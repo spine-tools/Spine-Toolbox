@@ -1,6 +1,25 @@
+#############################################################################
+# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+#
+# This file is part of Spine Toolbox.
+#
+# Spine Toolbox is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#############################################################################
+
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../SpineToolbox/ui/mainwindow.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/mainwindow.ui'
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -10,7 +29,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1007, 565)
+        MainWindow.resize(993, 565)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -75,14 +94,12 @@ class Ui_MainWindow(object):
         self.verticalLayout_3.addWidget(self.mdiArea)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1007, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 993, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
         self.menuHelp = QtWidgets.QMenu(self.menubar)
         self.menuHelp.setObjectName("menuHelp")
-        self.menuView = QtWidgets.QMenu(self.menubar)
-        self.menuView.setObjectName("menuView")
         self.menuEdit = QtWidgets.QMenu(self.menubar)
         self.menuEdit.setObjectName("menuEdit")
         MainWindow.setMenuBar(self.menubar)
@@ -105,14 +122,12 @@ class Ui_MainWindow(object):
         self.actionAdd_Tool.setObjectName("actionAdd_Tool")
         self.menuFile.addAction(self.actionData_Collection_View)
         self.menuFile.addAction(self.actionQuit)
-        self.menuHelp.addAction(self.actionDocumentation)
         self.menuHelp.addAction(self.actionAbout)
         self.menuEdit.addAction(self.actionAdd_Data_Collection)
         self.menuEdit.addAction(self.actionAdd_Data_Store)
         self.menuEdit.addAction(self.actionAdd_Tool)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
-        self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
@@ -128,7 +143,6 @@ class Ui_MainWindow(object):
         self.pushButton_tool_edit.setText(QtWidgets.QApplication.translate("MainWindow", "Edit", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
         self.menuHelp.setTitle(QtWidgets.QApplication.translate("MainWindow", "Help", None, -1))
-        self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuEdit.setTitle(QtWidgets.QApplication.translate("MainWindow", "Edit", None, -1))
         self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Quit", None, -1))
         self.actionData_Collection_View.setText(QtWidgets.QApplication.translate("MainWindow", "Open Data Store View", None, -1))
