@@ -2,7 +2,7 @@
 Spine Toolbox
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-:date:   14.11.2017
+:date:   14.12.2017
 """
 
 import sys

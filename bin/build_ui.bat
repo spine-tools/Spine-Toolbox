@@ -18,11 +18,11 @@ ECHO.
 ECHO --- Building Spine Toolbox GUI ---
 
 ECHO mainwindow.py
-CALL pyside2-uic ../SpineToolbox/ui/mainwindow.ui -o ../SpineToolbox/ui/mainwindow.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\SpineToolbox\ui\mainwindow.py.o > ..\SpineToolbox\ui\mainwindow.py
-del ..\SpineToolbox\ui\mainwindow.py.o
+CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
+del ..\spinetoolbox\ui\mainwindow.py.o
 
 ECHO data_store_form.py
-CALL pyside2-uic ../SpineToolbox/ui/data_store_form.ui -o ../SpineToolbox/ui/data_store_form.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\SpineToolbox\ui\data_store_form.py.o > ..\SpineToolbox\ui\data_store_form.py
-del ..\SpineToolbox\ui\data_store_form.py.o
+CALL pyside2-uic ../spinetoolbox/ui/data_store_form.ui -o ../spinetoolbox/ui/data_store_form.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\data_store_form.py.o > ..\spinetoolbox\ui\data_store_form.py
+del ..\spinetoolbox\ui\data_store_form.py.o

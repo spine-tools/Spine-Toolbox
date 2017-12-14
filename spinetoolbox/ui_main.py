@@ -2,7 +2,7 @@
 Module for main application GUI functions.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-:date:   14.11.2017
+:date:   14.12.2017
 """
 
 import locale
@@ -16,7 +16,7 @@ from widgets.data_store_widget import DataStoreWidget
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
     def __init__(self):
-        """ Initialize GUI."""
+        """ Initialize application and main window."""
         super().__init__(flags=Qt.Window)
         # Set number formatting to use user's default settings
         locale.setlocale(locale.LC_NUMERIC, '')
@@ -32,7 +32,7 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
 
     def connect_signals(self):
-        """Connect PyQt signals to slots."""
+        """Connect signals."""
         self.ui.actionData_Collection_View.triggered.connect(self.open_data_store_view)
         self.ui.pushButton_datastore_edit.pressed.connect(self.open_data_store_view)
 
@@ -45,8 +45,8 @@ class ToolboxUI(QMainWindow):
         """Method for handling application exit.
 
         Args:
-             event (QEvent): PyQt event
+             event (QEvent): PySide2 event
         """
-        logging.debug("Exiting application")
+        logging.debug("Bye bye")
         # noinspection PyArgumentList
         QApplication.quit()
