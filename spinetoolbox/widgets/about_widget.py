@@ -48,7 +48,7 @@ class AboutWidget(QWidget):
         self.setWindowFlags(Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.ui.label_version_str.setText("Version {0}".format(version))
+        self.ui.label_version_str.setText("v{0}".format(version))
         self.setup_license_text()
 
     def setup_license_text(self):

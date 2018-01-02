@@ -1,3 +1,6 @@
 .idea
 *.pyc
 .spyderproject
+spinetoolbox/__pycache__/
+spinetoolbox/ui/__pycache__/
+spinetoolbox/widgets/__pycache__/

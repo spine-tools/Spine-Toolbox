@@ -203,7 +203,6 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionData_Collection_View"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -216,12 +215,20 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="actionAdd_Data_Collection"/>
     <addaction name="actionAdd_Data_Store"/>
+    <addaction name="actionAdd_Data_Connection"/>
     <addaction name="actionAdd_Tool"/>
+    <addaction name="actionAdd_View"/>
+   </widget>
+   <widget class="QMenu" name="menuShow">
+    <property name="title">
+     <string>Show</string>
+    </property>
+    <addaction name="actionData_Store"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuShow"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -229,10 +236,13 @@
    <property name="text">
     <string>Quit</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
   </action>
-  <action name="actionData_Collection_View">
+  <action name="actionData_Store">
    <property name="text">
-    <string>Open Data Store View</string>
+    <string>Data Store</string>
    </property>
   </action>
   <action name="actionDocumentation">
@@ -244,10 +254,13 @@
    <property name="text">
     <string>About</string>
    </property>
+   <property name="shortcut">
+    <string>F12</string>
+   </property>
   </action>
-  <action name="actionAdd_Data_Collection">
+  <action name="actionAdd_Data_Connection">
    <property name="text">
-    <string>Add Data Collection</string>
+    <string>Add Data Connection</string>
    </property>
   </action>
   <action name="actionAdd_Data_Store">
@@ -258,6 +271,11 @@
   <action name="actionAdd_Tool">
    <property name="text">
     <string>Add Tool</string>
+   </property>
+  </action>
+  <action name="actionAdd_View">
+   <property name="text">
+    <string>Add View</string>
    </property>
   </action>
  </widget>

@@ -31,11 +31,11 @@ from PySide2.QtWidgets import QMainWindow, QApplication, QMdiSubWindow
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.subwindow_widget import SubWindowWidget
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
+from config import SPINE_TOOLBOX_VERSION
 
 
 class ToolboxUI(QMainWindow):
@@ -58,7 +58,8 @@ class ToolboxUI(QMainWindow):
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.actionData_Collection_View.triggered.connect(self.open_data_store_view)
+        self.ui.actionQuit.triggered.connect(self.closeEvent)
+        self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
         self.ui.pushButton_add_data_store.clicked.connect(self.add_data_store)
         self.ui.pushButton_add_data_connection.clicked.connect(self.add_data_connection)
         self.ui.pushButton_add_tool.clicked.connect(self.add_tool)
@@ -136,15 +137,17 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
-        self.about_form = AboutWidget(self, "0.0.1")
+        self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
         self.about_form.show()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
         """Method for handling application exit.
 
         Args:
              event (QEvent): PySide2 event
         """
+        if event:
+            event.accept()
         logging.debug("Bye bye")
         # noinspection PyArgumentList
         QApplication.quit()
