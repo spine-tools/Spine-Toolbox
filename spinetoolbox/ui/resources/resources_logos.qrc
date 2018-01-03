@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="partner_logos">
+    <file>Energy_Reform_logo.png</file>
+    <file>KU_Leuven_logo.png</file>
+    <file>UCD_Dublin_logo.png</file>
+    <file>KTH_logo.png</file>
+    <file>VTT_RGB.png</file>
+  </qresource>
+</RCC>

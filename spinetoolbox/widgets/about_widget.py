@@ -50,6 +50,9 @@ class AboutWidget(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.label_version_str.setText("v{0}".format(version))
         self.setup_license_text()
+        self._mousePressPos = None
+        self._mouseReleasePos = None
+        self._mouseMovePos = None
 
     def setup_license_text(self):
         """Add license to QTextBrowser."""
@@ -85,3 +88,41 @@ class AboutWidget(QWidget):
         """
         if event:
             event.accept()
+
+    def mousePressEvent(self, e):
+        """Save mouse position at the start of dragging.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        self._mousePressPos = e.globalPos()
+        self._mouseMovePos = e.globalPos()
+        super().mousePressEvent(e)
+
+    def mouseReleaseEvent(self, e):
+        """Save mouse position at the end of dragging.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        if self._mousePressPos is not None:
+            self._mouseReleasePos = e.globalPos()
+            moved = self._mouseReleasePos - self._mousePressPos
+            if moved.manhattanLength() > 3:
+                e.ignore()
+                return
+
+    def mouseMoveEvent(self, e):
+        """Moves the window when mouse button is pressed and mouse cursor is moved.
+
+        Args:
+            e (QMouseEvent): Mouse event
+        """
+        # logging.debug("MouseMoveEvent at pos:%s" % e.pos())
+        # logging.debug("MouseMoveEvent globalpos:%s" % e.globalPos())
+        currentpos = self.pos()
+        globalpos = e.globalPos()
+        diff = globalpos - self._mouseMovePos
+        newpos = currentpos + diff
+        self.move(newpos)
+        self._mouseMovePos = globalpos

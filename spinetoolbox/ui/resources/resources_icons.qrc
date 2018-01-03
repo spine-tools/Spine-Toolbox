@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="symbols">
+    <file>Spine_symbol.png</file>
+  </qresource>
+</RCC>

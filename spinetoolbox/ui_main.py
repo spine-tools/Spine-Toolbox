@@ -26,7 +26,7 @@ Module for main application GUI functions.
 
 import locale
 import logging
-from PySide2.QtCore import Qt, Slot, QSize
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QMainWindow, QApplication, QMdiSubWindow
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
@@ -60,6 +60,10 @@ class ToolboxUI(QMainWindow):
         """Connect signals."""
         self.ui.actionQuit.triggered.connect(self.closeEvent)
         self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
+        self.ui.actionAdd_Data_Store.triggered.connect(self.add_data_store)
+        self.ui.actionAdd_Data_Connection.triggered.connect(self.add_data_connection)
+        self.ui.actionAdd_Tool.triggered.connect(self.add_tool)
+        self.ui.actionAdd_View.triggered.connect(self.add_view)
         self.ui.pushButton_add_data_store.clicked.connect(self.add_data_store)
         self.ui.pushButton_add_data_connection.clicked.connect(self.add_data_connection)
         self.ui.pushButton_add_tool.clicked.connect(self.add_tool)
