@@ -24,8 +24,9 @@ QWidget that is used as an internal widget for a QMdiSubWindow.
 :date:   15.12.2017
 """
 
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel
+from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
+from ui.subwindow import Ui_Form
 
 
 class SubWindowWidget(QWidget):
@@ -35,43 +36,44 @@ class SubWindowWidget(QWidget):
         parent (QWidget): Parent widget.
         name (str): Internal widget object name
     """
-    def __init__(self, parent, name):
+    def __init__(self, name):
         """ Initialize class."""
-        super().__init__(parent)
-        self.setObjectName(name)
-        self.edit_button = QPushButton("Edit")
-        self.edit_button.setMaximumHeight(23)
-        self.edit_button.setMaximumWidth(65)
-        self.name_label = QLabel(name)
-        self.data_label = QLabel("data")
-        vertical_layout = QVBoxLayout()
-        vertical_layout.addWidget(self.name_label)
-        vertical_layout.addWidget(self.data_label)
-        vertical_layout.addWidget(self.edit_button)
-        self.setLayout(vertical_layout)
+        super().__init__()
+        # Setup UI from Qt Designer file
+        self.ui = Ui_Form()
+        self.ui.setupUi(self)
+        self.setObjectName(name)  # This is set also in setupUi()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
-    def update_name_label(self, txt):
+    def set_type_label(self, txt):
+        """Set new text for the type label.
+
+        Args:
+            txt (str): Text to display in the QLabel
+        """
+        self.ui.label_type.setText(txt)
+
+    def set_name_label(self, txt):
         """Set new text for the name label.
 
         Args:
             txt (str): Text to display in the QLabel
         """
-        self.name_label.setText(txt)
+        self.ui.label_name.setText(txt)
 
-    def update_data_label(self, txt):
+    def set_data_label(self, txt):
         """Set new text for the data label.
 
         Args:
             txt (str): Text to display in the QLabel
         """
-        self.data_label.setText(txt)
+        self.ui.label_data.setText(txt)
 
     def name_label_txt(self):
         """Return name label text."""
-        return self.name_label.text()
+        return self.ui.label_name.text()
 
     def data_label_txt(self):
         """Return data label text."""
-        return self.data_label.text()
+        return self.ui.label_data.text()

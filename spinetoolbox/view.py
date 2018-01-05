@@ -24,7 +24,6 @@ Module for view class.
 :date:   19.12.2017
 """
 
-import random
 import logging
 from metaobject import MetaObject
 from widgets.subwindow_widget import SubWindowWidget
@@ -35,26 +34,32 @@ class View(MetaObject):
     """View class.
 
     Attributes:
-        parent (QWidget): Parent of view widget
         name (str): Object name
         description (str): Object description
     """
-    def __init__(self, parent, name, description):
+    def __init__(self, name, description):
         super().__init__(name, description)
-        self._widget = SubWindowWidget(parent, name)
+        self.item_type = "View"
         self._data = "data"
-        self._widget.update_name_label(name + " " + str(random.randint(1, 10)))
-        self._widget.update_data_label(self._data)
+        self._widget = SubWindowWidget("View")
+        self._widget.set_type_label(self.item_type)
+        self._widget.set_name_label(name)
+        self._widget.set_data_label(self._data)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this view's signals to slots."""
-        self._widget.edit_button.clicked.connect(self.edit_clicked)
-
-    def widget(self):
-        return self._widget
+        self._widget.ui.pushButton_edit.clicked.connect(self.edit_clicked)
 
     @Slot(name='edit_clicked')
     def edit_clicked(self):
         """Edit button clicked."""
         logging.debug(self.name + " - " + str(self._data))
+
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
+
+    def get_data(self):
+        """Returns data of object."""
+        return self._data

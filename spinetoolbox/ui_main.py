@@ -54,23 +54,31 @@ class ToolboxUI(QMainWindow):
         self.data_connection_list = list()
         self.tool_list = list()
         self.view_list = list()
+        self.ds_n = 0
+        self.dc_n = 0
+        self.tool_n = 0
+        self.view_n = 0
         self.connect_signals()
 
     def connect_signals(self):
         """Connect signals."""
+        # Menu commands
         self.ui.actionQuit.triggered.connect(self.closeEvent)
         self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
         self.ui.actionAdd_Data_Store.triggered.connect(self.add_data_store)
         self.ui.actionAdd_Data_Connection.triggered.connect(self.add_data_connection)
         self.ui.actionAdd_Tool.triggered.connect(self.add_tool)
         self.ui.actionAdd_View.triggered.connect(self.add_view)
+        self.ui.actionAbout.triggered.connect(self.show_about)
+        # Buttons
         self.ui.pushButton_add_data_store.clicked.connect(self.add_data_store)
         self.ui.pushButton_add_data_connection.clicked.connect(self.add_data_connection)
         self.ui.pushButton_add_tool.clicked.connect(self.add_tool)
         self.ui.pushButton_add_view.clicked.connect(self.add_view)
         self.ui.pushButton_test1.clicked.connect(self.test1)
         self.ui.pushButton_test2.clicked.connect(self.test2)
-        self.ui.actionAbout.triggered.connect(self.show_about)
+        # QMdiArea
+        self.ui.mdiArea.subWindowActivated.connect(self.update_details_frame)
 
     @Slot(name="open_data_store_view")
     def open_data_store_view(self):
@@ -90,51 +98,86 @@ class ToolboxUI(QMainWindow):
         par = current_sub_window.widget().parent()
         logging.debug("Parent of {0}:{1}".format(widget_name, par))
 
+    @Slot("QMdiSubWindow", name="update_details_frame")
+    def update_details_frame(self, window):
+        if window is not None:
+            w = window.widget()
+            self.ui.lineEdit_type.setText(w.objectName())
+            self.ui.lineEdit_name.setText(w.name_label_txt())
+            self.match_selected_item_to_widget(w, w.name_label_txt())
+        else:
+            self.ui.lineEdit_type.setText("")
+            self.ui.lineEdit_name.setText("")
+            self.ui.lineEdit_data.setText("")
+            self.ui.lineEdit_test.setText("")
+
+    def match_selected_item_to_widget(self, window, name):
+        """Return the object (Data Store, Data Connection, etc.) that has window as its widget."""
+        obj_type = window.objectName()
+        if obj_type == "Data Store":
+            for item in self.data_store_list:
+                if item.name == name:
+                    logging.debug("Found item: {0}".format(name))
+                    self.ui.lineEdit_data.setText(str(item.get_data()))
+        elif obj_type == "Data Connection":
+            for item in self.data_connection_list:
+                if item.name == name:
+                    logging.debug("Found item: {0}".format(name))
+                    self.ui.lineEdit_data.setText(str(item.get_data()))
+        elif obj_type == "Tool":
+            for item in self.tool_list:
+                if item.name == name:
+                    logging.debug("Found item: {0}".format(name))
+                    self.ui.lineEdit_data.setText(str(item.get_data()))
+        elif obj_type == "View":
+            for item in self.view_list:
+                if item.name == name:
+                    logging.debug("Found item: {0}".format(name))
+                    self.ui.lineEdit_data.setText(str(item.get_data()))
+        else:
+            logging.debug("Unknown object type: {0}".format(obj_type))
+
     @Slot(name="add_data_store")
     def add_data_store(self):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
-        sw = QMdiSubWindow()
-        data_store = DataStore(sw, "Data Store", "Data Store description")
-        # Set data store widget as QMdiSubWindow's internal widget
-        sw.setWidget(data_store.widget())
+        self.ds_n += 1
+        data_store = DataStore("Data Store " + str(self.ds_n), "Data Store description")
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
         sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.ui.mdiArea.addSubWindow(sw, Qt.SubWindow)  # Add subwindow into QMdiArea
         self.data_store_list.append(data_store)  # Save reference or signals don't stick
         sw.show()
 
     @Slot(name="add_data_connection")
     def add_data_connection(self):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
-        sw = QMdiSubWindow()
-        data_connection = DataConnection(sw, "Data Connection", "Data Connection description")
-        # Set data connection widget as QMdiSubWindow's internal widget
-        sw.setWidget(data_connection.widget())
+        self.dc_n += 1
+        data_connection = DataConnection("Data Connection " + str(self.dc_n), "Data Connection description")
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
         sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.ui.mdiArea.addSubWindow(sw, Qt.SubWindow)  # Add subwindow into QMdiArea
         self.data_connection_list.append(data_connection)  # Save reference or signals don't stick
         sw.show()
 
     @Slot(name="add_tool")
     def add_tool(self):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
-        sw = QMdiSubWindow()
-        tool = Tool(sw, "Tool", "Tool description")
-        # Set tool widget as QMdiSubWindow's internal widget
-        sw.setWidget(tool.widget())
+        self.tool_n += 1
+        tool = Tool("Tool " + str(self.tool_n), "Tool description")
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
         sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.ui.mdiArea.addSubWindow(sw, Qt.SubWindow)  # Add subwindow into QMdiArea
         self.tool_list.append(tool)  # Save reference or signals don't stick
         sw.show()
 
     @Slot(name="add_view")
     def add_view(self):
         """Add View as a QMdiSubwindow to QMdiArea."""
-        sw = QMdiSubWindow()
-        view = View(sw, "View", "View description")
-        # Set view widget as QMdiSubWindow's internal widget
-        sw.setWidget(view.widget())
+        self.view_n += 1
+        view = View("View " + str(self.view_n), "View description")
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
         sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.ui.mdiArea.addSubWindow(sw, Qt.SubWindow)  # Add subwindow into QMdiArea
         self.view_list.append(view)  # Save reference or signals don't stick
         sw.show()
 

@@ -35,26 +35,32 @@ class DataStore(MetaObject):
     """Data Store class.
 
     Attributes:
-        parent (QWidget): Parent of data stores widget
         name (str): Object name
         description (str): Object description
     """
-    def __init__(self, parent, name, description):
+    def __init__(self, name, description):
         super().__init__(name, description)
-        self._widget = SubWindowWidget(parent, name)
+        self.item_type = "Data Store"
         self._data = random.randint(1, 100)
-        self._widget.update_name_label(name + " " + str(random.randint(1, 10)))
-        self._widget.update_data_label("Data:" + str(self._data))
+        self._widget = SubWindowWidget(self.item_type)
+        self._widget.set_type_label(self.item_type)
+        self._widget.set_name_label(name)
+        self._widget.set_data_label("Data:" + str(self._data))
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.edit_button.clicked.connect(self.edit_clicked)
-
-    def widget(self):
-        return self._widget
+        self._widget.ui.pushButton_edit.clicked.connect(self.edit_clicked)
 
     @Slot(name='edit_clicked')
     def edit_clicked(self):
         """Edit button clicked."""
         logging.debug(self.name + " Data: " + str(self._data))
+
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
+
+    def get_data(self):
+        """Returns data of object."""
+        return self._data

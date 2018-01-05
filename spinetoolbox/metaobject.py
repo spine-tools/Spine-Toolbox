@@ -20,31 +20,30 @@
 """
 MetaObject class.
 
-:author: Erkka Rinne <erkka.rinne@vtt.fi>
+:authors: Erkka Rinne <erkka.rinne@vtt.fi>, Pekka Savolainen <pekka.t.savolainen@vtt.fi>
 :date:   18.12.2017
 """
 
+import logging
 from PySide2.QtCore import QObject
 
 
 class MetaObject(QObject):
-    """Class for an object which has a name and some description.
+    """Class for an object which has a name, type, and some description.
 
     Attributes:
         name (str): Object name
-        short_name (str): Short name that can be used in e.g. file names
         description (str): Object description
-        short_name (str, optional): Short name
+        object_type (str): Object type (e.g. data store, connection, view, or tool)
     """
-    def __init__(self, name, description, short_name=None):
+    def __init__(self, name, description):
         """Class constructor."""
         super().__init__()
-        self.name = name
-        if short_name is not None:
-            self.short_name = short_name
-        else:
-            self.short_name = name.lower().replace(' ', '_')
-        self.description = description
+        self.name = ''
+        self.short_name = ''
+        self.description = ''
+        self.set_name(name)
+        self.set_description(description)
 
     def set_name(self, new_name):
         """Set object name and short name.
