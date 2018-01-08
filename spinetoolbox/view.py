@@ -41,7 +41,7 @@ class View(MetaObject):
         super().__init__(name, description)
         self.item_type = "View"
         self._data = "data"
-        self._widget = SubWindowWidget("View")
+        self._widget = SubWindowWidget(self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label(self._data)

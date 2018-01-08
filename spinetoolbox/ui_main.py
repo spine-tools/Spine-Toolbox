@@ -27,7 +27,8 @@ Module for main application GUI functions.
 import locale
 import logging
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QMainWindow, QApplication, QMdiSubWindow
+from PySide2.QtWidgets import QMainWindow, QApplication
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
@@ -50,10 +51,12 @@ class ToolboxUI(QMainWindow):
         self.ui.setupUi(self)
         self.about_form = None
         self.data_store_form = None
-        self.data_store_list = list()  # References to data stores. TODO: Remove reference if data store is deleted
+        self.project_item_model = self.init_models()
+        self.data_store_list = list()  # TODO: Find out why these are needed in addition with project_item_model refs.
         self.data_connection_list = list()
         self.tool_list = list()
         self.view_list = list()
+        self.ui.treeView_project.setModel(self.project_item_model)
         self.ds_n = 0
         self.dc_n = 0
         self.tool_n = 0
@@ -79,6 +82,62 @@ class ToolboxUI(QMainWindow):
         self.ui.pushButton_test2.clicked.connect(self.test2)
         # QMdiArea
         self.ui.mdiArea.subWindowActivated.connect(self.update_details_frame)
+        # Project TreeView
+        self.ui.treeView_project.clicked.connect(self.activate_subwindow)
+        self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
+
+    @Slot("QModelIndex", name="activate_subwindow")
+    def activate_subwindow(self, index):
+        """Set focus on selected subwindow.
+
+        Args:
+            index (QModelIndex): Index of clicked item, if available
+        """
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            if index.parent().isValid():
+                item = self.project_item_model.itemFromIndex(index)
+                item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
+                item_widget = item_data.get_widget()
+                item_subwindow = item_widget.parent()  # QMdiSubWindow that has item_widget as its internal widget
+                self.ui.mdiArea.setActiveSubWindow(item_subwindow)
+            return
+
+    @Slot("QModelIndex", name="show_subwindow")
+    def show_subwindow(self, index):
+        """Show double-clicked item subwindow if it was hidden.
+        Sets both QMdiSubWindow and its internal widget visible.
+
+        Args:
+            index (QModelIndex): Index of clicked item, if available
+        """
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            if index.parent().isValid():
+                item_data = self.project_item_model.itemFromIndex(index).data(Qt.UserRole)  # e.g. DataStore object
+                internal_widget = item_data.get_widget()  # QWidget of e.g. DataStore object
+                subwindow = internal_widget.parent()  # QMdiSubWindow that has internal_widget as its widget
+                subwindow.show()
+                internal_widget.show()
+            return
+
+    def init_models(self):
+        """Initialize Qt data model for project contents."""
+        m = QStandardItemModel()
+        m.setHorizontalHeaderItem(0, QStandardItem("Contents"))
+        m.appendRow(QStandardItem("Data Stores"))
+        m.appendRow(QStandardItem("Data Connections"))
+        m.appendRow(QStandardItem("Tools"))
+        m.appendRow(QStandardItem("Views"))
+        return m
 
     @Slot(name="open_data_store_view")
     def open_data_store_view(self):
@@ -93,7 +152,8 @@ class ToolboxUI(QMainWindow):
     @Slot(name="test2")
     def test2(self):
         current_sub_window = self.ui.mdiArea.currentSubWindow()
-        # logging.debug(current_sub_window.windowTitle())
+        if not current_sub_window:
+            return
         widget_name = current_sub_window.widget().name_label_txt()
         par = current_sub_window.widget().parent()
         logging.debug("Parent of {0}:{1}".format(widget_name, par))
@@ -102,9 +162,21 @@ class ToolboxUI(QMainWindow):
     def update_details_frame(self, window):
         if window is not None:
             w = window.widget()
-            self.ui.lineEdit_type.setText(w.objectName())
-            self.ui.lineEdit_name.setText(w.name_label_txt())
-            self.match_selected_item_to_widget(w, w.name_label_txt())
+            obj_type = w.objectName()
+            name = w.name_label_txt()
+            self.ui.lineEdit_type.setText(obj_type)
+            self.ui.lineEdit_name.setText(name)
+            # Find object data from model. Note: Finds child items only if Qt.MatchRecursive is set.
+            found_items = self.project_item_model.findItems(name, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+            if len(found_items) == 0:
+                logging.error("Item '{0}' not found in project model".format(name))
+                return
+            if len(found_items) > 1:
+                logging.error("More than one item with name '{0}' found".format(name))
+                return
+            object = found_items[0].data(Qt.UserRole)
+            self.ui.lineEdit_data.setText(str(object.get_data()))
+            # self.match_selected_item_to_widget(w, w.name_label_txt())
         else:
             self.ui.lineEdit_type.setText("")
             self.ui.lineEdit_name.setText("")
@@ -112,7 +184,7 @@ class ToolboxUI(QMainWindow):
             self.ui.lineEdit_test.setText("")
 
     def match_selected_item_to_widget(self, window, name):
-        """Return the object (Data Store, Data Connection, etc.) that has window as its widget."""
+        """[OBSOLETE] Return the object (Data Store, Data Connection, etc.) that has window as its widget."""
         obj_type = window.objectName()
         if obj_type == "Data Store":
             for item in self.data_store_list:
@@ -141,45 +213,78 @@ class ToolboxUI(QMainWindow):
     def add_data_store(self):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
         self.ds_n += 1
-        data_store = DataStore("Data Store " + str(self.ds_n), "Data Store description")
+        name = "Data Store " + str(self.ds_n)
+        data_store = DataStore(name, "Data Store description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
-        sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
+        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
         self.data_store_list.append(data_store)  # Save reference or signals don't stick
+        self.add_item_to_model("Data Stores", name, data_store)
         sw.show()
 
     @Slot(name="add_data_connection")
     def add_data_connection(self):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
         self.dc_n += 1
-        data_connection = DataConnection("Data Connection " + str(self.dc_n), "Data Connection description")
+        name = "Data Connection " + str(self.dc_n)
+        data_connection = DataConnection(name, "Data Connection description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
-        sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
+        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
         self.data_connection_list.append(data_connection)  # Save reference or signals don't stick
+        self.add_item_to_model("Data Connections", name, data_connection)
         sw.show()
 
     @Slot(name="add_tool")
     def add_tool(self):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         self.tool_n += 1
-        tool = Tool("Tool " + str(self.tool_n), "Tool description")
+        name = "Tool " + str(self.tool_n)
+        tool = Tool(name, "Tool description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
-        sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
+        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
         self.tool_list.append(tool)  # Save reference or signals don't stick
+        self.add_item_to_model("Tools", name, tool)
         sw.show()
 
     @Slot(name="add_view")
     def add_view(self):
         """Add View as a QMdiSubwindow to QMdiArea."""
         self.view_n += 1
+        name = "View " + str(self.view_n)
         view = View("View " + str(self.view_n), "View description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
-        sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
+        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
         self.view_list.append(view)  # Save reference or signals don't stick
+        self.add_item_to_model("Views", name, view)
         sw.show()
+
+    def add_item_to_model(self, category, text, data):
+        """Add item to project model.
+
+        Args:
+            category (str): Project category (e.g. Data Stores)
+            text (str): Display role for the new item
+            data (QObject): Object that is added to model (e.g. DataStore())
+        """
+        # First, find QStandardItem where new child item is added
+        found_items = self.project_item_model.findItems(category, Qt.MatchExactly, column=0)
+        if not found_items:
+            logging.error("'{0}' item not found in project item model".format(category))
+            return False
+        if len(found_items) > 1:
+            logging.error("More than one '{0}' item found in project item model".format(category))
+            return False
+        item_index = found_items[0].index()
+        parent_index = item_index.parent()
+        if not parent_index.isValid():
+            # Parent index is not valid if item has no parent
+            new_item = QStandardItem(text)
+            new_item.setData(data, role=Qt.UserRole)
+            self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
+        return True
 
     @Slot(name="show_about")
     def show_about(self):

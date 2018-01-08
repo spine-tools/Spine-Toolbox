@@ -30,6 +30,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(125, 100)
+        Form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.verticalLayout = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label_type = QtWidgets.QLabel(Form)

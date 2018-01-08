@@ -24,6 +24,7 @@ QWidget that is used as an internal widget for a QMdiSubWindow.
 :date:   15.12.2017
 """
 
+import logging
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow import Ui_Form
@@ -33,7 +34,6 @@ class SubWindowWidget(QWidget):
     """Class constructor.
 
     Attributes:
-        parent (QWidget): Parent widget.
         name (str): Internal widget object name
     """
     def __init__(self, name):
@@ -42,9 +42,9 @@ class SubWindowWidget(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(name)  # This is set also in setupUi()
+        self.setObjectName(name)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
         # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
+        # self.setAttribute(Qt.WA_DeleteOnClose)
 
     def set_type_label(self, txt):
         """Set new text for the type label.
@@ -77,3 +77,14 @@ class SubWindowWidget(QWidget):
     def data_label_txt(self):
         """Return data label text."""
         return self.ui.label_data.text()
+
+    def closeEvent(self, event):
+        """Find QMdiSubWindow that initiated this closeEvent. Hide QMdiSubWindow
+        and its internal widget (SubWindowWidget) instead of closing them.
+
+        Args:
+            event (QCloseEvent): Event initiated when user clicks 'X'
+        """
+        event.ignore()
+        self.hide()  # Hide SubWindowWidget (internal widget)
+        self.parent().hide()  # Hide QMdiSubWindow

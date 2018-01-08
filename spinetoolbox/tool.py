@@ -41,7 +41,7 @@ class Tool(MetaObject):
         super().__init__(name, description)
         self.item_type = "Tool"
         self._data = "GAMS Tool"
-        self._widget = SubWindowWidget("Tool")
+        self._widget = SubWindowWidget(self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label(self._data)
