@@ -32,6 +32,7 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
+from widgets.context_menus import ProjectItemContextMenu
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
@@ -52,10 +53,8 @@ class ToolboxUI(QMainWindow):
         self.about_form = None
         self.data_store_form = None
         self.project_item_model = self.init_models()
-        self.data_store_list = list()  # TODO: Find out why these are needed in addition with project_item_model refs.
-        self.data_connection_list = list()
-        self.tool_list = list()
-        self.view_list = list()
+        self.project_item_context_menu = None
+        self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ds_n = 0
         self.dc_n = 0
@@ -85,6 +84,7 @@ class ToolboxUI(QMainWindow):
         # Project TreeView
         self.ui.treeView_project.clicked.connect(self.activate_subwindow)
         self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
+        self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
 
     @Slot("QModelIndex", name="activate_subwindow")
     def activate_subwindow(self, index):
@@ -129,6 +129,7 @@ class ToolboxUI(QMainWindow):
                 internal_widget.show()
             return
 
+    # noinspection PyMethodMayBeStatic
     def init_models(self):
         """Initialize Qt data model for project contents."""
         m = QStandardItemModel()
@@ -151,6 +152,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test2")
     def test2(self):
+        n = len(self.project_refs)
+        logging.debug("Items in ref list: {0}".format(n))
         current_sub_window = self.ui.mdiArea.currentSubWindow()
         if not current_sub_window:
             return
@@ -174,40 +177,13 @@ class ToolboxUI(QMainWindow):
             if len(found_items) > 1:
                 logging.error("More than one item with name '{0}' found".format(name))
                 return
-            object = found_items[0].data(Qt.UserRole)
-            self.ui.lineEdit_data.setText(str(object.get_data()))
-            # self.match_selected_item_to_widget(w, w.name_label_txt())
+            matching_item_data = found_items[0].data(Qt.UserRole)
+            self.ui.lineEdit_data.setText(str(matching_item_data.get_data()))
         else:
             self.ui.lineEdit_type.setText("")
             self.ui.lineEdit_name.setText("")
             self.ui.lineEdit_data.setText("")
             self.ui.lineEdit_test.setText("")
-
-    def match_selected_item_to_widget(self, window, name):
-        """[OBSOLETE] Return the object (Data Store, Data Connection, etc.) that has window as its widget."""
-        obj_type = window.objectName()
-        if obj_type == "Data Store":
-            for item in self.data_store_list:
-                if item.name == name:
-                    logging.debug("Found item: {0}".format(name))
-                    self.ui.lineEdit_data.setText(str(item.get_data()))
-        elif obj_type == "Data Connection":
-            for item in self.data_connection_list:
-                if item.name == name:
-                    logging.debug("Found item: {0}".format(name))
-                    self.ui.lineEdit_data.setText(str(item.get_data()))
-        elif obj_type == "Tool":
-            for item in self.tool_list:
-                if item.name == name:
-                    logging.debug("Found item: {0}".format(name))
-                    self.ui.lineEdit_data.setText(str(item.get_data()))
-        elif obj_type == "View":
-            for item in self.view_list:
-                if item.name == name:
-                    logging.debug("Found item: {0}".format(name))
-                    self.ui.lineEdit_data.setText(str(item.get_data()))
-        else:
-            logging.debug("Unknown object type: {0}".format(obj_type))
 
     @Slot(name="add_data_store")
     def add_data_store(self):
@@ -217,8 +193,7 @@ class ToolboxUI(QMainWindow):
         data_store = DataStore(name, "Data Store description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
-        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.data_store_list.append(data_store)  # Save reference or signals don't stick
+        self.project_refs.append(data_store)  # Save reference or signals don't stick
         self.add_item_to_model("Data Stores", name, data_store)
         sw.show()
 
@@ -230,8 +205,7 @@ class ToolboxUI(QMainWindow):
         data_connection = DataConnection(name, "Data Connection description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
-        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.data_connection_list.append(data_connection)  # Save reference or signals don't stick
+        self.project_refs.append(data_connection)  # Save reference or signals don't stick
         self.add_item_to_model("Data Connections", name, data_connection)
         sw.show()
 
@@ -243,8 +217,7 @@ class ToolboxUI(QMainWindow):
         tool = Tool(name, "Tool description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
-        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.tool_list.append(tool)  # Save reference or signals don't stick
+        self.project_refs.append(tool)  # Save reference or signals don't stick
         self.add_item_to_model("Tools", name, tool)
         sw.show()
 
@@ -256,8 +229,7 @@ class ToolboxUI(QMainWindow):
         view = View("View " + str(self.view_n), "View description")
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
-        # sw.setAttribute(Qt.WA_DeleteOnClose)  # Closing deletes the subwindow
-        self.view_list.append(view)  # Save reference or signals don't stick
+        self.project_refs.append(view)  # Save reference or signals don't stick
         self.add_item_to_model("Views", name, view)
         sw.show()
 
@@ -269,13 +241,13 @@ class ToolboxUI(QMainWindow):
             text (str): Display role for the new item
             data (QObject): Object that is added to model (e.g. DataStore())
         """
-        # First, find QStandardItem where new child item is added
+        # First, find QStandardItem category item where new child item is added
         found_items = self.project_item_model.findItems(category, Qt.MatchExactly, column=0)
         if not found_items:
             logging.error("'{0}' item not found in project item model".format(category))
             return False
         if len(found_items) > 1:
-            logging.error("More than one '{0}' item found in project item model".format(category))
+            logging.error("More than one '{0}' items found in project item model".format(category))
             return False
         item_index = found_items[0].index()
         parent_index = item_index.parent()
@@ -284,13 +256,56 @@ class ToolboxUI(QMainWindow):
             new_item = QStandardItem(text)
             new_item.setData(data, role=Qt.UserRole)
             self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
+            self.ui.treeView_project.expand(item_index)
         return True
+
+    def remove_item(self, ind):
+        """Remove item from project.
+
+        Args:
+            ind (QModelIndex): Index of removed item in project tree view
+        """
+        item = ind.data(Qt.UserRole)
+        widget = item.get_widget()
+        sw = widget.parent()
+        logging.debug("Removing item: {0}".format(item.name))
+        # Delete QMdiSubWindow
+        self.ui.mdiArea.removeSubWindow(sw)  # QMdiSubWindow
+        self.ui.mdiArea.removeSubWindow(widget)  # SubWindowWidget
+        # Remove item from project model
+        if not self.project_item_model.removeRow(ind.row(), ind.parent()):
+            logging.error("Failed to remove item: {0}".format(item.name))
+        # Remove item from reference list
+        try:
+            self.project_refs.remove(item)
+        except ValueError:
+            logging.error("Item '{0}' not found in reference list".format(item))
 
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
         self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
         self.about_form.show()
+
+    @Slot("QPoint", name="show_item_context_menu")
+    def show_item_context_menu(self, pos):
+        """Context menu for project items.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_project.indexAt(pos)
+        global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
+        self.project_item_context_menu = ProjectItemContextMenu(self, global_pos, ind)
+        option = self.project_item_context_menu.get_action()
+        if option == "Remove":
+            self.remove_item(ind)
+            return
+        else:
+            # No option selected
+            pass
+        self.project_item_context_menu.deleteLater()
+        self.project_item_context_menu = None
 
     def closeEvent(self, event=None):
         """Method for handling application exit.

@@ -24,9 +24,7 @@ QWidget that is used as an internal widget for a QMdiSubWindow.
 :date:   15.12.2017
 """
 
-import logging
 from PySide2.QtWidgets import QWidget
-from PySide2.QtCore import Qt
 from ui.subwindow import Ui_Form
 
 
@@ -43,8 +41,6 @@ class SubWindowWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(name)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        # Ensure this window gets garbage-collected when closed
-        # self.setAttribute(Qt.WA_DeleteOnClose)
 
     def set_type_label(self, txt):
         """Set new text for the type label.
