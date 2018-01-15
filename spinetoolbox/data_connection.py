@@ -37,12 +37,14 @@ class DataConnection(MetaObject):
     Attributes:
         name (str): Object name
         description (str): Object description
+        project (SpineToolboxProject): Project
     """
-    def __init__(self, name, description):
+    def __init__(self, name, description, project):
         super().__init__(name, description)
         self.item_type = "Data Connection"
+        self._project = project
         self._data = random.randint(1, 100)
-        self._widget = SubWindowWidget(self.item_type)
+        self._widget = SubWindowWidget(name, self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label("Data:" + str(self._data))
@@ -60,6 +62,11 @@ class DataConnection(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    def set_data(self, d):
+        """Set data and update widgets representation of data."""
+        self._data = d
+        self._widget.set_data_label("Data:" + str(self._data))
 
     def get_data(self):
         """Returns data of object."""

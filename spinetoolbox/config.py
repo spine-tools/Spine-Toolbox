@@ -29,14 +29,29 @@ import os
 from PySide2.QtGui import QColor
 
 # General
-SPINE_TOOLBOX_VERSION = '0.0.2'
+SPINE_TOOLBOX_VERSION = '0.0.3'
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
 BLACK_COLOR = QColor('black')
 
-# Application path
+# Application path, configuration file path and default project path
 if getattr(sys, 'frozen', False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
+    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, 'settings.conf'))
+    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, 'projects'))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
+    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, 'conf', 'settings.conf'))
+    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, 'projects'))
+
+# Default settings
+SETTINGS = {'project_directory': '',
+            'previous_project': '',
+            'logging_level': '2'}
+
+# Stylesheets
+STATUSBAR_SS = "QStatusBar{border-width: 2px;\n" \
+                       "border-color: 'gainsboro';\n" \
+                       "border-style: groove;\n" \
+                       "border-radius: 2px;\n}"

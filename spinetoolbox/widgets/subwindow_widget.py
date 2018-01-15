@@ -32,15 +32,28 @@ class SubWindowWidget(QWidget):
     """Class constructor.
 
     Attributes:
-        name (str): Internal widget object name
+        item_type (str): Internal widget object type (e.g. 'Data Store')
     """
-    def __init__(self, name):
+    def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(name)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self._owner = owner  # Name of object that owns this object (e.g. 'Data Store 1', or 'GAMS MODEL A')
+
+    def set_owner(self, owner):
+        """Set owner of this SubWindowWidget.
+
+        Args:
+            owner (str): New owner
+        """
+        self._owner = owner
+
+    def owner(self):
+        """Return owner of this SubWindowWidget."""
+        return self._owner
 
     def set_type_label(self, txt):
         """Set new text for the type label.
@@ -50,6 +63,10 @@ class SubWindowWidget(QWidget):
         """
         self.ui.label_type.setText(txt)
 
+    def type_label(self):
+        """Return type label text."""
+        return self.ui.label_type.text()
+
     def set_name_label(self, txt):
         """Set new text for the name label.
 
@@ -57,6 +74,10 @@ class SubWindowWidget(QWidget):
             txt (str): Text to display in the QLabel
         """
         self.ui.label_name.setText(txt)
+
+    def name_label(self):
+        """Return name label text."""
+        return self.ui.label_name.text()
 
     def set_data_label(self, txt):
         """Set new text for the data label.
@@ -66,11 +87,7 @@ class SubWindowWidget(QWidget):
         """
         self.ui.label_data.setText(txt)
 
-    def name_label_txt(self):
-        """Return name label text."""
-        return self.ui.label_name.text()
-
-    def data_label_txt(self):
+    def data_label(self):
         """Return data label text."""
         return self.ui.label_data.text()
 
