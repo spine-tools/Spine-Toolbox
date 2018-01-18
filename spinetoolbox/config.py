@@ -34,6 +34,8 @@ ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
 BLACK_COLOR = QColor('black')
+# SPINE GREEN HTML: #99cc33 RGB: 153, 204, 51, alpha channel: 255
+# SPINE BLUE HTML: #004ac2 RGB: 0, 74, 194, alpha channel: 255
 
 # Application path, configuration file path and default project path
 if getattr(sys, 'frozen', False):
@@ -46,12 +48,31 @@ else:
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, 'projects'))
 
 # Default settings
-SETTINGS = {'project_directory': '',
-            'previous_project': '',
-            'logging_level': '2'}
+SETTINGS = {"project_directory": "",
+            "open_previous_project": "false",
+            "previous_project": "",
+            "show_exit_prompt": "false",
+            "logging_level": "2"}
 
 # Stylesheets
-STATUSBAR_SS = "QStatusBar{border-width: 2px;\n" \
-                       "border-color: 'gainsboro';\n" \
-                       "border-style: groove;\n" \
-                       "border-radius: 2px;\n}"
+STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; " \
+               "border-width: 1px;\n " \
+               "border-color: 'gray';\n " \
+               "border-style: groove;\n " \
+               "border-radius: 2px;\n}"
+
+SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
+              "QLabel{color: white;}" \
+              "QCheckBox{color: white;}" \
+              "QGroupBox{border: 2px solid gray; " \
+                    "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #004AC2, stop: 1 #80B0FF);" \
+                    "border-radius: 5px;" \
+                    "margin-top: 0.5em;}" \
+              "QGroupBox:title{border-radius: 2px; " \
+                    "background-color: ghostwhite;" \
+                    "subcontrol-origin: margin;" \
+                    "subcontrol-position: top center;" \
+                    "padding-top: 0px;" \
+                    "padding-bottom: 0px;" \
+                    "padding-right: 3px;" \
+                    "padding-left: 3px;}"

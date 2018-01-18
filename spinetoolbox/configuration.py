@@ -109,6 +109,20 @@ class ConfigurationParser(object):
             self.parser[section] = {}
         self.parser.set(section, option, value)
 
+    def setboolean(self, section, option, value):
+        """Set boolean configuration option value from a given integer value.
+        Note: Writes true if a string is given.
+
+        Args:
+            section (str): The configuration section to edit.
+            option (str): The configuration option to set.
+            value (int, bool): Writes false if 0 (or False), true if any other value given.
+        """
+        if value == 0:
+            self.set(section, option, 'false')
+        else:
+            self.set(section, option, 'true')
+
     def load(self, insert_missing=True):
         """Load configuration file. By default if 'default'
         section is missing, it is inserted into the configuration.

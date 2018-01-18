@@ -29,13 +29,14 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
 from widgets.context_menus import ProjectItemContextMenu
 from widgets.project_form_widget import NewProjectForm
+from widgets.settings_widget import SettingsWidget
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
@@ -67,6 +68,7 @@ class ToolboxUI(QMainWindow):
         self.tool_n = 0
         self.view_n = 0
         # Widget and form references
+        self.settings_form = None
         self.about_form = None
         self.data_store_form = None
         self.project_item_context_menu = None
@@ -106,6 +108,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen.triggered.connect(self.open_project)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
+        self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
         self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
         self.ui.actionAdd_Data_Store.triggered.connect(self.add_data_store)
@@ -149,13 +152,12 @@ class ToolboxUI(QMainWindow):
     def init_project(self):
         """Initializes project at application start-up. Loads the last project that was open
         when app was closed or starts without a project if app is started for the first time.
-        TODO: Make this into a configurable setting (i.e. Start previous project?)
         """
+        if not self._config.getboolean("settings", "open_previous_project"):
+            return
         # Get path to previous project file from configuration file
-        project_file_path = self._config.get('settings', 'previous_project')
+        project_file_path = self._config.get("settings", "previous_project")
         if not project_file_path:
-            msg = "Path to previous project file not found in settings file"
-            self.ui.statusbar.showMessage(msg, 10000)
             return
         if not os.path.isfile(project_file_path):
             msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
@@ -501,6 +503,12 @@ class ToolboxUI(QMainWindow):
             return False
         return found_items[0]
 
+    @Slot(name="show_settings")
+    def show_settings(self):
+        """Show Settings widget."""
+        self.settings_form = SettingsWidget(self, self._config, self._project)
+        self.settings_form.show()
+
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
@@ -527,15 +535,55 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
 
+    def show_confirm_exit(self):
+        """Shows confirm exit message box.
+
+        Returns:
+            True if user clicks Yes or False if exit is cancelled
+        """
+        ex = self._config.getboolean("settings", "show_exit_prompt")
+        if ex:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Confirm exit")
+            msg.setText("Are you sure you want to exit Spine Toolbox?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()  # Show message box
+            if answer == QMessageBox.Yes:
+                # Update conf file according to checkbox status
+                if not chkbox.checkState():
+                    show_prompt = True
+                else:
+                    show_prompt = False
+                self._config.setboolean("settings", "show_exit_prompt", show_prompt)
+                return True
+            else:
+                return False
+        return True
+
     def closeEvent(self, event=None):
         """Method for handling application exit.
 
         Args:
              event (QEvent): PySide2 event
         """
+        # Show confirm exit message box
+        if not self.show_confirm_exit():
+            # Exit cancelled
+            if event:
+                event.ignore()
+            return
+        logging.debug("Bye bye")
+        # Save current project (if enabled in settings)
+        if not self._project:
+            self._config.set("settings", "previous_project", "")
+        else:
+            self._config.set("settings", "previous_project", self._project.path)
+        self._config.save()
         if event:
             event.accept()
-        logging.debug("Bye bye")
-        self._config.save()
         # noinspection PyArgumentList
         QApplication.quit()
