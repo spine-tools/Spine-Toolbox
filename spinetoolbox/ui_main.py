@@ -28,7 +28,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, QSettings
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from ui.mainwindow import Ui_MainWindow
@@ -62,6 +62,7 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
         self._project = None
@@ -85,6 +86,12 @@ class ToolboxUI(QMainWindow):
         self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
         self.init_project()
+        self.restore_ui()
+
+    def init_conf(self):
+        """Load settings from configuration file."""
+        self._config = ConfigurationParser(CONFIGURATION_FILE, defaults=SETTINGS)
+        self._config.load()
 
     # noinspection PyMethodMayBeStatic
     def set_debug_level(self, level):
@@ -99,11 +106,6 @@ class ToolboxUI(QMainWindow):
         else:
             logging.debug("Logging level: Error messages only")
             logging.getLogger().setLevel(level=logging.ERROR)
-
-    def init_conf(self):
-        """Load settings from configuration file."""
-        self._config = ConfigurationParser(CONFIGURATION_FILE, defaults=SETTINGS)
-        self._config.load()
 
     def connect_signals(self):
         """Connect signals."""
@@ -121,10 +123,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.add_view)
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Buttons
-        # self.ui.pushButton_add_data_store.clicked.connect(self.add_data_store)
-        # self.ui.pushButton_add_data_connection.clicked.connect(self.add_data_connection)
-        # self.ui.pushButton_add_tool.clicked.connect(self.add_tool)
-        # self.ui.pushButton_add_view.clicked.connect(self.add_view)
         self.ui.pushButton_add_data_store.clicked.connect(self.show_add_data_store_form)
         self.ui.pushButton_add_data_connection.clicked.connect(self.show_add_data_connection_form)
         self.ui.pushButton_add_tool.clicked.connect(self.show_add_tool_form)
@@ -138,23 +136,6 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.clicked.connect(self.activate_subwindow)
         self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
-
-    # noinspection PyMethodMayBeStatic
-    def init_models(self):
-        """Initialize data model for project contents."""
-        m = QStandardItemModel()
-        m.setHorizontalHeaderItem(0, QStandardItem("Contents"))
-        m.appendRow(QStandardItem("Data Stores"))
-        m.appendRow(QStandardItem("Data Connections"))
-        m.appendRow(QStandardItem("Tools"))
-        m.appendRow(QStandardItem("Views"))
-        return m
-
-    def clear_ui(self):
-        """Clean UI to make room for a new or opened project."""
-        subwindows = self.ui.mdiArea.subWindowList()
-        for subwindow in subwindows:
-            self.remove_sw(subwindow)
 
     @Slot(name="init_project")
     def init_project(self):
@@ -174,6 +155,35 @@ class ToolboxUI(QMainWindow):
         if not self.open_project(project_file_path):
             logging.error("Loading project file '{0}' failed".format(project_file_path))
         return
+
+    def restore_ui(self):
+        """Restore UI state from previous session."""
+        window_size = self.qsettings.value("mainWindow/windowSize")
+        window_pos = self.qsettings.value("mainWindow/windowPosition")
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
+        if window_size:
+            self.resize(window_size)
+        if window_pos:
+            self.move(window_pos)
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+
+    # noinspection PyMethodMayBeStatic
+    def init_models(self):
+        """Initialize data model for project contents."""
+        m = QStandardItemModel()
+        m.setHorizontalHeaderItem(0, QStandardItem("Contents"))
+        m.appendRow(QStandardItem("Data Stores"))
+        m.appendRow(QStandardItem("Data Connections"))
+        m.appendRow(QStandardItem("Tools"))
+        m.appendRow(QStandardItem("Views"))
+        return m
+
+    def clear_ui(self):
+        """Clean UI to make room for a new or opened project."""
+        subwindows = self.ui.mdiArea.subWindowList()
+        for subwindow in subwindows:
+            self.remove_sw(subwindow)
 
     @Slot(name="new_project")
     def new_project(self):
@@ -615,6 +625,12 @@ class ToolboxUI(QMainWindow):
         else:
             self._config.set("settings", "previous_project", self._project.path)
         self._config.save()
+        self.qsettings.setValue("mainWindow/windowSize", self.size())
+        self.qsettings.setValue("mainWindow/windowPosition", self.pos())
+        if self.windowState() == Qt.WindowMaximized:
+            self.qsettings.setValue("mainWindow/windowMaximized", True)
+        else:
+            self.qsettings.setValue("mainWindow/windowMaximized", False)
         if event:
             event.accept()
         # noinspection PyArgumentList
