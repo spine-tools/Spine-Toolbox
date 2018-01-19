@@ -24,6 +24,8 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
+import logging
+from PySide2.QtCore import Qt
 from config import DEFAULT_PROJECT_DIR
 
 
@@ -41,3 +43,29 @@ def project_dir(configs=None):
     else:
         return proj_dir
 
+
+def short_name_reserved(short_name, project_model):
+    """Check if folder name derived from the name of the given item is in use.
+
+    Args:
+        short_name (str): Item short name
+        project_model (QStandardItemModel): Project model containing items
+
+    Returns:
+        True if short name is taken, False if it is available.
+    """
+    # short_name = name.lower().replace(' ', '_')
+    # Traverse all items in project model
+    top_level_items = project_model.findItems('*', Qt.MatchWildcard, column=0)
+    for top_level_item in top_level_items:
+        if top_level_item.hasChildren():
+            n_children = top_level_item.rowCount()
+            for i in range(n_children):
+                child = top_level_item.child(i, 0)
+                child_name = child.data(Qt.UserRole).name
+                child_short_name = child.data(Qt.UserRole).short_name
+                if short_name == child_short_name:
+                    logging.error(
+                        "Item {0} short name matches new short name {1}".format(child_name, short_name))
+                    return True
+    return False

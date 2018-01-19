@@ -29,13 +29,17 @@ import os
 from PySide2.QtGui import QColor
 
 # General
-SPINE_TOOLBOX_VERSION = '0.0.3'
+SPINE_TOOLBOX_VERSION = '0.0.4'
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
 BLACK_COLOR = QColor('black')
-# SPINE GREEN HTML: #99cc33 RGB: 153, 204, 51, alpha channel: 255
-# SPINE BLUE HTML: #004ac2 RGB: 0, 74, 194, alpha channel: 255
+# SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
+# SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
+# Selected characters that are not allowed in folder names
+INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
+# "." is actually valid in a folder name but
+# this is to prevent creating folders like "...."
 
 # Application path, configuration file path and default project path
 if getattr(sys, 'frozen', False):

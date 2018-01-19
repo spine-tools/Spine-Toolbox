@@ -21,7 +21,7 @@
 
 # Resource object code
 #
-# Created: to tammi 18 13:06:34 2018
+# Created: pe tammi 19 13:20:15 2018
 #      by: The Resource Compiler for PySide2 (Qt v5.9.0)
 #
 # WARNING! All changes made in this file will be lost!

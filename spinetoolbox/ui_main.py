@@ -37,6 +37,10 @@ from widgets.about_widget import AboutWidget
 from widgets.context_menus import ProjectItemContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
+from widgets.add_data_store_widget import AddDataStoreWidget
+from widgets.add_data_connection_widget import AddDataConnectionWidget
+from widgets.add_tool_widget import AddToolWidget
+from widgets.add_view_widget import AddViewWidget
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
@@ -63,16 +67,16 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.project_item_model = self.init_models()
         self.ui.treeView_project.setModel(self.project_item_model)
-        self.ds_n = 0
-        self.dc_n = 0
-        self.tool_n = 0
-        self.view_n = 0
         # Widget and form references
         self.settings_form = None
         self.about_form = None
         self.data_store_form = None
         self.project_item_context_menu = None
         self.project_form = None
+        self.add_data_store_form = None
+        self.add_data_connection_form = None
+        self.add_tool_form = None
+        self.add_view_form = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # Init application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -117,10 +121,14 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.add_view)
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Buttons
-        self.ui.pushButton_add_data_store.clicked.connect(self.add_data_store)
-        self.ui.pushButton_add_data_connection.clicked.connect(self.add_data_connection)
-        self.ui.pushButton_add_tool.clicked.connect(self.add_tool)
-        self.ui.pushButton_add_view.clicked.connect(self.add_view)
+        # self.ui.pushButton_add_data_store.clicked.connect(self.add_data_store)
+        # self.ui.pushButton_add_data_connection.clicked.connect(self.add_data_connection)
+        # self.ui.pushButton_add_tool.clicked.connect(self.add_tool)
+        # self.ui.pushButton_add_view.clicked.connect(self.add_view)
+        self.ui.pushButton_add_data_store.clicked.connect(self.show_add_data_store_form)
+        self.ui.pushButton_add_data_connection.clicked.connect(self.show_add_data_connection_form)
+        self.ui.pushButton_add_tool.clicked.connect(self.show_add_tool_form)
+        self.ui.pushButton_add_view.clicked.connect(self.show_add_view_form)
         self.ui.pushButton_remove_all.clicked.connect(self.clear_ui)
         self.ui.pushButton_test1.clicked.connect(self.test1)
         self.ui.pushButton_test2.clicked.connect(self.test2)
@@ -364,60 +372,48 @@ class ToolboxUI(QMainWindow):
             self.ui.lineEdit_data.setText("")
             self.ui.lineEdit_test.setText("")
 
-    @Slot(name="add_data_store")
-    def add_data_store(self):
+    def add_data_store(self, name, description):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
         if not self._project:
             logging.debug("No project")
             return
-        self.ds_n += 1
-        name = "Data Store " + str(self.ds_n)
-        data_store = DataStore(name, "Data Store description", self._project)
+        data_store = DataStore(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
         self.project_refs.append(data_store)  # Save reference or signals don't stick
         self.add_item_to_model("Data Stores", name, data_store)
         sw.show()
 
-    @Slot(name="add_data_connection")
-    def add_data_connection(self):
+    def add_data_connection(self, name, description):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
         if not self._project:
             logging.debug("No project")
             return
-        self.dc_n += 1
-        name = "Data Connection " + str(self.dc_n)
-        data_connection = DataConnection(name, "Data Connection description", self._project)
+        data_connection = DataConnection(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
         self.project_refs.append(data_connection)  # Save reference or signals don't stick
         self.add_item_to_model("Data Connections", name, data_connection)
         sw.show()
 
-    @Slot(name="add_tool")
-    def add_tool(self):
+    def add_tool(self, name, description):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         if not self._project:
             logging.debug("No project")
             return
-        self.tool_n += 1
-        name = "Tool " + str(self.tool_n)
-        tool = Tool(name, "Tool description", self._project)
+        tool = Tool(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
         self.project_refs.append(tool)  # Save reference or signals don't stick
         self.add_item_to_model("Tools", name, tool)
         sw.show()
 
-    @Slot(name="add_view")
-    def add_view(self):
+    def add_view(self, name, description):
         """Add View as a QMdiSubwindow to QMdiArea."""
         if not self._project:
             logging.debug("No project")
             return
-        self.view_n += 1
-        name = "View " + str(self.view_n)
-        view = View("View " + str(self.view_n), "View description", self._project)
+        view = View(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
         self.project_refs.append(view)  # Save reference or signals don't stick
@@ -496,12 +492,48 @@ class ToolboxUI(QMainWindow):
         """
         found_items = self.project_item_model.findItems(name, match_flags, column=0)
         if len(found_items) == 0:
-            logging.error("Item '{0}' not found in project model".format(name))
-            return False
+            # logging.debug("Item '{0}' not found in project model".format(name))
+            return None
         if len(found_items) > 1:
             logging.error("More than one item with name '{0}' found".format(name))
-            return False
+            return None
         return found_items[0]
+
+    @Slot(name="show_add_data_store_form")
+    def show_add_data_store_form(self):
+        """Show add data store widget."""
+        if not self._project:
+            logging.debug("Create a project first")
+            return
+        self.add_data_store_form = AddDataStoreWidget(self)
+        self.add_data_store_form.show()
+
+    @Slot(name="show_add_data_connection_form")
+    def show_add_data_connection_form(self):
+        """Show add data connection widget."""
+        if not self._project:
+            logging.debug("Create a project first")
+            return
+        self.add_data_connection_form = AddDataConnectionWidget(self)
+        self.add_data_connection_form.show()
+
+    @Slot(name="show_add_tool_form")
+    def show_add_tool_form(self):
+        """Show add tool widget."""
+        if not self._project:
+            logging.debug("Create a project first")
+            return
+        self.add_tool_form = AddToolWidget(self)
+        self.add_tool_form.show()
+
+    @Slot(name="show_add_view_form")
+    def show_add_view_form(self):
+        """Show add view widget."""
+        if not self._project:
+            logging.debug("Create a project first")
+            return
+        self.add_view_form = AddViewWidget(self)
+        self.add_view_form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):
