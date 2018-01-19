@@ -80,3 +80,13 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-bottom: 0px;" \
                     "padding-right: 3px;" \
                     "padding-left: 3px;}"
+
+ICON_TOOLBAR_SS = "QToolBar{spacing: 6px;" \
+                     "background-color: qlineargradient(" \
+                          "x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #E0E0E0, stop: 1 #A3AFFF);" \
+                     "padding: 6px;}" \
+                     "QToolButton{background-color: white;" \
+                     "border-width: 1px;" \
+                     "border-style: inset;" \
+                     "border-color: darkslategray;" \
+                     "border-radius: 2px;}"

@@ -2,4 +2,11 @@
   <qresource prefix="symbols">
     <file>Spine_symbol.png</file>
   </qresource>
+  <qresource prefix="icons">
+    <file>remove_all.png</file>
+    <file>ds_icon.png</file>
+    <file>dc_icon.png</file>
+    <file>tool_icon.png</file>
+    <file>view_icon.png</file>
+  </qresource>
 </RCC>

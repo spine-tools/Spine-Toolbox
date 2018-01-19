@@ -29,7 +29,7 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Slot, QSettings
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
@@ -41,6 +41,7 @@ from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
+import widgets.toolbars
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
@@ -79,9 +80,19 @@ class ToolboxUI(QMainWindow):
         self.add_tool_form = None
         self.add_view_form = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
-        # Init application
+        # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
+        # Make and initialize toolbars
+        self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
+        # Make keyboard shortcuts
+        self.test1_action = QAction(self)
+        self.test1_action.setShortcut("F5")
+        self.addAction(self.test1_action)
+        self.test2_action = QAction(self)
+        self.test2_action.setShortcut("F6")
+        self.addAction(self.test2_action)
         self.init_conf()  # Load settings to memory
         self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
@@ -121,15 +132,11 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.add_data_connection)
         self.ui.actionAdd_Tool.triggered.connect(self.add_tool)
         self.ui.actionAdd_View.triggered.connect(self.add_view)
+        self.ui.actionItem_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
-        # Buttons
-        self.ui.pushButton_add_data_store.clicked.connect(self.show_add_data_store_form)
-        self.ui.pushButton_add_data_connection.clicked.connect(self.show_add_data_connection_form)
-        self.ui.pushButton_add_tool.clicked.connect(self.show_add_tool_form)
-        self.ui.pushButton_add_view.clicked.connect(self.show_add_view_form)
-        self.ui.pushButton_remove_all.clicked.connect(self.clear_ui)
-        self.ui.pushButton_test1.clicked.connect(self.test1)
-        self.ui.pushButton_test2.clicked.connect(self.test2)
+        # Keyboard shortcut actions
+        self.test1_action.triggered.connect(self.test1)
+        self.test2_action.triggered.connect(self.test2)
         # QMdiArea
         self.ui.mdiArea.subWindowActivated.connect(self.update_details_frame)
         # Project TreeView
@@ -160,11 +167,14 @@ class ToolboxUI(QMainWindow):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("mainWindow/windowSize")
         window_pos = self.qsettings.value("mainWindow/windowPosition")
+        window_state = self.qsettings.value("mainWindow/windowState")
         window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
+        if window_state:
+            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
 
@@ -241,7 +251,7 @@ class ToolboxUI(QMainWindow):
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
         # Setup models and views
-        self.setWindowTitle("Sceleton Titan    -- {} --".format(self._project.name))
+        self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         logging.debug("Loading project {0}".format(self._project.name))
         # Populate project model with items read from JSON file
         if not self._project.load(dicts['objects']):
@@ -627,6 +637,7 @@ class ToolboxUI(QMainWindow):
         self._config.save()
         self.qsettings.setValue("mainWindow/windowSize", self.size())
         self.qsettings.setValue("mainWindow/windowPosition", self.pos())
+        self.qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
         if self.windowState() == Qt.WindowMaximized:
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
