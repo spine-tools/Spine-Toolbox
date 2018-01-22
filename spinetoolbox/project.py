@@ -94,7 +94,6 @@ class SpineToolboxProject(MetaObject):
     def save(self):
         """Collect project information and objects
         into a dictionary and write to a JSON file."""
-        logging.debug("Saving to path: {0}".format(self.path))
         # Clear dictionary
         saved_dict = dict()  # This is written to JSON file
         project_dict = dict()  # Dictionary for storing project info
@@ -126,7 +125,7 @@ class SpineToolboxProject(MetaObject):
         # Write into JSON file
         with open(self.path, 'w') as fp:
             json.dump(saved_dict, fp, indent=4)
-        logging.debug("Saved {0} items".format(n))
+        logging.debug("{0} items saved".format(n))
 
     def load(self, item_dict):
         """Populate project item model with items loaded from project file.

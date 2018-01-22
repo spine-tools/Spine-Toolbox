@@ -56,23 +56,25 @@ SETTINGS = {"project_directory": "",
             "open_previous_project": "false",
             "previous_project": "",
             "show_exit_prompt": "false",
-            "logging_level": "2"}
+            "logging_level": "2",
+            "datetime": "true"}
 
 # Stylesheets
-STATUSBAR_SS = "QStatusBar{background-color: #EBEBE0; " \
-               "border-width: 1px;\n " \
-               "border-color: 'gray';\n " \
-               "border-style: groove;\n " \
-               "border-radius: 2px;\n}"
+STATUSBAR_SS = "QStatusBar{" \
+                    "background-color: #EBEBE0;" \
+                    "border-width: 1px;" \
+                    "border-color: 'gray';" \
+                    "border-style: groove;" \
+                    "border-radius: 2px;\n}"
 
 SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
-              "QLabel{color: white;}" \
-              "QCheckBox{color: white;}" \
-              "QGroupBox{border: 2px solid gray; " \
+                "QLabel{color: white;}" \
+                "QCheckBox{color: white;}" \
+                "QGroupBox{border: 2px solid gray; " \
                     "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #004AC2, stop: 1 #80B0FF);" \
                     "border-radius: 5px;" \
                     "margin-top: 0.5em;}" \
-              "QGroupBox:title{border-radius: 2px; " \
+                "QGroupBox:title{border-radius: 2px; " \
                     "background-color: ghostwhite;" \
                     "subcontrol-origin: margin;" \
                     "subcontrol-position: top center;" \
@@ -81,12 +83,14 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-right: 3px;" \
                     "padding-left: 3px;}"
 
-ICON_TOOLBAR_SS = "QToolBar{spacing: 6px;" \
-                     "background-color: qlineargradient(" \
-                          "x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #E0E0E0, stop: 1 #A3AFFF);" \
-                     "padding: 6px;}" \
-                     "QToolButton{background-color: white;" \
-                     "border-width: 1px;" \
-                     "border-style: inset;" \
-                     "border-color: darkslategray;" \
-                     "border-radius: 2px;}"
+ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
+                    "background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
+                    "padding: 3px;}" \
+                  "QToolButton{background-color: white;" \
+                    "border-width: 1px;" \
+                    "border-style: inset;" \
+                    "border-color: darkslategray;" \
+                    "border-radius: 2px;}" \
+                  "QLabel{color:black;}"
+
+EVENTLOG_SS = "QTextBrowser{background-color: black;}"

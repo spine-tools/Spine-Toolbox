@@ -25,6 +25,7 @@ General helper functions and classes.
 """
 
 import logging
+import datetime
 from PySide2.QtCore import Qt
 from config import DEFAULT_PROJECT_DIR
 
@@ -69,3 +70,13 @@ def short_name_reserved(short_name, project_model):
                         "Item {0} short name matches new short name {1}".format(child_name, short_name))
                     return True
     return False
+
+
+def get_datetime(configs):
+    """Returns date and time string for appending into Event Log messages."""
+    show_date = configs.getboolean("settings", "datetime")
+    if show_date:
+        t = datetime.datetime.now()
+        return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
+    else:
+        return ""

@@ -72,22 +72,20 @@ class SettingsWidget(QWidget):
     def read_settings(self):
         """Read current settings from config object and update UI to show them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
-        # previous_project = self._configs.get("settings", "previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
+        datetime = self._configs.getboolean("settings", "datetime")
         if open_previous_project:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
-        # else:
-        #     self.ui.checkBox_open_previous_project.setCheckState(Qt.Unchecked)
         if show_exit_prompt:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
-        # else:
-        #     self.ui.checkBox_open_previous_project.setCheckState(Qt.Unchecked)
         if logging_level == '2':
             self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
         else:
             self.ui.checkBox_debug_messages.setCheckState(Qt.Unchecked)
+        if datetime:
+            self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if not proj_dir:
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
@@ -104,9 +102,11 @@ class SettingsWidget(QWidget):
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
+        d = int(self.ui.checkBox_datetime.checkState())
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "logging_level", c)
+        self._configs.setboolean("settings", "datetime", d)
         # Set logging level
         self._parent.set_debug_level(c)
         # Update project settings

@@ -159,6 +159,16 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="checkBox_datetime">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, date and time string is appended into Event Log messages&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Show date and time in Event Log messages</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QLabel" name="label">
             <property name="text">
              <string>Project directory</string>

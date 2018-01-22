@@ -28,7 +28,8 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Slot, QSettings
+import datetime
+from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from ui.mainwindow import Ui_MainWindow
@@ -48,12 +49,18 @@ from tool import Tool
 from view import View
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
-from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS
-from helpers import project_dir
+from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, EVENTLOG_SS
+from helpers import project_dir, get_datetime
 
 
 class ToolboxUI(QMainWindow):
     """Class for application main GUI functions."""
+
+    # Custom signals
+    msg = Signal(str, name="msg")
+    msg_success = Signal(str, name="msg_success")
+    msg_error = Signal(str, name="msg_error")
+    msg_warning = Signal(str, name="msg_warning")
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -83,6 +90,7 @@ class ToolboxUI(QMainWindow):
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
+        self.ui.textBrowser_eventlog.setStyleSheet(EVENTLOG_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -120,6 +128,11 @@ class ToolboxUI(QMainWindow):
 
     def connect_signals(self):
         """Connect signals."""
+        # Event log signals
+        self.msg.connect(self.add_message)
+        self.msg_success.connect(self.add_success_message)
+        self.msg_error.connect(self.add_error_message)
+        self.msg_warning.connect(self.add_warning_message)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -132,7 +145,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.add_data_connection)
         self.ui.actionAdd_Tool.triggered.connect(self.add_tool)
         self.ui.actionAdd_View.triggered.connect(self.add_view)
-        self.ui.actionItem_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
+        self.ui.actionAdd_Item_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
+        self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
         self.test1_action.triggered.connect(self.test1)
@@ -160,6 +174,7 @@ class ToolboxUI(QMainWindow):
             self.ui.statusbar.showMessage(msg, 10000)
             return
         if not self.open_project(project_file_path):
+            self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
             logging.error("Loading project file '{0}' failed".format(project_file_path))
         return
 
@@ -192,8 +207,12 @@ class ToolboxUI(QMainWindow):
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
         subwindows = self.ui.mdiArea.subWindowList()
+        n = len(subwindows)
+        if n == 0:
+            return
         for subwindow in subwindows:
             self.remove_sw(subwindow)
+        self.msg.emit("All {0} items removed from project".format(n))
 
     @Slot(name="new_project")
     def new_project(self):
@@ -212,6 +231,8 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self._project = SpineToolboxProject(self, name, description, self._config, ext='.proj')
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        self.ui.textBrowser_eventlog.clear()
+        self.msg.emit("New project created")
         self.save_project()
 
     @Slot(name="open_project")
@@ -230,6 +251,7 @@ class ToolboxUI(QMainWindow):
             if load_path == '':  # Cancel button clicked
                 return False
         if not os.path.isfile(load_path):
+            self.msg_error.emit("File <b>{0}</b> not found".format(load_path))
             logging.debug("File not found: {0}".format(load_path))
             return False
         if not load_path.lower().endswith('.proj'):
@@ -252,23 +274,25 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
         # Setup models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
-        logging.debug("Loading project {0}".format(self._project.name))
+        # self.msg.emit("Loading project {0}".format(self._project.name))
         # Populate project model with items read from JSON file
         if not self._project.load(dicts['objects']):
+            self.msg_error.emit("Loading project items failed")
             logging.error("Loading project items failed")
             self.project_item_model = self.init_models()
             return False
         self.ui.treeView_project.expandAll()
-        # self.ui.treeView_project.resizeColumnToContents(0)
+        self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
     @Slot(name="save_project")
     def save_project(self):
         """Save project."""
         if not self._project:
-            logging.debug("No project open")
+            self.msg.emit("No project open")
             return
         self._project.save()
+        self.msg.emit("Project saved to <b>{0}</b>".format(self._project.path))
 
     @Slot(name="save_project_as")
     def save_project_as(self):
@@ -278,10 +302,10 @@ class ToolboxUI(QMainWindow):
                                                'Project (*.proj)')
         file_path = dir_path[0]
         if file_path == '':  # Cancel button clicked
-            logging.debug("Saving project Canceled")
             return
         file_name = os.path.split(file_path)[-1]
         if not file_name.lower().endswith('.proj'):
+            self.msg_warning.emit("Only *.proj files supported")
             logging.debug("Only *.proj files supported")
             return
         if not self._project:
@@ -345,26 +369,26 @@ class ToolboxUI(QMainWindow):
     @Slot(name="test1")
     def test1(self):
         sub_windows = self.ui.mdiArea.subWindowList()
-        logging.debug("Number of subwindows:{0}".format(len(sub_windows)))
+        self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
         top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
         for top_level_item in top_level_items:
-            logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
+            # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
             if top_level_item.hasChildren():
                 n_children = top_level_item.rowCount()
                 for i in range(n_children):
                     child = top_level_item.child(i, 0)
-                    logging.debug("{0}".format(child.data(Qt.DisplayRole)))
+                    self.msg.emit("{0}".format(child.data(Qt.DisplayRole)))
 
     @Slot(name="test2")
     def test2(self):
         n = len(self.project_refs)
-        logging.debug("Items in ref list: {0}".format(n))
+        self.msg.emit("Items in ref list: {0}".format(n))
         current_sub_window = self.ui.mdiArea.currentSubWindow()
         if not current_sub_window:
             return
         owner_name = current_sub_window.widget().owner()
         par = current_sub_window.widget().parent()
-        logging.debug("Parent of {0}:{1}".format(owner_name, par))
+        self.msg.emit("Parent of {0} is {1}".format(owner_name, par))
 
     @Slot("QMdiSubWindow", name="update_details_frame")
     def update_details_frame(self, window):
@@ -395,49 +419,53 @@ class ToolboxUI(QMainWindow):
     def add_data_store(self, name, description):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
         if not self._project:
-            logging.debug("No project")
+            self.msg.emit("No project open")
             return
         data_store = DataStore(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
         self.project_refs.append(data_store)  # Save reference or signals don't stick
         self.add_item_to_model("Data Stores", name, data_store)
+        self.msg.emit("Data Store <b>{0}</b> added to project".format(name))
         sw.show()
 
     def add_data_connection(self, name, description):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
         if not self._project:
-            logging.debug("No project")
+            self.msg.emit("No project open")
             return
         data_connection = DataConnection(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
         self.project_refs.append(data_connection)  # Save reference or signals don't stick
         self.add_item_to_model("Data Connections", name, data_connection)
+        self.msg.emit("Data Connection <b>{0}</b> added to project".format(name))
         sw.show()
 
     def add_tool(self, name, description):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         if not self._project:
-            logging.debug("No project")
+            logging.debug("No project open")
             return
         tool = Tool(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
         self.project_refs.append(tool)  # Save reference or signals don't stick
         self.add_item_to_model("Tools", name, tool)
+        self.msg.emit("Tool <b>{0}</b> added to project".format(name))
         sw.show()
 
     def add_view(self, name, description):
         """Add View as a QMdiSubwindow to QMdiArea."""
         if not self._project:
-            logging.debug("No project")
+            logging.debug("No project open")
             return
         view = View(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
         self.project_refs.append(view)  # Save reference or signals don't stick
         self.add_item_to_model("Views", name, view)
+        self.msg.emit("View <b>{0}</b> added to project".format(name))
         sw.show()
 
     def add_item_to_model(self, category, text, data):
@@ -493,12 +521,17 @@ class ToolboxUI(QMainWindow):
         ind = self.project_item_model.indexFromItem(item)
         # Remove item from project model
         if not self.project_item_model.removeRow(ind.row(), ind.parent()):
+            self.msg_error.emit("Failed to remove item <b>{0}</b>".format(item.name))
             logging.error("Failed to remove item: {0}".format(item.name))
         # Remove item data from reference list
         try:
             self.project_refs.remove(item_data)  # Note: remove() removes only the first occurrence in the list
         except ValueError:
+            self.msg_error.emit("Item '{0}' not found in reference list".format(item_data))
             logging.error("Item '{0}' not found in reference list".format(item_data))
+            return
+        self.msg.emit("Item <b>{0}</b> removed from project".format(name))
+        return
 
     def find_item(self, name, match_flags=Qt.MatchExactly):
         """Find item by name in project model (column 0)
@@ -518,6 +551,62 @@ class ToolboxUI(QMainWindow):
             logging.error("More than one item with name '{0}' found".format(name))
             return None
         return found_items[0]
+
+    @Slot(str, name="add_message")
+    def add_message(self, msg):
+        """Append regular message to Event Log.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        open_tag = "<span style='color:white;white-space: pre-wrap;'>"
+        date_str = get_datetime(self._config)
+        message = open_tag + date_str + msg + "</span>"
+        self.ui.textBrowser_eventlog.append(message)
+        # noinspection PyArgumentList
+        QApplication.processEvents()
+
+    @Slot(str, name="add_success_message")
+    def add_success_message(self, msg):
+        """Append message with green text color to Event Log.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        open_tag = "<span style='color:#00ff00;white-space: pre-wrap;'>"
+        date_str = get_datetime(self._config)
+        message = open_tag + date_str + msg + "</span>"
+        self.ui.textBrowser_eventlog.append(message)
+        # noinspection PyArgumentList
+        QApplication.processEvents()
+
+    @Slot(str, name="add_error_message")
+    def add_error_message(self, msg):
+        """Append message with red color to Event Log.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        open_tag = "<span style='color:#ff3333;white-space: pre-wrap;'>"
+        date_str = get_datetime(self._config)
+        message = open_tag + date_str + msg + "</span>"
+        self.ui.textBrowser_eventlog.append(message)
+        # noinspection PyArgumentList
+        QApplication.processEvents()
+
+    @Slot(str, name="add_warning_message")
+    def add_warning_message(self, msg):
+        """Append message with yellow (golden) color to Event Log.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        open_tag = "<span style='color:yellow;white-space: pre-wrap;'>"
+        date_str = get_datetime(self._config)
+        message = open_tag + date_str + msg + "</span>"
+        self.ui.textBrowser_eventlog.append(message)
+        # noinspection PyArgumentList
+        QApplication.processEvents()
 
     @Slot(name="show_add_data_store_form")
     def show_add_data_store_form(self):
