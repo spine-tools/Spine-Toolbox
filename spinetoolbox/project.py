@@ -91,14 +91,19 @@ class SpineToolboxProject(MetaObject):
         self.filename = new_filename
         self.path = os.path.join(project_dir(self._configs), self.filename)
 
-    def save(self):
+    def save(self, tool_def_paths):
         """Collect project information and objects
-        into a dictionary and write to a JSON file."""
+        into a dictionary and write to a JSON file.
+
+        Args:
+            tool_def_paths (list): List of paths to tool definition files
+        """
         # Clear dictionary
         saved_dict = dict()  # This is written to JSON file
         project_dict = dict()  # Dictionary for storing project info
         project_dict['name'] = self.name
         project_dict['description'] = self.description
+        project_dict['tool_candidates'] = tool_def_paths
         item_dict = dict()  # Dictionary for storing project items
         n = 0
         # Traverse all items in project model
@@ -195,3 +200,40 @@ class SpineToolboxProject(MetaObject):
             self._parent.add_item_to_model("Views", name, view)
             view_sw.show()
         return True
+
+    def load_tool(self, jsonfile):
+        """Create a Tool instance according to a tool definition file.
+
+        Args:
+            jsonfile (str): Path of the tool definition file
+
+        Returns:
+            Instance of a subclass if Tool
+        """
+        try:
+            with open(jsonfile, 'r') as fp:
+                try:
+                    definition = json.load(fp)
+                except ValueError:
+                    self._parent.msg_error.emit("Tool definition file not valid")
+                    logging.exception("Loading JSON data failed")
+                    return None
+        except FileNotFoundError:
+            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(jsonfile))
+            return None
+        try:
+            _type = definition['type'].lower()
+        except KeyError:
+            self._parent.msg_error.emit("No type defined in tool definition file")
+            return None
+        # Infer path from JSON file
+        path = os.path.dirname(jsonfile)  # TODO: What is this shit?
+        if _type == "gams":
+            return GAMSTool.load(path, definition, self._parent)  # Get rid of self._parent
+        # elif _type == "julia":
+        #     return JuliaTool.load(path, definition, self._parent)
+        # elif _type == 'executable':
+        #     return ExecutableTool.load(path, definition, self._parent)  # Get rid of self._parent
+        else:
+            self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_type))
+            return None

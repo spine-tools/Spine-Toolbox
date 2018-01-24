@@ -43,11 +43,11 @@ class DataConnection(MetaObject):
         super().__init__(name, description)
         self.item_type = "Data Connection"
         self._project = project
-        self._data = random.randint(1, 100)
+        self._data = list()
         self._widget = SubWindowWidget(name, self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
-        self._widget.set_data_label("Data:" + str(self._data))
+        self._widget.set_data_label("Data")
         self.connect_signals()
 
     def connect_signals(self):

@@ -28,7 +28,6 @@ import os
 import locale
 import logging
 import json
-import datetime
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem
@@ -51,6 +50,7 @@ from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, EVENTLOG_SS
 from helpers import project_dir, get_datetime
+from models import ToolCandidateModel
 
 
 class ToolboxUI(QMainWindow):
@@ -74,8 +74,11 @@ class ToolboxUI(QMainWindow):
         # Class variables
         self._config = None
         self._project = None
-        self.project_item_model = self.init_models()
+        self.project_item_model = None
+        self.tool_candidate_model = None
+        self.init_models()
         self.ui.treeView_project.setModel(self.project_item_model)
+        self.ui.listView_tools.setModel(self.tool_candidate_model)
         # Widget and form references
         self.settings_form = None
         self.about_form = None
@@ -157,6 +160,9 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.clicked.connect(self.activate_subwindow)
         self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
+        # Tools ListView
+        self.ui.toolButton_add_tool_candidate.clicked.connect(self.add_tool_candidate)
+        self.ui.toolButton_remove_tool_candidate.clicked.connect(self.remove_tool_candidate)
 
     @Slot(name="init_project")
     def init_project(self):
@@ -194,15 +200,49 @@ class ToolboxUI(QMainWindow):
             self.setWindowState(Qt.WindowMaximized)
 
     # noinspection PyMethodMayBeStatic
-    def init_models(self):
-        """Initialize data model for project contents."""
-        m = QStandardItemModel()
-        m.setHorizontalHeaderItem(0, QStandardItem("Contents"))
-        m.appendRow(QStandardItem("Data Stores"))
-        m.appendRow(QStandardItem("Data Connections"))
-        m.appendRow(QStandardItem("Tools"))
-        m.appendRow(QStandardItem("Views"))
-        return m
+    def init_models(self, tool_candidate_paths):
+        """Initialize application internal data models.
+
+        Args:
+            tool_candidate_paths (list): List of tool definition file paths used in this project
+        """
+        self.project_item_model = QStandardItemModel()
+        self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
+        self.project_item_model.appendRow(QStandardItem("Data Stores"))
+        self.project_item_model.appendRow(QStandardItem("Data Connections"))
+        self.project_item_model.appendRow(QStandardItem("Tools"))
+        self.project_item_model.appendRow(QStandardItem("Views"))
+        self.init_tool_candidates_model(tool_candidate_paths)
+
+    def init_tool_candidates_model(self, tool_candidate_paths):
+        """Initialize Tool candidates model.
+
+        Args:
+            tool_candidate_paths (list): List of tool definition file paths used in this project
+        """
+        self.tool_candidate_model = ToolCandidateModel()
+        n_tools = 0
+        logging.debug("Initializing Tool model")
+        self.msg.emit("Loading Tools Candidates...")
+        for path in tool_candidate_paths:
+            if path == '' or not path:
+                continue
+            # Create candidate into project
+            tool_cand = self._project.load_tool(path)
+            n_tools += 1
+            if not tool_cand:
+                self.msg_error.emit("Failed to load Tool candidate from path <b>{0}</b>".format(path))
+                continue
+            # Add tool definition file path to tool instance variable
+            tool_cand.set_def_path(path)
+            # Insert tool into model
+            self.tool_candidate_model.insertRow(tool_cand)
+            self.msg.emit("Tool candidate <b>{0}</b> ready".format(tool_cand.name), 0)
+        # Set ToolModel to available Tools view
+        self.ui.listView_tools.setModel(self.tool_candidate_model)
+        # Note: If ToolCandidateModel signals are in use, they must be reconnected here.
+        if n_tools == 0:
+            self.msg_warning.emit("Project has no tool candidates")
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -243,6 +283,7 @@ class ToolboxUI(QMainWindow):
             load_path (str): If not None, this method is used to load the
             previously opened project at start-up
         """
+        tool_candidate_paths = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config),
@@ -270,16 +311,18 @@ class ToolboxUI(QMainWindow):
         project_dict = dicts['project']
         proj_name = project_dict['name']
         proj_desc = project_dict['description']
+        try:
+            tool_candidate_paths = project_dict['tool_candidates']
+        except KeyError:
+            logging.debug("tool_candidates keyword not found in project file")
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
-        # Setup models and views
+        # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
-        # self.msg.emit("Loading project {0}".format(self._project.name))
         # Populate project model with items read from JSON file
+        self.init_models(tool_candidate_paths)
         if not self._project.load(dicts['objects']):
             self.msg_error.emit("Loading project items failed")
-            logging.error("Loading project items failed")
-            self.project_item_model = self.init_models()
             return False
         self.ui.treeView_project.expandAll()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
@@ -291,7 +334,12 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("No project open")
             return
-        self._project.save()
+        # Put project's tool candidate definition files into a list
+        tool_candidates = list()
+        for i in range(self.tool_candidate_model.rowCount()):
+            if i > 0:
+                tool_candidates.append(self.tool_candidate_model.tool(i).get_def_path())
+        self._project.save(tool_candidates)
         self.msg.emit("Project saved to <b>{0}</b>".format(self._project.path))
 
     @Slot(name="save_project_as")
@@ -454,6 +502,25 @@ class ToolboxUI(QMainWindow):
         self.add_item_to_model("Tools", name, tool)
         self.msg.emit("Tool <b>{0}</b> added to project".format(name))
         sw.show()
+
+    @Slot(name="add_tool_candidate")
+    def add_tool_candidate(self):
+        """Add a possible tool to project, which can be added to a Tool item."""
+        if not self._project:
+            logging.debug("No project open")
+            return
+        # Select Tool definition file
+
+
+    @Slot(name="remove_tool_candidate")
+    def remove_tool_candidate(self):
+        """Remove tool candidate from project. This tool should be removed
+        from all Tool items that reference it as well."""
+        if not self._project:
+            logging.debug("No project open")
+            return
+        # Get selected item from listview_tools. Return if nothing selected.
+
 
     def add_view(self, name, description):
         """Add View as a QMdiSubwindow to QMdiArea."""

@@ -38,8 +38,8 @@ BLACK_COLOR = QColor('black')
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
 # Selected characters that are not allowed in folder names
 INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
-# "." is actually valid in a folder name but
-# this is to prevent creating folders like "...."
+# "." is actually valid in a folder name but this is
+# to prevent the user from creating folders like /..../
 
 # Application path, configuration file path and default project path
 if getattr(sys, 'frozen', False):
