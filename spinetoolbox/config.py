@@ -29,7 +29,7 @@ import os
 from PySide2.QtGui import QColor
 
 # General
-SPINE_TOOLBOX_VERSION = '0.0.4'
+SPINE_TOOLBOX_VERSION = "0.0.5"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -42,14 +42,27 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # to prevent the user from creating folders like /..../
 
 # Application path, configuration file path and default project path
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, 'settings.conf'))
-    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, 'projects'))
+    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
+    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, 'conf', 'settings.conf'))
-    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, 'projects'))
+    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
+    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
+
+# GAMS
+if not sys.platform == "win32":
+    GAMS_EXECUTABLE = "gams"
+    GAMSIDE_EXECUTABLE = "gamside"
+else:
+    GAMS_EXECUTABLE = "gams.exe"
+    GAMSIDE_EXECUTABLE = "gamside.exe"
+
+# Required and optional keywords for Tool candidate definition files
+REQUIRED_KEYS = ['name', 'description', 'includes']
+OPTIONAL_KEYS = ['short_name', 'inputfiles', 'opt_inputfiles', 'outputfiles', 'cmdline_args']
+LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'opt_inputfiles', 'outputfiles']  # These should be lists
 
 # Default settings
 SETTINGS = {"project_directory": "",
@@ -57,9 +70,11 @@ SETTINGS = {"project_directory": "",
             "previous_project": "",
             "show_exit_prompt": "false",
             "logging_level": "2",
-            "datetime": "true"}
+            "datetime": "true",
+            "gams_path": ""}
 
 # Stylesheets
+# TODO: Check necessity of extra hyphens in 'gray'
 STATUSBAR_SS = "QStatusBar{" \
                     "background-color: #EBEBE0;" \
                     "border-width: 1px;" \

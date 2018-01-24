@@ -28,42 +28,39 @@ import os.path
 import logging
 from collections import OrderedDict
 from metaobject import MetaObject
-from config import GAMS_EXECUTABLE, CONFIGURATION_FILE
+from config import GAMS_EXECUTABLE, REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 
 
 class ToolCandidate(MetaObject):
-    """Super class for different tool candidates."""
+    """Super class for various tool candidates.
 
-    def __init__(self, name, description, path, files,
-                 datafiles=None, datafiles_opt=None,
-                 outfiles=None, short_name=None,
-                 logfile=None, cmdline_args=None):
-        """Class constructor.
-
-        Args:
-            name (str): Name of the tool
-            description (str): Short description of the tool
-            path (str): Path to tool
-            files (str): List of files belonging to the tool (relative to 'path')
-            datafiles (list, optional): List of required data files
-            datafiles_opt (list, optional): List of optional data files (wildcards may be used)
-            outfiles (list, optional): List of output files (wildcards may be used)
-            short_name (str, optional): Short name for the tool
-            logfile (str, optional): Log file name (relative to 'path')
-            cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
-        """
+    Attributes:
+        name (str): Name of the tool
+        description (str): Short description of the tool
+        path (str): Path to tool
+        includes (str): List of files belonging to the tool (relative to 'path')
+        inputfiles (list): List of required data files
+        opt_inputfiles (list, optional): List of optional data files (wildcards may be used)
+        outputfiles (list, optional): List of output files (wildcards may be used)
+        logfile (str, optional): Log file name (relative to 'path')
+        cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
+    """
+    def __init__(self, name, description, path, includes,
+                 inputfiles=None, opt_inputfiles=None,
+                 outputfiles=None, logfile=None, cmdline_args=None):
+        """Class constructor."""
         super().__init__(name, description)
         if not os.path.exists(path):
             pass  # TODO: Do something here
         else:
             self.path = path
-        self.files = files
+        self.includes = includes
         self.cmdline_args = cmdline_args
-        self.datafiles = set(datafiles) if datafiles else set()
-        self.datafiles_opt = set(datafiles_opt) if datafiles_opt else set()
-        self.outfiles = set(outfiles) if outfiles else set()
+        self.inputfiles = set(inputfiles) if inputfiles else set()
+        self.opt_inputfiles = set(opt_inputfiles) if opt_inputfiles else set()
+        self.outputfiles = set(outputfiles) if outputfiles else set()
         self.return_codes = {}
-        self.def_file_path = ''  # Tool definition file path (JSON)
+        self.def_file_path = ''  # JSON tool definition file path
 
     def set_return_code(self, code, description):
         """Set a return code and associated text description for the tool.
@@ -86,6 +83,17 @@ class ToolCandidate(MetaObject):
         """Returns tool definition file path."""
         return self.def_file_path
 
+    def create_instance(self, ui, setup_cmdline_args, tool_output_dir, setup_name):
+        """Create an instance of the tool.
+
+        Args:
+            ui (TitanUI): Titan GUI instance
+            setup_cmdline_args (str): Extra command line arguments
+            tool_output_dir (str): Output directory for tool
+            setup_name (str): Short name of Setup that calls this method
+        """
+        return ToolInstance(self, ui, tool_output_dir, setup_name)
+
     def append_cmdline_args(self, command, extra_cmdline_args):
         """Append command line arguments to a command.
 
@@ -104,47 +112,33 @@ class ToolCandidate(MetaObject):
         return command
 
     @staticmethod
-    def check_definition(data, ui, required=None, optional=None, list_required=None):
-        """Check a dict containing tool definition.
+    def check_definition(data, ui):
+        """Check that a tool condidate definition contains
+        the required keys and that it is in correct format.
 
         Args:
-            data (dict): Dictionary of tool definitions
-            ui (TitanUI): Titan GUI instance
-            required (list): required keys
-            optional  (list): optional keys
-            list_required (list): keys that need to be lists
+            data (dict): Tool candidate definition
+            ui (ToolboxUI): Spine Toolbox QMainWindow instance
 
         Returns:
-            dict or None if there was a problem in the tool definition file
+            Dictionary or None if there was a problem in the tool definition.
         """
-        # Required and optional keys in definition file
-        if required is None:
-            required = REQUIRED_KEYS
-        if optional is None:
-            optional = OPTIONAL_KEYS
-        if list_required is None:
-            list_required = LIST_REQUIRED_KEYS
-        kwargs = {}
-        for p in required + optional:
+        kwargs = dict()
+        for p in REQUIRED_KEYS + OPTIONAL_KEYS:
             try:
                 kwargs[p] = data[p]
             except KeyError:
-                if p in required:
-                    ui.add_msg_signal.emit(
-                        "Required keyword '{0}' missing".format(p), 2)
-                    logging.error("Required keyword '{0}' missing".format(p))
+                if p in REQUIRED_KEYS:
+                    ui.msg_error.emit("Required keyword '{0}' missing".format(p))
                     return None
                 else:
                     # logging.info("Optional keyword '{0}' missing".format(p))
                     pass
-            # Check that some variables are lists
-            if p in list_required:
+            # Check that some values are lists
+            if p in LIST_REQUIRED_KEYS:
                 try:
                     if not isinstance(data[p], list):
-                        ui.add_msg_signal.emit(
-                            "Keyword '{0}' value must be a list".format(p), 2)
-                        logging.error(
-                            "Keyword '{0}' value must be a list".format(p))
+                        ui.msg_error.emit("Keyword '{0}' value must be a list".format(p), 2)
                         return None
                 except KeyError:
                     pass
@@ -152,32 +146,31 @@ class ToolCandidate(MetaObject):
 
 
 class GAMSTool(ToolCandidate):
-    """Class for GAMS Tools."""
+    """Class for GAMS tool candidates.
 
-    def __init__(self, name, description, path, files,
-                 datafiles=None, datafiles_opt=None, outfiles=None,
-                 short_name=None, cmdline_args=None):
-        """Class constructor.
+    Attributes:
+        name (str): GAMS Tool name
+        description (str): GAMS Tool description
+        path (str): Path (#TODO: to model main program? Check this)
+        includes (str): List of files belonging to the tool (relative to 'path')
+                     First file in the list is the main GAMS program.
+        inputfiles (list): List of required data files
+        opt_inputfiles (list, optional): List of optional data files (wildcards may be used)
+        outputfiles (list, optional): List of output files (wildcards may be used)
+        cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
+    """
 
-        Args:
-            name (str): GAMS Tool name
-            description (str): GAMS Tool description
-            path (str): Path
-            files (str): List of files belonging to the tool (relative to 'path')
-                         First file in the list is the main GAMS program.
-            datafiles (list, optional): List of required data files
-            datafiles_opt (list, optional): List of optional data files (wildcards may be used)
-            outfiles (list, optional): List of output files (wildcards may be used)
-            short_name (str, optional): Short name for the GAMS tool
-            cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
-        """
-        super().__init__(name, description, path, files,
-                         datafiles, datafiles_opt, outfiles, short_name,
-                         cmdline_args=cmdline_args)
-        self.main_prgm = files[0]
+    def __init__(self, name, description, path, includes,
+                 inputfiles=None, opt_inputfiles=None,
+                 outputfiles=None, cmdline_args=None):
+        """Class constructor."""
+        super().__init__(name, description, path, includes,
+                         inputfiles, opt_inputfiles, outputfiles,
+                         cmdline_args)
+        self.main_prgm = includes[0]
         # Add .lst file to list of output files
         self.lst_file = os.path.splitext(self.main_prgm)[0] + '.lst'
-        self.outfiles.add(self.lst_file)
+        self.outputfiles.add(self.lst_file)
         # Split main_prgm to main_dir and main_prgm
         # because GAMS needs to run in the directory of the main program
         self.main_dir, self.main_prgm = os.path.split(self.main_prgm)
@@ -199,10 +192,11 @@ class GAMSTool(ToolCandidate):
         }
 
     def __repr__(self):
+        """Remove this if not necessary."""
         return "GAMSTool('{}')".format(self.name)
 
     def update_gams_options(self, key, value):
-        """Update GAMS command line options. 'cerr and 'logoption' keywords supported.
+        """Update GAMS command line options. Only 'cerr and 'logoption' keywords supported.
 
         Args:
             key: Option name
@@ -216,21 +210,24 @@ class GAMSTool(ToolCandidate):
         else:
             logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
 
-    def create_instance(self, ui, setup_cmdline_args, tool_output_dir, setup_name, configs):
-        """Create an instance of the GAMS model
+    def create_instance(self, ui, extra_cmdline_args, tool_output_dir, tool_name, configs):
+        """Create an instance of the GAMS Tool.
+
+        TODO: This should probably be done by Tool class of Spine Toolbox.
 
         Args:
             ui (TitanUI): Titan GUI window
-            setup_cmdline_args (str): Extra Setup command line arguments
+            extra_cmdline_args (str): Extra command line arguments.
+                In addition to the ones defined in tool definition file.
             tool_output_dir (str): Tool output directory
-            setup_name (str): Short name of Setup that owns this Tool
+            tool_name (str): Short name of Tool that owns this Tool candidate!!!
             configs: (ConfigurationParser): Application configurations
         """
-        # Let Tool class create the ToolInstance
-        instance = super().create_instance(ui, setup_cmdline_args, tool_output_dir, setup_name)
+        # Let ToolCandidate class create the ToolInstance. TODO: Do this in Tool class?
+        instance = super().create_instance(ui, extra_cmdline_args, tool_output_dir, tool_name)
         # Use gams.exe according to the selected GAMS directory in settings
         # Read needed settings from config file
-        gams_path = configs.get('general', 'gams_path')
+        gams_path = configs.get('settings', 'gams_path')
         logoption_value = configs.get('settings', 'logoption')
         cerr_value = configs.get('settings', 'cerr')
         gams_exe_path = GAMS_EXECUTABLE
