@@ -20,14 +20,15 @@ Each option is presented below.
 
 #### Installing PySide2 for Anaconda & Miniconda Python (3.5+)
 
-PySide2 for Qt 5.6.2 is available on conda-forge channel. You need to 
-add this channel to your `conda` like this,
+PySide2 for Qt 5.6.2 is available on the conda-forge channel. You can install all requirements by running
 
-    conda config --add channels conda-forge
+    conda install --channel conda-forge --file requirements.txt
 
-Now you can install PySide2 with
+in the Spine Toolbox root folder.
 
-    conda install pyside2
+Alternatively, create a separate environment for the Toolbox with 
+
+	conda create --name spinetoolbox --channel conda-forge --file requirements.txt
 
 #### Installing PySide2 on a 'clean' Python (3.5+)
 
