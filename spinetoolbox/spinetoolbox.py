@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -45,6 +45,7 @@ def main(argv):
     # Enter main event loop and wait until exit() is called
     return_code = app.exec_()
     return return_code
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))

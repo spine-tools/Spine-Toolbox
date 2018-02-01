@@ -18,21 +18,21 @@
 #############################################################################
 
 """
-QWidget that is used as an internal widget for a QMdiSubWindow.
+QWidget that is used as an internal widget for a Tool QMdiSubWindow.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-:date:   15.12.2017
+:date:   31.1.2018
 """
 
 from PySide2.QtWidgets import QWidget
-from ui.subwindow import Ui_Form
+from ui.subwindow_tool import Ui_Form
 
 
-class SubWindowWidget(QWidget):
+class ToolSubWindowWidget(QWidget):
     """Class constructor.
 
     Attributes:
-        item_type (str): Internal widget object type (e.g. 'Data Store')
+        item_type (str): Internal widget object type (should always be 'Tool')
     """
     def __init__(self, owner, item_type):
         """ Initialize class."""
@@ -41,7 +41,7 @@ class SubWindowWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'Data Store 1', or 'GAMS MODEL A')
+        self._owner = owner  # Name of object that owns this object (e.g. 'Tool 1')
 
     def set_owner(self, owner):
         """Set owner of this SubWindowWidget.
@@ -55,18 +55,6 @@ class SubWindowWidget(QWidget):
         """Return owner of this SubWindowWidget."""
         return self._owner
 
-    def set_type_label(self, txt):
-        """Set new text for the type label.
-
-        Args:
-            txt (str): Text to display in the QLabel
-        """
-        self.ui.label_type.setText(txt)
-
-    def type_label(self):
-        """Return type label text."""
-        return self.ui.label_type.text()
-
     def set_name_label(self, txt):
         """Set new text for the name label.
 
@@ -78,18 +66,6 @@ class SubWindowWidget(QWidget):
     def name_label(self):
         """Return name label text."""
         return self.ui.label_name.text()
-
-    def set_data_label(self, txt):
-        """Set new text for the data label.
-
-        Args:
-            txt (str): Text to display in the QLabel
-        """
-        self.ui.label_data.setText(txt)
-
-    def data_label(self):
-        """Return data label text."""
-        return self.ui.label_data.text()
 
     def closeEvent(self, event):
         """Find QMdiSubWindow that initiated this closeEvent. Hide QMdiSubWindow

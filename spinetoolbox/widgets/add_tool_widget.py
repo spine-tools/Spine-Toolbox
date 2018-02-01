@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -42,6 +42,7 @@ class AddToolWidget(QWidget):
         """Initialize class."""
         super().__init__(f=Qt.Window)
         self._parent = parent  # QWidget parent
+        # self._tool_model = tool_model
         #  Set up the user interface from Designer.
         self.ui = ui.add_tool.Ui_Form()
         self.ui.setupUi(self)
@@ -54,8 +55,10 @@ class AddToolWidget(QWidget):
         # Class attributes
         self.name = ''
         self.description = ''
-        self.connect_signals()
+        # Init
+        self.ui.comboBox_tool.setModel(self._parent.tool_candidate_model)
         self.ui.lineEdit_name.setFocus()
+        self.connect_signals()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -64,6 +67,26 @@ class AddToolWidget(QWidget):
         self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        self.ui.comboBox_tool.currentIndexChanged.connect(self.update_args)
+
+    @Slot(int, name='update_args')
+    def update_args(self, row):
+        """Show Tool candidate command line arguments in text input.
+
+        Args:
+            row (int): Selected row number
+        """
+        if row == 0:
+            # No Tool selected
+            self.ui.lineEdit_tool_args.setText("")
+            return
+        selected_tool = self._parent.tool_candidate_model.tool(row)
+        args = selected_tool.cmdline_args
+        if not args:
+            # Tool cmdline_args is None if the line does not exist in Tool definition file
+            args = ''
+        self.ui.lineEdit_tool_args.setText("{0}".format(args))
+        return
 
     @Slot(name='name_changed')
     def name_changed(self):
@@ -82,6 +105,9 @@ class AddToolWidget(QWidget):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
+        if not self.name:  # No name given
+            self.statusbar.showMessage("Name missing", 3000)
+            return
         # Check for invalid characters for a folder name
         if any((True for x in self.name if x in INVALID_CHARS)):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
@@ -104,8 +130,14 @@ class AddToolWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        logging.debug("Adding Tool '{0}'".format(self.name))
-        self._parent.add_tool(self.name, self.description)
+        selected_row = self.ui.comboBox_tool.currentIndex()
+        if selected_row == 0:
+            logging.debug("Selected row 0 (no tool)")
+            selected_tool = None
+        else:
+            selected_tool = self._parent.tool_candidate_model.tool(selected_row)
+            logging.debug("Adding Tool '{0}' with tool {1}".format(self.name, selected_tool.name))
+        self._parent.add_tool(self.name, self.description, selected_tool)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

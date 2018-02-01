@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #

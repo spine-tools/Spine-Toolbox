@@ -3,7 +3,7 @@
 
 ECHO.
 ECHO ^<Script for Building Spine Toolbox GUI^>
-ECHO Copyright (C) ^<2016-2017^>  ^<VTT Technical Research Centre of Finland^>
+ECHO Copyright (C) ^<2017-2018^>  ^<VTT Technical Research Centre of Finland^>
 ECHO This program comes with ABSOLUTELY NO WARRANTY; for details see 'about'.
 ECHO box in the application. This is free software, and you are welcome to 
 ECHO redistribute it under certain conditions; See files COPYING and 
@@ -38,6 +38,11 @@ ECHO building subwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/subwindow.ui -o ../spinetoolbox/ui/subwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow.py.o > ..\spinetoolbox\ui\subwindow.py
 del ..\spinetoolbox\ui\subwindow.py.o
+
+ECHO building subwindow_tool.py
+CALL pyside2-uic ../spinetoolbox/ui/subwindow_tool.ui -o ../spinetoolbox/ui/subwindow_tool.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow_tool.py.o > ..\spinetoolbox\ui\subwindow_tool.py
+del ..\spinetoolbox\ui\subwindow_tool.py.o
 
 ECHO building project_form.py
 CALL pyside2-uic ../spinetoolbox/ui/project_form.ui -o ../spinetoolbox/ui/project_form.py.o
@@ -82,6 +87,7 @@ CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\about.ui
 CALL append_license_xml ..\spinetoolbox\ui\subwindow.ui
+CALL append_license_xml ..\spinetoolbox\ui\subwindow_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_data_store.ui
@@ -94,6 +100,7 @@ CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
 CALL append_license_py ..\spinetoolbox\ui\about.py
 CALL append_license_py ..\spinetoolbox\ui\subwindow.py
+CALL append_license_py ..\spinetoolbox\ui\subwindow_tool.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
 CALL append_license_py ..\spinetoolbox\ui\add_data_store.py

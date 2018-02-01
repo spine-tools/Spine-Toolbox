@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -26,7 +26,7 @@ Module for tool class.
 
 import logging
 from metaobject import MetaObject
-from widgets.subwindow_widget import SubWindowWidget
+from widgets.sw_tool_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot
 
 
@@ -37,36 +37,60 @@ class Tool(MetaObject):
         name (str): Object name
         description (str): Object description
         project (SpineToolboxProject): Project
+        tool_candidate (ToolCandidate): Tool of this Tool
     """
-    def __init__(self, name, description, project):
+    def __init__(self, name, description, project, tool_candidate):
         super().__init__(name, description)
         self.item_type = "Tool"
         self._project = project
-        self._data = "GAMS Tool"
-        self._widget = SubWindowWidget(name, self.item_type)
-        self._widget.set_type_label(self.item_type)
+        self._widget = ToolSubWindowWidget(name, self.item_type)
         self._widget.set_name_label(name)
-        self._widget.set_data_label(self._data)
+        self._tool = self.set_tool(tool_candidate)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this tool's signals to slots."""
-        self._widget.ui.pushButton_edit.clicked.connect(self.edit_clicked)
+        self._widget.ui.pushButton_details.clicked.connect(self.show_details)
+        self._widget.ui.pushButton_execute.clicked.connect(self.execute)
+        self._widget.ui.pushButton_x.clicked.connect(self.remove_tool)
 
-    @Slot(name='edit_clicked')
-    def edit_clicked(self):
-        """Edit button clicked."""
-        logging.debug(self.name + " - " + str(self._data))
+    @Slot(name='show_details')
+    def show_details(self):
+        """Details button clicked."""
+        logging.debug(self.name + " - Tool: " + str(self._tool))
+
+    @Slot(name='execute')
+    def execute(self):
+        """Execute button clicked."""
+        logging.debug("Executing: {0}".format(self.name))
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    def set_data(self, d):
-        """Set data and update widgets representation of data."""
-        self._data = d
-        self._widget.set_data_label("Data:" + str(self._data))
+    def tool(self):
+        """Return Tool candidate."""
+        return self._tool
 
-    def get_data(self):
-        """Returns data of object."""
-        return self._data
+    @Slot(name='remove_tool')
+    def remove_tool(self):
+        """Remove Tool from this Tool."""
+        self._tool = self.set_tool(None)
+
+    def set_tool(self, tool_candidate):
+        """Set tool candidate for this Tool. Remove tool candidate by giving None as argument.
+
+        Args:
+            tool_candidate (ToolCandidate): Candidate for this Tool. None removes the candidate.
+
+        Returns:
+            ToolCandidate or None if no Tool Candidate set for this Tool.
+        """
+        if not tool_candidate:
+            self._widget.ui.lineEdit_tool.setText("")
+            self._widget.ui.lineEdit_tool_args.setText("")
+            return None
+        else:
+            self._widget.ui.lineEdit_tool.setText(tool_candidate.name)
+            self._widget.ui.lineEdit_tool_args.setText(tool_candidate.cmdline_args)
+            return tool_candidate

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -167,6 +167,12 @@
          <property name="enabled">
           <bool>false</bool>
          </property>
+         <property name="cursor">
+          <cursorShape>ArrowCursor</cursorShape>
+         </property>
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool command line arguments&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
@@ -310,6 +316,8 @@
  <tabstops>
   <tabstop>lineEdit_name</tabstop>
   <tabstop>lineEdit_description</tabstop>
+  <tabstop>comboBox_tool</tabstop>
+  <tabstop>lineEdit_tool_args</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>

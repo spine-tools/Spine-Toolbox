@@ -9,7 +9,7 @@ setlocal
 set myvar=0
 echo Searching for license from file %1
 REM If the string is found tmpFile contains the name of the file
-FINDSTR /M /C:"Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland" %1 > tmpFile
+FINDSTR /M /C:"Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland" %1 > tmpFile
 set /p myvar=<tmpFile
 del tmpFile
 if "%myvar%"=="%1" (goto foundit) else (goto notfound)
@@ -30,7 +30,7 @@ TYPE %1 | FIND /V /I "<?xml version=""1.0"" encoding=""utf-8""?>" > tmp.ui
 echo ^<?xml version="1.0" encoding="utf-8"?^>
 echo ^<!--
 echo #############################################################################
-echo # Copyright ^(C^) 2016 - 2017 VTT Technical Research Centre of Finland
+echo # Copyright ^(C^) 2017 - 2018 VTT Technical Research Centre of Finland
 echo #
 echo # This file is part of Spine Toolbox.
 echo #

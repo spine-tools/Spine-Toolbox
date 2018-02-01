@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -78,6 +78,8 @@ class Ui_Form(object):
         self.horizontalLayout.addWidget(self.label)
         self.lineEdit_tool_args = QtWidgets.QLineEdit(Form)
         self.lineEdit_tool_args.setEnabled(False)
+        self.lineEdit_tool_args.setCursor(QtCore.Qt.ArrowCursor)
+        self.lineEdit_tool_args.setFocusPolicy(QtCore.Qt.NoFocus)
         self.lineEdit_tool_args.setReadOnly(True)
         self.lineEdit_tool_args.setObjectName("lineEdit_tool_args")
         self.horizontalLayout.addWidget(self.lineEdit_tool_args)
@@ -126,7 +128,9 @@ class Ui_Form(object):
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
         Form.setTabOrder(self.lineEdit_name, self.lineEdit_description)
-        Form.setTabOrder(self.lineEdit_description, self.pushButton_ok)
+        Form.setTabOrder(self.lineEdit_description, self.comboBox_tool)
+        Form.setTabOrder(self.comboBox_tool, self.lineEdit_tool_args)
+        Form.setTabOrder(self.lineEdit_tool_args, self.pushButton_ok)
         Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
 
     def retranslateUi(self, Form):

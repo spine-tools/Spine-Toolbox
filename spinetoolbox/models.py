@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -26,7 +26,6 @@ Note: These are Spine Toolbox internal data models.
 :date:   23.1.2018
 """
 
-import logging
 from PySide2.QtCore import Qt, QAbstractListModel, QModelIndex
 
 
@@ -73,11 +72,11 @@ class ToolCandidateModel(QAbstractListModel):
             else:
                 toolname = self._tools[row].name
                 return toolname
-        # elif role == Qt.ToolTipRole:
-        #     if row == 0 or row >= self.rowCount():
-        #         return ""
-        #     else:
-        #         return self._tools[row].def_file_path
+        elif role == Qt.ToolTipRole:
+            if row == 0 or row >= self.rowCount():
+                return ""
+            else:
+                return self._tools[row].def_file_path
 
     def flags(self, index):
         """Returns enabled flags for the given index.
@@ -147,4 +146,4 @@ class ToolCandidateModel(QAbstractListModel):
             else:
                 if name.lower() == tool.name.lower():
                     return tool
-        return False
+        return None

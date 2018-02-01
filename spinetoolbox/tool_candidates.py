@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -35,6 +35,7 @@ class ToolCandidate(MetaObject):
     """Super class for various tool candidates.
 
     Attributes:
+        parent (ToolBoxUI): QMainWindow instance
         name (str): Name of the tool
         description (str): Short description of the tool
         path (str): Path to tool
@@ -45,13 +46,14 @@ class ToolCandidate(MetaObject):
         logfile (str, optional): Log file name (relative to 'path')
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, name, description, path, includes,
+    def __init__(self, parent, name, description, path, includes,
                  inputfiles=None, opt_inputfiles=None,
-                 outputfiles=None, logfile=None, cmdline_args=None):
+                 outputfiles=None, cmdline_args = None):
         """Class constructor."""
         super().__init__(name, description)
+        self._parent = parent
         if not os.path.exists(path):
-            pass  # TODO: Do something here
+            pass
         else:
             self.path = path
         self.includes = includes
@@ -83,16 +85,18 @@ class ToolCandidate(MetaObject):
         """Returns tool definition file path."""
         return self.def_file_path
 
-    def create_instance(self, ui, setup_cmdline_args, tool_output_dir, setup_name):
+    def create_instance(self, ui, setup_cmdline_args, tool_output_dir, tool_name):
         """Create an instance of the tool.
 
         Args:
             ui (TitanUI): Titan GUI instance
             setup_cmdline_args (str): Extra command line arguments
             tool_output_dir (str): Output directory for tool
-            setup_name (str): Short name of Setup that calls this method
+            tool_name (str): Short name of Tool that owns this tool instance
         """
-        return ToolInstance(self, ui, tool_output_dir, setup_name)
+        ui.msg_error.emit("Creating instance not supported yet")
+        # return ToolInstance(self, ui, tool_output_dir, setup_name)
+        return None
 
     def append_cmdline_args(self, command, extra_cmdline_args):
         """Append command line arguments to a command.
@@ -112,13 +116,13 @@ class ToolCandidate(MetaObject):
         return command
 
     @staticmethod
-    def check_definition(data, ui):
-        """Check that a tool condidate definition contains
+    def check_definition(ui, data):
+        """Check that a tool candidate definition contains
         the required keys and that it is in correct format.
 
         Args:
-            data (dict): Tool candidate definition
             ui (ToolboxUI): Spine Toolbox QMainWindow instance
+            data (dict): Tool candidate definition
 
         Returns:
             Dictionary or None if there was a problem in the tool definition.
@@ -160,20 +164,21 @@ class GAMSTool(ToolCandidate):
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
 
-    def __init__(self, name, description, path, includes,
+    def __init__(self, parent, name, description, path, includes,
                  inputfiles=None, opt_inputfiles=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(name, description, path, includes,
+        super().__init__(parent, name, description, path, includes,
                          inputfiles, opt_inputfiles, outputfiles,
                          cmdline_args)
-        self.main_prgm = includes[0]
+        main_file = includes[0]
         # Add .lst file to list of output files
-        self.lst_file = os.path.splitext(self.main_prgm)[0] + '.lst'
+        self.lst_file = os.path.splitext(main_file)[0] + '.lst'
         self.outputfiles.add(self.lst_file)
         # Split main_prgm to main_dir and main_prgm
         # because GAMS needs to run in the directory of the main program
-        self.main_dir, self.main_prgm = os.path.split(self.main_prgm)
+        # TODO: This does not work because main_file is always just file name
+        self.main_dir, self.main_prgm = os.path.split(main_file)
         self.gams_options = OrderedDict()
         self.return_codes = {
             0: "Normal return",
@@ -210,7 +215,7 @@ class GAMSTool(ToolCandidate):
         else:
             logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
 
-    def create_instance(self, ui, extra_cmdline_args, tool_output_dir, tool_name, configs):
+    def create_instance(self, ui, extra_cmdline_args, tool_output_dir, tool_name):
         """Create an instance of the GAMS Tool.
 
         TODO: This should probably be done by Tool class of Spine Toolbox.
@@ -221,7 +226,6 @@ class GAMSTool(ToolCandidate):
                 In addition to the ones defined in tool definition file.
             tool_output_dir (str): Tool output directory
             tool_name (str): Short name of Tool that owns this Tool candidate!!!
-            configs: (ConfigurationParser): Application configurations
         """
         # Let ToolCandidate class create the ToolInstance. TODO: Do this in Tool class?
         instance = super().create_instance(ui, extra_cmdline_args, tool_output_dir, tool_name)
@@ -272,20 +276,20 @@ class GAMSTool(ToolCandidate):
         return instance
 
     @staticmethod
-    def load(path, data, ui):
+    def load(parent, path, data):
         """Create a GAMSTool according to a tool definition.
 
         Args:
+            parent (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
-            ui (TitanUI): Titan GUI instance
 
         Returns:
             GAMSTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = GAMSTool.check_definition(data, ui)
+        kwargs = GAMSTool.check_definition(parent, data)
         if kwargs is not None:
-            # Return a Executable model instance
-            return GAMSTool(path=path, **kwargs)
+            # Return an executable model instance
+            return GAMSTool(parent=parent, path=path, **kwargs)
         else:
             return None

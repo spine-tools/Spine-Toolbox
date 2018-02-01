@@ -9,7 +9,7 @@ echo Appending license to file %1
 
 (
 echo #############################################################################
-echo # Copyright ^(C^) 2016 - 2017 VTT Technical Research Centre of Finland
+echo # Copyright ^(C^) 2017 - 2018 VTT Technical Research Centre of Finland
 echo #
 echo # This file is part of Spine Toolbox.
 echo #

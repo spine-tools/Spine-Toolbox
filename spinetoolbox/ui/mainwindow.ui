@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -83,13 +83,13 @@
           <number>6</number>
          </property>
          <property name="leftMargin">
-          <number>0</number>
+          <number>6</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
+          <number>6</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>6</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
@@ -194,13 +194,13 @@
           <number>6</number>
          </property>
          <property name="leftMargin">
-          <number>0</number>
+          <number>6</number>
          </property>
          <property name="topMargin">
-          <number>0</number>
+          <number>6</number>
          </property>
          <property name="rightMargin">
-          <number>0</number>
+          <number>6</number>
          </property>
          <property name="bottomMargin">
           <number>6</number>
@@ -208,16 +208,34 @@
          <item>
           <widget class="QListView" name="listView_tools">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tools available in this project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool candidates&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QToolButton" name="toolButton_add_tool_candidate">
+            <widget class="QPushButton" name="pushButton_add_tool_candidate">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>26</width>
+               <height>26</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>26</width>
+               <height>26</height>
+              </size>
+             </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add Tool to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add Tool candidate to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
@@ -225,19 +243,34 @@
              </property>
              <property name="iconSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
-             </property>
-             <property name="autoRaise">
-              <bool>false</bool>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_remove_tool_candidate">
+            <widget class="QPushButton" name="pushButton_remove_tool_candidate">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>26</width>
+               <height>26</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>26</width>
+               <height>26</height>
+              </size>
+             </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove Tool from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove Tool candidate from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
@@ -245,8 +278,8 @@
              </property>
              <property name="iconSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
             </widget>

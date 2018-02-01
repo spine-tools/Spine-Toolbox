@@ -1,5 +1,5 @@
 #############################################################################
-# Copyright (C) 2016 - 2017 VTT Technical Research Centre of Finland
+# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
 #
@@ -34,6 +34,7 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
+from tool_candidates import GAMSTool
 
 
 class SpineToolboxProject(MetaObject):
@@ -46,7 +47,7 @@ class SpineToolboxProject(MetaObject):
             parent (ToolboxUI): Parent of this project
             name (str): Project name
             description (str): Project description
-            ext (str): Project save file extension (.json or .xlsx)
+            ext (str): Project save file extension (.proj)
         """
         super().__init__(name, description)
         self._parent = parent
@@ -123,7 +124,13 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name] = dict()
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
-                    item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
+                    if child_data.item_type == "Tool":
+                        if not child_data.tool():  # TODO: Make Tool getter method
+                            item_dict[top_level_item_txt][name]["tool"] = ""
+                        else:
+                            item_dict[top_level_item_txt][name]["tool"] = child_data.tool().name
+                    else:
+                        item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
         # Save project stuff
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
@@ -146,7 +153,7 @@ class SpineToolboxProject(MetaObject):
         tools = item_dict['Tools']
         views = item_dict['Views']
         n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
-        logging.debug("Loading {0} items".format(n))
+        self._parent.msg.emit("Project contains {0} items".format(n))
         # Recreate Data Stores
         for name in data_stores.keys():
             short_name = data_stores[name]['short name']
@@ -177,10 +184,15 @@ class SpineToolboxProject(MetaObject):
         for name in tools.keys():
             short_name = tools[name]['short name']
             desc = tools[name]['description']
-            data = tools[name]['data']
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            tool = Tool(name, desc, self)
-            tool.set_data(data)
+            tool_name = tools[name]['tool']
+            # Find tool candidate from model
+            tool_candidate = self._parent.tool_candidate_model.find_tool(tool_name)
+            # Clarifications for user
+            if not tool_name == "" and not tool_candidate:
+                self._parent.msg_error.emit("Tool <b>{0}</b> should have a Tool candidate <b>{1}</b> but "
+                                            "it was not found. Add it to Tool candidates and reopen "
+                                            "project.".format(name, tool_name))
+            tool = Tool(name, desc, self, tool_candidate)  # Can handle None as well
             # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
             tool_sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
             self._parent.project_refs.append(tool)  # Save reference or signals don't stick
@@ -202,7 +214,7 @@ class SpineToolboxProject(MetaObject):
         return True
 
     def load_tool(self, jsonfile):
-        """Create a Tool instance according to a tool definition file.
+        """Create a Tool candidate according to a tool definition file.
 
         Args:
             jsonfile (str): Path of the tool definition file
@@ -224,15 +236,21 @@ class SpineToolboxProject(MetaObject):
         try:
             _type = definition['type'].lower()
         except KeyError:
-            self._parent.msg_error.emit("No type defined in tool definition file")
+            self._parent.msg_error.emit("No type of tool defined in tool definition file. Should be "
+                                        "GAMS, Julia or executable")
             return None
-        # Infer path from JSON file
-        path = os.path.dirname(jsonfile)  # TODO: What is this shit?
+        # Infer path from JSON file. This assumes that main model file is in the same directory as the tool definition file
+        path = os.path.dirname(jsonfile)  # TODO: Is this needed?
         if _type == "gams":
-            return GAMSTool.load(path, definition, self._parent)  # Get rid of self._parent
-        # elif _type == "julia":
+            # self._parent.msg_warning.emit("GAMS tools not supported yet. path:{0} jsonfile:{1}".format(path, jsonfile))
+            return GAMSTool.load(self._parent, path, definition)
+        elif _type == "julia":
+            self._parent.msg_warning.emit("Julia tools not supported yet")
+            return None
         #     return JuliaTool.load(path, definition, self._parent)
-        # elif _type == 'executable':
+        elif _type == 'executable':
+            self._parent.msg_warning.emit("Executable tools not supported yet")
+            return None
         #     return ExecutableTool.load(path, definition, self._parent)  # Get rid of self._parent
         else:
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_type))
