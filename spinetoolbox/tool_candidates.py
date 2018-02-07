@@ -28,7 +28,7 @@ import os.path
 import logging
 from collections import OrderedDict
 from metaobject import MetaObject
-from config import GAMS_EXECUTABLE, REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
+from config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 
 
 class ToolCandidate(MetaObject):
@@ -41,14 +41,13 @@ class ToolCandidate(MetaObject):
         path (str): Path to tool
         includes (str): List of files belonging to the tool (relative to 'path')
         inputfiles (list): List of required data files
-        opt_inputfiles (list, optional): List of optional data files (wildcards may be used)
+        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
-        logfile (str, optional): Log file name (relative to 'path')
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
     def __init__(self, parent, name, description, path, includes,
-                 inputfiles=None, opt_inputfiles=None,
-                 outputfiles=None, cmdline_args = None):
+                 inputfiles=None, inputfiles_opt=None,
+                 outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
@@ -59,7 +58,7 @@ class ToolCandidate(MetaObject):
         self.includes = includes
         self.cmdline_args = cmdline_args
         self.inputfiles = set(inputfiles) if inputfiles else set()
-        self.opt_inputfiles = set(opt_inputfiles) if opt_inputfiles else set()
+        self.inputfiles_opt = set(inputfiles_opt) if inputfiles_opt else set()
         self.outputfiles = set(outputfiles) if outputfiles else set()
         self.return_codes = {}
         self.def_file_path = ''  # JSON tool definition file path
@@ -84,19 +83,6 @@ class ToolCandidate(MetaObject):
     def get_def_path(self):
         """Returns tool definition file path."""
         return self.def_file_path
-
-    def create_instance(self, ui, setup_cmdline_args, tool_output_dir, tool_name):
-        """Create an instance of the tool.
-
-        Args:
-            ui (TitanUI): Titan GUI instance
-            setup_cmdline_args (str): Extra command line arguments
-            tool_output_dir (str): Output directory for tool
-            tool_name (str): Short name of Tool that owns this tool instance
-        """
-        ui.msg_error.emit("Creating instance not supported yet")
-        # return ToolInstance(self, ui, tool_output_dir, setup_name)
-        return None
 
     def append_cmdline_args(self, command, extra_cmdline_args):
         """Append command line arguments to a command.
@@ -159,17 +145,17 @@ class GAMSTool(ToolCandidate):
         includes (str): List of files belonging to the tool (relative to 'path')
                      First file in the list is the main GAMS program.
         inputfiles (list): List of required data files
-        opt_inputfiles (list, optional): List of optional data files (wildcards may be used)
+        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
 
     def __init__(self, parent, name, description, path, includes,
-                 inputfiles=None, opt_inputfiles=None,
+                 inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(parent, name, description, path, includes,
-                         inputfiles, opt_inputfiles, outputfiles,
+                         inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         # Add .lst file to list of output files
@@ -214,66 +200,6 @@ class GAMSTool(ToolCandidate):
             self.gams_options[key] = "{0}={1}".format(key, value)
         else:
             logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
-
-    def create_instance(self, ui, extra_cmdline_args, tool_output_dir, tool_name):
-        """Create an instance of the GAMS Tool.
-
-        TODO: This should probably be done by Tool class of Spine Toolbox.
-
-        Args:
-            ui (TitanUI): Titan GUI window
-            extra_cmdline_args (str): Extra command line arguments.
-                In addition to the ones defined in tool definition file.
-            tool_output_dir (str): Tool output directory
-            tool_name (str): Short name of Tool that owns this Tool candidate!!!
-        """
-        # Let ToolCandidate class create the ToolInstance. TODO: Do this in Tool class?
-        instance = super().create_instance(ui, extra_cmdline_args, tool_output_dir, tool_name)
-        # Use gams.exe according to the selected GAMS directory in settings
-        # Read needed settings from config file
-        gams_path = configs.get('settings', 'gams_path')
-        logoption_value = configs.get('settings', 'logoption')
-        cerr_value = configs.get('settings', 'cerr')
-        gams_exe_path = GAMS_EXECUTABLE
-        if not gams_path == '':
-            gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
-        # General GAMS options
-        if logoption_value == '':  # If logoption is missing from .conf file
-            logoption_value = 3
-        if cerr_value == '':  # If cerr is missing from .conf file
-            cerr_value = 1
-        self.update_gams_options('logoption', logoption_value)
-        self.update_gams_options('cerr', cerr_value)
-        gams_option_list = list(self.gams_options.values())
-        # Update logfile to instance outfiles
-        logfile = os.path.splitext(self.files[0])[0] + '.log'
-        logfile_path = os.path.join(instance.basedir, logfile)
-        if logoption_value == '3':
-            # Remove path for <TOOLNAME>.log from outfiles if present
-            for out in instance.outfiles:
-                if os.path.basename(out) == logfile:
-                    try:
-                        instance.outfiles.remove(out)
-                        logging.debug("Removed path '{}' from outfiles".format(out))
-                    except ValueError:
-                        logging.exception("Tried to remove path '{}' but failed".format(out))
-        elif logoption_value == '4':
-            # Add <TOOLNAME>.log file to outfiles
-            instance.outfiles.append(logfile_path)  # TODO: Instance outfiles is a list, tool outfiles is a set
-        else:
-            logging.error("Unknown value for logoption: {}".format(logoption_value))
-        # Create run command for GAMS
-        # command = '{} "{}" {}'.format(gams_exe_path,
-        #                                           self.main_prgm,
-        #                                           ' '.join(gams_option_list))
-        self.main_dir = instance.basedir  # TODO: Get rid of self.main_dir
-        command = '{} "{}" Curdir="{}" {}'.format(gams_exe_path,
-                                                  self.main_prgm,
-                                                  self.main_dir,
-                                                  ' '.join(gams_option_list))
-        # Update instance command
-        instance.command = self.append_cmdline_args(command, setup_cmdline_args)
-        return instance
 
     @staticmethod
     def load(parent, path, data):

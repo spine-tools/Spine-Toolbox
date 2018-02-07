@@ -24,7 +24,6 @@ MetaObject class.
 :date:   18.12.2017
 """
 
-import logging
 from PySide2.QtCore import QObject
 
 
@@ -34,7 +33,6 @@ class MetaObject(QObject):
     Attributes:
         name (str): Object name
         description (str): Object description
-        object_type (str): Object type (e.g. data store, connection, view, or tool)
     """
     def __init__(self, name, description):
         """Class constructor."""

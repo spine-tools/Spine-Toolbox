@@ -26,6 +26,8 @@ General helper functions and classes.
 
 import logging
 import datetime
+import os
+import time
 from PySide2.QtCore import Qt
 from config import DEFAULT_PROJECT_DIR
 
@@ -80,3 +82,49 @@ def get_datetime(configs):
         return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
     else:
         return ""
+
+
+def create_dir(base_path, folder='', verbosity=False):
+    """Create (input/output) directories recursively.
+
+    Args:
+        base_path (str): Absolute path to wanted dir
+        folder (str): (Optional) Folder name. Usually short name of item.
+        verbosity (bool): True prints a message that tells if the directory already existed or if it was created.
+
+    Returns:
+        True if directory already exists or if it was created successfully.
+
+    Raises:
+        OSError if operation failed.
+    """
+    directory = os.path.join(base_path, folder)
+    if os.path.exists(directory):
+        if verbosity:
+            logging.debug("Directory found: {0}".format(directory))
+        return True
+    else:
+        try:
+            os.makedirs(directory, exist_ok=True)
+        except OSError:
+            raise
+        if verbosity:
+            logging.debug("Directory created: {0}".format(directory))
+        return True
+
+
+def create_output_dir_timestamp():
+    """ Creates a new timestamp string that is used as Tool output
+    directory.
+
+    Returns:
+        Timestamp string or empty string if failed.
+    """
+    try:
+        # Create timestamp
+        stamp = datetime.datetime.fromtimestamp(time.time())
+    except OverflowError:
+        logging.error('Timestamp out of range.')
+        return ''
+    extension = stamp.strftime('%Y-%m-%dT%H.%M.%S')
+    return extension

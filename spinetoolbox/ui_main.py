@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Module for main application GUI functions.
+Class for main application GUI functions.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
 :date:   14.12.2017
@@ -30,7 +30,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
@@ -48,7 +48,7 @@ from tool import Tool
 from view import View
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
-from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, EVENTLOG_SS
+from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
 from helpers import project_dir, get_datetime
 from models import ToolCandidateModel
 
@@ -61,6 +61,8 @@ class ToolboxUI(QMainWindow):
     msg_success = Signal(str, name="msg_success")
     msg_error = Signal(str, name="msg_error")
     msg_warning = Signal(str, name="msg_warning")
+    msg_proc = Signal(str, name="msg_proc")
+    msg_proc_error = Signal(str, name="msg_proc_error")
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -90,7 +92,8 @@ class ToolboxUI(QMainWindow):
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
-        self.ui.textBrowser_eventlog.setStyleSheet(EVENTLOG_SS)
+        self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
+        self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -133,6 +136,8 @@ class ToolboxUI(QMainWindow):
         self.msg_success.connect(self.add_success_message)
         self.msg_error.connect(self.add_error_message)
         self.msg_warning.connect(self.add_warning_message)
+        self.msg_proc.connect(self.add_process_message)
+        self.msg_proc_error.connect(self.add_process_error_message)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -147,6 +152,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.add_view)
         self.ui.actionAdd_Item_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
         self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
+        self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
         self.test1_action.triggered.connect(self.test1)
@@ -160,6 +166,8 @@ class ToolboxUI(QMainWindow):
         # Tools ListView
         self.ui.pushButton_add_tool_candidate.clicked.connect(self.add_tool_candidate)
         self.ui.pushButton_remove_tool_candidate.clicked.connect(self.remove_tool_candidate)
+        # Event Log & Process output
+        self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
 
     @Slot(name="init_project")
     def init_project(self):
@@ -469,7 +477,6 @@ class ToolboxUI(QMainWindow):
             self.ui.lineEdit_type.setText("")
             self.ui.lineEdit_name.setText("")
             self.ui.lineEdit_data.setText("")
-            self.ui.lineEdit_test.setText("")
 
     def add_data_store(self, name, description):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
@@ -502,7 +509,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             logging.debug("No project open")
             return
-        tool = Tool(name, description, self._project, tool_candidate)
+        tool = Tool(self, name, description, self._project, tool_candidate)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
         self.project_refs.append(tool)  # Save reference or signals don't stick
@@ -623,11 +630,11 @@ class ToolboxUI(QMainWindow):
             project_dict['tool_candidates'] = tools
         except KeyError:
             self.msg_error.emit("This is odd. tool_candidates list not found in project file <b>{0}</b>"
-                                     .format(project_file))
+                                .format(project_file))
             return
         except ValueError:
             self.msg_error.emit("This is odd. Tool definition file path <b>{0}</b> not found "
-                                     "in project file <b>{1}</b>".format(tool_def_path, project_file))
+                                "in project file <b>{1}</b>".format(tool_def_path, project_file))
             return
         # Save dictionaries back to JSON file
         dicts['project'] = project_dict
@@ -746,6 +753,19 @@ class ToolboxUI(QMainWindow):
             return None
         return found_items[0]
 
+    @Slot("QUrl", name="open_anchor")
+    def open_anchor(self, qurl):
+        """Open file explorer in the directory given in qurl.
+
+        Args:
+            qurl (QUrl): Directory path or a file to open
+        """
+        path = qurl.toLocalFile()  # Path to result folder
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(qurl)
+        if not res:
+            self.msg_error.emit("Opening path {} failed".format(path))
+
     @Slot(str, name="add_message")
     def add_message(self, msg):
         """Append regular message to Event Log.
@@ -799,6 +819,32 @@ class ToolboxUI(QMainWindow):
         date_str = get_datetime(self._config)
         message = open_tag + date_str + msg + "</span>"
         self.ui.textBrowser_eventlog.append(message)
+        # noinspection PyArgumentList
+        QApplication.processEvents()
+
+    @Slot(str, name="add_process_message")
+    def add_process_message(self, msg):
+        """Writes message from stdout to process output QTextBrowser.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        open_tag = "<span style='color:white;white-space: pre;'>"
+        message = open_tag + msg + "</span>"
+        self.ui.textBrowser_process_output.append(message)
+        # noinspection PyArgumentList
+        QApplication.processEvents()
+
+    @Slot(str, name="add_process_error_message")
+    def add_process_error_message(self, msg):
+        """Writes message from stderr to process output QTextBrowser.
+
+        Args:
+            msg (str): String written to QTextBrowser
+        """
+        open_tag = "<span style='color:#ff3333;white-space: pre;'>"
+        message = open_tag + msg + "</span>"
+        self.ui.textBrowser_process_output.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
 

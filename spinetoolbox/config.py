@@ -29,7 +29,7 @@ import os
 from PySide2.QtGui import QColor
 
 # General
-SPINE_TOOLBOX_VERSION = "0.0.5"
+SPINE_TOOLBOX_VERSION = "0.0.6"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -46,10 +46,16 @@ if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
+    DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
+    DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
+
+# Tool input/output directory names
+TOOL_INPUT_DIR = "input"
+TOOL_OUTPUT_DIR = "output"
 
 # GAMS
 if not sys.platform == "win32":
@@ -61,8 +67,8 @@ else:
 
 # Required and optional keywords for Tool candidate definition files
 REQUIRED_KEYS = ['name', 'description', 'includes']
-OPTIONAL_KEYS = ['short_name', 'inputfiles', 'opt_inputfiles', 'outputfiles', 'cmdline_args']
-LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'opt_inputfiles', 'outputfiles']  # These should be lists
+OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
+LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 # Default settings
 SETTINGS = {"project_directory": "",
@@ -74,13 +80,11 @@ SETTINGS = {"project_directory": "",
             "gams_path": ""}
 
 # Stylesheets
-# TODO: Check necessity of extra hyphens in 'gray'
 STATUSBAR_SS = "QStatusBar{" \
                     "background-color: #EBEBE0;" \
                     "border-width: 1px;" \
-                    "border-color: 'gray';" \
-                    "border-style: groove;" \
-                    "border-radius: 2px;\n}"
+                    "border-color: gray;" \
+                    "border-style: groove;}"
 
 SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                 "QLabel{color: white;}" \
@@ -108,4 +112,4 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                     "border-radius: 2px;}" \
                   "QLabel{color:black;}"
 
-EVENTLOG_SS = "QTextBrowser{background-color: black;}"
+TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"

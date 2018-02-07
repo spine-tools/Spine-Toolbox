@@ -25,10 +25,12 @@ Widget for controlling user settings.
 """
 
 import logging
-from PySide2.QtWidgets import QWidget, QStatusBar
+import os
+from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 import ui.settings
-from config import DEFAULT_PROJECT_DIR, STATUSBAR_SS, SETTINGS_SS
+from config import DEFAULT_PROJECT_DIR, STATUSBAR_SS, SETTINGS_SS, \
+    GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE
 
 
 class SettingsWidget(QWidget):
@@ -68,6 +70,27 @@ class SettingsWidget(QWidget):
         """ Connect PyQt signals. """
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        self.ui.pushButton_browse_gams.clicked.connect(self.browse_gams_path)
+
+    @Slot(name="browse_gams_path")
+    def browse_gams_path(self):
+        """Open file browser where user can select the directory of
+        GAMS that the user wants to use."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, 'Select GAMS Directory', os.path.abspath('C:\\'))
+        if answer == '':  # Cancel button clicked
+            return
+        selected_path = os.path.abspath(answer)
+        gams_path = os.path.join(selected_path, GAMS_EXECUTABLE)
+        gamside_path = os.path.join(selected_path, GAMSIDE_EXECUTABLE)
+        if not os.path.isfile(gams_path) and not os.path.isfile(gamside_path):
+            self.statusbar.showMessage("gams.exe and gamside.exe not found in selected directory", 10000)
+            self.ui.lineEdit_gams_path.setText("")
+            return
+        else:
+            self.statusbar.showMessage("Selected directory is valid GAMS directory", 10000)
+            self.ui.lineEdit_gams_path.setText(selected_path)
+        return
 
     def read_settings(self):
         """Read current settings from config object and update UI to show them."""
@@ -76,6 +99,7 @@ class SettingsWidget(QWidget):
         logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
+        gams_path = self._configs.get("settings", "gams_path")
         if open_previous_project:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
@@ -89,6 +113,7 @@ class SettingsWidget(QWidget):
         if not proj_dir:
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
+        self.ui.lineEdit_gams_path.setText(gams_path)
 
     def read_project_settings(self):
         """Read project settings from config object and update settings widgets accordingly."""
@@ -99,14 +124,24 @@ class SettingsWidget(QWidget):
     @Slot(name='ok_clicked')
     def ok_clicked(self):
         """Get selections and save them to conf file."""
+
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
+        # Check that GAMS directory is valid. Set it empty if not.
+        gams_path = self.ui.lineEdit_gams_path.text()
+        if not gams_path == "":  # Skip this if using GAMS in system path
+            gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
+            gamside_exe_path = os.path.join(gams_path, GAMSIDE_EXECUTABLE)
+            if not os.path.isfile(gams_exe_path) and not os.path.isfile(gamside_exe_path):
+                self.statusbar.showMessage("GAMS directory not valid", 10000)
+                return
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
+        self._configs.set("settings", "gams_path", gams_path)
         # Set logging level
         self._parent.set_debug_level(c)
         # Update project settings
