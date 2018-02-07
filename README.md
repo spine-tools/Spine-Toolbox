@@ -91,5 +91,11 @@ Add your Python scripts (e.g. C:\Python36\Scripts) and PySide2
 (e.g. C:\Python36\Lib\site-packages\PySide2) folders into your PATH 
 variable.
 
-GUI development tools are now ready. Use `build_ui.bat` to build Spine 
-Toolbox application after modifying `.ui` files with `designer.exe`.
+### Preparing and starting Spine Toolbox
+
+Run 'build_ui.bat' from your Python/PySide2 enabled command window to generate
+the code for the Spine Toolbox user interface.
+After modifying the user interface ('.ui') files with 'designer.exe', re-run 
+`build_ui.bat` to build the Spine Toolbox interface anew.
+
+In the command prompt, run 'python spinetoolbox.py' in the SpineToolbox folder.
