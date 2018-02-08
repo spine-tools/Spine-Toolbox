@@ -65,7 +65,7 @@ else:
     GAMS_EXECUTABLE = "gams.exe"
     GAMSIDE_EXECUTABLE = "gamside.exe"
 
-# Required and optional keywords for Tool candidate definition files
+# Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'description', 'includes']
 OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists

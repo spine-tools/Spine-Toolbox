@@ -24,7 +24,9 @@ QWidget that is used as an internal widget for a Tool QMdiSubWindow.
 :date:   31.1.2018
 """
 
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget
+from PySide2.QtCore import Qt
 from ui.subwindow_tool import Ui_Form
 
 
@@ -42,6 +44,8 @@ class ToolSubWindowWidget(QWidget):
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
         self._owner = owner  # Name of object that owns this object (e.g. 'Tool 1')
+        self.input_file_model = QStandardItemModel()
+        self.output_file_model = QStandardItemModel()
 
     def set_owner(self, owner):
         """Set owner of this SubWindowWidget.
@@ -66,6 +70,28 @@ class ToolSubWindowWidget(QWidget):
     def name_label(self):
         """Return name label text."""
         return self.ui.label_name.text()
+
+    def populate_input_files_list(self, items):
+        """List required Tool input files into QListView.
+        If items is None or empty list, model is cleared."""
+        self.input_file_model.clear()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                self.input_file_model.appendRow(qitem)
+        self.ui.listView_input_files.setModel(self.input_file_model)
+
+    def populate_output_files_list(self, items):
+        """List Tool output files into QListView.
+         If items is None or empty list, model is cleared."""
+        self.output_file_model.clear()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                self.output_file_model.appendRow(qitem)
+        self.ui.listView_output_files.setModel(self.output_file_model)
 
     def closeEvent(self, event):
         """Find QMdiSubWindow that initiated this closeEvent. Hide QMdiSubWindow

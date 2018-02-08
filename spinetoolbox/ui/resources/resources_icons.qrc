@@ -3,6 +3,7 @@
     <file>Spine_symbol.png</file>
   </qresource>
   <qresource prefix="icons">
+    <file>refresh_tools.png</file>
     <file>add_tool.png</file>
     <file>remove_tool.png</file>
     <file>remove_all.png</file>

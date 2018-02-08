@@ -28,7 +28,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
@@ -44,13 +44,12 @@ from widgets.add_view_widget import AddViewWidget
 import widgets.toolbars
 from data_store import DataStore
 from data_connection import DataConnection
-from tool import Tool
 from view import View
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
 from helpers import project_dir, get_datetime
-from models import ToolCandidateModel
+from models import ToolTemplateModel
 
 
 class ToolboxUI(QMainWindow):
@@ -77,7 +76,7 @@ class ToolboxUI(QMainWindow):
         self._config = None
         self._project = None
         self.project_item_model = None
-        self.tool_candidate_model = None
+        self.tool_template_model = None
         # Widget and form references
         self.settings_form = None
         self.about_form = None
@@ -146,10 +145,10 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
         self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
-        self.ui.actionAdd_Data_Store.triggered.connect(self.add_data_store)
-        self.ui.actionAdd_Data_Connection.triggered.connect(self.add_data_connection)
-        self.ui.actionAdd_Tool.triggered.connect(self.add_tool)
-        self.ui.actionAdd_View.triggered.connect(self.add_view)
+        self.ui.actionAdd_Data_Store.triggered.connect(self.show_add_data_store_form)
+        self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
+        self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
+        self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionAdd_Item_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
         self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
         self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
@@ -164,8 +163,9 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
-        self.ui.pushButton_add_tool_candidate.clicked.connect(self.add_tool_candidate)
-        self.ui.pushButton_remove_tool_candidate.clicked.connect(self.remove_tool_candidate)
+        self.ui.pushButton_add_tool_template.clicked.connect(self.add_tool_template)
+        self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
+        self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
 
@@ -209,11 +209,11 @@ class ToolboxUI(QMainWindow):
             self.ui.splitter.restoreState(splitter_state)
 
     # noinspection PyMethodMayBeStatic
-    def init_models(self, tool_candidate_paths):
+    def init_models(self, tool_template_paths):
         """Initialize application internal data models.
 
         Args:
-            tool_candidate_paths (list): List of tool definition file paths used in this project
+            tool_template_paths (list): List of tool definition file paths used in this project
         """
         self.project_item_model = QStandardItemModel()
         self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
@@ -222,36 +222,41 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.appendRow(QStandardItem("Tools"))
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
-        self.init_tool_candidates_model(tool_candidate_paths)
+        self.init_tool_template_model(tool_template_paths)
 
-    def init_tool_candidates_model(self, tool_candidate_paths):
-        """Initialize Tool candidates model.
+    def init_tool_template_model(self, tool_template_paths):
+        """Initializes Tool template model.
 
         Args:
-            tool_candidate_paths (list): List of tool definition file paths used in this project
+            tool_template_paths (list): List of tool definition file paths used in this project
         """
-        self.tool_candidate_model = ToolCandidateModel()
+        self.tool_template_model = ToolTemplateModel()
         n_tools = 0
-        self.msg.emit("Loading Tool candidates...")
-        for path in tool_candidate_paths:
+        self.msg.emit("Loading Tool Templates...")
+        for path in tool_template_paths:
             if path == '' or not path:
                 continue
-            # Add tool candidate into project
-            tool_cand = self._project.load_tool(path)
+            # Add tool template into project
+            tool_cand = self._project.load_tool_template(path)
             n_tools += 1
             if not tool_cand:
-                self.msg_error.emit("Failed to load Tool candidate from <b>{0}</b>".format(path))
+                self.msg_error.emit("Failed to load Tool template from <b>{0}</b>".format(path))
                 continue
             # Add tool definition file path to tool instance variable
             tool_cand.set_def_path(path)
             # Insert tool into model
-            self.tool_candidate_model.insertRow(tool_cand)
-            self.msg.emit("Tool candidate <b>{0}</b> ready".format(tool_cand.name))
-        # Set ToolCandidateModel to available Tools view
-        self.ui.listView_tools.setModel(self.tool_candidate_model)
-        # Note: If ToolCandidateModel signals are in use, they must be reconnected here.
+            self.tool_template_model.insertRow(tool_cand)
+            self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
+        # Set ToolTemplateModel to available Tools view
+        self.ui.listView_tool_templates.setModel(self.tool_template_model)
+        # Note: If ToolTemplateModel signals are in use, they must be reconnected here.
+        try:
+            # self.ui.listView_tool_templates.doubleClicked.connect(self.open_tool_template_file, Qt.UniqueConnection)
+            self.ui.listView_tool_templates.doubleClicked.connect(self.open_tool_template_file)
+        except TypeError:
+            pass
         if n_tools == 0:
-            self.msg_warning.emit("Project has no tool candidates")
+            self.msg_warning.emit("Project has no tool templates")
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -262,7 +267,7 @@ class ToolboxUI(QMainWindow):
         for subwindow in subwindows:
             self.remove_sw(subwindow)
         self._project = None
-        self.tool_candidate_model = None
+        self.tool_template_model = None
         self.msg.emit("All {0} items removed from project".format(n))
 
     @Slot(name="new_project")
@@ -281,7 +286,7 @@ class ToolboxUI(QMainWindow):
         self.clear_ui()
         self._project = None
         self._project = SpineToolboxProject(self, name, description, self._config, ext='.proj')
-        self.init_models(tool_candidate_paths=list())  # Start project with no tool candidates
+        self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.textBrowser_eventlog.clear()
         self.msg.emit("New project created")
@@ -295,7 +300,7 @@ class ToolboxUI(QMainWindow):
             load_path (str): If not None, this method is used to load the
             previously opened project at start-up
         """
-        tool_candidate_paths = list()
+        tool_template_paths = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config),
@@ -324,15 +329,15 @@ class ToolboxUI(QMainWindow):
         proj_name = project_dict['name']
         proj_desc = project_dict['description']
         try:
-            tool_candidate_paths = project_dict['tool_candidates']
+            tool_template_paths = project_dict['tool_templates']
         except KeyError:
-            logging.debug("tool_candidates keyword not found in project file")
+            logging.debug("tool_templates keyword not found in project file")
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Populate project model with items read from JSON file
-        self.init_models(tool_candidate_paths)
+        self.init_models(tool_template_paths)
         if not self._project.load(dicts['objects']):
             self.msg_error.emit("Loading project items failed")
             return False
@@ -346,12 +351,12 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("No project open")
             return
-        # Put project's tool candidate definition files into a list
-        tool_candidates = list()
-        for i in range(self.tool_candidate_model.rowCount()):
+        # Put project's tool template definition files into a list
+        tool_templates = list()
+        for i in range(self.tool_template_model.rowCount()):
             if i > 0:
-                tool_candidates.append(self.tool_candidate_model.tool(i).get_def_path())
-        self._project.save(tool_candidates)
+                tool_templates.append(self.tool_template_model.tool(i).get_def_path())
+        self._project.save(tool_templates)
         self.msg.emit("Project saved to <b>{0}</b>".format(self._project.path))
 
     @Slot(name="save_project_as")
@@ -436,19 +441,24 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test2")
     def test2(self):
-        subwindows = self.ui.mdiArea.subWindowList()
-        for subwindow in subwindows:
+        for subwindow in self.ui.mdiArea.subWindowList():
             w = subwindow.widget()  # SubWindowWidget
             w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-            # w_parent = w.parent()  # QMdiSubWindow
+            # w_parent = w.parent()  # QMdiSubWindow == subwindow
             # w_owner = w.owner()  # item name
             if w_type == "Tool":
                 self.msg.emit("Found Tool {0}".format(w.owner()))
                 # Find item in project model
+                size_hint = subwindow.sizeHint()
+                min_size = subwindow.minimumSize()
+                min_size_hint = subwindow.minimumSizeHint()
+                size_policy = subwindow.sizePolicy()
+                logging.debug("sizeHint:{0} minSize:{1} minSizeHint:{2} sizePolicy:{3}"
+                              .format(size_hint, min_size, min_size_hint, size_policy))
                 item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
                 tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
-                if tool.tool() is not None:
-                    self.msg.emit("Tool candidate of this Tool:{0}".format(tool.tool().name))
+                if tool.tool_template() is not None:
+                    self.msg.emit("Tool template of this Tool:{0}".format(tool.tool_template().name))
 
     @Slot("QMdiSubWindow", name="update_details_frame")
     def update_details_frame(self, window):
@@ -468,21 +478,13 @@ class ToolboxUI(QMainWindow):
             if not selected_item:
                 logging.error("Item {0} not found".format(name))
                 return
-            matching_item_data = selected_item.data(Qt.UserRole)
-            if not matching_item_data.item_type == 'Tool':
-                self.ui.lineEdit_data.setText(str(matching_item_data.get_data()))
-            else:
-                self.ui.lineEdit_data.setText("")
+            # matching_item_data = selected_item.data(Qt.UserRole)
         else:
             self.ui.lineEdit_type.setText("")
             self.ui.lineEdit_name.setText("")
-            self.ui.lineEdit_data.setText("")
 
     def add_data_store(self, name, description):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
-        if not self._project:
-            self.msg.emit("No project open")
-            return
         data_store = DataStore(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
@@ -493,9 +495,6 @@ class ToolboxUI(QMainWindow):
 
     def add_data_connection(self, name, description):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
-        if not self._project:
-            self.msg.emit("No project open")
-            return
         data_connection = DataConnection(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
@@ -504,45 +503,32 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Data Connection <b>{0}</b> added to project".format(name))
         sw.show()
 
-    def add_tool(self, name, description, tool_candidate):
-        """Add Tool as a QMdiSubwindow to QMdiArea."""
-        if not self._project:
-            logging.debug("No project open")
-            return
-        tool = Tool(self, name, description, self._project, tool_candidate)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
-        self.project_refs.append(tool)  # Save reference or signals don't stick
-        self.add_item_to_model("Tools", name, tool)
-        self.msg.emit("Tool <b>{0}</b> added to project".format(name))
-        sw.show()
-
-    @Slot(name="add_tool_candidate")
-    def add_tool_candidate(self):
+    @Slot(name="add_tool_template")
+    def add_tool_template(self):
         """Add a possible tool to project, which can be added to a Tool item."""
         if not self._project:
-            logging.debug("No project open")
+            self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, 'Select tool candidate file',
+        answer = QFileDialog.getOpenFileName(self, 'Select tool template file',
                                              os.path.join(project_dir(self._config), os.path.pardir),
                                              'JSON (*.json)')
         if answer[0] == '':  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
         # Load tool definition
-        tool = self._project.load_tool(def_file)
+        tool = self._project.load_tool_template(def_file)
         if not tool:
-            self.msg_error.emit("Adding Tool candidate failed".format(def_file))
+            self.msg_error.emit("Adding Tool template failed".format(def_file))
             return
-        if self.tool_candidate_model.find_tool(tool.name):
-            # Tool candidate already added to project
-            self.msg_warning.emit("Tool candidate <b>{0}</b> already in project".format(tool.name))
+        if self.tool_template_model.find_tool(tool.name):
+            # Tool template already added to project
+            self.msg_warning.emit("Tool template <b>{0}</b> already in project".format(tool.name))
             return
         # Add definition file path into tool
         tool.set_def_path(def_file)
         # Insert tool into model
-        self.tool_candidate_model.insertRow(tool)
+        self.tool_template_model.insertRow(tool)
         # Save Tool def file path to project file
         project_file = self._project.path  # Path to project file
         if project_file.lower().endswith('.proj'):
@@ -557,38 +543,84 @@ class ToolboxUI(QMainWindow):
             project_dict = dicts['project']
             objects_dict = dicts['objects']
             try:
-                tools = project_dict['tool_candidates']
+                tools = project_dict['tool_templates']
                 if def_file not in tools:
                     tools.append(def_file)
-                project_dict['tool_candidates'] = tools
+                project_dict['tool_templates'] = tools
             except KeyError:
-                logging.debug("Adding tool_candidates keyword to project file")
-                project_dict['tool_candidates'] = [def_file]
+                logging.debug("Adding tool_templates keyword to project file")
+                project_dict['tool_templates'] = [def_file]
             # Save dictionaries back to project save file
             dicts['project'] = project_dict
             dicts['objects'] = objects_dict
             with open(project_file, 'w') as fp:
                 json.dump(dicts, fp, indent=4)
-            self.msg_success.emit("Tool candidate <b>{0}</b> added to project".format(tool.name))
+            self.msg_success.emit("Tool template <b>{0}</b> added to project".format(tool.name))
         else:
             self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
             return
 
-    @Slot(name="remove_tool_candidate")
-    def remove_tool_candidate(self):
-        """Remove tool candidate from ToolCandidateModel
-        and tool definition file path from project file.
-        This tool should probably be removed from all
-        Tool items that reference it as well."""
+    @Slot(name="refresh_tool_templates")
+    def refresh_tool_templates(self):
+        """If user has changed a Tool template while the application is running,
+        this method refreshes all Tools that use this template to reflect the changes."""
         if not self._project:
-            logging.debug("No project open")
+            self.msg.emit("No project open")
             return
-        # self.msg_warning.emit("Removing Tool Candidate (not impl. yet)")
+        self.msg.emit("Refreshing Tool templates")
+        # Re-open project
+        project_file = self._project.path  # Path to project file
+        if project_file.lower().endswith(".proj"):
+            try:
+                with open(project_file, 'r') as fh:
+                    dicts = json.load(fh)
+            except OSError:
+                self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
+                return
+            # Get project settings
+            project_dict = dicts['project']
+            try:
+                tool_template_paths = project_dict['tool_templates']
+            except KeyError:
+                logging.debug("tool_templates keyword not found in project file")
+                self.msg_warning.emit("No Tool templates in project")
+                return
+            self.init_tool_template_model(tool_template_paths)
+            # Reattach all Tool templates because ToolTemplateModel may have changed
+            for subwindow in self.ui.mdiArea.subWindowList():
+                w = subwindow.widget()  # SubWindowWidget
+                w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
+                if w_type == "Tool":
+                    # Find item in project model
+                    item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
+                    tool = item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
+                    if tool.tool_template() is not None:
+                        # Get old tool template name
+                        old_t_name = tool.tool_template().name
+                        # Find the same tool template from ToolTemplateModel
+                        new_template = self.tool_template_model.find_tool(old_t_name)
+                        if not new_template:
+                            self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
+                            tool.set_tool_template(None)
+                            continue
+                        tool.set_tool_template(new_template)
+                        self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
+                                      .format(new_template.name, tool.name))
+
+    @Slot(name="remove_tool_template")
+    def remove_tool_template(self):
+        """Removes tool template from ToolTemplateModel
+        and tool definition file path from project file.
+        Removes also Tool templates from all Tool items
+        that use this template."""
+        if not self._project:
+            self.msg.emit("No project open")
+            return
         try:
-            index = self.ui.listView_tools.selectedIndexes()[0]
+            index = self.ui.listView_tool_templates.selectedIndexes()[0]
         except IndexError:
             # Nothing selected
-            self.msg.emit("Select a Tool candidate to remove")
+            self.msg.emit("Select a Tool template to remove")
             return
         if not index.isValid():
             return
@@ -596,15 +628,15 @@ class ToolboxUI(QMainWindow):
             # Do not remove No Tool option
             self.msg.emit("<b>No Tool</b> cannot be removed")
             return
-        sel_tool = self.tool_candidate_model.tool(index.row())
+        sel_tool = self.tool_template_model.tool(index.row())
         tool_def_path = sel_tool.def_file_path
-        msg = "Removing Tool candidate <b>{0}</b>. Are you sure?".format(sel_tool.name)
+        msg = "Removing Tool template <b>{0}</b>. Are you sure?".format(sel_tool.name)
         # noinspection PyCallByClass, PyTypeChecker
-        answer = QMessageBox.question(self, 'Remove Tool candidate', msg, QMessageBox.Yes, QMessageBox.No)
+        answer = QMessageBox.question(self, 'Remove Tool template', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             self.msg.emit("Operation cancelled")
             return
-        self.msg.emit("Removing Tool candidate <b>{0}</b> -> <b>{1}</b>".format(sel_tool.name, tool_def_path))
+        self.msg.emit("Removing Tool template <b>{0}</b> -> <b>{1}</b>".format(sel_tool.name, tool_def_path))
         # Remove tool def file path from the project file (only JSON supported)
         project_file = self._project.path
         if not project_file.lower().endswith('.proj'):
@@ -620,16 +652,16 @@ class ToolboxUI(QMainWindow):
         # Get project settings
         project_dict = dicts['project']
         object_dict = dicts['objects']
-        if not self.tool_candidate_model.removeRow(index.row()):
+        if not self.tool_template_model.removeRow(index.row()):
             self.msg_error.emit("Error in removing Tool <b>{0}</b>".format(sel_tool.name))
             return
         try:
-            tools = project_dict['tool_candidates']
+            tools = project_dict['tool_templates']
             tools.remove(tool_def_path)
             # logging.debug("tools list after removal:{}".format(tools))
-            project_dict['tool_candidates'] = tools
+            project_dict['tool_templates'] = tools
         except KeyError:
-            self.msg_error.emit("This is odd. tool_candidates list not found in project file <b>{0}</b>"
+            self.msg_error.emit("This is odd. tool_templates list not found in project file <b>{0}</b>"
                                 .format(project_file))
             return
         except ValueError:
@@ -641,26 +673,22 @@ class ToolboxUI(QMainWindow):
         dicts['objects'] = object_dict
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
-        # Remove tool candidate also from Tools that use it
-        subwindows = self.ui.mdiArea.subWindowList()
-        for subwindow in subwindows:
+        # Remove tool template also from Tools that use it
+        for subwindow in self.ui.mdiArea.subWindowList():
             w = subwindow.widget()  # SubWindowWidget
             w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
             if w_type == "Tool":
                 # Find item in project model
                 item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
                 tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
-                if tool.tool() is not None:
-                    if tool.tool().name == sel_tool.name:
-                        tool.remove_tool()
+                if tool.tool_template() is not None:
+                    if tool.tool_template().name == sel_tool.name:
+                        tool.set_tool_template(None)
                         self.msg.emit("Removed {0} from Tool <b>{1}</b>".format(sel_tool.name, tool.name))
-        self.msg_success.emit("Tool candidate removed successfully")
+        self.msg_success.emit("Tool template removed successfully")
 
     def add_view(self, name, description):
         """Add View as a QMdiSubwindow to QMdiArea."""
-        if not self._project:
-            logging.debug("No project open")
-            return
         view = View(name, description, self._project)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
         sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
@@ -766,6 +794,28 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit("Opening path {} failed".format(path))
 
+    @Slot("QModelIndex", name='open_tool_template_file')
+    def open_tool_template_file(self, clicked_index):
+        """Open the double-clicked Tool template definition file in the default (.json) text-editor.
+
+        Args:
+            clicked_index (QModelIndex): Index of the double clicked item
+        """
+        if clicked_index.row() == 0:
+            return  # Don't do anything if No Tool option is double-clicked
+        tool_template = self.tool_template_model.tool(clicked_index.row())
+        tool_template_url = "file:///" + tool_template.def_file_path
+        # Open Tool template definition file in editor
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
+        if not res:
+            logging.error("Failed to open editor for {0}".format(tool_template_url))
+            self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
+                                "files are associated with a text editor. For example on Windows "
+                                "10, go to Control Panel -> Default Programs to do this."
+                                .format(tool_template.def_file_path))
+        return
+
     @Slot(str, name="add_message")
     def add_message(self, msg):
         """Append regular message to Event Log.
@@ -852,7 +902,7 @@ class ToolboxUI(QMainWindow):
     def show_add_data_store_form(self):
         """Show add data store widget."""
         if not self._project:
-            logging.debug("Create a project first")
+            self.msg.emit("Create or open a project first")
             return
         self.add_data_store_form = AddDataStoreWidget(self)
         self.add_data_store_form.show()
@@ -861,7 +911,7 @@ class ToolboxUI(QMainWindow):
     def show_add_data_connection_form(self):
         """Show add data connection widget."""
         if not self._project:
-            logging.debug("Create a project first")
+            self.msg.emit("Create or open a project first")
             return
         self.add_data_connection_form = AddDataConnectionWidget(self)
         self.add_data_connection_form.show()
@@ -870,16 +920,16 @@ class ToolboxUI(QMainWindow):
     def show_add_tool_form(self):
         """Show add tool widget."""
         if not self._project:
-            logging.debug("Create a project first")
+            self.msg.emit("Create or open a project first")
             return
-        self.add_tool_form = AddToolWidget(self)
+        self.add_tool_form = AddToolWidget(self, self._project)
         self.add_tool_form.show()
 
     @Slot(name="show_add_view_form")
     def show_add_view_form(self):
         """Show add view widget."""
         if not self._project:
-            logging.debug("Create a project first")
+            self.msg.emit("Create or open a project first")
             return
         self.add_view_form = AddViewWidget(self)
         self.add_view_form.show()
@@ -915,8 +965,10 @@ class ToolboxUI(QMainWindow):
         if option == "Remove":
             self.remove_item(ind)
             return
-        else:
-            # No option selected
+        if option == "Hide all":  # Hide all subwindows
+            for sw in self.ui.mdiArea.subWindowList():
+                sw.hide()
+        else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None

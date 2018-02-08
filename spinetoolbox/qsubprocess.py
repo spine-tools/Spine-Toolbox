@@ -38,7 +38,7 @@ class QSubProcess(QObject):
 
         Args:
             ui (ToolboxUI): Instance of Main UI class.
-            tool (ToolCandidate): Tool to run in sub-process.
+            tool (ToolTemplate): Tool to run in sub-process.
         """
         super().__init__()
         self._ui = ui

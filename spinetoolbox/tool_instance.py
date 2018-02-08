@@ -38,7 +38,7 @@ class ToolInstance(QObject):
     """Class for Tool instances.
 
     Attributes:
-        tool (ToolCandidate): Tool for which this instance is created
+        tool (ToolTemplate): Tool for which this instance is created
         ui (ToolboxUI): QMainWindow instance
         tool_output_dir (str): Directory where results are saved
         project (SpineToolboxProject): Current project

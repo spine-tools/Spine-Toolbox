@@ -36,13 +36,14 @@ class AddToolWidget(QWidget):
     """A widget to query user's preferences for a new item.
 
     Attributes:
-        parent: Parent widget.
+        parent (QWidget): Parent widget.
+        project(SpineToolboxProject): Project where to add the new Tool
     """
-    def __init__(self, parent):
+    def __init__(self, parent, project):
         """Initialize class."""
         super().__init__(f=Qt.Window)
-        self._parent = parent  # QWidget parent
-        # self._tool_model = tool_model
+        self._parent = parent
+        self._project = project
         #  Set up the user interface from Designer.
         self.ui = ui.add_tool.Ui_Form()
         self.ui.setupUi(self)
@@ -56,7 +57,7 @@ class AddToolWidget(QWidget):
         self.name = ''
         self.description = ''
         # Init
-        self.ui.comboBox_tool.setModel(self._parent.tool_candidate_model)
+        self.ui.comboBox_tool.setModel(self._parent.tool_template_model)
         self.ui.lineEdit_name.setFocus()
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
@@ -71,7 +72,7 @@ class AddToolWidget(QWidget):
 
     @Slot(int, name='update_args')
     def update_args(self, row):
-        """Show Tool candidate command line arguments in text input.
+        """Show Tool template command line arguments in text input.
 
         Args:
             row (int): Selected row number
@@ -80,7 +81,7 @@ class AddToolWidget(QWidget):
             # No Tool selected
             self.ui.lineEdit_tool_args.setText("")
             return
-        selected_tool = self._parent.tool_candidate_model.tool(row)
+        selected_tool = self._parent.tool_template_model.tool(row)
         args = selected_tool.cmdline_args
         if not args:
             # Tool cmdline_args is None if the line does not exist in Tool definition file
@@ -116,7 +117,6 @@ class AddToolWidget(QWidget):
         if self._parent.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
-            logging.error("Item with same name already in project")
             return
         # Check that short name (folder) is not reserved
         short_name = self.name.lower().replace(' ', '_')
@@ -135,9 +135,9 @@ class AddToolWidget(QWidget):
             logging.debug("Selected row 0 (no tool)")
             selected_tool = None
         else:
-            selected_tool = self._parent.tool_candidate_model.tool(selected_row)
+            selected_tool = self._parent.tool_template_model.tool(selected_row)
             logging.debug("Adding Tool '{0}' with tool {1}".format(self.name, selected_tool.name))
-        self._parent.add_tool(self.name, self.description, selected_tool)
+        self._project.add_tool(self.name, self.description, selected_tool)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

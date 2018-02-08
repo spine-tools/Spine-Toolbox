@@ -1,0 +1,39 @@
+B 2 C o m p i l a t i o n
+B 164 Include File Summary
+B 180 E x e c u t i o n
+I 183 peak
+I 184 tener
+I 186 lf
+I 187 ener
+B 195 Equation Listing    SOLVE william Using LP From line 147
+D 196 pow
+D 211 res
+D 228 st
+D 243 minu
+D 260 maxu
+D 277 totcap
+D 288 totcap2
+D 303 cdef
+B 350 Column Listing      SOLVE william Using LP From line 147
+E 351 x
+E 377 n
+E 411 s
+E 430 k
+E 469 cost
+B 478 Model Statistics    SOLVE william Using LP From line 147
+B 494 Solution Report     SOLVE william Using LP From line 147
+F 523 pow
+F 533 res
+F 543 st
+F 563 minu
+F 583 maxu
+F 603 totcap
+F 623 totcap2
+F 629 cdef
+G 632 x
+G 652 n
+G 672 s
+G 692 k
+G 700 cost
+B 713 E x e c u t i o n
+I 714 rep

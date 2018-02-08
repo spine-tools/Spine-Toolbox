@@ -28,13 +28,14 @@ import os
 import logging
 import json
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QSizePolicy
 from metaobject import MetaObject
 from helpers import project_dir, create_dir
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
-from tool_candidates import GAMSTool
+from tool_templates import GAMSTool
 from config import DEFAULT_WORK_DIR
 
 
@@ -109,7 +110,7 @@ class SpineToolboxProject(MetaObject):
         project_dict = dict()  # Dictionary for storing project info
         project_dict['name'] = self.name
         project_dict['description'] = self.description
-        project_dict['tool_candidates'] = tool_def_paths
+        project_dict['tool_templates'] = tool_def_paths
         item_dict = dict()  # Dictionary for storing project items
         n = 0
         # Traverse all items in project model
@@ -130,10 +131,10 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
                     if child_data.item_type == "Tool":
-                        if not child_data.tool():
+                        if not child_data.tool_template():
                             item_dict[top_level_item_txt][name]["tool"] = ""
                         else:
-                            item_dict[top_level_item_txt][name]["tool"] = child_data.tool().name
+                            item_dict[top_level_item_txt][name]["tool"] = child_data.tool_template().name
                     else:
                         item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
         # Save project stuff
@@ -190,19 +191,20 @@ class SpineToolboxProject(MetaObject):
             short_name = tools[name]['short name']
             desc = tools[name]['description']
             tool_name = tools[name]['tool']
-            # Find tool candidate from model
-            tool_candidate = self._parent.tool_candidate_model.find_tool(tool_name)
+            # Find tool template from model
+            tool_template = self._parent.tool_template_model.find_tool(tool_name)
             # Clarifications for user
-            if not tool_name == "" and not tool_candidate:
-                self._parent.msg_error.emit("Tool <b>{0}</b> should have a Tool candidate <b>{1}</b> but "
-                                            "it was not found. Add it to Tool candidates and reopen "
+            if not tool_name == "" and not tool_template:
+                self._parent.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                                            "it was not found. Add it to Tool templates and reopen "
                                             "project.".format(name, tool_name))
-            tool = Tool(self._parent, name, desc, self, tool_candidate)  # Can handle None as well
-            # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-            tool_sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
-            self._parent.project_refs.append(tool)  # Save reference or signals don't stick
-            self._parent.add_item_to_model("Tools", name, tool)
-            tool_sw.show()
+            self.add_tool(name, desc, tool_template)
+            # tool = Tool(self._parent, name, desc, self, tool_template)  # Can handle None as well
+            # # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+            # tool_sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
+            # self._parent.project_refs.append(tool)  # Save reference or signals don't stick
+            # self._parent.add_item_to_model("Tools", name, tool)
+            # tool_sw.show()
         # Recreate Views
         for name in views.keys():
             short_name = views[name]['short name']
@@ -218,8 +220,8 @@ class SpineToolboxProject(MetaObject):
             view_sw.show()
         return True
 
-    def load_tool(self, jsonfile):
-        """Create a Tool candidate according to a tool definition file.
+    def load_tool_template(self, jsonfile):
+        """Create a Tool template according to a tool definition file.
 
         Args:
             jsonfile (str): Path of the tool definition file
@@ -260,3 +262,15 @@ class SpineToolboxProject(MetaObject):
         else:
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_type))
             return None
+
+    def add_tool(self, name, description, tool_template):
+        """Add Tool as a QMdiSubwindow to QMdiArea."""
+        tool = Tool(self._parent, name, description, self, tool_template)
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
+        # logging.debug("minimumSizeHint:{0}".format(sw.minimumSizeHint()))
+        self._parent.project_refs.append(tool)  # Save reference or signals don't stick
+        self._parent.add_item_to_model("Tools", name, tool)
+        sw.show()
+        sw.resize(sw.minimumSizeHint())
+        self._parent.msg.emit("Tool <b>{0}</b> ready".format(name))

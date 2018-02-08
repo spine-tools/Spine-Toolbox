@@ -41,9 +41,9 @@ class Tool(MetaObject):
         name (str): Object name
         description (str): Object description
         project (SpineToolboxProject): Project
-        tool_candidate (ToolCandidate): Tool of this Tool
+        tool_template (ToolTemplate): Template for this Tool
     """
-    def __init__(self, parent, name, description, project, tool_candidate):
+    def __init__(self, parent, name, description, project, tool_template):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
@@ -51,7 +51,8 @@ class Tool(MetaObject):
         self._project = project
         self._widget = ToolSubWindowWidget(name, self.item_type)
         self._widget.set_name_label(name)
-        self._tool = self.set_tool(tool_candidate)
+        self._tool_template = None
+        self.set_tool_template(tool_template)
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
@@ -62,38 +63,108 @@ class Tool(MetaObject):
         """Connect this tool's signals to slots."""
         self._widget.ui.pushButton_details.clicked.connect(self.show_details)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
-        self._widget.ui.pushButton_x.clicked.connect(self.remove_tool)
+        self._widget.ui.pushButton_x.clicked.connect(self.remove_tool_template)
 
     @Slot(name='show_details')
     def show_details(self):
         """Details button clicked."""
-        if not self.tool():
+        if not self.tool_template():
             self._parent.msg_warning.emit("No Tool Template")
             return
-        # Print the tool definition file
-        tool_def = self.tool().get_def_path()
+        definition = self.read_tool_def(self.tool_template().get_def_path())
+        if not definition:
+            return
+        self._parent.msg.emit("Tool template file contents:\n{0}"
+                              .format(json.dumps(definition, sort_keys=True, indent=4)))
+
+    def tool_template(self):
+        """Returns Tool template."""
+        return self._tool_template
+
+    @Slot(name='remove_tool_template')
+    def remove_tool_template(self):
+        """Removes Template from this Tool. Needed as an 'X' button slot"""
+        self.set_tool_template(None)
+
+    def set_tool_template(self, tool_template):
+        """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
+
+        Args:
+            tool_template (ToolTemplate): Template for this Tool. None removes the template.
+
+        Returns:
+            ToolTemplate or None if no Tool Template set for this Tool.
+        """
+        self._tool_template = tool_template
+        self.update_tool_ui()
+
+    def update_tool_ui(self):
+        """Update Tool UI to show Tool template details."""
+        if not self.tool_template():
+            self._widget.ui.lineEdit_tool.setText("")
+            self._widget.ui.lineEdit_tool_args.setText("")
+            self._widget.populate_input_files_list(None)
+            self._widget.populate_output_files_list(None)
+        else:
+            self._widget.ui.lineEdit_tool.setText(self.tool_template().name)
+            self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self.update_input_files()
+            self.update_output_files()
+
+    def update_input_files(self):
+        """Show input files in QListView."""
+        if not self.tool_template():
+            return
+        def_path = self.tool_template().get_def_path()
+        definition = self.read_tool_def(def_path)
+        if not definition:
+            return
         try:
-            with open(tool_def, 'r') as fp:
+            input_files = definition["inputfiles"]
+        except KeyError:
+            logging.error("Key 'inputfiles' not found in file {0}".format(def_path))
+            return
+        self._widget.populate_input_files_list(input_files)
+
+    def update_output_files(self):
+        """Show output files in QListView."""
+        if not self.tool_template():
+            return
+        def_path = self.tool_template().get_def_path()
+        definition = self.read_tool_def(def_path)
+        if not definition:
+            return
+        try:
+            output_files = definition["outputfiles"]
+        except KeyError:
+            logging.error("Key 'outputfiles' not found in file {0}".format(def_path))
+            return
+        self._widget.populate_output_files_list(output_files)
+
+    def read_tool_def(self, tool_def_file):
+        """Return tool template definition file contents or None if operation failed."""
+        try:
+            with open(tool_def_file, 'r') as fp:
                 try:
                     definition = json.load(fp)
                 except ValueError:
                     self._parent.msg_error.emit("Tool definition file not valid")
                     logging.exception("Loading JSON data failed")
-                    return
+                    return None
         except FileNotFoundError:
-            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(tool_def))
-            return
-        self._parent.msg.emit("Tool definition file contents:\n{0}".format(json.dumps(definition, sort_keys=True, indent=4)))
+            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(tool_def_file))
+            return None
+        return definition
 
     @Slot(name='execute')
     def execute(self):
         """Execute button clicked."""
-        if not self.tool():
+        if not self.tool_template():
             self._parent.msg_warning.emit("No Tool to execute")
             return
         self._parent.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         try:
-            self.instance = ToolInstance(self.tool(), self._parent, self.output_dir, self._project)
+            self.instance = ToolInstance(self.tool_template(), self._parent, self.output_dir, self._project)
         except OSError as e:
             self._parent.msg_error.emit("Tool instance creation failed. {0}".format(e))
             return
@@ -105,40 +176,13 @@ class Tool(MetaObject):
     def execution_finished(self, return_code):
         """Tool execution finished."""
         if return_code == 0:
-            self._parent.msg_success.emit("Tool {0} execution finished".format(self.tool().name))
+            self._parent.msg_success.emit("Tool {0} execution finished".format(self.tool_template().name))
         else:
-            self._parent.msg_error.emit("Tool {0} execution failed".format(self.tool().name))
+            self._parent.msg_error.emit("Tool {0} execution failed".format(self.tool_template().name))
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
-
-    def tool(self):
-        """Return Tool candidate."""
-        return self._tool
-
-    @Slot(name='remove_tool')
-    def remove_tool(self):
-        """Remove Tool from this Tool."""
-        self._tool = self.set_tool(None)
-
-    def set_tool(self, tool_candidate):
-        """Set tool candidate for this Tool. Remove tool candidate by giving None as argument.
-
-        Args:
-            tool_candidate (ToolCandidate): Candidate for this Tool. None removes the candidate.
-
-        Returns:
-            ToolCandidate or None if no Tool Candidate set for this Tool.
-        """
-        if not tool_candidate:
-            self._widget.ui.lineEdit_tool.setText("")
-            self._widget.ui.lineEdit_tool_args.setText("")
-            return None
-        else:
-            self._widget.ui.lineEdit_tool.setText(tool_candidate.name)
-            self._widget.ui.lineEdit_tool_args.setText(tool_candidate.cmdline_args)
-            return tool_candidate
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
@@ -148,7 +192,7 @@ class Tool(MetaObject):
         if not gams_path == '':
             gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
         main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-        command = '{} "{}" Curdir="{}" logoption=3'.format(gams_exe_path, self.tool().main_prgm, main_dir)
+        command = '{} "{}" Curdir="{}" logoption=3'.format(gams_exe_path, self.tool_template().main_prgm, main_dir)
         # Append Tool specific command line arguments to command (if present and implemented)
         self.instance.command = self.append_cmdline_args(command)
 
@@ -156,14 +200,14 @@ class Tool(MetaObject):
         """Append command line arguments to a command.
 
         Args:
-            command (str): Tool command
+            command (str): Command that starts processing the Tool in a subprocess
         """
         if (self.extra_cmdline_args is not None) and (not self.extra_cmdline_args == ''):
-            if (self.tool().cmdline_args is not None) and (not self.tool().cmdline_args == ''):
-                command += ' ' + self.tool().cmdline_args + ' ' + self.extra_cmdline_args
+            if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
+                command += ' ' + self.tool_template().cmdline_args + ' ' + self.extra_cmdline_args
             else:
                 command += ' ' + self.extra_cmdline_args
         else:
-            if (self.tool().cmdline_args is not None) and (not self.tool().cmdline_args == ''):
-                command += ' ' + self.tool().cmdline_args
+            if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
+                command += ' ' + self.tool_template().cmdline_args
         return command

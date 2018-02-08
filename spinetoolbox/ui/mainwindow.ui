@@ -127,6 +127,9 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="focusPolicy">
+               <enum>Qt::NoFocus</enum>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -143,6 +146,9 @@
                 <verstretch>0</verstretch>
                </sizepolicy>
               </property>
+              <property name="focusPolicy">
+               <enum>Qt::NoFocus</enum>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -151,30 +157,14 @@
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QLineEdit" name="lineEdit_data">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="readOnly">
-               <bool>true</bool>
-              </property>
-              <property name="placeholderText">
-               <string>Data</string>
-              </property>
-             </widget>
-            </item>
            </layout>
           </widget>
          </item>
         </layout>
        </widget>
-       <widget class="QWidget" name="tab_tools">
+       <widget class="QWidget" name="tab_tool_templates">
         <attribute name="title">
-         <string>Tools</string>
+         <string>Templates</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <property name="spacing">
@@ -193,16 +183,16 @@
           <number>6</number>
          </property>
          <item>
-          <widget class="QListView" name="listView_tools">
+          <widget class="QListView" name="listView_tool_templates">
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool candidates&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool Templates available in this project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QPushButton" name="pushButton_add_tool_candidate">
+            <widget class="QPushButton" name="pushButton_add_tool_template">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -222,7 +212,7 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add Tool candidate to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add Tool Template to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
@@ -237,7 +227,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_remove_tool_candidate">
+            <widget class="QPushButton" name="pushButton_refresh_tool_templates">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -257,7 +247,42 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove Tool candidate from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh Tool Templates. Press this button to refresh Tools that use this Template if the Template has changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/refresh_tools.png</normaloff>:/icons/refresh_tools.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>22</width>
+               <height>22</height>
+              </size>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_remove_tool_template">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>26</width>
+               <height>26</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>26</width>
+               <height>26</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove Tool Template from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
@@ -296,6 +321,12 @@
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
+       <property name="horizontalScrollBarPolicy">
+        <enum>Qt::ScrollBarAsNeeded</enum>
+       </property>
        <property name="viewMode">
         <enum>QMdiArea::SubWindowView</enum>
        </property>
@@ -313,7 +344,7 @@
      <x>0</x>
      <y>0</y>
      <width>998</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -569,6 +600,16 @@
    <header>widgets/custom_qtextbrowser.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>treeView_project</tabstop>
+  <tabstop>listView_tool_templates</tabstop>
+  <tabstop>pushButton_add_tool_template</tabstop>
+  <tabstop>pushButton_refresh_tool_templates</tabstop>
+  <tabstop>pushButton_remove_tool_template</tabstop>
+  <tabstop>textBrowser_eventlog</tabstop>
+  <tabstop>textBrowser_process_output</tabstop>
+ </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
  </resources>

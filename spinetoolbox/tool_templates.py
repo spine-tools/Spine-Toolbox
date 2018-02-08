@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Tool candidate classes.
+Tool template classes.
 
 :authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Erkka Rinne <erkka.rinne@vtt.fi>
 :date:   24.1.2018
@@ -31,15 +31,15 @@ from metaobject import MetaObject
 from config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 
 
-class ToolCandidate(MetaObject):
-    """Super class for various tool candidates.
+class ToolTemplate(MetaObject):
+    """Super class for various tool templates.
 
     Attributes:
         parent (ToolBoxUI): QMainWindow instance
         name (str): Name of the tool
         description (str): Short description of the tool
         path (str): Path to tool
-        includes (str): List of files belonging to the tool (relative to 'path')
+        includes (str): List of files belonging to the tool template (relative to 'path')
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
@@ -103,12 +103,12 @@ class ToolCandidate(MetaObject):
 
     @staticmethod
     def check_definition(ui, data):
-        """Check that a tool candidate definition contains
+        """Check that a tool template definition contains
         the required keys and that it is in correct format.
 
         Args:
             ui (ToolboxUI): Spine Toolbox QMainWindow instance
-            data (dict): Tool candidate definition
+            data (dict): Tool template definition
 
         Returns:
             Dictionary or None if there was a problem in the tool definition.
@@ -135,13 +135,13 @@ class ToolCandidate(MetaObject):
         return kwargs
 
 
-class GAMSTool(ToolCandidate):
-    """Class for GAMS tool candidates.
+class GAMSTool(ToolTemplate):
+    """Class for GAMS tool templates.
 
     Attributes:
         name (str): GAMS Tool name
         description (str): GAMS Tool description
-        path (str): Path (#TODO: to model main program? Check this)
+        path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path')
                      First file in the list is the main GAMS program.
         inputfiles (list): List of required data files

@@ -29,7 +29,7 @@ Note: These are Spine Toolbox internal data models.
 from PySide2.QtCore import Qt, QAbstractListModel, QModelIndex
 
 
-class ToolCandidateModel(QAbstractListModel):
+class ToolTemplateModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
     def __init__(self, parent=None):
         super().__init__()
@@ -124,21 +124,23 @@ class ToolCandidateModel(QAbstractListModel):
         return True
 
     def tool(self, row):
-        """Returns tool on given row.
+        """Returns tool template on given row.
+        # TODO: Change method name to tool_template
 
         Args:
-            row (int): Row of tool
+            row (int): Row of tool template
 
         Returns:
-            Tool from tools list
+            ToolTemplate from tool template list
         """
         return self._tools[row]
 
     def find_tool(self, name):
-        """Returns tool with the given name.
+        """Returns tool template with the given name.
+        # TODO: Change name to find_tool_template
 
         Args:
-            name (str): Name of tool to be found
+            name (str): Name of tool template to be found
         """
         for tool in self._tools:
             if isinstance(tool, str):
