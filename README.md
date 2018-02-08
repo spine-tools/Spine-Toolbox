@@ -8,7 +8,17 @@ simulation models.
 - Python 3.5+
 - PySide2 for Qt 5.6+
 
-### Installing PySide2 for Anaconda & Miniconda Python (3.5+)
+### Installing PySide2
+
+There are three options for installing PySide2
+
+- Installing PySide2 for Anaconda & Miniconda (3.5+)
+- Installing PySide2 on a 'clean' Python (3.5+)
+- Installing PySide2 by building sources (Python 2 & 3)
+
+Each option is presented below.
+
+#### Installing PySide2 for Anaconda & Miniconda Python (3.5+)
 
 PySide2 for Qt 5.6.2 is available on conda-forge channel. You need to 
 add this channel to your `conda` like this,
@@ -19,7 +29,7 @@ Now you can install PySide2 with
 
     conda install pyside2
 
-### Installing PySide2 on Python
+#### Installing PySide2 on a 'clean' Python (3.5+)
 
 Download wheel from http://hansch.info/PySide2/
 
@@ -46,7 +56,7 @@ application components. If you want to develop the Graphical User
 Interface (views, buttons, menus, etc.) you need the PySide2 GUI 
 development tools.
 
-### Installing PySide2 GUI Development Tools (Windows)
+#### Installing PySide2 GUI Development Tools (Windows)
 
 These instructions have been tested when the Qt 5.9.0 wheel 
 PySide2-5.9-cp36-cp36m-win_amd64.whl has been installed.
@@ -90,6 +100,15 @@ At least \Compiler and \port_v3 folders are required.
 Add your Python scripts (e.g. C:\Python36\Scripts) and PySide2 
 (e.g. C:\Python36\Lib\site-packages\PySide2) folders into your PATH 
 variable.
+
+#### Installing PySide2 by building sources (Python 2 & 3)
+
+You can install PySide2 by building the source package yourself. Instructions 
+on how to do this can be found on the getting started page of the official
+PySide2 wiki 
+https://wiki.qt.io/PySide2_GettingStarted
+  
+Follow the instructions on the page according to your OS.
 
 ### Preparing and starting Spine Toolbox
 
