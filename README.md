@@ -13,7 +13,7 @@ simulation models.
 There are three options for installing PySide2
 
 - Installing PySide2 for Anaconda & Miniconda (3.5+)
-- Installing PySide2 on a 'clean' Python (3.5+)
+- Installing PySide2 on a ‘clean’ Python (3.5+)
 - Installing PySide2 by building sources (Python 2 & 3)
 
 Each option is presented below.
@@ -30,9 +30,9 @@ Alternatively, create a separate environment for the Toolbox with
 
 	conda create --name spinetoolbox --channel conda-forge --file requirements.txt
 
-#### Installing PySide2 on a 'clean' Python (3.5+)
+#### Installing PySide2 on a ‘clean’ Python (3.5+)
 
-Download wheel from http://hansch.info/PySide2/
+Download wheel from [http://hansch.info/PySide2/](http://hansch.info/PySide2/)
 
 The following wheels are available:
 PySide2 for Qt 5.6.2 (Python 3.5 and Python 3.6)
@@ -76,11 +76,9 @@ it is located. It should be in the folder where PySide2 was installed
 
 `pyside2-uic.exe` is in your Python scripts folder 
 (e.g. C:\Python36\Scripts). To make it work, clone `pyside-setup` 
-project from
+project from https://code.qt.io/pyside/pyside-setup.git.
 
-https://code.qt.io/pyside/pyside-setup.git
-
-Checkout branch `dev`
+Checkout branch `dev`.
 
 Go to folder \pyside-setup\sources\pyside2-tools\pyside2uic
 
@@ -107,15 +105,15 @@ variable.
 You can install PySide2 by building the source package yourself. Instructions 
 on how to do this can be found on the getting started page of the official
 PySide2 wiki 
-https://wiki.qt.io/PySide2_GettingStarted
+[https://wiki.qt.io/PySide2_GettingStarted](https://wiki.qt.io/PySide2_GettingStarted)
   
 Follow the instructions on the page according to your OS.
 
-### Preparing and starting Spine Toolbox
+## Preparing and starting Spine Toolbox
 
-Run 'build_ui.bat' from your Python/PySide2 enabled command window to generate
+Run `build_ui.bat` from your Python/PySide2 enabled command window to generate
 the code for the Spine Toolbox user interface.
-After modifying the user interface ('.ui') files with 'designer.exe', re-run 
+After modifying the user interface (*.ui) files with `designer.exe`, re-run 
 `build_ui.bat` to build the Spine Toolbox interface anew.
 
-In the command prompt, run 'python spinetoolbox.py' in the SpineToolbox folder.
+In the command prompt, run `python spinetoolbox.py` in the `spinetoolbox` folder.
