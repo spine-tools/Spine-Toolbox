@@ -38,6 +38,7 @@ class Tool(MetaObject):
     """Tool class.
 
     Attributes:
+        parent (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
         project (SpineToolboxProject): Project
@@ -48,6 +49,7 @@ class Tool(MetaObject):
         super().__init__(name, description)
         self._parent = parent
         self.item_type = "Tool"
+        self.item_category = "Tools"
         self._project = project
         self._widget = ToolSubWindowWidget(name, self.item_type)
         self._widget.set_name_label(name)
@@ -62,6 +64,7 @@ class Tool(MetaObject):
     def connect_signals(self):
         """Connect this tool's signals to slots."""
         self._widget.ui.pushButton_details.clicked.connect(self.show_details)
+        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.pushButton_x.clicked.connect(self.remove_tool_template)
 
@@ -76,6 +79,25 @@ class Tool(MetaObject):
             return
         self._parent.msg.emit("Tool template file contents:\n{0}"
                               .format(json.dumps(definition, sort_keys=True, indent=4)))
+
+    @Slot(name="show_connections")
+    def show_connections(self):
+        """Show connections of this Tool."""
+        inputs = self._parent.connection_model.input_items(self.name)
+        outputs = self._parent.connection_model.output_items(self.name)
+        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
+        self._parent.msg.emit("Input items")
+        if not inputs:
+            self._parent.msg_warning.emit("None")
+        else:
+            for item in inputs:
+                self._parent.msg_warning.emit("{0}".format(item))
+        self._parent.msg.emit("Output items")
+        if not outputs:
+            self._parent.msg_warning.emit("None")
+        else:
+            for item in outputs:
+                self._parent.msg_warning.emit("{0}".format(item))
 
     def tool_template(self):
         """Returns Tool template."""

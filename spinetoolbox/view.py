@@ -34,13 +34,16 @@ class View(MetaObject):
     """View class.
 
     Attributes:
+        parent (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
         project (SpineToolboxProject): Project
     """
-    def __init__(self, name, description, project):
+    def __init__(self, parent, name, description, project):
         super().__init__(name, description)
+        self._parent = parent
         self.item_type = "View"
+        self.item_category = "Views"
         self._project = project
         self._data = "data"
         self._widget = SubWindowWidget(name, self.item_type)
@@ -52,11 +55,31 @@ class View(MetaObject):
     def connect_signals(self):
         """Connect this view's signals to slots."""
         self._widget.ui.pushButton_edit.clicked.connect(self.edit_clicked)
+        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
 
     @Slot(name='edit_clicked')
     def edit_clicked(self):
         """Edit button clicked."""
         logging.debug(self.name + " - " + str(self._data))
+
+    @Slot(name="show_connections")
+    def show_connections(self):
+        """Show connections of this item."""
+        inputs = self._parent.connection_model.input_items(self.name)
+        outputs = self._parent.connection_model.output_items(self.name)
+        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
+        self._parent.msg.emit("Input items")
+        if not inputs:
+            self._parent.msg_warning.emit("None")
+        else:
+            for item in inputs:
+                self._parent.msg_warning.emit("{0}".format(item))
+        self._parent.msg.emit("Output items")
+        if not outputs:
+            self._parent.msg_warning.emit("None")
+        else:
+            for item in outputs:
+                self._parent.msg_warning.emit("{0}".format(item))
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""

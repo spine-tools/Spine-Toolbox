@@ -313,6 +313,41 @@
          </item>
         </layout>
        </widget>
+       <widget class="QWidget" name="tab_connections">
+        <attribute name="title">
+         <string>Connections</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QTableView" name="tableView_connections">
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <property name="horizontalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <attribute name="horizontalHeaderStretchLastSection">
+            <bool>true</bool>
+           </attribute>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
       <widget class="QMdiArea" name="mdiArea">
        <property name="sizePolicy">
@@ -344,7 +379,7 @@
      <x>0</x>
      <y>0</y>
      <width>998</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

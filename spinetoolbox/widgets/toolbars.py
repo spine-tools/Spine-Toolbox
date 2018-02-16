@@ -76,7 +76,7 @@ def make_item_toolbar(ui):
     add_data_connection.triggered.connect(ui.show_add_data_connection_form)
     add_tool.triggered.connect(ui.show_add_tool_form)
     add_view.triggered.connect(ui.show_add_view_form)
-    remove_all.triggered.connect(ui.clear_ui)
+    remove_all.triggered.connect(ui.remove_all_items)
     # Set stylesheet
     toolbar.setStyleSheet(ICON_TOOLBAR_SS)
     toolbar.setObjectName("ItemToolbar")

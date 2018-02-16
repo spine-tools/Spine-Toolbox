@@ -28,7 +28,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
@@ -42,14 +42,11 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 import widgets.toolbars
-from data_store import DataStore
-from data_connection import DataConnection
-from view import View
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
 from helpers import project_dir, get_datetime
-from models import ToolTemplateModel
+from models import ToolTemplateModel, ConnectionModel
 
 
 class ToolboxUI(QMainWindow):
@@ -77,6 +74,7 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
+        self.connection_model = None
         # Widget and form references
         self.settings_form = None
         self.about_form = None
@@ -154,7 +152,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
+        # noinspection PyUnresolvedReferences
         self.test1_action.triggered.connect(self.test1)
+        # noinspection PyUnresolvedReferences
         self.test2_action.triggered.connect(self.test2)
         # QMdiArea
         self.ui.mdiArea.subWindowActivated.connect(self.update_details_frame)
@@ -223,6 +223,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
         self.init_tool_template_model(tool_template_paths)
+        self.init_connection_model()
 
     def init_tool_template_model(self, tool_template_paths):
         """Initializes Tool template model.
@@ -249,14 +250,46 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
         # Set ToolTemplateModel to available Tools view
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
-        # Note: If ToolTemplateModel signals are in use, they must be reconnected here.
-        try:
-            # self.ui.listView_tool_templates.doubleClicked.connect(self.open_tool_template_file, Qt.UniqueConnection)
+        # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
+        # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
+        n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
+        if n_recv == 0:
+            # logging.debug("Connecting doubleClicked signal for QListView")
             self.ui.listView_tool_templates.doubleClicked.connect(self.open_tool_template_file)
-        except TypeError:
-            pass
+        elif n_recv > 1:
+            # Check that this never gets over 1
+            logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv))
+        else:
+            pass  # signal already connected
         if n_tools == 0:
             self.msg_warning.emit("Project has no tool templates")
+
+    def init_connection_model(self):
+        """Initializes a model representing connections between project items."""
+        self.connection_model = ConnectionModel(self)
+        self.ui.tableView_connections.setModel(self.connection_model)
+        # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
+        n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
+        if n_connected == 0:
+            # logging.debug("Connecting clicked signal for QTableView")
+            self.ui.tableView_connections.clicked.connect(self.connection_clicked)
+        elif n_connected > 1:
+            # Check that this never gets over 1
+            logging.error("Number of receivers for tableView_connections clicked signal is now:{0}".format(n_connected))
+        else:
+            pass  # signal already connected
+
+    @Slot("QModelIndex", name="connection_clicked")
+    def connection_clicked(self, index):
+        """Toggle the boolean value in the connection model.
+
+        Args:
+            index (QModelIndex): Clicked index
+        """
+        if not index.isValid():
+            return
+        # logging.debug("index {0}:{1} clicked".format(index.row(), index.column()))
+        self.connection_model.setData(index, "value", Qt.EditRole)  # value not used
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -301,6 +334,7 @@ class ToolboxUI(QMainWindow):
             previously opened project at start-up
         """
         tool_template_paths = list()
+        connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config),
@@ -331,7 +365,11 @@ class ToolboxUI(QMainWindow):
         try:
             tool_template_paths = project_dict['tool_templates']
         except KeyError:
-            logging.debug("tool_templates keyword not found in project file")
+            self.msg_warning.emit("Tool templates not found in project file")
+        try:
+            connections = project_dict['connections']
+        except KeyError:
+            self.msg_warning.emit("No connections found in project file")
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
         # Init models and views
@@ -342,6 +380,9 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Loading project items failed")
             return False
         self.ui.treeView_project.expandAll()
+        # Restore connections
+        self.msg.emit("Restoring connections")
+        self.connection_model.reset_model(connections)
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -430,6 +471,11 @@ class ToolboxUI(QMainWindow):
     def test1(self):
         sub_windows = self.ui.mdiArea.subWindowList()
         self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
+        logging.debug("Total number of items: {0}".format(self.n_items("all")))
+        logging.debug("Number of Data Stores: {0}".format(self.n_items("Data Stores")))
+        logging.debug("Number of Data Connections: {0}".format(self.n_items("Data Connections")))
+        logging.debug("Number of Tools: {0}".format(self.n_items("Tools")))
+        logging.debug("Number of Views: {0}".format(self.n_items("Views")))
         top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
         for top_level_item in top_level_items:
             # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
@@ -482,26 +528,6 @@ class ToolboxUI(QMainWindow):
         else:
             self.ui.lineEdit_type.setText("")
             self.ui.lineEdit_name.setText("")
-
-    def add_data_store(self, name, description):
-        """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
-        data_store = DataStore(name, description, self._project)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
-        self.project_refs.append(data_store)  # Save reference or signals don't stick
-        self.add_item_to_model("Data Stores", name, data_store)
-        self.msg.emit("Data Store <b>{0}</b> added to project".format(name))
-        sw.show()
-
-    def add_data_connection(self, name, description):
-        """Add Data Connection as a QMdiSubwindow to QMdiArea."""
-        data_connection = DataConnection(name, description, self._project)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
-        self.project_refs.append(data_connection)  # Save reference or signals don't stick
-        self.add_item_to_model("Data Connections", name, data_connection)
-        self.msg.emit("Data Connection <b>{0}</b> added to project".format(name))
-        sw.show()
 
     @Slot(name="add_tool_template")
     def add_tool_template(self):
@@ -687,16 +713,6 @@ class ToolboxUI(QMainWindow):
                         self.msg.emit("Removed {0} from Tool <b>{1}</b>".format(sel_tool.name, tool.name))
         self.msg_success.emit("Tool template removed successfully")
 
-    def add_view(self, name, description):
-        """Add View as a QMdiSubwindow to QMdiArea."""
-        view = View(name, description, self._project)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
-        self.project_refs.append(view)  # Save reference or signals don't stick
-        self.add_item_to_model("Views", name, view)
-        self.msg.emit("View <b>{0}</b> added to project".format(name))
-        sw.show()
-
     def add_item_to_model(self, category, text, data):
         """Add item to project model.
 
@@ -720,8 +736,23 @@ class ToolboxUI(QMainWindow):
             new_item = QStandardItem(text)
             new_item.setData(data, role=Qt.UserRole)
             self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
+            # Get row and column number (i.e. index) for the connection model. This is to
+            # keep the project item model and connection model synchronized.
+            index = self.new_item_index(data.item_category)  # Get index according to item category
+            self.connection_model.append_item(new_item, index)
             self.ui.treeView_project.expand(item_index)
         return True
+
+    @Slot(name="remove_all_items")
+    def remove_all_items(self):
+        """Slot for Remove All button."""
+        subwindows = self.ui.mdiArea.subWindowList()
+        n = len(subwindows)
+        if n == 0:
+            return
+        for subwindow in subwindows:
+            self.remove_sw(subwindow)
+        self.msg.emit("All {0} items removed from project".format(n))
 
     def remove_item(self, ind):
         """Remove subwindow from project when it's index in the project model is known.
@@ -748,16 +779,17 @@ class ToolboxUI(QMainWindow):
         item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
         ind = self.project_item_model.indexFromItem(item)
+        # Remove item from connection model
+        if not self.connection_model.remove_item(item):
+            self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
         # Remove item from project model
         if not self.project_item_model.removeRow(ind.row(), ind.parent()):
-            self.msg_error.emit("Failed to remove item <b>{0}</b>".format(item.name))
-            logging.error("Failed to remove item: {0}".format(item.name))
+            self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(item_data.name))
         # Remove item data from reference list
         try:
             self.project_refs.remove(item_data)  # Note: remove() removes only the first occurrence in the list
         except ValueError:
             self.msg_error.emit("Item '{0}' not found in reference list".format(item_data))
-            logging.error("Item '{0}' not found in reference list".format(item_data))
             return
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
         return
@@ -780,6 +812,68 @@ class ToolboxUI(QMainWindow):
             logging.error("More than one item with name '{0}' found".format(name))
             return None
         return found_items[0]
+
+    def n_items(self, typ):
+        """Returns the number of items in the project according to type.
+
+        Args:
+            typ (str): Type of item to count. "all" returns the number of items in project.
+        """
+        n = 0
+        if not self.project_item_model:
+            return n
+        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
+        for top_level_item in top_level_items:
+            if typ == "all":
+                if top_level_item.hasChildren():
+                    n = n + top_level_item.rowCount()
+            elif typ == "Data Stores":
+                if top_level_item.data(Qt.DisplayRole) == "Data Stores":
+                    n = top_level_item.rowCount()
+            elif typ == "Data Connections":
+                if top_level_item.data(Qt.DisplayRole) == "Data Connections":
+                    n = top_level_item.rowCount()
+            elif typ == "Tools":
+                if top_level_item.data(Qt.DisplayRole) == "Tools":
+                    n = top_level_item.rowCount()
+            elif typ == "Views":
+                if top_level_item.data(Qt.DisplayRole) == "Views":
+                    n = top_level_item.rowCount()
+            else:
+                logging.error("Unknown type: {0}".format(typ))
+        return n
+
+    def new_item_index(self, category):
+        """Get index where a new item is appended according to category."""
+        if category == "Data Stores":
+            # Return number of data stores
+            return self.n_items("Data Stores") - 1
+        elif category == "Data Connections":
+            # Return number of data stores + data connections - 1
+            return self.n_items("Data Stores") + self.n_items("Data Connections") - 1
+        elif category == "Tools":
+            # Return number of data stores + data connections + tools - 1
+            return self.n_items("Data Stores") + self.n_items("Data Connections") + self.n_items("Tools") - 1
+        elif category == "Views":
+            # Return total number of items - 1
+            return self.n_items("all") - 1
+        else:
+            logging.error("Unknown category:{0}".format(category))
+            return 0
+
+    def return_item_names(self):
+        """Returns the names of all items in a list."""
+        item_names = list()
+        if not self.project_item_model:
+            return item_names
+        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
+        for top_level_item in top_level_items:
+            if top_level_item.hasChildren():
+                n_children = top_level_item.rowCount()
+                for i in range(n_children):
+                    child = top_level_item.child(i, 0)
+                    item_names.append(child.data(Qt.DisplayRole))
+        return item_names
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):
@@ -904,7 +998,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_store_form = AddDataStoreWidget(self)
+        self.add_data_store_form = AddDataStoreWidget(self, self._project)
         self.add_data_store_form.show()
 
     @Slot(name="show_add_data_connection_form")
@@ -913,7 +1007,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_connection_form = AddDataConnectionWidget(self)
+        self.add_data_connection_form = AddDataConnectionWidget(self, self._project)
         self.add_data_connection_form.show()
 
     @Slot(name="show_add_tool_form")
@@ -931,7 +1025,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_view_form = AddViewWidget(self)
+        self.add_view_form = AddViewWidget(self, self._project)
         self.add_view_form.show()
 
     @Slot(name="show_settings")

@@ -36,7 +36,7 @@ class AddToolWidget(QWidget):
     """A widget to query user's preferences for a new item.
 
     Attributes:
-        parent (QWidget): Parent widget.
+        parent (ToolboxUI): Parent widget
         project(SpineToolboxProject): Project where to add the new Tool
     """
     def __init__(self, parent, project):
@@ -132,11 +132,9 @@ class AddToolWidget(QWidget):
         """Creates new Item according to user's selections."""
         selected_row = self.ui.comboBox_tool.currentIndex()
         if selected_row == 0:
-            logging.debug("Selected row 0 (no tool)")
             selected_tool = None
         else:
             selected_tool = self._parent.tool_template_model.tool(selected_row)
-            logging.debug("Adding Tool '{0}' with tool {1}".format(self.name, selected_tool.name))
         self._project.add_tool(self.name, self.description, selected_tool)
 
     def keyPressEvent(self, e):

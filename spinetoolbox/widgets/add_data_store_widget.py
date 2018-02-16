@@ -36,12 +36,14 @@ class AddDataStoreWidget(QWidget):
     """A widget to query user's preferences for a new item.
 
     Attributes:
-        parent: Parent widget.
+        parent (ToolboxUI): Parent widget
+        project (SpineToolboxProject): Project for the new item
     """
-    def __init__(self, parent):
+    def __init__(self, parent, project):
         """Initialize class."""
         super().__init__(f=Qt.Window)
-        self._parent = parent  # QWidget parent
+        self._parent = parent
+        self._project = project
         #  Set up the user interface from Designer.
         self.ui = ui.add_data_store.Ui_Form()
         self.ui.setupUi(self)
@@ -104,8 +106,7 @@ class AddDataStoreWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        logging.debug("Adding Data Store '{0}'".format(self.name))
-        self._parent.add_data_store(self.name, self.description)
+        self._project.add_data_store(self.name, self.description)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

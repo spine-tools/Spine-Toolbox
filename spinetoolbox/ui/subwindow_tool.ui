@@ -263,7 +263,29 @@
         <bool>false</bool>
        </property>
        <property name="text">
-        <string>Details</string>
+        <string>Info</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_connections">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>75</width>
+         <height>23</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show connections&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Conn.</string>
        </property>
       </widget>
      </item>
@@ -276,7 +298,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Execute</string>
+        <string>Exec.</string>
        </property>
       </widget>
      </item>

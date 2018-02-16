@@ -111,6 +111,7 @@ class SpineToolboxProject(MetaObject):
         project_dict['name'] = self.name
         project_dict['description'] = self.description
         project_dict['tool_templates'] = tool_def_paths
+        project_dict['connections'] = self._parent.connection_model.get_connections()
         item_dict = dict()  # Dictionary for storing project items
         n = 0
         # Traverse all items in project model
@@ -143,7 +144,6 @@ class SpineToolboxProject(MetaObject):
         # Write into JSON file
         with open(self.path, 'w') as fp:
             json.dump(saved_dict, fp, indent=4)
-        logging.debug("{0} items saved".format(n))
 
     def load(self, item_dict):
         """Populate project item model with items loaded from project file.
@@ -166,26 +166,14 @@ class SpineToolboxProject(MetaObject):
             desc = data_stores[name]['description']
             data = data_stores[name]['data']
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            data_store = DataStore(name, desc, self)
-            data_store.set_data(data)
-            # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-            ds_sw = self._parent.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
-            self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
-            self._parent.add_item_to_model("Data Stores", name, data_store)
-            ds_sw.show()
+            self.add_data_store(name, desc, data)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
             desc = data_connections[name]['description']
             data = data_connections[name]['data']
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            data_connection = DataConnection(name, desc, self)
-            data_connection.set_data(data)
-            # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-            dc_sw = self._parent.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
-            self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
-            self._parent.add_item_to_model("Data Connections", name, data_connection)
-            dc_sw.show()
+            self.add_data_connection(name, desc, data)
         # Recreate Tools
         for name in tools.keys():
             short_name = tools[name]['short name']
@@ -199,25 +187,13 @@ class SpineToolboxProject(MetaObject):
                                             "it was not found. Add it to Tool templates and reopen "
                                             "project.".format(name, tool_name))
             self.add_tool(name, desc, tool_template)
-            # tool = Tool(self._parent, name, desc, self, tool_template)  # Can handle None as well
-            # # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-            # tool_sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
-            # self._parent.project_refs.append(tool)  # Save reference or signals don't stick
-            # self._parent.add_item_to_model("Tools", name, tool)
-            # tool_sw.show()
         # Recreate Views
         for name in views.keys():
             short_name = views[name]['short name']
             desc = views[name]['description']
             data = views[name]['data']
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            view = View(name, desc, self)
-            view.set_data(data)
-            # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-            view_sw = self._parent.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
-            self._parent.project_refs.append(view)  # Save reference or signals don't stick
-            self._parent.add_item_to_model("Views", name, view)
-            view_sw.show()
+            self.add_view(name, desc, data)
         return True
 
     def load_tool_template(self, jsonfile):
@@ -263,6 +239,28 @@ class SpineToolboxProject(MetaObject):
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_type))
             return None
 
+    def add_data_store(self, name, description, data=1):
+        """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
+        data_store = DataStore(self._parent, name, description, self)
+        data_store.set_data(data)
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self._parent.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
+        self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
+        self._parent.add_item_to_model("Data Stores", name, data_store)
+        self._parent.msg.emit("Data Store <b>{0}</b> added to project".format(name))
+        sw.show()
+
+    def add_data_connection(self, name, description, data=2):
+        """Add Data Connection as a QMdiSubwindow to QMdiArea."""
+        data_connection = DataConnection(self._parent, name, description, self)
+        data_connection.set_data(data)
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self._parent.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
+        self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
+        self._parent.add_item_to_model("Data Connections", name, data_connection)
+        self._parent.msg.emit("Data Connection <b>{0}</b> added to project".format(name))
+        sw.show()
+
     def add_tool(self, name, description, tool_template):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         tool = Tool(self._parent, name, description, self, tool_template)
@@ -274,3 +272,14 @@ class SpineToolboxProject(MetaObject):
         sw.show()
         sw.resize(sw.minimumSizeHint())
         self._parent.msg.emit("Tool <b>{0}</b> ready".format(name))
+
+    def add_view(self, name, description, data="View data"):
+        """Add View as a QMdiSubwindow to QMdiArea."""
+        view = View(self._parent, name, description, self)
+        view.set_data(data)
+        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
+        sw = self._parent.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
+        self._parent.project_refs.append(view)  # Save reference or signals don't stick
+        self._parent.add_item_to_model("Views", name, view)
+        self._parent.msg.emit("View <b>{0}</b> added to project".format(name))
+        sw.show()
