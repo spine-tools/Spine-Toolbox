@@ -233,7 +233,7 @@ class ToolboxUI(QMainWindow):
         """
         self.tool_template_model = ToolTemplateModel()
         n_tools = 0
-        self.msg.emit("Loading Tool Templates...")
+        self.msg.emit("Loading Tool templates...")
         for path in tool_template_paths:
             if path == '' or not path:
                 continue
@@ -381,7 +381,7 @@ class ToolboxUI(QMainWindow):
             return False
         self.ui.treeView_project.expandAll()
         # Restore connections
-        self.msg.emit("Restoring connections")
+        self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
@@ -660,7 +660,6 @@ class ToolboxUI(QMainWindow):
         # noinspection PyCallByClass, PyTypeChecker
         answer = QMessageBox.question(self, 'Remove Tool template', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
-            self.msg.emit("Operation cancelled")
             return
         self.msg.emit("Removing Tool template <b>{0}</b> -> <b>{1}</b>".format(sel_tool.name, tool_def_path))
         # Remove tool def file path from the project file (only JSON supported)
@@ -746,6 +745,14 @@ class ToolboxUI(QMainWindow):
     @Slot(name="remove_all_items")
     def remove_all_items(self):
         """Slot for Remove All button."""
+        if not self._project:
+            self.msg.emit("No items to remove")
+            return
+        msg = "Remove all items from project?"
+        # noinspection PyCallByClass, PyTypeChecker
+        answer = QMessageBox.question(self, 'Removing all items', msg, QMessageBox.Yes, QMessageBox.No)
+        if not answer == QMessageBox.Yes:
+            return
         subwindows = self.ui.mdiArea.subWindowList()
         n = len(subwindows)
         if n == 0:

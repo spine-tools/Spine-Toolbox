@@ -159,7 +159,7 @@ class SpineToolboxProject(MetaObject):
         tools = item_dict['Tools']
         views = item_dict['Views']
         n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
-        self._parent.msg.emit("Project contains {0} items".format(n))
+        self._parent.msg.emit("Loading project items...")
         # Recreate Data Stores
         for name in data_stores.keys():
             short_name = data_stores[name]['short name']
@@ -247,7 +247,7 @@ class SpineToolboxProject(MetaObject):
         sw = self._parent.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
-        self._parent.msg.emit("Data Store <b>{0}</b> added to project".format(name))
+        # self._parent.msg.emit("Data Store <b>{0}</b> ready".format(name))
         sw.show()
 
     def add_data_connection(self, name, description, data=2):
@@ -258,7 +258,7 @@ class SpineToolboxProject(MetaObject):
         sw = self._parent.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
-        self._parent.msg.emit("Data Connection <b>{0}</b> added to project".format(name))
+        # self._parent.msg.emit("Data Connection <b>{0}</b> ready".format(name))
         sw.show()
 
     def add_tool(self, name, description, tool_template):
@@ -269,9 +269,9 @@ class SpineToolboxProject(MetaObject):
         # logging.debug("minimumSizeHint:{0}".format(sw.minimumSizeHint()))
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
+        # self._parent.msg.emit("Tool <b>{0}</b> ready".format(name))
         sw.show()
         sw.resize(sw.minimumSizeHint())
-        self._parent.msg.emit("Tool <b>{0}</b> ready".format(name))
 
     def add_view(self, name, description, data="View data"):
         """Add View as a QMdiSubwindow to QMdiArea."""
@@ -281,5 +281,5 @@ class SpineToolboxProject(MetaObject):
         sw = self._parent.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)
-        self._parent.msg.emit("View <b>{0}</b> added to project".format(name))
+        # self._parent.msg.emit("View <b>{0}</b> ready".format(name))
         sw.show()
