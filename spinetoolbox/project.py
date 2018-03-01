@@ -136,6 +136,9 @@ class SpineToolboxProject(MetaObject):
                             item_dict[top_level_item_txt][name]["tool"] = ""
                         else:
                             item_dict[top_level_item_txt][name]["tool"] = child_data.tool_template().name
+                    elif child_data.item_type == "Data Connection":
+                        # Save references
+                        item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
                     else:
                         item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
         # Save project stuff
@@ -171,9 +174,12 @@ class SpineToolboxProject(MetaObject):
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
             desc = data_connections[name]['description']
-            data = data_connections[name]['data']
+            try:
+                refs = data_connections[name]["references"]
+            except KeyError:
+                refs = list()
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_data_connection(name, desc, data)
+            self.add_data_connection(name, desc, refs)
         # Recreate Tools
         for name in tools.keys():
             short_name = tools[name]['short name']
@@ -244,29 +250,34 @@ class SpineToolboxProject(MetaObject):
         data_store = DataStore(self._parent, name, description, self)
         data_store.set_data(data)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow)
+        sw = self._parent.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow
+                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
+                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
         # self._parent.msg.emit("Data Store <b>{0}</b> ready".format(name))
         sw.show()
 
-    def add_data_connection(self, name, description, data=2):
+    def add_data_connection(self, name, description, references):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
-        data_connection = DataConnection(self._parent, name, description, self)
-        data_connection.set_data(data)
+        data_connection = DataConnection(self._parent, name, description, self, references)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow)
+        sw = self._parent.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow
+                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
+                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
         # self._parent.msg.emit("Data Connection <b>{0}</b> ready".format(name))
         sw.show()
+        sw.resize(sw.minimumSizeHint())
 
     def add_tool(self, name, description, tool_template):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         tool = Tool(self._parent, name, description, self, tool_template)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow)
-        # logging.debug("minimumSizeHint:{0}".format(sw.minimumSizeHint()))
+        sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow
+                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
+                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
         # self._parent.msg.emit("Tool <b>{0}</b> ready".format(name))
@@ -278,7 +289,9 @@ class SpineToolboxProject(MetaObject):
         view = View(self._parent, name, description, self)
         view.set_data(data)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow)
+        sw = self._parent.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow
+                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
+                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)
         # self._parent.msg.emit("View <b>{0}</b> ready".format(name))

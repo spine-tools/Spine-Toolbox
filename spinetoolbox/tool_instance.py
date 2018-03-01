@@ -126,15 +126,15 @@ class ToolInstance(QObject):
                 return  # or emit instance_finished_signal
             try:
                 return_msg = self.tool.return_codes[ret]
-                self.ui.msg_error.emit("<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
-                self.ui.msg_error.emit("Unknown return code ({0})".format(ret))
+                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
             self.instance_finished_signal.emit(ret)
             return
         else:  # Return code 0: success
             self.tool_process.deleteLater()
             self.tool_process = None
-            self.ui.msg.emit("Tool finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tTool finished successfully. Return code:{0}".format(ret))
         self.instance_finished_signal.emit(ret)
         return
 
@@ -228,7 +228,8 @@ class ToolInstance(QObject):
 
     def make_work_output_dirs(self):
         """Make sure that work directory has the necessary output directories for Tool output files.
-        Checks only "outputfiles" list. Alternatively you can add directories to "inputfiles" list in the tool definition file.
+        Checks only "outputfiles" list. Alternatively you can add directories to "inputfiles" list
+        in the tool definition file.
 
         Returns:
             Boolean value depending on operation success.

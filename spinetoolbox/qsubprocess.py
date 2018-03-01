@@ -59,7 +59,7 @@ class QSubProcess(QObject):
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
         self._ui.msg.emit("*** Starting Tool <b>{0}</b> ***".format(self._running_tool.name))
-        self._ui.msg.emit("<i>{0}</i>".format(command))
+        self._ui.msg.emit("\t<i>{0}</i>".format(command))
         self._process.started.connect(self.process_started)
         self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
         self._process.readyReadStandardError.connect(self.on_ready_stderr)
@@ -76,7 +76,7 @@ class QSubProcess(QObject):
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
-        self._ui.msg.emit("Subprocess started...")
+        self._ui.msg.emit("\tSubprocess started...")
 
     @Slot("QProcess::ProcessState", name="on_state_changed")
     def on_state_changed(self, new_state):
@@ -139,10 +139,10 @@ class QSubProcess(QObject):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             logging.error("QProcess CrashExit")
-            self._ui.msg_error("Subprocess crashed")
+            self._ui.msg_error("\tSubprocess crashed")
             self.process_failed = True
         elif exit_status == QProcess.NormalExit:
-            self._ui.msg.emit("Subprocess finished")
+            self._ui.msg.emit("\tSubprocess finished")
             logging.debug("QProcess NormalExit")
         else:
             logging.error("Unknown exit from QProcess '{0}'".format(exit_status))

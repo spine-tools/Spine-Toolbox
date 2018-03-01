@@ -27,9 +27,10 @@ Tool class.
 import logging
 import os
 import json
+import shutil
 from metaobject import MetaObject
 from widgets.sw_tool_widget import ToolSubWindowWidget
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE
 
@@ -53,6 +54,8 @@ class Tool(MetaObject):
         self._project = project
         self._widget = ToolSubWindowWidget(name, self.item_type)
         self._widget.set_name_label(name)
+        self._widget.make_header_for_input_files()
+        self._widget.make_header_for_output_files()
         self._tool_template = None
         self.set_tool_template(tool_template)
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
@@ -178,29 +181,141 @@ class Tool(MetaObject):
             return None
         return definition
 
-    @Slot(name='execute')
+    @Slot(name="execute")
     def execute(self):
         """Execute button clicked."""
         if not self.tool_template():
             self._parent.msg_warning.emit("No Tool to execute")
             return
+        self._parent.msg.emit("")
         self._parent.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         try:
             self.instance = ToolInstance(self.tool_template(), self._parent, self.output_dir, self._project)
         except OSError as e:
             self._parent.msg_error.emit("Tool instance creation failed. {0}".format(e))
             return
+        # Find required input files for ToolInstance (if any)
+        if self._widget.input_file_model.rowCount() > 0:
+            self._parent.msg.emit("*** Searching for required input files ***")
+            # Abort if there are no input items connected to this Tool
+            inputs = self._parent.connection_model.input_items(self.name)
+            if not inputs:
+                self._parent.msg_error.emit("This Tool has no input connections. Required input files not found.")
+                return
+            file_copy_paths = self.find_input_files()
+            if not file_copy_paths:
+                self._parent.msg_error.emit("Tool execution aborted")
+                return
+            self._parent.msg.emit("*** Copying input files to work directory ***")
+            # Copy input files to ToolInstance work directory
+            if not self.copy_input_files(file_copy_paths):
+                self._parent.msg_error.emit("Tool execution aborted")
+                return
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
+
+    def find_input_files(self):
+        """Iterate files in required input files model and find them from connected items.
+
+        Returns:
+            Dictionary of paths where required files are found or None if some file was not found.
+        """
+        file_paths = dict()
+        for i in range(self._widget.input_file_model.rowCount()):
+            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Just get the filename if there is a path attached to the file
+            path, filename = os.path.split(req_file_path)
+            found_file = self.find_file(filename)
+            if not found_file:
+                self._parent.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
+                return None
+            else:
+                # file_paths.append(found_file)
+                file_paths[req_file_path] = found_file
+        return file_paths
+
+    def find_file(self, fname):
+        """Find required input file for this Tool Instance. Search file from Data
+        Connection items that are input items for the Tool that instantiates this
+        ToolInstance.
+
+        Args:
+            fname (str): File name (no path)
+
+        Returns:
+            Path to file or None if it was not found.
+        """
+        # TODO: Loop through all input items but beware of feedback loops and infinite loops
+        path = None
+        # Find file only from immediate parent items
+        for input_item in self._parent.connection_model.input_items(self.name):
+            # self._parent.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
+            # Find item from project model
+            found_item = self._parent.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                return path
+            item_data = found_item.data(Qt.UserRole)
+            # Find file from parent Data Connections
+            if item_data.item_type == "Data Connection":
+                # Search in Data Connection data directory
+                dc_files = item_data.data_files()  # List of file names (no path)
+                if fname in dc_files:
+                    self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, item_data.name))
+                    path = os.path.join(item_data.data_dir, fname)
+                    break
+                # Search in Data Connection references
+                else:
+                    refs = item_data.file_references()  # List of paths including file name
+                    for ref in refs:
+                        p, fn = os.path.split(ref)
+                        if fn == fname:
+                            self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
+                                                  .format(fname, item_data.name))
+                            path = ref
+                            break
+            elif item_data.item_type == "Tool":
+                # TODO: Find file from output files of parent Tools
+                pass
+        return path
+
+    def copy_input_files(self, paths):
+        """Copy files from given paths to the directories in work directory, where the Tool requires them to be.
+
+        Args:
+            paths (dict): Key is path to required file, value is the path to where the file is located.
+
+        Returns:
+            Boolean variable depending on operation success
+        """
+        n_copied_files = 0
+        for dst_folder, src_path in paths.items():
+            # Join work directory path to dst folder
+            dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst_folder))
+            fname = os.path.split(src_path)[1]
+            self._parent.msg.emit("\tCopying <b>{0}</b>".format(fname))
+            if not os.path.exists(src_path):
+                self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                return False
+            try:
+                shutil.copyfile(src_path, dst_path)
+                n_copied_files += 1
+            except OSError as e:
+                logging.error(e)
+                self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
+                                            .format(src_path, dst_path))
+                return False
+        self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+        return True
 
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
         """Tool execution finished."""
         if return_code == 0:
-            self._parent.msg_success.emit("Tool {0} execution finished".format(self.tool_template().name))
+            self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
         else:
-            self._parent.msg_error.emit("Tool {0} execution failed".format(self.tool_template().name))
+            self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.tool_template().name))
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""

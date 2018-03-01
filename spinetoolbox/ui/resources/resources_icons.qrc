@@ -3,6 +3,9 @@
     <file>Spine_symbol.png</file>
   </qresource>
   <qresource prefix="icons">
+    <file>dc_add.png</file>
+    <file>plus.png</file>
+    <file>minus.png</file>
     <file>refresh_tools.png</file>
     <file>add_tool.png</file>
     <file>remove_tool.png</file>

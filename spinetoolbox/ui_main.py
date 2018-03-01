@@ -45,7 +45,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
-from helpers import project_dir, get_datetime
+from helpers import project_dir, get_datetime, erase_dir
 from models import ToolTemplateModel, ConnectionModel
 
 
@@ -524,6 +524,10 @@ class ToolboxUI(QMainWindow):
             if not selected_item:
                 logging.error("Item {0} not found".format(name))
                 return
+            item_data = selected_item.data(Qt.UserRole)
+            if item_data.item_type == "Data Connection":
+                # logging.debug("DC selected")
+                item_data.refresh()
             # matching_item_data = selected_item.data(Qt.UserRole)
         else:
             self.ui.lineEdit_type.setText("")
@@ -758,7 +762,7 @@ class ToolboxUI(QMainWindow):
         if n == 0:
             return
         for subwindow in subwindows:
-            self.remove_sw(subwindow)
+            self.remove_sw(subwindow, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
 
     def remove_item(self, ind):
@@ -768,14 +772,16 @@ class ToolboxUI(QMainWindow):
             ind (QModelIndex): Index of removed item in project model
         """
         sw = ind.data(Qt.UserRole).get_widget().parent()
-        self.remove_sw(sw)
+        self.remove_sw(sw, delete_item=True)
 
-    def remove_sw(self, sw):
+    def remove_sw(self, sw, delete_item=False):
         """Remove sub-window and its internal widget from project. To remove all items in project,
-        loop all sub-windows through this method.
+        loop all sub-windows through this method. This method is used in both opening and creating a new project as
+        well as when item(s) are deleted from project. Set delete_item flag to True to delete the item irrevocably.
 
         Args:
             sw (QMdiSubWindow): Subwindow to remove.
+            delete_item: If set to True, deletes the directories and data associated with the item
         """
         widget = sw.widget()  # SubWindowWidget
         name = widget.owner()
@@ -785,6 +791,9 @@ class ToolboxUI(QMainWindow):
         # Find item in project model
         item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
+        data_dir = None
+        if item_data.item_type == "Data Connection":
+            data_dir = item_data.data_dir
         ind = self.project_item_model.indexFromItem(item)
         # Remove item from connection model
         if not self.connection_model.remove_item(item):
@@ -798,6 +807,17 @@ class ToolboxUI(QMainWindow):
         except ValueError:
             self.msg_error.emit("Item '{0}' not found in reference list".format(item_data))
             return
+        if delete_item:
+            if data_dir:
+                # Remove data directory and all its contents
+                self.msg.emit("Removing directory <b>{0}</b>".format(data_dir))
+                try:
+                    if not erase_dir(data_dir):
+                        self.msg_error.emit("Directory does not exist")
+                        return
+                except OSError:
+                    self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
+                    return
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
         return
 

@@ -28,8 +28,32 @@ import logging
 import datetime
 import os
 import time
+import shutil
+import glob
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QApplication
+from PySide2.QtGui import QCursor
 from config import DEFAULT_PROJECT_DIR
+
+
+def busy_effect(func):
+    """ Decorator to change the mouse cursor to 'busy' while a function is processed.
+
+    Args:
+        func: Decorated function.
+    """
+    def new_function(*args, **kwargs):
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.exception("Error {}".format(e.args[0]))
+            raise e
+        finally:
+            # noinspection PyArgumentList
+            QApplication.restoreOverrideCursor()
+    return new_function
 
 
 def project_dir(configs=None):
@@ -128,3 +152,57 @@ def create_output_dir_timestamp():
         return ''
     extension = stamp.strftime('%Y-%m-%dT%H.%M.%S')
     return extension
+
+
+@busy_effect
+def copy_files(src_dir, dst_dir, includes=None, excludes=None):
+    """Method for copying files. Does not copy folders.
+
+    Args:
+        src_dir (str): Source directory
+        dst_dir (str): Destination directory
+        includes (list): Included files (wildcards accepted)
+        excludes (list): Excluded files (wildcards accepted)
+
+    Returns:
+        count (int): Number of files copied
+    """
+    if not includes:
+        includes = ['*']
+    if not excludes:
+        excludes = []
+    src_files = []
+    for pattern in includes:
+        src_files += glob.glob(os.path.join(src_dir, pattern))
+    exclude_files = []
+    for pattern in excludes:
+        exclude_files += glob.glob(os.path.join(src_dir, pattern))
+    count = 0
+    for filename in src_files:
+        if os.path.isdir(filename):
+            continue
+        if filename not in exclude_files:
+            shutil.copy(filename, dst_dir)
+            count += 1
+    return count
+
+
+@busy_effect
+def erase_dir(path, verbosity=False):
+    """Delete directory and all its contents without prompt.
+
+    Args:
+        path (str): Path to directory
+        verbosity (bool): Print logging messages or not
+    """
+    if not os.path.exists(path):
+        if verbosity:
+            logging.debug("Path does not exist: {}".format(path))
+        return False
+    if verbosity:
+        logging.debug("Deleting directory {0}".format(path))
+    try:
+        shutil.rmtree(path)
+    except OSError:
+        raise
+    return True

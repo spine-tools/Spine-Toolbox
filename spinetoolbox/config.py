@@ -113,3 +113,7 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                   "QLabel{color:black;}"
 
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
+
+TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
+DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
+HEADER_POINTSIZE = 8

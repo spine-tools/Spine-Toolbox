@@ -39,6 +39,11 @@ CALL pyside2-uic ../spinetoolbox/ui/subwindow.ui -o ../spinetoolbox/ui/subwindow
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow.py.o > ..\spinetoolbox\ui\subwindow.py
 del ..\spinetoolbox\ui\subwindow.py.o
 
+ECHO building subwindow_data_connection.py
+CALL pyside2-uic ../spinetoolbox/ui/subwindow_data_connection.ui -o ../spinetoolbox/ui/subwindow_data_connection.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow_data_connection.py.o > ..\spinetoolbox\ui\subwindow_data_connection.py
+del ..\spinetoolbox\ui\subwindow_data_connection.py.o
+
 ECHO building subwindow_tool.py
 CALL pyside2-uic ../spinetoolbox/ui/subwindow_tool.ui -o ../spinetoolbox/ui/subwindow_tool.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow_tool.py.o > ..\spinetoolbox\ui\subwindow_tool.py
@@ -87,6 +92,7 @@ CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\about.ui
 CALL append_license_xml ..\spinetoolbox\ui\subwindow.ui
+CALL append_license_xml ..\spinetoolbox\ui\subwindow_data_connection.ui
 CALL append_license_xml ..\spinetoolbox\ui\subwindow_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
@@ -100,6 +106,7 @@ CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
 CALL append_license_py ..\spinetoolbox\ui\about.py
 CALL append_license_py ..\spinetoolbox\ui\subwindow.py
+CALL append_license_py ..\spinetoolbox\ui\subwindow_data_connection.py
 CALL append_license_py ..\spinetoolbox\ui\subwindow_tool.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
