@@ -396,7 +396,7 @@ class ToolboxUI(QMainWindow):
         tool_templates = list()
         for i in range(self.tool_template_model.rowCount()):
             if i > 0:
-                tool_templates.append(self.tool_template_model.tool(i).get_def_path())
+                tool_templates.append(self.tool_template_model.tool_template(i).get_def_path())
         self._project.save(tool_templates)
         self.msg.emit("Project saved to <b>{0}</b>".format(self._project.path))
 
@@ -551,7 +551,7 @@ class ToolboxUI(QMainWindow):
         if not tool:
             self.msg_error.emit("Adding Tool template failed".format(def_file))
             return
-        if self.tool_template_model.find_tool(tool.name):
+        if self.tool_template_model.find_tool_template(tool.name):
             # Tool template already added to project
             self.msg_warning.emit("Tool template <b>{0}</b> already in project".format(tool.name))
             return
@@ -628,7 +628,7 @@ class ToolboxUI(QMainWindow):
                         # Get old tool template name
                         old_t_name = tool.tool_template().name
                         # Find the same tool template from ToolTemplateModel
-                        new_template = self.tool_template_model.find_tool(old_t_name)
+                        new_template = self.tool_template_model.find_tool_template(old_t_name)
                         if not new_template:
                             self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
                             tool.set_tool_template(None)
@@ -658,7 +658,7 @@ class ToolboxUI(QMainWindow):
             # Do not remove No Tool option
             self.msg.emit("<b>No Tool</b> cannot be removed")
             return
-        sel_tool = self.tool_template_model.tool(index.row())
+        sel_tool = self.tool_template_model.tool_template(index.row())
         tool_def_path = sel_tool.def_file_path
         msg = "Removing Tool template <b>{0}</b>. Are you sure?".format(sel_tool.name)
         # noinspection PyCallByClass, PyTypeChecker
@@ -924,7 +924,7 @@ class ToolboxUI(QMainWindow):
         """
         if clicked_index.row() == 0:
             return  # Don't do anything if No Tool option is double-clicked
-        tool_template = self.tool_template_model.tool(clicked_index.row())
+        tool_template = self.tool_template_model.tool_template(clicked_index.row())
         tool_template_url = "file:///" + tool_template.def_file_path
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList

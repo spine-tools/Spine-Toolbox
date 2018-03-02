@@ -186,7 +186,7 @@ class SpineToolboxProject(MetaObject):
             desc = tools[name]['description']
             tool_name = tools[name]['tool']
             # Find tool template from model
-            tool_template = self._parent.tool_template_model.find_tool(tool_name)
+            tool_template = self._parent.tool_template_model.find_tool_template(tool_name)
             # Clarifications for user
             if not tool_name == "" and not tool_template:
                 self._parent.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
@@ -255,7 +255,6 @@ class SpineToolboxProject(MetaObject):
                                                   | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
-        # self._parent.msg.emit("Data Store <b>{0}</b> ready".format(name))
         sw.show()
 
     def add_data_connection(self, name, description, references):
@@ -267,7 +266,6 @@ class SpineToolboxProject(MetaObject):
                                                   | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
-        # self._parent.msg.emit("Data Connection <b>{0}</b> ready".format(name))
         sw.show()
         sw.resize(sw.minimumSizeHint())
 
@@ -280,7 +278,6 @@ class SpineToolboxProject(MetaObject):
                                                   | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
-        # self._parent.msg.emit("Tool <b>{0}</b> ready".format(name))
         sw.show()
         sw.resize(sw.minimumSizeHint())
 
@@ -294,5 +291,4 @@ class SpineToolboxProject(MetaObject):
                                                   | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)
-        # self._parent.msg.emit("View <b>{0}</b> ready".format(name))
         sw.show()

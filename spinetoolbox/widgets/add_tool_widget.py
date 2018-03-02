@@ -81,7 +81,7 @@ class AddToolWidget(QWidget):
             # No Tool selected
             self.ui.lineEdit_tool_args.setText("")
             return
-        selected_tool = self._parent.tool_template_model.tool(row)
+        selected_tool = self._parent.tool_template_model.tool_template(row)
         args = selected_tool.cmdline_args
         if not args:
             # Tool cmdline_args is None if the line does not exist in Tool definition file
@@ -134,7 +134,7 @@ class AddToolWidget(QWidget):
         if selected_row == 0:
             selected_tool = None
         else:
-            selected_tool = self._parent.tool_template_model.tool(selected_row)
+            selected_tool = self._parent.tool_template_model.tool_template(selected_row)
         self._project.add_tool(self.name, self.description, selected_tool)
 
     def keyPressEvent(self, e):

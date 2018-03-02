@@ -124,9 +124,8 @@ class ToolTemplateModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    def tool(self, row):
+    def tool_template(self, row):
         """Returns tool template on given row.
-        # TODO: Change method name to tool_template
 
         Args:
             row (int): Row of tool template
@@ -136,12 +135,11 @@ class ToolTemplateModel(QAbstractListModel):
         """
         return self._tools[row]
 
-    def find_tool(self, name):
+    def find_tool_template(self, name):
         """Returns tool template with the given name.
-        # TODO: Change name to find_tool_template
 
         Args:
-            name (str): Name of tool template to be found
+            name (str): Name of tool template to find
         """
         for tool in self._tools:
             if isinstance(tool, str):
@@ -150,6 +148,16 @@ class ToolTemplateModel(QAbstractListModel):
                 if name.lower() == tool.name.lower():
                     return tool
         return None
+
+    def tool_template_row(self, name):
+        """Returns the index (row) on which the given template lives or -1 if not found."""
+        for i in range(len(self._tools)):
+            if isinstance(self._tools[i], str):
+                continue
+            else:
+                if name == self._tools[i].name:
+                    return i
+        return -1
 
 
 class ConnectionModel(QAbstractTableModel):

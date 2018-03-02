@@ -56,8 +56,18 @@ class Tool(MetaObject):
         self._widget.set_name_label(name)
         self._widget.make_header_for_input_files()
         self._widget.make_header_for_output_files()
+        self._widget.ui.comboBox_tool.setModel(self._parent.tool_template_model)
         self._tool_template = None
         self.set_tool_template(tool_template)
+        # Set correct row selected in the comboBox
+        if not tool_template:
+            r = 0
+        else:
+            r = self._parent.tool_template_model.tool_template_row(tool_template.name)
+            if r == -1:
+                logging.error("error in tool_template_row() method")
+                r = 0
+        self._widget.ui.comboBox_tool.setCurrentIndex(r)
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
@@ -69,7 +79,7 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_details.clicked.connect(self.show_details)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
-        self._widget.ui.pushButton_x.clicked.connect(self.remove_tool_template)
+        self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
 
     @Slot(name='show_details')
     def show_details(self):
@@ -106,11 +116,6 @@ class Tool(MetaObject):
         """Returns Tool template."""
         return self._tool_template
 
-    @Slot(name='remove_tool_template')
-    def remove_tool_template(self):
-        """Removes Template from this Tool. Needed as an 'X' button slot"""
-        self.set_tool_template(None)
-
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
 
@@ -126,12 +131,12 @@ class Tool(MetaObject):
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
         if not self.tool_template():
-            self._widget.ui.lineEdit_tool.setText("")
+            # self._widget.ui.comboBox_tool.setCurrentText("")
             self._widget.ui.lineEdit_tool_args.setText("")
             self._widget.populate_input_files_list(None)
             self._widget.populate_output_files_list(None)
         else:
-            self._widget.ui.lineEdit_tool.setText(self.tool_template().name)
+            # self._widget.ui.comboBox_tool.setCurrentText(self.tool_template().name)
             self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.update_input_files()
             self.update_output_files()
@@ -348,3 +353,17 @@ class Tool(MetaObject):
             if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
                 command += ' ' + self.tool_template().cmdline_args
         return command
+
+    @Slot(int, name="update_tool_template")
+    def update_tool_template(self, row):
+        """Update Tool template according to selection.
+
+        Args:
+            row (int): Selected row in the comboBox
+        """
+        if row == 0:
+            new_tool = None
+        else:
+            # Find ToolTemplate from model according to row
+            new_tool = self._parent.tool_template_model.tool_template(row)
+        self.set_tool_template(new_tool)
