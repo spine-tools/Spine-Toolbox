@@ -1,0 +1,10 @@
+{
+    "name": "Julia test",
+    "description": "Loads DataFrames and reads a table.",
+    "tooltype": "julia",
+    "includes": ["test.jl", "input/"],
+    "cmdline_args": "",
+    "inputfiles": ["input/branch.csv"],
+    "inputfiles_opt": [],
+    "outputfiles": []
+}
