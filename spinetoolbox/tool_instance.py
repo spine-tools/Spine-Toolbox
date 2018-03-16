@@ -109,16 +109,29 @@ class ToolInstance(QObject):
         if self.tool.tooltype == "julia":
             self.tool_process = self._project.julia_subprocess
             self.tool_process.start_if_not_running()
-            #self.tool_process.subprocess_finished_signal.connect(self.tool_finished) #TODO
-            self.tool_process.write_on_process(self.command)
+            self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
+            if not self.tool_process.write_on_process(self.command):
+                self.ui.msg_error.emit("Julia Tool failed to start. Make sure you have Julia installed properly.")
+                self.instance_finished_signal.emit(-9999)
+                return
         else:
             self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
-            self.tool_process.subprocess_finished_signal.connect(self.tool_finished)
+            self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
 
-    @Slot(int, name="tool_finished")
-    def tool_finished(self, ret):
-        """Run when tool has finished processing. Copies output of tool
+    @Slot(int, name="julia_tool_finished")
+    def julia_tool_finished(self, ret):
+        """Run when Julia tool has finished processing.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        self.ui.msg.emit("\t Julia Tool finished. Return code:{0}".format(ret))
+        self.instance_finished_signal.emit(ret)
+
+    @Slot(int, name="gams_tool_finished")
+    def gams_tool_finished(self, ret):
+        """Run when GAMS tool has finished processing. Copies output of tool
         to project output directory.
 
         Args:

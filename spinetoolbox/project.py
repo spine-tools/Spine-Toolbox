@@ -28,7 +28,6 @@ import os
 import logging
 import json
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QSizePolicy
 from metaobject import MetaObject
 from helpers import project_dir, create_dir
 from data_store import DataStore
@@ -249,7 +248,7 @@ class SpineToolboxProject(MetaObject):
             return None
         #     return ExecutableTool.load(path, definition, self._parent)  # Get rid of self._parent
         else:
-            self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_type))
+            self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
     def add_data_store(self, name, description, data=1):

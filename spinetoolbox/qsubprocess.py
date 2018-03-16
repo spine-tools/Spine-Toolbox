@@ -27,6 +27,7 @@ Module to handle running tools in a QProcess.
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 import logging
 
+
 class QSubProcess(QObject):
     """Class to handle starting, running, and finishing PySide2 QProcesses."""
 
@@ -46,7 +47,6 @@ class QSubProcess(QObject):
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
-
 
     def start_if_not_running(self, workdir=None):
         """Start a QProcess if is not running.
@@ -84,8 +84,14 @@ class QSubProcess(QObject):
 
         Args:
             command (str): command to write
+
+        Returns:
+            False if QProcess is None (failed to start), else True
         """
+        if not self._process:
+            return False
         self._process.write(command)
+        return True
 
     @Slot(name="process_started")
     def process_started(self):
