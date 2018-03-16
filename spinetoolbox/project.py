@@ -35,8 +35,9 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
-from tool_templates import GAMSTool
-from config import DEFAULT_WORK_DIR
+from tool_templates import GAMSTool, JuliaTool
+from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
+import qsubprocess
 
 
 class SpineToolboxProject(MetaObject):
@@ -59,6 +60,7 @@ class SpineToolboxProject(MetaObject):
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
         self.project_contents = dict()
+        self.julia_subprocess = None
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -223,7 +225,7 @@ class SpineToolboxProject(MetaObject):
             self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(jsonfile))
             return None
         try:
-            _type = definition['type'].lower()
+            _tooltype = definition['tooltype'].lower()
         except KeyError:
             self._parent.msg_error.emit("No type of tool defined in tool definition file. Should be "
                                         "GAMS, Julia or executable")
@@ -231,13 +233,18 @@ class SpineToolboxProject(MetaObject):
         # Infer path from JSON file. This assumes that main model file is in the same directory
         # as the tool definition file
         path = os.path.dirname(jsonfile)  # TODO: Is this needed?
-        if _type == "gams":
+        if _tooltype == "gams":
             return GAMSTool.load(self._parent, path, definition)
-        elif _type == "julia":
-            self._parent.msg_warning.emit("Julia tools not supported yet")
-            return None
+        elif _tooltype == "julia":
+            if not self.julia_subprocess:
+                julia_path = self._parent._config.get("settings", "julia_path")
+                julia_exe_path = JULIA_EXECUTABLE
+                if not julia_path == '':
+                    julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
+                self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
+            return JuliaTool.load(self._parent, path, definition)
         #     return JuliaTool.load(path, definition, self._parent)
-        elif _type == 'executable':
+        elif _tooltype == 'executable':
             self._parent.msg_warning.emit("Executable tools not supported yet")
             return None
         #     return ExecutableTool.load(path, definition, self._parent)  # Get rid of self._parent

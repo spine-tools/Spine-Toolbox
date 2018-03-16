@@ -27,51 +27,65 @@ Module to handle running tools in a QProcess.
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 import logging
 
-
 class QSubProcess(QObject):
     """Class to handle starting, running, and finishing PySide2 QProcesses."""
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
 
-    def __init__(self, ui, tool):
+    def __init__(self, ui, command):
         """Class constructor.
 
         Args:
             ui (ToolboxUI): Instance of Main UI class.
-            tool (ToolTemplate): Tool to run in sub-process.
+            command: Run command
         """
         super().__init__()
         self._ui = ui
-        self._running_tool = tool
+        self._command = command
         self.process_failed = False
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
 
-    # noinspection PyUnresolvedReferences
-    def start_process(self, command, workdir=None):
-        """Start the execution of a tool in a QProcess.
+
+    def start_if_not_running(self, workdir=None):
+        """Start a QProcess if is not running.
 
         Args:
-            command: Run command
+            workdir (str): Path to work directory
+        """
+        if self._process.state() != QProcess.Running:
+            self.start_process(workdir=workdir)
+
+    # noinspection PyUnresolvedReferences
+    def start_process(self, workdir=None):
+        """Start the execution of a command in a QProcess.
+
+        Args:
             workdir (str): Path to work directory
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
-        self._ui.msg.emit("*** Starting Tool <b>{0}</b> ***".format(self._running_tool.name))
-        self._ui.msg.emit("\t<i>{0}</i>".format(command))
         self._process.started.connect(self.process_started)
         self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
         self._process.readyReadStandardError.connect(self.on_ready_stderr)
         self._process.finished.connect(self.process_finished)
         self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
         self._process.stateChanged.connect(self.on_state_changed)
-        self._process.start(command)
+        self._process.start(self._command)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
             self._process.deleteLater()
             self._process = None
             self.subprocess_finished_signal.emit(0)  # TODO: Check that this works
+
+    def write_on_process(self, command):
+        """Writes a command on a running process
+
+        Args:
+            command (str): command to write
+        """
+        self._process.write(command)
 
     @Slot(name="process_started")
     def process_started(self):

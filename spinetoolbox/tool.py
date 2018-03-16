@@ -32,7 +32,7 @@ from metaobject import MetaObject
 from widgets.sw_tool_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE
+from config import TOOL_OUTPUT_DIR
 
 
 class Tool(MetaObject):
@@ -329,14 +329,14 @@ class Tool(MetaObject):
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
         type specific initialization should happen (whether instance is GAMS or Julia Model)."""
-        gams_path = self._parent._config.get("settings", "gams_path")
-        gams_exe_path = GAMS_EXECUTABLE
-        if not gams_path == '':
-            gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
-        main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-        command = '{} "{}" Curdir="{}" logoption=3'.format(gams_exe_path, self.tool_template().main_prgm, main_dir)
-        # Append Tool specific command line arguments to command (if present and implemented)
-        self.instance.command = self.append_cmdline_args(command)
+        if self.tool_template().tooltype == "gams":
+            main_dir = self.instance.basedir  # TODO: Is main_dir needed?
+            command = '{} "{}" Curdir="{}" logoption=3'.format(self.tool_template().exe_path, self.tool_template().main_prgm, main_dir)
+            # Append Tool specific command line arguments to command (if present and implemented)
+            self.instance.command = self.append_cmdline_args(command)
+        elif self.tool_template().tooltype == "julia":
+            main_dir = self.instance.basedir  # TODO: Is main_dir needed?
+            self.instance.command = 'cd("{}"); include("{}")\n'.format(main_dir, self.tool_template().main_prgm)
 
     def append_cmdline_args(self, command):
         """Append command line arguments to a command.

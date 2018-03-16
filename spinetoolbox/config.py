@@ -65,8 +65,14 @@ else:
     GAMS_EXECUTABLE = "gams.exe"
     GAMSIDE_EXECUTABLE = "gamside.exe"
 
+# Julia
+if not sys.platform == "win32":
+    JULIA_EXECUTABLE = "julia"
+else:
+    JULIA_EXECUTABLE = "julia.exe"
+
 # Required and optional keywords for Tool template definition files
-REQUIRED_KEYS = ['name', 'description', 'includes']
+REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
 OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
@@ -77,7 +83,8 @@ SETTINGS = {"project_directory": "",
             "show_exit_prompt": "false",
             "logging_level": "2",
             "datetime": "true",
-            "gams_path": ""}
+            "gams_path": "",
+            "julia_path": ""}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \

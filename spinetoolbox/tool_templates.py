@@ -29,6 +29,7 @@ import logging
 from collections import OrderedDict
 from metaobject import MetaObject
 from config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
+from config import GAMS_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class ToolTemplate(MetaObject):
@@ -45,12 +46,13 @@ class ToolTemplate(MetaObject):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, description, path, includes,
+    def __init__(self, parent, name, description, tooltype, path, includes,
                  inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
+        self.tooltype = tooltype
         if not os.path.exists(path):
             pass
         else:
@@ -150,13 +152,19 @@ class GAMSTool(ToolTemplate):
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
 
-    def __init__(self, parent, name, description, path, includes,
+    def __init__(self, parent, name, description, tooltype, path, includes,
                  inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, path, includes,
+        super().__init__(parent, name, description, tooltype, path, includes,
                          inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
+
+        gams_path = self._parent._config.get("settings", "gams_path")
+        gams_exe_path = GAMS_EXECUTABLE
+        if not gams_path == '':
+            gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
+        self.exe_path = gams_exe_path
         main_file = includes[0]
         # Add .lst file to list of output files
         self.lst_file = os.path.splitext(main_file)[0] + '.lst'
@@ -217,5 +225,71 @@ class GAMSTool(ToolTemplate):
         if kwargs is not None:
             # Return an executable model instance
             return GAMSTool(parent=parent, path=path, **kwargs)
+        else:
+            return None
+
+
+class JuliaTool(ToolTemplate):
+    """Class for Julia tool templates.
+
+    Attributes:
+        name (str): Julia Tool name
+        description (str): Julia Tool description
+        path (str): Path to model main file
+        includes (str): List of files belonging to the tool (relative to 'path')
+                     First file in the list is the main Julia program.
+        inputfiles (list): List of required data files
+        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+        outputfiles (list, optional): List of output files (wildcards may be used)
+        cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
+    """
+
+    def __init__(self, parent, name, description, tooltype, path, includes,
+                 inputfiles=None, inputfiles_opt=None,
+                 outputfiles=None, cmdline_args=None):
+        """Class constructor."""
+        super().__init__(parent, name, description, tooltype, path, includes,
+                         inputfiles, inputfiles_opt, outputfiles,
+                         cmdline_args)
+        julia_path = self._parent._config.get("settings", "julia_path")
+        julia_exe_path = JULIA_EXECUTABLE
+        if not julia_path == '':
+            julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
+        self.exe_path = julia_exe_path
+        main_file = includes[0]
+        self.main_dir, self.main_prgm = os.path.split(main_file)
+        self.julia_options = OrderedDict()
+        self.return_codes = {
+            0: "Normal return"  # Not official
+        }
+
+    def __repr__(self):
+        """Remove this if not necessary."""
+        return "JuliaTool('{}')".format(self.name)
+
+    def update_julia_options(self, key, value):
+        """Update Julia command line options.
+
+        Args:
+            key: Option name
+            value: Option value
+        """
+
+    @staticmethod
+    def load(parent, path, data):
+        """Create a JuliaTool according to a tool definition.
+
+        Args:
+            parent (ToolboxUI): QMainWindow instance
+            path (str): Base path to tool files
+            data (dict): Dictionary of tool definitions
+
+        Returns:
+            JuliaTool instance or None if there was a problem in the tool definition file.
+        """
+        kwargs = JuliaTool.check_definition(parent, data)
+        if kwargs is not None:
+            # Return an executable model instance
+            return JuliaTool(parent=parent, path=path, **kwargs)
         else:
             return None

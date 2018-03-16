@@ -104,9 +104,17 @@ class ToolInstance(QObject):
 
     def execute(self):
         """Start executing tool instance in QProcess."""
-        self.tool_process = qsubprocess.QSubProcess(self.ui, self.tool)
-        self.tool_process.subprocess_finished_signal.connect(self.tool_finished)
-        self.tool_process.start_process(self.command, workdir=self.basedir)
+        self.ui.msg.emit("*** Starting Tool <b>{0}</b> ***".format(self.tool.name))
+        self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
+        if self.tool.tooltype == "julia":
+            self.tool_process = self._project.julia_subprocess
+            self.tool_process.start_if_not_running()
+            #self.tool_process.subprocess_finished_signal.connect(self.tool_finished) #TODO
+            self.tool_process.write_on_process(self.command)
+        else:
+            self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
+            self.tool_process.subprocess_finished_signal.connect(self.tool_finished)
+            self.tool_process.start_process(workdir=self.basedir)
 
     @Slot(int, name="tool_finished")
     def tool_finished(self, ret):
