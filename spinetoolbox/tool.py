@@ -331,12 +331,15 @@ class Tool(MetaObject):
         type specific initialization should happen (whether instance is GAMS or Julia Model)."""
         if self.tool_template().tooltype == "gams":
             main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-            command = '{} "{}" Curdir="{}" logoption=3'.format(self.tool_template().exe_path, self.tool_template().main_prgm, main_dir)
+            command = '{} "{}" Curdir="{}" logoption=3'\
+                .format(self.tool_template().exe_path, self.tool_template().main_prgm, main_dir)
             # Append Tool specific command line arguments to command (if present and implemented)
             self.instance.command = self.append_cmdline_args(command)
         elif self.tool_template().tooltype == "julia":
             main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-            self.instance.command = 'cd("{}"); include("{}")\n'.format(main_dir, self.tool_template().main_prgm)
+            mod_main_dir = main_dir.__repr__().strip("'")
+            self.instance.command = r'cd("{}"); include("{}"){}'\
+                .format(mod_main_dir, self.tool_template().main_prgm, "\n")
 
     def append_cmdline_args(self, command):
         """Append command line arguments to a command.
