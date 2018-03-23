@@ -1,0 +1,10 @@
+{
+    "name": "Create datapackage",
+    "description": "Creates a custom datapackage for the Swedish hydro data.",
+    "tooltype": "julia",
+    "includes": ["create_datapackage.jl", "input/"],
+    "cmdline_args": "",
+    "inputfiles": ["input/data_connection.json"],
+    "inputfiles_opt": [],
+    "outputfiles": []
+}

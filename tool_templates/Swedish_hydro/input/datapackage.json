@@ -1,0 +1,169 @@
+{
+    "profile": "tabular-data-package",
+    "resources": [
+        {
+            "profile": "tabular-data-resource",
+            "name": "SpotPrice7D1S",
+            "format": "csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "p",
+                        "format": "default",
+                        "type": "number"
+                    }
+                ],
+                "missingValues": [
+                    ""
+                ]
+            },
+            "path": "SpotPrice7D1S.csv",
+            "mediatype": "text/csv"
+        },
+        {
+            "profile": "tabular-data-resource",
+            "name": "Plants",
+            "format": "csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "station_index",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "station_name",
+                        "format": "default",
+                        "type": "string"
+                    },
+                    {
+                        "name": "downstream",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "Pmax",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "Qmax",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "Mmax",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "Qavg",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "FlowTimeQ",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "FlowTimeS",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "river",
+                        "format": "default",
+                        "type": "string"
+                    },
+                    {
+                        "name": "Elomr\u00e5de",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "Smin",
+                        "format": "default",
+                        "type": "integer"
+                    },
+                    {
+                        "name": "Qmin",
+                        "format": "default",
+                        "type": "integer"
+                    }
+                ],
+                "foreignKeys": [
+                    {
+                        "fields": [
+                            "downstream"
+                        ],
+                        "reference": {
+                            "fields": [
+                                "station_index"
+                            ],
+                            "resource": "Plants"
+                        }
+                    }
+                ],
+                "primaryKey": [
+                    "station_index"
+                ],
+                "missingValues": [
+                    ""
+                ]
+            },
+            "path": "Plants.csv",
+            "mediatype": "text/csv"
+        },
+        {
+            "profile": "tabular-data-resource",
+            "name": "Constraints",
+            "format": "csv",
+            "encoding": "utf-8",
+            "schema": {
+                "fields": [
+                    {
+                        "name": "M0",
+                        "format": "default",
+                        "type": "number"
+                    },
+                    {
+                        "name": "Mend",
+                        "format": "default",
+                        "type": "number"
+                    },
+                    {
+                        "name": "V",
+                        "format": "default",
+                        "type": "number"
+                    },
+                    {
+                        "name": "constraint_station",
+                        "format": "default",
+                        "type": "string"
+                    }
+                ],
+                "foreignKeys": [
+                    {
+                        "fields": [
+                            "constraint_station"
+                        ],
+                        "reference": {
+                            "fields": [
+                                "station_name"
+                            ],
+                            "resource": "Plants"
+                        }
+                    }
+                ],
+                "missingValues": [
+                    ""
+                ]
+            },
+            "path": "Constraints.csv",
+            "mediatype": "text/csv"
+        }
+    ]
+}
