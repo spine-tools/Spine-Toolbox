@@ -1,7 +1,7 @@
 using SpineData
 using JSON
 
-dc = JSON.parsefile("input/data_connection.json")
+dc = JSON.parsefile("input/rawCSV.json")
 @unpack(dc, path)
 
 pkg_desc = infer_datapackage_descriptor(path)

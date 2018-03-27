@@ -4,7 +4,7 @@
     "tooltype": "julia",
     "includes": ["create_datapackage.jl", "input/"],
     "cmdline_args": "",
-    "inputfiles": ["input/data_connection.json"],
+    "inputfiles": ["input/rawCSV.json"],
     "inputfiles_opt": [],
     "outputfiles": []
 }
