@@ -186,7 +186,7 @@ Click on the `T` button to add a new tool to our project. Give it a name such as
 
 ![](fig/add_run_hydro_tool.png)
 
-Select the `Connections` tab at the bottom of the left pane, and click on the element under column 'create_dp', row 'rawCSV', so it says 'true', as shown below:
+Select the `Connections` tab at the bottom of the left pane, and click on the element under column 'run_hydro', row 'datapackage', so it says 'true', as shown below:
 
 ![](fig/connections2.png)
 
