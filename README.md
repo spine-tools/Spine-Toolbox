@@ -126,18 +126,14 @@ This example runs a small hydro model on the Swedish hydropower system. Input da
 
 #### Preliminaries
 
-This example assumes that you have Julia with the following packages installed:
+This example assumes that you are running this version of the Spine Toolbox (branch `manuelma`) and have Julia with the following packages installed:
 - [JuMP](https://github.com/JuliaOpt/JuMP.jl)
 - [Clp]()
 - [SpineData]()
 
 Follow the above links and complete the installation instructions for each package.
 
-Then, run the `configure_dc.jl` Julia script in the `tool_templates/Swedish_hydro/input` folder to set up a correct data connection for your system:
-
-```
-$ julia configure_dc.jl
-```
+Finally, in the command prompt, go to the `tool_templates/Swedish_hydro/input` folder and run `julia config_rawCSV_dc.jl`.
 
 #### Create a new project
 
@@ -147,47 +143,47 @@ Open the Spine toolbox and select `File/New` to create a new project. Give it a 
 
 #### Add tool templates
 
-Select the `Templates` tab at the bottom of the left pane and click on the button with a wrench and a plus sign to add a new tool template.
+Select the `Templates` tab at the bottom of the side pane and click on the button with a wrench and a plus sign to add a new tool template.
 
-Navigate to the `tool_templates/Swedish_hydro` folder, select the file `create_datapackage.json` and hit `Open`. Repeat for the `run_hydro_model.json` file. Now you should see your two tool templates on the left pane:
+Navigate to the `tool_templates/Swedish_hydro` folder, select the `create_datapackage.json` file and hit `Open`. Repeat for the `run_hydro_model.json` file. Now you should see your two tool templates on the side pane:
 
 ![](fig/tool_templates.png)
 
 #### Add data connection to raw CSV data
 
-Click on the `DC` button to add a new data connection to our project. Give it a name such as 'rawCSV' and click `Ok`. On the 'rawCSV' Data Connection item, click on the button with plus sign to add a new reference. Navigate to the `tool_templates/Swedish_hydro/input` folder, select the file `rawCSV.json` and click `Ok`:
+Click on the `DC` button to add a new data connection to your project. Give it a name such as 'rawCSV' and click `Ok`. On the 'rawCSV' item, click on the button with the plus sign to add a new reference. Navigate to the `tool_templates/Swedish_hydro/input` folder, select the `rawCSV.json` file and click `Ok`:
 
 ![](fig/rawCSV.png)
 
-#### Add and execute tool to create datapackage from raw CSV data connection
+#### Run tool to create datapackage from raw CSV data connection
 
-Click on the `T` button to add a new tool to our project. Give it a name such as 'create_dp', then select 'Create datapackage' from the dropdown list, and click `Ok`:
+Click on the `T` button to add a new tool to your project. Give it a name such as 'create_dp', then select 'Create datapackage' from the dropdown list, and click `Ok`:
 
 
 ![](fig/add_create_dp_tool.png)
 
-Select the `Connections` tab at the bottom of the left pane, and click on the element under column 'create_dp', row 'rawCSV', so it says 'true', as shown below:
+Select the `Connections` tab at the bottom of the side pane, and click on the cell in column 'create_dp' and row 'rawCSV'. This will change it from 'false' to 'true', as shown below:
 
 ![](fig/connections1.png)
 
-On the 'create_dp' Tool item, click on `Exec.` to run the tool. You should see the output of the tool on the bottom right pane.
+On the 'create_dp' item, click on `Exec.` to run the tool. You should see the output of the tool on the bottom right pane.
 
 
 #### Add data connection to tabular datapackage
 
-Click on the `DC` button to add a new data connection to our project. Give it a name such as 'datapackage' and click `Ok`. On the 'datapackage' Data Connection item, click on the button with plus sign to add a new reference. Navigate to the `tool_templates/Swedish_hydro/input` folder, select the files `datapackage.json`, `Plants.csv`, `Constraints.csv`, and `SpotPrice7D1S.csv`, and click `Ok`:
+Click on the `DC` button to add a second data connection to your project. Give it a name such as 'datapackage' and click `Ok`. On the 'datapackage' item, click on the button with the plus sign to add a new reference. Navigate to the `tool_templates/Swedish_hydro/input` folder, select the `datapackage.json`, `Plants.csv`, `Constraints.csv`, and `SpotPrice7D1S.csv` files, and click `Ok`:
 
 ![](fig/datapackage.png)
 
-#### Add and execute tool to run hydro model from tabular datapackage connection
+#### Execute tool to run hydro model from tabular datapackage connection
 
-Click on the `T` button to add a new tool to our project. Give it a name such as 'run_hydro', then select 'Run hydro model' from the dropdown list, and click `Ok`:
+Click on the `T` button to add a second tool to your project. Give it a name such as 'run_hydro', then select 'Run hydro model' from the dropdown list, and click `Ok`:
 
 
 ![](fig/add_run_hydro_tool.png)
 
-Select the `Connections` tab at the bottom of the left pane, and click on the element under column 'run_hydro', row 'datapackage', so it says 'true', as shown below:
+Select the `Connections` tab at the bottom of the left pane, and click on the element in column 'run_hydro' and row 'datapackage', so it says 'true', as shown below:
 
 ![](fig/connections2.png)
 
-On the 'run_hydro' Tool item, click on `Exec.` to run the tool. You should see the output of the tool on the bottom right pane.
+On the 'run_hydro' item, click on `Exec.` to run the tool. You should see the output of the tool on the bottom right pane.
