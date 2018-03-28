@@ -128,8 +128,8 @@ This example runs a small hydro model on the Swedish hydropower system. Input da
 
 This example assumes that you are running this version of the Spine Toolbox (branch `manuelma`) and have Julia with the following packages installed:
 - [JuMP](https://github.com/JuliaOpt/JuMP.jl)
-- [Clp]()
-- [SpineData]()
+- [Clp](https://github.com/JuliaOpt/Clp.jl)
+- [SpineData](https://gitlab.vtt.fi/spine/data/tree/manuelma/)
 
 Follow the above links and complete the installation instructions for each package.
 
