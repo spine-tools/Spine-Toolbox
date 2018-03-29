@@ -46,17 +46,17 @@ for i = 1:N
 end
 
 # Downstream power plants matrix (including itself)
-# Assumes downstream reservoirs have higher index and last reservoir has none below
 Ad = eye(Int16,N)
 for i = 1:N-1
     col = i
     while true
-       ind = find(Aq[:,col])[1]
-       Ad[i,ind] = 1
-       if ind==N
+       ind = find(Aq[:,col])
+       if length(ind)==1
+           Ad[i,ind] = 1
+           col = ind
+       else
            break
        end
-       col = ind
     end
 end
 
