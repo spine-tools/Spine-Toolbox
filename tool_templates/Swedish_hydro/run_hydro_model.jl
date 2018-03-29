@@ -1,10 +1,11 @@
+using SpineModel
 using SpineData
 using JuMP, Clp
 
-sdo = build_sdo_from_datapackage("input/datapackage.json")
+sdo = build_Spine_object("input/datapackage.json")
 update_all_datatypes!(sdo)
 
-jfo = build_jfo_from_sdo(sdo)
+jfo = build_JuMP_object(sdo)
 
 solver = ClpSolver()
 current_river = "Skellefteälven"
