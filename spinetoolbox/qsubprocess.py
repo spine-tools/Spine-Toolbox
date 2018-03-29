@@ -77,7 +77,7 @@ class QSubProcess(QObject):
             self.process_failed = True
             self._process.deleteLater()
             self._process = None
-            self.subprocess_finished_signal.emit(0)  # TODO: Check that this works
+            self.subprocess_finished_signal.emit(0)
 
     def write_on_process(self, command):
         """Writes a command on a running process

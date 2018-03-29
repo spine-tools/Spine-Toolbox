@@ -59,7 +59,7 @@ class SpineToolboxProject(MetaObject):
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
         self.project_contents = dict()
-        self.julia_subprocess = None
+        self.julia_subprocess = None  # Contains Julia REPL instance
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -236,17 +236,17 @@ class SpineToolboxProject(MetaObject):
             return GAMSTool.load(self._parent, path, definition)
         elif _tooltype == "julia":
             if not self.julia_subprocess:
+                # TODO: This is so that Julia REPL stays open between executions. Check for a better place for this.
                 julia_path = self._parent._config.get("settings", "julia_path")
-                julia_exe_path = JULIA_EXECUTABLE
                 if not julia_path == '':
                     julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
+                else:
+                    julia_exe_path = JULIA_EXECUTABLE
                 self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
             return JuliaTool.load(self._parent, path, definition)
-        #     return JuliaTool.load(path, definition, self._parent)
         elif _tooltype == 'executable':
             self._parent.msg_warning.emit("Executable tools not supported yet")
             return None
-        #     return ExecutableTool.load(path, definition, self._parent)  # Get rid of self._parent
         else:
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None

@@ -30,7 +30,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 import ui.settings
 from config import DEFAULT_PROJECT_DIR, STATUSBAR_SS, SETTINGS_SS, \
-    GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE
+    GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class SettingsWidget(QWidget):
@@ -71,6 +71,7 @@ class SettingsWidget(QWidget):
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.pushButton_browse_gams.clicked.connect(self.browse_gams_path)
+        self.ui.pushButton_browse_julia.clicked.connect(self.browse_julia_path)
 
     @Slot(name="browse_gams_path")
     def browse_gams_path(self):
@@ -92,6 +93,24 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_gams_path.setText(selected_path)
         return
 
+    @Slot(name="browse_julia_path")
+    def browse_julia_path(self):
+        """Open file browser where user can select the path to wanted Julia version."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, 'Select Julia Directory', os.path.abspath('C:\\'))
+        if answer == '':  # Cancel button clicked
+            return
+        selected_path = os.path.abspath(answer)
+        julia_path = os.path.join(selected_path, JULIA_EXECUTABLE)
+        if not os.path.isfile(julia_path):
+            self.statusbar.showMessage("julia.exe not found in selected directory", 10000)
+            self.ui.lineEdit_julia_path.setText("")
+            return
+        else:
+            self.statusbar.showMessage("Selected directory is valid Julia directory", 10000)
+            self.ui.lineEdit_julia_path.setText(selected_path)
+        return
+
     def read_settings(self):
         """Read current settings from config object and update UI to show them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
@@ -100,6 +119,8 @@ class SettingsWidget(QWidget):
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
+        use_repl = self._configs.getboolean("settings", "use_repl")
+        julia_path =self._configs.get("settings", "julia_path")
         if open_previous_project:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
@@ -114,6 +135,9 @@ class SettingsWidget(QWidget):
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
         self.ui.lineEdit_gams_path.setText(gams_path)
+        if use_repl:
+            self.ui.checkBox_use_repl.setCheckState(Qt.Checked)
+        self.ui.lineEdit_julia_path.setText(julia_path)
 
     def read_project_settings(self):
         """Read project settings from config object and update settings widgets accordingly."""
@@ -124,7 +148,6 @@ class SettingsWidget(QWidget):
     @Slot(name='ok_clicked')
     def ok_clicked(self):
         """Get selections and save them to conf file."""
-
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
@@ -135,13 +158,24 @@ class SettingsWidget(QWidget):
             gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
             gamside_exe_path = os.path.join(gams_path, GAMSIDE_EXECUTABLE)
             if not os.path.isfile(gams_exe_path) and not os.path.isfile(gamside_exe_path):
-                self.statusbar.showMessage("GAMS directory not valid", 10000)
+                self.statusbar.showMessage("GAMS executables not found in selected directory", 10000)
                 return
+        e = int(self.ui.checkBox_use_repl.checkState())
+        # Check that Julia directory is valid. Set it empty if not.
+        julia_path = self.ui.lineEdit_julia_path.text()
+        if not julia_path == "":  # Skip this if using Julia in system path
+            julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
+            if not os.path.isfile(julia_exe_path):
+                self.statusbar.showMessage("Julia executable not found in selected directory", 10000)
+                return
+        # Write to config object
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)
+        self._configs.setboolean("settings", "use_repl", e)
+        self._configs.set("settings", "julia_path", julia_path)
         # Set logging level
         self._parent.set_debug_level(c)
         # Update project settings

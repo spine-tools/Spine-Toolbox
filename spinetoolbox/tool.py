@@ -32,7 +32,7 @@ from metaobject import MetaObject
 from widgets.sw_tool_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR
+from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class Tool(MetaObject):
@@ -330,16 +330,37 @@ class Tool(MetaObject):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
         type specific initialization should happen (whether instance is GAMS or Julia Model)."""
         if self.tool_template().tooltype == "gams":
+            gams_path = self._parent._config.get("settings", "gams_path")
+            if not gams_path == '':
+                gams_exe = os.path.join(gams_path, GAMS_EXECUTABLE)
+            else:
+                gams_exe = GAMS_EXECUTABLE
             main_dir = self.instance.basedir  # TODO: Is main_dir needed?
             command = '{} "{}" Curdir="{}" logoption=3'\
-                .format(self.tool_template().exe_path, self.tool_template().main_prgm, main_dir)
+                .format(gams_exe, self.tool_template().main_prgm, main_dir)
             # Append Tool specific command line arguments to command (if present and implemented)
             self.instance.command = self.append_cmdline_args(command)
         elif self.tool_template().tooltype == "julia":
-            main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-            mod_main_dir = main_dir.__repr__().strip("'")
-            self.instance.command = r'cd("{}"); include("{}"){}'\
-                .format(mod_main_dir, self.tool_template().main_prgm, "\n")
+            use_repl = self._parent._config.getboolean("settings", "use_repl")
+            if use_repl:
+                # Run scripts in Julia REPL
+                main_dir = self.instance.basedir  # TODO: Is main_dir needed?
+                mod_main_dir = main_dir.__repr__().strip("'")
+                self.instance.command = r'cd("{}"); include("{}"){}'\
+                    .format(mod_main_dir, self.tool_template().main_prgm, "\n")
+            else:
+                # Run scripts with command "julia script.jl"
+                julia_dir = self._parent._config.get("settings", "julia_path")
+                if not julia_dir == '':
+                    julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+                else:
+                    julia_exe = JULIA_EXECUTABLE
+                work_dir = self.instance.basedir
+                script_path = os.path.join(work_dir, self.tool_template().main_prgm)
+                cmnd = '{0} {1}'.format(julia_exe, script_path)
+                # Append Tool specific command line arguments to command
+                self.instance.command = self.append_cmdline_args(cmnd)
+                return
 
     def append_cmdline_args(self, command):
         """Append command line arguments to a command.

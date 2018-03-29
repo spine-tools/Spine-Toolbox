@@ -107,13 +107,18 @@ class ToolInstance(QObject):
         self.ui.msg.emit("*** Starting Tool <b>{0}</b> ***".format(self.tool.name))
         self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
         if self.tool.tooltype == "julia":
-            self.tool_process = self._project.julia_subprocess
-            self.tool_process.start_if_not_running()
-            self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
-            if not self.tool_process.write_on_process(self.command):
-                self.ui.msg_error.emit("Julia Tool failed to start. Make sure you have Julia installed properly.")
-                self.instance_finished_signal.emit(-9999)
-                return
+            if self.ui._config.getboolean("settings", "use_repl"):
+                self.tool_process = self._project.julia_subprocess
+                self.tool_process.start_if_not_running()
+                self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
+                if not self.tool_process.write_on_process(self.command):
+                    self.ui.msg_error.emit("Julia Tool failed to start. Make sure you have Julia installed properly.")
+                    self.instance_finished_signal.emit(-9999)
+                    return
+            else:
+                self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
+                self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
+                self.tool_process.start_process(workdir=self.basedir)
         else:
             self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)

@@ -24,12 +24,11 @@ Tool template classes.
 :date:   24.1.2018
 """
 
-import os.path
+import os
 import logging
 from collections import OrderedDict
 from metaobject import MetaObject
 from config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
-from config import GAMS_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class ToolTemplate(MetaObject):
@@ -159,12 +158,6 @@ class GAMSTool(ToolTemplate):
         super().__init__(parent, name, description, tooltype, path, includes,
                          inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
-
-        gams_path = self._parent._config.get("settings", "gams_path")
-        gams_exe_path = GAMS_EXECUTABLE
-        if not gams_path == '':
-            gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
-        self.exe_path = gams_exe_path
         main_file = includes[0]
         # Add .lst file to list of output files
         self.lst_file = os.path.splitext(main_file)[0] + '.lst'
@@ -251,11 +244,6 @@ class JuliaTool(ToolTemplate):
         super().__init__(parent, name, description, tooltype, path, includes,
                          inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
-        julia_path = self._parent._config.get("settings", "julia_path")
-        julia_exe_path = JULIA_EXECUTABLE
-        if not julia_path == '':
-            julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
-        self.exe_path = julia_exe_path
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.julia_options = OrderedDict()
@@ -274,6 +262,7 @@ class JuliaTool(ToolTemplate):
             key: Option name
             value: Option value
         """
+        return True
 
     @staticmethod
     def load(parent, path, data):

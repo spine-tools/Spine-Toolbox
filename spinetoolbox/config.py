@@ -84,6 +84,7 @@ SETTINGS = {"project_directory": "",
             "logging_level": "2",
             "datetime": "true",
             "gams_path": "",
+            "use_repl": "true",
             "julia_path": ""}
 
 # Stylesheets
