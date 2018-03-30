@@ -3,7 +3,7 @@ using SpineData
 using JuMP, Clp
 
 sdo = build_Spine_object("input/datapackage.json")
-update_all_datatypes!(sdo)
+update_all_datatypesa!(sdo)
 
 jfo = build_JuMP_object(sdo)
 

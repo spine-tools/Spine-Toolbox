@@ -32,6 +32,7 @@ class QSubProcess(QObject):
     """Class to handle starting, running, and finishing PySide2 QProcesses."""
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
+    repl_finished_signal = Signal(int, name="repl_finished_signal")
 
     def __init__(self, ui, command):
         """Class constructor.
@@ -54,7 +55,10 @@ class QSubProcess(QObject):
         Args:
             workdir (str): Path to work directory
         """
-        if self._process.state() != QProcess.Running:
+        if self._process is None:
+            self._process = QProcess(self)
+            self.start_process(workdir=workdir)
+        elif self._process.state() != QProcess.Running:
             self.start_process(workdir=workdir)
 
     # noinspection PyUnresolvedReferences
@@ -191,3 +195,7 @@ class QSubProcess(QObject):
         """Emit data from stderr."""
         out = str(self._process.readAllStandardError().data(), "utf-8")
         self._ui.msg_proc_error.emit(out.strip())
+        if out.strip().endswith("repl_succ"):
+            self.repl_finished_signal.emit(0)
+        elif out.strip().endswith("repl_err"):
+            self.repl_finished_signal.emit(-9999)

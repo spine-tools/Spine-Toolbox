@@ -346,7 +346,9 @@ class Tool(MetaObject):
                 # Run scripts in Julia REPL
                 main_dir = self.instance.basedir  # TODO: Is main_dir needed?
                 mod_main_dir = main_dir.__repr__().strip("'")
-                self.instance.command = r'cd("{}"); include("{}"){}'\
+                self.instance.command = r'cd("{}");'\
+                    r'try include("{}"); info("repl_succ")'\
+                    r'catch e; info(e); info("repl_err") end{}'\
                     .format(mod_main_dir, self.tool_template().main_prgm, "\n")
             else:
                 # Run scripts with command "julia script.jl"
