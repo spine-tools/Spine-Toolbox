@@ -7,6 +7,7 @@ simulation models.
 
 - Python 3.5+
 - PySide2 for Qt 5.6+
+- Datapackage-py 1.2.3+
 
 ### Installing PySide2
 
@@ -18,17 +19,17 @@ There are three options for installing PySide2
 
 Each option is presented below.
 
-#### Installing PySide2 for Anaconda & Miniconda Python (3.5+)
+#### Installing PySide2 and datapackage-py for Anaconda & Miniconda Python (3.5+)
 
 PySide2 for Qt 5.6.2 is available on the conda-forge channel. You can install all requirements by running
 
-    conda install --channel conda-forge --file requirements.txt
+    conda install -c conda-forge -c manulero --file requirements.txt
 
 in the Spine Toolbox root folder.
 
 Alternatively, create a separate environment for the Toolbox with
 
-	conda create --name spinetoolbox --channel conda-forge --file requirements.txt
+	conda create --name spinetoolbox -c conda-forge -c manulero --file requirements.txt
 
 #### Installing PySide2 on a ‘clean’ Python (3.5+)
 
@@ -57,7 +58,9 @@ application components. If you want to develop the Graphical User
 Interface (views, buttons, menus, etc.) you need the PySide2 GUI
 development tools.
 
-#### Installing PySide2 GUI Development Tools (Windows)
+#### Installing PySide2 GUI Development Tools
+
+##### Windows
 
 These instructions have been tested when the Qt 5.9.0 wheel
 PySide2-5.9-cp36-cp36m-win_amd64.whl has been installed.
@@ -100,6 +103,11 @@ Add your Python scripts (e.g. C:\Python36\Scripts) and PySide2
 (e.g. C:\Python36\Lib\site-packages\PySide2) folders into your PATH
 variable.
 
+##### Linux
+
+[Miniconda](https://conda.io/miniconda.html) actually provides the three required utilities out of the box. After bash installation they can be called from the command line by running `designer`,
+`pyside2-uic`, and `pyside2-rcc`.
+
 #### Installing PySide2 by building sources (Python 2 & 3)
 
 You can install PySide2 by building the source package yourself. Instructions
@@ -111,79 +119,11 @@ Follow the instructions on the page according to your OS.
 
 ## Preparing and starting Spine Toolbox
 
-Run `build_ui.bat` from your Python/PySide2 enabled command window to generate
+On windows, run `build_ui.bat` from your Python/PySide2 enabled command window to generate
 the code for the Spine Toolbox user interface.
 After modifying the user interface (*.ui) files with `designer.exe`, re-run
 `build_ui.bat` to build the Spine Toolbox interface anew.
 
-In the command prompt, run `python spinetoolbox.py` in the `spinetoolbox` folder.
+On Linux, just run `bash build_ui.sh` instead of `build_ui.bat`, and `designer` instead of `designer.exe`.
 
-## Examples
-
-### Swedish hydro model
-
-This example runs a small hydro model on the Swedish hydropower system. Input data is collected in raw CSV format and used to build a tabular datapackage. The tabular datapackage is used together with the `SpineData` Julia package to import data into Spine in a custom way.
-
-#### Preliminaries
-
-This example assumes that you are running this version of the Spine Toolbox (branch `manuelma`) and have Julia with the following packages installed:
-- [JuMP](https://github.com/JuliaOpt/JuMP.jl)
-- [Clp](https://github.com/JuliaOpt/Clp.jl)
-- [SpineData](https://gitlab.vtt.fi/spine/data/tree/manuelma/)
-
-Follow the above links and complete the installation instructions for each package.
-
-Finally, in the command prompt, go to the `tool_templates/Swedish_hydro/input` folder and run `julia config_rawCSV_dc.jl`.
-
-#### Create a new project
-
-Open the Spine toolbox and select `File/New` to create a new project. Give it a name such as 'Swedish_hydro' and hit `Ok`.
-
-![](fig/new_swedish_hydro.png)
-
-#### Add tool templates
-
-Select the `Templates` tab at the bottom of the side pane and click on the button with a wrench and a plus sign to add a new tool template.
-
-Navigate to the `tool_templates/Swedish_hydro` folder, select the `create_datapackage.json` file and hit `Open`. Repeat for the `run_hydro_model.json` file. Now you should see your two tool templates on the side pane:
-
-![](fig/tool_templates.png)
-
-#### Add data connection to raw CSV data
-
-Click on the `DC` button to add a new data connection to your project. Give it a name such as 'rawCSV' and click `Ok`. On the 'rawCSV' item, click on the button with the plus sign to add a new reference. Navigate to the `tool_templates/Swedish_hydro/input` folder, select the `rawCSV.json` file and click `Ok`:
-
-![](fig/rawCSV.png)
-
-#### Run tool to create datapackage from raw CSV data connection
-
-Click on the `T` button to add a new tool to your project. Give it a name such as 'create_dp', then select 'Create datapackage' from the dropdown list, and click `Ok`:
-
-
-![](fig/add_create_dp_tool.png)
-
-Select the `Connections` tab at the bottom of the side pane, and click on the cell in column 'create_dp' and row 'rawCSV'. This will change it from 'false' to 'true', as shown below:
-
-![](fig/connections1.png)
-
-On the 'create_dp' item, click on `Exec.` to run the tool. You should see the output of the tool on the bottom right pane.
-
-
-#### Add data connection to tabular datapackage
-
-Click on the `DC` button to add a second data connection to your project. Give it a name such as 'datapackage' and click `Ok`. On the 'datapackage' item, click on the button with the plus sign to add a new reference. Navigate to the `tool_templates/Swedish_hydro/input` folder, select the `datapackage.json`, `Plants.csv`, `Constraints.csv`, and `SpotPrice7D1S.csv` files, and click `Ok`:
-
-![](fig/datapackage.png)
-
-#### Execute tool to run hydro model from tabular datapackage connection
-
-Click on the `T` button to add a second tool to your project. Give it a name such as 'run_hydro', then select 'Run hydro model' from the dropdown list, and click `Ok`:
-
-
-![](fig/add_run_hydro_tool.png)
-
-Select the `Connections` tab at the bottom of the left pane, and click on the element in column 'run_hydro' and row 'datapackage', so it says 'true', as shown below:
-
-![](fig/connections2.png)
-
-On the 'run_hydro' item, click on `Exec.` to run the tool. You should see the output of the tool on the bottom right pane.
+From the command prompt, run `python spinetoolbox.py` in the `spinetoolbox` folder.
