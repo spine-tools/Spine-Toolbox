@@ -440,3 +440,158 @@ class ConnectionModel(QAbstractTableModel):
         self.beginResetModel()
         self.connections = connection_table
         self.endResetModel()
+
+
+class MinimalTableModel(QAbstractTableModel):
+    """Table model for outlining."""
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self._parent = parent  # QMainWindow
+        self._data = []
+        self.header = list()
+
+    def flags(self, index):
+        """Returns flags for table items."""
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled
+
+    def rowCount(self, *args, **kwargs):
+        """Number of rows in the model."""
+        return len(self._data)
+
+    def columnCount(self, *args, **kwargs):
+        """Number of columns in the model."""
+        return len(self.header)
+
+    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+        """Set headers."""
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            try:
+                h = self.header[section]
+            except IndexError:
+                return None
+            return h
+        else:
+            return None
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index.
+
+        Args:
+            index (QModelIndex): Index of item
+            role (int): Data role
+
+        Returns:
+            Item data for given role.
+        """
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            return self._data[index.row()][index.column()]
+        else:
+            return None
+
+    def rowData(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the row referred to by the index.
+
+        Args:
+            index (QModelIndex): Index of item
+            role (int): Data role
+
+        Returns:
+            Item data for given role.
+        """
+        if not index.isValid():
+            return None
+        if role == Qt.DisplayRole:
+            return self._data[index.row()]
+        else:
+            return None
+
+    def setData(self, index, value, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        self._data[index.row()][index.column()] = value
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """Inserts count rows into the model before the given row.
+        Items in the new row will be children of the item represented
+        by the parent model index.
+
+        Args:
+            row (int): Row number where new rows are inserted
+            count (int): Number of inserted rows
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if rows were inserted successfully, False otherwise
+        """
+        if row < 0 or row > self.rowCount():
+            return False
+        if not count == 1:
+            logging.error("Insert 1 row at a time")
+            return False
+        self.beginInsertRows(parent, row, row)
+        new_row = list()
+        if self.columnCount() == 0:
+            new_row.append(None)
+        else:
+            # noinspection PyUnusedLocal
+            [new_row.append(None) for i in range(self.columnCount())]
+        # Notice if insert index > rowCount(), new object is inserted to end
+        self._data.insert(row, new_row)
+        self.endInsertRows()
+        return True
+
+    def insertColumns(self, column, count, parent=QModelIndex()):
+        """Inserts count columns into the model before the given column.
+        Items in the new column will be children of the item represented
+        by the parent model index.
+
+        Args:
+            column (int): Column number where new columns are inserted
+            count (int): Number of inserted columns
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if columns were inserted successfully, False otherwise
+        """
+        if column < 0 or column > self.columnCount():
+            return False
+        if not count == 1:
+            logging.error("Insert 1 column at a time")
+            return False
+        self.beginInsertColumns(parent, column, column)
+        for j in range(self.rowCount()):
+            # Notice if insert index > rowCount(), new object is inserted to end
+            self._data[j].insert(column, None)
+        self.endInsertColumns()
+        return True
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Removes count rows starting with the given row under parent parent from the model.
+
+        Args:
+            row (int): Row number where to start removing rows
+            count (int): Number of removed rows
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if rows were removed successfully, False otherwise
+        """
+        if row < 0 or row > self.rowCount():
+            return False
+        if not count == 1:
+            logging.error("Remove 1 row at a time")
+            return False
+        self.beginRemoveRows(parent, row, row)
+        removed_row = self._data.pop(row)
+        # logging.debug("{0} removed from row:{1}".format(removed_row, row))
+        self.endRemoveRows()
+        return True
+
+    def reset_model(self, new_data):
+        """Reset model."""
+        self.beginResetModel()
+        self._data = new_data
+        self.endResetModel()

@@ -33,6 +33,8 @@ from metaobject import MetaObject
 from widgets.sw_data_connection_widget import DataConnectionWidget
 from helpers import create_dir
 from config import APPLICATION_PATH
+from datapackage import Package
+from widgets.edit_foreign_keys_widget import EditForeignKeysWidget
 
 
 class DataConnection(MetaObject):
@@ -76,6 +78,8 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_plus.clicked.connect(self.add_references)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
+        self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
+        self._widget.ui.toolButton_foreign_keys.clicked.connect(self.show_add_foreign_key_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
 
     @Slot(name="open_directory")
@@ -139,6 +143,69 @@ class DataConnection(MetaObject):
                 continue
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
+
+    @Slot(name="create_datapackage")
+    def create_datapackage(self):
+        data_files = os.listdir(self.data_dir)
+        if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
+            self._parent.msg_error.emit("The folder <b>{}</b> does not have any CSV files."
+                                        " Add some and try again.".format(self.data_dir))
+            return
+        self.package = Package(base_path = self.data_dir)
+        self.package.infer(os.path.join(self.data_dir, '*.csv'))
+        self.save_datapackage()
+        data_files = os.listdir(self.data_dir)
+        self._widget.populate_data_list(data_files)
+
+    @Slot(name="show_add_foreign_key_form")
+    def show_add_foreign_key_form(self):
+        #create models for comboboxes
+        #create widget with self as the parent
+        """Show add foreign key widget."""
+        if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
+            self._parent.msg_error.emit("Create a datapackage first.")
+            return
+        self.package = Package(os.path.join(self.data_dir, 'datapackage.json'))
+        self.edit_foreign_keys_form = EditForeignKeysWidget(self, self._project)
+        self.edit_foreign_keys_form.show()
+
+    def foreign_keys_data(self):
+        data = list()
+        if not self.package:
+            return
+        for resource in self.package.resources:
+            for fk in resource.schema.foreign_keys:
+                child_table = resource.name
+                child_field = fk['fields']
+                parent_table = fk['reference']['resource']
+                parent_field = fk['reference']['fields']
+                data.append([child_table, child_field, parent_table, parent_field])
+        return data
+
+    def clear_foreign_keys(self):
+        if not self.package:
+            return
+        for resource in self.package.descriptor['resources']:
+            resource['schema'].pop('foreignKeys', None)
+        self.package.commit()
+
+    def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
+        i = self.package.resource_names.index(child_table)
+        foreign_key = {
+            "fields": child_field,
+            "reference": {
+                "resource": parent_table,
+                "fields": parent_field
+            }
+        }
+        self.package.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
+        if foreign_key not in self.package.descriptor['resources'][i]['schema']['foreignKeys']:
+            self.package.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
+            self.package.commit()
+
+    def save_datapackage(self):
+        self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
+        self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
 
     @Slot(name="show_connections")
     def show_connections(self):

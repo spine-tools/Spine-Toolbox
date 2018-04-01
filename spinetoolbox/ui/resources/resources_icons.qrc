@@ -4,6 +4,8 @@
   </qresource>
   <qresource prefix="icons">
     <file>dc_add.png</file>
+    <file>datapkg.png</file>
+    <file>fk.png</file>
     <file>plus.png</file>
     <file>minus.png</file>
     <file>refresh_tools.png</file>

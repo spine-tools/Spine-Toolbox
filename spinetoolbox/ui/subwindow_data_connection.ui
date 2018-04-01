@@ -263,6 +263,52 @@ color: rgb(255, 255, 255);</string>
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QToolButton" name="toolButton_datapkg">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generate datapackage.json file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resources/resources_icons.qrc">
+           <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QToolButton" name="toolButton_foreign_keys">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>20</width>
+           <height>20</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Edit datpackage's foreign keys.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="icon">
+          <iconset resource="resources/resources_icons.qrc">
+           <normaloff>:/icons/fk.png</normaloff>:/icons/fk.png</iconset>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
