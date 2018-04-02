@@ -117,7 +117,7 @@ class EditForeignKeysWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView_fks.itemDelegate().commitData.connect(self.data_commited)
+        self.ui.tableView_fks.itemDelegate().commit_data.connect(self.data_commited)
         self.ui.toolButton_add_fk.clicked.connect(self.add_fk_clicked)
         self.ui.toolButton_rm_fks.clicked.connect(self.rm_fks_clicked)
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
@@ -161,8 +161,8 @@ class EditForeignKeysWidget(QWidget):
         for row in self.original_data:
             if row not in new_data:
                 to_remove.append(row)
-        logging.debug(to_add)
-        logging.debug(to_remove)
+        logging.debug("to add:{}".format(to_add))
+        logging.debug("to_del:{}".format(to_remove))
         for row in to_add:
             child_table = row[header.index(Header.CHILD_TABLE.fullname)]
             child_field = row[header.index(Header.CHILD_FIELD.fullname)]

@@ -23,7 +23,7 @@ Widget shown to user when Foreign Keys are edited.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, Signal
 from PySide2.QtWidgets import QItemDelegate, QComboBox
 import logging
 
@@ -32,6 +32,8 @@ class ComboBoxDelegate(QItemDelegate):
     A delegate that places a fully functioning QComboBox in every
     cell of the column to which it's applied
     """
+    commit_data = Signal(QComboBox, name="commit_data")
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -43,18 +45,16 @@ class ComboBoxDelegate(QItemDelegate):
         items = self.parent().combo_items(index)
         if items:
             combo.addItems(items)
-            if not combo.original_data:
-                combo.setCurrentIndex(-1)   #force index change when editing empty cells
+            combo.setCurrentIndex(-1)   #force index change
             combo.currentIndexChanged.connect(self.current_index_changed)
         return combo
 
     def setEditorData(self, editor, index):
         editor.showPopup()
 
-    #def setModelData(self, editor, model, index):
-        #model.setData(index, editor.currentText())
-        #return False
+    def setModelData(self, editor, model, index):
+        return False
 
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):
-        self.commitData.emit(self.sender())
+        self.commit_data.emit(self.sender())
