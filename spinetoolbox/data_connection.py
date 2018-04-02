@@ -35,6 +35,7 @@ from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_foreign_keys_widget import EditForeignKeysWidget
+from widgets.confirmation_dialog import ConfirmationDialog
 
 
 class DataConnection(MetaObject):
@@ -151,7 +152,7 @@ class DataConnection(MetaObject):
             self._parent.msg_error.emit("The folder <b>{}</b> does not have any CSV files."
                                         " Add some and try again.".format(self.data_dir))
             return
-        self.package = Package(base_path = self.data_dir)
+        self.package = CustomPackage(base_path = self.data_dir)
         self.package.infer(os.path.join(self.data_dir, '*.csv'))
         self.save_datapackage()
         data_files = os.listdir(self.data_dir)
@@ -159,53 +160,29 @@ class DataConnection(MetaObject):
 
     @Slot(name="show_add_foreign_key_form")
     def show_add_foreign_key_form(self):
-        #create models for comboboxes
-        #create widget with self as the parent
         """Show add foreign key widget."""
         if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
             self._parent.msg_error.emit("Create a datapackage first.")
             return
-        self.package = Package(os.path.join(self.data_dir, 'datapackage.json'))
-        self.edit_foreign_keys_form = EditForeignKeysWidget(self, self._project)
+        self.package = CustomPackage(os.path.join(self.data_dir, 'datapackage.json'))
+        self.edit_foreign_keys_form = EditForeignKeysWidget(self)
         self.edit_foreign_keys_form.show()
 
-    def foreign_keys_data(self):
-        data = list()
-        if not self.package:
-            return
-        for resource in self.package.resources:
-            for fk in resource.schema.foreign_keys:
-                child_table = resource.name
-                child_field = fk['fields']
-                parent_table = fk['reference']['resource']
-                parent_field = fk['reference']['fields']
-                data.append([child_table, child_field, parent_table, parent_field])
-        return data
+    def save_datapackage(self):  #TODO: handle zip as well?
+        """Save datapackage.json to datadir"""
+        if os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
+            msg = '<b>Are you sure you want to replace the file'\
+                  ' "datapackage.json" in "{}"?</b>'.format(os.path.basename(self.data_dir))
+            self.dialog = ConfirmationDialog(msg)
+            self.dialog.button_clicked_signal.connect(self.finish_save_datapackage)
+            self.dialog.show()
 
-    def clear_foreign_keys(self):
-        if not self.package:
-            return
-        for resource in self.package.descriptor['resources']:
-            resource['schema'].pop('foreignKeys', None)
-        self.package.commit()
+    @Slot(bool, name="finish_save_datapackage")
+    def finish_save_datapackage(self, ret):
+        if ret:
+            self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
+            self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
 
-    def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
-        i = self.package.resource_names.index(child_table)
-        foreign_key = {
-            "fields": child_field,
-            "reference": {
-                "resource": parent_table,
-                "fields": parent_field
-            }
-        }
-        self.package.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
-        if foreign_key not in self.package.descriptor['resources'][i]['schema']['foreignKeys']:
-            self.package.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
-            self.package.commit()
-
-    def save_datapackage(self):
-        self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
-        self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
 
     @Slot(name="show_connections")
     def show_connections(self):
@@ -243,3 +220,52 @@ class DataConnection(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+
+class CustomPackage(Package):
+    def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
+        super().__init__(descriptor, base_path, strict, storage)
+
+    def foreign_keys_data(self):
+        data = list()
+        for resource in self.resources:
+            for fk in resource.schema.foreign_keys:
+                child_table = resource.name
+                child_field = fk['fields'][0]
+                parent_table = fk['reference']['resource']
+                parent_field = fk['reference']['fields'][0]
+                data.append([child_table, child_field, parent_table, parent_field])
+        return data
+
+    def clear_foreign_keys(self):
+        for resource in self.descriptor['resources']:
+            resource['schema'].pop('foreignKeys', None)
+        self.commit()
+
+    def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
+        i = self.resource_names.index(child_table)
+        foreign_key = {
+            "fields": child_field,
+            "reference": {
+                "resource": parent_table,
+                "fields": parent_field
+            }
+        }
+        self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
+        if foreign_key not in self.descriptor['resources'][i]['schema']['foreignKeys']:
+            self.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
+            self.commit()
+
+    def rm_foreign_key(self, child_table, child_field, parent_table, parent_field):
+        i = self.resource_names.index(child_table)
+        foreign_key = {
+            "fields": child_field,
+            "reference": {
+                "resource": parent_table,
+                "fields": parent_field
+            }
+        }
+        if 'foreignKeys' in self.descriptor['resources'][i]['schema']:
+            if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
+                self.descriptor['resources'][i]['schema']['foreignKeys'].remove(foreign_key)
+                self.commit()

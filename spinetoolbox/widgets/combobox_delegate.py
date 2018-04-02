@@ -25,6 +25,7 @@ Widget shown to user when Foreign Keys are edited.
 """
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QItemDelegate, QComboBox
+import logging
 
 class ComboBoxDelegate(QItemDelegate):
     """
@@ -32,25 +33,27 @@ class ComboBoxDelegate(QItemDelegate):
     cell of the column to which it's applied
     """
     def __init__(self, parent):
-        QItemDelegate.__init__(self, parent)
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         combo = QComboBox(parent)
         combo.row = index.row()
         combo.column = index.column()
+        combo.original_data = index.model().data(index)
         items = self.parent().combo_items(index)
         if items:
             combo.addItems(items)
+            if not combo.original_data:
+                combo.setCurrentIndex(-1)   #force index change when editing empty cells
             combo.currentIndexChanged.connect(self.current_index_changed)
         return combo
 
     def setEditorData(self, editor, index):
-        editor.blockSignals(True)
-        editor.setCurrentText(str(index.model().data(index)))
-        editor.blockSignals(False)
+        editor.showPopup()
 
-    def setModelData(self, editor, model, index):
-        model.setData(index, editor.currentText())
+    #def setModelData(self, editor, model, index):
+        #model.setData(index, editor.currentText())
+        #return False
 
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):

@@ -32,7 +32,7 @@ class CheckBoxDelegate(QItemDelegate):
     cell of the column to which it's applied
     """
     def __init__(self, parent):
-        QItemDelegate.__init__(self, parent)
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         '''

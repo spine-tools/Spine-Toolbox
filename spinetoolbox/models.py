@@ -448,7 +448,7 @@ class MinimalTableModel(QAbstractTableModel):
     def __init__(self, parent=None):
         super().__init__()
         self._parent = parent  # QMainWindow
-        self._data = []
+        self._data = list()
         self.header = list()
 
     def flags(self, index):
@@ -508,10 +508,25 @@ class MinimalTableModel(QAbstractTableModel):
         else:
             return None
 
+    def modelData(self, role=Qt.DisplayRole):
+        """Returns all the model data.
+
+        Args:
+            role (int): Data role
+
+        Returns:
+            Model data for given role.
+        """
+        if role == Qt.DisplayRole:
+            return self._data
+        else:
+            return None
+
     def setData(self, index, value, role=Qt.DisplayRole):
         if not index.isValid():
-            return None
+            return False
         self._data[index.row()][index.column()] = value
+        return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.

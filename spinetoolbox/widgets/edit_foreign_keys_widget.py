@@ -18,14 +18,15 @@
 #############################################################################
 
 """
-Widget shown to user when Foreign Keys are edited.
+Widget shown to user when pressing Edit Foreign Keys on Data Connection item.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
 
+from copy import deepcopy
 import logging
-from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView
+from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView
 from PySide2.QtCore import Slot, Qt, QEvent
 import ui.edit_foreign_keys
 from config import STATUSBAR_SS
@@ -42,27 +43,22 @@ class Header(Enum):
     PARENT_TABLE = 3, 'Parent table'
     PARENT_FIELD = 4, 'Parent field'
 
-    def __new__(cls, value, name):
+    def __new__(cls, index, name):
         member = object.__new__(cls)
-        member._value_ = value
+        member.index = index
         member.fullname = name
         return member
 
-    def __int__(self):
-        return self.value
-
 class EditForeignKeysWidget(QWidget):
-    """A widget to query foreign keys definiton from user.
+    """A widget to allow the user to define foreign keys for a datapackage.
 
     Attributes:
-        parent (ToolboxUI): Parent widget
-        project(SpineToolboxProject): Project where to add the new Tool
+        dc (DataConnection): Data connection object that calls this widget
     """
-    def __init__(self, parent, project):
+    def __init__(self, dc):
         """Initialize class."""
         super().__init__(f=Qt.Window)
-        self._parent = parent
-        self._project = project
+        self.dc = dc
         #  Set up the user interface from Designer.
         self.ui = ui.edit_foreign_keys.Ui_Form()
         self.ui.setupUi(self)
@@ -84,17 +80,19 @@ class EditForeignKeysWidget(QWidget):
         self.fks_model = MinimalTableModel()
         for header in Header:
             self.fks_model.header.append(header.fullname)
-        new_data = self._parent.foreign_keys_data()
-        self.fks_model.reset_model(new_data)
-        self.fks_model.insertColumns(int(Header.RM), 1)
+        data = self.dc.package.foreign_keys_data()
+        self.original_data = deepcopy(data)
+        self.fks_model.reset_model(data)
+        self.fks_model.insertColumns(Header.RM.index, 1)
 
     def init_tableView_fks(self):
         """Initialize fhe Foreign Keys data view"""
         self.ui.tableView_fks.setItemDelegate(ComboBoxDelegate(self))
-        self.ui.tableView_fks.setItemDelegateForColumn(int(Header.RM), CheckBoxDelegate(self))
+        self.ui.tableView_fks.setItemDelegateForColumn(Header.RM.index, CheckBoxDelegate(self))
         self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.tableView_fks.setModel(self.fks_model)
         self.ui.tableView_fks.setFocus()
+        #self.ui.tableView_fks.setEditTriggers(QAbstractItemView.AllEditTriggers)
 
     def combo_items(self, index):
         """Return combobox items depending on index"""
@@ -102,12 +100,14 @@ class EditForeignKeysWidget(QWidget):
         column = index.column()
         header = self.fks_model.headerData(column)
         if header.endswith('table'):
-            items = self._parent.package.resource_names
+            items = self.dc.package.resource_names
         elif header.endswith('field'):
-            index = self.fks_model.createIndex(row, column-1)
+            header = header.replace('field', 'table')
+            column = next(h.index for h in Header if h.fullname == header)
+            index = self.fks_model.createIndex(row, column)
             table_name = self.fks_model.data(index)
             if table_name:
-                items = self._parent.package.get_resource(table_name).schema.field_names
+                items = self.dc.package.get_resource(table_name).schema.field_names
             else:
                 header = header.replace('field', 'table')
                 msg = "{} not selected. Select one first.".format(header)
@@ -126,31 +126,57 @@ class EditForeignKeysWidget(QWidget):
     @Slot(int, name='data_commited')
     def data_commited(self, sender):
         """Whenever the table combobox changes, update the field combobox view"""
-        row = sender.row
-        column = sender.column
-        header = self.fks_model.headerData(column)
-        if header.endswith('table'):
-            table = sender.currentText()
-            item = self._parent.package.get_resource(table).schema.field_names[0]
-            index = self.fks_model.createIndex(row, column+1)
-            self.fks_model.setData(index, item)
-            self.ui.tableView_fks.update(index)
+        original_table = sender.original_data
+        table = sender.currentText()
+        logging.debug("orig {}".format(original_table))
+        logging.debug("curr {}".format(table))
+        if table != original_table:
+            row = sender.row
+            column = sender.column
+            index = self.fks_model.createIndex(row, column)
+            self.fks_model.setData(index, table)
+            header = self.fks_model.headerData(column)
+            if header.endswith('table'):
+                header = header.replace('table', 'field')
+                column = next(h.index for h in Header if h.fullname == header)
+                index = self.fks_model.createIndex(row, column)
+                item = self.dc.package.get_resource(table).schema.field_names[0]
+                self.fks_model.setData(index, item)
+                self.ui.tableView_fks.update(index)
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
         """Udpate datapackage with Foreign Keys model."""
-        self._parent.clear_foreign_keys()
-        for row in range(self.fks_model.rowCount()):
-            index = self.fks_model.createIndex(row, 0)
-            row_data = self.fks_model.rowData(index)
-            if None in [x for i,x in enumerate(row_data) if i != int(Header.RM)]:
-                continue
-            child_table = row_data[int(Header.CHILD_TABLE)]
-            child_field = row_data[int(Header.CHILD_FIELD)]
-            parent_table = row_data[int(Header.PARENT_TABLE)]
-            parent_field = row_data[int(Header.PARENT_FIELD)]
-            self._parent.add_foreign_key(child_table, child_field, parent_table, parent_field)
-        self._parent.save_datapackage()
+        new_data = deepcopy(self.fks_model.modelData())
+        header = list(self.fks_model.header)
+        for row in new_data:
+            del row[Header.RM.index]
+        del header[Header.RM.index]
+        new_data = [x for x in new_data if not None in x]
+        to_add = list()
+        to_remove = list()
+        for row in new_data:
+            if row not in self.original_data:
+                to_add.append(row)
+        for row in self.original_data:
+            if row not in new_data:
+                to_remove.append(row)
+        logging.debug(to_add)
+        logging.debug(to_remove)
+        for row in to_add:
+            child_table = row[header.index(Header.CHILD_TABLE.fullname)]
+            child_field = row[header.index(Header.CHILD_FIELD.fullname)]
+            parent_table = row[header.index(Header.PARENT_TABLE.fullname)]
+            parent_field = row[header.index(Header.PARENT_FIELD.fullname)]
+            self.dc.package.add_foreign_key(child_table, child_field, parent_table, parent_field)
+        for row in to_remove:
+            child_table = row[header.index(Header.CHILD_TABLE.fullname)]
+            child_field = row[header.index(Header.CHILD_FIELD.fullname)]
+            parent_table = row[header.index(Header.PARENT_TABLE.fullname)]
+            parent_field = row[header.index(Header.PARENT_FIELD.fullname)]
+            self.dc.package.rm_foreign_key(child_table, child_field, parent_table, parent_field)
+        if to_add or to_remove:
+            self.dc.save_datapackage()
         self.close()
 
     @Slot(name='add_fk_clicked')
@@ -163,7 +189,7 @@ class EditForeignKeysWidget(QWidget):
         """Removes selected rows from Foreign Keys model."""
         new_data = []
         for row in range(self.fks_model.rowCount()):
-            index = self.fks_model.createIndex(row, int(Header.RM))
+            index = self.fks_model.createIndex(row, Header.RM.index)
             if not self.fks_model.data(index):
                 new_data.append(self.fks_model.rowData(index))
         self.fks_model.reset_model(new_data)

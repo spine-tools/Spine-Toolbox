@@ -48,7 +48,7 @@ class Ui_Form(object):
         self.label_fks.setObjectName("label_fks")
         self.verticalLayout.addWidget(self.label_fks)
         self.tableView_fks = QtWidgets.QTableView(Form)
-        self.tableView_fks.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.DoubleClicked|QtWidgets.QAbstractItemView.EditKeyPressed)
+        self.tableView_fks.setEditTriggers(QtWidgets.QAbstractItemView.DoubleClicked|QtWidgets.QAbstractItemView.EditKeyPressed)
         self.tableView_fks.setObjectName("tableView_fks")
         self.tableView_fks.horizontalHeader().setCascadingSectionResizes(True)
         self.tableView_fks.horizontalHeader().setDefaultSectionSize(150)
