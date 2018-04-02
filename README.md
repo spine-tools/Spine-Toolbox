@@ -7,21 +7,21 @@ simulation models.
 
 - Python 3.5+
 - PySide2 for Qt 5.6+
-- Datapackage-py 1.2.3+
+- Datapackage 1.2.3+
 
-### Installing PySide2
+### Installing PySide2 and Datapackage
 
-There are three options for installing PySide2
+There are three options for installing PySide2 and Datapackage
 
-- Installing PySide2 for Anaconda & Miniconda (3.5+)
-- Installing PySide2 on a ‘clean’ Python (3.5+)
+- Installing PySide2 and Datapackage for Anaconda & Miniconda (3.5+)
+- Installing PySide2 and Datapackage on a ‘clean’ Python (3.5+)
 - Installing PySide2 by building sources (Python 2 & 3)
 
 Each option is presented below.
 
-#### Installing PySide2 and datapackage-py for Anaconda & Miniconda Python (3.5+)
+#### Installing PySide2 and Datapackage for Anaconda & Miniconda Python (3.5+)
 
-PySide2 for Qt 5.6.2 is available on the conda-forge channel. You can install all requirements by running
+PySide2 for Qt 5.6.2 is available on the conda-forge channel. Datapackage 1.2.3 is available on the manulero channel. You can install all requirements by running
 
     conda install -c conda-forge -c manulero --file requirements.txt
 
@@ -31,9 +31,9 @@ Alternatively, create a separate environment for the Toolbox with
 
 	conda create --name spinetoolbox -c conda-forge -c manulero --file requirements.txt
 
-#### Installing PySide2 on a ‘clean’ Python (3.5+)
+#### Installing PySide2 and Datapackage on a ‘clean’ Python (3.5+)
 
-Download wheel from [http://hansch.info/PySide2/](http://hansch.info/PySide2/)
+Download wheel for PySide2 from [http://hansch.info/PySide2/](http://hansch.info/PySide2/)
 
 The following wheels are available:
 PySide2 for Qt 5.6.2 (Python 3.5 and Python 3.6)
@@ -50,8 +50,11 @@ resides with the following contents:
     Prefix = /Python36/Lib/site-packages/PySide2
     Binaries = /Python36/Lib/site-packages/PySide2
 
-If your PySide2 folder is in another path, modify Prefix and Binaries
-lines accordingly.
+If your PySide2 folder is in another path, modify Prefix and Binaries lines accordingly.
+
+Install Datapackage by running
+
+    pip install datapackage
 
 Spine Toolbox should now work and you are ready to develop the core
 application components. If you want to develop the Graphical User
@@ -105,8 +108,7 @@ variable.
 
 ##### Linux
 
-[Miniconda](https://conda.io/miniconda.html) actually provides the three required utilities out of the box. After bash installation they can be called from the command line by running `designer`,
-`pyside2-uic`, and `pyside2-rcc`.
+[Miniconda](https://conda.io/miniconda.html) provides the three required utilities out of the box. After bash installation they can be called from the command line by running `designer`, `pyside2-uic`, and `pyside2-rcc`.
 
 #### Installing PySide2 by building sources (Python 2 & 3)
 
