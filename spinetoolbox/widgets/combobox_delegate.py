@@ -41,7 +41,7 @@ class ComboBoxDelegate(QItemDelegate):
         combo = QComboBox(parent)
         combo.row = index.row()
         combo.column = index.column()
-        combo.original_data = index.model().data(index)
+        combo.previous_data = index.model().data(index)
         items = self.parent().combo_items(index)
         if items:
             combo.addItems(items)

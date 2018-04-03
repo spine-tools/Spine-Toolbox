@@ -126,21 +126,22 @@ class EditForeignKeysWidget(QWidget):
     @Slot(int, name='data_commited')
     def data_commited(self, sender):
         """Whenever the table combobox changes, update the field combobox view"""
-        original_table = sender.original_data
-        table = sender.currentText()
-        logging.debug("orig {}".format(original_table))
-        logging.debug("curr {}".format(table))
-        if table != original_table:
+        previous_table = sender.previous_data
+        current_table = sender.currentText()
+        logging.debug("prev {}".format(previous_table))
+        logging.debug("curr {}".format(current_table))
+        if current_table != previous_table:
+            sender.previous_data = current_table
             row = sender.row
             column = sender.column
             index = self.fks_model.createIndex(row, column)
-            self.fks_model.setData(index, table)
+            self.fks_model.setData(index, current_table)
             header = self.fks_model.headerData(column)
             if header.endswith('table'):
                 header = header.replace('table', 'field')
                 column = next(h.index for h in Header if h.fullname == header)
                 index = self.fks_model.createIndex(row, column)
-                item = self.dc.package.get_resource(table).schema.field_names[0]
+                item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.fks_model.setData(index, item)
                 self.ui.tableView_fks.update(index)
 
