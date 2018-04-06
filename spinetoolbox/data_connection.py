@@ -71,6 +71,9 @@ class DataConnection(MetaObject):
         # Populate data (files) model
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
+        #set connections buttons slot type
+        self._widget.ui.toolButton_inputslot.is_inputslot = True
+        self._widget.ui.toolButton_outputslot.is_inputslot = False
         self.connect_signals()
 
     def connect_signals(self):
@@ -82,6 +85,12 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_foreign_keys.clicked.connect(self.show_add_foreign_key_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
+        self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
+        self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
+
+    @Slot(name="draw_links")
+    def draw_links(self):
+        self._parent.draw_links(self.sender())
 
     @Slot(name="open_directory")
     def open_directory(self):
@@ -176,6 +185,8 @@ class DataConnection(MetaObject):
             self.dialog = ConfirmationDialog(msg)
             self.dialog.button_clicked_signal.connect(self.finish_save_datapackage)
             self.dialog.show()
+        else:
+            self.finish_save_datapackage(True)
 
     @Slot(bool, name="finish_save_datapackage")
     def finish_save_datapackage(self, ret):

@@ -37,6 +37,7 @@ from view import View
 from tool_templates import GAMSTool, JuliaTool
 from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
 import qsubprocess
+from widgets.custom_qmdisubwindow import CustomQMdiSubWindow
 
 
 class SpineToolboxProject(MetaObject):
@@ -267,7 +268,8 @@ class SpineToolboxProject(MetaObject):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
         data_connection = DataConnection(self._parent, name, description, self, references)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(data_connection.get_widget(), Qt.SubWindow
+        sw = CustomQMdiSubWindow(self._parent.ui.mdiArea, data_connection.get_widget())
+        self._parent.ui.mdiArea.addSubWindow(sw, Qt.SubWindow
                                                   | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
                                                   | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
@@ -279,7 +281,8 @@ class SpineToolboxProject(MetaObject):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         tool = Tool(self._parent, name, description, self, tool_template)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(tool.get_widget(), Qt.SubWindow
+        sw = CustomQMdiSubWindow(self._parent.ui.mdiArea, tool.get_widget())
+        self._parent.ui.mdiArea.addSubWindow(sw, Qt.SubWindow
                                                   | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
                                                   | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick

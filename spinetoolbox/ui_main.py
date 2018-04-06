@@ -41,12 +41,14 @@ from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
+from widgets.link_widget import DrawLinkWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
 from helpers import project_dir, get_datetime, erase_dir
 from models import ToolTemplateModel, ConnectionModel
+from views import LinkView
 
 
 class ToolboxUI(QMainWindow):
@@ -106,6 +108,7 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.init_project()
         self.restore_ui()
+        self.ui.draw_link_widget = DrawLinkWidget(self)
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -268,6 +271,8 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
+        self.ui.linkView_connections = LinkView(self)
+        self.ui.linkView_connections.setModel(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
         if n_connected == 0:
@@ -1054,6 +1059,48 @@ class ToolboxUI(QMainWindow):
             return
         self.add_view_form = AddViewWidget(self, self._project)
         self.add_view_form.show()
+
+    def draw_links(self, button):
+        """Draw links when slot button is clicked"""
+        logging.debug("draw_links")
+        if not self.ui.draw_link_widget.drawing:
+            #start drawing and remember slot
+            self.ui.draw_link_widget.drawing = True
+            #self._from_slot = button
+            self.ui.draw_link_widget.set_initial_position(button)
+            self.from_item = button.parent().owner()
+            self.from_is_input = button.is_inputslot
+        else:
+            #stop drawing and make connection
+            self.ui.draw_link_widget.drawing = False
+            #self._to_slot = button
+            self.to_is_input = button.is_inputslot
+            if self.from_is_input == self.to_is_input:
+                slot_type = 'input' if self.to_is_input else 'output'
+                self.msg_error.emit("Unable to make connection because the"
+                                            " two slots are of the same type ('{}')."\
+                                            .format(slot_type))
+            else:
+                self.to_item = button.parent().owner()
+                # create connection
+                connection_model = self.connection_model
+                if self.from_is_input:  #input to output
+                    input_item = self.from_item
+                    output_item = self.to_item
+                else:  #assume output to input
+                    output_item = self.from_item
+                    input_item = self.to_item
+                row = connection_model.header.index(output_item)
+                column = connection_model.header.index(input_item)
+                index = connection_model.createIndex(row, column)
+                if not connection_model.data(index, Qt.DisplayRole):
+                    connection_model.setData(index, "value", Qt.EditRole)  # value not used
+                    self.msg.emit("<b>{}</b>'s output is now connected to"\
+                                  " <b>{}</b>'s input.".format(output_item, input_item))
+                else:
+                    self.msg.emit("<b>{}</b>'s output is already connected to"\
+                              " <b>{}</b>'s input.".format(output_item, input_item))
+
 
     @Slot(name="show_settings")
     def show_settings(self):

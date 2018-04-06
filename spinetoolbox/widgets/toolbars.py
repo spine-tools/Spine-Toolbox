@@ -69,6 +69,7 @@ def make_item_toolbar(ui):
     toolbar.addAction(add_view)
     toolbar.addSeparator()
     toolbar.addAction(remove_all)
+    toolbar.addSeparator()
     toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
     toolbar.setIconSize(QSize(20, 20))
     # Connect signals

@@ -51,6 +51,7 @@ class ToolSubWindowWidget(QWidget):
         self.ui.treeView_output_files.setModel(self.output_file_model)
         self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
         self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        self.ui.label_name.setFocus()
 
     def set_owner(self, owner):
         """Set owner of this SubWindowWidget.

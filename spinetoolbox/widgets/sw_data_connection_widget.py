@@ -29,6 +29,7 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_connection import Ui_Form
 from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
+import logging
 
 
 class DataConnectionWidget(QWidget):
@@ -37,6 +38,7 @@ class DataConnectionWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
     """
+
     def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
@@ -51,6 +53,7 @@ class DataConnectionWidget(QWidget):
         self.ui.treeView_data.setModel(self.data_model)
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.label_name.setFocus()
 
     def set_owner(self, owner):
         """Set owner of this SubWindowWidget.

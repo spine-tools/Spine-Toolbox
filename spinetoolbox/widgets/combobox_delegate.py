@@ -53,7 +53,7 @@ class ComboBoxDelegate(QItemDelegate):
         editor.showPopup()
 
     def setModelData(self, editor, model, index):
-        return False
+        pass
 
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):

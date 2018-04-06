@@ -26,6 +26,13 @@ for ui_file in ../spinetoolbox/ui/*.ui; do
     sed -i '/# Created:/d;/#      by:/d' $py_file
 done
 
+echo building resources_icons_rc.py
+pyside2-rcc -o ../spinetoolbox/resources_icons_rc.py ../spinetoolbox/ui/resources/resources_icons.qrc
+
+echo building resources_logos_rc.py
+pyside2-rcc -o ../spinetoolbox/resources_logos_rc.py ../spinetoolbox/ui/resources/resources_logos.qrc
+
+
 echo --- Build completed ---
 printf '\n'
 echo --- APPENDING LICENSE TO .UI FILES ---

@@ -440,7 +440,9 @@ class ConnectionModel(QAbstractTableModel):
         self.beginResetModel()
         self.connections = connection_table
         self.endResetModel()
-
+        top_left = self.index(0, 0)
+        bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
+        self.dataChanged.emit(top_left, bottom_right)
 
 class MinimalTableModel(QAbstractTableModel):
     """Table model for outlining."""
