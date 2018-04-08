@@ -268,7 +268,7 @@ class SpineToolboxProject(MetaObject):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
         data_connection = DataConnection(self._parent, name, description, self, references)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = CustomQMdiSubWindow(self._parent.ui.mdiArea, data_connection.get_widget())
+        sw = CustomQMdiSubWindow(data_connection.get_widget())
         self._parent.ui.mdiArea.addSubWindow(sw, Qt.SubWindow
                                                   | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
                                                   | Qt.WindowCloseButtonHint)
@@ -281,7 +281,7 @@ class SpineToolboxProject(MetaObject):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         tool = Tool(self._parent, name, description, self, tool_template)
         # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = CustomQMdiSubWindow(self._parent.ui.mdiArea, tool.get_widget())
+        sw = CustomQMdiSubWindow(tool.get_widget())
         self._parent.ui.mdiArea.addSubWindow(sw, Qt.SubWindow
                                                   | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
                                                   | Qt.WindowCloseButtonHint)

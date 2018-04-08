@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -26,7 +26,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>998</width>
+    <width>720</width>
     <height>565</height>
    </rect>
   </property>
@@ -349,24 +349,12 @@
         </layout>
        </widget>
       </widget>
-      <widget class="QMdiArea" name="mdiArea">
+      <widget class="QMdiArea" name="mdiArea_with_links">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
-       </property>
-       <property name="verticalScrollBarPolicy">
-        <enum>Qt::ScrollBarAsNeeded</enum>
-       </property>
-       <property name="horizontalScrollBarPolicy">
-        <enum>Qt::ScrollBarAsNeeded</enum>
-       </property>
-       <property name="viewMode">
-        <enum>QMdiArea::SubWindowView</enum>
-       </property>
-       <property name="tabsMovable">
-        <bool>false</bool>
        </property>
       </widget>
      </widget>
@@ -378,8 +366,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>998</width>
-     <height>21</height>
+     <width>720</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

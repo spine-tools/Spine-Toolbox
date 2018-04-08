@@ -29,19 +29,19 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QFrame, QWidget, QMdiArea, QSizePolicy
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.context_menus import ProjectItemContextMenu
+from widgets.context_menus import ProjectItemContextMenu, ConnLinkContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
-from widgets.link_widget import DrawLinkWidget
+from widgets.link_widget import DrawLinkWidget, LinkLayout
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -70,6 +70,8 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        # Adapt user interface, especially mdiArea so that we can draw links on it
+        self.init_mdiArea_with_links()
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
@@ -82,6 +84,7 @@ class ToolboxUI(QMainWindow):
         self.about_form = None
         self.data_store_form = None
         self.project_item_context_menu = None
+        self.conn_link_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -108,7 +111,28 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.init_project()
         self.restore_ui()
+
+    def init_mdiArea_with_links(self):
+        """Initialize the area shared by the mdi and the LinkView"""
+        self.ui.mdiArea = QMdiArea()
+        sizePolicy = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.ui.mdiArea.sizePolicy().hasHeightForWidth())
+        self.ui.mdiArea.setSizePolicy(sizePolicy)
+        self.ui.mdiArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.ui.mdiArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.ui.mdiArea.setViewMode(QMdiArea.SubWindowView)
+        self.ui.mdiArea.setTabsMovable(False)
+        self.ui.mdiArea.setObjectName("mdiArea")
+        self.ui.mdiArea.is_link = False
         self.ui.draw_link_widget = DrawLinkWidget(self)
+        layout = LinkLayout(self.ui.mdiArea_with_links)
+        layout.addWidget(self.ui.mdiArea)
+        layout.addWidget(self.ui.draw_link_widget)
+        self.ui.linkView_connections = LinkView(self, layout)
+        self.ui.mdiArea_with_links.setLayout(layout)
+        #self.ui.mdiArea_with_links_layout.addWidget(self.ui.draw_link_widget)
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -169,6 +193,8 @@ class ToolboxUI(QMainWindow):
         self.ui.pushButton_add_tool_template.clicked.connect(self.add_tool_template)
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
+        # Connections LinkView
+        self.ui.linkView_connections.customContextMenuRequested.connect(self.show_link_context_menu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
 
@@ -271,7 +297,6 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.linkView_connections = LinkView(self)
         self.ui.linkView_connections.setModel(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
@@ -1062,18 +1087,15 @@ class ToolboxUI(QMainWindow):
 
     def draw_links(self, button):
         """Draw links when slot button is clicked"""
-        logging.debug("draw_links")
         if not self.ui.draw_link_widget.drawing:
             #start drawing and remember slot
             self.ui.draw_link_widget.drawing = True
-            #self._from_slot = button
-            self.ui.draw_link_widget.set_initial_position(button)
+            self.ui.draw_link_widget.start_drawing_at(button)
             self.from_item = button.parent().owner()
             self.from_is_input = button.is_inputslot
         else:
             #stop drawing and make connection
             self.ui.draw_link_widget.drawing = False
-            #self._to_slot = button
             self.to_is_input = button.is_inputslot
             if self.from_is_input == self.to_is_input:
                 slot_type = 'input' if self.to_is_input else 'output'
@@ -1083,18 +1105,17 @@ class ToolboxUI(QMainWindow):
             else:
                 self.to_item = button.parent().owner()
                 # create connection
-                connection_model = self.connection_model
-                if self.from_is_input:  #input to output
+                if self.from_is_input:  #must be input to output
                     input_item = self.from_item
                     output_item = self.to_item
-                else:  #assume output to input
+                else:  #must be output to input
                     output_item = self.from_item
                     input_item = self.to_item
-                row = connection_model.header.index(output_item)
-                column = connection_model.header.index(input_item)
-                index = connection_model.createIndex(row, column)
-                if not connection_model.data(index, Qt.DisplayRole):
-                    connection_model.setData(index, "value", Qt.EditRole)  # value not used
+                row = self.connection_model.header.index(output_item)
+                column = self.connection_model.header.index(input_item)
+                index = self.connection_model.createIndex(row, column)
+                if not self.connection_model.data(index, Qt.DisplayRole):
+                    self.connection_model.setData(index, "value", Qt.EditRole)  # value not used
                     self.msg.emit("<b>{}</b>'s output is now connected to"\
                                   " <b>{}</b>'s input.".format(output_item, input_item))
                 else:
@@ -1140,6 +1161,25 @@ class ToolboxUI(QMainWindow):
             pass
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
+
+    @Slot("QPoint", "QModelIndex", name="show_link_context_menu")
+    def show_link_context_menu(self, pos, ind):
+        """Context menu for connection links.
+
+        Args:
+            pos (QPoint): Mouse position
+            ids (QModelIndex): Index at pos (from LinkWidget custom implementation)
+        """
+        global_pos = self.ui.linkView_connections.viewport().mapToGlobal(pos) #TODO: check if this is needed
+        self.conn_link_context_menu = ConnLinkContextMenu(self, global_pos, ind)
+        option = self.conn_link_context_menu.get_action()
+        if option == "Remove":
+            self.connection_clicked(ind)
+            return
+        else:  # No option selected
+            pass
+        self.conn_link_context_menu.deleteLater()
+        self.conn_link_context_menu = None
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.

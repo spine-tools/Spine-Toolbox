@@ -65,3 +65,37 @@ class ProjectItemContextMenu(QMenu):
     def get_action(self):
         """Returns the clicked action, a string with a description."""
         return self.option
+
+
+class ConnLinkContextMenu(QMenu):
+    """Context menu class for connection links."""
+
+    def __init__(self, parent, position, index):
+        super().__init__()
+        self._parent = parent
+        self.index = index
+        self.option = "None"
+        if index.isValid():
+            self.add_action("Remove")
+        self.exec_(position)
+
+    def add_action(self, text):
+        """Adds an action to the context menu.
+
+        Args:
+            text (str): Text description of the action
+        """
+        action = self.addAction(text)
+        action.triggered.connect(lambda: self.set_action(text))
+
+    def set_action(self, option):
+        """Sets the action which was clicked.
+
+        Args:
+            option (str): string with the text description of the action
+        """
+        self.option = option
+
+    def get_action(self):
+        """Returns the clicked action, a string with a description."""
+        return self.option
