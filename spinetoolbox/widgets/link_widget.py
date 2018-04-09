@@ -10,7 +10,7 @@ import logging
 import inspect
 from PySide2.QtWidgets import QWidget, QSizePolicy, QWidgetItem, QLayout
 from PySide2.QtCore import Qt, QPoint, QSize, Signal, Slot, QRect, QEvent
-from PySide2.QtGui import QPainter, QColor, QPen, QRegion, QBitmap
+from PySide2.QtGui import QPainter, QColor, QPen, QRegion, QBitmap, QPainterPathStroker
 
 class LinkWidget(QWidget):
     """A widget that represents a connection in mdiArea"""
@@ -38,15 +38,16 @@ class LinkWidget(QWidget):
         self.from_subwindow = self.from_item.parent()
         self.to_item = self._to_slot.parent()
         self.to_subwindow = self.to_item.parent()
-        self.setToolTip("<html><p>Connection link from {}'s ouput to {}'s input<\html>"\
+        self.setToolTip("<html><p>Connection from {}'s ouput to {}'s input<\html>"\
             .format(self.from_item.owner(), self.to_item.owner()))
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
-    #TODO: this below was intended to improve performance, however it bugs
-    #when the mouse is released while the subwindow is not visible
-    #(since the subwindow does not send the signal to restore mask)
-    #May be improved by catching hide event on the subwindow (or st)
+
+    #TODO: this below was intended to improve performance, but it bugs
+    #whenever the mouse is released and the subwindow is not visible
+    #(bc the subwindow does not send signal to restore mask)
+    #Might be fixed by catching hide event on the subwindow (or something)
     #and stop blocking mask updates at that point
     #@Slot("bool", "set_update_mask")
     #def set_update_mask_on_move(self, value):
@@ -63,6 +64,8 @@ class LinkWidget(QWidget):
     def update_extreme_points(self):    #TODO: look for a better way
         """update from and to slot current positions"""
         self.compute_offsets()
+        self.from_rect = self._from_slot.geometry()
+        self.to_rect = self._to_slot.geometry()
         self.from_center = self.from_rect.center() + self.from_offset
         self.to_center = self.to_rect.center() + self.to_offset
         self.from_topleft = self.from_rect.topLeft() + self.from_offset
@@ -72,7 +75,7 @@ class LinkWidget(QWidget):
 
     def update_mask(self):
         """mask everything but the link"""
-        #logging.debug("update mask")
+        #logging.debug("{} update mask".format(self.toolTip()))
         bitmap = QBitmap(self.size())
         bitmap.clear()
         painter = QPainter(bitmap)
@@ -80,8 +83,11 @@ class LinkWidget(QWidget):
         painter.drawLine(self.from_center, self.to_center)
         painter.drawRect(QRect(self.from_topleft, self.from_bottomright))
         painter.drawRect(QRect(self.to_topleft, self.to_bottomright))
-        painter.end()
         self.setMask(bitmap)
+        painter.end()
+        if self.mask().isEmpty():
+            logging.debug("fix")
+            self.mask_fully()
 
     def mask_fully(self):
         """fully mask the widget"""
@@ -101,21 +107,37 @@ class LinkWidget(QWidget):
         Args:
             e (QPaintEvent): Paint event
         """
+        self.update_extreme_points()
+        if self.update_mask_on_move:
+            self.update_mask()
+
         # Only paint if two subwindows are visible
         if self.from_subwindow.isVisible() and self.to_subwindow.isVisible():
-            self.from_rect = self._from_slot.geometry()
-            self.to_rect = self._to_slot.geometry()
-            self.update_extreme_points()
-            if self.update_mask_on_move:
-                self.update_mask()
+            from_geom = QRect(self.from_topleft, self.from_bottomright)
+            to_geom = QRect(self.to_topleft, self.to_bottomright)
             painter = QPainter(self)
-            painter.setPen(QPen(self.pen_color, self.pen_width))
+            line_pen = QPen(self.pen_color, self.pen_width)
+            #this is to prevent links to stay visible over a subwindow, but needs more work
+            from_covered = False
+            to_covered = False
+            sw = self._parent.ui.mdiArea.activeSubWindow()
+            if sw:
+                sw_geom = sw.geometry()
+                from_covered = sw != self.from_subwindow and sw_geom.intersects(from_geom)
+                to_covered = sw != self.to_subwindow and sw_geom.intersects(to_geom)
+            painter.setPen(line_pen)
             painter.drawLine(self.from_center, self.to_center)
-            painter.setPen(QPen(self.pen_color, .5*self.pen_width))
-            painter.fillRect(QRect(self.from_topleft, self.from_bottomright), self.pen_color)
-            painter.fillRect(QRect(self.to_topleft, self.to_bottomright), self.pen_color)
-        else:
-            self.mask_fully()
+            if from_covered:
+                rect_color = QColor(128,128,128,128)
+            else:
+                rect_color = self.pen_color
+            painter.fillRect(from_geom, rect_color)
+            rect_color = self.pen_color
+            if to_covered:
+                rect_color = QColor(128,128,128,64)
+            else:
+                rect_color = self.pen_color
+            painter.fillRect(to_geom, rect_color)
 
     def contextMenuEvent(self, e):
         self.customContextMenuRequested.emit(e.globalPos(), self.model_index)
@@ -218,15 +240,15 @@ class LinkLayout(QLayout):
         return len(self.items)
 
     def itemAt(self, ind):  #TODO: handle index out of range error
-        logging.debug("Item at called by {}, index {}".format(inspect.stack()[1][3], ind))
+        #logging.debug("Item at called by {}, index {}".format(inspect.stack()[1][3], ind))
         if 0 <= ind < self.count():
             return self.items[ind]
         else:
-            logging.debug("Item at: Got index {}, len {}".format(ind, self.count()))
+            #logging.debug("Item at: Got index {}, len {}".format(ind, self.count()))
             return 0
 
     def takeAt(self, ind):
-        logging.debug("take at index {}, current len {}".format(ind, self.count()))
+        #logging.debug("take at index {}, current len {}".format(ind, self.count()))
         if 0 <= ind < self.count():
             item = self.items.pop(ind)
             self.removeItem(item)
@@ -235,16 +257,16 @@ class LinkLayout(QLayout):
             return 0
 
     def addItem(self, item):
-        logging.debug("add item {}".format(item))
+        #logging.debug("add item {}".format(item))
         self.items.append(item)
 
     def addWidget(self, widget):
-        logging.debug("add widget {}".format(widget))
+        #logging.debug("add widget {}".format(widget))
         self.addChildWidget(widget)
         self.addItem(QWidgetItem(widget))
 
     def setGeometry(self, rect):
-        logging.debug("setting geom {}".format(rect))
+        #logging.debug("setting geom {}".format(rect))
         super().setGeometry(rect)
         if len(self.items) == 0:
             return

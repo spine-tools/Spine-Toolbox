@@ -17,7 +17,7 @@ class CustomQMdiSubWindow(QMdiSubWindow):
     sw_moved_signal = Signal(name="sw_moved_signal")
     sw_showed_signal = Signal(name="sw_showed_signal")
     sw_hid_signal = Signal(name="sw_hid_signal")
-    sw_mouse_pressed_or_released_signal = Signal("bool", name="sw_mouse_pressed_or_released_signal")
+    #sw_mouse_pressed_or_released_signal = Signal("bool", name="sw_mouse_pressed_or_released_signal")
 
     def __init__(self, widget, f=Qt.SubWindow):
         super().__init__(flags=f)
@@ -40,10 +40,10 @@ class CustomQMdiSubWindow(QMdiSubWindow):
         super().hideEvent(event)
         self.sw_hid_signal.emit()
 
-    def mouseReleaseEvent(self, event):
-        super().mouseReleaseEvent(event)
-        self.sw_mouse_pressed_or_released_signal.emit(True)
+    #def mouseReleaseEvent(self, event):
+    #    super().mouseReleaseEvent(event)
+    #    self.sw_mouse_pressed_or_released_signal.emit(True)
 
-    def mousePressEvent(self, event):
-        super().mousePressEvent(event)
-        self.sw_mouse_pressed_or_released_signal.emit(False)
+    #def mousePressEvent(self, event):
+    #    super().mousePressEvent(event)
+    #    self.sw_mouse_pressed_or_released_signal.emit(False)
