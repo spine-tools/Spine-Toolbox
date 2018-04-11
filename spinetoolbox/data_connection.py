@@ -34,7 +34,7 @@ from widgets.sw_data_connection_widget import DataConnectionWidget
 from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
-from widgets.edit_foreign_keys_widget import EditForeignKeysWidget
+from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
 
 
 class DataConnection(MetaObject):
@@ -82,7 +82,7 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
-        self._widget.ui.toolButton_foreign_keys.clicked.connect(self.show_add_foreign_key_form)
+        self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
         self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
@@ -166,15 +166,15 @@ class DataConnection(MetaObject):
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
 
-    @Slot(name="show_add_foreign_key_form")
-    def show_add_foreign_key_form(self):
-        """Show add foreign key widget."""
+    @Slot(name="show_edit_keys_form")
+    def show_edit_keys_form(self):
+        """Show edit keys widget."""
         if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
             self._parent.msg_error.emit("Create a datapackage first.")
             return
         self.package = CustomPackage(os.path.join(self.data_dir, 'datapackage.json'))
-        self.edit_foreign_keys_form = EditForeignKeysWidget(self)
-        self.edit_foreign_keys_form.show()
+        self.edit_datapackage_keys_form = EditDatapackageKeysWidget(self)
+        self.edit_datapackage_keys_form.show()
 
     def save_datapackage(self):  #TODO: handle zip as well?
         """Save datapackage.json to datadir"""
@@ -232,6 +232,14 @@ class DataConnection(MetaObject):
 class CustomPackage(Package):
     def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
         super().__init__(descriptor, base_path, strict, storage)
+
+    def primary_keys_data(self):
+        data = list()
+        for resource in self.resources:
+            for field in resource.schema.primary_key:
+                table = resource.name
+                data.append([table, field])
+        return data
 
     def foreign_keys_data(self):
         data = list()

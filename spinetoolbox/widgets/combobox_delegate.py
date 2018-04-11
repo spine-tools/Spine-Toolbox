@@ -42,7 +42,8 @@ class ComboBoxDelegate(QItemDelegate):
         combo.row = index.row()
         combo.column = index.column()
         combo.previous_data = index.model().data(index)
-        items = self.parent().combo_items(index)
+        combo_items = index.model().combo_items_method
+        items = combo_items(index)
         if items:
             combo.addItems(items)
             combo.setCurrentIndex(-1)   #force index change

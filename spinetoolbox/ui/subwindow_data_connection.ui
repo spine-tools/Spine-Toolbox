@@ -329,7 +329,7 @@ color: rgb(255, 255, 255);</string>
         </widget>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton_foreign_keys">
+        <widget class="QToolButton" name="toolButton_datapkg_keys">
          <property name="enabled">
           <bool>true</bool>
          </property>
