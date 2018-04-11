@@ -186,7 +186,7 @@ color: rgb(255, 255, 255);</string>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <property name="spacing">
-        <number>6</number>
+        <number>1</number>
        </property>
        <property name="leftMargin">
         <number>0</number>

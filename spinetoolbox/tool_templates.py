@@ -262,7 +262,7 @@ class JuliaTool(ToolTemplate):
             key: Option name
             value: Option value
         """
-        return True
+        pass
 
     @staticmethod
     def load(parent, path, data):

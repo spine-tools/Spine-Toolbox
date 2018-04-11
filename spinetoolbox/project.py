@@ -38,8 +38,6 @@ from tool_templates import GAMSTool, JuliaTool
 from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
 import qsubprocess
 
-from PySide2.QtGui import QPen, QBrush
-
 
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects.

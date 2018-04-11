@@ -99,7 +99,8 @@ class LinksView(QGraphicsView):
         #logging.debug("project rows inserted")
         for ind in range(first, last+1):
             widget = item.child(ind, 0).data(role=Qt.UserRole).get_widget()
-            proxy = self.scene().addWidget(widget, Qt.Window)
+            flags = Qt.Window
+            proxy = self.scene().addWidget(widget, flags)
             proxy.type = "subwindow"
             sw_geom = proxy.windowFrameGeometry()
             self.max_sw_width = max(self.max_sw_width, sw_geom.width())
