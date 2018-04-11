@@ -7,6 +7,12 @@ then
     exit 0
 fi
 
+if grep -Fq "Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland" $1
+then
+    echo 'License found'
+    exit 0
+fi
+
 echo Appending license to file $1
 
 LICENSE="#############################################################################\n\

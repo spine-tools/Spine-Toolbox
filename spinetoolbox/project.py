@@ -27,7 +27,7 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtCore import Qt, QRectF
+from PySide2.QtCore import Qt
 from metaobject import MetaObject
 from helpers import project_dir, create_dir
 from data_store import DataStore
