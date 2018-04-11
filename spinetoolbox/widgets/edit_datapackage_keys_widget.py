@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Widget shown to user when pressing Edit Foreign Keys on Data Connection item.
+Widget shown to user when pressing Edit Keys on Data Connection item.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018

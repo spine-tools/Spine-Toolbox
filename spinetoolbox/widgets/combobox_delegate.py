@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Widget shown to user when Foreign Keys are edited.
+A delegate to edit table cells with comboboxes.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018

@@ -83,7 +83,6 @@ class ToolboxUI(QMainWindow):
         self.about_form = None
         self.data_store_form = None
         self.project_item_context_menu = None
-        self.conn_link_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -178,8 +177,6 @@ class ToolboxUI(QMainWindow):
         self.ui.pushButton_add_tool_template.clicked.connect(self.add_tool_template)
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
-        # Connections LinkView
-        #self.ui.linkView_connections.customContextMenuRequested.connect(self.show_link_context_menu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
 
