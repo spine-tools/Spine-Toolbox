@@ -88,7 +88,7 @@ class Tool(MetaObject):
 
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.draw_links(self.sender())
+        self._parent.ui.mdiArea.draw_links(self.sender())
 
     @Slot(name='show_details')
     def show_details(self):

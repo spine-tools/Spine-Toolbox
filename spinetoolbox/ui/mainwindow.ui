@@ -26,8 +26,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>720</width>
-    <height>565</height>
+    <width>709</width>
+    <height>557</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,25 +35,13 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_4">
-    <property name="spacing">
-     <number>6</number>
-    </property>
-    <property name="leftMargin">
-     <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
-     <number>0</number>
-    </property>
     <item>
      <widget class="QSplitter" name="splitter">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
+      </property>
+      <property name="handleWidth">
+       <number>1</number>
       </property>
       <widget class="QTabWidget" name="tabWidget">
        <property name="sizePolicy">
@@ -349,10 +337,10 @@
         </layout>
        </widget>
       </widget>
-      <widget class="QMdiArea" name="mdiArea_with_links">
+      <widget class="QWidget" name="mdiArea_container" native="true">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Ignored" vsizetype="Expanding">
-         <horstretch>0</horstretch>
+         <horstretch>2</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
@@ -366,7 +354,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>720</width>
+     <width>709</width>
      <height>25</height>
     </rect>
    </property>

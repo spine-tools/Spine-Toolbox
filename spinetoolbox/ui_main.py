@@ -29,7 +29,7 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QFrame, QWidget, QMdiArea, QSizePolicy
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QVBoxLayout
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
@@ -41,14 +41,13 @@ from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
-from widgets.link_widget import DrawLinkWidget, LinkLayout
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
 from helpers import project_dir, get_datetime, erase_dir
 from models import ToolTemplateModel, ConnectionModel
-from views import LinkView
+from views import LinksView
 
 
 class ToolboxUI(QMainWindow):
@@ -70,8 +69,8 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        # Adapt user interface, especially mdiArea so that we can draw links on it
-        self.init_mdiArea_with_links()
+        # Initialize custom mdiArea based on QGraphicsView
+        self.init_mdiArea()
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
@@ -112,27 +111,13 @@ class ToolboxUI(QMainWindow):
         self.init_project()
         self.restore_ui()
 
-    def init_mdiArea_with_links(self):
-        """Initialize the area shared by the mdi and the LinkView"""
-        self.ui.mdiArea = QMdiArea()
-        sizePolicy = QSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ui.mdiArea.sizePolicy().hasHeightForWidth())
-        self.ui.mdiArea.setSizePolicy(sizePolicy)
-        self.ui.mdiArea.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.ui.mdiArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.ui.mdiArea.setViewMode(QMdiArea.SubWindowView)
-        self.ui.mdiArea.setTabsMovable(False)
-        self.ui.mdiArea.setObjectName("mdiArea")
-        self.ui.mdiArea.is_link = False
-        self.ui.draw_link_widget = DrawLinkWidget(self)
-        layout = LinkLayout(self.ui.mdiArea_with_links)
+    def init_mdiArea(self):
+        """Initialize the mdiArea as a LinksView"""
+        layout = QVBoxLayout()
+        self.ui.mdiArea_container.setLayout(layout)
+        self.ui.mdiArea_container.setStyleSheet("background: transparent")
+        self.ui.mdiArea = LinksView(self)
         layout.addWidget(self.ui.mdiArea)
-        layout.addWidget(self.ui.draw_link_widget)
-        self.ui.linkView_connections = LinkView(self, layout)
-        self.ui.mdiArea_with_links.setLayout(layout)
-        #self.ui.mdiArea_with_links_layout.addWidget(self.ui.draw_link_widget)
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -194,7 +179,7 @@ class ToolboxUI(QMainWindow):
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
         # Connections LinkView
-        self.ui.linkView_connections.customContextMenuRequested.connect(self.show_link_context_menu)
+        #self.ui.linkView_connections.customContextMenuRequested.connect(self.show_link_context_menu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
 
@@ -251,6 +236,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.appendRow(QStandardItem("Tools"))
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
+        self.ui.mdiArea.setProjectItemModel(self.project_item_model)
         self.init_tool_template_model(tool_template_paths)
         self.init_connection_model()
 
@@ -297,7 +283,7 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.linkView_connections.setModel(self.connection_model)
+        self.ui.mdiArea.setConnectionModel(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
         if n_connected == 0:
@@ -323,12 +309,13 @@ class ToolboxUI(QMainWindow):
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
-        subwindows = self.ui.mdiArea.subWindowList()
-        n = len(subwindows)
+        item_names = self.return_item_names()
+        n = len(item_names)
         if n == 0:
             return
-        for subwindow in subwindows:
-            self.remove_sw(subwindow)
+        for name in item_names:
+            ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            self.remove_item(ind)
         self._project = None
         self.tool_template_model = None
         self.msg.emit("All {0} items removed from project".format(n))
@@ -492,8 +479,6 @@ class ToolboxUI(QMainWindow):
             if index.parent().isValid():
                 item_data = self.project_item_model.itemFromIndex(index).data(Qt.UserRole)  # e.g. DataStore object
                 internal_widget = item_data.get_widget()  # QWidget of e.g. DataStore object
-                subwindow = internal_widget.parent()  # QMdiSubWindow that has internal_widget as its widget
-                subwindow.show()
                 internal_widget.show()
             return
 
@@ -787,44 +772,32 @@ class ToolboxUI(QMainWindow):
         answer = QMessageBox.question(self, 'Removing all items', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             return
-        subwindows = self.ui.mdiArea.subWindowList()
-        n = len(subwindows)
+        item_names = self.return_item_names()
+        n = len(item_names)
         if n == 0:
             return
-        for subwindow in subwindows:
-            self.remove_sw(subwindow, delete_item=True)
+        for name in item_names:
+            ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
 
-    def remove_item(self, ind):
+    def remove_item(self, ind, delete_item=False):
         """Remove subwindow from project when it's index in the project model is known.
+        To remove all items in project, loop all indices through this method.
+        This method is used in both opening and creating a new project as
+        well as when item(s) are deleted from project.
+        Set delete_item flag to True to delete the item irrevocably.
 
         Args:
             ind (QModelIndex): Index of removed item in project model
-        """
-        sw = ind.data(Qt.UserRole).get_widget().parent()
-        self.remove_sw(sw, delete_item=True)
-
-    def remove_sw(self, sw, delete_item=False):
-        """Remove sub-window and its internal widget from project. To remove all items in project,
-        loop all sub-windows through this method. This method is used in both opening and creating a new project as
-        well as when item(s) are deleted from project. Set delete_item flag to True to delete the item irrevocably.
-
-        Args:
-            sw (QMdiSubWindow): Subwindow to remove.
             delete_item: If set to True, deletes the directories and data associated with the item
         """
-        widget = sw.widget()  # SubWindowWidget
-        name = widget.owner()
-        # Delete QMdiSubWindow
-        self.ui.mdiArea.removeSubWindow(sw)  # QMdiSubWindow
-        self.ui.mdiArea.removeSubWindow(widget)  # SubWindowWidget
-        # Find item in project model
+        name = ind.data(Qt.UserRole).get_widget().owner()
         item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
         data_dir = None
         if item_data.item_type == "Data Connection":
             data_dir = item_data.data_dir
-        ind = self.project_item_model.indexFromItem(item)
         # Remove item from connection model
         if not self.connection_model.remove_item(item):
             self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
@@ -1085,44 +1058,6 @@ class ToolboxUI(QMainWindow):
         self.add_view_form = AddViewWidget(self, self._project)
         self.add_view_form.show()
 
-    def draw_links(self, button):
-        """Draw links when slot button is clicked"""
-        if not self.ui.draw_link_widget.drawing:
-            #start drawing and remember slot
-            self.ui.draw_link_widget.drawing = True
-            self.ui.draw_link_widget.start_drawing_at(button)
-            self.from_item = button.parent().owner()
-            self.from_is_input = button.is_inputslot
-        else:
-            #stop drawing and make connection
-            self.ui.draw_link_widget.drawing = False
-            self.to_is_input = button.is_inputslot
-            if self.from_is_input == self.to_is_input:
-                slot_type = 'input' if self.to_is_input else 'output'
-                self.msg_error.emit("Unable to make connection because the"
-                                            " two slots are of the same type ('{}')."\
-                                            .format(slot_type))
-            else:
-                self.to_item = button.parent().owner()
-                # create connection
-                if self.from_is_input:  #must be input to output
-                    input_item = self.from_item
-                    output_item = self.to_item
-                else:  #must be output to input
-                    output_item = self.from_item
-                    input_item = self.to_item
-                row = self.connection_model.header.index(output_item)
-                column = self.connection_model.header.index(input_item)
-                index = self.connection_model.createIndex(row, column)
-                if not self.connection_model.data(index, Qt.DisplayRole):
-                    self.connection_model.setData(index, "value", Qt.EditRole)  # value not used
-                    self.msg.emit("<b>{}</b>'s output is now connected to"\
-                                  " <b>{}</b>'s input.".format(output_item, input_item))
-                else:
-                    self.msg.emit("<b>{}</b>'s output is already connected to"\
-                              " <b>{}</b>'s input.".format(output_item, input_item))
-
-
     @Slot(name="show_settings")
     def show_settings(self):
         """Show Settings widget."""
@@ -1152,7 +1087,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu = ProjectItemContextMenu(self, global_pos, ind)
         option = self.project_item_context_menu.get_action()
         if option == "Remove":
-            self.remove_item(ind)
+            self.remove_item(ind, delete_item=True)
             return
         if option == "Hide all":  # Hide all subwindows
             for sw in self.ui.mdiArea.subWindowList():
@@ -1162,7 +1097,6 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
 
-    @Slot("QPoint", "QModelIndex", name="show_link_context_menu")
     def show_link_context_menu(self, pos, ind):
         """Context menu for connection links.
 
@@ -1170,8 +1104,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             ids (QModelIndex): Index at pos (from LinkWidget custom implementation)
         """
-        global_pos = self.ui.linkView_connections.viewport().mapToGlobal(pos) #TODO: check if this is needed
-        self.conn_link_context_menu = ConnLinkContextMenu(self, global_pos, ind)
+        self.conn_link_context_menu = ConnLinkContextMenu(self, pos, ind)
         option = self.conn_link_context_menu.get_action()
         if option == "Remove":
             self.connection_clicked(ind)

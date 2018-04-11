@@ -122,12 +122,14 @@ class DataConnectionWidget(QWidget):
                 self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):
-        """Find QMdiSubWindow that initiated this closeEvent. Hide QMdiSubWindow
-        and its internal widget (SubWindowWidget) instead of closing them.
+        """Hide widget and is proxy instead of closing them.
 
         Args:
             event (QCloseEvent): Event initiated when user clicks 'X'
         """
         event.ignore()
-        self.hide()  # Hide SubWindowWidget (internal widget)
-        self.parent().hide()  # Hide QMdiSubWindow
+        self.hide()  # Hide widget and its proxy hides as well
+
+    def parent(self):
+        """Return embedding QGraphicsProxyWindow"""
+        return self.graphicsProxyWidget()

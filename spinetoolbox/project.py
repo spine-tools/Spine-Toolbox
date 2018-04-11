@@ -27,7 +27,8 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QGraphicsItem, QGraphicsProxyWidget, QDialog, QGraphicsRectItem, QGraphicsWidget, QPushButton
+from PySide2.QtCore import Qt, QRectF
 from metaobject import MetaObject
 from helpers import project_dir, create_dir
 from data_store import DataStore
@@ -38,6 +39,8 @@ from tool_templates import GAMSTool, JuliaTool
 from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
 import qsubprocess
 from widgets.custom_qmdisubwindow import CustomQMdiSubWindow
+
+from PySide2.QtGui import QPen, QBrush
 
 
 class SpineToolboxProject(MetaObject):
@@ -267,28 +270,14 @@ class SpineToolboxProject(MetaObject):
     def add_data_connection(self, name, description, references):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
         data_connection = DataConnection(self._parent, name, description, self, references)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = CustomQMdiSubWindow(data_connection.get_widget())
-        self._parent.ui.mdiArea.addSubWindow(sw, Qt.SubWindow
-                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
-                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
-        sw.show()
-        sw.resize(sw.minimumSizeHint())
 
     def add_tool(self, name, description, tool_template):
         """Add Tool as a QMdiSubwindow to QMdiArea."""
         tool = Tool(self._parent, name, description, self, tool_template)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = CustomQMdiSubWindow(tool.get_widget())
-        self._parent.ui.mdiArea.addSubWindow(sw, Qt.SubWindow
-                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
-                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
-        sw.show()
-        sw.resize(sw.minimumSizeHint())
 
     def add_view(self, name, description, data="View data"):
         """Add View as a QMdiSubwindow to QMdiArea."""

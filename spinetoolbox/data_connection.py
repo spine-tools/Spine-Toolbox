@@ -28,14 +28,13 @@ import os
 import shutil
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtWidgets import QFileDialog
+from PySide2.QtWidgets import QFileDialog, QMessageBox
 from metaobject import MetaObject
 from widgets.sw_data_connection_widget import DataConnectionWidget
 from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_foreign_keys_widget import EditForeignKeysWidget
-from widgets.confirmation_dialog import ConfirmationDialog
 
 
 class DataConnection(MetaObject):
@@ -90,7 +89,7 @@ class DataConnection(MetaObject):
 
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.draw_links(self.sender())
+        self._parent.ui.mdiArea.draw_links(self.sender())
 
     @Slot(name="open_directory")
     def open_directory(self):
@@ -180,20 +179,17 @@ class DataConnection(MetaObject):
     def save_datapackage(self):  #TODO: handle zip as well?
         """Save datapackage.json to datadir"""
         if os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
-            msg = '<b>Are you sure you want to replace the file'\
-                  ' "datapackage.json" in "{}"?</b>'.format(os.path.basename(self.data_dir))
-            self.dialog = ConfirmationDialog(msg)
-            self.dialog.button_clicked_signal.connect(self.finish_save_datapackage)
-            self.dialog.show()
-        else:
-            self.finish_save_datapackage(True)
-
-    @Slot(bool, name="finish_save_datapackage")
-    def finish_save_datapackage(self, ret):
-        if ret:
-            self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
+            msg = '<b>Replacing file "datapackage.json" in "{}"</b>.'\
+                  ' Are you sure?'.format(os.path.basename(self.data_dir))
+            # noinspection PyCallByClass, PyTypeChecker
+            answer = QMessageBox.question(self._parent, 'Replace datapackage.json', msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                return
             self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
-
+            self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
+        else:
+            self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
+            self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
 
     @Slot(name="show_connections")
     def show_connections(self):

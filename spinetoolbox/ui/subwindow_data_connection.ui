@@ -22,6 +22,9 @@
 <ui version="4.0">
  <class>Form</class>
  <widget class="QWidget" name="Form">
+  <property name="windowModality">
+   <enum>Qt::NonModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -49,7 +52,7 @@
    <string>Data Connection</string>
   </property>
   <property name="toolTip">
-   <string>Input slot. Draw connections from/to here.</string>
+   <string/>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="spacing">

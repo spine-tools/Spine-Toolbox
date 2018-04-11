@@ -444,8 +444,9 @@ class ConnectionModel(QAbstractTableModel):
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
 
+
 class MinimalTableModel(QAbstractTableModel):
-    """Table model for outlining."""
+    """Table model for outlining simple tabular data."""
 
     def __init__(self, parent=None):
         super().__init__()

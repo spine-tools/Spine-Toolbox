@@ -2,8 +2,18 @@ using SpineModel
 using SpineData
 using JuMP, Clp
 
-sdo = build_Spine_object("input/datapackage.json")
-update_all_datatypesa!(sdo)
+path = "/home/manuelma/Codes/spine/toolbox/tool_templates/Swedish_hydro/input"
+pkg_desc = infer(path)
+
+set_primary_key!(pkg_desc, "Plants", ["station_index"])
+
+add_foreign_key!(pkg_desc, "Plants", ["downstream"], "Plants", ["station_index"])
+add_foreign_key!(pkg_desc, "Constraints", ["constraint_station"], "Plants", ["station_name"])
+
+save_datapackage(pkg_desc, path)
+
+sdo = build_Spine_object(joinpath(path, "datapackage.json"))
+update_all_datatypes!(sdo)
 
 jfo = build_JuMP_object(sdo)
 

@@ -29,6 +29,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
+        Form.setWindowModality(QtCore.Qt.NonModal)
         Form.resize(200, 275)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
@@ -37,6 +38,7 @@ class Ui_Form(object):
         Form.setSizePolicy(sizePolicy)
         Form.setMinimumSize(QtCore.QSize(200, 275))
         Form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        Form.setToolTip("")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_2.setSpacing(0)
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
@@ -204,7 +206,6 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Data Connection", None, -1))
-        Form.setToolTip(QtWidgets.QApplication.translate("Form", "Input slot. Draw connections from/to here.", None, -1))
         self.toolButton_inputslot.setToolTip(QtWidgets.QApplication.translate("Form", "Input slot. Draw connections from/to here.", None, -1))
         self.toolButton_inputslot.setText(QtWidgets.QApplication.translate("Form", "...", None, -1))
         self.label_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))

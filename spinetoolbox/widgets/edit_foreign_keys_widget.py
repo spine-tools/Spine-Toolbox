@@ -128,8 +128,8 @@ class EditForeignKeysWidget(QWidget):
         """Whenever the table combobox changes, update the field combobox view"""
         previous_table = sender.previous_data
         current_table = sender.currentText()
-        logging.debug("prev {}".format(previous_table))
-        logging.debug("curr {}".format(current_table))
+        #logging.debug("prev {}".format(previous_table))
+        #logging.debug("curr {}".format(current_table))
         if current_table != previous_table:
             sender.previous_data = current_table
             row = sender.row
@@ -162,8 +162,8 @@ class EditForeignKeysWidget(QWidget):
         for row in self.original_data:
             if row not in new_data:
                 to_remove.append(row)
-        logging.debug("to add:{}".format(to_add))
-        logging.debug("to_del:{}".format(to_remove))
+        #logging.debug("to add:{}".format(to_add))
+        #logging.debug("to_del:{}".format(to_remove))
         for row in to_add:
             child_table = row[header.index(Header.CHILD_TABLE.fullname)]
             child_field = row[header.index(Header.CHILD_FIELD.fullname)]
