@@ -27,7 +27,6 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtWidgets import QGraphicsItem, QGraphicsProxyWidget, QDialog, QGraphicsRectItem, QGraphicsWidget, QPushButton
 from PySide2.QtCore import Qt, QRectF
 from metaobject import MetaObject
 from helpers import project_dir, create_dir
@@ -38,7 +37,6 @@ from view import View
 from tool_templates import GAMSTool, JuliaTool
 from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
 import qsubprocess
-from widgets.custom_qmdisubwindow import CustomQMdiSubWindow
 
 from PySide2.QtGui import QPen, QBrush
 
