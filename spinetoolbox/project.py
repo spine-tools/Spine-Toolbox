@@ -257,13 +257,8 @@ class SpineToolboxProject(MetaObject):
         """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
         data_store = DataStore(self._parent, name, description, self)
         data_store.set_data(data)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(data_store.get_widget(), Qt.SubWindow
-                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
-                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
-        sw.show()
 
     def add_data_connection(self, name, description, references):
         """Add Data Connection as a QMdiSubwindow to QMdiArea."""
@@ -281,10 +276,5 @@ class SpineToolboxProject(MetaObject):
         """Add View as a QMdiSubwindow to QMdiArea."""
         view = View(self._parent, name, description, self)
         view.set_data(data)
-        # Add QWidget -> QMdiSubWindow -> QMdiArea. Returns the added QMdiSubWindow
-        sw = self._parent.ui.mdiArea.addSubWindow(view.get_widget(), Qt.SubWindow
-                                                  | Qt.CustomizeWindowHint | Qt.WindowSystemMenuHint
-                                                  | Qt.WindowCloseButtonHint)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)
-        sw.show()
