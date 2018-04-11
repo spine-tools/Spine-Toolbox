@@ -69,7 +69,7 @@ class EditDatapackageKeysWidget(QWidget):
     """
     def __init__(self, dc):
         """Initialize class."""
-        super().__init__(f=Qt.Window)
+        super().__init__()
         self.dc = dc
         #  Set up the user interface from Designer.
         self.ui = ui.edit_datapackage_keys.Ui_Form()
@@ -130,6 +130,9 @@ class EditDatapackageKeysWidget(QWidget):
         header = self.pks_model.headerData(column)
         if header == 'Table':
             items = self.dc.package.resource_names
+            # filter out items already in the model
+            column_data = self.pks_model.columnData(column)
+            items = [i for i in items if i not in column_data]
         elif header == 'Field':
             header = 'Table'
             column = next(h.index for h in PrimaryKeysHeader if h.fullname == header)
@@ -235,9 +238,9 @@ class EditDatapackageKeysWidget(QWidget):
         pks_to_add = list()
         pks_to_remove = list()
         for row in new_data:
-            if row not in self.pks_original_data:
+            if row not in self.original_pk_data:
                 pks_to_add.append(row)
-        for row in self.pks_original_data:
+        for row in self.original_pk_data:
             if row not in new_data:
                 pks_to_remove.append(row)
         #logging.debug("pks to add:{}".format(pks_to_add))
@@ -260,24 +263,24 @@ class EditDatapackageKeysWidget(QWidget):
         fks_to_add = list()
         fks_to_remove = list()
         for row in new_data:
-            if row not in self.fks_original_data:
+            if row not in self.original_fk_data:
                 fks_to_add.append(row)
-        for row in self.fks_original_data:
+        for row in self.original_fk_data:
             if row not in new_data:
                 fks_to_remove.append(row)
         #logging.debug("fks to add:{}".format(fks_to_add))
         #logging.debug("fks to_del:{}".format(fks_to_remove))
         for row in fks_to_add:
-            child_table = row[header.index(Header.CHILD_TABLE.fullname)]
-            child_field = row[header.index(Header.CHILD_FIELD.fullname)]
-            parent_table = row[header.index(Header.PARENT_TABLE.fullname)]
-            parent_field = row[header.index(Header.PARENT_FIELD.fullname)]
+            child_table = row[header.index(ForeignKeysHeader.CHILD_TABLE.fullname)]
+            child_field = row[header.index(ForeignKeysHeader.CHILD_FIELD.fullname)]
+            parent_table = row[header.index(ForeignKeysHeader.PARENT_TABLE.fullname)]
+            parent_field = row[header.index(ForeignKeysHeader.PARENT_FIELD.fullname)]
             self.dc.package.add_foreign_key(child_table, child_field, parent_table, parent_field)
         for row in fks_to_remove:
-            child_table = row[header.index(Header.CHILD_TABLE.fullname)]
-            child_field = row[header.index(Header.CHILD_FIELD.fullname)]
-            parent_table = row[header.index(Header.PARENT_TABLE.fullname)]
-            parent_field = row[header.index(Header.PARENT_FIELD.fullname)]
+            child_table = row[header.index(ForeignKeysHeader.CHILD_TABLE.fullname)]
+            child_field = row[header.index(ForeignKeysHeader.CHILD_FIELD.fullname)]
+            parent_table = row[header.index(ForeignKeysHeader.PARENT_TABLE.fullname)]
+            parent_field = row[header.index(ForeignKeysHeader.PARENT_FIELD.fullname)]
             self.dc.package.rm_foreign_key(child_table, child_field, parent_table, parent_field)
         if pks_to_add or pks_to_remove or fks_to_add or fks_to_remove:
             self.dc.save_datapackage()
@@ -300,7 +303,7 @@ class EditDatapackageKeysWidget(QWidget):
         for row in range(self.pks_model.rowCount()):
             index = self.pks_model.createIndex(row, PrimaryKeysHeader.RM.index)
             if not self.pks_model.data(index):
-                new_data.append(self.pks_model.rowData(index))
+                new_data.append(self.pks_model.rowData(row))
         self.pks_model.reset_model(new_data)
 
     @Slot(name='rm_fks_clicked')
@@ -310,7 +313,7 @@ class EditDatapackageKeysWidget(QWidget):
         for row in range(self.fks_model.rowCount()):
             index = self.fks_model.createIndex(row, ForeignKeysHeader.RM.index)
             if not self.fks_model.data(index):
-                new_data.append(self.fks_model.rowData(index))
+                new_data.append(self.fks_model.rowData(row))
         self.fks_model.reset_model(new_data)
 
     def keyPressEvent(self, e):

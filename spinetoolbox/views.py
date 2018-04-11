@@ -64,7 +64,7 @@ class LinksView(QGraphicsView):
 
     def subWindowList(self):
         """Return list of subwindows (replicate QMdiArea.subWindowList)"""
-        return [x for x in self.scene().items() if x.isWindow()]
+        return [x for x in self.scene().items() if x.type == 'subwindow']
 
     def setActiveSubWindow(self, item):
         """replicate QMdiArea.setActiveWindow"""
@@ -77,7 +77,7 @@ class LinksView(QGraphicsView):
     def removeSubWindow(self, sw): #this method will be obsolete, since it doesn't coordinate with the model
         """remove subwindow and any attached links from the scene"""
         for item in self.scene().items():
-            if item.objectName() != "link":
+            if item.type != "link":
                 continue
             if sw.widget() == item.from_item or sw.widget() == item.to_item:
                 self.scene().removeItem(item)
@@ -86,7 +86,7 @@ class LinksView(QGraphicsView):
     def find_link(self, index):
         """Find link in scene, by model index"""
         for item in self.scene().items():
-            if item.objectName() != "link":
+            if item.type != "link":
                 continue
             #logging.debug(item.model_index)
             if item.model_index == index:
@@ -100,6 +100,7 @@ class LinksView(QGraphicsView):
         for ind in range(first, last+1):
             widget = item.child(ind, 0).data(role=Qt.UserRole).get_widget()
             proxy = self.scene().addWidget(widget, Qt.Window)
+            proxy.type = "subwindow"
             sw_geom = proxy.windowFrameGeometry()
             self.max_sw_width = max(self.max_sw_width, sw_geom.width())
             self.max_sw_height = max(self.max_sw_height, sw_geom.height())
@@ -136,6 +137,7 @@ class LinksView(QGraphicsView):
                     from_slot = sub_windows[o].widget().ui.toolButton_outputslot
                     to_slot = sub_windows[i].widget().ui.toolButton_inputslot
                     link = Link(self._parent, from_slot, to_slot, index)
+                    link.type = "link"
                     self.scene().addItem(link)
                 else:   #connection destroyed, remove link widget
                     i = self.find_link(index)
@@ -230,9 +232,6 @@ class Link(QGraphicsLineItem):
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.update_line()
 
-    def objectName(self):
-        return "link"
-
     def compute_offsets(self):
         self.from_offset = self.from_item.frameGeometry().topLeft()
         self.to_offset = self.to_item.frameGeometry().topLeft()
@@ -321,9 +320,7 @@ class LinkDrawer(QGraphicsLineItem):
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.setZValue(2)   #TODO: is this better than stackBefore?
         self.hide()
-
-    def objectName(self):
-        return "not-link-yet"
+        self.type = "link-drawer"
 
     def start_drawing_at(self, button):
         """start drawing"""

@@ -494,8 +494,8 @@ class MinimalTableModel(QAbstractTableModel):
         else:
             return None
 
-    def rowData(self, index, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the row referred to by the index.
+    def rowData(self, row, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the given row.
 
         Args:
             index (QModelIndex): Index of item
@@ -504,10 +504,27 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             Item data for given role.
         """
-        if not index.isValid():
+        if not 0 <= row < self.rowCount():
             return None
         if role == Qt.DisplayRole:
-            return self._data[index.row()]
+            return self._data[row]
+        else:
+            return None
+
+    def columnData(self, column, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the given column.
+
+        Args:
+            index (QModelIndex): Index of item
+            role (int): Data role
+
+        Returns:
+            Item data for given role.
+        """
+        if not 0 <= column < self.columnCount():
+            return None
+        if role == Qt.DisplayRole:
+            return [self._data[row][column] for row in range(self.rowCount())]
         else:
             return None
 

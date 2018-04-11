@@ -257,6 +257,11 @@ class CustomPackage(Package):
             resource['schema'].pop('foreignKeys', None)
         self.commit()
 
+    def add_primary_key(self, table, field):
+        i = self.resource_names.index(table)
+        self.descriptor['resources'][i]['schema']['primaryKey'] = field
+        self.commit()
+
     def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
         i = self.resource_names.index(child_table)
         foreign_key = {
@@ -270,6 +275,12 @@ class CustomPackage(Package):
         if foreign_key not in self.descriptor['resources'][i]['schema']['foreignKeys']:
             self.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
             self.commit()
+
+    def rm_primary_key(self, table, field):
+        i = self.resource_names.index(table)
+        if 'primaryKey' in self.descriptor['resources'][i]['schema']:
+            if self.descriptor['resources'][i]['schema']['primaryKey'] == field:
+                self.descriptor['resources'][i]['schema']['primaryKey'] == ''
 
     def rm_foreign_key(self, child_table, child_field, parent_table, parent_field):
         i = self.resource_names.index(child_table)
