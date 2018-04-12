@@ -40,12 +40,18 @@ class LinksView(QGraphicsView):
         self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.max_sw_width = 0
         self.max_sw_height = 0
-        self.scene().selectionChanged.connect(self.selection_changed)
+        self.scene().changed.connect(self.scene_changed)
+        self.active_subwindow = None
 
-    @Slot(name='selection_changed')
-    def selection_changed(self):
-        """Check if selected item is subwindow and emit signal accordingly"""
-        logging.debug("selection changed")
+    @Slot(name='scene_changed')
+    def scene_changed(self):
+        """Check if active subwindow has changed and emit signal accordingly"""
+        #logging.debug("scene changed")
+        current_active_subwindow = self.scene().activePanel()
+        if current_active_subwindow != self.active_subwindow:
+            self.active_subwindow = current_active_subwindow
+            self.subWindowActivated.emit(self.active_subwindow)
+
 
     def setProjectItemModel(self, model):
         """Set project item model and connect signals"""
@@ -114,7 +120,7 @@ class LinksView(QGraphicsView):
             position = QPoint(item.row() * self.max_sw_width, ind * self.max_sw_height)
             proxy.setPos(position)
             proxy.setFlag(QGraphicsItem.ItemIsSelectable, True  )
-            logging.debug(proxy)
+            proxy.widget().activateWindow()
 
     @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
     def projectRowsRemoved(self, item, first, last):
