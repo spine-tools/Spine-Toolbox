@@ -29,12 +29,13 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QVBoxLayout
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
+from PySide2.QtWidgets import QVBoxLayout, QToolButton
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.context_menus import ProjectItemContextMenu, LinkContextMenu
+from widgets.context_menus import ProjectItemContextMenu, LinkContextMenu, addToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -83,6 +84,8 @@ class ToolboxUI(QMainWindow):
         self.about_form = None
         self.data_store_form = None
         self.project_item_context_menu = None
+        self.link_context_menu = None
+        self.add_tool_template_popup_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -174,7 +177,9 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
-        self.ui.pushButton_add_tool_template.clicked.connect(self.add_tool_template)
+        self.add_tool_template_popup_menu = addToolTemplatePopupMenu(self)
+        self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
+        #self.ui.pushButton_add_tool_template.clicked.connect(self.add_tool_template)
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
         # Event Log & Process output
@@ -545,8 +550,8 @@ class ToolboxUI(QMainWindow):
             self.ui.lineEdit_type.setText("")
             self.ui.lineEdit_name.setText("")
 
-    @Slot(name="add_tool_template")
-    def add_tool_template(self):
+    @Slot(name="open_tool_template")
+    def open_tool_template(self):
         """Add a possible tool to project, which can be added to a Tool item."""
         if not self._project:
             self.msg.emit("No project open")

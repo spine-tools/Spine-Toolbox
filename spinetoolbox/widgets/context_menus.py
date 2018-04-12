@@ -99,3 +99,15 @@ class LinkContextMenu(QMenu):
     def get_action(self):
         """Returns the clicked action, a string with a description."""
         return self.option
+
+
+class addToolTemplatePopupMenu(QMenu):
+    """Popup menu class for add tool template button."""
+
+    def __init__(self, parent):
+        super().__init__()
+        self._parent = parent
+        self.option = "None"
+        action = self.addAction("Open")
+        action.triggered.connect(self._parent.open_tool_template)
+        action = self.addAction("Create")

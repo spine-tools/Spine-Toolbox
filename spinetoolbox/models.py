@@ -453,6 +453,7 @@ class MinimalTableModel(QAbstractTableModel):
         self._parent = parent  # QMainWindow
         self._data = list()
         self.header = list()
+        self._tool_tip = None
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -491,6 +492,8 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         if role == Qt.DisplayRole:
             return self._data[index.row()][index.column()]
+        elif role == Qt.ToolTipRole:
+            return self._tool_tip
         else:
             return None
 
@@ -545,8 +548,10 @@ class MinimalTableModel(QAbstractTableModel):
     def setData(self, index, value, role=Qt.DisplayRole):
         if not index.isValid():
             return False
-        self._data[index.row()][index.column()] = value
-        return True
+        if role == Qt.DisplayRole:
+            self._data[index.row()][index.column()] = value
+            return True
+        return False
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -630,3 +635,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginResetModel()
         self._data = new_data
         self.endResetModel()
+
+    def set_tool_tip(self, tool_tip):
+        self._tool_tip = tool_tip
