@@ -67,7 +67,7 @@ class ProjectItemContextMenu(QMenu):
         return self.option
 
 
-class ConnLinkContextMenu(QMenu):
+class LinkContextMenu(QMenu):
     """Context menu class for connection links."""
 
     def __init__(self, parent, position, index):

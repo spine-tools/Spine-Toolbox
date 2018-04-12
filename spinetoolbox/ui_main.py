@@ -34,7 +34,7 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.context_menus import ProjectItemContextMenu, ConnLinkContextMenu
+from widgets.context_menus import ProjectItemContextMenu, LinkContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -1101,15 +1101,15 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             ids (QModelIndex): Index at pos (from LinkWidget custom implementation)
         """
-        self.conn_link_context_menu = ConnLinkContextMenu(self, pos, ind)
-        option = self.conn_link_context_menu.get_action()
+        self.link_context_menu = LinkContextMenu(self, pos, ind)
+        option = self.link_context_menu.get_action()
         if option == "Remove":
             self.connection_clicked(ind)
             return
         else:  # No option selected
             pass
-        self.conn_link_context_menu.deleteLater()
-        self.conn_link_context_menu = None
+        self.link_context_menu.deleteLater()
+        self.link_context_menu = None
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.

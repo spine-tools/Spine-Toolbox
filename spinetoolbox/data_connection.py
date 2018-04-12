@@ -230,10 +230,12 @@ class DataConnection(MetaObject):
 
 
 class CustomPackage(Package):
+    """Custom Package class to manage keys more directly."""
     def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
         super().__init__(descriptor, base_path, strict, storage)
 
     def primary_keys_data(self):
+        """Return primary keys in a 2-column array"""
         data = list()
         for resource in self.resources:
             for field in resource.schema.primary_key:
@@ -242,6 +244,7 @@ class CustomPackage(Package):
         return data
 
     def foreign_keys_data(self):
+        """Return foreign keys in a 4-column array"""
         data = list()
         for resource in self.resources:
             for fk in resource.schema.foreign_keys:
@@ -252,17 +255,14 @@ class CustomPackage(Package):
                 data.append([child_table, child_field, parent_table, parent_field])
         return data
 
-    def clear_foreign_keys(self):
-        for resource in self.descriptor['resources']:
-            resource['schema'].pop('foreignKeys', None)
-        self.commit()
-
     def add_primary_key(self, table, field):
+        """Add primary key to the package"""
         i = self.resource_names.index(table)
         self.descriptor['resources'][i]['schema']['primaryKey'] = field
         self.commit()
 
     def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
+        """Add foreign key to the package"""
         i = self.resource_names.index(child_table)
         foreign_key = {
             "fields": child_field,
@@ -277,12 +277,14 @@ class CustomPackage(Package):
             self.commit()
 
     def rm_primary_key(self, table, field):
+        """Remove primary key from the package"""
         i = self.resource_names.index(table)
         if 'primaryKey' in self.descriptor['resources'][i]['schema']:
             if self.descriptor['resources'][i]['schema']['primaryKey'] == field:
                 self.descriptor['resources'][i]['schema']['primaryKey'] == ''
 
     def rm_foreign_key(self, child_table, child_field, parent_table, parent_field):
+        """Remove foreign key from the package"""
         i = self.resource_names.index(child_table)
         foreign_key = {
             "fields": child_field,

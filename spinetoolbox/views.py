@@ -10,7 +10,7 @@ Note: These are Spine Toolbox internal data models.
 import logging
 import inspect
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QPoint, QRect, QPoint
-from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, QGraphicsObject
+from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, QGraphicsItem
 from PySide2.QtGui import QColor, QPen, QPainter, QTransform
 
 
@@ -25,7 +25,7 @@ class LinksView(QGraphicsView):
         parent(ToolboxUI): Parent of this view
     """
 
-    subWindowActivated = Signal(name="subWindowActivated")
+    subWindowActivated = Signal("QGraphicsProxyWidget", name="subWindowActivated")
 
     def __init__(self, parent):
         """Initialize the view"""
@@ -40,6 +40,12 @@ class LinksView(QGraphicsView):
         self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.max_sw_width = 0
         self.max_sw_height = 0
+        self.scene().selectionChanged.connect(self.selection_changed)
+
+    @Slot(name='selection_changed')
+    def selection_changed(self):
+        """Check if selected item is subwindow and emit signal accordingly"""
+        logging.debug("selection changed")
 
     def setProjectItemModel(self, model):
         """Set project item model and connect signals"""
@@ -107,6 +113,8 @@ class LinksView(QGraphicsView):
             self.max_sw_height = max(self.max_sw_height, sw_geom.height())
             position = QPoint(item.row() * self.max_sw_width, ind * self.max_sw_height)
             proxy.setPos(position)
+            proxy.setFlag(QGraphicsItem.ItemIsSelectable, True  )
+            logging.debug(proxy)
 
     @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
     def projectRowsRemoved(self, item, first, last):
