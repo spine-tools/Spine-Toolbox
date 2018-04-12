@@ -47,11 +47,10 @@ class LinksView(QGraphicsView):
     def scene_changed(self):
         """Check if active subwindow has changed and emit signal accordingly"""
         #logging.debug("scene changed")
-        current_active_subwindow = self.scene().activePanel()
+        current_active_subwindow = self.scene().activeWindow()
         if current_active_subwindow != self.active_subwindow:
             self.active_subwindow = current_active_subwindow
             self.subWindowActivated.emit(self.active_subwindow)
-
 
     def setProjectItemModel(self, model):
         """Set project item model and connect signals"""
@@ -159,24 +158,24 @@ class LinksView(QGraphicsView):
                     if i is not None:
                         self.scene().removeItem(i)
 
-    @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
-    def connectionColumnsRemoved(self, index, first, last):
-        """update view when model changes"""
-        #logging.debug("conn columns removed")
-        for row in range(self.connection_model().rowCount()):
-            for column in range(first, last+1):
-                index = self.connection_model().index(row, column)
-                i = self.find_link(index)
-                if i is not None:
-                    self.scene().removeItem(i)
-                    #logging.debug("remove {}".format(i))
-
     @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
     def connectionRowsRemoved(self, column, first, last):
         """update view when model changes"""
         #logging.debug("conn rows removed")
         for column in range(self.connection_model().columnCount()):
             for row in range(first, last+1):
+                index = self.connection_model().index(row, column)
+                i = self.find_link(index)
+                if i is not None:
+                    self.scene().removeItem(i)
+                    #logging.debug("remove {}".format(i))
+
+    @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
+    def connectionColumnsRemoved(self, index, first, last):
+        """update view when model changes"""
+        #logging.debug("conn columns removed")
+        for row in range(self.connection_model().rowCount()):
+            for column in range(first, last+1):
                 index = self.connection_model().index(row, column)
                 i = self.find_link(index)
                 if i is not None:
@@ -248,6 +247,7 @@ class Link(QGraphicsLineItem):
         self.update_line()
 
     def compute_offsets(self):
+        """compute slot-button offsets within the frame"""
         self.from_offset = self.from_item.frameGeometry().topLeft()
         self.to_offset = self.to_item.frameGeometry().topLeft()
 
@@ -264,6 +264,7 @@ class Link(QGraphicsLineItem):
         self.to_bottomright = self.to_rect.bottomRight() + self.to_offset
 
     def update_line(self):
+        """Update extreme points and line accordingly"""
         #logging.debug("update_line")
         self.update_extreme_points()
         self.setLine(self.from_center.x(), self.from_center.y(), self.to_center.x(), self.to_center.y())
@@ -279,14 +280,14 @@ class Link(QGraphicsLineItem):
                 self._to_slot.animateClick()
 
     def contextMenuEvent(self, e):
-        """show contex menu unless mouse is over one of slot button"""
+        """show contex menu unless mouse is over one of the slot buttons"""
         if self._from_slot.underMouse() or self._to_slot.underMouse():
             e.ignore()
         else:
             self._parent.show_link_context_menu(e.screenPos(), self.model_index)
 
     def paint(self, painter, option, widget):
-
+        """Paint rectangles over the slot-buttons simulating connection anchors"""
         #only paint if two items are visible
         if self.from_item.isVisible() and self.to_item.isVisible():
             self.update_line()
@@ -389,7 +390,7 @@ class LinkDrawer(QGraphicsLineItem):
 
 
     def paint(self, painter, option, widget):
-        """Draw small squares on slot positions.
+        """Draw small rects on begin and end positions.
 
         Args:
             e (QPaintEvent): Paint event
