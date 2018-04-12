@@ -35,13 +35,14 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.context_menus import ProjectItemContextMenu, LinkContextMenu, addToolTemplatePopupMenu
+from widgets.custom_menus import ProjectItemContextMenu, LinkContextMenu, addToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
+from widgets.create_tool_template_widget import CreateToolTemplateWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -91,6 +92,7 @@ class ToolboxUI(QMainWindow):
         self.add_data_connection_form = None
         self.add_tool_form = None
         self.add_view_form = None
+        self.create_tool_template_form = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -1059,6 +1061,15 @@ class ToolboxUI(QMainWindow):
             return
         self.add_view_form = AddViewWidget(self, self._project)
         self.add_view_form.show()
+
+    @Slot(name="show_create_tool_template_form")
+    def show_create_tool_template_form(self):
+        """Show create tool template widget."""
+        if not self._project:
+            self.msg.emit("Create or open a project first")
+            return
+        self.create_tool_template_form = CreateToolTemplateWidget(self, self._project)
+        self.create_tool_template_form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):
