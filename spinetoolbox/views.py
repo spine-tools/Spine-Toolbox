@@ -48,9 +48,10 @@ class LinksView(QGraphicsView):
         """Check if active subwindow has changed and emit signal accordingly"""
         #logging.debug("scene changed")
         current_active_subwindow = self.scene().activeWindow()
-        if current_active_subwindow != self.active_subwindow:
-            self.active_subwindow = current_active_subwindow
-            self.subWindowActivated.emit(self.active_subwindow)
+        if hasattr(current_active_subwindow, 'item_type'):
+            if current_active_subwindow != self.active_subwindow:
+                self.active_subwindow = current_active_subwindow
+                self.subWindowActivated.emit(self.active_subwindow)
 
     def setProjectItemModel(self, model):
         """Set project item model and connect signals"""
@@ -75,7 +76,7 @@ class LinksView(QGraphicsView):
 
     def subWindowList(self):
         """Return list of subwindows (replicate QMdiArea.subWindowList)"""
-        return [x for x in self.scene().items() if x.item_type == 'subwindow']
+        return [x for x in self.scene().items() if hasattr(x, 'item_type') and x.item_type == 'subwindow']
 
     def setActiveSubWindow(self, item):
         """replicate QMdiArea.setActiveWindow"""
@@ -88,19 +89,17 @@ class LinksView(QGraphicsView):
     def removeSubWindow(self, sw): #this method will be obsolete, since it doesn't coordinate with the model
         """remove subwindow and any attached links from the scene"""
         for item in self.scene().items():
-            if item.item_type != "link":
-                continue
-            if sw.widget() == item.from_item or sw.widget() == item.to_item:
-                self.scene().removeItem(item)
+            if hasattr(item, 'item_type') and item.item_type == "link":
+                if sw.widget() == item.from_item or sw.widget() == item.to_item:
+                    self.scene().removeItem(item)
         self.scene().removeItem(sw)
 
     def find_link(self, index):
         """Find link in scene, by model index"""
         for item in self.scene().items():
-            if item.item_type != "link":
-                continue
-            if item.model_index == index:
-                return item
+            if hasattr(item, 'item_type') and item.item_type == "link":
+                if item.model_index == index:
+                    return item
         return None
 
     @Slot("QModelIndex", "int", "int", name='projectRowsInserted')
@@ -162,14 +161,13 @@ class LinksView(QGraphicsView):
         n_rows = self.connection_model().rowCount()
         n_columns = self.connection_model().columnCount()
         for item in self.scene().items():
-            if item.item_type != "link":
-                continue
-            row = item.model_index.row()
-            column = item.model_index.column()
-            if 0 <= row < n_rows and 0 <= column < n_columns:
-                continue
-            else:
-                self.scene().removeItem(item)
+            if hasattr(item, 'item_type') and item.item_type == "link":
+                row = item.model_index.row()
+                column = item.model_index.column()
+                if 0 <= row < n_rows and 0 <= column < n_columns:
+                    continue
+                else:
+                    self.scene().removeItem(item)
 
     def draw_links(self, button):
         """Draw links when slot button is clicked"""
