@@ -62,8 +62,8 @@ class LinksView(QGraphicsView):
         """Set connection model and connect signals"""
         self._connection_model = model
         self._connection_model.dataChanged.connect(self.connectionDataChanged)
-        self._connection_model.rowsAboutToBeRemoved.connect(self.connectionRowsRemoved)
-        self._connection_model.columnsAboutToBeRemoved.connect(self.connectionColumnsRemoved)
+        self._connection_model.rowsRemoved.connect(self.connectionsRemoved)
+        self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
 
     def project_item_model(self):
         """return project item model"""
@@ -75,7 +75,7 @@ class LinksView(QGraphicsView):
 
     def subWindowList(self):
         """Return list of subwindows (replicate QMdiArea.subWindowList)"""
-        return [x for x in self.scene().items() if x.type == 'subwindow']
+        return [x for x in self.scene().items() if x.item_type == 'subwindow']
 
     def setActiveSubWindow(self, item):
         """replicate QMdiArea.setActiveWindow"""
@@ -88,7 +88,7 @@ class LinksView(QGraphicsView):
     def removeSubWindow(self, sw): #this method will be obsolete, since it doesn't coordinate with the model
         """remove subwindow and any attached links from the scene"""
         for item in self.scene().items():
-            if item.type != "link":
+            if item.item_type != "link":
                 continue
             if sw.widget() == item.from_item or sw.widget() == item.to_item:
                 self.scene().removeItem(item)
@@ -97,9 +97,8 @@ class LinksView(QGraphicsView):
     def find_link(self, index):
         """Find link in scene, by model index"""
         for item in self.scene().items():
-            if item.type != "link":
+            if item.item_type != "link":
                 continue
-            #logging.debug(item.model_index)
             if item.model_index == index:
                 return item
         return None
@@ -112,13 +111,12 @@ class LinksView(QGraphicsView):
             widget = item.child(ind, 0).data(role=Qt.UserRole).get_widget()
             flags = Qt.Window
             proxy = self.scene().addWidget(widget, flags)
-            proxy.type = "subwindow"
+            proxy.item_type = "subwindow"
             sw_geom = proxy.windowFrameGeometry()
             self.max_sw_width = max(self.max_sw_width, sw_geom.width())
             self.max_sw_height = max(self.max_sw_height, sw_geom.height())
             position = QPoint(item.row() * self.max_sw_width, ind * self.max_sw_height)
             proxy.setPos(position)
-            proxy.setFlag(QGraphicsItem.ItemIsSelectable, True  )
             proxy.widget().activateWindow()
 
     @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
@@ -151,36 +149,27 @@ class LinksView(QGraphicsView):
                     from_slot = sub_windows[o].widget().ui.toolButton_outputslot
                     to_slot = sub_windows[i].widget().ui.toolButton_inputslot
                     link = Link(self._parent, from_slot, to_slot, index)
-                    link.type = "link"
                     self.scene().addItem(link)
                 else:   #connection destroyed, remove link widget
-                    i = self.find_link(index)
-                    if i is not None:
-                        self.scene().removeItem(i)
+                    link = self.find_link(index)
+                    if link is not None:
+                        self.scene().removeItem(link)
 
-    @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
-    def connectionRowsRemoved(self, column, first, last):
+    @Slot("QModelIndex", "int", "int", name='connectionsRemoved')
+    def connectionsRemoved(self, index, first, last):
         """update view when model changes"""
-        #logging.debug("conn rows removed")
-        for column in range(self.connection_model().columnCount()):
-            for row in range(first, last+1):
-                index = self.connection_model().index(row, column)
-                i = self.find_link(index)
-                if i is not None:
-                    self.scene().removeItem(i)
-                    #logging.debug("remove {}".format(i))
-
-    @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
-    def connectionColumnsRemoved(self, index, first, last):
-        """update view when model changes"""
-        #logging.debug("conn columns removed")
-        for row in range(self.connection_model().rowCount()):
-            for column in range(first, last+1):
-                index = self.connection_model().index(row, column)
-                i = self.find_link(index)
-                if i is not None:
-                    self.scene().removeItem(i)
-                    #logging.debug("remove {}".format(i))
+        #logging.debug("conns. removed")
+        n_rows = self.connection_model().rowCount()
+        n_columns = self.connection_model().columnCount()
+        for item in self.scene().items():
+            if item.item_type != "link":
+                continue
+            row = item.model_index.row()
+            column = item.model_index.column()
+            if 0 <= row < n_rows and 0 <= column < n_columns:
+                continue
+            else:
+                self.scene().removeItem(item)
 
     def draw_links(self, button):
         """Draw links when slot button is clicked"""
@@ -245,6 +234,7 @@ class Link(QGraphicsLineItem):
             .format(self.from_item.owner(), self.to_item.owner()))
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.update_line()
+        self.item_type = "link"
 
     def compute_offsets(self):
         """compute slot-button offsets within the frame"""
@@ -336,7 +326,7 @@ class LinkDrawer(QGraphicsLineItem):
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.setZValue(2)   #TODO: is this better than stackBefore?
         self.hide()
-        self.type = "link-drawer"
+        self.item_type = "link-drawer"
 
     def start_drawing_at(self, button):
         """start drawing"""
