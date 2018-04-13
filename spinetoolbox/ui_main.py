@@ -42,7 +42,7 @@ from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
-from widgets.create_tool_template_widget import CreateToolTemplateWidget
+from widgets.tool_template_widget import ToolTemplateWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -92,7 +92,7 @@ class ToolboxUI(QMainWindow):
         self.add_data_connection_form = None
         self.add_tool_form = None
         self.add_view_form = None
-        self.create_tool_template_form = None
+        self.tool_template_form = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -181,7 +181,6 @@ class ToolboxUI(QMainWindow):
         # Tools ListView
         self.add_tool_template_popup_menu = addToolTemplatePopupMenu(self)
         self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
-        #self.ui.pushButton_add_tool_template.clicked.connect(self.add_tool_template)
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
         # Event Log & Process output
@@ -257,7 +256,7 @@ class ToolboxUI(QMainWindow):
             if path == '' or not path:
                 continue
             # Add tool template into project
-            tool_cand = self._project.load_tool_template(path)
+            tool_cand = self._project.load_tool_template_from_file(path)
             n_tools += 1
             if not tool_cand:
                 self.msg_error.emit("Failed to load Tool template from <b>{0}</b>".format(path))
@@ -566,7 +565,7 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load tool definition
-        tool = self._project.load_tool_template(def_file)
+        tool = self._project.load_tool_template_from_file(def_file)
         if not tool:
             self.msg_error.emit("Adding Tool template failed".format(def_file))
             return
@@ -576,6 +575,11 @@ class ToolboxUI(QMainWindow):
             return
         # Add definition file path into tool
         tool.set_def_path(def_file)
+        self.add_tool_template(tool)
+
+    def add_tool_template(self, tool):
+        # Get definition file path
+        def_file = tool.get_def_path()
         # Insert tool into model
         self.tool_template_model.insertRow(tool)
         # Save Tool def file path to project file
@@ -932,16 +936,20 @@ class ToolboxUI(QMainWindow):
         if clicked_index.row() == 0:
             return  # Don't do anything if No Tool option is double-clicked
         tool_template = self.tool_template_model.tool_template(clicked_index.row())
-        tool_template_url = "file:///" + tool_template.def_file_path
-        # Open Tool template definition file in editor
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
-        if not res:
-            logging.error("Failed to open editor for {0}".format(tool_template_url))
-            self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
-                                "files are associated with a text editor. For example on Windows "
-                                "10, go to Control Panel -> Default Programs to do this."
-                                .format(tool_template.def_file_path))
+
+        # Show the template in the Tool Template Form
+        self.show_tool_template_form(tool_template)
+
+        #tool_template_url = "file:///" + tool_template.def_file_path
+        ## Open Tool template definition file in editor
+        ## noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        #res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
+        #if not res:
+        #    logging.error("Failed to open editor for {0}".format(tool_template_url))
+        #    self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
+        #                        "files are associated with a text editor. For example on Windows "
+        #                        "10, go to Control Panel -> Default Programs to do this."
+        #                        .format(tool_template.def_file_path))
         return
 
     @Slot(str, name="add_message")
@@ -1062,14 +1070,14 @@ class ToolboxUI(QMainWindow):
         self.add_view_form = AddViewWidget(self, self._project)
         self.add_view_form.show()
 
-    @Slot(name="show_create_tool_template_form")
-    def show_create_tool_template_form(self):
+    @Slot(name="show_tool_template_form")
+    def show_tool_template_form(self, tool_template=None):
         """Show create tool template widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.create_tool_template_form = CreateToolTemplateWidget(self, self._project)
-        self.create_tool_template_form.show()
+        self.tool_template_form = ToolTemplateWidget(self, self._project, tool_template)
+        self.tool_template_form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):

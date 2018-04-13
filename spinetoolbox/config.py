@@ -41,7 +41,7 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # "." is actually valid in a folder name but this is
 # to prevent the user from creating folders like /..../
 
-# Application path, configuration file path and default project path
+# Application path, configuration file path, default project path, and default work path
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
@@ -71,6 +71,8 @@ if not sys.platform == "win32":
 else:
     JULIA_EXECUTABLE = "julia.exe"
 
+# Tool types
+TOOL_TYPES = ['GAMS', 'Julia']
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
 OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
@@ -124,4 +126,5 @@ TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
 
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
+TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
