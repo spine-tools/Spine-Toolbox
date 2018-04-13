@@ -13,18 +13,19 @@ from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QPoint, QRect
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, QGraphicsItem
 from PySide2.QtGui import QColor, QPen, QPainter, QTransform
 
+#QGraphicsItem arbitrary property
+ITEM_TYPE = 0
 
 class LinksView(QGraphicsView):
     """Pseudo-QMdiArea implemented as QGraphicsView.
     It 'views' the project_item_model as well as the connections_model.
     The project_item_model is viewed as pseudo-QMdiAreaSubwindows.
-    The connections_model is viewed as object of class Link (see below)
+    The connections_model is viewed as objects of class Link (see below)
     drawn between the pseudo-QMdiAreaSubwindows
 
     Attributes:
         parent(ToolboxUI): Parent of this view
     """
-
     subWindowActivated = Signal("QGraphicsProxyWidget", name="subWindowActivated")
 
     def __init__(self, parent):
@@ -47,10 +48,10 @@ class LinksView(QGraphicsView):
     def scene_changed(self):
         """Check if active subwindow has changed and emit signal accordingly"""
         #logging.debug("scene changed")
-        current_active_subwindow = self.scene().activeWindow()
-        if hasattr(current_active_subwindow, 'item_type'):
-            if current_active_subwindow != self.active_subwindow:
-                self.active_subwindow = current_active_subwindow
+        current_active_sw = self.scene().activeWindow()
+        if current_active_sw and current_active_sw.data(ITEM_TYPE) == "subwindow":
+            if current_active_sw != self.active_subwindow:
+                self.active_subwindow = current_active_sw
                 self.subWindowActivated.emit(self.active_subwindow)
 
     def setProjectItemModel(self, model):
@@ -76,7 +77,7 @@ class LinksView(QGraphicsView):
 
     def subWindowList(self):
         """Return list of subwindows (replicate QMdiArea.subWindowList)"""
-        return [x for x in self.scene().items() if hasattr(x, 'item_type') and x.item_type == 'subwindow']
+        return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
     def setActiveSubWindow(self, item):
         """replicate QMdiArea.setActiveWindow"""
@@ -89,7 +90,7 @@ class LinksView(QGraphicsView):
     def removeSubWindow(self, sw): #this method will be obsolete, since it doesn't coordinate with the model
         """remove subwindow and any attached links from the scene"""
         for item in self.scene().items():
-            if hasattr(item, 'item_type') and item.item_type == "link":
+            if item.data(ITEM_TYPE) == "link":
                 if sw.widget() == item.from_item or sw.widget() == item.to_item:
                     self.scene().removeItem(item)
         self.scene().removeItem(sw)
@@ -97,7 +98,7 @@ class LinksView(QGraphicsView):
     def find_link(self, index):
         """Find link in scene, by model index"""
         for item in self.scene().items():
-            if hasattr(item, 'item_type') and item.item_type == "link":
+            if item.data(ITEM_TYPE) == "link":
                 if item.model_index == index:
                     return item
         return None
@@ -110,7 +111,7 @@ class LinksView(QGraphicsView):
             widget = item.child(ind, 0).data(role=Qt.UserRole).get_widget()
             flags = Qt.Window
             proxy = self.scene().addWidget(widget, flags)
-            proxy.item_type = "subwindow"
+            proxy.setData(ITEM_TYPE, "subwindow")
             sw_geom = proxy.windowFrameGeometry()
             self.max_sw_width = max(self.max_sw_width, sw_geom.width())
             self.max_sw_height = max(self.max_sw_height, sw_geom.height())
@@ -161,7 +162,7 @@ class LinksView(QGraphicsView):
         n_rows = self.connection_model().rowCount()
         n_columns = self.connection_model().columnCount()
         for item in self.scene().items():
-            if hasattr(item, 'item_type') and item.item_type == "link":
+            if item.data(ITEM_TYPE) == "link":
                 row = item.model_index.row()
                 column = item.model_index.column()
                 if 0 <= row < n_rows and 0 <= column < n_columns:
@@ -232,7 +233,7 @@ class Link(QGraphicsLineItem):
             .format(self.from_item.owner(), self.to_item.owner()))
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.update_line()
-        self.item_type = "link"
+        self.setData(ITEM_TYPE, "link")
 
     def compute_offsets(self):
         """compute slot-button offsets within the frame"""
@@ -324,7 +325,7 @@ class LinkDrawer(QGraphicsLineItem):
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.setZValue(2)   #TODO: is this better than stackBefore?
         self.hide()
-        self.item_type = "link-drawer"
+        self.setData(ITEM_TYPE, "link-drawer")
 
     def start_drawing_at(self, button):
         """start drawing"""
