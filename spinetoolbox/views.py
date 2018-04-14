@@ -364,19 +364,17 @@ class LinkDrawer(QGraphicsLineItem):
             pos = e.pos().toPoint()
             view_pos = self._parent.ui.mdiArea.mapFromScene(pos)
             for item in self._parent.ui.mdiArea.items(view_pos):
-                if item.isWindow():
-                    break
-            if item:
-                sw = item.widget()
-                sw_offset = sw.frameGeometry().topLeft()
-                pos -= sw_offset
-                candidate_button = sw.childAt(pos)
-                if hasattr(candidate_button, 'is_inputslot'):
-                    candidate_button.animateClick()
-                else:
-                    self.drawing = False
-                    self._parent.msg_error.emit("Unable to make connection."
-                                                " Try landing the connection onto a slot button.")
+                if item.data(ITEM_TYPE) == "subwindow":
+                    widget = item.widget()
+                    widget_offset = widget.frameGeometry().topLeft()
+                    pos -= widget_offset
+                    candidate_button = widget.childAt(pos)
+                    if hasattr(candidate_button, 'is_inputslot'):
+                        candidate_button.animateClick()
+                        return
+            self.drawing = False
+            self._parent.msg_error.emit("Unable to make connection."
+                                        " Try landing the connection onto a slot button.")
 
 
     def paint(self, painter, option, widget):
