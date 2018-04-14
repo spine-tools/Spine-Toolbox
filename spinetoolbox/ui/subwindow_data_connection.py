@@ -215,7 +215,7 @@ class Ui_Form(object):
         self.toolButton_minus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected references or all if nothing is selected</p></body></html>", None, -1))
         self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Copies files to Data connection\'s directory.</p></body></html>", None, -1))
         self.toolButton_datapkg.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Generate datapackage.json file.</p></body></html>", None, -1))
-        self.toolButton_datapkg_keys.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit datpackage\'s keys.</p></body></html>", None, -1))
+        self.toolButton_datapkg_keys.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit datapackage\'s keys.</p></body></html>", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in File Explorer</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open", None, -1))
         self.pushButton_connections.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Show connections</p></body></html>", None, -1))

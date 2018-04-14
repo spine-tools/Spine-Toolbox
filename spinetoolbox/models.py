@@ -550,6 +550,7 @@ class MinimalTableModel(QAbstractTableModel):
             return False
         if role == Qt.DisplayRole:
             self._data[index.row()][index.column()] = value
+            #self.dataChanged.emit(index, index)
             return True
         return False
 

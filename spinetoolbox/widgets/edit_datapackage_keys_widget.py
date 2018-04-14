@@ -117,7 +117,7 @@ class EditDatapackageKeysWidget(QWidget):
         #self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_pks.setModel(self.pks_model)
-        self.ui.tableView_pks.setFocus()
+        self.resize_tableView_pks()
         #self.ui.tableView_pks.resizeColumnsToContents()
         # foreign keys
         self.ui.tableView_fks.setItemDelegate(ComboBoxDelegate(self))
@@ -125,6 +125,21 @@ class EditDatapackageKeysWidget(QWidget):
         #self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_fks.setModel(self.fks_model)
+        self.resize_tableView_fks()
+
+    def resize_tableView_pks(self):
+        self.ui.tableView_pks.resizeColumnsToContents()
+        new_width = 2
+        for h in PrimaryKeysHeader:
+            new_width += self.ui.tableView_pks.columnWidth(h.index)
+        self.ui.tableView_pks.setMinimumWidth(new_width)
+
+    def resize_tableView_fks(self):
+        self.ui.tableView_fks.resizeColumnsToContents()
+        new_width = 2
+        for h in ForeignKeysHeader:
+            new_width += self.ui.tableView_fks.columnWidth(h.index)
+        self.ui.tableView_fks.setMinimumWidth(new_width)
 
     def pk_combo_items(self, index):
         """Return combobox items depending on index"""
@@ -205,6 +220,7 @@ class EditDatapackageKeysWidget(QWidget):
                 item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.pks_model.setData(index, item)
                 self.ui.tableView_pks.update(index)
+        self.resize_tableView_pks()
 
     @Slot(int, name='fk_data_commited')
     def fk_data_commited(self, sender):
@@ -227,6 +243,7 @@ class EditDatapackageKeysWidget(QWidget):
                 item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.fks_model.setData(index, item)
                 self.ui.tableView_fks.update(index)
+        self.resize_tableView_fks()
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
