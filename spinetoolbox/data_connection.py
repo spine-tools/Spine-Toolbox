@@ -86,10 +86,27 @@ class DataConnection(MetaObject):
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
         self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
+        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
 
     @Slot(name="draw_links")
     def draw_links(self):
         self._parent.ui.mdiArea.draw_links(self.sender())
+
+    @Slot("QModelIndex", name="open_datafile")
+    def open_data_file(self, index):
+        """Open data file in default program."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            data_file = os.listdir(self.data_dir)[index.row()]
+            url = "file:///" + os.path.join(self.data_dir, data_file)
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(name="open_directory")
     def open_directory(self):

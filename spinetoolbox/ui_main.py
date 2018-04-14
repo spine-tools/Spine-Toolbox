@@ -35,7 +35,7 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.custom_menus import ProjectItemContextMenu, LinkContextMenu, addToolTemplatePopupMenu
+from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, LinkContextMenu, addToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -85,6 +85,7 @@ class ToolboxUI(QMainWindow):
         self.about_form = None
         self.data_store_form = None
         self.project_item_context_menu = None
+        self.tool_template_context_menu = None
         self.link_context_menu = None
         self.add_tool_template_popup_menu = None
         self.project_form = None
@@ -182,7 +183,8 @@ class ToolboxUI(QMainWindow):
         self.add_tool_template_popup_menu = addToolTemplatePopupMenu(self)
         self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
-        self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_tool_template)
+        self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
+        self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
 
@@ -270,13 +272,24 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
         # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
+        # doubleClicked signal
         n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
         if n_recv == 0:
             # logging.debug("Connecting doubleClicked signal for QListView")
-            self.ui.listView_tool_templates.doubleClicked.connect(self.open_tool_template_file)
+            self.ui.listView_tool_templates.doubleClicked.connect(self.edit_tool_template)
         elif n_recv > 1:
             # Check that this never gets over 1
             logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv))
+        else:
+            pass  # signal already connected
+        # customContextMenuRequested signal
+        n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))  # nr of receivers
+        if n_recv == 0:
+            # slogging.debug("Connecting customContextMenuRequested signal for QListView")
+            self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
+        elif n_recv > 1:
+            # Check that this never gets over 1
+            logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}".format(n_recv))
         else:
             pass  # signal already connected
         if n_tools == 0:
@@ -553,7 +566,9 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
-        """Add a possible tool to project, which can be added to a Tool item."""
+        """Open a file dialog so that the user can select an existant tool template .json file.
+        Continue loading the tool template into the Project if succesfull.
+        """
         if not self._project:
             self.msg.emit("No project open")
             return
@@ -578,6 +593,7 @@ class ToolboxUI(QMainWindow):
         self.add_tool_template(tool)
 
     def add_tool_template(self, tool):
+        """Add a ToolTemplate instance to project, which then can be added to a Tool item."""
         # Get definition file path
         def_file = tool.get_def_path()
         # Insert tool into model
@@ -660,12 +676,9 @@ class ToolboxUI(QMainWindow):
                         self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
                                       .format(new_template.name, tool.name))
 
-    @Slot(name="remove_tool_template")
-    def remove_tool_template(self):
-        """Removes tool template from ToolTemplateModel
-        and tool definition file path from project file.
-        Removes also Tool templates from all Tool items
-        that use this template."""
+    @Slot(name="remove_selected_tool_template")
+    def remove_selected_tool_template(self):
+        """Prepare to remove tool template selected in QListView."""
         if not self._project:
             self.msg.emit("No project open")
             return
@@ -681,6 +694,14 @@ class ToolboxUI(QMainWindow):
             # Do not remove No Tool option
             self.msg.emit("<b>No Tool</b> cannot be removed")
             return
+        self.remove_tool_template(index)
+
+    @Slot("QModelIndex", name="remove_tool_template")
+    def remove_tool_template(self, index):
+        """Remove tool template from ToolTemplateModel
+        and tool definition file path from project file.
+        Removes also Tool templates from all Tool items
+        that use this template."""
         sel_tool = self.tool_template_model.tool_template(index.row())
         tool_def_path = sel_tool.def_file_path
         msg = "Removing Tool template <b>{0}</b>. Are you sure?".format(sel_tool.name)
@@ -926,30 +947,61 @@ class ToolboxUI(QMainWindow):
         if not res:
             self.msg_error.emit("Opening path {} failed".format(path))
 
-    @Slot("QModelIndex", name='open_tool_template_file')
-    def open_tool_template_file(self, clicked_index):
-        """Open the double-clicked Tool template definition file in the default (.json) text-editor.
+    @Slot("QModelIndex", name='edit_tool_template')
+    def edit_tool_template(self, index):
+        """Open the tool template widget for editing an existing tool template.
 
         Args:
-            clicked_index (QModelIndex): Index of the double clicked item
+            index (QModelIndex): Index of the item (from double-click or contex menu signal)
         """
-        if clicked_index.row() == 0:
+        if index.row() == 0:
             return  # Don't do anything if No Tool option is double-clicked
-        tool_template = self.tool_template_model.tool_template(clicked_index.row())
+        tool_template = self.tool_template_model.tool_template(index.row())
 
         # Show the template in the Tool Template Form
         self.show_tool_template_form(tool_template)
 
-        #tool_template_url = "file:///" + tool_template.def_file_path
-        ## Open Tool template definition file in editor
-        ## noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        #res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
-        #if not res:
-        #    logging.error("Failed to open editor for {0}".format(tool_template_url))
-        #    self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
-        #                        "files are associated with a text editor. For example on Windows "
-        #                        "10, go to Control Panel -> Default Programs to do this."
-        #                        .format(tool_template.def_file_path))
+
+    @Slot("QModelIndex", name='open_tool_template_file')
+    def open_tool_template_file(self, index):
+        """Open the Tool template definition file in the default (.json) text-editor.
+
+        Args:
+            index (QModelIndex): Index of the item
+        """
+        tool_template = self.tool_template_model.tool_template(index.row())
+        tool_template_url = "file:///" + tool_template.def_file_path
+        # Open Tool template definition file in editor
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
+        if not res:
+            logging.error("Failed to open editor for {0}".format(tool_template_url))
+            self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
+                                "files are associated with a text editor. For example on Windows "
+                                "10, go to Control Panel -> Default Programs to do this."
+                                .format(tool_template.def_file_path))
+        return
+
+    @Slot("QModelIndex", name='open_tool_main_program_file')
+    def open_tool_main_program_file(self, index):
+        """Open the tool template's main program file in the default editor.
+
+        Args:
+            index (QModelIndex): Index of the item
+        """
+        tool = self.tool_template_model.tool_template(index.row())
+        main_program_url = "file:///" + os.path.join(tool.path, tool.includes[0])
+        # Open Tool template definition file in editor
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
+        if not res:
+            logging.error("Failed to open editor for {0}".format(main_program_url))
+            filename, file_extension = os.path.splitext(main_program_url)
+            self.msg_error.emit("Unable to open Tool template main program file {0}. "
+                                "Make sure that <b>{1}</b> "
+                                "files are associated with an editor. For example on Windows "
+                                "10, go to Control Panel -> Default Programs to do this."
+                                .format(tool_template.includes[0]), file_extension)
         return
 
     @Slot(str, name="add_message")
@@ -1109,14 +1161,37 @@ class ToolboxUI(QMainWindow):
         option = self.project_item_context_menu.get_action()
         if option == "Remove":
             self.remove_item(ind, delete_item=True)
-            return
-        if option == "Hide all":  # Hide all subwindows
+        elif option == "Hide all":  # Hide all subwindows
             for sw in self.ui.mdiArea.subWindowList():
                 sw.hide()
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
+
+    @Slot("QPoint", name="show_tool_template_context_menu")
+    def show_tool_template_context_menu(self, pos):
+        """Context menu for tool templates.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.listView_tool_templates.indexAt(pos)
+        global_pos = self.ui.listView_tool_templates.viewport().mapToGlobal(pos)
+        self.tool_template_context_menu = ToolTemplateContextMenu(self, global_pos, ind)#
+        option = self.tool_template_context_menu.get_action()
+        if option == "Open":
+            self.edit_tool_template(ind)
+        elif option == "Open in external editor":
+            self.open_tool_template_file(ind)
+        elif option == "Open main program":
+            self.open_tool_main_program_file(ind)
+        elif option == "Remove":
+            self.remove_tool_template(ind)
+        else:  # No option selected
+            pass
+        self.tool_template_context_menu.deleteLater()
+        self.tool_template_context_menu = None
 
     def show_link_context_menu(self, pos, ind):
         """Context menu for connection links.
