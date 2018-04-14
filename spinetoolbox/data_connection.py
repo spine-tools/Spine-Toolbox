@@ -26,6 +26,7 @@ Module for data connection class.
 
 import os
 import shutil
+import logging
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog, QMessageBox
@@ -297,8 +298,11 @@ class CustomPackage(Package):
         """Remove primary key from the package"""
         i = self.resource_names.index(table)
         if 'primaryKey' in self.descriptor['resources'][i]['schema']:
+            logging.debug("has pk")
             if self.descriptor['resources'][i]['schema']['primaryKey'] == field:
-                self.descriptor['resources'][i]['schema']['primaryKey'] == ''
+                logging.debug("same pk")
+                del self.descriptor['resources'][i]['schema']['primaryKey']
+                self.commit()
 
     def rm_foreign_key(self, child_table, child_field, parent_table, parent_field):
         """Remove foreign key from the package"""
