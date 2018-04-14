@@ -13,8 +13,9 @@ from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QPoint, QRect
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, QGraphicsItem
 from PySide2.QtGui import QColor, QPen, QPainter, QTransform
 
-#QGraphicsItem arbitrary property
+#QGraphicsItem arbitrary properties
 ITEM_TYPE = 0
+MODEL_INDEX = 1
 
 class LinksView(QGraphicsView):
     """Pseudo-QMdiArea implemented as QGraphicsView.
@@ -99,7 +100,7 @@ class LinksView(QGraphicsView):
         """Find link in scene, by model index"""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
-                if item.model_index == index:
+                if item.data(MODEL_INDEX) == index:
                     return item
         return None
 
@@ -163,8 +164,8 @@ class LinksView(QGraphicsView):
         n_columns = self.connection_model().columnCount()
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
-                row = item.model_index.row()
-                column = item.model_index.column()
+                row = item.data(MODEL_INDEX).row()
+                column = item.data(MODEL_INDEX).column()
                 if 0 <= row < n_rows and 0 <= column < n_columns:
                     continue
                 else:
@@ -224,7 +225,7 @@ class Link(QGraphicsLineItem):
         self._from_slot = from_widget
         self._to_slot = to_widget
         self.setZValue(1)   #TODO: is this better than stackBefore?
-        self.model_index = index
+        self.setData(MODEL_INDEX, index)
         self.pen_color = QColor(0,255,0,176)
         self.pen_width = 10
         self.from_item = self._from_slot.parent()
@@ -273,7 +274,7 @@ class Link(QGraphicsLineItem):
         if self._from_slot.underMouse() or self._to_slot.underMouse():
             e.ignore()
         else:
-            self._parent.show_link_context_menu(e.screenPos(), self.model_index)
+            self._parent.show_link_context_menu(e.screenPos(), self.data(MODEL_INDEX))
 
     def paint(self, painter, option, widget):
         """Paint rectangles over the slot-buttons simulating connection anchors"""

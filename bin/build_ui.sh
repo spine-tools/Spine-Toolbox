@@ -10,7 +10,7 @@ redistribute it under certain conditions; See files COPYING and
 COPYING.LESSER for details."
 printf '\n'
 
-read -n 1 -s -r -p "Press any key to continue"
+#read -n 1 -s -r -p "Press any key to continue"
 printf '\n'
 echo --- pyside2-uic version ---
 pyside2-uic --version
