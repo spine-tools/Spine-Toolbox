@@ -1,6 +1,6 @@
 """
 Classes for handling views in PySide2's model/view framework.
-Note: These are Spine Toolbox internal data models.
+Note: These are Spine Toolbox internal data views.
 
 
 :author: Manuel Marin <manuelma@kth.se>
@@ -8,7 +8,6 @@ Note: These are Spine Toolbox internal data models.
 """
 
 import logging
-import inspect
 from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QPoint, QRect, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, QGraphicsItem
 from PySide2.QtGui import QColor, QPen, QBrush, QPainter, QTransform, QPolygonF
@@ -114,6 +113,7 @@ class LinksView(QGraphicsView):
             flags = Qt.Window
             proxy = self.scene().addWidget(widget, flags)
             proxy.setData(ITEM_TYPE, "subwindow")
+            #figure out the best position on the view
             sw_geom = proxy.windowFrameGeometry()
             self.max_sw_width = max(self.max_sw_width, sw_geom.width())
             self.max_sw_height = max(self.max_sw_height, sw_geom.height())
@@ -148,9 +148,9 @@ class LinksView(QGraphicsView):
                     sw_owners = list(sw.widget().owner() for sw in sub_windows)
                     o = sw_owners.index(output_item)
                     i = sw_owners.index(input_item)
-                    from_slot = sub_windows[o].widget().ui.toolButton_connector
-                    to_slot = sub_windows[i].widget().ui.toolButton_connector
-                    link = Link(self._parent, from_slot, to_slot, index)
+                    from_connector = sub_windows[o].widget().ui.toolButton_connector
+                    to_connector = sub_windows[i].widget().ui.toolButton_connector
+                    link = Link(self._parent, from_connector, to_connector, index)
                     self.scene().addItem(link)
                 else:   #connection destroyed, remove link widget
                     link = self.find_link(index)
@@ -173,9 +173,9 @@ class LinksView(QGraphicsView):
                     self.scene().removeItem(item)
 
     def draw_links(self, button):
-        """Draw links when slot button is clicked"""
+        """Draw links when connector button is clicked"""
         if not self.link_drawer.drawing:
-            #start drawing and remember slot
+            #start drawing and remember connector
             self.link_drawer.drawing = True
             self.link_drawer.start_drawing_at(button)
             self.from_item = button.parent().owner()
@@ -200,19 +200,19 @@ class LinksView(QGraphicsView):
 class Link(QGraphicsLineItem):
     """An item that represents a connection in mdiArea"""
 
-    def __init__(self, parent, from_widget, to_widget, index):
+    def __init__(self, parent, from_button, to_button, index):
         """Initializes item.
 
         Args:
             parent (ToolboxUI): QMainWindow instance
-            from_slot (QToolButton): the button where this link origins from
-            to_slot (QToolButton): the destination button
+            from_button (QToolButton): the button where this link origins from
+            to_button (QToolButton): the destination button
             index (QModelIndex): the corresponding index in the model
         """
         super().__init__()
         self._parent = parent
-        self._from_slot = from_widget
-        self._to_slot = to_widget
+        self._from_connector = from_button
+        self._to_connector = to_button
         self.setZValue(1)   #TODO: is this better than stackBefore?
         self.setData(MODEL_INDEX, index)
         self.normal_color = QColor(0,255,0,176)
@@ -220,10 +220,10 @@ class Link(QGraphicsLineItem):
         self.pen_width = 10
         self.arrow_size = 20
         self.arrow_head = QPolygonF()
-        self.from_item = self._from_slot.parent()
-        self.to_item = self._to_slot.parent()
-        self.from_rect = self._from_slot.geometry()
-        self.to_rect = self._to_slot.geometry()
+        self.from_item = self._from_connector.parent()
+        self.to_item = self._to_connector.parent()
+        self.from_rect = self._from_connector.geometry()
+        self.to_rect = self._to_connector.geometry()
         self.setToolTip("<html><p>Connection from <b>{}</b>'s ouput to <b>{}</b>'s input<\html>"\
             .format(self.from_item.owner(), self.to_item.owner()))
         self.setPen(QPen(self.normal_color, self.pen_width))
@@ -231,12 +231,12 @@ class Link(QGraphicsLineItem):
         self.setData(ITEM_TYPE, "link")
 
     def compute_offsets(self):
-        """compute slot-button offsets within the frame"""
+        """compute connector-button offsets within the frame"""
         self.from_offset = self.from_item.frameGeometry().topLeft()
         self.to_offset = self.to_item.frameGeometry().topLeft()
 
     def update_extreme_points(self):    #TODO: look for a better way
-        """update from and to slot current positions"""
+        """update from and to connector current positions"""
         self.compute_offsets()
         self.from_center = self.from_rect.center() + self.from_offset
         self.to_center = self.to_rect.center() + self.to_offset
@@ -252,24 +252,25 @@ class Link(QGraphicsLineItem):
         self.setLine(self.from_center.x(), self.from_center.y(), self.to_center.x(), self.to_center.y())
 
     def mousePressEvent(self, e):
-        """Trigger slot button if it is underneath"""
+        """Trigger connector button if it is underneath"""
         if e.button() != Qt.LeftButton:
             e.ignore()
         else:
-            if self._from_slot.underMouse():
-                self._from_slot.animateClick()
-            elif self._to_slot.underMouse():
-                self._to_slot.animateClick()
+            if self._from_connector.underMouse():
+                self._from_connector.animateClick()
+            elif self._to_connector.underMouse():
+                self._to_connector.animateClick()
 
     def contextMenuEvent(self, e):
-        """show contex menu unless mouse is over one of the slot buttons"""
-        if self._from_slot.underMouse() or self._to_slot.underMouse():
+        """show contex menu unless mouse is over one of the connector buttons"""
+        if self._from_connector.underMouse() or self._to_connector.underMouse():
             e.ignore()
         else:
             self._parent.show_link_context_menu(e.screenPos(), self.data(MODEL_INDEX))
 
     def paint(self, painter, option, widget):
-        """Paint rectangles over the slot-buttons simulating connection anchors"""
+        """Paint ellipse and arrow at from and to positions, respectively
+        Obscure item if connectors overlap any window"""
         #only paint if two items are visible
         if self.from_item.isVisible() and self.to_item.isVisible():
             self.update_line()
@@ -310,7 +311,7 @@ class Link(QGraphicsLineItem):
             super().paint(painter, option, widget)
 
 class LinkDrawer(QGraphicsLineItem):
-    """An item that allows one to draw links between slot buttons in mdiArea
+    """An item that allows one to draw links between connector buttons in mdiArea
     Attributes:
         parent (ToolboxUI): QMainWindow instance
     """
@@ -355,7 +356,7 @@ class LinkDrawer(QGraphicsLineItem):
             self.to = e.pos().toPoint()
 
     def mousePressEvent(self, e):
-        """If link lands on slot button, trigger click
+        """If link lands on connector button, trigger click
 
         Args:
             e (QMouseEvent): Mouse event
@@ -378,7 +379,7 @@ class LinkDrawer(QGraphicsLineItem):
                         return
             self.drawing = False
             self._parent.msg_error.emit("Unable to make connection."
-                                        " Try landing the connection onto a slot button.")
+                                        " Try landing the link onto a connector button.")
 
 
     def paint(self, painter, option, widget):
