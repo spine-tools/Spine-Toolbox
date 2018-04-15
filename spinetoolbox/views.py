@@ -9,9 +9,10 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 import inspect
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QPoint, QRect, QPoint
+from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QPoint, QRect, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, QGraphicsItem
-from PySide2.QtGui import QColor, QPen, QPainter, QTransform
+from PySide2.QtGui import QColor, QPen, QBrush, QPainter, QTransform, QPolygonF
+from math import atan2, sin, cos, pi #arrow head
 
 #QGraphicsItem arbitrary properties
 ITEM_TYPE = 0
@@ -147,8 +148,8 @@ class LinksView(QGraphicsView):
                     sw_owners = list(sw.widget().owner() for sw in sub_windows)
                     o = sw_owners.index(output_item)
                     i = sw_owners.index(input_item)
-                    from_slot = sub_windows[o].widget().ui.toolButton_outputslot
-                    to_slot = sub_windows[i].widget().ui.toolButton_inputslot
+                    from_slot = sub_windows[o].widget().ui.toolButton_connector
+                    to_slot = sub_windows[i].widget().ui.toolButton_connector
                     link = Link(self._parent, from_slot, to_slot, index)
                     self.scene().addItem(link)
                 else:   #connection destroyed, remove link widget
@@ -178,35 +179,23 @@ class LinksView(QGraphicsView):
             self.link_drawer.drawing = True
             self.link_drawer.start_drawing_at(button)
             self.from_item = button.parent().owner()
-            self.from_is_input = button.is_inputslot
         else:
             #stop drawing and make connection
             self.link_drawer.drawing = False
-            self.to_is_input = button.is_inputslot
-            if self.from_is_input == self.to_is_input:
-                slot_type = 'input' if self.to_is_input else 'output'
-                self._parent.msg_error.emit("Unable to make connection because the"
-                                            " two slots are of the same type ('{}')."\
-                                            .format(slot_type))
-            else:
-                self.to_item = button.parent().owner()
-                # create connection
-                if self.from_is_input:  #must be input to output
-                    input_item = self.from_item
-                    output_item = self.to_item
-                else:  #must be output to input
-                    output_item = self.from_item
-                    input_item = self.to_item
-                row = self.connection_model().header.index(output_item)
-                column = self.connection_model().header.index(input_item)
-                index = self.connection_model().createIndex(row, column)
-                if not self.connection_model().data(index, Qt.DisplayRole):
-                    self.connection_model().setData(index, "value", Qt.EditRole)  # value not used
-                    self._parent.msg.emit("<b>{}</b>'s output is now connected to"\
-                                  " <b>{}</b>'s input.".format(output_item, input_item))
-                else:
-                    self._parent.msg.emit("<b>{}</b>'s output is already connected to"\
+            self.to_item = button.parent().owner()
+            # create connection
+            output_item = self.from_item
+            input_item = self.to_item
+            row = self.connection_model().header.index(output_item)
+            column = self.connection_model().header.index(input_item)
+            index = self.connection_model().createIndex(row, column)
+            if not self.connection_model().data(index, Qt.DisplayRole):
+                self.connection_model().setData(index, "value", Qt.EditRole)  # value not used
+                self._parent.msg.emit("<b>{}</b>'s output is now connected to"\
                               " <b>{}</b>'s input.".format(output_item, input_item))
+            else:
+                self._parent.msg.emit("<b>{}</b>'s output is already connected to"\
+                          " <b>{}</b>'s input.".format(output_item, input_item))
 
 class Link(QGraphicsLineItem):
     """An item that represents a connection in mdiArea"""
@@ -226,13 +215,18 @@ class Link(QGraphicsLineItem):
         self._to_slot = to_widget
         self.setZValue(1)   #TODO: is this better than stackBefore?
         self.setData(MODEL_INDEX, index)
-        self.pen_color = QColor(0,255,0,176)
+        self.normal_color = QColor(0,255,0,176)
+        self.covered_color = QColor(128,128,128,128)
         self.pen_width = 10
+        self.arrow_size = 20
+        self.arrow_head = QPolygonF()
         self.from_item = self._from_slot.parent()
         self.to_item = self._to_slot.parent()
+        self.from_rect = self._from_slot.geometry()
+        self.to_rect = self._to_slot.geometry()
         self.setToolTip("<html><p>Connection from <b>{}</b>'s ouput to <b>{}</b>'s input<\html>"\
             .format(self.from_item.owner(), self.to_item.owner()))
-        self.setPen(QPen(self.pen_color, self.pen_width))
+        self.setPen(QPen(self.normal_color, self.pen_width))
         self.update_line()
         self.setData(ITEM_TYPE, "link")
 
@@ -244,8 +238,6 @@ class Link(QGraphicsLineItem):
     def update_extreme_points(self):    #TODO: look for a better way
         """update from and to slot current positions"""
         self.compute_offsets()
-        self.from_rect = self._from_slot.geometry()
-        self.to_rect = self._to_slot.geometry()
         self.from_center = self.from_rect.center() + self.from_offset
         self.to_center = self.to_rect.center() + self.to_offset
         self.from_topleft = self.from_rect.topLeft() + self.from_offset
@@ -292,16 +284,29 @@ class Link(QGraphicsLineItem):
                 sw_geom = sw.windowFrameGeometry()
                 from_covered = active_item != self.from_item and sw_geom.intersects(from_geom)
                 to_covered = active_item != self.to_item and sw_geom.intersects(to_geom)
-            if from_covered:
-                from_rect_color = QColor(128,128,128,128)
+            if from_covered or to_covered:
+                color = self.covered_color
             else:
-                from_rect_color = self.pen_color
-            if to_covered:
-                to_rect_color = QColor(128,128,128,64)
-            else:
-                to_rect_color = self.pen_color
-            painter.fillRect(from_geom, from_rect_color)
-            painter.fillRect(to_geom, to_rect_color)
+                color = self.normal_color
+            #arrow head
+            angle = atan2(-self.line().dy(), self.line().dx())
+            arrow_p0 = self.line().p2()
+            shorter_line = QLineF(self.line())
+            shorter_line.setLength(shorter_line.length() - self.arrow_size)
+            self.setLine(shorter_line)
+            arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
+                                    cos(angle + pi / 3) * self.arrow_size);
+            arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
+                                    cos(angle + pi - pi / 3) * self.arrow_size);
+            self.arrow_head.clear()
+            self.arrow_head.append(arrow_p0)
+            self.arrow_head.append(arrow_p1)
+            self.arrow_head.append(arrow_p2)
+            brush = QBrush(color, Qt.SolidPattern)
+            painter.setBrush(brush)
+            painter.drawEllipse(self.from_center, self.pen_width, self.pen_width)
+            painter.drawPolygon(self.arrow_head)
+            self.setPen(QPen(color, self.pen_width))
             super().paint(painter, option, widget)
 
 class LinkDrawer(QGraphicsLineItem):
@@ -323,6 +328,8 @@ class LinkDrawer(QGraphicsLineItem):
         # set pen
         self.pen_color = QColor(255,0,255)
         self.pen_width = 6
+        self.arrow_size = 12
+        self.arrow_head = QPolygonF()
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.setZValue(2)   #TODO: is this better than stackBefore?
         self.hide()
@@ -346,9 +353,6 @@ class LinkDrawer(QGraphicsLineItem):
         """
         if self.fr is not None:
             self.to = e.pos().toPoint()
-            moved = self.fr - self.to
-            if moved.manhattanLength() > 3:
-                self.setLine(self.fr.x(), self.fr.y(), self.to.x(), self.to.y())
 
     def mousePressEvent(self, e):
         """If link lands on slot button, trigger click
@@ -369,7 +373,7 @@ class LinkDrawer(QGraphicsLineItem):
                     widget_offset = widget.frameGeometry().topLeft()
                     pos -= widget_offset
                     candidate_button = widget.childAt(pos)
-                    if hasattr(candidate_button, 'is_inputslot'):
+                    if hasattr(candidate_button, 'is_connector'):
                         candidate_button.animateClick()
                         return
             self.drawing = False
@@ -383,7 +387,24 @@ class LinkDrawer(QGraphicsLineItem):
         Args:
             e (QPaintEvent): Paint event
         """
+        #arrow head
+        self.setLine(self.fr.x(), self.fr.y(), self.to.x(), self.to.y())
+        angle = atan2(-self.line().dy(), self.line().dx())
+        arrow_p0 = self.line().p2()
+        shorter_line = QLineF(self.line())
+        shorter_line.setLength(shorter_line.length() - self.arrow_size)
+        self.setLine(shorter_line)
+        arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
+                                cos(angle + pi / 3) * self.arrow_size);
+        arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
+                                cos(angle + pi - pi / 3) * self.arrow_size);
+        self.arrow_head.clear()
+        self.arrow_head.append(arrow_p0)
+        self.arrow_head.append(arrow_p1)
+        self.arrow_head.append(arrow_p2)
         p = QPoint(self.pen_width, self.pen_width)
-        painter.fillRect(QRect(self.fr-p, self.fr+p), self.pen_color)
-        painter.fillRect(QRect(self.to-p, self.to+p), self.pen_color)
+        brush = QBrush(self.pen_color, Qt.SolidPattern)
+        painter.setBrush(brush)
+        painter.drawEllipse(self.fr, self.pen_width, self.pen_width)
+        painter.drawPolygon(self.arrow_head)
         super().paint(painter, option, widget)
