@@ -354,6 +354,7 @@ class LinkDrawer(QGraphicsLineItem):
         """
         if self.fr is not None:
             self.to = e.pos().toPoint()
+            self.update()
 
     def mousePressEvent(self, e):
         """If link lands on connector button, trigger click

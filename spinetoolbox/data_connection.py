@@ -274,17 +274,17 @@ class CustomPackage(Package):
     def add_primary_key(self, table, field):
         """Add primary key to the package"""
         i = self.resource_names.index(table)
-        self.descriptor['resources'][i]['schema']['primaryKey'] = field
+        self.descriptor['resources'][i]['schema']['primaryKey'] = [field]
         self.commit()
 
     def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
         """Add foreign key to the package"""
         i = self.resource_names.index(child_table)
         foreign_key = {
-            "fields": child_field,
+            "fields": [child_field],
             "reference": {
                 "resource": parent_table,
-                "fields": parent_field
+                "fields": [parent_field]
             }
         }
         self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
@@ -306,10 +306,10 @@ class CustomPackage(Package):
         """Remove foreign key from the package"""
         i = self.resource_names.index(child_table)
         foreign_key = {
-            "fields": child_field,
+            "fields": [child_field],
             "reference": {
                 "resource": parent_table,
-                "fields": parent_field
+                "fields": [parent_field]
             }
         }
         if 'foreignKeys' in self.descriptor['resources'][i]['schema']:
