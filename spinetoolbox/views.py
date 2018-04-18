@@ -15,7 +15,6 @@ from math import atan2, sin, cos, pi #arrow head
 
 #QGraphicsItem arbitrary properties
 ITEM_TYPE = 0
-MODEL_INDEX = 1
 
 class LinksView(QGraphicsView):
     """Pseudo-QMdiArea implemented as QGraphicsView.
@@ -66,7 +65,7 @@ class LinksView(QGraphicsView):
         self._connection_model = model
         self._connection_model.dataChanged.connect(self.connectionDataChanged)
         self._connection_model.rowsRemoved.connect(self.connectionsRemoved)
-        self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
+        #self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
 
     def project_item_model(self):
         """return project item model"""
@@ -92,15 +91,15 @@ class LinksView(QGraphicsView):
         """remove subwindow and any attached links from the scene"""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
-                if sw.widget() == item.from_item or sw.widget() == item.to_item:
+                if sw.widget() == item.from_widget or sw.widget() == item.to_widget:
                     self.scene().removeItem(item)
         self.scene().removeItem(sw)
 
-    def find_link(self, index):
+    def find_link(self, from_widget, to_widget):
         """Find link in scene, by model index"""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
-                if item.data(MODEL_INDEX) == index:
+                if item.from_widget == from_widget and item.to_widget == to_widget:
                     return item
         return None
 
@@ -132,7 +131,7 @@ class LinksView(QGraphicsView):
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
     def connectionDataChanged(self, top_left, bottom_right, roles=None):
         """update view when model changes"""
-        #logging.debug("conn data changed")
+        logging.debug("conn data changed")
         top = top_left.row()
         left = top_left.column()
         bottom = bottom_right.row()
@@ -141,36 +140,35 @@ class LinksView(QGraphicsView):
             for column in range(left, right+1):
                 index = self.connection_model().index(row, column)
                 data = self.connection_model().data(index, Qt.DisplayRole)
+                from_name = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
+                to_name = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
+                sub_windows = self.subWindowList()
+                sw_owners = list(sw.widget().owner() for sw in sub_windows)
+                fr = sw_owners.index(from_name)
+                to = sw_owners.index(to_name)
+                from_widget = sub_windows[fr].widget()
+                to_widget = sub_windows[to].widget()
                 if data:    #connection made, add link widget
-                    input_item = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                    output_item = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
-                    sub_windows = self.subWindowList()
-                    sw_owners = list(sw.widget().owner() for sw in sub_windows)
-                    o = sw_owners.index(output_item)
-                    i = sw_owners.index(input_item)
-                    from_connector = sub_windows[o].widget().ui.toolButton_connector
-                    to_connector = sub_windows[i].widget().ui.toolButton_connector
-                    link = Link(self._parent, from_connector, to_connector, index)
+                    link = Link(self._parent, from_widget, to_widget)
                     self.scene().addItem(link)
                 else:   #connection destroyed, remove link widget
-                    link = self.find_link(index)
+                    link = self.find_link(from_widget, to_widget)
                     if link is not None:
                         self.scene().removeItem(link)
 
     @Slot("QModelIndex", "int", "int", name='connectionsRemoved')
     def connectionsRemoved(self, index, first, last):
         """update view when model changes"""
-        #logging.debug("conns. removed")
-        n_rows = self.connection_model().rowCount()
-        n_columns = self.connection_model().columnCount()
-        for item in self.scene().items():
-            if item.data(ITEM_TYPE) == "link":
-                row = item.data(MODEL_INDEX).row()
-                column = item.data(MODEL_INDEX).column()
-                if 0 <= row < n_rows and 0 <= column < n_columns:
-                    continue
-                else:
-                    self.scene().removeItem(item)
+        logging.debug("conns. removed")
+        for i in range(first,last+1):
+            removed_name = self.connection_model().headerData(i, orientation=Qt.Horizontal)
+            for item in self.scene().items():
+                if item.data(ITEM_TYPE) == "link":
+                    from_name = item.from_widget.owner()
+                    to_name = item.to_widget.owner()
+                    if removed_name == from_name or removed_name == to_name:
+                        self.scene().removeItem(item)
+
 
     def draw_links(self, button):
         """Draw links when connector button is clicked"""
@@ -178,29 +176,27 @@ class LinksView(QGraphicsView):
             #start drawing and remember connector
             self.link_drawer.drawing = True
             self.link_drawer.start_drawing_at(button)
-            self.from_item = button.parent().owner()
+            self.from_widget = button.parent().owner()
         else:
             #stop drawing and make connection
             self.link_drawer.drawing = False
-            self.to_item = button.parent().owner()
+            self.to_widget = button.parent().owner()
             # create connection
-            output_item = self.from_item
-            input_item = self.to_item
-            row = self.connection_model().header.index(output_item)
-            column = self.connection_model().header.index(input_item)
+            row = self.connection_model().header.index(self.from_widget)
+            column = self.connection_model().header.index(self.to_widget)
             index = self.connection_model().createIndex(row, column)
             if not self.connection_model().data(index, Qt.DisplayRole):
                 self.connection_model().setData(index, "value", Qt.EditRole)  # value not used
                 self._parent.msg.emit("<b>{}</b>'s output is now connected to"\
-                              " <b>{}</b>'s input.".format(output_item, input_item))
+                              " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
             else:
                 self._parent.msg.emit("<b>{}</b>'s output is already connected to"\
-                          " <b>{}</b>'s input.".format(output_item, input_item))
+                          " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
 
 class Link(QGraphicsLineItem):
     """An item that represents a connection in mdiArea"""
 
-    def __init__(self, parent, from_button, to_button, index):
+    def __init__(self, parent, from_widget, to_widget):
         """Initializes item.
 
         Args:
@@ -211,29 +207,28 @@ class Link(QGraphicsLineItem):
         """
         super().__init__()
         self._parent = parent
-        self._from_connector = from_button
-        self._to_connector = to_button
         self.setZValue(1)   #TODO: is this better than stackBefore?
-        self.setData(MODEL_INDEX, index)
         self.normal_color = QColor(0,255,0,176)
         self.covered_color = QColor(128,128,128,128)
         self.pen_width = 10
         self.arrow_size = 20
         self.arrow_head = QPolygonF()
-        self.from_item = self._from_connector.parent()
-        self.to_item = self._to_connector.parent()
-        self.from_rect = self._from_connector.geometry()
-        self.to_rect = self._to_connector.geometry()
+        self.from_widget = from_widget
+        self.to_widget = to_widget
+        self.from_connector = self.from_widget.ui.toolButton_connector
+        self.to_connector = self.to_widget.ui.toolButton_connector
+        self.from_rect = self.from_connector.geometry()
+        self.to_rect = self.to_connector.geometry()
         self.setToolTip("<html><p>Connection from <b>{}</b>'s ouput to <b>{}</b>'s input<\html>"\
-            .format(self.from_item.owner(), self.to_item.owner()))
+            .format(self.from_widget.owner(), self.to_widget.owner()))
         self.setPen(QPen(self.normal_color, self.pen_width))
         self.update_line()
         self.setData(ITEM_TYPE, "link")
 
     def compute_offsets(self):
         """compute connector-button offsets within the frame"""
-        self.from_offset = self.from_item.frameGeometry().topLeft()
-        self.to_offset = self.to_item.frameGeometry().topLeft()
+        self.from_offset = self.from_widget.frameGeometry().topLeft()
+        self.to_offset = self.to_widget.frameGeometry().topLeft()
 
     def update_extreme_points(self):    #TODO: look for a better way
         """update from and to connector current positions"""
@@ -256,23 +251,23 @@ class Link(QGraphicsLineItem):
         if e.button() != Qt.LeftButton:
             e.ignore()
         else:
-            if self._from_connector.underMouse():
-                self._from_connector.animateClick()
-            elif self._to_connector.underMouse():
-                self._to_connector.animateClick()
+            if self.from_connector.underMouse():
+                self.from_connector.animateClick()
+            elif self.to_connector.underMouse():
+                self.to_connector.animateClick()
 
     def contextMenuEvent(self, e):
         """show contex menu unless mouse is over one of the connector buttons"""
-        if self._from_connector.underMouse() or self._to_connector.underMouse():
+        if self.from_connector.underMouse() or self.to_connector.underMouse():
             e.ignore()
         else:
-            self._parent.show_link_context_menu(e.screenPos(), self.data(MODEL_INDEX))
+            self._parent.show_link_context_menu(e.screenPos(), self.from_widget, self.to_widget)
 
     def paint(self, painter, option, widget):
         """Paint ellipse and arrow at from and to positions, respectively
         Obscure item if connectors overlap any window"""
         #only paint if two items are visible
-        if self.from_item.isVisible() and self.to_item.isVisible():
+        if self.from_widget.isVisible() and self.to_widget.isVisible():
             self.update_line()
             from_geom = QRect(self.from_topleft, self.from_bottomright)
             to_geom = QRect(self.to_topleft, self.to_bottomright)
@@ -281,10 +276,10 @@ class Link(QGraphicsLineItem):
             to_covered = False
             sw = self._parent.ui.mdiArea.activeSubWindow()
             if sw:
-                active_item = sw.widget()
+                active_widget = sw.widget()
                 sw_geom = sw.windowFrameGeometry()
-                from_covered = active_item != self.from_item and sw_geom.intersects(from_geom)
-                to_covered = active_item != self.to_item and sw_geom.intersects(to_geom)
+                from_covered = active_widget != self.from_widget and sw_geom.intersects(from_geom)
+                to_covered = active_widget != self.to_widget and sw_geom.intersects(to_geom)
             if from_covered or to_covered:
                 color = self.covered_color
             else:

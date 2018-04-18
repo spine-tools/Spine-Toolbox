@@ -320,7 +320,7 @@ class ToolboxUI(QMainWindow):
         """
         if not index.isValid():
             return
-        # logging.debug("index {0}:{1} clicked".format(index.row(), index.column()))
+        #logging.debug("index {0}:{1} clicked".format(index.row(), index.column()))
         self.connection_model.setData(index, "value", Qt.EditRole)  # value not used
 
     def clear_ui(self):
@@ -811,7 +811,7 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("All {0} items removed from project".format(n))
 
     def remove_item(self, ind, delete_item=False):
-        """Remove subwindow from project when it's index in the project model is known.
+        """Remove item from project when it's index in the project model is known.
         To remove all items in project, loop all indices through this method.
         This method is used in both opening and creating a new project as
         well as when item(s) are deleted from project.
@@ -1193,17 +1193,23 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
 
-    def show_link_context_menu(self, pos, ind):
+    def show_link_context_menu(self, pos, from_widget, to_widget):
         """Context menu for connection links.
 
         Args:
             pos (QPoint): Mouse position
-            ids (QModelIndex): Index at pos (from LinkWidget custom implementation)
+            from_widget (QWidget): The widget this link originates from
+            to_widget (QWidget): The widget this link points to
         """
-        self.link_context_menu = LinkContextMenu(self, pos, ind)
+        from_name = from_widget.owner()
+        to_name = to_widget.owner()
+        row = self.connection_model.header.index(from_name)
+        column = self.connection_model.header.index(to_name)
+        index = self.connection_model.index(row, column)
+        self.link_context_menu = LinkContextMenu(self, pos, index)
         option = self.link_context_menu.get_action()
         if option == "Remove":
-            self.connection_clicked(ind)
+            self.connection_clicked(index)
             return
         else:  # No option selected
             pass

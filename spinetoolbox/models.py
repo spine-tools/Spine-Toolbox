@@ -396,11 +396,11 @@ class ConnectionModel(QAbstractTableModel):
             return False
         # logging.debug("Removing {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
-        self.header.remove(item_name)
         if not self.removeRows(item_index, 1, parent=QModelIndex()):
             return False
         if not self.removeColumns(item_index, 1, parent=QModelIndex()):
             return False
+        self.header.remove(item_name)
         # logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections))
         return True
