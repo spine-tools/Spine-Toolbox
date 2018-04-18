@@ -75,8 +75,7 @@ class Tool(MetaObject):
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
         # set connections buttons slot type
-        self._widget.ui.toolButton_inputslot.is_inputslot = True
-        self._widget.ui.toolButton_outputslot.is_inputslot = False
+        self._widget.ui.toolButton_connector.is_connector = True
         self.connect_signals()
 
     def connect_signals(self):
@@ -85,8 +84,7 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
-        self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
-        self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
+        self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""

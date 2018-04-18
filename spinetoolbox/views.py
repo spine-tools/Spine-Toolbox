@@ -9,33 +9,37 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 import inspect
-from PySide2.QtCore import Qt, QRect, QPoint
+from PySide2.QtCore import Qt, QRect, QPoint, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsLineItem
-from PySide2.QtGui import QColor, QPen
+from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush
+from math import atan2, sin, cos, pi #arrow head
 from config import ITEM_TYPE
 
 
 class Link(QGraphicsLineItem):
     """An item that represents a connection between project items."""
 
-    def __init__(self, parent, from_button, to_button):
+    def __init__(self, parent, from_widget, to_widget):
         """Initializes item."""
         super().__init__()
         self._parent = parent
-        self.from_slot = from_button
-        self.to_slot = to_button
+        self.from_widget = from_widget
+        self.to_widget = to_widget
+        self.from_connector = self.from_widget.ui.toolButton_connector
+        self.to_connector = self.to_widget.ui.toolButton_connector
         self.setZValue(1)   # TODO: is this better than stackBefore?
-        self.pen_color = QColor(0, 255, 0, 176)
+        self.normal_color = QColor(0, 255, 0, 176)
+        self.covered_color = QColor(128, 128, 128, 128)
         self.pen_width = 10
-        self.from_widget = self.from_slot.parent()
-        self.to_widget = self.to_slot.parent()
+        self.arrow_size = 20
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.from_widget.owner(), self.to_widget.owner()))
-        self.setPen(QPen(self.pen_color, self.pen_width))
+        self.setPen(QPen(self.normal_color, self.pen_width))
+        self.from_rect = self.from_connector.geometry()
+        self.to_rect = self.to_connector.geometry()
+        self.arrow_head = QPolygonF()
         self.update_line()
         self.setData(ITEM_TYPE, "link")
-        self.from_rect = None
-        self.to_rect = None
         self.from_center = None
         self.to_center = None
         self.from_topleft = None
@@ -46,15 +50,13 @@ class Link(QGraphicsLineItem):
         self.to_offset = None
 
     def compute_offsets(self):
-        """Compute slot-button offsets within the frame."""
+        """Compute connector-button offsets within the frame."""
         self.from_offset = self.from_widget.frameGeometry().topLeft()
         self.to_offset = self.to_widget.frameGeometry().topLeft()
 
     def update_extreme_points(self):  # TODO: look for a better way
-        """Update from and to slot current positions."""
+        """Update from and to connector current positions."""
         self.compute_offsets()
-        self.from_rect = self.from_slot.geometry()
-        self.to_rect = self.to_slot.geometry()
         self.from_center = self.from_rect.center() + self.from_offset
         self.to_center = self.to_rect.center() + self.to_offset
         self.from_topleft = self.from_rect.topLeft() + self.from_offset
@@ -73,20 +75,21 @@ class Link(QGraphicsLineItem):
         if e.button() != Qt.LeftButton:
             e.ignore()
         else:
-            if self.from_slot.underMouse():
-                self.from_slot.animateClick()
-            elif self.to_slot.underMouse():
-                self.to_slot.animateClick()
+            if self.from_connector.underMouse():
+                self.from_connector.animateClick()
+            elif self.to_connector.underMouse():
+                self.to_connector.animateClick()
 
     def contextMenuEvent(self, e):
         """Show context menu unless mouse is over one of the slot buttons."""
-        if self.from_slot.underMouse() or self.to_slot.underMouse():
+        if self.from_connector.underMouse() or self.to_connector.underMouse():
             e.ignore()
         else:
             self._parent.show_link_context_menu(e.screenPos(), self.from_widget, self.to_widget)
 
     def paint(self, painter, option, widget):
-        """Paint rectangles over the slot-buttons simulating connection anchors."""
+        """Paint ellipse and arrow at from and to positions, respectively
+        Obscure item if connectors overlap any window"""
         # only paint if two items are visible
         if self.from_widget.isVisible() and self.to_widget.isVisible():
             self.update_line()
@@ -95,23 +98,39 @@ class Link(QGraphicsLineItem):
             # check whether the active sw overlaps rects and update color accordingly
             sw = self._parent.ui.graphicsView.activeSubWindow()
             if not sw:
-                super().paint(painter, option, widget)
-                return
+                # super().paint(painter, option, widget)
+                # return
+                # don't return so ellipse and arrowheads stay when no window is selected
+                from_covered = False
+                to_covered = False
             else:
                 active_item = sw.widget()
                 sw_geom = sw.windowFrameGeometry()
                 from_covered = active_item != self.from_widget and sw_geom.intersects(from_geom)
                 to_covered = active_item != self.to_widget and sw_geom.intersects(to_geom)
-            if from_covered:
-                from_rect_color = QColor(128, 128, 128, 128)
+            if from_covered or to_covered:
+                color = self.covered_color
             else:
-                from_rect_color = self.pen_color
-            if to_covered:
-                to_rect_color = QColor(128, 128, 128, 64)
-            else:
-                to_rect_color = self.pen_color
-            painter.fillRect(from_geom, from_rect_color)
-            painter.fillRect(to_geom, to_rect_color)
+                color = self.normal_color
+            #arrow head
+            angle = atan2(-self.line().dy(), self.line().dx())
+            arrow_p0 = self.line().p2()
+            shorter_line = QLineF(self.line())
+            shorter_line.setLength(shorter_line.length() - self.arrow_size)
+            self.setLine(shorter_line)
+            arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
+                                    cos(angle + pi / 3) * self.arrow_size);
+            arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
+                                    cos(angle + pi - pi / 3) * self.arrow_size);
+            self.arrow_head.clear()
+            self.arrow_head.append(arrow_p0)
+            self.arrow_head.append(arrow_p1)
+            self.arrow_head.append(arrow_p2)
+            brush = QBrush(color, Qt.SolidPattern)
+            painter.setBrush(brush)
+            painter.drawEllipse(self.from_center, self.pen_width, self.pen_width)
+            painter.drawPolygon(self.arrow_head)
+            self.setPen(QPen(color, self.pen_width))
             super().paint(painter, option, widget)
 
 
@@ -133,6 +152,8 @@ class LinkDrawer(QGraphicsLineItem):
         # set pen
         self.pen_color = QColor(255, 0, 255)
         self.pen_width = 6
+        self.arrow_size = 12
+        self.arrow_head = QPolygonF()
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
@@ -156,9 +177,7 @@ class LinkDrawer(QGraphicsLineItem):
         """
         if self.fr is not None:
             self.to = e.pos().toPoint()
-            moved = self.fr - self.to
-            if moved.manhattanLength() > 3:
-                self.setLine(self.fr.x(), self.fr.y(), self.to.x(), self.to.y())
+            self.update()
 
     def mousePressEvent(self, e):
         """If link lands on slot button, trigger click.
@@ -174,22 +193,38 @@ class LinkDrawer(QGraphicsLineItem):
             pos = e.pos().toPoint()
             view_pos = self._qmainwindow.ui.graphicsView.mapFromScene(pos)
             for item in self._qmainwindow.ui.graphicsView.items(view_pos):
-
                 if item.data(ITEM_TYPE) == "subwindow":
-                    sw = item.widget()
-                    sw_offset = sw.frameGeometry().topLeft()
-                    pos -= sw_offset
-                    candidate_button = sw.childAt(pos)
-                    if hasattr(candidate_button, 'is_inputslot'):
+                    widget = item.widget()
+                    widget_offset = widget.frameGeometry().topLeft()
+                    pos -= widget_offset
+                    candidate_button = widget.childAt(pos)
+                    if hasattr(candidate_button, 'is_connector'):
                         candidate_button.animateClick()
                         return
             self.drawing = False
             self._qmainwindow.msg_error.emit("Unable to make connection."
-                                             " Try landing the connection onto a slot button.")
+                                             " Try landing the connection onto a connector button.")
 
     def paint(self, painter, option, widget):
-        """Draw small rectangles on begin and end positions."""
+        """Draw ellipse at begin position and arrowhead at end position."""
+        #arrow head
+        self.setLine(self.fr.x(), self.fr.y(), self.to.x(), self.to.y())
+        angle = atan2(-self.line().dy(), self.line().dx())
+        arrow_p0 = self.line().p2()
+        shorter_line = QLineF(self.line())
+        shorter_line.setLength(shorter_line.length() - self.arrow_size)
+        self.setLine(shorter_line)
+        arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
+                                cos(angle + pi / 3) * self.arrow_size);
+        arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
+                                cos(angle + pi - pi / 3) * self.arrow_size);
+        self.arrow_head.clear()
+        self.arrow_head.append(arrow_p0)
+        self.arrow_head.append(arrow_p1)
+        self.arrow_head.append(arrow_p2)
         p = QPoint(self.pen_width, self.pen_width)
-        painter.fillRect(QRect(self.fr-p, self.fr+p), self.pen_color)
-        painter.fillRect(QRect(self.to-p, self.to+p), self.pen_color)
+        brush = QBrush(self.pen_color, Qt.SolidPattern)
+        painter.setBrush(brush)
+        painter.drawEllipse(self.fr, self.pen_width, self.pen_width)
+        painter.drawPolygon(self.arrow_head)
         super().paint(painter, option, widget)

@@ -73,8 +73,7 @@ class DataConnection(MetaObject):
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
         #set connections buttons slot type
-        self._widget.ui.toolButton_inputslot.is_inputslot = True
-        self._widget.ui.toolButton_outputslot.is_inputslot = False
+        self._widget.ui.toolButton_connector.is_connector = True
         self.connect_signals()
 
     def connect_signals(self):
@@ -86,8 +85,7 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
-        self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
-        self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
+        self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
