@@ -12,27 +12,25 @@ import inspect
 from PySide2.QtCore import Qt, QRect, QPoint
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsLineItem
 from PySide2.QtGui import QColor, QPen
-from config import ITEM_TYPE, MODEL_INDEX
+from config import ITEM_TYPE
 
 
 class Link(QGraphicsLineItem):
     """An item that represents a connection between project items."""
 
-    def __init__(self, parent, from_widget, to_widget, index):
+    def __init__(self, parent, from_button, to_button):
         """Initializes item."""
         super().__init__()
         self._parent = parent
-        self._from_slot = from_widget
-        self._to_slot = to_widget
+        self.from_slot = from_button
+        self.to_slot = to_button
         self.setZValue(1)   # TODO: is this better than stackBefore?
-        self.setData(MODEL_INDEX, index)
-        # self.model_index = index
         self.pen_color = QColor(0, 255, 0, 176)
         self.pen_width = 10
-        self.from_item = self._from_slot.parent()
-        self.to_item = self._to_slot.parent()
+        self.from_widget = self.from_slot.parent()
+        self.to_widget = self.to_slot.parent()
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
-                        "to <b>{1}</b>'s input<\html>".format(self.from_item.owner(), self.to_item.owner()))
+                        "to <b>{1}</b>'s input<\html>".format(self.from_widget.owner(), self.to_widget.owner()))
         self.setPen(QPen(self.pen_color, self.pen_width))
         self.update_line()
         self.setData(ITEM_TYPE, "link")
@@ -49,14 +47,14 @@ class Link(QGraphicsLineItem):
 
     def compute_offsets(self):
         """Compute slot-button offsets within the frame."""
-        self.from_offset = self.from_item.frameGeometry().topLeft()
-        self.to_offset = self.to_item.frameGeometry().topLeft()
+        self.from_offset = self.from_widget.frameGeometry().topLeft()
+        self.to_offset = self.to_widget.frameGeometry().topLeft()
 
     def update_extreme_points(self):  # TODO: look for a better way
         """Update from and to slot current positions."""
         self.compute_offsets()
-        self.from_rect = self._from_slot.geometry()
-        self.to_rect = self._to_slot.geometry()
+        self.from_rect = self.from_slot.geometry()
+        self.to_rect = self.to_slot.geometry()
         self.from_center = self.from_rect.center() + self.from_offset
         self.to_center = self.to_rect.center() + self.to_offset
         self.from_topleft = self.from_rect.topLeft() + self.from_offset
@@ -75,22 +73,22 @@ class Link(QGraphicsLineItem):
         if e.button() != Qt.LeftButton:
             e.ignore()
         else:
-            if self._from_slot.underMouse():
-                self._from_slot.animateClick()
-            elif self._to_slot.underMouse():
-                self._to_slot.animateClick()
+            if self.from_slot.underMouse():
+                self.from_slot.animateClick()
+            elif self.to_slot.underMouse():
+                self.to_slot.animateClick()
 
     def contextMenuEvent(self, e):
         """Show context menu unless mouse is over one of the slot buttons."""
-        if self._from_slot.underMouse() or self._to_slot.underMouse():
+        if self.from_slot.underMouse() or self.to_slot.underMouse():
             e.ignore()
         else:
-            self._parent.show_link_context_menu(e.screenPos(), self.data(MODEL_INDEX))
+            self._parent.show_link_context_menu(e.screenPos(), self.from_widget, self.to_widget)
 
     def paint(self, painter, option, widget):
         """Paint rectangles over the slot-buttons simulating connection anchors."""
         # only paint if two items are visible
-        if self.from_item.isVisible() and self.to_item.isVisible():
+        if self.from_widget.isVisible() and self.to_widget.isVisible():
             self.update_line()
             from_geom = QRect(self.from_topleft, self.from_bottomright)
             to_geom = QRect(self.to_topleft, self.to_bottomright)
@@ -102,8 +100,8 @@ class Link(QGraphicsLineItem):
             else:
                 active_item = sw.widget()
                 sw_geom = sw.windowFrameGeometry()
-                from_covered = active_item != self.from_item and sw_geom.intersects(from_geom)
-                to_covered = active_item != self.to_item and sw_geom.intersects(to_geom)
+                from_covered = active_item != self.from_widget and sw_geom.intersects(from_geom)
+                to_covered = active_item != self.to_widget and sw_geom.intersects(to_geom)
             if from_covered:
                 from_rect_color = QColor(128, 128, 128, 128)
             else:

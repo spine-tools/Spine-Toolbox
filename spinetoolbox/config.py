@@ -43,7 +43,6 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 
 # QGraphicsItem arbitrary properties
 ITEM_TYPE = 0
-MODEL_INDEX = 1
 
 # Application path, configuration file path and default project path
 if getattr(sys, "frozen", False):

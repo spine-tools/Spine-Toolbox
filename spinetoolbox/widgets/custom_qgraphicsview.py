@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Class for a custom QTextBrowser to add options to context menu.
+Class for a custom QGraphicsView for visualizing project items and connections.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
 :date:   6.2.2018
@@ -28,7 +28,7 @@ import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QPoint, Qt
 from views import LinkDrawer, Link
-from config import ITEM_TYPE, MODEL_INDEX
+from config import ITEM_TYPE
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -86,7 +86,7 @@ class CustomQGraphicsView(QGraphicsView):
         self._connection_model = model
         self._connection_model.dataChanged.connect(self.connectionDataChanged)
         self._connection_model.rowsRemoved.connect(self.connectionsRemoved)
-        self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
+        #self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
 
     def project_item_model(self):
         """Return project item model."""
@@ -120,11 +120,11 @@ class CustomQGraphicsView(QGraphicsView):
                     self.scene().removeItem(item)
         self.scene().removeItem(sw)
 
-    def find_link(self, index):
+    def find_link(self, from_slot, to_slot):
         """Find link in scene, by model index"""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
-                if item.data(MODEL_INDEX) == index:
+                if item.from_slot == from_slot and item.to_slot == to_slot:
                     return item
         return None
 
@@ -166,60 +166,35 @@ class CustomQGraphicsView(QGraphicsView):
             for column in range(left, right+1):
                 index = self.connection_model().index(row, column)
                 data = self.connection_model().data(index, Qt.DisplayRole)
+                input_item = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
+                output_item = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
+                sub_windows = self.subWindowList()
+                sw_owners = list(sw.widget().owner() for sw in sub_windows)
+                o = sw_owners.index(output_item)
+                i = sw_owners.index(input_item)
+                from_slot = sub_windows[o].widget().ui.toolButton_outputslot
+                to_slot = sub_windows[i].widget().ui.toolButton_inputslot
                 if data:  # connection made, add link widget
-                    input_item = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                    output_item = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
-                    sub_windows = self.subWindowList()
-                    sw_owners = list(sw.widget().owner() for sw in sub_windows)
-                    o = sw_owners.index(output_item)
-                    i = sw_owners.index(input_item)
-                    from_slot = sub_windows[o].widget().ui.toolButton_outputslot
-                    to_slot = sub_windows[i].widget().ui.toolButton_inputslot
-                    link = Link(self._parent, from_slot, to_slot, index)
+                    link = Link(self._parent, from_slot, to_slot)
                     self.scene().addItem(link)
                 else:   # connection destroyed, remove link widget
-                    link = self.find_link(index)
+                    link = self.find_link(from_slot, to_slot)
                     if link is not None:
                         self.scene().removeItem(link)
 
     @Slot("QModelIndex", "int", "int", name='connectionsRemoved')
     def connectionsRemoved(self, index, first, last):
-        """Update view when connection model changes."""
-        # logging.debug("conns. removed")
-        n_rows = self.connection_model().rowCount()
-        n_columns = self.connection_model().columnCount()
-        for item in self.scene().items():
-            if item.data(ITEM_TYPE) == "link":
-                row = item.data(MODEL_INDEX).row()
-                column = item.data(MODEL_INDEX).column()
-                if 0 <= row < n_rows and 0 <= column < n_columns:
-                    continue
-                else:
-                    self.scene().removeItem(item)
+        """update view when model changes"""
+        logging.debug("conns. removed")
+        for i in range(first,last+1):
+            removed_name = self.connection_model().headerData(i, orientation=Qt.Horizontal)
+            for item in self.scene().items():
+                if item.data(ITEM_TYPE) == "link":
+                    from_name = item.from_widget.owner()
+                    to_name = item.to_widget.owner()
+                    if removed_name == from_name or removed_name == to_name:
+                        self.scene().removeItem(item)
 
-    # @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
-    # def connectionRowsRemoved(self, column, first, last):
-    #     """update view when model changes"""
-    #     # logging.debug("conn rows removed")
-    #     for column in range(self.connection_model().columnCount()):
-    #         for row in range(first, last+1):
-    #             index = self.connection_model().index(row, column)
-    #             i = self.find_link(index)
-    #             if i is not None:
-    #                 self.scene().removeItem(i)
-    #                 # logging.debug("remove {}".format(i))
-
-    # @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
-    # def connectionColumnsRemoved(self, index, first, last):
-    #     """update view when model changes"""
-    #     # logging.debug("conn columns removed")
-    #     for row in range(self.connection_model().rowCount()):
-    #         for column in range(first, last+1):
-    #             index = self.connection_model().index(row, column)
-    #             i = self.find_link(index)
-    #             if i is not None:
-    #                 self.scene().removeItem(i)
-    #                 # logging.debug("remove {}".format(i))
 
     def draw_links(self, button):
         """Draw links when slot button is clicked"""
