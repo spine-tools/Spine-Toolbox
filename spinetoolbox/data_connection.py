@@ -30,7 +30,7 @@ from PySide2.QtCore import Slot, QUrl
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from metaobject import MetaObject
-from widgets.sw_data_connection_widget import DataConnectionWidget
+from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
@@ -53,6 +53,8 @@ class DataConnection(MetaObject):
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
         self._project = project
+        # TODO: Try to set the parent of the drawn widget (QGraphicsProxyWidget?) as the scene
+        # TODO: Or use scene.add_item(self._widget)?? to set the parent
         self._widget = DataConnectionWidget(name, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
@@ -87,9 +89,13 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
         self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
 
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
+
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.ui.mdiArea.draw_links(self.sender())
+        self._parent.ui.graphicsView.draw_links(self.sender())
 
     @Slot(name="open_directory")
     def open_directory(self):
@@ -223,10 +229,6 @@ class DataConnection(MetaObject):
         NOTE: Might lead to performance issues."""
         d = os.listdir(self.data_dir)
         self._widget.populate_data_list(d)
-
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
 
 
 class CustomPackage(Package):

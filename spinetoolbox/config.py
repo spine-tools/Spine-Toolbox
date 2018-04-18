@@ -41,6 +41,10 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # "." is actually valid in a folder name but this is
 # to prevent the user from creating folders like /..../
 
+# QGraphicsItem arbitrary properties
+ITEM_TYPE = 0
+MODEL_INDEX = 1
+
 # Application path, configuration file path and default project path
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))

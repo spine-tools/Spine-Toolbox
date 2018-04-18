@@ -47,7 +47,6 @@ from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
 from helpers import project_dir, get_datetime, erase_dir
 from models import ToolTemplateModel, ConnectionModel
-from views import LinksView
 
 
 class ToolboxUI(QMainWindow):
@@ -70,7 +69,7 @@ class ToolboxUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         # Initialize custom mdiArea based on QGraphicsView
-        self.init_mdiArea()
+        # self.init_mdiArea()
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
@@ -110,13 +109,13 @@ class ToolboxUI(QMainWindow):
         self.init_project()
         self.restore_ui()
 
-    def init_mdiArea(self):
-        """Initialize the mdiArea as a LinksView"""
-        layout = QVBoxLayout()
-        self.ui.mdiArea_container.setLayout(layout)
-        self.ui.mdiArea_container.setStyleSheet("background: transparent")
-        self.ui.mdiArea = LinksView(self)
-        layout.addWidget(self.ui.mdiArea)
+    # def init_mdiArea(self):
+    #     """Initialize the mdiArea as a LinksView"""
+    #     layout = QVBoxLayout()
+    #     self.ui.mdiArea_container.setLayout(layout)
+    #     self.ui.mdiArea_container.setStyleSheet("background: transparent")
+    #     self.ui.mdiArea = LinksView(self)
+    #     layout.addWidget(self.ui.mdiArea)
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -168,7 +167,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyUnresolvedReferences
         self.test2_action.triggered.connect(self.test2)
         # QMdiArea
-        self.ui.mdiArea.subWindowActivated.connect(self.update_details_frame)
+        self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
         # Project TreeView
         self.ui.treeView_project.clicked.connect(self.activate_subwindow)
         self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
@@ -233,7 +232,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.appendRow(QStandardItem("Tools"))
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
-        self.ui.mdiArea.setProjectItemModel(self.project_item_model)
+        self.ui.graphicsView.setProjectItemModel(self.project_item_model)
         self.init_tool_template_model(tool_template_paths)
         self.init_connection_model()
 
@@ -280,7 +279,7 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.mdiArea.setConnectionModel(self.connection_model)
+        self.ui.graphicsView.setConnectionModel(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
         if n_connected == 0:
@@ -456,7 +455,7 @@ class ToolboxUI(QMainWindow):
                 item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
                 item_widget = item_data.get_widget()
                 item_subwindow = item_widget.parent()  # QMdiSubWindow that has item_widget as its internal widget
-                self.ui.mdiArea.setActiveSubWindow(item_subwindow)
+                self.ui.graphicsView.setActiveSubWindow(item_subwindow)
             return
 
     @Slot("QModelIndex", name="show_subwindow")
@@ -481,7 +480,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test1")
     def test1(self):
-        sub_windows = self.ui.mdiArea.subWindowList()
+        sub_windows = self.ui.graphicsView.subWindowList()
         self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
         logging.debug("Total number of items: {0}".format(self.n_items("all")))
         logging.debug("Number of Data Stores: {0}".format(self.n_items("Data Stores")))
@@ -499,7 +498,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test2")
     def test2(self):
-        for subwindow in self.ui.mdiArea.subWindowList():
+        for subwindow in self.ui.graphicsView.subWindowList():
             w = subwindow.widget()  # SubWindowWidget
             w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
             # w_parent = w.parent()  # QMdiSubWindow == subwindow
@@ -629,7 +628,7 @@ class ToolboxUI(QMainWindow):
                 return
             self.init_tool_template_model(tool_template_paths)
             # Reattach all Tool templates because ToolTemplateModel may have changed
-            for subwindow in self.ui.mdiArea.subWindowList():
+            for subwindow in self.ui.graphicsView.subWindowList():
                 w = subwindow.widget()  # SubWindowWidget
                 w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
                 if w_type == "Tool":
@@ -715,7 +714,7 @@ class ToolboxUI(QMainWindow):
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
         # Remove tool template also from Tools that use it
-        for subwindow in self.ui.mdiArea.subWindowList():
+        for subwindow in self.ui.graphicsView.subWindowList():
             w = subwindow.widget()  # SubWindowWidget
             w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
             if w_type == "Tool":
@@ -1087,7 +1086,7 @@ class ToolboxUI(QMainWindow):
             self.remove_item(ind, delete_item=True)
             return
         if option == "Hide all":  # Hide all subwindows
-            for sw in self.ui.mdiArea.subWindowList():
+            for sw in self.ui.graphicsView.subWindowList():
                 sw.hide()
         else:  # No option selected
             pass

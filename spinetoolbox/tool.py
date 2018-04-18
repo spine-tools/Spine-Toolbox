@@ -29,7 +29,7 @@ import os
 import json
 import shutil
 from metaobject import MetaObject
-from widgets.sw_tool_widget import ToolSubWindowWidget
+from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
@@ -52,6 +52,8 @@ class Tool(MetaObject):
         self.item_type = "Tool"
         self.item_category = "Tools"
         self._project = project
+        # TODO: Try to set the parent of the drawn widget (QGraphicsProxyWidget?) as the scene
+        # TODO: Or use scene.add_item(self._widget)?? to set the parent
         self._widget = ToolSubWindowWidget(name, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_input_files()
@@ -72,7 +74,7 @@ class Tool(MetaObject):
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
-        #set connections buttons slot type
+        # set connections buttons slot type
         self._widget.ui.toolButton_inputslot.is_inputslot = True
         self._widget.ui.toolButton_outputslot.is_inputslot = False
         self.connect_signals()
@@ -86,9 +88,13 @@ class Tool(MetaObject):
         self._widget.ui.toolButton_inputslot.clicked.connect(self.draw_links)
         self._widget.ui.toolButton_outputslot.clicked.connect(self.draw_links)
 
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
+
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.ui.mdiArea.draw_links(self.sender())
+        self._parent.ui.graphicsView.draw_links(self.sender())
 
     @Slot(name='show_details')
     def show_details(self):
@@ -330,10 +336,6 @@ class Tool(MetaObject):
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
         else:
             self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.tool_template().name))
-
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
