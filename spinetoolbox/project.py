@@ -203,7 +203,7 @@ class SpineToolboxProject(MetaObject):
             self.add_view(name, desc, data)
         return True
 
-    def load_tool_template(self, jsonfile):
+    def load_tool_template_from_file(self, jsonfile):
         """Create a Tool template according to a tool definition file.
 
         Args:
@@ -223,15 +223,30 @@ class SpineToolboxProject(MetaObject):
         except FileNotFoundError:
             self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(jsonfile))
             return None
+        # Infer path to the main program
+        try:
+            includes_main_path = definition['includes_main_path'] #path to the main program relative to jsonfile
+        except KeyError:
+            includes_main_path = "."
+        path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
+        return self.load_tool_template_from_dict(definition, path)
+
+    def load_tool_template_from_dict(self, definition, path):
+        """Create a Tool template according to a dictionary.
+
+        Args:
+            definition (dict): Dictionary with the tool definition
+            path (str): Folder of the definition json file
+
+        Returns:
+            Instance of a subclass if Tool
+        """
         try:
             _tooltype = definition['tooltype'].lower()
         except KeyError:
             self._parent.msg_error.emit("No type of tool defined in tool definition file. Should be "
                                         "GAMS, Julia or executable")
             return None
-        # Infer path from JSON file. This assumes that main model file is in the same directory
-        # as the tool definition file
-        path = os.path.dirname(jsonfile)  # TODO: Is this needed?
         if _tooltype == "gams":
             return GAMSTool.load(self._parent, path, definition)
         elif _tooltype == "julia":

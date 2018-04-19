@@ -73,6 +73,9 @@ if not sys.platform == "win32":
     JULIA_EXECUTABLE = "julia"
 else:
     JULIA_EXECUTABLE = "julia.exe"
+    
+# Tool types
+TOOL_TYPES = ['GAMS', 'Julia']
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
@@ -127,4 +130,5 @@ TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
 
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
+TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
