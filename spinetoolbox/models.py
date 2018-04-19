@@ -630,3 +630,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginResetModel()
         self._data = new_data
         self.endResetModel()
+
+    def set_tool_tip(self, tool_tip):
+        """Set tool tip"""
+        self._tool_tip = tool_tip

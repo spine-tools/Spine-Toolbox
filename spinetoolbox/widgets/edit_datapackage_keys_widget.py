@@ -37,7 +37,7 @@ from widgets.checkbox_delegate import CheckBoxDelegate
 
 class PrimaryKeysHeader(Enum):
     """A Class for handling tableview headers"""
-    RM = 0, 'Remove?'
+    RM = 0, 'Select'
     TABLE = 1, 'Table'
     FIELD = 2, 'Field'
 
@@ -49,7 +49,7 @@ class PrimaryKeysHeader(Enum):
 
 class ForeignKeysHeader(Enum):
     """A Class for handling tableview headers"""
-    RM = 0, 'Remove?'
+    RM = 0, 'Select'
     CHILD_TABLE = 1, 'Child table'
     CHILD_FIELD = 2, 'Child field'
     PARENT_TABLE = 3, 'Parent table'
@@ -96,6 +96,7 @@ class EditDatapackageKeysWidget(QWidget):
         data = self.dc.package.primary_keys_data()
         self.original_pk_data = deepcopy(data)
         self.pks_model.reset_model(data)
+        self.pks_model.set_tool_tip("<p>Double click to start editing.")
         self.pks_model.insertColumns(PrimaryKeysHeader.RM.index, 1)
         self.pks_model.combo_items_method = self.pk_combo_items
         # foreign keys
@@ -105,6 +106,7 @@ class EditDatapackageKeysWidget(QWidget):
         data = self.dc.package.foreign_keys_data()
         self.original_fk_data = deepcopy(data)
         self.fks_model.reset_model(data)
+        self.fks_model.set_tool_tip("<p>Double click to start editing.")
         self.fks_model.insertColumns(ForeignKeysHeader.RM.index, 1)
         self.fks_model.combo_items_method = self.fk_combo_items
 
@@ -113,15 +115,30 @@ class EditDatapackageKeysWidget(QWidget):
         # primary keys
         self.ui.tableView_pks.setItemDelegate(ComboBoxDelegate(self))
         self.ui.tableView_pks.setItemDelegateForColumn(PrimaryKeysHeader.RM.index, CheckBoxDelegate(self))
-        self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_pks.setModel(self.pks_model)
-        self.ui.tableView_pks.setFocus()
+        self.resize_tableView_pks()
         # foreign keys
         self.ui.tableView_fks.setItemDelegate(ComboBoxDelegate(self))
         self.ui.tableView_fks.setItemDelegateForColumn(ForeignKeysHeader.RM.index, CheckBoxDelegate(self))
-        self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_fks.setModel(self.fks_model)
+        self.resize_tableView_fks()
         #self.ui.tableView_fks.setEditTriggers(QAbstractItemView.AllEditTriggers)
+
+    def resize_tableView_pks(self):
+        self.ui.tableView_pks.resizeColumnsToContents()
+        new_width = 2
+        for h in PrimaryKeysHeader:
+            new_width += self.ui.tableView_pks.columnWidth(h.index)
+        self.ui.tableView_pks.setMinimumWidth(new_width)
+
+    def resize_tableView_fks(self):
+        self.ui.tableView_fks.resizeColumnsToContents()
+        new_width = 2
+        for h in ForeignKeysHeader:
+            new_width += self.ui.tableView_fks.columnWidth(h.index)
+        self.ui.tableView_fks.setMinimumWidth(new_width)
 
     def pk_combo_items(self, index):
         """Return combobox items depending on index"""
@@ -202,6 +219,7 @@ class EditDatapackageKeysWidget(QWidget):
                 item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.pks_model.setData(index, item)
                 self.ui.tableView_pks.update(index)
+        self.resize_tableView_pks()
 
     @Slot(int, name='fk_data_commited')
     def fk_data_commited(self, sender):
@@ -224,6 +242,7 @@ class EditDatapackageKeysWidget(QWidget):
                 item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.fks_model.setData(index, item)
                 self.ui.tableView_fks.update(index)
+        self.resize_tableView_fks()
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
