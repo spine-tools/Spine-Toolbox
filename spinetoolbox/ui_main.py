@@ -29,7 +29,7 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QVBoxLayout
+from PySide2.QtWidgets import QMainWindow, QApplication, QMessageBox, QCheckBox, QAction, QVBoxLayout
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
@@ -45,7 +45,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
-from helpers import project_dir, get_datetime, erase_dir
+from helpers import project_dir, get_datetime, erase_dir, custom_getopenfilename, custom_getsavefilename
 from models import ToolTemplateModel, ConnectionModel
 
 
@@ -348,8 +348,8 @@ class ToolboxUI(QMainWindow):
         connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config),
-                                                 'Projects (*.proj)', options = QFileDialog.DontUseNativeDialog)
+            answer = custom_getopenfilename(self.ui.graphicsView, self, 'Open project', project_dir(self._config),
+                                                 'Projects (*.proj)')
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False
@@ -415,7 +415,7 @@ class ToolboxUI(QMainWindow):
     def save_project_as(self):
         """Save current project on a new name and activate it."""
         # noinspection PyCallByClass
-        dir_path = QFileDialog.getSaveFileName(self, 'Save project', project_dir(self._config),
+        dir_path = custom_getsavefilename(self.ui.graphicsView, self, 'Save project', project_dir(self._config),
                                                'Project (*.proj)')
         file_path = dir_path[0]
         if file_path == '':  # Cancel button clicked
@@ -549,7 +549,7 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, 'Select tool template file',
+        answer = custom_getopenfilename(self.ui.graphicsView, self, 'Select tool template file',
                                              os.path.join(project_dir(self._config), os.path.pardir),
                                              'JSON (*.json)')
         if answer[0] == '':  # Cancel button clicked

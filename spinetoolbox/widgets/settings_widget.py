@@ -26,11 +26,12 @@ Widget for controlling user settings.
 
 import logging
 import os
-from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
+from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
 import ui.settings
 from config import DEFAULT_PROJECT_DIR, STATUSBAR_SS, SETTINGS_SS, \
     GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
+from helpers import custom_getexistingdirectory
 
 
 class SettingsWidget(QWidget):
@@ -78,7 +79,7 @@ class SettingsWidget(QWidget):
         """Open file browser where user can select the directory of
         GAMS that the user wants to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select GAMS Directory', os.path.abspath('C:\\'))
+        answer = custom_getexistingdirectory(self._parent.ui.graphicsView, self, 'Select GAMS Directory', os.path.abspath('C:\\'))
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
@@ -97,7 +98,7 @@ class SettingsWidget(QWidget):
     def browse_julia_path(self):
         """Open file browser where user can select the path to wanted Julia version."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select Julia Directory', os.path.abspath('C:\\'))
+        answer = custom_getexistingdirectory(self._parent.ui.graphicsView, self, 'Select Julia Directory', os.path.abspath('C:\\'))
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)

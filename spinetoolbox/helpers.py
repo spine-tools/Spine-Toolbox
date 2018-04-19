@@ -34,6 +34,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from PySide2.QtGui import QCursor
 from config import DEFAULT_PROJECT_DIR
+from PySide2.QtWidgets import QFileDialog
 
 
 def busy_effect(func):
@@ -206,3 +207,27 @@ def erase_dir(path, verbosity=False):
     except OSError:
         raise
     return True
+
+def custom_getopenfilename(view, parent, caption, dir_, filter_):
+    view.setUpdatesEnabled(False)
+    answer = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
+    view.setUpdatesEnabled(True)
+    return answer
+
+def custom_getopenfilenames(view, parent, caption, dir_, filter_):
+    view.setUpdatesEnabled(False)
+    answer = QFileDialog.getOpenFileNames(parent, caption, dir_, filter_)
+    view.setUpdatesEnabled(True)
+    return answer
+
+def custom_getsavefilename(view, parent, caption, dir_, filter_):
+    view.setUpdatesEnabled(False)
+    answer = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
+    view.setUpdatesEnabled(True)
+    return answer
+
+def custom_getexistingdirectory(view, parent, caption, dir_):
+    view.setUpdatesEnabled(False)
+    answer = QFileDialog.getExistingDirectory(parent, caption, dir_)
+    view.setUpdatesEnabled(True)
+    return answer
