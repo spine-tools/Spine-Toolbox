@@ -42,13 +42,13 @@ class CustomQGraphicsView(QGraphicsView):
 
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
-        # self._scene = QGraphicsScene()
-        # super().__init__(self._scene)
+        #self._scene = QGraphicsScene()
+        #super().__init__(self._scene)
         super().__init__(parent)
-        self._qmainwindow = parent.parent().parent()
-        self._parent = self._qmainwindow
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
+        self._qmainwindow = parent.parent().parent()
+        self._parent = self._qmainwindow
         self._connection_model = None
         self._project_item_model = None
         #     self.link_drawer = LinkDrawer(parent)  # TODO: Pekka
@@ -59,10 +59,8 @@ class CustomQGraphicsView(QGraphicsView):
         self.max_sw_height = 0
         self.scene().changed.connect(self.scene_changed)
         self.active_subwindow = None
-        self.from_item = None
-        self.to_item = None
-        self.to_is_input = None
-        self.from_is_input = None
+        self.from_widget = None
+        self.to_widget = None
         self.show()
 
     @Slot(name='scene_changed')
@@ -85,8 +83,10 @@ class CustomQGraphicsView(QGraphicsView):
         """Set connection model and connect signals."""
         self._connection_model = model
         self._connection_model.dataChanged.connect(self.connectionDataChanged)
+        # note: since rows and columns are always removed together in our model,
+        # only one of these two lines below is strictly needed
         self._connection_model.rowsRemoved.connect(self.connectionsRemoved)
-        #self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
+        # self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
 
     def project_item_model(self):
         """Return project item model."""

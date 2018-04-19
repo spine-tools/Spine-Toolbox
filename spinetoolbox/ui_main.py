@@ -68,8 +68,6 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        # Initialize custom mdiArea based on QGraphicsView
-        # self.init_mdiArea()
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
@@ -351,7 +349,7 @@ class ToolboxUI(QMainWindow):
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config),
-                                                 'Projects (*.proj)')
+                                                 'Projects (*.proj)', options = QFileDialog.DontUseNativeDialog)
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False

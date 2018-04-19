@@ -29,7 +29,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(643, 557)
+        MainWindow.resize(1014, 626)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.centralwidget)
@@ -181,7 +181,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 643, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1014, 25))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -235,7 +235,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dockWidget_process_output.sizePolicy().hasHeightForWidth())
         self.dockWidget_process_output.setSizePolicy(sizePolicy)
-        self.dockWidget_process_output.setMinimumSize(QtCore.QSize(80, 93))
+        self.dockWidget_process_output.setMinimumSize(QtCore.QSize(80, 100))
         self.dockWidget_process_output.setObjectName("dockWidget_process_output")
         self.dockWidgetContents_2 = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
