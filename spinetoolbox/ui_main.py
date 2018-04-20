@@ -965,8 +965,14 @@ class ToolboxUI(QMainWindow):
             index (QModelIndex): Index of the item
         """
         tool_template = self.tool_template_model.tool_template(index.row())
-        if not QFile.
-        tool_template_url = "file:///" + tool_template.def_file_path
+        file_path = tool_template.def_file_path
+        # Check if file exists first. openUrl may return True if file doesn't exist
+        if not os.path.isfile(file_path):
+            logging.error("Failed to open editor for {0}".format(file_path))
+            self.msg_error.emit("Tool definition file <b>{0}</b> not found."
+                                .format(file_path))
+            return
+        tool_template_url = "file:///" + file_path
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
@@ -976,7 +982,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
                                 "files are associated with a text editor. For example on Windows "
                                 "10, go to Control Panel -> Default Programs to do this."
-                                .format(tool_template.def_file_path))
+                                .format(file_path))
         return
 
     @Slot("QModelIndex", name='open_tool_main_program_file')
@@ -987,19 +993,25 @@ class ToolboxUI(QMainWindow):
             index (QModelIndex): Index of the item
         """
         tool = self.tool_template_model.tool_template(index.row())
-        main_program_url = "file:///" + os.path.join(tool.path, tool.includes[0])
+        file_path = os.path.join(tool.path, tool.includes[0])
+        # Check if file exists first. openUrl may return True if file doesn't exist
+        if not os.path.isfile(file_path):
+            logging.error("Failed to open editor for {0}".format(file_path))
+            self.msg_error.emit("Tool main program file <b>{0}</b> not found."
+                                .format(file_path))
+            return
+        main_program_url = "file:///" + file_path
         # Open Tool template main program file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
-        logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(main_program_url))
-            filename, file_extension = os.path.splitext(main_program_url)
+            filename, file_extension = os.path.splitext(file_path)
             self.msg_error.emit("Unable to open Tool template main program file {0}. "
                                 "Make sure that <b>{1}</b> "
                                 "files are associated with an editor. For example on Windows "
                                 "10, go to Control Panel -> Default Programs to do this."
-                                .format(tool_template.includes[0]), file_extension)
+                                .format(filename, file_extension))
         return
 
     @Slot(str, name="add_message")
