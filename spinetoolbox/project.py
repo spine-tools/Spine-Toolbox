@@ -140,8 +140,8 @@ class SpineToolboxProject(MetaObject):
                     elif child_data.item_type == "Data Connection":
                         # Save references
                         item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
-                    else:
-                        item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
+                    elif child_data.item_type == "Data Store":
+                        item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
         # Save project stuff
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
@@ -168,9 +168,12 @@ class SpineToolboxProject(MetaObject):
         for name in data_stores.keys():
             short_name = data_stores[name]['short name']
             desc = data_stores[name]['description']
-            data = data_stores[name]['data']
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_data_store(name, desc, data)
+            try:
+                refs = data_stores[name]["references"]
+            except KeyError:
+                refs = list()
+            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, refs))
+            self.add_data_store(name, desc, refs)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
@@ -266,27 +269,26 @@ class SpineToolboxProject(MetaObject):
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, data=1):
-        """Make a QMdiSubwindow, add data store widget to it, and add subwindow to QMdiArea."""
-        data_store = DataStore(self._parent, name, description, self)
-        data_store.set_data(data)
+    def add_data_store(self, name, description, references):
+        """Add data store to project item model."""
+        data_store = DataStore(self._parent, name, description, self, references)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
 
     def add_data_connection(self, name, description, references):
-        """Add Data Connection as a QMdiSubwindow to QMdiArea."""
+        """Add Data Connection to project item model."""
         data_connection = DataConnection(self._parent, name, description, self, references)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
 
     def add_tool(self, name, description, tool_template):
-        """Add Tool as a QMdiSubwindow to QMdiArea."""
+        """Add Tool to project item model."""
         tool = Tool(self._parent, name, description, self, tool_template)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
 
     def add_view(self, name, description, data="View data"):
-        """Add View as a QMdiSubwindow to QMdiArea."""
+        """Add View to project item model."""
         view = View(self._parent, name, description, self)
         view.set_data(data)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick

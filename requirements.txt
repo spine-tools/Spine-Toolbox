@@ -1,3 +1,4 @@
 python >=3.5
 pyside2 >=2.*
-datapackage >=1.2.3 
+datapackage >=1.2.3
+pyodbc >= 4.0.23

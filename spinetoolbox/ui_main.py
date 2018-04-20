@@ -965,10 +965,12 @@ class ToolboxUI(QMainWindow):
             index (QModelIndex): Index of the item
         """
         tool_template = self.tool_template_model.tool_template(index.row())
+        if not QFile.
         tool_template_url = "file:///" + tool_template.def_file_path
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
+        logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(tool_template_url))
             self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
@@ -986,9 +988,10 @@ class ToolboxUI(QMainWindow):
         """
         tool = self.tool_template_model.tool_template(index.row())
         main_program_url = "file:///" + os.path.join(tool.path, tool.includes[0])
-        # Open Tool template definition file in editor
+        # Open Tool template main program file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
+        logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(main_program_url))
             filename, file_extension = os.path.splitext(main_program_url)
