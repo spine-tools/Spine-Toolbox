@@ -625,6 +625,18 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
             return
 
+    def update_tool_template(self, row, tool):
+        """Update a ToolTemplate instance in the project.
+        """
+        # Insert tool into model
+        index = self.tool_template_model.createIndex(row, 0)
+        self.tool_template_model.removeRow(row)
+        self.tool_template_model.insertRow(tool, row)
+        self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool.name))
+        # Reattach Tool template to any Tools that use it
+        logging.debug("Reattaching tool template {}".format(tool.name))
+        self.reattach_tool_templates(tool.name)
+
     @Slot(name="refresh_tool_templates")
     def refresh_tool_templates(self):
         """If user has changed a Tool template while the application is running,

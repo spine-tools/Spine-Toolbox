@@ -317,18 +317,15 @@ class ToolTemplateWidget(QWidget):
             self.statusbar.showMessage("Adding Tool template failed", 3000)
             return False
         # Check if a tool template with this name already exists
-        row = self._parent.tool_template_model.tool_template_row(self.definition['name'])
-        if row >= 0:
+        row = self._parent.tool_template_model.tool_template_row(tool.name)
+        if row >= 0: #Note: Row 0 at this moment has 'No tool'
             old_tool = self._parent.tool_template_model.tool_template(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
                 return True
-            logging.debug("Updating definition for tool template '{}'".format(self.definition['name']))
-            # Remove the tool template now, we will add it back right away with the new definition
-            if not self._parent.tool_template_model.removeRow(row):
-                self.statusbar.showMessage("This is odd. Tool template not found in project.", 3000)
-                return False
+            logging.debug("Updating definition for tool template '{}'".format(tool.name))
+            self._parent.update_tool_template(row, tool)
         else:
             answer = custom_getsavefilename(self._parent.ui.graphicsView, self, 'Save tool template file', \
                                             self.def_file_path, 'JSON (*.json)')
@@ -336,8 +333,7 @@ class ToolTemplateWidget(QWidget):
                 return False
             def_file = os.path.abspath(answer[0]) # TODO: maybe check that extension is .json?
             tool.set_def_path(def_file)
-        # Add tool
-        self._parent.add_tool_template(tool)
+            self._parent.add_tool_template(tool)
         # Save path of main program file relative to definition file in case they difer
         def_path = os.path.dirname(def_file)
         if def_path != self.includes_main_path:
@@ -350,9 +346,6 @@ class ToolTemplateWidget(QWidget):
                 self.statusbar.showMessage("Error saving file", 3000)
                 logging.exception("Saving JSON file failed.")
                 return False
-        if row >= 0: # this means a tool template was updated
-            logging.debug("Reattaching tool template {}".format(tool.name))
-            self._parent.reattach_tool_templates(tool.name)
         logging.debug("Tool template added or updated.")
         return True
 

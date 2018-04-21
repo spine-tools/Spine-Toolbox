@@ -87,7 +87,7 @@ class ToolTemplateModel(QAbstractListModel):
         """
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def insertRow(self, tool, row=0, parent=QModelIndex(), *args, **kwargs):
+    def insertRow(self, tool, row=None, parent=QModelIndex(), *args, **kwargs):
         """Insert row (tool) into model.
 
         Args:
@@ -100,8 +100,10 @@ class ToolTemplateModel(QAbstractListModel):
         Returns:
             Void
         """
+        if not row:
+            row = self.rowCount()
         self.beginInsertRows(parent, row, row)
-        self._tools.append(tool)
+        self._tools.insert(row, tool)
         self.endInsertRows()
 
     def removeRow(self, row, parent=QModelIndex(), *args, **kwargs):
