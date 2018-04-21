@@ -228,9 +228,9 @@ class SpineToolboxProject(MetaObject):
             return None
         # Infer path to the main program
         try:
-            includes_main_path = definition['includes_main_path'] #path to the main program relative to jsonfile
+            includes_main_path = definition['includes_main_path'] # path to main program relative to definition file
         except KeyError:
-            includes_main_path = "."
+            includes_main_path = "."    # assume main program and definition file are on the same path
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
         return self.load_tool_template_from_dict(definition, path)
 
@@ -239,7 +239,7 @@ class SpineToolboxProject(MetaObject):
 
         Args:
             definition (dict): Dictionary with the tool definition
-            path (str): Folder of the definition json file
+            path (str): Folder of the main program file
 
         Returns:
             Instance of a subclass if Tool

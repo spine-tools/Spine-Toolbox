@@ -36,6 +36,7 @@ from config import STATUSBAR_SS, INVALID_CHARS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import custom_getopenfilenames, custom_getsavefilename
 import logging
+import inspect
 
 
 class ToolTemplateWidget(QWidget):
@@ -301,35 +302,58 @@ class ToolTemplateWidget(QWidget):
             self.close()
 
     def call_add_tool_template(self):
-        """Creates new Tool Template according to user's selections."""
-        answer = custom_getsavefilename(self._parent.ui.graphicsView, self, 'Save tool template file', self.def_file_path,\
-                                             'JSON (*.json)')
-        if answer[0] == '':  # Cancel button clicked
-            return False
-        def_file = os.path.abspath(answer[0]) # TODO: maybe check that extension is .json?
-        # Save path of main program file relative to definition file in case they difer
-        def_path = os.path.dirname(def_file)
-        if def_path != self.includes_main_path:
-            self.definition['includes_main_path'] = os.path.relpath(self.includes_main_path, def_path)
-        with open(def_file, 'w') as fp:
-            try:
-                json.dump(self.definition, fp)
-            except ValueError:
-                self.statusbar.showMessage("Error saving file", 3000)
-                logging.exception("Saving JSON file failed.")
-                return False
+        """Create or update Tool Template according to user's selections.
+        If the name is the same as an existing tool template, it is updated and
+        auto-saved to the definition file. (The user is editting an existing
+        tool template)
+        If the name is not in the tool template model, create a new one and
+        offer to save the definition file. (The user is creating a new template
+        from scratch or spawning from an existing one)
+        """
+        # Load tool template
         path = self.includes_main_path
         tool = self._project.load_tool_template_from_dict(self.definition, path)
         if not tool:
             self.statusbar.showMessage("Adding Tool template failed", 3000)
             return False
-        if self._parent.tool_template_model.find_tool_template(tool.name):
-            # Tool template already in project but possibly the definition changed
-            self._parent.refresh_tool_templates()
-            return True
-        # Add definition file path into tool
-        tool.set_def_path(def_file)
+        # Check if a tool template with this name already exists
+        row = self._parent.tool_template_model.tool_template_row(self.definition['name'])
+        if row >= 0:
+            old_tool = self._parent.tool_template_model.tool_template(row)
+            def_file = old_tool.get_def_path()
+            tool.set_def_path(def_file)
+            if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
+                return True
+            logging.debug("Updating definition for tool template '{}'".format(self.definition['name']))
+            # Remove the tool template now, we will add it back right away with the new definition
+            if not self._parent.tool_template_model.removeRow(row):
+                self.statusbar.showMessage("This is odd. Tool template not found in project.", 3000)
+                return False
+        else:
+            answer = custom_getsavefilename(self._parent.ui.graphicsView, self, 'Save tool template file', \
+                                            self.def_file_path, 'JSON (*.json)')
+            if answer[0] == '':  # Cancel button clicked
+                return False
+            def_file = os.path.abspath(answer[0]) # TODO: maybe check that extension is .json?
+            tool.set_def_path(def_file)
+        # Add tool
         self._parent.add_tool_template(tool)
+        # Save path of main program file relative to definition file in case they difer
+        def_path = os.path.dirname(def_file)
+        if def_path != self.includes_main_path:
+            self.definition['includes_main_path'] = os.path.relpath(self.includes_main_path, def_path)
+        # Save file descriptor
+        with open(def_file, 'w') as fp:
+            try:
+                json.dump(self.definition, fp, indent=4)
+            except ValueError:
+                self.statusbar.showMessage("Error saving file", 3000)
+                logging.exception("Saving JSON file failed.")
+                return False
+        if row >= 0: # this means a tool template was updated
+            logging.debug("Reattaching tool template {}".format(tool.name))
+            self._parent.reattach_tool_templates(tool.name)
+        logging.debug("Tool template added or updated.")
         return True
 
     def keyPressEvent(self, e):

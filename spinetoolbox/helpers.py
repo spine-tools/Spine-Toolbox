@@ -209,24 +209,52 @@ def erase_dir(path, verbosity=False):
     return True
 
 def custom_getopenfilename(view, parent, caption, dir_, filter_):
+    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
+    In this way `view` does not attempt to paint over the dialog.
+
+    Args:
+        view (QGraphicsView): The view to stop before opening the dialog.
+        parent, caption, dir_, filter_ : Normal arguments to getOpenFileName.
+    """
     view.setUpdatesEnabled(False)
     answer = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
     view.setUpdatesEnabled(True)
     return answer
 
 def custom_getopenfilenames(view, parent, caption, dir_, filter_):
+    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
+    In this way `view` does not attempt to paint over the dialog.
+
+    Args:
+        view (QGraphicsView): The view to stop before opening the dialog.
+        parent, caption, dir_, filter_ : Normal arguments to getOpenFileNames.
+    """
     view.setUpdatesEnabled(False)
     answer = QFileDialog.getOpenFileNames(parent, caption, dir_, filter_)
     view.setUpdatesEnabled(True)
     return answer
 
 def custom_getsavefilename(view, parent, caption, dir_, filter_):
+    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
+    In this way `view` does not attempt to paint over the dialog.
+
+    Args:
+        view (QGraphicsView): The view to stop before opening the dialog.
+        parent, caption, dir_, filter_ : Normal arguments to getSaveFileName.
+    """
     view.setUpdatesEnabled(False)
     answer = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
     view.setUpdatesEnabled(True)
     return answer
 
 def custom_getexistingdirectory(view, parent, caption, dir_):
+    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
+    In this way `view` does not attempt to paint over the dialog.
+
+    Args:
+        view (QGraphicsView): The view to stop before opening the dialog.
+        parent, caption, dir_ : Normal arguments to getExistingDirectory.
+    """
     view.setUpdatesEnabled(False)
     answer = QFileDialog.getExistingDirectory(parent, caption, dir_)
     view.setUpdatesEnabled(True)

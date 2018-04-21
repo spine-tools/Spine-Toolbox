@@ -652,16 +652,29 @@ class ToolboxUI(QMainWindow):
                 return
             self.init_tool_template_model(tool_template_paths)
             # Reattach all Tool templates because ToolTemplateModel may have changed
-            for subwindow in self.ui.graphicsView.subWindowList():
-                w = subwindow.widget()  # SubWindowWidget
-                w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-                if w_type == "Tool":
-                    # Find item in project model
-                    item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-                    tool = item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
-                    if tool.tool_template() is not None:
-                        # Get old tool template name
-                        old_t_name = tool.tool_template().name
+            self.reattach_tool_templates()
+        else:
+            self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
+            return
+
+    def reattach_tool_templates(self, tool_template_name=None):
+        """Reattach tool templates that may have changed.
+
+        Args:
+        tool_template_name (str): if None, reattach all tool templates in project.
+            If a name is given, only reattach that one
+        """
+        for subwindow in self.ui.graphicsView.subWindowList():
+            w = subwindow.widget()  # SubWindowWidget
+            w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
+            if w_type == "Tool":
+                # Find item in project model
+                item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
+                tool = item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
+                if tool.tool_template() is not None:
+                    # Get old tool template name
+                    old_t_name = tool.tool_template().name
+                    if not tool_template_name or old_t_name == tool_template_name:
                         # Find the same tool template from ToolTemplateModel
                         new_template = self.tool_template_model.find_tool_template(old_t_name)
                         if not new_template:
@@ -670,7 +683,7 @@ class ToolboxUI(QMainWindow):
                             continue
                         tool.set_tool_template(new_template)
                         self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
-                                      .format(new_template.name, tool.name))
+                                .format(new_template.name, tool.name))
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
