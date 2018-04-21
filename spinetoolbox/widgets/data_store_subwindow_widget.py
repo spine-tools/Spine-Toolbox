@@ -49,11 +49,11 @@ class DataStoreWidget(QWidget):
         self._owner = owner  # Name of object that owns this object (e.g. 'DC 1')
         self.reference_model = QStandardItemModel()  # References to databases
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
-        #self.ui.treeView_references.setModel(self.reference_model)
-        #self.ui.treeView_data.setModel(self.data_model)
-        #self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        #self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        #self.ui.label_name.setFocus()
+        self.ui.treeView_references.setModel(self.reference_model)
+        self.ui.treeView_data.setModel(self.data_model)
+        self.ui.treeView_references.setStyleSheet(DS_TREEVIEW_HEADER_SS)
+        self.ui.treeView_data.setStyleSheet(DS_TREEVIEW_HEADER_SS)
+        self.ui.label_name.setFocus()
 
     def set_owner(self, owner):
         """Set owner of this SubWindowWidget.

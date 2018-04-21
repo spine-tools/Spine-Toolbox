@@ -78,7 +78,7 @@ class DataStore(MetaObject):
         """Connect this data store's signals to slots."""
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
-        #self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
+        self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         #self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
@@ -103,6 +103,23 @@ class DataStore(MetaObject):
         self.add_connection_string_form = AddConnectionStringForm(self._parent, self)
         self.add_connection_string_form.show()
 
+    @Slot(name="remove_references")
+    def remove_references(self):
+        """Remove selected references from reference list.
+        Removes all references if nothing is selected.
+        """
+        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        if not indexes:  # Nothing selected
+            self.references.clear()
+            self._parent.msg.emit("All references removed")
+        else:
+            rows = [ind.row() for ind in indexes]
+            rows.sort(reverse=True)
+            for row in rows:
+                self.references.pop(row)
+            self._parent.msg.emit("Selected references removed")
+        self._widget.populate_reference_list(self.references)
+
     @Slot(name="show_connections")
     def show_connections(self):
         """Show connections of this item."""
@@ -121,6 +138,11 @@ class DataStore(MetaObject):
         else:
             for item in outputs:
                 self._parent.msg_warning.emit("{0}".format(item))
+
+    def add_reference(self, reference):
+        """Add reference to reference model and populate widget's reference list"""
+        self.references.append(reference)
+        self._widget.populate_reference_list(self.references)
 
     def data_references(self):
         """Return a list of paths to files and databases that are in this item as references (self.references)."""

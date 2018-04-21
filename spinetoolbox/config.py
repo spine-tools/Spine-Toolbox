@@ -82,6 +82,9 @@ REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
 OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
+# Required fields for Connection Strings
+CS_REQUIRED_KEYS = ['DRIVER', 'SERVER', 'DATABASE']
+
 # Default settings
 SETTINGS = {"project_directory": "",
             "open_previous_project": "false",
