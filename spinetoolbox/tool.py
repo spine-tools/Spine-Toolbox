@@ -92,7 +92,7 @@ class Tool(MetaObject):
 
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.ui.graphicsView.draw_links(self.sender())
+        self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name='show_details')
     def show_details(self):

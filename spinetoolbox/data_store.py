@@ -33,7 +33,8 @@ from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from helpers import create_dir, custom_getopenfilenames
 from PySide2.QtCore import Slot
-from widgets.add_connection_string_widget import AddConnectionStringForm
+from widgets.add_connection_string_widget import AddConnectionStringWidget
+from widgets.Spine_data_explorer_widget import SpineDataExplorerWidget
 
 
 class DataStore(MetaObject):
@@ -44,7 +45,7 @@ class DataStore(MetaObject):
         name (str): Object name
         description (str): Object description
         project (SpineToolboxProject): Project
-        references (list): List of references (can be files or database references)
+        references (list): List of references (for now it's only database references)
     """
     def __init__(self, parent, name, description, project, references):
         super().__init__(name, description)
@@ -57,50 +58,41 @@ class DataStore(MetaObject):
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()
         # Make directory for Data Store
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         self.references = references
-        try:
-            create_dir(self.data_dir)
-        except OSError:
-            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
-                                        " Check permissions.".format(self.data_dir))
+        self.Spine_data_model = QStandardItemModel()
+        self.Spine_data_model.setHorizontalHeaderItem(0, QStandardItem(name))
         # Populate references model
         self._widget.populate_reference_list(self.references)
-        # Populate data (files) model
-        data_files = os.listdir(self.data_dir)
-        self._widget.populate_data_list(data_files)
         #set connections buttons slot type
         self._widget.ui.toolButton_connector.is_connector = True
         self.add_connection_string_form = None
+        self.Spine_data_explorer_form = None
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
+        self._widget.ui.pushButton_open.clicked.connect(self.open_explorer)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        #self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
+        self._widget.ui.toolButton_add.clicked.connect(self.import_into_project)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.ui.graphicsView.draw_links(self.sender())
+        self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
-    @Slot(name="open_directory")
-    def open_directory(self):
-        """Open file explorer in Data Connection data directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+    @Slot(name="open_explorer")
+    def open_explorer(self):
+        """Open Spine data explorer."""
+        self.Spine_data_explorer_form = SpineDataExplorerWidget(self._parent, self)
+        self.Spine_data_explorer_form.show()
 
     @Slot(name="add_references")
     def show_add_connection_string_form(self):
         """Show the form for specifying connection strings."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        self.add_connection_string_form = AddConnectionStringForm(self._parent, self)
+        self.add_connection_string_form = AddConnectionStringWidget(self._parent, self)
         self.add_connection_string_form.show()
 
     @Slot(name="remove_references")
@@ -119,6 +111,50 @@ class DataStore(MetaObject):
                 self.references.pop(row)
             self._parent.msg.emit("Selected references removed")
         self._widget.populate_reference_list(self.references)
+
+    @Slot(name="import_into_project")
+    def import_into_project(self):
+        """Import data from dsn reference list into project and update Data QTreeView."""
+        if not self.references:
+            self._parent.msg_warning.emit("No data to import")
+            return
+        self._parent.msg.emit("Importing data")
+        databases = list()
+        for connection_string in self.references:
+            try:
+                cnxn = pyodbc.connect(connection_string, autocommit=True, timeout=3)
+            except pyodbc.Error:
+                self.statusbar.showMessage("Unable to connect to {}".format(dsn), 3000)
+                continue
+            try:
+                database_name = self.import_database(cnxn)
+            except pyodbc.Error:
+                self._parent.msg_error.emit("[pyodbc.Error] Import failed")
+                continue
+            databases.append(database_name)
+        self._widget.populate_data_list(databases)
+
+    def import_database(self, cnxn):
+        """Import database from am ODBC connection into project
+
+        Args:
+            cnxn (pyodbc.Connection): The connection to read data from
+        """
+        database_name = cnxn.getinfo(pyodbc.SQL_DATABASE_NAME)
+        self._parent.msg.emit("Importing database <b>{0}</b>".format(database_name))
+        database_item = QStandardItem(database_name)
+        cursor = cnxn.cursor()
+        cursor2 = cnxn.cursor()
+        for row in cursor.execute("select * from object_classes"):
+            object_class_item = QStandardItem(row.Object_class)
+            for row2 in cursor2.execute("""
+                select * from objects where Object_class = ?
+            """, row.Object_class):
+                object_item = QStandardItem(row2.Object)
+                object_class_item.appendRow(object_item)
+            database_item.appendRow(object_class_item)
+        self.Spine_data_model.appendRow(database_item)
+        return database_name
 
     @Slot(name="show_connections")
     def show_connections(self):
@@ -140,7 +176,7 @@ class DataStore(MetaObject):
                 self._parent.msg_warning.emit("{0}".format(item))
 
     def add_reference(self, reference):
-        """Add reference to reference model and populate widget's reference list"""
+        """Add reference to reference list and populate widget's reference list"""
         self.references.append(reference)
         self._widget.populate_reference_list(self.references)
 

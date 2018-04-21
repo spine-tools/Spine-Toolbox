@@ -26,6 +26,7 @@ Module for data connection class.
 
 import os
 import shutil
+import logging
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QMessageBox
@@ -93,7 +94,7 @@ class DataConnection(MetaObject):
 
     @Slot(name="draw_links")
     def draw_links(self):
-        self._parent.ui.graphicsView.draw_links(self.sender())
+        self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name="open_directory")
     def open_directory(self):

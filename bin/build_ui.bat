@@ -89,10 +89,15 @@ CALL pyside2-uic ../spinetoolbox/ui/edit_datapackage_keys.ui -o ../spinetoolbox/
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_datapackage_keys.py.o > ..\spinetoolbox\ui\edit_datapackage_keys.py
 del ..\spinetoolbox\ui\edit_datapackage_keys.py.o
 
-ECHO building edit_datapackage_keys.py
+ECHO building add_connection_string.py
 CALL pyside2-uic ../spinetoolbox/ui/add_connection_string.ui -o ../spinetoolbox/ui/add_connection_string.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_connection_string.py.o > ..\spinetoolbox\ui\add_connection_string.py
 del ..\spinetoolbox\ui\add_connection_string.py.o
+
+ECHO building Spine_data_explorer.py
+CALL pyside2-uic ../spinetoolbox/ui/Spine_data_explorer.ui -o ../spinetoolbox/ui/Spine_data_explorer.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\Spine_data_explorer.py.o > ..\spinetoolbox\ui\Spine_data_explorer.py
+del ..\spinetoolbox\ui\Spine_data_explorer.py.o
 
 ECHO building resources_icons_rc.py
 CALL pyside2-rcc -o ../spinetoolbox/resources_icons_rc.py ../spinetoolbox/ui/resources/resources_icons.qrc
