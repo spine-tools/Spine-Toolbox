@@ -91,7 +91,7 @@ del ..\spinetoolbox\ui\edit_datapackage_keys.py.o
 
 ECHO building edit_datapackage_keys.py
 CALL pyside2-uic ../spinetoolbox/ui/add_connection_string.ui -o ../spinetoolbox/ui/add_connection_string.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_connection_string.py.o > ..\spinetoolbox\ui\edit_datapackage_keys.py
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_connection_string.py.o > ..\spinetoolbox\ui\add_connection_string.py
 del ..\spinetoolbox\ui\add_connection_string.py.o
 
 ECHO building resources_icons_rc.py
