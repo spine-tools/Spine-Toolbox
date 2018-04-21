@@ -7,21 +7,22 @@ simulation models.
 
 - Python 3.5+
 - PySide2 for Qt 5.6+
-- Datapackage 1.2.3+
+- datapackage 1.2.3+
+- pyodbc 4.0.23+
 
-### Installing PySide2 and Datapackage
+### Installing requirements
 
-There are three options for installing PySide2 and Datapackage
+There are three options for installing PySide2, datapackage, and pyodbc.
 
-- Installing PySide2 and Datapackage for Anaconda & Miniconda (3.5+)
-- Installing PySide2 and Datapackage on a ‘clean’ Python (3.5+)
+- Installing for Anaconda & Miniconda (3.5+)
+- Installing on a ‘clean’ Python (3.5+)
 - Installing PySide2 by building sources (Python 2 & 3)
 
 Each option is presented below.
 
-#### OPTION 1: Installing PySide2 and Datapackage for Anaconda & Miniconda Python (3.5+)
+#### OPTION 1: Installing PySide2, datapackage, and pyodbc for Anaconda & Miniconda Python (3.5+)
 
-PySide2 for Qt 5.6.2 is available on the conda-forge channel. Datapackage 1.2.3 is available on the manulero channel. You can install all requirements by running
+PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge channel. Datapackage 1.2.3 is available on the manulero channel. You can install all requirements by running
 
     conda install -c conda-forge -c manulero --file requirements.txt
 
@@ -31,12 +32,13 @@ Alternatively, create a separate environment for the Toolbox with
 
 	conda create --name spinetoolbox -c conda-forge -c manulero --file requirements.txt
 
-Last, install Datapackage by running
+Last, install datapackage and pyodbc by running
 
     pip install datapackage
+    pip install pyodbc
 
 
-#### OPTION 2: Installing PySide2 and Datapackage on a ‘clean’ Python (3.5+)
+#### OPTION 2: Installing PySide2, datapackage, and pyodbc on a ‘clean’ Python (3.5+)
 
 Download wheel for PySide2 from [http://hansch.info/PySide2/](http://hansch.info/PySide2/)
 
@@ -57,9 +59,10 @@ resides with the following contents:
 
 If your PySide2 folder is in another path, modify Prefix and Binaries lines accordingly.
 
-Install Datapackage by running
+Install datapackage and pyodbc by running
 
     pip install datapackage
+    pip install pyodbc
 
 Spine Toolbox should now work and you are ready to develop the core
 application components. If you want to develop the Graphical User
@@ -131,6 +134,6 @@ the code for the Spine Toolbox user interface.
 After modifying the user interface (*.ui) files with `designer.exe`, re-run
 `build_ui.bat` to build the Spine Toolbox interface anew.
 
-On Linux, just run `bash build_ui.sh` instead of `build_ui.bat`, and `designer` instead of `designer.exe`.
+On Linux, just use `bash build_ui.sh` instead of `build_ui.bat`, and `designer` instead of `designer.exe`.
 
 From the command prompt, run `python spinetoolbox.py` in the `spinetoolbox` folder.
