@@ -19,7 +19,7 @@ There are three options for installing PySide2 and Datapackage
 
 Each option is presented below.
 
-#### Installing PySide2 and Datapackage for Anaconda & Miniconda Python (3.5+)
+#### OPTION 1: Installing PySide2 and Datapackage for Anaconda & Miniconda Python (3.5+)
 
 PySide2 for Qt 5.6.2 is available on the conda-forge channel. Datapackage 1.2.3 is available on the manulero channel. You can install all requirements by running
 
@@ -31,7 +31,12 @@ Alternatively, create a separate environment for the Toolbox with
 
 	conda create --name spinetoolbox -c conda-forge -c manulero --file requirements.txt
 
-#### Installing PySide2 and Datapackage on a ‘clean’ Python (3.5+)
+Last, install Datapackage by running
+
+    pip install datapackage
+
+
+#### OPTION 2: Installing PySide2 and Datapackage on a ‘clean’ Python (3.5+)
 
 Download wheel for PySide2 from [http://hansch.info/PySide2/](http://hansch.info/PySide2/)
 
@@ -61,7 +66,7 @@ application components. If you want to develop the Graphical User
 Interface (views, buttons, menus, etc.) you need the PySide2 GUI
 development tools.
 
-#### Installing PySide2 GUI Development Tools
+#### OPTION 3: Installing PySide2 GUI Development Tools
 
 ##### Windows
 
