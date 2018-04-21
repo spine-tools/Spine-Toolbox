@@ -5,8 +5,8 @@ ECHO.
 ECHO ^<Script for Building Spine Toolbox GUI^>
 ECHO Copyright (C) ^<2017-2018^>  ^<VTT Technical Research Centre of Finland^>
 ECHO This program comes with ABSOLUTELY NO WARRANTY; for details see 'about'.
-ECHO box in the application. This is free software, and you are welcome to 
-ECHO redistribute it under certain conditions; See files COPYING and 
+ECHO box in the application. This is free software, and you are welcome to
+ECHO redistribute it under certain conditions; See files COPYING and
 ECHO COPYING.LESSER for details.
 ECHO.
 
@@ -38,6 +38,11 @@ ECHO building subwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/subwindow.ui -o ../spinetoolbox/ui/subwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow.py.o > ..\spinetoolbox\ui\subwindow.py
 del ..\spinetoolbox\ui\subwindow.py.o
+
+ECHO building subwindow_data_connection.py
+CALL pyside2-uic ../spinetoolbox/ui/subwindow_data_store.ui -o ../spinetoolbox/ui/subwindow_data_store.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\subwindow_data_store.py.o > ..\spinetoolbox\ui\subwindow_data_store.py
+del ..\spinetoolbox\ui\subwindow_data_store.py.o
 
 ECHO building subwindow_data_connection.py
 CALL pyside2-uic ../spinetoolbox/ui/subwindow_data_connection.ui -o ../spinetoolbox/ui/subwindow_data_connection.py.o
