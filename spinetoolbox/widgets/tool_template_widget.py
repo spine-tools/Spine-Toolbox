@@ -29,11 +29,11 @@ is filled with all the information from the Templated being edited
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QMessageBox
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog
 from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, INVALID_CHARS, TT_TREEVIEW_HEADER_SS,\
+from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import custom_getopenfilenames, custom_getsavefilename
 import logging
@@ -69,8 +69,8 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setStyleSheet(STATUSBAR_SS)
-        # init ui
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
+        # init ui
         self.ui.treeView_includes.setModel(self.includes_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -321,7 +321,7 @@ class ToolTemplateWidget(QWidget):
             self.close()
 
     def call_add_tool_template(self):
-        """Create or update Tool Template according to user's selections.
+        """Add or update Tool Template according to user's selections.
         If the name is the same as an existing tool template, it is updated and
         auto-saved to the definition file. (The user is editting an existing
         tool template)

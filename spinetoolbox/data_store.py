@@ -33,6 +33,7 @@ from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from helpers import create_dir, custom_getopenfilenames
 from PySide2.QtCore import Slot
+from widgets.add_connection_string_widget import AddConnectionStringForm
 
 
 class DataStore(MetaObject):
@@ -70,12 +71,13 @@ class DataStore(MetaObject):
         self._widget.populate_data_list(data_files)
         #set connections buttons slot type
         self._widget.ui.toolButton_connector.is_connector = True
+        self.add_connection_string_form = None
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.connect(self.add_references)
+        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
         #self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         #self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
@@ -95,19 +97,11 @@ class DataStore(MetaObject):
             self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(name="add_references")
-    def add_references(self):
-        """Let user select references to files for this data connection."""
+    def show_add_connection_string_form(self):
+        """Show the form for specifying connection strings."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = custom_getopenfilenames(self._parent.ui.graphicsView, self._parent, "Add file references", APPLICATION_PATH, "*.*")
-        file_paths = answer[0]
-        if not file_paths:  # Cancel button clicked
-            return
-        for path in file_paths:
-            if path in self.references:
-                self._parent.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
-                continue
-            self.references.append(os.path.abspath(path))
-        self._widget.populate_reference_list(self.references)
+        self.add_connection_string_form = AddConnectionStringForm(self._parent, self)
+        self.add_connection_string_form.show()
 
     @Slot(name="show_connections")
     def show_connections(self):
