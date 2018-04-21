@@ -30,7 +30,8 @@ import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QMessageBox
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, INVALID_CHARS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
@@ -108,6 +109,7 @@ class ToolTemplateWidget(QWidget):
         """Connect signals to slots."""
         #self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
+        self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
         self.ui.toolButton_minus_inputfiles.clicked.connect(self.remove_inputfiles)
@@ -212,6 +214,23 @@ class ToolTemplateWidget(QWidget):
                 continue
             self.includes.append(path_to_add)
         self.populate_includes_list(self.includes)
+
+
+    @Slot("QModelIndex", name="open_includes_file")
+    def open_includes_file(self, index):
+        """Open source file in default program."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            includes_file = self.includes[index.row()]
+            url = "file:///" + os.path.join(self.includes_main_path, includes_file)
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._parent.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
     @Slot(name="add_inputfiles")
     def add_inputfiles(self):

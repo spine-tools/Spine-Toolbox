@@ -992,6 +992,7 @@ class ToolboxUI(QMainWindow):
         tool_template = self.tool_template_model.tool_template(index.row())
         file_path = tool_template.def_file_path
         # Check if file exists first. openUrl may return True if file doesn't exist
+        # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for {0}".format(file_path))
             self.msg_error.emit("Tool definition file <b>{0}</b> not found."
@@ -1020,6 +1021,7 @@ class ToolboxUI(QMainWindow):
         tool = self.tool_template_model.tool_template(index.row())
         file_path = os.path.join(tool.path, tool.includes[0])
         # Check if file exists first. openUrl may return True if file doesn't exist
+        # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for {0}".format(file_path))
             self.msg_error.emit("Tool main program file <b>{0}</b> not found."

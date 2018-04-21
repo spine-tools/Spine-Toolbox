@@ -85,6 +85,7 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
+        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
@@ -155,6 +156,22 @@ class DataConnection(MetaObject):
                 continue
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
+
+    @Slot("QModelIndex", name="open_data_file")
+    def open_data_file(self, index):
+        """Open data file in default program."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            data_file = os.listdir(self.data_dir)[index.row()]
+            url = "file:///" + os.path.join(self.data_dir, data_file)
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._parent.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
     @Slot(name="create_datapackage")
     def create_datapackage(self):
