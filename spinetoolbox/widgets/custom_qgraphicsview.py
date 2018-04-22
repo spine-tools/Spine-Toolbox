@@ -177,7 +177,7 @@ class CustomQGraphicsView(QGraphicsView):
                 to_widget = sub_windows[to].widget()
                 if data:  # connection made, add link widget
                     link = Link(self._parent, from_widget, to_widget)
-                    self.scene().addItem(link)
+                    self.scene().addItem(link) #TODO: try QPersistentModelIndex to keep track of Links
                 else:   # connection destroyed, remove link widget
                     link = self.find_link(from_widget, to_widget)
                     if link is not None:

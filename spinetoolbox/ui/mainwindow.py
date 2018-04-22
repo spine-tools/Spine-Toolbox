@@ -378,6 +378,6 @@ class Ui_MainWindow(object):
         self.actionSubprocess_Output.setText(QtWidgets.QApplication.translate("MainWindow", "Subprocess Output", None, -1))
         self.actionSubprocess_Output.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Subprocess Output widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

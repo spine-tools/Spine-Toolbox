@@ -469,7 +469,7 @@ class MinimalTableModel(QAbstractTableModel):
         return len(self.header)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
-        """Set headers."""
+        """Get headers."""
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             try:
                 h = self.header[section]

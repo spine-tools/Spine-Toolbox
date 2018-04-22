@@ -18,22 +18,23 @@
 #############################################################################
 
 """
-QWidget that is shown to user when adding Connection strings to a Data Store.
+QWidget that is shown to user when opening Spine data model from a Data Store.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   21.4.2018
 """
 
 import os
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar
+from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView
 from PySide2.QtCore import Slot, Qt
 from ui.Spine_data_explorer import Ui_Form
 from config import STATUSBAR_SS
+from models import MinimalTableModel
 import logging
 
 
 class SpineDataExplorerWidget(QWidget):
-    """A widget to query user's input for a new connection string"""
+    """A widget to show and edit Spine objects in a data store."""
 
     def __init__(self, parent, data_store):
         """ Initialize class.
@@ -49,6 +50,8 @@ class SpineDataExplorerWidget(QWidget):
         # Class attributes
         self._parent = parent
         self._data_store = data_store
+        self.object_parameters_model = MinimalTableModel()
+        self.relationship_parameters_model = MinimalTableModel()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -57,11 +60,43 @@ class SpineDataExplorerWidget(QWidget):
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
         self.ui.treeView_object.setModel(self._data_store.Spine_data_model)
-        #self.connect_signals()
+        self.ui.tableView_object_parameters.setModel(self.object_parameters_model)
+        self.ui.tableView_relationship_parameters.setModel(self.relationship_parameters_model)
+        self.ui.tableView_object_parameters.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_relationship_parameters.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.connect_signals()
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.pushButton_close.clicked.connect(self.close)
+        self.ui.treeView_object.clicked.connect(self.reset_parameter_models)
+
+    @Slot("QModelIndex", name="reset_parameter_models")
+    def reset_parameter_models(self, index):
+        """Populate tableViews whenever an object item is selected on the treeView"""
+        # logging.debug("reset_parameter_models")
+        # Read parameter data from item's UserRole
+        item = self._data_store.Spine_data_model.itemFromIndex(index)
+        parameter_data = item.data(Qt.UserRole)
+        if parameter_data and item.parent(): # object item selected
+            # Discover root item (ie database)
+            root = item
+            while root.parent():
+                root = root.parent()
+            # Read parameter names from root's UserRole
+            parameter_names = root.data(Qt.UserRole)
+            # Set headers
+            self.object_parameters_model.header.clear()
+            self.object_parameters_model.header.append("parameter_entity_class_id")
+            self.object_parameters_model.header.extend(parameter_names)
+            self.relationship_parameters_model.header.clear()
+            self.relationship_parameters_model.header.append("relationship_class_id")
+            self.relationship_parameters_model.header.append("parent_object_id")
+            self.relationship_parameters_model.header.append("child_object_id")
+            self.relationship_parameters_model.header.extend(parameter_names)
+            # Reset models
+            self.object_parameters_model.reset_model(parameter_data.object)
+            self.relationship_parameters_model.reset_model(parameter_data.relationship)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

@@ -73,16 +73,16 @@ class AddConnectionStringWidget(QWidget):
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
-    @Slot(int, name="unpack_dsn")
-    def unpack_dsn(self, index):
+    @Slot("int", name="unpack_dsn")
+    def unpack_dsn(self, row):
         """Whenever a new dsn is selected, populate form with data from it"""
-        if index == 0: # Dummy entry 'Select data source name...' is selected
+        if row == 0: # Dummy entry 'Select data source name...' is selected
             return
         dsn = self.ui.comboBox_dsn.currentText()
         driver = self.data_sources[dsn]
         self.ui.lineEdit_driver.setText(driver)
         try:
-            cnxn = pyodbc.connect(DSN=dsn, timeout=3)
+            cnxn = pyodbc.connect(DSN=dsn, autocommit=True, timeout=3)
         except pyodbc.OperationalError:
             self.statusbar.showMessage("Unable to connect to {}".format(dsn), 3000)
             return
@@ -120,7 +120,7 @@ class AddConnectionStringWidget(QWidget):
                 return
         connection_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in self.string_dict.items() if v)
         try:
-            cnxn = pyodbc.connect(connection_string, timeout=3)
+            cnxn = pyodbc.connect(connection_string, autocommit=True, timeout=3)
         except:
             self.statusbar.showMessage("Connection failed.")
             return

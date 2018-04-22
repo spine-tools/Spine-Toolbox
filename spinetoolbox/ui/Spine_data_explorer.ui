@@ -27,7 +27,7 @@
     <x>0</x>
     <y>0</y>
     <width>524</width>
-    <height>502</height>
+    <height>496</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,49 +71,88 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <widget class="QWidget" name="">
+       <widget class="QWidget" name="layoutWidget">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
           <widget class="QLabel" name="label_object_tree">
            <property name="text">
-            <string>Object tree</string>
+            <string>&lt;b&gt;Object tree&lt;/b&gt;</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QTreeView" name="treeView_object"/>
+          <widget class="QTreeView" name="treeView_object">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
        <widget class="QSplitter" name="splitter">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <horstretch>2</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
         </property>
-        <widget class="QWidget" name="">
+        <widget class="QWidget" name="layoutWidget">
          <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
            <widget class="QLabel" name="label_object_parameters">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
-             <string>Object Parameters</string>
+             <string>&lt;b&gt;Object Parameters&lt;/b&gt;</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QTableView" name="tableView_object_parameters"/>
+           <widget class="QTableView" name="tableView_object_parameters">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
-        <widget class="QWidget" name="">
+        <widget class="QWidget" name="layoutWidget">
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
            <widget class="QLabel" name="label_relationship_parameters">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="text">
-             <string>Relationship Parameters</string>
+             <string>&lt;b&gt;Relationship Parameters&lt;/b&gt;</string>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QTableView" name="tableView_relationship_parameters"/>
+           <widget class="QTableView" name="tableView_relationship_parameters">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

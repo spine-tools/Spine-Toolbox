@@ -107,6 +107,7 @@ class DataStoreWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(item.replace(';', ';<br>'), Qt.ToolTipRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):
