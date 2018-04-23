@@ -34,6 +34,7 @@ from widgets.data_store_subwindow_widget import DataStoreWidget
 from PySide2.QtCore import Qt, Slot
 from widgets.add_connection_string_widget import AddConnectionStringWidget
 from widgets.Spine_data_explorer_widget import SpineDataExplorerWidget
+from helpers import busy_effect
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -145,6 +146,7 @@ class DataStore(MetaObject):
         self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
         self._widget.populate_data_list(self.databases)
 
+    @busy_effect
     def import_reference(self, reference):
         """Import database from an ODBC connection reference into Spine data model.
         Args:
