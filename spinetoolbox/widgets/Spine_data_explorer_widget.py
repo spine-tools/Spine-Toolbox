@@ -64,6 +64,7 @@ class SpineDataExplorerWidget(QWidget):
         self.ui.tableView_relationship_parameters.setModel(self.relationship_parameters_model)
         self.ui.tableView_object_parameters.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_relationship_parameters.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.treeView_object.expandAll()
         self.connect_signals()
 
     def connect_signals(self):
@@ -87,12 +88,12 @@ class SpineDataExplorerWidget(QWidget):
             parameter_names = root.data(Qt.UserRole)
             # Set headers
             self.object_parameters_model.header.clear()
-            self.object_parameters_model.header.append("parameter_entity_class_id")
+            #self.object_parameters_model.header.append("parameter_entity_class_id")
             self.object_parameters_model.header.extend(parameter_names)
             self.relationship_parameters_model.header.clear()
-            self.relationship_parameters_model.header.append("relationship_class_id")
-            self.relationship_parameters_model.header.append("parent_object_id")
-            self.relationship_parameters_model.header.append("child_object_id")
+            self.relationship_parameters_model.header.append("relationship_class_name")
+            self.relationship_parameters_model.header.append("child_class_name")
+            self.relationship_parameters_model.header.append("child_object_name")
             self.relationship_parameters_model.header.extend(parameter_names)
             # Reset models
             self.object_parameters_model.reset_model(parameter_data.object)

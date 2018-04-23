@@ -31,7 +31,6 @@ import logging
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
-from helpers import create_dir, custom_getopenfilenames
 from PySide2.QtCore import Qt, Slot
 from widgets.add_connection_string_widget import AddConnectionStringWidget
 from widgets.Spine_data_explorer_widget import SpineDataExplorerWidget
@@ -63,6 +62,8 @@ class DataStore(MetaObject):
         self.Spine_data_model.setHorizontalHeaderItem(0, QStandardItem(name))
         # Populate references model
         self._widget.populate_reference_list(self.references)
+        # Import data into project
+        self.import_references()
         #set connections buttons slot type
         self._widget.ui.toolButton_connector.is_connector = True
         self.add_connection_string_form = None
@@ -74,7 +75,7 @@ class DataStore(MetaObject):
         self._widget.ui.pushButton_open.clicked.connect(self.open_explorer)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.toolButton_add.clicked.connect(self.import_into_project)
+        self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
@@ -88,12 +89,21 @@ class DataStore(MetaObject):
         self.Spine_data_explorer_form = SpineDataExplorerWidget(self._parent, self)
         self.Spine_data_explorer_form.showMaximized()
 
-    @Slot(name="add_references")
+    @Slot(name="show_add_connection_string_form")
     def show_add_connection_string_form(self):
         """Show the form for specifying connection strings."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         self.add_connection_string_form = AddConnectionStringWidget(self._parent, self)
         self.add_connection_string_form.show()
+
+    def add_reference(self, reference):
+        """Add reference to reference list and populate widget's reference list"""
+        self.references.append(reference)
+        self._widget.populate_reference_list(self.references)
+        # import reference into project
+        # self.import_reference(reference)
+        # self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
+        # self._widget.populate_data_list(self.databases)
 
     @Slot(name="remove_references")
     def remove_references(self):
@@ -111,9 +121,10 @@ class DataStore(MetaObject):
                 self.references.pop(row)
             self._parent.msg.emit("Selected references removed")
         self._widget.populate_reference_list(self.references)
+        # TODO: remove reference imported to the project
 
-    @Slot(name="import_into_project")
-    def import_into_project(self):
+    @Slot(name="import_references")
+    def import_references(self):
         """Import data from selected items in reference list and update database list.
         If no item is selected then import all of them.
         """
@@ -121,89 +132,98 @@ class DataStore(MetaObject):
             self._parent.msg_warning.emit("No data to import")
             return
         indexes = self._widget.ui.treeView_references.selectedIndexes()
-        if not indexes:  # Nothing selected
+        if not indexes:  # Nothing selected, import all
             references_to_import = self.references
         else:
             references_to_import = [self.references[ind.row()] for ind in indexes]
-        self._parent.msg.emit("Importing data")
-        for connection_string in references_to_import:
+        for reference in references_to_import:
             try:
-                cnxn = pyodbc.connect(connection_string, autocommit=True, timeout=3)
-            except pyodbc.Error as e:
-                self._parent.msg_error.emit("[pyodbc.Error] Connection failed ({0})".format(e))
-                continue
-            try:
-                database_name = self.import_database(cnxn)
+                self.import_reference(reference)
             except pyodbc.Error as e:
                 self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
                 continue
-            self.databases.append(database_name)
+        self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
         self._widget.populate_data_list(self.databases)
 
-    def import_database(self, cnxn):
-        """Import database from a ODBC connection reference into Spine data model.
+    def import_reference(self, reference):
+        """Import database from an ODBC connection reference into Spine data model.
         Args:
             cnxn (pyodbc.Connection): The connection to read data from
         """
+        cnxn = pyodbc.connect(reference, autocommit=True, timeout=3)
         database_name = cnxn.getinfo(pyodbc.SQL_DATABASE_NAME)
-        # Make sure that we don't overwrite existing data
-        new_database_name = database_name
-        k = len(self.Spine_data_model.findItems(database_name, Qt.MatchStartsWith))
-        if k > 0:
-            new_database_name += "_" + str(k-1)
-        self._parent.msg.emit("Importing database <b>{0}</b>".format(new_database_name))
+        self._parent.msg.emit("Importing database <b>{0}</b>".format(database_name))
         # Create database item
-        database_item = QStandardItem(new_database_name)
+        database_item = QStandardItem(database_name)
         # Create container for parameter names
         parameter_names = list()
-        for row in cnxn.cursor().execute("""
+        for i,row in enumerate(cnxn.cursor().execute("""
             select COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS
-            where TABLE_NAME = 'parameters'
+            where TABLE_NAME = 'parameter'
             and TABLE_SCHEMA = ?
-        """, database_name):
+        """, database_name)):
+            # Get rid of `object_name`
+            if row.COLUMN_NAME == 'object_name':
+                continue
             parameter_names.append(row.COLUMN_NAME)
         # Store parameter names in item's UserRole
         database_item.setData(parameter_names, Qt.UserRole)
-        for row in cnxn.cursor().execute("select * from object_classes"):
+        for object_class in cnxn.cursor().execute("select * from object_class"):
             # Create object class item
-            object_class_item = QStandardItem(row.object_class_id)
-            for row2 in cnxn.cursor().execute("""
-                select * from objects where object_class_id = ?
-            """, row.object_class_id):
+            object_class_item = QStandardItem(object_class.name)
+            for object_ in cnxn.cursor().execute("""
+                select * from object where class_name = ?
+            """, object_class.name):
                 # Create object item
-                object_item = QStandardItem(row2.object_id)
+                object_item = QStandardItem(object_.name)
                 # Create parameter container
                 parameter_data = ParameterContainer()
                 # Query object parameters
-                for row3 in cnxn.cursor().execute("""
-                    select pd.parameter_entity_class_id, p.*
-                    from parameters as p
+                for parameter in cnxn.cursor().execute("""
+                    select p.*
+                    from parameter as p
                     join parameter_definition as pd
-                    on p.parameter_id = pd.parameter_id
-                    where pd.parameter_entity_class_id = ?
-                    and p.entity_id = ?
-                """, [row.object_class_id, row2.object_id]):
-                    parameter_data.object.append(row3)
+                    on p.name = pd.name
+                    where pd.object_class_name = ?
+                    and p.object_name = ?
+                """, [object_class.name, object_.name]):
+                    # Get rid of `object_name`
+                    parameter = [p for i,p in enumerate(parameter)\
+                                if parameter.cursor_description[i][0] != 'object_name']
+                    parameter_data.object.append(parameter)
                 # Query relationship parameters
-                for row3 in cnxn.cursor().execute("""
-                    select rc.relationship_class_id, r.parent_object_id, r.child_object_id, p.*
-                    from parameters as p
-                    join relationships as r
-                    on p.entity_id = r.relationship_id
-                    join relationship_classes as rc
-                    on r.relationship_class_id = rc.relationship_class_id
-                    where rc.parent_class_id = ?
-                    and r.parent_object_id = ?
-                """, [row.object_class_id, row2.object_id]):
-                    parameter_data.relationship.append(row3)
+                for parameter in cnxn.cursor().execute("""
+                    select rc.name, rc.child_class_name, r.child_object_name, p.*
+                    from relationship_class as rc
+                    join (relationship as r
+                    left join parameter as p
+                    on r.name = p.object_name)
+                    on rc.name = r.class_name
+                    where rc.parent_class_name = ?
+                    and r.parent_object_name = ?
+                """, [object_class.name, object_.name]):
+                    # Get rid of `object_name`
+                    parameter = [p for i,p in enumerate(parameter)\
+                                if parameter.cursor_description[i][0] != 'object_name']
+                    parameter_data.relationship.append(parameter)
                 # Store parameter data in item's UserRole
                 object_item.setData(parameter_data, Qt.UserRole)
                 # Attach object to object class
                 object_class_item.appendRow(object_item)
             # Attach object class to database
             database_item.appendRow(object_class_item)
-        self.Spine_data_model.appendRow(database_item)
-        return database_name
+        # Find items with the same name as the current database
+        items = self.Spine_data_model.findItems(database_name, Qt.MatchExactly, column=0)
+        # Row where to insert the new database item
+        row = self.Spine_data_model.rowCount()
+        if len(items) > 0:
+            row = items[0].index().row()
+        # Remove existing items with the same name (column 0)
+        for item in items:
+            row = item.index().row()
+            if not self.Spine_data_model.removeRow(row):
+                self.msg_error.emit("Removing item <b>{0}</b> from data store failed".format(database_name))
+        self.Spine_data_model.insertRow(row, database_item)
 
     @Slot(name="show_connections")
     def show_connections(self):
@@ -224,13 +244,8 @@ class DataStore(MetaObject):
             for item in outputs:
                 self._parent.msg_warning.emit("{0}".format(item))
 
-    def add_reference(self, reference):
-        """Add reference to reference list and populate widget's reference list"""
-        self.references.append(reference)
-        self._widget.populate_reference_list(self.references)
-
     def data_references(self):
-        """Return a list of paths to files and databases that are in this item as references (self.references)."""
+        """Return a list connections strings that are in this item as references (self.references)."""
         return self.references
 
     def get_widget(self):
@@ -238,8 +253,8 @@ class DataStore(MetaObject):
         return self._widget
 
 class ParameterContainer:
-    """A class to store parameter data for a Spine object or relationship,
-    to use it as model for table views in SpineDataExplorerWidgets.
+    """A class to store parameter data for a Spine object or relationship.
+    It serves to populate models of table views in SpineDataExplorerWidgets.
 
     """
     def __init__(self):

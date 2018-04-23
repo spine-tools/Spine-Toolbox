@@ -208,54 +208,18 @@ def erase_dir(path, verbosity=False):
         raise
     return True
 
-def custom_getopenfilename(view, parent, caption, dir_, filter_):
-    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
-    In this way `view` does not attempt to paint over the dialog.
-
-    Args:
-        view (QGraphicsView): The view to stop before opening the dialog.
-        parent, caption, dir_, filter_ : Normal arguments to getOpenFileName.
+def blocking_updates(view, func):
+    """Wrapper to block updates to a view while calling a function.
+    Fix bug on Linux which causes QFileDialogs to become unresponsive
+    when there is visible items on QGraphicsView.
     """
-    view.setUpdatesEnabled(False)
-    answer = QFileDialog.getOpenFileName(parent, caption, dir_, filter_)
-    view.setUpdatesEnabled(True)
-    return answer
-
-def custom_getopenfilenames(view, parent, caption, dir_, filter_):
-    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
-    In this way `view` does not attempt to paint over the dialog.
-
-    Args:
-        view (QGraphicsView): The view to stop before opening the dialog.
-        parent, caption, dir_, filter_ : Normal arguments to getOpenFileNames.
-    """
-    view.setUpdatesEnabled(False)
-    answer = QFileDialog.getOpenFileNames(parent, caption, dir_, filter_)
-    view.setUpdatesEnabled(True)
-    return answer
-
-def custom_getsavefilename(view, parent, caption, dir_, filter_):
-    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
-    In this way `view` does not attempt to paint over the dialog.
-
-    Args:
-        view (QGraphicsView): The view to stop before opening the dialog.
-        parent, caption, dir_, filter_ : Normal arguments to getSaveFileName.
-    """
-    view.setUpdatesEnabled(False)
-    answer = QFileDialog.getSaveFileName(parent, caption, dir_, filter_)
-    view.setUpdatesEnabled(True)
-    return answer
-
-def custom_getexistingdirectory(view, parent, caption, dir_):
-    """Open a file dialog after disabling updates to `view`. Reenable updates afterwards.
-    In this way `view` does not attempt to paint over the dialog.
-
-    Args:
-        view (QGraphicsView): The view to stop before opening the dialog.
-        parent, caption, dir_ : Normal arguments to getExistingDirectory.
-    """
-    view.setUpdatesEnabled(False)
-    answer = QFileDialog.getExistingDirectory(parent, caption, dir_)
-    view.setUpdatesEnabled(True)
-    return answer
+    def new_function(*args, **kwargs):
+        view.setUpdatesEnabled(False)
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logging.exception("Error {}".format(e.args[0]))
+            raise e
+        finally:
+            view.setUpdatesEnabled(True)
+    return new_function

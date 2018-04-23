@@ -113,7 +113,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>&lt;b&gt;Object Parameters&lt;/b&gt;</string>
+             <string>&lt;b&gt;Object parameter&lt;/b&gt;</string>
             </property>
            </widget>
           </item>
@@ -140,7 +140,7 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>&lt;b&gt;Relationship Parameters&lt;/b&gt;</string>
+             <string>&lt;b&gt;Relationship parameter&lt;/b&gt;</string>
             </property>
            </widget>
           </item>

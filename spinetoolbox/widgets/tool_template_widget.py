@@ -29,13 +29,13 @@ is filled with all the information from the Templated being edited
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog
 from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
-from helpers import custom_getopenfilenames, custom_getsavefilename
+from helpers import blocking_updates
 import logging
 import inspect
 
@@ -189,7 +189,8 @@ class ToolTemplateWidget(QWidget):
         """Let user select source files for this tool template."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
-        answer = custom_getopenfilenames(self._parent.ui.graphicsView, self, "Add source file", path, "*.*")
+        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileNames)
+        answer = func(self, "Add source file", path, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
@@ -346,7 +347,8 @@ class ToolTemplateWidget(QWidget):
             logging.debug("Updating definition for tool template '{}'".format(tool.name))
             self._parent.update_tool_template(row, tool)
         else:
-            answer = custom_getsavefilename(self._parent.ui.graphicsView, self, 'Save tool template file', \
+            func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getSaveFileName)
+            answer = func(self, 'Save tool template file', \
                                             self.def_file_path, 'JSON (*.json)')
             if answer[0] == '':  # Cancel button clicked
                 return False

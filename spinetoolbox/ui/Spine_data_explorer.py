@@ -138,7 +138,7 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Spine Data Explorer", None, -1))
         self.label_object_tree.setText(QtWidgets.QApplication.translate("Form", "<b>Object tree</b>", None, -1))
-        self.label_object_parameters.setText(QtWidgets.QApplication.translate("Form", "<b>Object Parameters</b>", None, -1))
-        self.label_relationship_parameters.setText(QtWidgets.QApplication.translate("Form", "<b>Relationship Parameters</b>", None, -1))
+        self.label_object_parameters.setText(QtWidgets.QApplication.translate("Form", "<b>Object parameter</b>", None, -1))
+        self.label_relationship_parameters.setText(QtWidgets.QApplication.translate("Form", "<b>Relationship parameter</b>", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 

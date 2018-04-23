@@ -25,11 +25,11 @@ QWidget that is shown to user when adding Connection strings to a Data Store.
 
 import os
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar
+from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 from ui.add_connection_string import Ui_Form
 from config import STATUSBAR_SS, APPLICATION_PATH
-from helpers import custom_getopenfilename
+from helpers import blocking_updates
 import logging
 import pyodbc
 from config import CS_REQUIRED_KEYS
@@ -83,7 +83,7 @@ class AddConnectionStringWidget(QWidget):
         self.ui.lineEdit_driver.setText(driver)
         try:
             cnxn = pyodbc.connect(DSN=dsn, autocommit=True, timeout=3)
-        except pyodbc.OperationalError:
+        except pyodbc.Error as e:
             self.statusbar.showMessage("Unable to connect to {}".format(dsn), 3000)
             return
         server_name = cnxn.getinfo(pyodbc.SQL_SERVER_NAME)
@@ -98,7 +98,8 @@ class AddConnectionStringWidget(QWidget):
         """Let user select a driver file from computer."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = APPLICATION_PATH # TODO: make it a more relevant path
-        answer = custom_getopenfilename(self._parent.ui.graphicsView, self, "Select driver file", path, "*.*")
+        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileName)
+        answer = func(self, "Select driver file", path, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
