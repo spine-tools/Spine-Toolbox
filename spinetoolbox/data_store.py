@@ -33,7 +33,7 @@ from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from PySide2.QtCore import Qt, Slot
 from widgets.add_connection_string_widget import AddConnectionStringWidget
-from widgets.Spine_data_explorer_widget import SpineDataExplorerWidget
+from widgets.spine_data_explorer_widget import SpineDataExplorerWidget
 from helpers import busy_effect
 
 class DataStore(MetaObject):
@@ -59,8 +59,8 @@ class DataStore(MetaObject):
         # Make directory for Data Store
         self.references = references
         self.databases = list() # name of imported databases
-        self.Spine_data_model = QStandardItemModel()
-        self.Spine_data_model.setHorizontalHeaderItem(0, QStandardItem(name))
+        self.spine_data_model = QStandardItemModel()
+        self.spine_data_model.setHorizontalHeaderItem(0, QStandardItem(name))
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Import data into project
@@ -68,7 +68,7 @@ class DataStore(MetaObject):
         #set connections buttons slot type
         self._widget.ui.toolButton_connector.is_connector = True
         self.add_connection_string_form = None
-        self.Spine_data_explorer_form = None
+        self.spine_data_explorer_form = None
         self.connect_signals()
 
     def connect_signals(self):
@@ -87,8 +87,8 @@ class DataStore(MetaObject):
     @Slot(name="open_explorer")
     def open_explorer(self):
         """Open Spine data explorer."""
-        self.Spine_data_explorer_form = SpineDataExplorerWidget(self._parent, self)
-        self.Spine_data_explorer_form.showMaximized()
+        self.spine_data_explorer_form = SpineDataExplorerWidget(self._parent, self)
+        self.spine_data_explorer_form.showMaximized()
 
     @Slot(name="show_add_connection_string_form")
     def show_add_connection_string_form(self):
@@ -103,7 +103,7 @@ class DataStore(MetaObject):
         self._widget.populate_reference_list(self.references)
         # import reference into project
         # self.import_reference(reference)
-        # self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
+        # self.databases = [self.spine_data_model.item(r).text() for r in range(self.spine_data_model.rowCount())]
         # self._widget.populate_data_list(self.databases)
 
     @Slot(name="remove_references")
@@ -143,7 +143,7 @@ class DataStore(MetaObject):
             except pyodbc.Error as e:
                 self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
                 continue
-        #self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
+        #self.databases = [self.spine_data_model.item(r).text() for r in range(self.spine_data_model.rowCount())]
         self._widget.populate_data_list(self.databases)
 
     @busy_effect
@@ -215,18 +215,18 @@ class DataStore(MetaObject):
             # Attach object class to database
             database_item.appendRow(object_class_item)
         # Find items with the same name as the current database (column 0)
-        items = self.Spine_data_model.findItems(database_name, Qt.MatchExactly, column=0)
+        items = self.spine_data_model.findItems(database_name, Qt.MatchExactly, column=0)
         if len(items) > 0:
             positon = items[0].index().row() # insert item at the previous position
         else:
-            positon = self.Spine_data_model.rowCount() # insert item at the end
+            positon = self.spine_data_model.rowCount() # insert item at the end
             self.databases.append(database_name)
         # Remove existing items with the same name
         for item in items:
             row = item.index().row()
-            if not self.Spine_data_model.removeRow(row):
+            if not self.spine_data_model.removeRow(row):
                 self.msg_error.emit("Removing item <b>{0}</b> from data store failed".format(database_name))
-        self.Spine_data_model.insertRow(positon, database_item)
+        self.spine_data_model.insertRow(positon, database_item)
 
     @Slot(name="show_connections")
     def show_connections(self):

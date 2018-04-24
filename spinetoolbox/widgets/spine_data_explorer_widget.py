@@ -27,7 +27,7 @@ import os
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView
 from PySide2.QtCore import Slot, Qt
-from ui.Spine_data_explorer import Ui_Form
+from ui.spine_data_explorer import Ui_Form
 from config import STATUSBAR_SS
 from models import MinimalTableModel
 import logging
@@ -59,7 +59,7 @@ class SpineDataExplorerWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.ui.treeView_object.setModel(self._data_store.Spine_data_model)
+        self.ui.treeView_object.setModel(self._data_store.spine_data_model)
         self.ui.tableView_object_parameters.setModel(self.object_parameters_model)
         self.ui.tableView_relationship_parameters.setModel(self.relationship_parameters_model)
         self.ui.tableView_object_parameters.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
@@ -77,7 +77,7 @@ class SpineDataExplorerWidget(QWidget):
         """Populate tableViews whenever an object item is selected on the treeView"""
         # logging.debug("reset_parameter_models")
         # Read parameter data from item's UserRole
-        item = self._data_store.Spine_data_model.itemFromIndex(index)
+        item = self._data_store.spine_data_model.itemFromIndex(index)
         parameter_data = item.data(Qt.UserRole)
         if parameter_data and item.parent(): # object item selected
             # Discover root item (ie database)
