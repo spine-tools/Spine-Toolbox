@@ -26,9 +26,9 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Signal, Slot, QPoint, Qt
+from PySide2.QtCore import Signal, Slot, QPoint, Qt, QTimer
 from views import LinkDrawer, Link
-from config import ITEM_TYPE
+from config import ITEM_TYPE, FPS
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -42,11 +42,12 @@ class CustomQGraphicsView(QGraphicsView):
 
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
-        #self._scene = QGraphicsScene()
-        #super().__init__(self._scene)
         super().__init__(parent)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.update_viewport)
+        self.timer.start(1000/FPS)   # Adjust frames per second
         self._qmainwindow = parent.parent().parent()
         self._parent = self._qmainwindow
         self._connection_model = None
@@ -63,10 +64,15 @@ class CustomQGraphicsView(QGraphicsView):
         self.to_widget = None
         self.show()
 
+    @Slot(name="update_viewport")
+    def update_viewport(self):
+        #logging.debug("timeout")
+        self.viewport().update()
+
     @Slot(name='scene_changed')
     def scene_changed(self):
         """Check if active subwindow has changed and emit signal accordingly."""
-        # logging.debug("scene changed")
+        #logging.debug("scene changed")
         current_active_sw = self.scene().activeWindow()
         if current_active_sw and current_active_sw.data(ITEM_TYPE) == "subwindow":
             if current_active_sw != self.active_subwindow:

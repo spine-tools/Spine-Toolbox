@@ -372,7 +372,7 @@
         <number>0</number>
        </property>
        <property name="viewportUpdateMode">
-        <enum>QGraphicsView::FullViewportUpdate</enum>
+        <enum>QGraphicsView::NoViewportUpdate</enum>
        </property>
       </widget>
      </widget>

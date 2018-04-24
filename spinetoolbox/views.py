@@ -9,7 +9,7 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 import inspect
-from PySide2.QtCore import Qt, QRect, QPoint, QPointF, QLineF
+from PySide2.QtCore import Qt, Slot, QRect, QPoint, QPointF, QLineF
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsLineItem
 from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush
 from math import atan2, sin, cos, pi #arrow head
@@ -48,6 +48,12 @@ class Link(QGraphicsLineItem):
         self.to_bottomright = None
         self.from_offset = None
         self.to_offset = None
+
+
+    @Slot(name="update")
+    def update(self):
+        logging.debug("update link")
+        super().update()
 
     def compute_offsets(self):
         """Compute connector-button offsets within the frame."""

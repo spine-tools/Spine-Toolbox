@@ -136,3 +136,6 @@ DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
+
+# QGrapchisView framerate
+FPS = 15

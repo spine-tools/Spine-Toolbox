@@ -176,7 +176,7 @@ class Ui_MainWindow(object):
         self.graphicsView.setSizePolicy(sizePolicy)
         self.graphicsView.setFrameShadow(QtWidgets.QFrame.Raised)
         self.graphicsView.setMidLineWidth(0)
-        self.graphicsView.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
+        self.graphicsView.setViewportUpdateMode(QtWidgets.QGraphicsView.NoViewportUpdate)
         self.graphicsView.setObjectName("graphicsView")
         self.horizontalLayout_2.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)

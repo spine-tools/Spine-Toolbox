@@ -64,7 +64,7 @@ class DataStore(MetaObject):
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Import data into project
-        self.import_references()
+        # self.import_references()
         #set connections buttons slot type
         self._widget.ui.toolButton_connector.is_connector = True
         self.add_connection_string_form = None
@@ -143,14 +143,14 @@ class DataStore(MetaObject):
             except pyodbc.Error as e:
                 self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
                 continue
-        self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
+        #self.databases = [self.Spine_data_model.item(r).text() for r in range(self.Spine_data_model.rowCount())]
         self._widget.populate_data_list(self.databases)
 
     @busy_effect
     def import_reference(self, reference):
         """Import database from an ODBC connection reference into Spine data model.
         Args:
-            cnxn (pyodbc.Connection): The connection to read data from
+            reference (str): The connection string stored as reference.
         """
         cnxn = pyodbc.connect(reference, autocommit=True, timeout=3)
         database_name = cnxn.getinfo(pyodbc.SQL_DATABASE_NAME)
@@ -159,11 +159,11 @@ class DataStore(MetaObject):
         database_item = QStandardItem(database_name)
         # Create container for parameter names
         parameter_names = list()
-        for i,row in enumerate(cnxn.cursor().execute("""
+        for row in cnxn.cursor().execute("""
             select COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS
             where TABLE_NAME = 'parameter'
             and TABLE_SCHEMA = ?
-        """, database_name)):
+        """, database_name):
             # Get rid of `object_name`
             if row.COLUMN_NAME == 'object_name':
                 continue
@@ -214,18 +214,19 @@ class DataStore(MetaObject):
                 object_class_item.appendRow(object_item)
             # Attach object class to database
             database_item.appendRow(object_class_item)
-        # Find items with the same name as the current database
+        # Find items with the same name as the current database (column 0)
         items = self.Spine_data_model.findItems(database_name, Qt.MatchExactly, column=0)
-        # Row where to insert the new database item
-        row = self.Spine_data_model.rowCount()
         if len(items) > 0:
-            row = items[0].index().row()
-        # Remove existing items with the same name (column 0)
+            positon = items[0].index().row() # insert item at the previous position
+        else:
+            positon = self.Spine_data_model.rowCount() # insert item at the end
+            self.databases.append(database_name)
+        # Remove existing items with the same name
         for item in items:
             row = item.index().row()
             if not self.Spine_data_model.removeRow(row):
                 self.msg_error.emit("Removing item <b>{0}</b> from data store failed".format(database_name))
-        self.Spine_data_model.insertRow(row, database_item)
+        self.Spine_data_model.insertRow(positon, database_item)
 
     @Slot(name="show_connections")
     def show_connections(self):
