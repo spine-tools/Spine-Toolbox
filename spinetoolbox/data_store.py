@@ -24,8 +24,6 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import os
-import shutil
 import pyodbc
 import logging
 from PySide2.QtGui import QStandardItemModel, QStandardItem
@@ -101,7 +99,7 @@ class DataStore(MetaObject):
     @Slot(name="open_explorer")
     def open_explorer(self):
         """Open Spine data explorer."""
-        #self.spine_data_explorer.showMaximized()
+        # self.spine_data_explorer.showMaximized()
         self.spine_data_explorer.show()
 
     @Slot(name="show_add_connection_string_form")
@@ -158,7 +156,6 @@ class DataStore(MetaObject):
                 continue
         self._widget.populate_data_list(self.databases)
 
-
     @Slot(name="show_connections")
     def show_connections(self):
         """Show connections of this item."""
@@ -181,7 +178,3 @@ class DataStore(MetaObject):
     def data_references(self):
         """Return a list connections strings that are in this item as references (self.references)."""
         return self.references
-
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget

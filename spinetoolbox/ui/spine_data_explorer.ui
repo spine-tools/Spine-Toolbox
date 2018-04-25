@@ -27,7 +27,7 @@
     <x>0</x>
     <y>0</y>
     <width>782</width>
-    <height>559</height>
+    <height>601</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -68,6 +68,12 @@
      </property>
      <item>
       <widget class="QSplitter" name="splitter_3">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -81,7 +87,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QTreeView" name="treeView_object">
+          <widget class="CustomQTreeView" name="treeView_object">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>1</horstretch>
@@ -169,13 +175,20 @@
             </item>
            </layout>
           </item>
+          <item>
+           <widget class="Line" name="line_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
         <widget class="QSplitter" name="splitter">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>
-         <widget class="QWidget" name="">
+         <widget class="QWidget" name="layoutWidget">
           <layout class="QVBoxLayout" name="verticalLayout">
            <item>
             <widget class="QLabel" name="label_parameter_as_parent">
@@ -241,7 +254,7 @@
            </item>
           </layout>
          </widget>
-         <widget class="QWidget" name="">
+         <widget class="QWidget" name="layoutWidget">
           <layout class="QVBoxLayout" name="verticalLayout_4">
            <item>
             <widget class="QLabel" name="label_parameter_as_child">
@@ -312,21 +325,18 @@
       </widget>
      </item>
      <item>
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
-        <widget class="QLabel" name="label">
-         <property name="text">
-          <string>Commit message:</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLineEdit" name="lineEdit">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>0</height>
-          </size>
+        <widget class="QLineEdit" name="lineEdit_commit_msg">
+         <property name="placeholderText">
+          <string>Enter commit message here...</string>
          </property>
         </widget>
        </item>
@@ -338,9 +348,16 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_cancel">
+        <widget class="QPushButton" name="pushButton_reset">
          <property name="text">
-          <string>Cancel</string>
+          <string>Reset</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_close">
+         <property name="text">
+          <string>Close</string>
          </property>
         </widget>
        </item>
@@ -379,6 +396,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomQTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resources/resources_icons.qrc"/>
  </resources>

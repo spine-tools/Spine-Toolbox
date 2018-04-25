@@ -54,6 +54,7 @@ class SpineDataExplorerWidget(QWidget):
         self._parent = parent
         self._data_store = data_store
         self.object_tree_model = QStandardItemModel()
+        self.object_tree_model.setHorizontalHeaderItem(0, QStandardItem(self._data_store.name))
         self.object_parameter_model = MinimalTableModel()
         self.parameter_as_parent_model = MinimalTableModel()
         self.parameter_as_child_model = MinimalTableModel()
@@ -75,9 +76,9 @@ class SpineDataExplorerWidget(QWidget):
         # self.ui.treeView_object.expandAll() # TODO: try to make this work
         # context menus
         self.object_tree_context_menu = None
-        self.object_tree_update_qry_parameters = dict()
-        self.object_tree_delete_qry_parameters = dict()
-        self.object_tree_insert_qry_parameters = dict()
+        self.object_tree_update = dict()
+        self.object_tree_delete = dict()
+        self.object_tree_insert = dict()
         self.connect_signals()
         self.object_tree_model_item_changed_connection = None
         self.object_tree_model_rows_removed_connection = None
@@ -85,8 +86,9 @@ class SpineDataExplorerWidget(QWidget):
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
-        self.ui.pushButton_cancel.clicked.connect(self.cancel_clicked)
-        self.ui.treeView_object.clicked.connect(self.reset_parameter_models)
+        self.ui.pushButton_close.clicked.connect(self.close_clicked)
+        self.ui.pushButton_reset.clicked.connect(self.reset_clicked)
+        self.ui.treeView_object.currentIndexChanged.connect(self.reset_parameter_models)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
 
     def connect_object_tree_model_signals(self):
@@ -205,11 +207,12 @@ class SpineDataExplorerWidget(QWidget):
                 self._parent.msg_error.emit("Removing item <b>{0}</b> from data store failed".format(database_name))
         self.object_tree_model.insertRow(position, database_item)
         # clear commit query parameters
-        self.object_tree_update_qry_parameters[reference] = dict()
-        self.object_tree_delete_qry_parameters[reference] = dict()
-        self.object_tree_insert_qry_parameters[reference] = dict()
+        self.object_tree_update[reference] = dict()
+        self.object_tree_delete[reference] = dict()
+        self.object_tree_insert[reference] = dict()
         self.connect_object_tree_model_signals()
-        self.ui.treeView_object.expand(database_item.index())
+        self.clear_parameter_models()
+        # self.ui.treeView_object.expand(database_item.index())
 
 
     @Slot("QStandardItem", name="object_tree_model_item_changed")
@@ -221,14 +224,15 @@ class SpineDataExplorerWidget(QWidget):
         while root.parent():
             root = root.parent()
         reference = root.data(REFERENCE)
+        self.object_tree_update.setdefault(reference, dict())
         table = item.data(TABLE)
+        name = item.data(NAME)
         new_name = item.text()
-        old_name = item.data(NAME)
-        self.object_tree_update_qry_parameters.setdefault(reference, dict())
-        p = {'table': table, 'new_name': new_name, 'old_name': old_name}
-        # Note: the dictionary is so that only the last renaming is applied
-        self.object_tree_update_qry_parameters[reference][table,old_name] = p
-        logging.debug(self.object_tree_update_qry_parameters)
+        if table == "object_class":
+            self.object_tree_update[reference][table, name] = new_name
+        elif table == "object":
+            object_class_name = item.parent().data(NAME)
+            self.object_tree_update[reference][table, object_class_name, name] = new_name
 
     @Slot("QModelIndex", "int", "int", name="object_tree_model_rows_removed")
     def object_tree_model_rows_removed(self, parent, first, last):
@@ -241,59 +245,116 @@ class SpineDataExplorerWidget(QWidget):
         while root.parent():
             root = root.parent()
         reference = root.data(REFERENCE)
-        self.object_tree_delete_qry_parameters.setdefault(reference, list())
+        self.object_tree_delete.setdefault(reference, dict())
         table = item.data(TABLE)
         name = item.data(NAME)
         if table == "object_class":
-            p = {'table': table, 'name': name}
-            self.object_tree_delete_qry_parameters[reference].append(p)
+            self.object_tree_delete[reference][table, name] = True
         elif table == "object":
             object_class_name = parent_item.data(NAME)
-            p = {'table': table, 'object_class_name': object_class_name, 'name': name}
-            self.object_tree_delete_qry_parameters[reference].append(p)
-        logging.debug(self.object_tree_delete_qry_parameters)
+            self.object_tree_delete[reference][table, object_class_name, name] = True
 
     @Slot(name="commit_clicked")
     def commit_clicked(self):
         """Commit model to database"""
+        commit_message = self.ui.lineEdit_commit_msg.text()
+        if not commit_message:
+            self.statusbar.showMessage("Commit message missing.")
+            return
+        commit_qry = str()
         invisible_root = self.object_tree_model.invisibleRootItem()
         for i in range(invisible_root.rowCount()):
             root = invisible_root.child(i,0)
             reference = root.data(REFERENCE)
+            database_name = root.text()
             try:
-                cnxn = pyodbc.connect(reference, autocommit=False, timeout=3) # TODO: set autocommit=True
+                cnxn = pyodbc.connect(reference, autocommit=False, timeout=3)
             except pyodbc.Error:
                 self.statusbar.showMessage("Unable to connect to {}".format(reference), 3000)
                 continue
-            self.object_tree_delete_qry_parameters.setdefault(reference, list())
-            self.object_tree_update_qry_parameters.setdefault(reference, dict())
-            for row in self.object_tree_delete_qry_parameters[reference]:
-                table = row['table']
-                name = row['name']
+            commit_qry += "On {}:\n".format(database_name)
+            cursor = cnxn.cursor()
+            self.object_tree_delete.setdefault(reference, dict())
+            self.object_tree_delete.setdefault(reference, dict())
+            for key in self.object_tree_delete[reference]:
+                table = key[0]
                 if table == 'object_class':
-                    sql = "DELETE FROM object_class WHERE name = ?"
-                    cnxn.cursor().execute(sql, name)
-                    sql = "DELETE FROM object WHERE class_name = ?"
-                    cnxn.cursor().execute(sql, name)
+                    name = key[1]
+                    cursor.execute("DELETE FROM object_class WHERE name = ?", name)
+                    cursor.execute("DELETE FROM object WHERE class_name = ?", name)
+                    cursor.execute("""
+                        DELETE FROM relationship WHERE class_name IN
+                        (SELECT name FROM relationship_class
+                        WHERE parent_class_name = ?
+                        OR child_class_name = ?)
+                    """, name, name)
+                    cursor.execute("""
+                        DELETE FROM relationship_class
+                        WHERE parent_class_name = ?
+                        OR child_class_name = ?
+                    """, name, name)
+                    cursor.execute("""
+                        DELETE FROM parameter WHERE name IN
+                        (SELECT name FROM parameter_definition
+                        WHERE object_class_name = ?)
+                    """, name)
+                    cursor.execute("""
+                        DELETE FROM parameter_definition
+                        WHERE object_class_name = ?
+                    """, name)
                 elif table == 'object':
-                    object_class_name = row['object_class_name']
-                    sql = "DELETE FROM object WHERE class_name = ? and name = ?"
-                    cnxn.cursor().execute(sql, [object_class_name, name])
-            for key,value in self.object_tree_update_qry_parameters[reference].items():
-                table = value['table']
-                old_name = value['old_name']
-                new_name = value['new_name']
-                sql = "UPDATE {} SET name = ? WHERE name = ?".format(table)
-                cnxn.cursor().execute(sql, new_name, old_name)
+                    object_class_name = key[1]
+                    name = key[2]
+                    cursor.execute("""
+                        DELETE FROM object WHERE class_name = ? and name = ?
+                    """, [object_class_name, name])
+                    cursor.execute("""
+                        DELETE FROM relationship WHERE class_name IN
+                        (SELECT name FROM relationship_class
+                        WHERE parent_class_name = ?)
+                        AND parent_object_name = ?
+                    """, [object_class_name, name])
+                    cursor.execute("""
+                        DELETE FROM relationship WHERE class_name IN
+                        (SELECT name FROM relationship_class
+                        WHERE child_class_name = ?)
+                        AND child_object_name = ?
+                    """, [object_class_name, name])
+                    cursor.execute("""
+                        DELETE FROM parameter WHERE name IN
+                        (SELECT name FROM parameter_definition
+                        WHERE object_class_name = ?)
+                        AND object_name = ?
+                    """, [object_class_name, name])
+            for key,value in self.object_tree_update[reference].items():
+                if key in self.object_tree_delete: # item already deleted
+                    continue
+                table = key[0]
+                new_name = value
                 if table == 'object_class':
-                    sql = "UPDATE object SET object_class_name = ? WHERE object_class_name = ?"
-                    cnxn.cursor().execute(sql, new_name, old_name)
+                    name = key[1]
+                    sql = "UPDATE object SET class_name = ? WHERE class_name = ?"
+                    cursor.execute(sql, new_name, name)
+                elif table == 'object':
+                    object_class_name = key[1]
+                    name = key[2]
+                    sql = """
+                        UPDATE {} SET name = ? WHERE object_class_name = ? AND name = ?
+                    """.format(table)
+                    cursor.execute(sql, new_name, object_class_name, name)
+            cnxn.commit()
+        self.statusbar.showMessage("Changes commited to all databases.")
+
+    @Slot(name="close_clicked")
+    def close_clicked(self):
+        """Close this form without commiting any changes."""
         self.close()
 
-    @Slot(name="cancel_clicked")
-    def cancel_clicked(self):
-        # TODO: undo changes to model
-        self.close()
+    @Slot(name="reset_clicked")
+    def reset_clicked(self):
+        """Reset all changes to the model since the last commit."""
+        # is it enough to save a copy of the root item and inject that back into the model?
+        pass
 
     @Slot("QModelIndex", name="reset_parameter_models")
     def reset_parameter_models(self, index):
@@ -305,10 +366,42 @@ class SpineDataExplorerWidget(QWidget):
             root = item
             while root.parent():
                 root = root.parent()
+            reference = root.data(REFERENCE)
             parameter_header = root.data(PARAMETER_HEADER)
             object_parameter = item.data(OBJECT_PARAMETER)
-            parameter_as_parent = item.data(PARAMETER_AS_PARENT)
-            parameter_as_child = item.data(PARAMETER_AS_CHILD)
+            parameter_as_parent_original = item.data(PARAMETER_AS_PARENT)
+            parameter_as_child_original = item.data(PARAMETER_AS_CHILD)
+            parameter_as_parent = list()
+            parameter_as_child = list()
+            for row in parameter_as_parent_original:
+                child_class_name = row[1]
+                child_object_name = row[2]
+                # ignore deleted
+                if ('object_class', child_class_name) in self.object_tree_delete[reference]:
+                    continue
+                if ('object', child_class_name, child_object_name) in self.object_tree_delete[reference]:
+                    continue
+                # update renamed
+                if ('object_class', child_class_name) in self.object_tree_update[reference]:
+                    row[1] = self.object_tree_update[reference]['object_class', child_class_name]
+                if ('object', child_class_name, child_object_name) in self.object_tree_update[reference]:
+                    row[2] = self.object_tree_update[reference]['object', child_class_name, child_object_name]
+                parameter_as_parent.append(row)
+            # Adjust names
+            for row in parameter_as_child_original:
+                parent_class_name = row[1]
+                parent_object_name = row[2]
+                # ignore deleted
+                if ('object_class', parent_class_name) in self.object_tree_delete[reference]:
+                    continue
+                if ('object', parent_class_name, parent_object_name) in self.object_tree_delete[reference]:
+                    continue
+                # update renamed
+                if ('object_class', parent_class_name) in self.object_tree_update[reference]:
+                    row[1] = self.object_tree_update[reference]['object_class', parent_class_name]
+                if ('object', parent_class_name, parent_object_name) in self.object_tree_update[reference]:
+                    row[2] = self.object_tree_update[reference]['object', parent_class_name, parent_object_name]
+                parameter_as_child.append(row)
             # Set headers
             # object
             self.object_parameter_model.header.clear()
@@ -329,7 +422,18 @@ class SpineDataExplorerWidget(QWidget):
             self.object_parameter_model.reset_model(object_parameter)
             self.parameter_as_parent_model.reset_model(parameter_as_parent)
             self.parameter_as_child_model.reset_model(parameter_as_child)
+        else:
+            self.clear_parameter_models()
 
+    def clear_parameter_models(self):
+        """Clear parameter models"""
+        # Clear models
+        self.object_parameter_model.header.clear()
+        self.parameter_as_parent_model.header.clear()
+        self.parameter_as_child_model.header.clear()
+        self.object_parameter_model.reset_model([])
+        self.parameter_as_parent_model.reset_model([])
+        self.parameter_as_child_model.reset_model([])
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
