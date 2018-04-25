@@ -34,8 +34,6 @@ from widgets.data_store_subwindow_widget import DataStoreWidget
 from PySide2.QtCore import Qt, Slot
 from widgets.add_connection_string_widget import AddConnectionStringWidget
 from widgets.spine_data_explorer_widget import SpineDataExplorerWidget
-from config import REFERENCE, TABLE, NAME, PARAMETER_HEADER, OBJECT_PARAMETER,\
-    PARAMETER_AS_PARENT, PARAMETER_AS_CHILD
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -65,7 +63,6 @@ class DataStore(MetaObject):
         self._widget.ui.toolButton_connector.is_connector = True
         self.add_connection_string_form = None
         self.spine_data_explorer = SpineDataExplorerWidget(self._parent, self)
-        self.spine_data_explorer.object_tree_model.setHorizontalHeaderItem(0, QStandardItem(name))
         self.connect_signals()
         # Import references into project
         # TODO: implement this with automatic import setting
