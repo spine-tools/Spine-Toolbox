@@ -154,8 +154,8 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Add Connection String", None, -1))
-        self.lineEdit_driver.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Driver (required)</p></body></html>", None, -1))
-        self.lineEdit_driver.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type driver name or path here...", None, -1))
+        self.lineEdit_driver.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>ODBC driver (required)</p></body></html>", None, -1))
+        self.lineEdit_driver.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type ODBC driver name here...", None, -1))
         self.pushButton_browse.setText(QtWidgets.QApplication.translate("Form", "Browse", None, -1))
         self.lineEdit_server.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Server (required)</p></body></html>", None, -1))
         self.lineEdit_server.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type server name here...", None, -1))

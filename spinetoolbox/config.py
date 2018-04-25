@@ -27,6 +27,7 @@ Spine Toolbox default configurations.
 import sys
 import os
 from PySide2.QtGui import QColor
+from PySide2.QtCore import Qt
 
 # General
 SPINE_TOOLBOX_VERSION = "0.0.7"
@@ -138,4 +139,13 @@ TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
 
 # QGrapchisView framerate
-FPS = 15
+FPS = 24
+
+# Spine objet tree item's user roles
+REFERENCE = Qt.UserRole
+TABLE = Qt.UserRole+1
+NAME = Qt.UserRole+2
+PARAMETER_HEADER = Qt.UserRole+3
+OBJECT_PARAMETER = Qt.UserRole+4
+PARAMETER_AS_PARENT = Qt.UserRole+5
+PARAMETER_AS_CHILD = Qt.UserRole+6

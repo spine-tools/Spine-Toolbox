@@ -26,6 +26,7 @@ Classes for custom context menus.
 
 from PySide2.QtWidgets import QMenu
 from PySide2.QtCore import SLOT
+from config import TABLE
 
 
 class ProjectItemContextMenu(QMenu):
@@ -144,6 +145,45 @@ class ToolTemplateContextMenu(QMenu):
         """Returns the clicked action, a string with a description."""
         return self.option
 
+class ObjectTreeContextMenu(QMenu):
+    """Context menu class for Spine data explorer object tree items."""
+
+    def __init__(self, parent, position, index):
+        super().__init__()
+        self._parent = parent
+        self.index = index
+        self.option = "None"
+        if index.isValid():
+            item = self._parent.object_tree_model.itemFromIndex(index)
+            if not item.data(TABLE): # it's a database
+                self.add_action("New object class")
+            else:
+                if item.data(TABLE) == "object_class":
+                    self.add_action("New object")
+                self.add_action("Rename")
+                self.add_action("Remove")
+        self.exec_(position)
+
+    def add_action(self, text):
+        """Adds an action to the context menu.
+
+        Args:
+            text (str): Text description of the action
+        """
+        action = self.addAction(text)
+        action.triggered.connect(lambda: self.set_action(text))
+
+    def set_action(self, option):
+        """Sets the action which was clicked.
+
+        Args:
+            option (str): string with the text description of the action
+        """
+        self.option = option
+
+    def get_action(self):
+        """Returns the clicked action, a string with a description."""
+        return self.option
 
 class addToolTemplatePopupMenu(QMenu):
     """Popup menu class for add tool template button."""

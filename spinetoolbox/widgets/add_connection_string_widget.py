@@ -29,7 +29,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 from ui.add_connection_string import Ui_Form
 from config import STATUSBAR_SS, APPLICATION_PATH
-from helpers import blocking_updates
+from helpers import blocking_updates, busy_effect
 import logging
 import pyodbc
 from config import CS_REQUIRED_KEYS
@@ -74,6 +74,7 @@ class AddConnectionStringWidget(QWidget):
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
     @Slot("int", name="unpack_dsn")
+    @busy_effect
     def unpack_dsn(self, row):
         """Whenever a new dsn is selected, populate form with data from it"""
         if row == 0: # Dummy entry 'Select data source name...' is selected
@@ -85,6 +86,9 @@ class AddConnectionStringWidget(QWidget):
             cnxn = pyodbc.connect(DSN=dsn, autocommit=True, timeout=3)
         except pyodbc.Error as e:
             self.statusbar.showMessage("Unable to connect to {}".format(dsn), 3000)
+            self.ui.lineEdit_server.clear()
+            self.ui.lineEdit_database.clear()
+            self.ui.lineEdit_username.clear()
             return
         server_name = cnxn.getinfo(pyodbc.SQL_SERVER_NAME)
         database_name = cnxn.getinfo(pyodbc.SQL_DATABASE_NAME)

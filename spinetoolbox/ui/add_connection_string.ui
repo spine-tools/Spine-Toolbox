@@ -101,10 +101,10 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Driver (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;ODBC driver (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="placeholderText">
-          <string>Type driver name or path here...</string>
+          <string>Type ODBC driver name here...</string>
          </property>
          <property name="clearButtonEnabled">
           <bool>true</bool>
