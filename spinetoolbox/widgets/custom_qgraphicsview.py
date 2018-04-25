@@ -26,7 +26,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Signal, Slot, QPoint, Qt, QTimer
+from PySide2.QtCore import Slot, Qt, QTimer
 from views import LinkDrawer, Link
 from config import ITEM_TYPE, FPS
 
@@ -37,9 +37,6 @@ class CustomQGraphicsView(QGraphicsView):
     Attributes:
         parent (QWidget): This is a QSplitter object
     """
-
-    subWindowActivated = Signal("QGraphicsProxyWidget", name="subWindowActivated")
-
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
@@ -52,13 +49,12 @@ class CustomQGraphicsView(QGraphicsView):
         self._parent = self._qmainwindow
         self._connection_model = None
         self._project_item_model = None
-        #     self.link_drawer = LinkDrawer(parent)  # TODO: Pekka
-        self.link_drawer = LinkDrawer(self._scene, self._qmainwindow)
-        self.scene().addItem(self.link_drawer)
+        self.link_drawer = None
+        self.make_link_drawer(self._scene, self._qmainwindow)
         # self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.max_sw_width = 0
         self.max_sw_height = 0
-        self.scene().changed.connect(self.scene_changed)
+        # self.scene().changed.connect(self.scene_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
@@ -66,18 +62,33 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot(name="update_viewport")
     def update_viewport(self):
-        #logging.debug("timeout")
+        # logging.debug("timeout")
         self.viewport().update()
 
-    @Slot(name='scene_changed')
-    def scene_changed(self):
-        """Check if active subwindow has changed and emit signal accordingly."""
-        #logging.debug("scene changed")
-        current_active_sw = self.scene().activeWindow()
-        if current_active_sw and current_active_sw.data(ITEM_TYPE) == "subwindow":
-            if current_active_sw != self.active_subwindow:
-                self.active_subwindow = current_active_sw
-                self.subWindowActivated.emit(self.active_subwindow)
+    # @Slot(name='scene_changed')
+    # def scene_changed(self):
+    #     """Check if active subwindow has changed and emit signal accordingly."""
+    #     #logging.debug("scene changed")
+    #     current_active_sw = self.scene().activeWindow()
+    #     if current_active_sw and current_active_sw.data(ITEM_TYPE) == "subwindow":
+    #         if current_active_sw != self.active_subwindow:
+    #             self.active_subwindow = current_active_sw
+    #             self.subWindowActivated.emit(self.active_subwindow)
+
+    def make_link_drawer(self, scene, qmainwindow):
+        """Make new LinkDrawer and add it scene. Needed when opening a new project."""
+        self.link_drawer = LinkDrawer(scene, qmainwindow)
+        self.scene().addItem(self.link_drawer)
+
+    def remove_scene_items(self):
+        """Remove all items and their children from the scene.
+        LinkDrawer must be added after calling this method, when opening a project.
+        """
+        logging.debug("Removing {0} from scene".format(len(self._scene.items())))
+        for item in self._scene.items():
+            logging.debug("Removing item:{0}".format(item))
+            self._scene.removeItem(item)
+        logging.debug("Items on scene: {0}".format(len(self._scene.items())))
 
     def setProjectItemModel(self, model):
         """Set project item model and connect signals."""
@@ -118,40 +129,46 @@ class CustomQGraphicsView(QGraphicsView):
         # logging.debug("activeWindow type is now:{0}".format(act_w.type))
         return self.scene().activeWindow()
 
-    def removeSubWindow(self, sw):  # this method will be obsolete, since it doesn't coordinate with the model
-        """Remove subwindow and any attached links from the scene."""
+    def removeSubWindow(self, sw):
+        """OBSOLETE! Remove subwindow and any attached links from the scene."""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
                 if sw.widget() == item.from_item or sw.widget() == item.to_item:
                     self.scene().removeItem(item)
         self.scene().removeItem(sw)
 
-    def find_link(self, from_widget, to_widget):
+    def find_link(self, src_icon, dst_icon):
         """Find link in scene, by model index"""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
-                if item.from_widget == from_widget and item.to_widget == to_widget:
+                if item.src_icon == src_icon and item.dst_icon == dst_icon:
                     return item
         return None
 
     @Slot("QModelIndex", "int", "int", name='projectRowsInserted')
     def projectRowsInserted(self, item, first, last):
         """Update view when an item is inserted to project."""
-        for ind in range(first, last+1):
-            data = item.child(ind, 0).data(role=Qt.UserRole)
-            widget = data.get_widget()
-            logging.debug("Inserting {0}. first:{1} last:{2}".format(data.name, first, last))
-            flags = Qt.Window
-            proxy = self.scene().addWidget(widget, flags)
-            proxy.setData(ITEM_TYPE, "subwindow")
-            #figure out the best position on the view
-            sw_geom = proxy.windowFrameGeometry()
-            self.max_sw_width = max(self.max_sw_width, sw_geom.width())
-            self.max_sw_height = max(self.max_sw_height, sw_geom.height())
-            position = QPoint(item.row() * self.max_sw_width, ind * self.max_sw_height)
-            proxy.setPos(position)
-            # proxy.setFlag(QGraphicsItem.ItemIsSelectable, True)
-            proxy.widget().activateWindow()
+        if not first-last == 0:
+            logging.error("Adding more than one item at a time is not allowed. first:{0} last:{1}".format(first, last))
+            return
+        data = item.child(first, 0).data(role=Qt.UserRole)
+        widget = data.get_widget()  # TODO: Embed this widget into SubWindowArea dockWidget
+
+        # for ind in range(first, last+1):
+        #     data = item.child(ind, 0).data(role=Qt.UserRole)
+        #     widget = data.get_widget()
+        #     logging.debug("Inserting {0}. first:{1} last:{2}".format(data.name, first, last))
+        #     flags = Qt.Window
+        #     proxy = self.scene().addWidget(widget, flags)
+        #     proxy.setData(ITEM_TYPE, "subwindow")
+        #     # figure out the best position on the view
+        #     sw_geom = proxy.windowFrameGeometry()
+        #     self.max_sw_width = max(self.max_sw_width, sw_geom.width())
+        #     self.max_sw_height = max(self.max_sw_height, sw_geom.height())
+        #     position = QPoint(item.row() * self.max_sw_width, ind * self.max_sw_height)
+        #     proxy.setPos(position)
+        #     # proxy.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        #     proxy.widget().activateWindow()
 
     @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
     def projectRowsRemoved(self, item, first, last):
@@ -163,8 +180,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
     def connectionDataChanged(self, top_left, bottom_right, roles=None):
-        """update view when model changes"""
-        # logging.debug("conn data changed")
+        """update view when model changes."""
         top = top_left.row()
         left = top_left.column()
         bottom = bottom_right.row()
@@ -175,45 +191,53 @@ class CustomQGraphicsView(QGraphicsView):
                 data = self.connection_model().data(index, Qt.DisplayRole)
                 from_name = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
                 to_name = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                sub_windows = self.subWindowList()
-                sw_owners = list(sw.widget().owner() for sw in sub_windows)
-                fr = sw_owners.index(from_name)
-                to = sw_owners.index(to_name)
-                from_widget = sub_windows[fr].widget()
-                to_widget = sub_windows[to].widget()
+                from_item = self._parent.find_item(from_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
+                to_item = self._parent.find_item(to_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
+
+                # sub_windows = self.subWindowList()
+                # sw_owners = list(sw.widget().owner() for sw in sub_windows)
+                # fr = sw_owners.index(from_name)
+                # to = sw_owners.index(to_name)
+                # from_widget = sub_windows[fr].widget()
+                # to_widget = sub_windows[to].widget()
+
                 if data:  # connection made, add link widget
-                    link = Link(self._parent, from_widget, to_widget)
-                    self.scene().addItem(link) #TODO: try QPersistentModelIndex to keep track of Links
+                    link = Link(self._parent, from_item.get_icon(), to_item.get_icon())
+                    self.scene().addItem(link)  # TODO: try QPersistentModelIndex to keep track of Links
                 else:   # connection destroyed, remove link widget
-                    link = self.find_link(from_widget, to_widget)
+                    link = self.find_link(from_item.get_icon(), to_item.get_icon())
                     if link is not None:
                         self.scene().removeItem(link)
 
     @Slot("QModelIndex", "int", "int", name='connectionsRemoved')
     def connectionsRemoved(self, index, first, last):
-        """update view when connection model changes"""
+        """Update view when connection model changes."""
         # logging.debug("conns. removed")
-        for i in range(first,last+1):
+        for i in range(first, last+1):
             removed_name = self.connection_model().headerData(i, orientation=Qt.Horizontal)
             for item in self.scene().items():
                 if item.data(ITEM_TYPE) == "link":
-                    from_name = item.from_widget.owner()
-                    to_name = item.to_widget.owner()
-                    if removed_name == from_name or removed_name == to_name:
+                    src_name = item.src_icon.name()
+                    dst_name = item.dst_icon.name()
+                    if removed_name == src_name or removed_name == dst_name:
                         self.scene().removeItem(item)
 
+    def draw_links(self, src_point, name):
+        """Draw links when slot button is clicked.
 
-    def draw_links(self, button):
-        """Draw links when slot button is clicked"""
+        Args:
+            src_point (QPointF): Position on scene where to start drawing. Center point of connector button.
+            name (str): Name of item where to start drawing
+        """
         if not self.link_drawer.drawing:
             # start drawing and remember connector
             self.link_drawer.drawing = True
-            self.link_drawer.start_drawing_at(button)
-            self.from_widget = button.parent().owner()
+            self.link_drawer.start_drawing_at(src_point)
+            self.from_widget = name  # owner is Name of Item (e.g. DC1)
         else:
             # stop drawing and make connection
             self.link_drawer.drawing = False
-            self.to_widget = button.parent().owner()
+            self.to_widget = name
             # create connection
             row = self.connection_model().header.index(self.from_widget)
             column = self.connection_model().header.index(self.to_widget)
@@ -225,3 +249,26 @@ class CustomQGraphicsView(QGraphicsView):
             else:
                 self._parent.msg.emit("<b>{}</b>'s output is already connected to"
                                       " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
+
+    # def draw_links(self, button):
+    #     """Draw links when slot button is clicked"""
+    #     if not self.link_drawer.drawing:
+    #         # start drawing and remember connector
+    #         self.link_drawer.drawing = True
+    #         self.link_drawer.start_drawing_at(button)
+    #         self.from_widget = button.parent().owner()
+    #     else:
+    #         # stop drawing and make connection
+    #         self.link_drawer.drawing = False
+    #         self.to_widget = button.parent().owner()
+    #         # create connection
+    #         row = self.connection_model().header.index(self.from_widget)
+    #         column = self.connection_model().header.index(self.to_widget)
+    #         index = self.connection_model().createIndex(row, column)
+    #         if not self.connection_model().data(index, Qt.DisplayRole):
+    #             self.connection_model().setData(index, "value", Qt.EditRole)  # value not used
+    #             self._parent.msg.emit("<b>{}</b>'s output is now connected to"
+    #                                   " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
+    #         else:
+    #             self._parent.msg.emit("<b>{}</b>'s output is already connected to"
+    #                                   " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))

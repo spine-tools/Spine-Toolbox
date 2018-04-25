@@ -36,6 +36,8 @@ from helpers import create_dir, blocking_updates
 from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
+from views import DataConnectionImage
+
 
 class DataConnection(MetaObject):
     """Data Connection class.
@@ -47,7 +49,7 @@ class DataConnection(MetaObject):
         project (SpineToolboxProject): Project
         references (list): List of file references
     """
-    def __init__(self, parent, name, description, project, references):
+    def __init__(self, parent, name, description, project, references, x, y):
         super().__init__(name, description)
         self._parent = parent
         self.item_type = "Data Connection"
@@ -72,8 +74,9 @@ class DataConnection(MetaObject):
         # Populate data (files) model
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
-        #set connections buttons slot type
-        self._widget.ui.toolButton_connector.is_connector = True
+        # set connections buttons slot type
+        # self._widget.ui.toolButton_connector.is_connector = True
+        self._graphics_item = DataConnectionImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):
@@ -85,16 +88,23 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
-        self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
+        # self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
+
+    def set_icon(self, icon):
+        self._graphics_item = icon
+
+    def get_icon(self):
+        """Returns the item representing this data connection in the scene."""
+        return self._graphics_item
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot(name="draw_links")
-    def draw_links(self):
-        self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
+    # @Slot(name="draw_links")
+    # def draw_links(self):
+    #     self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name="open_directory")
     def open_directory(self):

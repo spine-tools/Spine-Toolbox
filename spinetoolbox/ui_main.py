@@ -28,8 +28,8 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QMessageBox, QCheckBox, QAction, QVBoxLayout, QFileDialog
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QRectF
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QGraphicsScene
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreWidget
@@ -45,9 +45,10 @@ from widgets.tool_template_widget import ToolTemplateWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
-from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
+from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, ITEM_TYPE
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates
 from models import ToolTemplateModel, ConnectionModel
+from views import SceneBackground
 
 
 class ToolboxUI(QMainWindow):
@@ -91,6 +92,7 @@ class ToolboxUI(QMainWindow):
         self.add_view_form = None
         self.tool_template_form = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
+        # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
@@ -111,14 +113,6 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.init_project()
         self.restore_ui()
-
-    # def init_mdiArea(self):
-    #     """Initialize the mdiArea as a LinksView"""
-    #     layout = QVBoxLayout()
-    #     self.ui.mdiArea_container.setLayout(layout)
-    #     self.ui.mdiArea_container.setStyleSheet("background: transparent")
-    #     self.ui.mdiArea = LinksView(self)
-    #     layout.addWidget(self.ui.mdiArea)
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -163,17 +157,19 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Item_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
         self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
         self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
+        self.ui.actionSelected_Item.triggered.connect(lambda: self.ui.dockWidget_item.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
         # noinspection PyUnresolvedReferences
         self.test1_action.triggered.connect(self.test1)
         # noinspection PyUnresolvedReferences
         self.test2_action.triggered.connect(self.test2)
-        # QMdiArea
-        self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
+        # QGraphicsView and QGraphicsScene
+        # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
+        # self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
         # Project TreeView
-        self.ui.treeView_project.clicked.connect(self.activate_subwindow)
-        self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
+        self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
+        # self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
         self.add_tool_template_popup_menu = addToolTemplatePopupMenu(self)
@@ -278,14 +274,15 @@ class ToolboxUI(QMainWindow):
             logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv))
         else:
             pass  # signal already connected
-        # customContextMenuRequested signal
-        n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))  # nr of receivers
+        # customContextMenuRequested signal. Get n of receivers for this signal
+        n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
         if n_recv == 0:
             # slogging.debug("Connecting customContextMenuRequested signal for QListView")
             self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
         elif n_recv > 1:
             # Check that this never gets over 1
-            logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}".format(n_recv))
+            logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}"
+                          .format(n_recv))
         else:
             pass  # signal already connected
         if n_tools == 0:
@@ -309,7 +306,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot("QModelIndex", name="connection_clicked")
     def connection_clicked(self, index):
-        """Toggle the boolean value in the connection model.
+        """Toggle boolean value in the connection model.
 
         Args:
             index (QModelIndex): Clicked index
@@ -325,6 +322,8 @@ class ToolboxUI(QMainWindow):
         n = len(item_names)
         if n == 0:
             return
+        # Clear widget info from QDockWidget
+        self.clear_info_area()
         for name in item_names:
             ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
             self.remove_item(ind)
@@ -382,7 +381,11 @@ class ToolboxUI(QMainWindow):
         # Load project from JSON file
         try:
             with open(load_path, 'r') as fh:
-                dicts = json.load(fh)
+                try:
+                    dicts = json.load(fh)
+                except json.decoder.JSONDecodeError:
+                    logging.exception("Failed to load file:{0}".format(load_path))
+                    return False
         except OSError:
             logging.exception("Could not load project from file {0}".format(load_path))
             return False
@@ -400,6 +403,15 @@ class ToolboxUI(QMainWindow):
             connections = project_dict['connections']
         except KeyError:
             self.msg_warning.emit("No connections found in project file")
+        try:
+            x = project_dict['scene_x']
+            y = project_dict['scene_y']
+            w = project_dict['scene_w']
+            h = project_dict['scene_h']
+        except KeyError:
+            pass
+        # self.ui.graphicsView.reset_scene()
+        # self.ui.graphicsView.setSceneRect(QRectF())  # TODO: This should setSceneRect to 0 but does nothing
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
         # Init models and views
@@ -454,9 +466,9 @@ class ToolboxUI(QMainWindow):
             self.save_project()
         return
 
-    @Slot("QModelIndex", name="activate_subwindow")
-    def activate_subwindow(self, index):
-        """Set focus on selected subwindow.
+    @Slot("QModelIndex", name="select_item_and_show_info")
+    def select_item_and_show_info(self, index):
+        """Set item selected in scene and show item info in QDockWidget.
 
         Args:
             index (QModelIndex): Index of clicked item, if available
@@ -469,31 +481,38 @@ class ToolboxUI(QMainWindow):
         else:
             if index.parent().isValid():
                 item = self.project_item_model.itemFromIndex(index)
+                if not item:
+                    logging.error("Item not found")
+                    return
                 item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
-                item_widget = item_data.get_widget()
-                item_subwindow = item_widget.parent()  # QMdiSubWindow that has item_widget as its internal widget
-                self.ui.graphicsView.setActiveSubWindow(item_subwindow)
+                # Clear previous selection
+                self.ui.graphicsView.scene().clearSelection()
+                # Set item icon on scene selected.
+                icon = item_data.get_icon()
+                # Select master icon and all of its children are selected as well
+                icon.master().setSelected(True)
+                self.show_info(item_data.name)
             return
 
-    @Slot("QModelIndex", name="show_subwindow")
-    def show_subwindow(self, index):
-        """Show double-clicked item subwindow if it was hidden.
-        Sets both QMdiSubWindow and its internal widget visible.
-
-        Args:
-            index (QModelIndex): Index of clicked item, if available
-        """
-        if not index:
-            return
-        if not index.isValid():
-            logging.error("Index not valid")
-            return
-        else:
-            if index.parent().isValid():
-                item_data = self.project_item_model.itemFromIndex(index).data(Qt.UserRole)  # e.g. DataStore object
-                internal_widget = item_data.get_widget()  # QWidget of e.g. DataStore object
-                internal_widget.show()
-            return
+    # @Slot("QModelIndex", name="show_subwindow")
+    # def show_subwindow(self, index):
+    #     """Show double-clicked item subwindow if it was hidden.
+    #     Sets both QMdiSubWindow and its internal widget visible.
+    #
+    #     Args:
+    #         index (QModelIndex): Index of clicked item, if available
+    #     """
+    #     if not index:
+    #         return
+    #     if not index.isValid():
+    #         logging.error("Index not valid")
+    #         return
+    #     else:
+    #         if index.parent().isValid():
+    #             item_data = self.project_item_model.itemFromIndex(index).data(Qt.UserRole)  # e.g. DataStore object
+    #             internal_widget = item_data.get_widget()  # QWidget of e.g. DataStore object
+    #             internal_widget.show()
+    #         return
 
     @Slot(name="test1")
     def test1(self):
@@ -515,6 +534,15 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test2")
     def test2(self):
+        logging.debug("Items on scene:{0}".format(len(self.ui.graphicsView.scene().items())))
+        # for item in self.ui.graphicsView.scene().items():
+        #     logging.debug(item)
+        scene_size = self.ui.graphicsView.scene().sceneRect()
+        logging.debug("sceneRect:{0}".format(scene_size))
+        mouse_item = self.ui.graphicsView.scene().mouseGrabberItem()
+        # logging.debug("mouse grabber item:{0}".format(mouse_item))
+        # self.ui.graphicsView.scene().addItem(self.dc)
+        return
         for subwindow in self.ui.graphicsView.subWindowList():
             w = subwindow.widget()  # SubWindowWidget
             w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
@@ -534,32 +562,62 @@ class ToolboxUI(QMainWindow):
                 if tool.tool_template() is not None:
                     self.msg.emit("Tool template of this Tool:{0}".format(tool.tool_template().name))
 
-    @Slot("QMdiSubWindow", name="update_details_frame")
-    def update_details_frame(self, window):
-        """Update labels on main window according to the currently selected QMdiSubWindow.
+    def show_info(self, name):
+        """Show information of selected item. Embed old item widgets into QDockWidget."""
+        item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item from project model
+        if not item:
+            logging.error("Item {0} not found".format(name))
+            return
+        item_data = item.data(Qt.UserRole)
+        # Clear QGroupBox layout
+        self.clear_info_area()
+        # layout = self.ui.groupBox_subwindow.layout()
+        # for i in reversed(range(layout.count())):
+        #     widget_to_remove = layout.itemAt(i).widget()
+        #     # Remove it from the layout list
+        #     layout.removeWidget(widget_to_remove)
+        #     # Remove it from the gui
+        #     widget_to_remove.setParent(None)
+        # Add new item into layout
+        self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
 
-        Args:
-            window (QMdiSubWindow): Active sub-window
-        """
-        if window is not None:
-            w = window.widget()  # SubWindowWidget
-            obj_type = w.objectName()
-            name = w.owner()
-            self.ui.lineEdit_type.setText(obj_type)
-            self.ui.lineEdit_name.setText(name)
-            # Find object data from model. Note: Finds child items only if Qt.MatchRecursive is set.
-            selected_item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
-            if not selected_item:
-                logging.error("Item {0} not found".format(name))
-                return
-            item_data = selected_item.data(Qt.UserRole)
-            if item_data.item_type == "Data Connection":
-                # logging.debug("DC selected")
-                item_data.refresh()
-            # matching_item_data = selected_item.data(Qt.UserRole)
-        else:
-            self.ui.lineEdit_type.setText("")
-            self.ui.lineEdit_name.setText("")
+    def clear_info_area(self):
+        """Clear SubWindowArea QDockWidget."""
+        layout = self.ui.groupBox_subwindow.layout()
+        for i in reversed(range(layout.count())):
+            widget_to_remove = layout.itemAt(i).widget()
+            # Remove it from the layout list
+            layout.removeWidget(widget_to_remove)
+            # Remove it from the gui
+            widget_to_remove.setParent(None)
+
+    # @Slot("QMdiSubWindow", name="update_details_frame")
+    # def update_details_frame(self, window):
+    #     """OBSOLETE: Update labels on main window according to the currently selected QMdiSubWindow.
+    #
+    #     Args:
+    #         window (QMdiSubWindow): Active sub-window
+    #     """
+    #     if window is not None:
+    #         w = window.widget()  # SubWindowWidget
+    #         obj_type = w.objectName()
+    #         name = w.owner()
+    #         # self.ui.lineEdit_type.setText(obj_type)
+    #         # self.ui.lineEdit_name.setText(name)
+    #         # Find object data from model. Note: Finds child items only if Qt.MatchRecursive is set.
+    #         selected_item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
+    #         if not selected_item:
+    #             logging.error("Item {0} not found".format(name))
+    #             return
+    #         item_data = selected_item.data(Qt.UserRole)
+    #         if item_data.item_type == "Data Connection":
+    #             # logging.debug("DC selected")
+    #             item_data.refresh()
+    #         # matching_item_data = selected_item.data(Qt.UserRole)
+    #     else:
+    #         pass
+    #         # self.ui.lineEdit_type.setText("")
+    #         # self.ui.lineEdit_name.setText("")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -838,7 +896,9 @@ class ToolboxUI(QMainWindow):
         To remove all items in project, loop all indices through this method.
         This method is used in both opening and creating a new project as
         well as when item(s) are deleted from project.
-        Set delete_item flag to True to delete the item irrevocably.
+        Use delete_item=False when closing the project or creating a new one.
+        Setting delete_item=True deletes the item irrevocably. This means that
+        data directories will be deleted from the hard drive.
 
         Args:
             ind (QModelIndex): Index of removed item in project model
@@ -850,7 +910,10 @@ class ToolboxUI(QMainWindow):
         data_dir = None
         if item_data.item_type == "Data Connection":
             data_dir = item_data.data_dir
-        # Remove item from connection model
+        # Remove item icon (QGraphicsItems) from scene
+        self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
+        item_data.set_icon(None)
+        # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
         if not self.connection_model.remove_item(item):
             self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
         # Remove item from project model
@@ -1198,12 +1261,9 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
         self.project_item_context_menu = ProjectItemContextMenu(self, global_pos, ind)
         option = self.project_item_context_menu.get_action()
-        if option == "Remove":
+        if option == "Remove Item":
             self.remove_item(ind, delete_item=True)
             return
-        if option == "Hide all":  # Hide all subwindows
-            for sw in self.ui.graphicsView.subWindowList():
-                sw.hide()
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
@@ -1233,7 +1293,7 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
 
-    def show_link_context_menu(self, pos, from_widget, to_widget):
+    def show_link_context_menu(self, pos, src_item_name, dst_item_name):
         """Context menu for connection links.
 
         Args:
@@ -1241,10 +1301,10 @@ class ToolboxUI(QMainWindow):
             from_widget (QWidget): The widget this link originates from
             to_widget (QWidget): The widget this link lands on
         """
-        from_name = from_widget.owner()
-        to_name = to_widget.owner()
-        row = self.connection_model.header.index(from_name)
-        column = self.connection_model.header.index(to_name)
+        # from_name = from_widget.owner()
+        # to_name = to_widget.owner()
+        row = self.connection_model.header.index(src_item_name)
+        column = self.connection_model.header.index(dst_item_name)
         ind = self.connection_model.index(row, column)
         self.link_context_menu = LinkContextMenu(self, pos, ind)
         option = self.link_context_menu.get_action()

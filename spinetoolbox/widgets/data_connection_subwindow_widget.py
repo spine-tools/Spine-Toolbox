@@ -24,12 +24,12 @@ QWidget that is used as an internal widget for a Data Connection QMdiSubWindow.
 :date:   22.2.2018
 """
 
+import logging
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_connection import Ui_Form
 from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
-import logging
 
 
 class DataConnectionWidget(QWidget):

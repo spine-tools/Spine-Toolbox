@@ -26,8 +26,9 @@ Module for view class.
 
 import logging
 from metaobject import MetaObject
-from widgets.subwindow_widget import SubWindowWidget
+from widgets.view_subwindow_widget import ViewWidget
 from PySide2.QtCore import Slot
+from views import ViewImage
 
 
 class View(MetaObject):
@@ -39,27 +40,40 @@ class View(MetaObject):
         description (str): Object description
         project (SpineToolboxProject): Project
     """
-    def __init__(self, parent, name, description, project):
+    def __init__(self, parent, name, description, project, x, y):
         super().__init__(name, description)
         self._parent = parent
         self.item_type = "View"
         self.item_category = "Views"
         self._project = project
         self._data = "data"
-        self._widget = SubWindowWidget(name, self.item_type)
+        self._widget = ViewWidget(name, self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label(self._data)
+        self._graphics_item = ViewImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this view's signals to slots."""
-        self._widget.ui.pushButton_edit.clicked.connect(self.edit_clicked)
+        self._widget.ui.pushButton_info.clicked.connect(self.info_clicked)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
 
-    @Slot(name='edit_clicked')
-    def edit_clicked(self):
-        """Edit button clicked."""
+    def set_icon(self, icon):
+        """Set icon."""
+        self._graphics_item = icon
+
+    def get_icon(self):
+        """Returns the item representing this data connection in the scene."""
+        return self._graphics_item
+
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
+
+    @Slot(name='info_clicked')
+    def info_clicked(self):
+        """Info button clicked."""
         logging.debug(self.name + " - " + str(self._data))
 
     @Slot(name="show_connections")
@@ -80,10 +94,6 @@ class View(MetaObject):
         else:
             for item in outputs:
                 self._parent.msg_warning.emit("{0}".format(item))
-
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
 
     def set_data(self, d):
         """Set data and update widgets representation of data."""

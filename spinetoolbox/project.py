@@ -113,6 +113,10 @@ class SpineToolboxProject(MetaObject):
         project_dict['description'] = self.description
         project_dict['tool_templates'] = tool_def_paths
         project_dict['connections'] = self._parent.connection_model.get_connections()
+        project_dict["scene_x"] = self._parent.ui.graphicsView.scene().sceneRect().x()
+        project_dict["scene_y"] = self._parent.ui.graphicsView.scene().sceneRect().y()
+        project_dict["scene_w"] = self._parent.ui.graphicsView.scene().sceneRect().width()
+        project_dict["scene_h"] = self._parent.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
         n = 0
         # Traverse all items in project model
@@ -132,6 +136,8 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name] = dict()
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
+                    item_dict[top_level_item_txt][name]["x"] = child_data.get_icon().master().sceneBoundingRect().x()
+                    item_dict[top_level_item_txt][name]["y"] = child_data.get_icon().master().sceneBoundingRect().y()
                     if child_data.item_type == "Tool":
                         if not child_data.tool_template():
                             item_dict[top_level_item_txt][name]["tool"] = ""
@@ -142,6 +148,10 @@ class SpineToolboxProject(MetaObject):
                         item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
                     elif child_data.item_type == "Data Store":
                         item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
+                    elif child_data.item_type == "View":
+                        item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
+                    else:
+                        logging.error("Unrecognized item type: {0}".format(child_data.item_type))
         # Save project stuff
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
@@ -172,8 +182,14 @@ class SpineToolboxProject(MetaObject):
                 refs = data_stores[name]["references"]
             except KeyError:
                 refs = list()
+            try:
+                x = data_stores[name]["x"]
+                y = data_stores[name]["y"]
+            except KeyError:
+                x = 0
+                y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, refs))
-            self.add_data_store(name, desc, refs)
+            self.add_data_store(name, desc, refs, x, y)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
@@ -182,8 +198,14 @@ class SpineToolboxProject(MetaObject):
                 refs = data_connections[name]["references"]
             except KeyError:
                 refs = list()
+            try:
+                x = data_connections[name]["x"]
+                y = data_connections[name]["y"]
+            except KeyError:
+                x = 0
+                y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_data_connection(name, desc, refs)
+            self.add_data_connection(name, desc, refs, x, y)
         # Recreate Tools
         for name in tools.keys():
             short_name = tools[name]['short name']
@@ -196,14 +218,30 @@ class SpineToolboxProject(MetaObject):
                 self._parent.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
                                             "it was not found. Add it to Tool templates and reopen "
                                             "project.".format(name, tool_name))
-            self.add_tool(name, desc, tool_template)
+            try:
+                x = tools[name]["x"]
+                y = tools[name]["y"]
+            except KeyError:
+                x = 0
+                y = 0
+            self.add_tool(name, desc, tool_template, x, y)
         # Recreate Views
         for name in views.keys():
             short_name = views[name]['short name']
             desc = views[name]['description']
-            data = views[name]['data']
+            try:
+                data = views[name]['data']
+            except KeyError:
+                logging.error("'data' keyword not found in View {0}".format(name))
+                data = ''
+            try:
+                x = views[name]["x"]
+                y = views[name]["y"]
+            except KeyError:
+                x = 0
+                y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, data)
+            self.add_view(name, desc, data, x, y)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -269,27 +307,27 @@ class SpineToolboxProject(MetaObject):
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, references):
+    def add_data_store(self, name, description, references, x=0, y=0):
         """Add data store to project item model."""
-        data_store = DataStore(self._parent, name, description, self, references)
+        data_store = DataStore(self._parent, name, description, self, references, x, y)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
 
-    def add_data_connection(self, name, description, references):
+    def add_data_connection(self, name, description, references, x=0, y=0):
         """Add Data Connection to project item model."""
-        data_connection = DataConnection(self._parent, name, description, self, references)
+        data_connection = DataConnection(self._parent, name, description, self, references, x, y)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
 
-    def add_tool(self, name, description, tool_template):
+    def add_tool(self, name, description, tool_template, x=0, y=0):
         """Add Tool to project item model."""
-        tool = Tool(self._parent, name, description, self, tool_template)
+        tool = Tool(self._parent, name, description, self, tool_template, x, y)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
 
-    def add_view(self, name, description, data="View data"):
+    def add_view(self, name, description, data="View data", x=0, y=0):
         """Add View to project item model."""
-        view = View(self._parent, name, description, self)
+        view = View(self._parent, name, description, self, x, y)
         view.set_data(data)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)

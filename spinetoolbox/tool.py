@@ -33,6 +33,7 @@ from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
+from views import ToolImage
 
 
 class Tool(MetaObject):
@@ -45,7 +46,7 @@ class Tool(MetaObject):
         project (SpineToolboxProject): Project
         tool_template (ToolTemplate): Template for this Tool
     """
-    def __init__(self, parent, name, description, project, tool_template):
+    def __init__(self, parent, name, description, project, tool_template, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
@@ -75,7 +76,8 @@ class Tool(MetaObject):
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
         # set connections buttons slot type
-        self._widget.ui.toolButton_connector.is_connector = True
+        # self._widget.ui.toolButton_connector.is_connector = True
+        self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
         self.connect_signals()
 
     def connect_signals(self):
@@ -84,15 +86,22 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
-        self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
+        # self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
+
+    def set_icon(self, icon):
+        self._graphics_item = icon
+
+    def get_icon(self):
+        """Returns the item representing this data connection in the scene."""
+        return self._graphics_item
 
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot(name="draw_links")
-    def draw_links(self):
-        self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
+    # @Slot(name="draw_links")
+    # def draw_links(self):
+    #     self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name='show_details')
     def show_details(self):

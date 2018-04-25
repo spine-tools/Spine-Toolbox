@@ -39,12 +39,12 @@ class ProjectItemContextMenu(QMenu):
         self.option = "None"
         if not index.isValid():
             # If no item at index
-            self.add_action("Hide all")
+            pass
         elif not index.parent().isValid():
             # If index is at a category item
-            self.add_action("Hide all")
+            pass
         else:
-            self.add_action("Remove")
+            self.add_action("Remove Item")
         self.exec_(position)
 
     def add_action(self, text):
