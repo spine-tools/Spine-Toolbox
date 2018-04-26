@@ -42,9 +42,9 @@ class CustomQGraphicsView(QGraphicsView):
         super().__init__(parent)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_viewport)
-        self.timer.start(1000/FPS)   # Adjust frames per second
+        # self.timer = QTimer(self)
+        # self.timer.timeout.connect(self.update_viewport)
+        # self.timer.start(1000/FPS)   # Adjust frames per second
         self._qmainwindow = parent.parent().parent()
         self._parent = self._qmainwindow
         self._connection_model = None
@@ -60,10 +60,10 @@ class CustomQGraphicsView(QGraphicsView):
         self.to_widget = None
         self.show()
 
-    @Slot(name="update_viewport")
-    def update_viewport(self):
-        # logging.debug("timeout")
-        self.viewport().update()
+    # @Slot(name="update_viewport")
+    # def update_viewport(self):
+    #     # logging.debug("timeout")
+    #     self.viewport().update()
 
     @Slot(name='scene_changed')
     def scene_changed(self):

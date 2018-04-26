@@ -55,8 +55,6 @@ class DataConnection(MetaObject):
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
         self._project = project
-        # TODO: Try to set the parent of the drawn widget (QGraphicsProxyWidget?) as the scene
-        # TODO: Or use scene.add_item(self._widget)?? to set the parent
         self._widget = DataConnectionWidget(name, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
@@ -74,8 +72,6 @@ class DataConnection(MetaObject):
         # Populate data (files) model
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
-        # set connections buttons slot type
-        # self._widget.ui.toolButton_connector.is_connector = True
         self._graphics_item = DataConnectionImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
 
@@ -89,7 +85,6 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
-        # self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -101,10 +96,6 @@ class DataConnection(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
-
-    # @Slot(name="draw_links")
-    # def draw_links(self):
-    #     self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name="open_directory")
     def open_directory(self):

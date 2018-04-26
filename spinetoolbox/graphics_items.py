@@ -25,10 +25,9 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import logging
-import inspect
 from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsLineItem, \
-    QGraphicsEllipseItem, QGraphicsSimpleTextItem, QToolButton, QGraphicsRectItem
+    QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem
 from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush
 from math import atan2, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
@@ -74,6 +73,10 @@ class ItemImage(QGraphicsItem):
         self.y = y  # y coordinate in the scene
         self.w = w
         self.h = h
+        self.connector_pen = QPen(QColor('black'))  # QPen is used to draw the item outline
+        self.connector_pen.setStyle(Qt.DotLine)
+        self.connector_brush = QBrush(QColor(255, 255, 255, 0))  # QBrush is used to fill the item
+        self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))  # QBrush is used to fill the item
         self._name = name
         self.font_size = 8  # point size
         self.q_rect = QRectF(self.x, self.y, self.w, self.h)  # Position and size of the drawn item
@@ -85,22 +88,27 @@ class ItemImage(QGraphicsItem):
         font.setBold(True)
         self.name_item.setFont(font)
         self.name_item.setPos(self.x, self.y)  # TODO: Refine position
-        self.connector_button = QToolButton()  # TODO: Refine position and make this into a QGraphicsEllipseItem
-        self.connector_button.setArrowType(Qt.RightArrow)
+        self.connector_button = QGraphicsRectItem()
+        self.connector_button.setPen(self.connector_pen)
+        self.connector_button.setBrush(self.connector_brush)
+        self.connector_button.setRect(QRectF(self.x+25, self.y+25, 20, 20))  # TODO: Refine position
+        self.connector_button.setAcceptHoverEvents(True)
+        self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.connector_button.is_connector = True
 
     def make_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
         make up the icon drawn on the scene.
         NOTE: setting the parent item moves the items as one!!
         """
-        # self.setPos(self.x, self.y)
         icon = QGraphicsEllipseItem(self.q_rect)
         icon.setPen(pen)
         icon.setBrush(brush)
         icon.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        icon.setAcceptHoverEvents(True)
+        # icon.setAcceptHoverEvents(True)
         return icon
 
     def links(self):
@@ -121,10 +129,6 @@ class ItemImage(QGraphicsItem):
         """Returns items connector button (QWidget)."""
         return self.connector_button
 
-    def proxy_conn_button(self):
-        """Returns items connector button proxy (QGraphicsProxyWidget)."""
-        return self.proxy_connector_button
-
     def master(self):
         """Return the parent QGraphicsItem of this Item."""
         return self._master
@@ -135,6 +139,7 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
+        # NOTE: This is disabled. setAcceptHoverEvents(True) to master to enable this.
         self._master.setBrush(self.hover_brush)
 
     def hover_leave_event(self, event):
@@ -143,7 +148,7 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        # TODO: Try setting QGraphicsEffect(Qt.shadow) or something
+        # NOTE: This is disabled. setAcceptHoverEvents(True) to master to enable this.
         self._master.setBrush(self.brush)
 
     def mouse_press_event(self, event):
@@ -163,7 +168,6 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        # self.setPos(event.scenePos().x(), event.scenePos().y())
         link_list = self.links()
         for link in link_list:
             link.update_line()
@@ -177,13 +181,39 @@ class ItemImage(QGraphicsItem):
         """
         QGraphicsItem.mouseReleaseEvent(self._master, event)
 
+    def connector_mouse_press_event(self, event):
+        """Catch connector button click. Starts drawing a link."""
+        if not event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            self.show_item_info()
+            self.start_drawing()
+
+    def connector_hover_enter_event(self, event):
+        """Set a darker shade to connector button when mouse enters icon boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        # TODO: Try setting QGraphicsEffect(QGraphicsItem.shadow) or something
+        self.connector_button.setBrush(self.connector_hover_brush)
+
+    def connector_hover_leave_event(self, event):
+        """Restore original brush when mouse leaves icon boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        # TODO: Try setting QGraphicsEffect(QGraphicsItem.not_shadow) or something
+        self.connector_button.setBrush(self.connector_brush)
+
     def show_item_info(self):
         """Update GUI to show the details of the selected item in a QDockWidget."""
         self._main.show_info(self.name())
 
     def start_drawing(self):
         """Start drawing a link from the center point of the connector button."""
-        center_point = self.proxy_conn_button().sceneBoundingRect().center()
+        center_point = self.conn_button().sceneBoundingRect().center()
         self._main.ui.graphicsView.draw_links(center_point, self.name())
 
 
@@ -214,16 +244,15 @@ class DataConnectionImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self.connector_button.mousePressEvent = self.connector_mouse_press_event
+        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
+        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
-        self.proxy_connector_button = self._main.ui.graphicsView.scene().addWidget(self.connector_button)
-        self.proxy_connector_button.setPos(self.x+20, self.y+30)
-        self.connector_button.pressed.connect(self.start_drawing)
-        self.connector_button.is_connector = True
         # Group the drawn items together by setting the master as the parent of other QGraphicsItems
         self.name_item.setParentItem(self._master)
-        self.proxy_connector_button.setParentItem(self._master)
+        self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
         """Calls super class method."""
@@ -249,9 +278,17 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         super().hover_leave_event(event)
 
-    def start_drawing(self):
+    def connector_mouse_press_event(self, event):
         """Calls super class method."""
-        super().start_drawing()
+        super().connector_mouse_press_event(event)
+
+    def connector_hover_enter_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_enter_event(event)
+
+    def connector_hover_leave_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_leave_event(event)
 
 
 class ToolImage(ItemImage):
@@ -281,16 +318,15 @@ class ToolImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self.connector_button.mousePressEvent = self.connector_mouse_press_event
+        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
+        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
-        self.proxy_connector_button = self._main.ui.graphicsView.scene().addWidget(self.connector_button)
-        self.proxy_connector_button.setPos(self.x+20, self.y+30)
-        self.connector_button.pressed.connect(self.start_drawing)
-        self.connector_button.is_connector = True
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.proxy_connector_button.setParentItem(self._master)
         self.name_item.setParentItem(self._master)
+        self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
         """Calls super class method."""
@@ -316,9 +352,17 @@ class ToolImage(ItemImage):
         """Calls super class method."""
         super().hover_leave_event(event)
 
-    def start_drawing(self):
+    def connector_mouse_press_event(self, event):
         """Calls super class method."""
-        super().start_drawing()
+        super().connector_mouse_press_event(event)
+
+    def connector_hover_enter_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_enter_event(event)
+
+    def connector_hover_leave_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_leave_event(event)
 
 
 class DataStoreImage(ItemImage):
@@ -348,16 +392,15 @@ class DataStoreImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self.connector_button.mousePressEvent = self.connector_mouse_press_event
+        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
+        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
-        self.proxy_connector_button = self._main.ui.graphicsView.scene().addWidget(self.connector_button)
-        self.proxy_connector_button.setPos(self.x+20, self.y+30)
-        self.connector_button.pressed.connect(self.start_drawing)
-        self.connector_button.is_connector = True
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.proxy_connector_button.setParentItem(self._master)
         self.name_item.setParentItem(self._master)
+        self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
         """Calls super class method."""
@@ -383,9 +426,17 @@ class DataStoreImage(ItemImage):
         """Calls super class method."""
         super().hover_leave_event(event)
 
-    def start_drawing(self):
+    def connector_mouse_press_event(self, event):
         """Calls super class method."""
-        super().start_drawing()
+        super().connector_mouse_press_event(event)
+
+    def connector_hover_enter_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_enter_event(event)
+
+    def connector_hover_leave_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_leave_event(event)
 
 
 class ViewImage(ItemImage):
@@ -415,16 +466,15 @@ class ViewImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self.connector_button.mousePressEvent = self.connector_mouse_press_event
+        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
+        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
-        self.proxy_connector_button = self._main.ui.graphicsView.scene().addWidget(self.connector_button)
-        self.proxy_connector_button.setPos(self.x+20, self.y+30)
-        self.connector_button.pressed.connect(self.start_drawing)
-        self.connector_button.is_connector = True
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.proxy_connector_button.setParentItem(self._master)
         self.name_item.setParentItem(self._master)
+        self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
         """Calls super class method."""
@@ -450,9 +500,17 @@ class ViewImage(ItemImage):
         """Calls super class method."""
         super().hover_leave_event(event)
 
-    def start_drawing(self):
+    def connector_mouse_press_event(self, event):
         """Calls super class method."""
-        super().start_drawing()
+        super().connector_mouse_press_event(event)
+
+    def connector_hover_enter_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_enter_event(event)
+
+    def connector_hover_leave_event(self, event):
+        """Calls super class method."""
+        super().connector_hover_leave_event(event)
 
 
 class Link(QGraphicsLineItem):
@@ -467,8 +525,8 @@ class Link(QGraphicsLineItem):
         self._parent = parent
         self.src_icon = src_icon
         self.dst_icon = dst_icon
-        self.src_connector = self.src_icon.proxy_conn_button()  # QGraphicsProxyWidget
-        self.dst_connector = self.dst_icon.proxy_conn_button()
+        self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
+        self.dst_connector = self.dst_icon.conn_button()
         self.setZValue(1)   # TODO: is this better than stackBefore?
         self.normal_color = QColor(0, 255, 0, 176)
         self.covered_color = QColor(128, 128, 128, 128)
@@ -502,9 +560,10 @@ class Link(QGraphicsLineItem):
         if e.button() != Qt.LeftButton:
             e.ignore()
         else:
-            if self.src_icon.conn_button().underMouse():
-                self.src_icon.conn_button().animateClick()
-            elif self.dst_icon.conn_button().underMouse():
+            if self.src_icon.conn_button().isUnderMouse():
+                self.src_icon.mousePressEvent(e)
+            elif self.dst_icon.conn_button().isUnderMouse():
+                self.dst_icon.mousePressEvent(e)
                 self.dst_icon.conn_button().animateClick()
 
     def contextMenuEvent(self, e):
@@ -514,7 +573,7 @@ class Link(QGraphicsLineItem):
             e (QGraphicsSceneMouseEvent): Mouse event
         """
         # TODO: Context menu must be shown over buttons if the item has a feedback connection.
-        if self.src_icon.conn_button().underMouse() or self.dst_icon.conn_button().underMouse():
+        if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
             e.ignore()
         else:
             self._parent.show_link_context_menu(e.screenPos(), self.src_icon.name(), self.dst_icon.name())
@@ -604,17 +663,13 @@ class LinkDrawer(QGraphicsLineItem):
         else:
             pos = e.scenePos()
             view_pos = self._qmainwindow.ui.graphicsView.mapFromScene(pos)
-            # logging.debug("pos:{0} view_pos:{1}".format(pos, view_pos))
             for item in self._qmainwindow.ui.graphicsView.items(view_pos):
                 # logging.debug("item:{0}".format(item))
-                try:
-                    widget = item.widget()
-                except AttributeError:
-                    continue
-                if isinstance(widget, QToolButton):
-                    # logging.debug("QToolButton found")
-                    if hasattr(widget, 'is_connector'):  # Should be a QToolButton
-                        widget.animateClick()
+                if isinstance(item, QGraphicsRectItem):  # TODO: Is this test needed?
+                    # logging.debug("QGraphicsRectItem found")
+                    if hasattr(item, 'is_connector'):  # only a connector_button should have this
+                        # Send mousePressEvent to QGraphicsRectItem (connector_button)
+                        item.mousePressEvent(e)
                         return
             self.drawing = False
             self._qmainwindow.msg_error.emit("Unable to make connection."

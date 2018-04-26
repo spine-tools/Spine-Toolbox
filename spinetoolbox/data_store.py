@@ -61,8 +61,6 @@ class DataStore(MetaObject):
         self.databases = list() # name of imported databases
         # Populate references model
         self._widget.populate_reference_list(self.references)
-        # set connections buttons slot type
-        # self._widget.ui.toolButton_connector.is_connector = True
         self.add_connection_string_form = None
         self.spine_data_explorer = SpineDataExplorerWidget(self._parent, self)
         self.spine_data_explorer.object_tree_model.setHorizontalHeaderItem(0, QStandardItem(name))
@@ -79,7 +77,6 @@ class DataStore(MetaObject):
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
-        # self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -91,10 +88,6 @@ class DataStore(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
-
-    # @Slot(name="draw_links")
-    # def draw_links(self):
-    #     self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name="open_explorer")
     def open_explorer(self):

@@ -334,7 +334,7 @@
         <enum>QGraphicsView::NoDrag</enum>
        </property>
        <property name="viewportUpdateMode">
-        <enum>QGraphicsView::NoViewportUpdate</enum>
+        <enum>QGraphicsView::FullViewportUpdate</enum>
        </property>
       </widget>
      </widget>
@@ -347,7 +347,7 @@
      <x>0</x>
      <y>0</y>
      <width>1014</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

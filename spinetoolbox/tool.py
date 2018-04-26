@@ -53,8 +53,6 @@ class Tool(MetaObject):
         self.item_type = "Tool"
         self.item_category = "Tools"
         self._project = project
-        # TODO: Try to set the parent of the drawn widget (QGraphicsProxyWidget?) as the scene
-        # TODO: Or use scene.add_item(self._widget)?? to set the parent
         self._widget = ToolSubWindowWidget(name, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_input_files()
@@ -75,8 +73,6 @@ class Tool(MetaObject):
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
-        # set connections buttons slot type
-        # self._widget.ui.toolButton_connector.is_connector = True
         self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
         self.connect_signals()
 
@@ -86,7 +82,6 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
-        # self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -98,10 +93,6 @@ class Tool(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
-
-    # @Slot(name="draw_links")
-    # def draw_links(self):
-    #     self._parent.ui.graphicsView.draw_links(self._widget.ui.toolButton_connector)
 
     @Slot(name='show_details')
     def show_details(self):
