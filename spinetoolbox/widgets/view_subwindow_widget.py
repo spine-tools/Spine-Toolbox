@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-QWidget that is used to display information in a View item.
+QWidget that is used to display information contained in a View.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi
 :date:   25.4.2018
@@ -102,7 +102,3 @@ class ViewWidget(QWidget):
         """
         event.ignore()
         self.hide()  # Hide widget and its proxy hides as well
-
-    def parent(self):
-        """Return embedding QGraphicsProxyWindow"""
-        return self.graphicsProxyWidget()

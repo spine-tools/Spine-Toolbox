@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-QWidget that is used as an internal widget for a Tool QMdiSubWindow.
+QWidget that is used to display information contained in a Tool.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
 :date:   31.1.2018
@@ -127,7 +127,3 @@ class ToolSubWindowWidget(QWidget):
         """
         event.ignore()
         self.hide()  # Hide widget and its proxy hides as well
-
-    def parent(self):
-        """Return embedding QGraphicsProxyWindow"""
-        return self.graphicsProxyWidget()

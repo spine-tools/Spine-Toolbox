@@ -18,18 +18,18 @@
 #############################################################################
 
 """
-QWidget that is used as an internal widget for a Data Store QGraphicsProxyWidget.
+QWidget that is used to display information contained in a Data Store.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   19.4.2018
 """
 
+import logging
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_store import Ui_Form
 from config import DS_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
-import logging
 
 
 class DataStoreWidget(QWidget):
@@ -38,7 +38,6 @@ class DataStoreWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Store')
     """
-
     def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
@@ -46,7 +45,7 @@ class DataStoreWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'DC 1')
+        self._owner = owner  # Name of object that owns this object (e.g. 'DS 1')
         self.reference_model = QStandardItemModel()  # References to databases
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
         self.ui.treeView_references.setModel(self.reference_model)
@@ -130,7 +129,3 @@ class DataStoreWidget(QWidget):
         """
         event.ignore()
         self.hide()  # Hide widget and its proxy hides as well
-
-    def parent(self):
-        """Return embedding QGraphicsProxyWindow"""
-        return self.graphicsProxyWidget()

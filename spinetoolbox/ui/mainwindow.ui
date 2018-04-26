@@ -328,7 +328,7 @@
         </brush>
        </property>
        <property name="renderHints">
-        <set>QPainter::Antialiasing|QPainter::HighQualityAntialiasing|QPainter::SmoothPixmapTransform|QPainter::TextAntialiasing</set>
+        <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
        </property>
        <property name="dragMode">
         <enum>QGraphicsView::NoDrag</enum>

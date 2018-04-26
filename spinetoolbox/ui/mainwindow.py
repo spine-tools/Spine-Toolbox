@@ -149,7 +149,7 @@ class Ui_MainWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(240, 240, 240))
         brush.setStyle(QtCore.Qt.SolidPattern)
         self.graphicsView.setBackgroundBrush(brush)
-        self.graphicsView.setRenderHints(QtGui.QPainter.Antialiasing|QtGui.QPainter.HighQualityAntialiasing|QtGui.QPainter.SmoothPixmapTransform|QtGui.QPainter.TextAntialiasing)
+        self.graphicsView.setRenderHints(QtGui.QPainter.Antialiasing|QtGui.QPainter.TextAntialiasing)
         self.graphicsView.setDragMode(QtWidgets.QGraphicsView.NoDrag)
         self.graphicsView.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
         self.graphicsView.setObjectName("graphicsView")

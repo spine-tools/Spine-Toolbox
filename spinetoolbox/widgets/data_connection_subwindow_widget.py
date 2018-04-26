@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-QWidget that is used as an internal widget for a Data Connection QMdiSubWindow.
+QWidget that is used to display information contained in a Data Connection.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
 :date:   22.2.2018
@@ -38,7 +38,6 @@ class DataConnectionWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
     """
-
     def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
@@ -129,7 +128,3 @@ class DataConnectionWidget(QWidget):
         """
         event.ignore()
         self.hide()  # Hide widget and its proxy hides as well
-
-    def parent(self):
-        """Return embedding QGraphicsProxyWindow"""
-        return self.graphicsProxyWidget()

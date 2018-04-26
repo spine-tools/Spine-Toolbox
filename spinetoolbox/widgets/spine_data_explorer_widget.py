@@ -19,6 +19,7 @@
 
 """
 QWidget that is shown to user when opening Spine data model from a Data Store.
+
 :author: Manuel Marin <manuelma@kth.se>
 :date:   21.4.2018
 """
@@ -35,6 +36,7 @@ from widgets.custom_menus import ObjectTreeContextMenu
 from helpers import busy_effect
 import logging
 import pyodbc
+
 
 class SpineDataExplorerWidget(QWidget):
     """A widget to show and edit Spine objects in a data store."""
