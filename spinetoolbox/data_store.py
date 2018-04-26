@@ -32,7 +32,7 @@ from widgets.data_store_subwindow_widget import DataStoreWidget
 from PySide2.QtCore import Qt, Slot
 from widgets.add_connection_string_widget import AddConnectionStringWidget
 from widgets.spine_data_explorer_widget import SpineDataExplorerWidget
-from views import DataStoreImage
+from graphics_items import DataStoreImage
 from config import REFERENCE, TABLE, NAME, PARAMETER_HEADER, OBJECT_PARAMETER,\
     PARAMETER_AS_PARENT, PARAMETER_AS_CHILD
 

@@ -28,7 +28,7 @@ import logging
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
 from PySide2.QtCore import Slot
-from views import ViewImage
+from graphics_items import ViewImage
 
 
 class View(MetaObject):

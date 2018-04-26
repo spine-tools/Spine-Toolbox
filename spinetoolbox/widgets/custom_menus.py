@@ -145,6 +145,7 @@ class ToolTemplateContextMenu(QMenu):
         """Returns the clicked action, a string with a description."""
         return self.option
 
+
 class ObjectTreeContextMenu(QMenu):
     """Context menu class for Spine data explorer object tree items."""
 
@@ -184,6 +185,7 @@ class ObjectTreeContextMenu(QMenu):
     def get_action(self):
         """Returns the clicked action, a string with a description."""
         return self.option
+
 
 class addToolTemplatePopupMenu(QMenu):
     """Popup menu class for add tool template button."""

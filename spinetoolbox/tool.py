@@ -33,7 +33,7 @@ from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
-from views import ToolImage
+from graphics_items import ToolImage
 
 
 class Tool(MetaObject):

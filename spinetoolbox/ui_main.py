@@ -48,7 +48,7 @@ from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, ITEM_TYPE
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates
 from models import ToolTemplateModel, ConnectionModel
-from views import SceneBackground
+from graphics_items import SceneBackground
 
 
 class ToolboxUI(QMainWindow):

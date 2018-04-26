@@ -36,7 +36,7 @@ from helpers import create_dir, blocking_updates
 from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
-from views import DataConnectionImage
+from graphics_items import DataConnectionImage
 
 
 class DataConnection(MetaObject):
