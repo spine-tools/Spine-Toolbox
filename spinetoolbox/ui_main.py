@@ -46,7 +46,8 @@ from widgets.tool_template_widget import ToolTemplateWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
-from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS
+from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
+    SPLITTER_SS, SEPARATOR_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates
 from models import ToolTemplateModel, ConnectionModel
 
@@ -98,6 +99,8 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
+        self.ui.splitter.setStyleSheet(SPLITTER_SS)
+        self.setStyleSheet(SEPARATOR_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -570,15 +573,11 @@ class ToolboxUI(QMainWindow):
         item_data = item.data(Qt.UserRole)
         # Clear QGroupBox layout
         self.clear_info_area()
-        # layout = self.ui.groupBox_subwindow.layout()
-        # for i in reversed(range(layout.count())):
-        #     widget_to_remove = layout.itemAt(i).widget()
-        #     # Remove it from the layout list
-        #     layout.removeWidget(widget_to_remove)
-        #     # Remove it from the gui
-        #     widget_to_remove.setParent(None)
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
+        # If Data Connection, refresh data files
+        if item_data.item_type == "Data Connection":
+            item_data.refresh()
 
     def clear_info_area(self):
         """Clear SubWindowArea QDockWidget."""

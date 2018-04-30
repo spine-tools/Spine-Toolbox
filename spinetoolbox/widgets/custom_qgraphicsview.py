@@ -54,7 +54,7 @@ class CustomQGraphicsView(QGraphicsView):
         # self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.max_sw_width = 0
         self.max_sw_height = 0
-        # self.scene().changed.connect(self.scene_changed)  # TODO: Check if this is needed
+        self.scene().changed.connect(self.scene_changed)  # TODO: Check if this is needed
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
@@ -69,6 +69,7 @@ class CustomQGraphicsView(QGraphicsView):
     def scene_changed(self):
         """Check if active subwindow has changed and emit signal accordingly."""
         # logging.debug("scene changed")
+        return
         current_active_sw = self.scene().activeWindow()
         if current_active_sw and current_active_sw.data(ITEM_TYPE) == "subwindow":
             if current_active_sw != self.active_subwindow:
@@ -83,8 +84,8 @@ class CustomQGraphicsView(QGraphicsView):
     def setProjectItemModel(self, model):
         """Set project item model and connect signals."""
         self._project_item_model = model
-        self._project_item_model.rowsInserted.connect(self.projectRowsInserted)
-        self._project_item_model.rowsAboutToBeRemoved.connect(self.projectRowsRemoved)
+        # self._project_item_model.rowsInserted.connect(self.projectRowsInserted)
+        # self._project_item_model.rowsAboutToBeRemoved.connect(self.projectRowsRemoved)
 
     def setConnectionModel(self, model):
         """Set connection model and connect signals."""
@@ -108,28 +109,28 @@ class CustomQGraphicsView(QGraphicsView):
         # TODO: Check if needed
         return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
-    def setActiveSubWindow(self, item):
-        """Replicate QMdiArea.setActiveWindow."""
-        # TODO: Check if needed
-        self.scene().setActiveWindow(item)
+    # def setActiveSubWindow(self, item):
+    #     """Replicate QMdiArea.setActiveWindow."""
+    #     # TODO: Check if needed
+    #     self.scene().setActiveWindow(item)
 
-    def activeSubWindow(self):
-        """Replicate QMdiArea.activeSubWindow."""
-        # TODO: Check if needed
-        act_w = self.scene().activeWindow()
-        if not act_w:
-            return None
-        # logging.debug("activeWindow type is now:{0}".format(act_w.type))
-        return self.scene().activeWindow()
+    # def activeSubWindow(self):
+    #     """Replicate QMdiArea.activeSubWindow."""
+    #     # TODO: Check if needed
+    #     act_w = self.scene().activeWindow()
+    #     if not act_w:
+    #         return None
+    #     # logging.debug("activeWindow type is now:{0}".format(act_w.type))
+    #     return self.scene().activeWindow()
 
-    def removeSubWindow(self, sw):
-        """OBSOLETE! Remove subwindow and any attached links from the scene."""
-        # TODO: Check if needed
-        for item in self.scene().items():
-            if item.data(ITEM_TYPE) == "link":
-                if sw.widget() == item.from_item or sw.widget() == item.to_item:
-                    self.scene().removeItem(item)
-        self.scene().removeItem(sw)
+    # def removeSubWindow(self, sw):
+    #     """OBSOLETE! Remove subwindow and any attached links from the scene."""
+    #     # TODO: Check if needed
+    #     for item in self.scene().items():
+    #         if item.data(ITEM_TYPE) == "link":
+    #             if sw.widget() == item.from_item or sw.widget() == item.to_item:
+    #                 self.scene().removeItem(item)
+    #     self.scene().removeItem(sw)
 
     def find_link(self, src_icon, dst_icon):
         """Find link in scene, by model index"""
@@ -139,29 +140,29 @@ class CustomQGraphicsView(QGraphicsView):
                     return item
         return None
 
-    @Slot("QModelIndex", "int", "int", name='projectRowsInserted')
-    def projectRowsInserted(self, item, first, last):
-        """Update view when an item is inserted to project."""
-        # TODO: Check if needed
-        # TODO: This does not really do anything. To be removed.
-        if not first-last == 0:
-            logging.error("Adding more than one item at a time is not allowed. first:{0} last:{1}".format(first, last))
-            return
-        data = item.child(first, 0).data(role=Qt.UserRole)
-        widget = data.get_widget()
+    # @Slot("QModelIndex", "int", "int", name='projectRowsInserted')
+    # def projectRowsInserted(self, item, first, last):
+    #     """Update view when an item is inserted to project."""
+    #     # TODO: Check if needed
+    #     # TODO: This does not really do anything. To be removed.
+    #     if not first-last == 0:
+    #         logging.error("Adding more than one item at a time is not allowed. first:{0} last:{1}".format(first, last))
+    #         return
+    #     data = item.child(first, 0).data(role=Qt.UserRole)
+    #     widget = data.get_widget()
 
-    @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
-    def projectRowsRemoved(self, item, first, last):
-        """Update view when an item is removed from project."""
-        # TODO: Check if needed
-        # logging.debug("project rows removed")
-        for ind in range(first, last+1):
-            sw = item.child(ind, 0).data(role=Qt.UserRole).get_widget().parent()
-            self.scene().removeItem(sw)
+    # @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
+    # def projectRowsRemoved(self, item, first, last):
+    #     """Update view when an item is removed from project."""
+    #     # TODO: Check if needed
+    #     # logging.debug("project rows removed")
+    #     for ind in range(first, last+1):
+    #         sw = item.child(ind, 0).data(role=Qt.UserRole).get_widget().parent()
+    #         self.scene().removeItem(sw)
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
     def connectionDataChanged(self, top_left, bottom_right, roles=None):
-        """update view when model changes."""
+        """Add or remove Link on scene between items when connection model changes."""
         top = top_left.row()
         left = top_left.column()
         bottom = bottom_right.row()

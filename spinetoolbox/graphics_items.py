@@ -678,6 +678,9 @@ class LinkDrawer(QGraphicsLineItem):
     def paint(self, painter, option, widget):
         """Draw ellipse at begin position and arrowhead at end position."""
         # arrow head
+        if not self.drawing:
+            super().paint(painter, option, widget)
+            return
         self.setLine(self.src.x(), self.src.y(), self.dst.x(), self.dst.y())
         angle = atan2(-self.line().dy(), self.line().dx())
         arrow_p0 = self.line().p2()
