@@ -32,7 +32,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNA
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
-from widgets.data_store_widget import DataStoreWidget
+from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, LinkContextMenu, \
     addToolTemplatePopupMenu

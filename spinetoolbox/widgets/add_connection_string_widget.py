@@ -25,7 +25,6 @@ QWidget that is shown to user when adding Connection strings to a Data Store.
 """
 
 import os
-from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 from ui.add_connection_string import Ui_Form
@@ -113,24 +112,25 @@ class AddConnectionStringWidget(QWidget):
     @Slot(name='ok_clicked')
     def ok_clicked(self):
         """Check that everything is valid, create string and add it to data store."""
+        reference = dict()
         if self.ui.comboBox_dsn.currentIndex() > 0:
-            self.string_dict['DSN'] = self.ui.comboBox_dsn.currentText()
-        self.string_dict['DRIVER'] = self.ui.lineEdit_driver.text()
-        self.string_dict['SERVER'] = self.ui.lineEdit_server.text()
-        self.string_dict['DATABASE'] = self.ui.lineEdit_database.text()
-        self.string_dict['UID'] = self.ui.lineEdit_username.text()
-        self.string_dict['PWD'] = self.ui.lineEdit_password.text()
+            reference['DSN'] = self.ui.comboBox_dsn.currentText()
+        reference['DRIVER'] = self.ui.lineEdit_driver.text()
+        reference['SERVER'] = self.ui.lineEdit_server.text()
+        reference['DATABASE'] = self.ui.lineEdit_database.text()
+        reference['UID'] = self.ui.lineEdit_username.text()
+        reference['PWD'] = self.ui.lineEdit_password.text()
         for k in CS_REQUIRED_KEYS:
-            if not self.string_dict[k]:
+            if not reference[k]:
                 self.statusbar.showMessage("{} missing".format(k.capitalize()), 3000)
                 return
-        connection_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in self.string_dict.items() if v)
+        connection_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in reference.items() if v)
         try:
-            cnxn = pyodbc.connect(connection_string, autocommit=True, timeout=3)
+            pyodbc.connect(connection_string, autocommit=True, timeout=3)
         except:
             self.statusbar.showMessage("Connection failed.")
             return
-        self._data_store.add_reference(connection_string)
+        self._data_store.add_reference(reference)
         self.close()
 
     def keyPressEvent(self, e):

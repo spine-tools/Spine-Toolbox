@@ -26,7 +26,7 @@ Classes for custom context menus.
 
 from PySide2.QtWidgets import QMenu
 from PySide2.QtCore import SLOT
-from config import TABLE
+import sys
 
 
 class ProjectItemContextMenu(QMenu):
@@ -155,14 +155,12 @@ class ObjectTreeContextMenu(QMenu):
         self.index = index
         self.option = "None"
         if index.isValid():
-            item = self._parent.object_tree_model.itemFromIndex(index)
-            if not item.data(TABLE): # it's a database
+            if index.internalId() == sys.maxsize:
                 self.add_action("New object class")
             else:
-                if item.data(TABLE) == "object_class":
-                    self.add_action("New object")
-                self.add_action("Rename")
-                self.add_action("Remove")
+                self.add_action("New object")
+            self.add_action("Rename")
+            self.add_action("Remove")
         self.exec_(position)
 
     def add_action(self, text):

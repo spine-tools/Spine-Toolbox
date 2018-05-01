@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -20,253 +20,348 @@
 #############################################################################
 -->
 <ui version="4.0">
- <class>DataStoreForm</class>
- <widget class="QWidget" name="DataStoreForm">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>590</height>
+    <width>782</width>
+    <height>601</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Data Store</string>
+   <string>Spine Data Explorer</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_7">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QVBoxLayout" name="verticalLayout_5">
+     <property name="spacing">
+      <number>2</number>
+     </property>
+     <property name="leftMargin">
+      <number>4</number>
+     </property>
+     <property name="topMargin">
+      <number>4</number>
+     </property>
+     <property name="rightMargin">
+      <number>4</number>
+     </property>
+     <property name="bottomMargin">
+      <number>4</number>
+     </property>
      <item>
-      <widget class="QTreeWidget" name="treeWidget">
-       <property name="sortingEnabled">
-        <bool>true</bool>
+      <widget class="QSplitter" name="splitter_3">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <attribute name="headerDefaultSectionSize">
-        <number>186</number>
-       </attribute>
-       <column>
-        <property name="text">
-         <string>Object Tree</string>
-        </property>
-       </column>
-       <column>
-        <property name="text">
-         <string/>
-        </property>
-       </column>
-       <item>
-        <property name="text">
-         <string>Unit</string>
-        </property>
-        <item>
-         <property name="text">
-          <string>CPS_CCGT</string>
-         </property>
-         <property name="background">
-          <brush brushstyle="NoBrush">
-           <color alpha="255">
-            <red>0</red>
-            <green>0</green>
-            <blue>0</blue>
-           </color>
-          </brush>
-         </property>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <widget class="QWidget" name="layoutWidget">
+        <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
-          <property name="text">
-           <string>UNIT_CONTROLAREA</string>
-          </property>
+          <widget class="QLabel" name="label_object_tree">
+           <property name="text">
+            <string>&lt;b&gt;Object tree&lt;/b&gt;</string>
+           </property>
+          </widget>
          </item>
          <item>
-          <property name="text">
-           <string>UNIT_CONSTRAINT</string>
-          </property>
+          <widget class="CustomQTreeView" name="treeView_object">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+             <horstretch>1</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="contextMenuPolicy">
+            <enum>Qt::CustomContextMenu</enum>
+           </property>
+           <property name="editTriggers">
+            <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
+           </property>
+          </widget>
          </item>
-         <item>
-          <property name="text">
-           <string>UNIT_AVAILSTS</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>UNIT_AVAILDTS</string>
-          </property>
-         </item>
-        </item>
-        <item>
-         <property name="text">
-          <string>AA3</string>
+        </layout>
+       </widget>
+       <widget class="QSplitter" name="splitter_2">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+          <horstretch>2</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <widget class="QWidget" name="layoutWidget">
+         <layout class="QVBoxLayout" name="verticalLayout_2">
+          <item>
+           <widget class="QLabel" name="label_object_parameter">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>&lt;b&gt;Object parameter&lt;/b&gt;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableView" name="tableView_object_parameter">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>2</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_3">
+            <item>
+             <widget class="QToolButton" name="toolButton_add_object_parameter">
+              <property name="text">
+               <string>...</string>
+              </property>
+              <property name="icon">
+               <iconset resource="resources/resources_icons.qrc">
+                <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="toolButton_remove_object_parameter">
+              <property name="text">
+               <string>...</string>
+              </property>
+              <property name="icon">
+               <iconset resource="resources/resources_icons.qrc">
+                <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="Line" name="line_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QSplitter" name="splitter">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>AA2</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>AA1</string>
-         </property>
-        </item>
-       </item>
-       <item>
-        <property name="text">
-         <string>Transmission Node</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Transmission Branch</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Time Slice Definition</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Storage</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Reserve</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Fuel</string>
-        </property>
-       </item>
+         <widget class="QWidget" name="layoutWidget">
+          <layout class="QVBoxLayout" name="verticalLayout">
+           <item>
+            <widget class="QLabel" name="label_parameter_as_parent">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&lt;b&gt;Relationship parameter (as parent)&lt;/b&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTableView" name="tableView_parameter_as_parent">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QToolButton" name="toolButton_add_parameter_as_parent_2">
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_remove_parameter_as_parent_2">
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="layoutWidget">
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <item>
+            <widget class="QLabel" name="label_parameter_as_child">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>&lt;b&gt;Relationship parameter (as child)&lt;/b&gt;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTableView" name="tableView_parameter_as_child">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>2</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_5">
+             <item>
+              <widget class="QToolButton" name="toolButton_add_parameter_as_child">
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QToolButton" name="toolButton_remove_parameter_as_child">
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="icon">
+                <iconset resource="resources/resources_icons.qrc">
+                 <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="horizontalSpacer_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </widget>
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout">
+      <widget class="Line" name="line">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
-        <widget class="QLabel" name="label">
+        <widget class="QLineEdit" name="lineEdit_commit_msg">
+         <property name="placeholderText">
+          <string>Enter commit message here...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_commit">
          <property name="text">
-          <string>Object Parameters</string>
+          <string>Commit</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QTreeWidget" name="treeWidget_2">
-         <property name="sortingEnabled">
-          <bool>true</bool>
-         </property>
-         <attribute name="headerDefaultSectionSize">
-          <number>110</number>
-         </attribute>
-         <column>
-          <property name="text">
-           <string>o_id</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>p_id</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>t_id</string>
-          </property>
-         </column>
-         <item>
-          <property name="text">
-           <string>CPS_CCGT</string>
-          </property>
-          <property name="text">
-           <string>FORCED_OUTAGE</string>
-          </property>
-          <property name="text">
-           <string>HS</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>CPS_CCGT</string>
-          </property>
-          <property name="text">
-           <string>SOD</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>CPS_CCGT</string>
-          </property>
-          <property name="text">
-           <string>MTTR</string>
-          </property>
-         </item>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="label_2">
+        <widget class="QPushButton" name="pushButton_reset">
          <property name="text">
-          <string>Membership Parameters</string>
+          <string>Reset</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QTreeWidget" name="treeWidget_3">
-         <property name="sortingEnabled">
-          <bool>true</bool>
+        <widget class="QPushButton" name="pushButton_close">
+         <property name="text">
+          <string>Close</string>
          </property>
-         <attribute name="headerDefaultSectionSize">
-          <number>110</number>
-         </attribute>
-         <column>
-          <property name="text">
-           <string>mc_id</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>o_id1</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
-           <string>o_id2</string>
-          </property>
-         </column>
-         <item>
-          <property name="text">
-           <string>UNIT_RESERVE</string>
-          </property>
-          <property name="text">
-           <string>CPS_CCGT</string>
-          </property>
-          <property name="text">
-           <string>SOR</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>UNIT_RESERVE</string>
-          </property>
-          <property name="text">
-           <string>CPS_CCGT</string>
-          </property>
-          <property name="text">
-           <string>TOR</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>UNIT_RESERVE</string>
-          </property>
-          <property name="text">
-           <string>CPS_CCGT</string>
-          </property>
-          <property name="text">
-           <string>DYN_NI</string>
-          </property>
-         </item>
         </widget>
        </item>
       </layout>
@@ -274,84 +369,45 @@
     </layout>
    </item>
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <layout class="QHBoxLayout" name="horizontalLayout_statusbar_placeholder">
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
      <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
+      <widget class="QWidget" name="widget_invisible_dummy" native="true">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <property name="sizeHint" stdset="0">
+       <property name="minimumSize">
         <size>
-         <width>40</width>
+         <width>0</width>
          <height>20</height>
         </size>
        </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton">
-       <property name="text">
-        <string>New</string>
+       <property name="maximumSize">
+        <size>
+         <width>0</width>
+         <height>20</height>
+        </size>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_3">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_2">
-       <property name="text">
-        <string>Modify</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_4">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_3">
-       <property name="text">
-        <string>Import</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
      </item>
     </layout>
    </item>
   </layout>
  </widget>
- <resources/>
+ <customwidgets>
+  <customwidget>
+   <class>CustomQTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources>
+  <include location="resources/resources_icons.qrc"/>
+ </resources>
  <connections/>
 </ui>

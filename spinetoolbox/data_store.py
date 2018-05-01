@@ -24,18 +24,16 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import pyodbc
+import os
+import pyodbc, sqlite3
 import logging
-from PySide2.QtGui import QStandardItemModel, QStandardItem
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
+from widgets.data_store_widget import DataStoreForm
 from PySide2.QtCore import Qt, Slot
 from widgets.add_connection_string_widget import AddConnectionStringWidget
-from widgets.spine_data_explorer_widget import SpineDataExplorerWidget
 from graphics_items import DataStoreImage
-from config import REFERENCE, TABLE, NAME, PARAMETER_HEADER, OBJECT_PARAMETER,\
-    PARAMETER_AS_PARENT, PARAMETER_AS_CHILD
-
+from helpers import create_dir
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -57,26 +55,31 @@ class DataStore(MetaObject):
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()
-        self.references = references
+        self.references = list() #references
+        # Make directory for Data Store
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+                                        " Check permissions.".format(self.data_dir))
         self.databases = list() # name of imported databases
         # Populate references model
-        self._widget.populate_reference_list(self.references)
+        self._widget.populate_reference_list(self.references)# Populate data (files) model
+        data_files = os.listdir(self.data_dir)
+        self._widget.populate_data_list(data_files)
         self.add_connection_string_form = None
-        self.spine_data_explorer = SpineDataExplorerWidget(self._parent, self)
-        self.spine_data_explorer.object_tree_model.setHorizontalHeaderItem(0, QStandardItem(name))
+        self.spine_data_explorer = None
         self._graphics_item = DataStoreImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
-        # Import references into project
-        # TODO: implement this with automatic import setting
-        self.import_references()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.pushButton_open.clicked.connect(self.open_explorer)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
+        self._widget.ui.treeView_data.doubleClicked.connect(self.open_file)
+        self._widget.ui.toolButton_add.clicked.connect(self.import_references)
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -89,12 +92,6 @@ class DataStore(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot(name="open_explorer")
-    def open_explorer(self):
-        """Open Spine data explorer."""
-        # self.spine_data_explorer.showMaximized()
-        self.spine_data_explorer.show()
-
     @Slot(name="show_add_connection_string_form")
     def show_add_connection_string_form(self):
         """Show the form for specifying connection strings."""
@@ -105,10 +102,6 @@ class DataStore(MetaObject):
         """Add reference to reference list and populate widget's reference list"""
         self.references.append(reference)
         self._widget.populate_reference_list(self.references)
-        # import reference into project
-        # TODO: implement this with automatic import setting
-        # self.spine_data_explorer.import_reference(reference)
-        # self._widget.populate_data_list(self.databases)
 
     @Slot(name="remove_references")
     def remove_references(self):
@@ -126,11 +119,10 @@ class DataStore(MetaObject):
                 self.references.pop(row)
             self._parent.msg.emit("Selected references removed")
         self._widget.populate_reference_list(self.references)
-        # TODO: remove reference imported to the project
 
     @Slot(name="import_references")
     def import_references(self):
-        """Import data from selected items in reference list and update database list.
+        """Import data from selected items in reference list into local SQLite file.
         If no item is selected then import all of them.
         """
         if not self.references:
@@ -143,11 +135,53 @@ class DataStore(MetaObject):
             references_to_import = [self.references[ind.row()] for ind in indexes]
         for reference in references_to_import:
             try:
-                self.spine_data_explorer.import_reference(reference)
+                self.import_reference(reference)
             except pyodbc.Error as e:
                 self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
                 continue
-        self._widget.populate_data_list(self.databases)
+        data_files = os.listdir(self.data_dir)
+        self._widget.populate_data_list(data_files)
+
+    def import_reference(self, reference):
+        """Import reference database into local SQLite file"""
+
+        database_name = reference["DATABASE"]
+        self._parent.msg.emit("Importing database <b>{0}</b>".format(database_name))
+        odbc_cnxn_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in reference.items() if v)
+        obdc_cnxn = pyodbc.connect(odbc_cnxn_string, autocommit=True, timeout=3)
+        sqlite_cnxn = sqlite3.connect(os.path.join(self.data_dir, database_name + ".sqlite"))
+        table_names = [
+            'object_class', 'object',
+            'relationship_class', 'relationship',
+            'parameter_definition', 'parameter'
+        ]
+        for table in table_names:
+            sqlite_cnxn.cursor().execute("DROP TABLE IF EXISTS {}".format(table))
+            header = list()
+            for row in obdc_cnxn.cursor().columns(table=table):
+                header.append(row.column_name)
+            sql = "CREATE TABLE {0} (`{1}`)".format(table, '`, `'.join(header))
+            sqlite_cnxn.cursor().execute(sql)
+            for row in obdc_cnxn.cursor().execute("SELECT * FROM {0}".format(table)):
+                sql = "INSERT INTO {0} VALUES (".format(table)\
+                    + ', '.join(["?" for i in range(len(row))]) + ")"
+                sqlite_cnxn.cursor().execute(sql, row)
+        sqlite_cnxn.commit()
+        self.databases.append(database_name)
+
+    @Slot("QModelIndex", name="open_file")
+    def open_file(self, index):
+        """Open reference in spine data explorer."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            data_file = os.listdir(self.data_dir)[index.row()]
+            data_file_path = os.path.join(self.data_dir, data_file)
+            self.spine_data_explorer = DataStoreForm(self._parent, data_file_path)
+            self.spine_data_explorer.show()
 
     @Slot(name="show_connections")
     def show_connections(self):

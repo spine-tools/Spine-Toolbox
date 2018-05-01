@@ -141,12 +141,3 @@ HEADER_POINTSIZE = 8
 
 # QGraphicsView framerate
 FPS = 50
-
-# Spine objet tree item's user roles
-REFERENCE = Qt.UserRole
-TABLE = Qt.UserRole+1
-NAME = Qt.UserRole+2
-PARAMETER_HEADER = Qt.UserRole+3
-OBJECT_PARAMETER = Qt.UserRole+4
-PARAMETER_AS_PARENT = Qt.UserRole+5
-PARAMETER_AS_CHILD = Qt.UserRole+6
