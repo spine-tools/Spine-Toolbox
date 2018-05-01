@@ -55,7 +55,7 @@ class DataStore(MetaObject):
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()
-        self.references = list() #references
+        self.references = references
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -65,11 +65,12 @@ class DataStore(MetaObject):
                                         " Check permissions.".format(self.data_dir))
         self.databases = list() # name of imported databases
         # Populate references model
-        self._widget.populate_reference_list(self.references)# Populate data (files) model
+        self._widget.populate_reference_list(self.references)
+        # Populate data (files) model
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
         self.add_connection_string_form = None
-        self.spine_data_explorer = None
+        self.data_store_form = None
         self._graphics_item = DataStoreImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
 
@@ -180,8 +181,8 @@ class DataStore(MetaObject):
         else:
             data_file = os.listdir(self.data_dir)[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
-            self.spine_data_explorer = DataStoreForm(self._parent, data_file_path)
-            self.spine_data_explorer.show()
+            self.data_store_form = DataStoreForm(self._parent, data_file_path)
+            self.data_store_form.show()
 
     @Slot(name="show_connections")
     def show_connections(self):

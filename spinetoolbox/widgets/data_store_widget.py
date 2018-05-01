@@ -24,12 +24,11 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtSql import QSqlTableModel, QSqlDatabase, QSqlQuery
+from PySide2.QtSql import QSqlTableModel, QSqlDatabase
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView
-from PySide2.QtCore import Slot, Qt, SIGNAL, QAbstractProxyModel, QModelIndex, QSortFilterProxyModel
+from PySide2.QtCore import Slot, Qt, QAbstractProxyModel, QModelIndex
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
-from models import MinimalTableModel
 from widgets.custom_menus import ObjectTreeContextMenu
 from helpers import busy_effect
 import logging
