@@ -24,7 +24,7 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtSql import QSqlTableModel, QSqlDatabase
+from PySide2.QtSql import QSqlTableModel, QSqlDatabase, QSqlQueryModel
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView
 from PySide2.QtCore import Slot, Qt, QAbstractProxyModel, QModelIndex
 from ui.data_store_form import Ui_Form
@@ -54,6 +54,9 @@ class DataStoreForm(QWidget):
         # Sql table models
         self.object_class_model = None
         self.object_model = None
+        # Sql query model
+        self.object_class_join_model = None
+        self.class_object_count_model = None
         # Proxy models
         self.object_tree_model = QTreeProxyModel(self)
         self.object_parameter_model = None
@@ -84,7 +87,7 @@ class DataStoreForm(QWidget):
         #self.ui.pushButton_reset.clicked.connect(self.reset_clicked)
         self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
-        self.object_class_model.primeInsert.connect(self.object_class_inserted)
+        #self.object_class_model.primeInsert.connect(self.object_class_inserted)
 
     @Slot("int", "QSqlRecord", name="object_class_inserted")
     def object_class_inserted(self, row, record):
@@ -109,21 +112,41 @@ class DataStoreForm(QWidget):
         if not database.open():
             self._parent.msg.emit("Connection to <b>{0}</b> failed.".format(database_name))
             return
-        self.object_class_model = QSqlTableModel(self, database)
-        self.object_class_model.setTable("object_class")
-        self.object_class_model.select()
-        self.object_class_model.setEditStrategy(QSqlTableModel.OnManualSubmit)
-        self.object_model = QSqlTableModel(self, database)
-        self.object_model.setTable("object")
-        self.object_model.select()
-        self.object_model.setEditStrategy(QSqlTableModel.OnManualSubmit)
+
+        self.object_class_join_model = QSqlQueryModel()
+        self.object_class_join_model.setQuery("""
+            SELECT oc.name as class_name,
+                oc.description as class_description,
+                oc.display_order as class_display_order,
+                o.name as object_name,
+                o.description as object_description
+            from object_class as oc
+            LEFT JOIN object as o
+            ON oc.name=o.class_name
+            ORDER BY class_display_order
+        """)
+
+        self.class_object_count_model = QSqlQueryModel()
+        self.class_object_count_model.setQuery("""
+            SELECT oc.name as class_name,
+                o.count as object_count,
+                oc.display_order as class_display_order
+            FROM object_class as oc
+            LEFT JOIN (
+                SELECT class_name, count(*) as count
+                FROM object GROUP BY class_name
+            ) as o
+            ON oc.name=o.class_name
+            ORDER BY class_display_order
+        """)
+
         self.object_tree_model = QTreeProxyModel(self)
-        self.object_tree_model.set_models(self.object_model, self.object_class_model)
+        self.object_tree_model.set_models(self.object_class_join_model,\
+                                            self.class_object_count_model)
         self.ui.treeView_object.setModel(self.object_tree_model)
-        self.ui.treeView_object.resizeColumnToContents(0) # TODO: try to improve this
-        self.ui.treeView_object.resizeColumnToContents(1) # TODO: try to improve this
         self.ui.treeView_object.expandAll()
-        #self.ui.treeView_object.setEditTriggers(QAbstractItemView.SelectedClicked|QAbstractItemView.EditKeyPressed)
+        self.ui.treeView_object.resizeColumnToContents(0)
+        self.ui.treeView_object.resizeColumnToContents(1)
 
         self.object_parameter_model = QSqlTableModel(self, database)
         self.object_parameter_model.setTable("parameter")
@@ -153,7 +176,7 @@ class DataStoreForm(QWidget):
         if index.internalId() == sys.maxsize:
             return
         object_name = index.data()
-        object_class_name = self.object_class_model.record(index.internalId()).value("name")
+        class_name = self.class_object_count_model.record(index.internalId()).value("class_name")
         clause = "object_name='{}'".format(object_name)
         self.object_parameter_model.setFilter(clause)
         clause = """object_name in
@@ -162,7 +185,7 @@ class DataStoreForm(QWidget):
             on r.class_name=rc.name
             where r.parent_object_name='{}'
             and rc.parent_class_name='{}')
-        """.format(object_name, object_class_name)
+        """.format(object_name, class_name)
         self.parameter_as_parent_model.setFilter(clause)
         clause = """object_name in
             (SELECT r.name from relationship as r
@@ -170,7 +193,7 @@ class DataStoreForm(QWidget):
             on r.class_name=rc.name
             where r.child_object_name='{}'
             and rc.child_class_name='{}')
-        """.format(object_name, object_class_name)
+        """.format(object_name, class_name)
         self.parameter_as_child_model.setFilter(clause)
 
     @Slot("QPoint", name="show_object_tree_context_menu")
@@ -230,69 +253,45 @@ class QTreeProxyModel(QAbstractProxyModel):
     def __init__(self, parent=None):
         """Init class"""
         super().__init__(parent)
-        self.header = list()
-        self.object_class_model = None
+        self.class_object_count_model = None
         self.class_display_order = dict()
-        self.class_count = dict()
+        self.class_object_count = dict()
         self.class_offset = dict()
-        self.object_name_sec = None
-        self.object_class_name_sec = None
-        self.object_description_sec = None
         self.class_name_sec = None
         self.class_description_sec = None
+        self.object_name_sec = None
+        self.object_description_sec = None
 
-    def set_models(self, object_model, object_class_model):
+    def setSourceModel(self, model):
+        """Sets the given sourceModel to be processed by the proxy model."""
+        #logging.debug("set source")
+        self.beginResetModel()
+        super().setSourceModel(model)
+        self.endResetModel()
+
+    def set_models(self, object_class_join_model, class_object_count_model):
         """Setup models"""
-        self.setSourceModel(object_model)
-        self.object_class_model = object_class_model
+        self.setSourceModel(object_class_join_model)
+        self.class_object_count_model = class_object_count_model
         # Find out sections in each source model
-        object_header = self.sourceModel().record()
-        class_header = self.object_class_model.record()
-        self.object_name_sec = object_header.indexOf("name")
-        self.object_class_name_sec = object_header.indexOf("class_name")
-        self.object_description_sec = object_header.indexOf("description")
-        self.class_name_sec = class_header.indexOf("name")
-        self.class_description_sec = class_header.indexOf("description")
-        # insert dummy column to object table to map class description from/to it
-        # this enables editing of class description in treeView
-        self.sourceModel().insertColumn(self.sourceModel().columnCount())
-        self.object_class_desc_sec = self.sourceModel().columnCount()-1
-        # TODO: remove this column before commit
-        # self.sourceModel().removeColumn(self.sourceModel().columnCount()-1)
+        header = self.sourceModel().record()
+        self.class_name_sec = header.indexOf("class_name")
+        self.class_description_sec = header.indexOf("class_description")
+        self.object_name_sec = header.indexOf("object_name")
+        self.object_description_sec = header.indexOf("object_description")
 
-        # Sort both models by class_name to compute correct offsets
-        self.sourceModel().sort(object_header.indexOf("class_name"), Qt.AscendingOrder)
-        self.object_class_model.sort(self.class_name_sec, Qt.AscendingOrder)
         offset = 0
-        for i in range(self.object_class_model.rowCount()):
-            class_name = self.object_class_model.record(i).value("name")
+        for i in range(self.class_object_count_model.rowCount()):
+            class_name = self.class_object_count_model.record(i).value("class_name")
             self.class_offset[class_name] = offset
-            count = 0
-            for j in range(self.sourceModel().rowCount()):
-                if self.sourceModel().record(j).value("class_name") == class_name:
-                    count += 1
-            self.class_count[class_name] = count
-            offset += count
-        # Sort class model by display order
-        self.object_class_model.sort(class_header.indexOf("display_order"), Qt.AscendingOrder)
-        # Compute class display order
-        for i in range(self.object_class_model.rowCount()):
-            class_name = self.object_class_model.record(i).value("name")
+            object_count = self.class_object_count_model.record(i).value("object_count")
+            if not object_count:
+                object_count = 0
+            self.class_object_count[class_name] = object_count
+            if object_count == 0:
+                object_count = 1
+            offset += object_count
             self.class_display_order[class_name] = i
-        self.setHeaderData(0, Qt.Horizontal, "name")
-        self.setHeaderData(1, Qt.Horizontal, "description")
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        """Inserts count rows into the model before the given row.
-        Items in the new row will be children of the item represented
-        by the parent model index."""
-        if not parent.isValid(): # New class
-            self.object_class_model.insertRows(row, count, QModelIndex())
-            return True
-        if parent.internalId() == sys.maxsize:
-            self.sourceModel().insertRows(0, count, QModelIndex())
-            return True
-        return False
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -307,10 +306,10 @@ class QTreeProxyModel(QAbstractProxyModel):
         """Returns the number of rows under the given parent"""
         #logging.debug("rowcount")
         if not parent.isValid(): # root
-            return self.object_class_model.rowCount()
+            return self.class_object_count_model.rowCount()
         if parent.internalId() == sys.maxsize: # class
-            class_name = self.object_class_model.record(parent.row()).value("name")
-            return self.class_count[class_name]
+            class_name = self.class_object_count_model.record(parent.row()).value("class_name")
+            return self.class_object_count[class_name]
         return 0
 
     def index(self, row, column, parent=QModelIndex()):
@@ -325,49 +324,30 @@ class QTreeProxyModel(QAbstractProxyModel):
     def mapToSource(self, proxy_index):
         """Return the model index in the source model that corresponds to the
         proxy_index in the proxy model"""
-        #logging.debug("mapto")
+        # logging.debug("mapto")
         if not proxy_index.isValid():
             return QModelIndex()
         if proxy_index.internalId() == sys.maxsize: # class
-            class_name = self.object_class_model.record(proxy_index.row()).value("name")
-            row = self.class_offset[class_name] + 1
-            column = self.object_class_name_sec if proxy_index.column() == 0 else self.object_class_desc_sec
+            class_name = self.class_object_count_model.record(proxy_index.row()).value("class_name")
+            row = self.class_offset[class_name]
+            column = self.class_name_sec if proxy_index.column() == 0 else\
+                    self.class_description_sec
             return self.sourceModel().index(row, column)
-        class_name = self.object_class_model.record(proxy_index.internalId()).value("name")
+        class_name = self.class_object_count_model.record(proxy_index.internalId()).value("class_name")
         row = self.class_offset[class_name] + proxy_index.row()
         column = self.object_name_sec if proxy_index.column() == 0 else self.object_description_sec
         return self.sourceModel().index(row, column)
 
-    def data(self, index, role=Qt.DisplayRole):
-        """Read class description from object_class_model"""
-        #logging.debug("data")
-        if not index.isValid():
-            return None
-        if index.internalId() == sys.maxsize and index.column() == 1:
-            column = self.class_description_sec
-            object_class_index = self.object_class_model.createIndex(index.row(), column)
-            return self.object_class_model.data(object_class_index, role)
-        return super().data(index, role)
-
-    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
-        """Get headers."""
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            try:
-                h = self.header[section]
-            except IndexError:
-                return None
-            return h
-        else:
-            return None
-
-    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
-        """Set headers"""
-        # logging.debug("set header data")
-        if orientation == Qt.Horizontal and role == Qt.EditRole:
-            self.header.insert(section, value)
-            self.headerDataChanged.emit(orientation, section, section)
-            return True
-        return False
+    #def setData(self, index, value, role=Qt.EditRole):
+    #    """Sets the role data for the item at index to value."""
+    #    logging.debug("set data")
+    #    if role != Qt.EditRole:
+    #        return False
+    #    if index.internalId() == sys.maxsize:
+    #        logging.debug("hello")
+    #        self.dataChanged.emit(index, index, Qt.EditRole)
+    #        return True
+    #    return super().setData(index, value, role)
 
     def parent(self, index):
         """Returns the parent of the model item with the given index. """
@@ -384,25 +364,17 @@ class QTreeProxyModel(QAbstractProxyModel):
         source_index from the source model"""
         #logging.debug("mapfrom")
         class_name = self.sourceModel().record(source_index.row()).value("class_name")
-        if source_index.column() == self.object_class_name_sec:
-            row = self.class_display_order[class_name]
-            column = 0
-            internal_id = sys.maxsize
-        elif source_index.column() == self.object_class_desc_sec:
-            row = self.class_display_order[class_name]
-            column = 1
-            internal_id = sys.maxsize   # TODO: what is this?
-        elif source_index.column() == self.object_name_sec:
+        source_column = source_index.column()
+        if source_column in [self.object_name_sec, self.object_description_sec]:
             row = source_index.row() - self.class_offset[class_name]
-            column = 0
-            internal_id = self.class_display_order[class_name]
-        elif source_index.column() == self.object_description_sec:
-            row = source_index.row() - self.class_offset[class_name]
-            column = 1
-            internal_id = self.class_display_order[class_name]
-        else:
-            return QModelIndex()
-        return self.createIndex(row, column, internal_id)
+            column = 0 if source_column == self.object_name_sec else 1
+            parent_row = self.class_display_order[class_name]
+            return self.createIndex(row, column, parent_row)
+        elif source_column in [self.class_name_sec, self.class_description_sec]:
+            row = self.class_display_order[class_name]
+            column = 0 if source_column == self.class_name_sec else 1
+            return self.createIndex(row, column, sys.maxsize)
+        return QModelIndex()
 
     def hasChildren(self, parent):
         """Return whether or not parent has children in the model"""
@@ -413,10 +385,3 @@ class QTreeProxyModel(QAbstractProxyModel):
         if parent.internalId() == sys.maxsize:
             return True
         return False
-
-    def setSourceModel(self, model):
-        """Sets the given sourceModel to be processed by the proxy model."""
-        #logging.debug("set source")
-        self.beginResetModel()
-        super().setSourceModel(model)
-        self.endResetModel()
