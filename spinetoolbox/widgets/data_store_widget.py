@@ -24,7 +24,7 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtSql import QSqlTableModel, QSqlDatabase, QSqlQueryModel
+from PySide2.QtSql import QSqlTableModel, QSqlDatabase, QSqlQueryModel, QSqlQuery
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView
 from PySide2.QtCore import Slot, Qt, QAbstractProxyModel, QModelIndex
 from ui.data_store_form import Ui_Form
@@ -112,7 +112,7 @@ class DataStoreForm(QWidget):
         if not database.open():
             self._parent.msg.emit("Connection to <b>{0}</b> failed.".format(database_name))
             return
-
+        # object class join model
         self.object_class_join_model = QSqlQueryModel()
         self.object_class_join_model.setQuery("""
             SELECT oc.name as class_name,
@@ -120,12 +120,12 @@ class DataStoreForm(QWidget):
                 oc.display_order as class_display_order,
                 o.name as object_name,
                 o.description as object_description
-            from object_class as oc
+            FROM object_class as oc
             LEFT JOIN object as o
             ON oc.name=o.class_name
             ORDER BY class_display_order
         """)
-
+        # class object count model
         self.class_object_count_model = QSqlQueryModel()
         self.class_object_count_model.setQuery("""
             SELECT oc.name as class_name,
@@ -139,7 +139,7 @@ class DataStoreForm(QWidget):
             ON oc.name=o.class_name
             ORDER BY class_display_order
         """)
-
+        # object tree model and view
         self.object_tree_model = QTreeProxyModel(self)
         self.object_tree_model.set_models(self.object_class_join_model,\
                                             self.class_object_count_model)
@@ -147,7 +147,7 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.expandAll()
         self.ui.treeView_object.resizeColumnToContents(0)
         self.ui.treeView_object.resizeColumnToContents(1)
-
+        # object and relationship parameter
         self.object_parameter_model = QSqlTableModel(self, database)
         self.object_parameter_model.setTable("parameter")
         self.object_parameter_model.select()
@@ -160,7 +160,7 @@ class DataStoreForm(QWidget):
         self.parameter_as_child_model.setTable("parameter")
         self.parameter_as_child_model.select()
         self.parameter_as_child_model.setEditStrategy(QSqlTableModel.OnManualSubmit)
-
+        # object and relationship parameter view
         self.ui.tableView_object_parameter.setModel(self.object_parameter_model)
         object_name_sec = self.object_parameter_model.record().indexOf("object_name")
         self.ui.tableView_object_parameter.hideColumn(object_name_sec)
@@ -209,7 +209,7 @@ class DataStoreForm(QWidget):
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, ind)#
         option = self.object_tree_context_menu.get_action()
         if option.startswith("New"):
-            if self.object_tree_model.insertRow(ind.row(), ind.parent()):
+            if self.object_class_join_model.insertRow(ind.row(), ind.parent()):
                 self.ui.treeView_object.edit(ind)
             #self.object_tree_model.setData(ind.child(0,0), option)
             #self.ui.treeView_object.setCurrentIndex(ind.child(0,0))
@@ -279,7 +279,9 @@ class QTreeProxyModel(QAbstractProxyModel):
         self.class_description_sec = header.indexOf("class_description")
         self.object_name_sec = header.indexOf("object_name")
         self.object_description_sec = header.indexOf("object_description")
+        self.reset_models()
 
+    def reset_models(self):
         offset = 0
         for i in range(self.class_object_count_model.rowCount()):
             class_name = self.class_object_count_model.record(i).value("class_name")
@@ -289,8 +291,9 @@ class QTreeProxyModel(QAbstractProxyModel):
                 object_count = 0
             self.class_object_count[class_name] = object_count
             if object_count == 0:
-                object_count = 1
-            offset += object_count
+                offset += 1
+            else:
+                offset += object_count
             self.class_display_order[class_name] = i
 
     def flags(self, index):
@@ -321,6 +324,16 @@ class QTreeProxyModel(QAbstractProxyModel):
             return self.createIndex(row, column, sys.maxsize)
         return self.createIndex(row, column, parent.row())
 
+    def parent(self, index):
+        """Returns the parent of the model item with the given index. """
+        #logging.debug("parent")
+        if not index.isValid():
+            return QModelIndex()
+        if index.internalId() == sys.maxsize:
+            return QModelIndex()
+        parent_row = index.internalId()
+        return self.createIndex(parent_row, 0, sys.maxsize)
+
     def mapToSource(self, proxy_index):
         """Return the model index in the source model that corresponds to the
         proxy_index in the proxy model"""
@@ -337,27 +350,6 @@ class QTreeProxyModel(QAbstractProxyModel):
         row = self.class_offset[class_name] + proxy_index.row()
         column = self.object_name_sec if proxy_index.column() == 0 else self.object_description_sec
         return self.sourceModel().index(row, column)
-
-    #def setData(self, index, value, role=Qt.EditRole):
-    #    """Sets the role data for the item at index to value."""
-    #    logging.debug("set data")
-    #    if role != Qt.EditRole:
-    #        return False
-    #    if index.internalId() == sys.maxsize:
-    #        logging.debug("hello")
-    #        self.dataChanged.emit(index, index, Qt.EditRole)
-    #        return True
-    #    return super().setData(index, value, role)
-
-    def parent(self, index):
-        """Returns the parent of the model item with the given index. """
-        #logging.debug("parent")
-        if not index.isValid():
-            return QModelIndex()
-        if index.internalId() == sys.maxsize:
-            return QModelIndex()
-        parent_row = index.internalId()
-        return self.createIndex(parent_row, 0, sys.maxsize)
 
     def mapFromSource(self, source_index):
         """Return the model index in the proxy model that corresponds to the
@@ -385,3 +377,71 @@ class QTreeProxyModel(QAbstractProxyModel):
         if parent.internalId() == sys.maxsize:
             return True
         return False
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """Inserts count rows into the model before the given row.
+        Items in the new row will be children of the item represented
+        by the parent model index.
+        """
+        if index.internalId() == sys.maxsize: # object_class table
+            pass
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Sets the role data for the item at index to value."""
+        logging.debug("set data")
+        if role != Qt.EditRole:
+            return False
+        q = QSqlQuery()
+        name = index.sibling(index.row(), 0).data()
+        if index.internalId() == sys.maxsize: # object_class table
+            if index.column() == 0: # name
+                # object_class table
+                q.prepare("""
+                    UPDATE object_class
+                    SET name=? WHERE name=?
+                """)
+                q.addBindValue(value)
+                q.addBindValue(name)
+                q.exec_()
+                # object table
+                q.prepare("""
+                    UPDATE object
+                    SET class_name=? WHERE class_name=?
+                """)
+                q.addBindValue(value)
+                q.addBindValue(name)
+                q.exec_()
+            if index.column() == 1: # description
+                # object_class table
+                q.prepare("""
+                    UPDATE object_class
+                    SET description=? WHERE name=?
+                """)
+                q.addBindValue(value)
+                q.addBindValue(name)
+                q.exec_()
+        else: # object table
+            if index.column() == 0: # name
+                q.prepare("""
+                    UPDATE object
+                    SET name=? WHERE name=?
+                """)
+                q.addBindValue(value)
+                q.addBindValue(name)
+                q.exec_()
+            if index.column() == 1: # description
+                q.prepare("""
+                    UPDATE object
+                    SET description=? WHERE name=?
+                """)
+                q.addBindValue(value)
+                q.addBindValue(name)
+                q.exec_()
+        # commit
+        self.sourceModel().query().exec_()
+        self.class_object_count_model.query().exec_()
+        self.reset_models()
+        self.dataChanged.emit(index, index, Qt.EditRole)
+        # TODO: keep going with remaining tables
+        # TODO: save all executed sql statements
+        return True

@@ -27,10 +27,11 @@ Module for data store class.
 import os
 import pyodbc, sqlite3
 import logging
+from PySide2.QtGui import QDesktopServices
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, QUrl
 from widgets.add_connection_string_widget import AddConnectionStringWidget
 from graphics_items import DataStoreImage
 from helpers import create_dir
@@ -76,6 +77,7 @@ class DataStore(MetaObject):
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
+        self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
@@ -92,6 +94,15 @@ class DataStore(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    @Slot(name="open_directory")
+    def open_directory(self):
+        """Open file explorer in Data Connection data directory."""
+        url = "file:///" + self.data_dir
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(name="show_add_connection_string_form")
     def show_add_connection_string_form(self):
