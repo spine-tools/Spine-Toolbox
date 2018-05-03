@@ -26,7 +26,7 @@ Classes for drawing graphics items on QGraphicsScene.
 
 import logging
 from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF
-from PySide2.QtWidgets import QGraphicsScene, QGraphicsItem, QGraphicsLineItem, \
+from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem
 from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush
 from math import atan2, sin, cos, pi  # arrow head
@@ -141,6 +141,7 @@ class ItemImage(QGraphicsItem):
         """
         # NOTE: This is disabled. setAcceptHoverEvents(True) to master to enable this.
         self._master.setBrush(self.hover_brush)
+        event.accept()
 
     def hover_leave_event(self, event):
         """Restore original brush when mouse leaves icon boundaries.
@@ -150,6 +151,7 @@ class ItemImage(QGraphicsItem):
         """
         # NOTE: This is disabled. setAcceptHoverEvents(True) to master to enable this.
         self._master.setBrush(self.brush)
+        event.accept()
 
     def mouse_press_event(self, event):
         """Update UI to show details of this item. Prevents dragging
@@ -517,12 +519,14 @@ class Link(QGraphicsLineItem):
     """An item that represents a connection between project items.
 
     Attributes:
-        parent (???): TODO: Check what this is
+        qmainwindow (ToolboxUI): main UI class instance
+        src_icon (ItemImage): Source icon
+        dst_icon(ItemImage): Destination icon
     """
-    def __init__(self, parent, src_icon, dst_icon):
+    def __init__(self, qmainwindow, src_icon, dst_icon):
         """Initializes item."""
         super().__init__()
-        self._parent = parent
+        self._qmainwindow = qmainwindow
         self.src_icon = src_icon
         self.dst_icon = dst_icon
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
@@ -572,21 +576,24 @@ class Link(QGraphicsLineItem):
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
         """
-        # TODO: Context menu must be shown over buttons if the item has a feedback connection.
+        # TODO: Context menu must be shown on feedback Links as well
         if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
             e.ignore()
         else:
-            self._parent.show_link_context_menu(e.screenPos(), self.src_icon.name(), self.dst_icon.name())
+            self._qmainwindow.show_link_context_menu(e.screenPos(), self.src_icon.name(), self.dst_icon.name())
 
     def paint(self, painter, option, widget):
         """Paint ellipse and arrow at from and to positions, respectively."""
-        self.update_line()
-        # arrow head
-        angle = atan2(-self.line().dy(), self.line().dx())
-        arrow_p0 = self.line().p2()
-        shorter_line = QLineF(self.line())
-        shorter_line.setLength(shorter_line.length() - self.arrow_size)
-        self.setLine(shorter_line)
+        self.src_rect = self.src_connector.sceneBoundingRect()
+        self.dst_rect = self.dst_connector.sceneBoundingRect()
+        self.src_center = self.src_rect.center()
+        self.dst_center = self.dst_rect.center()
+        # Make line shorter to make room for an arrow head
+        line = QLineF(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
+        angle = atan2(-line.dy(), line.dx())
+        arrow_p0 = line.p2()
+        line.setLength(line.length() - self.arrow_size)
+        self.setLine(line)
         arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
                                       cos(angle + pi / 3) * self.arrow_size)
         arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
@@ -607,13 +614,11 @@ class LinkDrawer(QGraphicsLineItem):
     """An item that allows one to draw links between slot buttons in QGraphicsView.
 
     Attributes:
-        parent (QGraphicsScene): QGraphicsScene instance
         qmainwindow (ToolboxUI): QMainWindow instance
     """
-    def __init__(self, parent, qmainwindow):
+    def __init__(self, qmainwindow):
         """Initializes instance."""
         super().__init__()
-        self._parent = parent  # scene
         self._qmainwindow = qmainwindow
         self.src = None  # source point
         self.dst = None  # destination point
@@ -677,25 +682,22 @@ class LinkDrawer(QGraphicsLineItem):
 
     def paint(self, painter, option, widget):
         """Draw ellipse at begin position and arrowhead at end position."""
-        # arrow head
-        if not self.drawing:
-            super().paint(painter, option, widget)
-            return
-        self.setLine(self.src.x(), self.src.y(), self.dst.x(), self.dst.y())
-        angle = atan2(-self.line().dy(), self.line().dx())
-        arrow_p0 = self.line().p2()
-        shorter_line = QLineF(self.line())
-        shorter_line.setLength(shorter_line.length() - self.arrow_size)
-        self.setLine(shorter_line)
+        # Make the drawn line shorter so that the arrow head has room
+        line = QLineF(self.src.x(), self.src.y(), self.dst.x(), self.dst.y())
+        angle = atan2(-line.dy(), line.dx())
+        arrow_p0 = line.p2()
+        line.setLength(line.length() - self.arrow_size)
+        self.setLine(line)
         arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
                                       cos(angle + pi / 3) * self.arrow_size)
         arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
                                       cos(angle + pi - pi / 3) * self.arrow_size)
+        # Paint arrow head in the end of the line
         self.arrow_head.clear()
         self.arrow_head.append(arrow_p0)
         self.arrow_head.append(arrow_p1)
         self.arrow_head.append(arrow_p2)
-        p = QPoint(self.pen_width, self.pen_width)
+        # p = QPoint(self.pen_width, self.pen_width)
         brush = QBrush(self.pen_color, Qt.SolidPattern)
         painter.setBrush(brush)
         painter.drawEllipse(self.src, self.pen_width, self.pen_width)

@@ -110,7 +110,6 @@ class ToolInstance(QObject):
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self._project.julia_subprocess
                 self.tool_process.start_if_not_running()
-                logging.debug("Connecting repl_finished_signal")
                 self.tool_process.repl_finished_signal.connect(self.julia_tool_finished)
                 if not self.tool_process.write_on_process(self.command):
                     self.ui.msg_error.emit("Julia Tool failed to start. Make sure you have Julia installed properly.")
@@ -135,7 +134,6 @@ class ToolInstance(QObject):
         self.ui.msg.emit("\t Julia Tool finished. Return code:{0}".format(ret))
         self.instance_finished_signal.emit(ret)
         if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
-            logging.debug("Disconnecting repl_finished_signal")
             self.tool_process.repl_finished_signal.disconnect(self.julia_tool_finished)
 
     @Slot(int, name="gams_tool_finished")

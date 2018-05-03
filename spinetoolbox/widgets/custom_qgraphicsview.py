@@ -42,50 +42,33 @@ class CustomQGraphicsView(QGraphicsView):
         super().__init__(parent)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
-        # self.timer = QTimer(self)
-        # self.timer.timeout.connect(self.update_viewport)
-        # self.timer.start(1000/FPS)   # Adjust frames per second
         self._qmainwindow = parent.parent().parent()
         self._parent = self._qmainwindow
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
-        self.make_link_drawer(self._scene, self._qmainwindow)
-        # self.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
-        self.scene().changed.connect(self.scene_changed)  # TODO: Check if this is needed
+        # self.scene().changed.connect(self.scene_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
         self.show()
 
-    # @Slot(name="update_viewport")
-    # def update_viewport(self):
-    #     # logging.debug("timeout")
-    #     self.viewport().update()
-
     @Slot(name='scene_changed')
-    def scene_changed(self):
-        """Check if active subwindow has changed and emit signal accordingly."""
-        # logging.debug("scene changed")
-        return
-        current_active_sw = self.scene().activeWindow()
-        if current_active_sw and current_active_sw.data(ITEM_TYPE) == "subwindow":
-            if current_active_sw != self.active_subwindow:
-                self.active_subwindow = current_active_sw
-                self.subWindowActivated.emit(self.active_subwindow)
+    def scene_changed(self, changed_qrects):
+        """Not in use at the moment."""
+        logging.debug("scene changed. {0}".format(changed_qrects))
 
-    def make_link_drawer(self, scene, qmainwindow):
+    def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
-        self.link_drawer = LinkDrawer(scene, qmainwindow)
+        self.link_drawer = LinkDrawer(self._qmainwindow)
         self.scene().addItem(self.link_drawer)
 
     def setProjectItemModel(self, model):
         """Set project item model and connect signals."""
         self._project_item_model = model
-        # self._project_item_model.rowsInserted.connect(self.projectRowsInserted)
-        # self._project_item_model.rowsAboutToBeRemoved.connect(self.projectRowsRemoved)
 
     def setConnectionModel(self, model):
         """Set connection model and connect signals."""
@@ -109,29 +92,6 @@ class CustomQGraphicsView(QGraphicsView):
         # TODO: Check if needed
         return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
-    # def setActiveSubWindow(self, item):
-    #     """Replicate QMdiArea.setActiveWindow."""
-    #     # TODO: Check if needed
-    #     self.scene().setActiveWindow(item)
-
-    # def activeSubWindow(self):
-    #     """Replicate QMdiArea.activeSubWindow."""
-    #     # TODO: Check if needed
-    #     act_w = self.scene().activeWindow()
-    #     if not act_w:
-    #         return None
-    #     # logging.debug("activeWindow type is now:{0}".format(act_w.type))
-    #     return self.scene().activeWindow()
-
-    # def removeSubWindow(self, sw):
-    #     """OBSOLETE! Remove subwindow and any attached links from the scene."""
-    #     # TODO: Check if needed
-    #     for item in self.scene().items():
-    #         if item.data(ITEM_TYPE) == "link":
-    #             if sw.widget() == item.from_item or sw.widget() == item.to_item:
-    #                 self.scene().removeItem(item)
-    #     self.scene().removeItem(sw)
-
     def find_link(self, src_icon, dst_icon):
         """Find link in scene, by model index"""
         for item in self.scene().items():
@@ -139,26 +99,6 @@ class CustomQGraphicsView(QGraphicsView):
                 if item.src_icon == src_icon and item.dst_icon == dst_icon:
                     return item
         return None
-
-    # @Slot("QModelIndex", "int", "int", name='projectRowsInserted')
-    # def projectRowsInserted(self, item, first, last):
-    #     """Update view when an item is inserted to project."""
-    #     # TODO: Check if needed
-    #     # TODO: This does not really do anything. To be removed.
-    #     if not first-last == 0:
-    #         logging.error("Adding more than one item at a time is not allowed. first:{0} last:{1}".format(first, last))
-    #         return
-    #     data = item.child(first, 0).data(role=Qt.UserRole)
-    #     widget = data.get_widget()
-
-    # @Slot("QModelIndex", "int", "int", name='projectRowsRemoved')
-    # def projectRowsRemoved(self, item, first, last):
-    #     """Update view when an item is removed from project."""
-    #     # TODO: Check if needed
-    #     # logging.debug("project rows removed")
-    #     for ind in range(first, last+1):
-    #         sw = item.child(ind, 0).data(role=Qt.UserRole).get_widget().parent()
-    #         self.scene().removeItem(sw)
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
     def connectionDataChanged(self, top_left, bottom_right, roles=None):
@@ -176,7 +116,7 @@ class CustomQGraphicsView(QGraphicsView):
                 from_item = self._parent.find_item(from_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
                 to_item = self._parent.find_item(to_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
                 if data:  # connection made, add link widget
-                    link = Link(self._parent, from_item.get_icon(), to_item.get_icon())
+                    link = Link(self._qmainwindow, from_item.get_icon(), to_item.get_icon())
                     self.scene().addItem(link)  # TODO: try QPersistentModelIndex to keep track of Links
                     # TODO: Probably a better idea would be to store Link instances into
                     # TODO: ConnectionModel (QAbstractTableModel)
