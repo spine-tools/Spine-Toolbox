@@ -12,33 +12,44 @@ simulation models.
 
 ### Installing requirements
 
-There are three options for installing PySide2, datapackage, and pyodbc.
+datapackage and pyodbc packages are available on pip. Run
 
-- Installing for Anaconda & Miniconda (3.5+)
+    pip install datapackage
+    pip install pyodbc
+
+to install. NOTE: these packages are automatically installed
+if you use Anaconda or Miniconda (see below).
+
+There are three options for installing PySide2.
+
+- Installing for Anaconda & Miniconda Python (3.5+)
 - Installing on a ‘clean’ Python (3.5+)
 - Installing PySide2 by building sources (Python 2 & 3)
 
 Each option is presented below.
 
-#### OPTION 1: Installing PySide2, datapackage, and pyodbc for Anaconda & Miniconda Python (3.5+)
+#### OPTION 1: Installing for Anaconda & Miniconda Python (3.5+)
 
-PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge channel. Datapackage 1.2.3 is available on the manulero channel. You can install all requirements by running
+PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge
+channel. Datapackage 1.2.3 is available on the manulero channel.
+You can install all requirements by running
 
     conda install -c conda-forge -c manulero --file requirements.txt
 
 in the Spine Toolbox root folder.
 
-Alternatively, create a separate environment for the Toolbox with
+Alternatively, create a separate environment for Spine Toolbox with
 
 	conda create --name spinetoolbox -c conda-forge -c manulero --file requirements.txt
 
-Last, install datapackage and pyodbc by running
+The PySide2 GUI development tools (`designer`, `pyside2-uic`, and `pyside2-rcc`)
+are included for both Windows and Linux in the PySide2 installation.
 
-    pip install datapackage
-    pip install pyodbc
+#### OPTION 2: Installing on a ‘clean’ Python (3.5+)
 
-
-#### OPTION 2: Installing PySide2, datapackage, and pyodbc on a ‘clean’ Python (3.5+)
+NOTE: This option is complicated because there still is no official PySide2 wheel 
+available. This is likely to be simpler when the first official release 
+version of PySide2 is released.
 
 Download wheel for PySide2 from [http://hansch.info/PySide2/](http://hansch.info/PySide2/)
 
@@ -50,31 +61,32 @@ Install with e.g.
 
     pip install PySide2-5.9-cp36-cp36m-win_amd64.whl
 
-Make text file `qt.conf` into the folder where your `python.exe`
-resides with the following contents:
+Make text file `qt.conf` into the directory where your `python.exe`
+resides with the following content:
 
     [Paths]
     Prefix = /Python36/Lib/site-packages/PySide2
     Binaries = /Python36/Lib/site-packages/PySide2
 
 If your PySide2 folder is in another path, modify Prefix and Binaries lines accordingly.
+NOTE: There's no need for the drive letter on Windows. Use ‘/’ character to separate
+directories also on Windows.
 
 Install datapackage and pyodbc by running
 
     pip install datapackage
     pip install pyodbc
 
-Spine Toolbox should now work and you are ready to develop the core
-application components. If you want to develop the Graphical User
-Interface (views, buttons, menus, etc.) you need the PySide2 GUI
-development tools.
+Spine Toolbox is now ready to run and you can also develop the
+core application components. If you want to run the application,
+skip next section and see "Running Spine Toolbox". If you want to develop
+the Graphical User Interface (views, buttons, menus, etc.) you need
+the PySide2 GUI development tools.
 
-#### OPTION 3: Installing PySide2 GUI Development Tools
+#### Installing PySide2 GUI Development Tools
 
-##### Windows
-
-These instructions have been tested when the Qt 5.9.0 wheel
-PySide2-5.9-cp36-cp36m-win_amd64.whl has been installed.
+These instructions have been tested with the Qt 5.9.0 wheel
+PySide2-5.9-cp36-cp36m-win_amd64.whl installed on Windows.
 
 Developing Spine Toolbox GUI requires
 
@@ -110,15 +122,11 @@ At least \Compiler and \port_v3 folders are required.
 
 `pyside2-rcc.exe` should be in the same folder as `designer.exe`.
 
-Add your Python scripts (e.g. C:\Python36\Scripts) and PySide2
-(e.g. C:\Python36\Lib\site-packages\PySide2) folders into your PATH
+Add your Python scripts path (e.g. C:\Python36\Scripts) and PySide2
+(e.g. C:\Python36\Lib\site-packages\PySide2) path into your system PATH
 variable.
 
-##### Linux
-
-[Miniconda](https://conda.io/miniconda.html) provides the three required utilities out of the box. After bash installation they can be called from the command line by running `designer`, `pyside2-uic`, and `pyside2-rcc`.
-
-#### Installing PySide2 by building sources (Python 2 & 3)
+#### OPTION #3: Installing PySide2 by building sources (Python 2 & 3)
 
 You can install PySide2 by building the source package yourself. Instructions
 on how to do this can be found on the getting started page of the official
@@ -127,13 +135,19 @@ PySide2 wiki
 
 Follow the instructions on the page according to your OS.
 
-## Preparing and starting Spine Toolbox
+## Running Spine Toolbox
 
-On windows, run `build_ui.bat` from your Python/PySide2 enabled command window to generate
-the code for the Spine Toolbox user interface.
-After modifying the user interface (*.ui) files with `designer.exe`, re-run
-`build_ui.bat` to build the Spine Toolbox interface anew.
+To start the application run
 
-On Linux, just use `bash build_ui.sh` instead of `build_ui.bat`, and `designer` instead of `designer.exe`.
+    python spinetoolbox.py
 
-From the command prompt, run `python spinetoolbox.py` in the `spinetoolbox` folder.
+from the command prompt in the `spinetoolbox` directory.
+
+If you have modified the user interface files (*.ui), with Qt Designer
+(`designer.exe`) you need to build the UI for the changes to take effect.
+On windows, run `build_ui.bat` to generate the code for Spine Toolbox
+user interface. This requires the PySide2 GUI development tools described
+previously.
+
+On Linux, just use `bash build_ui.sh` instead of `build_ui.bat`, and `designer`
+instead of `designer.exe`.
