@@ -126,7 +126,7 @@ Add your Python scripts path (e.g. C:\Python36\Scripts) and PySide2
 (e.g. C:\Python36\Lib\site-packages\PySide2) path into your system PATH
 variable.
 
-#### OPTION #3: Installing PySide2 by building sources (Python 2 & 3)
+#### OPTION 3: Installing PySide2 by building sources (Python 2 & 3)
 
 You can install PySide2 by building the source package yourself. Instructions
 on how to do this can be found on the getting started page of the official
