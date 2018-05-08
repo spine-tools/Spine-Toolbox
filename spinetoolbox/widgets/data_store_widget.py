@@ -24,7 +24,7 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtSql import QSqlTableModel, QSqlDatabase, QSqlQueryModel, QSqlQuery
+from PySide2.QtSql import QSqlRelationalTableModel, QSqlDatabase, QSqlQueryModel, QSqlQuery, QSqlRelation
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView
 from PySide2.QtCore import Slot, Qt, QAbstractProxyModel, QModelIndex
 from ui.data_store_form import Ui_Form
@@ -51,17 +51,13 @@ class DataStoreForm(QWidget):
         self.ui.setupUi(self)
         # Class attributes
         self._parent = parent
-        # Sql table models
-        self.object_class_model = None
-        self.object_model = None
         # Sql query model
-        self.object_class_join_model = None
-        self.class_object_count_model = None
+        self.join_model = None
         # Proxy models
         self.object_tree_model = QTreeProxyModel(self)
+        # Sql table models
         self.object_parameter_model = None
-        self.parameter_as_parent_model = None
-        self.parameter_as_child_model = None
+        self.relationship_parameter_model = None
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -71,8 +67,7 @@ class DataStoreForm(QWidget):
         # init ui
         self.ui.treeView_object.setEditTriggers(QAbstractItemView.SelectedClicked|QAbstractItemView.EditKeyPressed)
         self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.ui.tableView_parameter_as_parent.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.ui.tableView_parameter_as_child.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         # context menus
         self.object_tree_context_menu = None
         self.init_models(file_path)
@@ -113,88 +108,113 @@ class DataStoreForm(QWidget):
             self._parent.msg.emit("Connection to <b>{0}</b> failed.".format(database_name))
             return
         # object class join model
-        self.object_class_join_model = QSqlQueryModel()
-        self.object_class_join_model.setQuery("""
-            SELECT oc.name as class_name,
-                oc.description as class_description,
-                oc.display_order as class_display_order,
+        self.join_model = QSqlQueryModel()
+        self.join_model.setQuery("""
+            SELECT oc.id as object_class_id,
+                oc.name as object_class_name,
+                oc.description as object_class_description,
+                oc.display_order as object_class_display_order,
+                o.id as object_id,
                 o.name as object_name,
-                o.description as object_description
+                o.description as object_description,
+				rc.id as relationship_class_id,
+				rc.name as relationship_class_name,
+				r.related_object_id as related_object_id,
+				r.related_object_name as related_object_name
             FROM object_class as oc
             LEFT JOIN object as o
-            ON oc.name=o.class_name
-            ORDER BY class_display_order
+            ON oc.id=o.class_id
+			LEFT JOIN (
+                SELECT parent_class_id as object_class_id,
+                    id,
+                    name
+                FROM relationship_class as rc
+				UNION ALL
+                    SELECT child_class_id as object_class_id,
+                    id,
+                    name
+                    FROM relationship_class as rc
+			) as rc
+            ON oc.id=rc.object_class_id
+			LEFT JOIN (
+                SELECT r.parent_object_id as object_id,
+					r.class_id,
+                    o.id as related_object_id,
+                    o.name as related_object_name
+                FROM relationship as r
+				JOIN object as o
+				ON r.child_object_id=o.id
+				UNION ALL
+					SELECT r.child_object_id as object_id,
+						r.class_id,
+						o.id as related_object_id,
+						o.name as related_object_name
+					FROM relationship as r
+					JOIN object as o
+					ON r.parent_object_id=o.id
+			) as r
+			ON r.class_id=rc.id
+            AND o.id=r.object_id
+            ORDER BY object_class_display_order, object_id, relationship_class_id, related_object_id
         """)
-        # class object count model
-        self.class_object_count_model = QSqlQueryModel()
-        self.class_object_count_model.setQuery("""
-            SELECT oc.name as class_name,
-                o.count as object_count,
-                oc.display_order as class_display_order
-            FROM object_class as oc
-            LEFT JOIN (
-                SELECT class_name, count(*) as count
-                FROM object GROUP BY class_name
-            ) as o
-            ON oc.name=o.class_name
-            ORDER BY class_display_order
-        """)
+        # TODO: Check if query is ok
         # object tree model and view
         self.object_tree_model = QTreeProxyModel(self)
-        self.object_tree_model.set_models(self.object_class_join_model,\
-                                            self.class_object_count_model)
+        self.object_tree_model.setSourceModel(self.join_model)
         self.ui.treeView_object.setModel(self.object_tree_model)
-        self.ui.treeView_object.expandAll()
+        #self.ui.treeView_object.expandAll()
         self.ui.treeView_object.resizeColumnToContents(0)
-        self.ui.treeView_object.resizeColumnToContents(1)
+        #self.ui.treeView_object.colapseAll()
         # object and relationship parameter
-        self.object_parameter_model = QSqlTableModel(self, database)
-        self.object_parameter_model.setTable("parameter")
+        self.object_parameter_model = QSqlRelationalTableModel(self, database)
+        self.object_parameter_model.setTable("parameter_value")
+        self.object_parameter_model.setRelation(0, QSqlRelation("parameter", "id", "name"));
         self.object_parameter_model.select()
-        self.object_parameter_model.setEditStrategy(QSqlTableModel.OnManualSubmit)
-        self.parameter_as_parent_model = QSqlTableModel(self, database)
-        self.parameter_as_parent_model.setTable("parameter")
-        self.parameter_as_parent_model.select()
-        self.parameter_as_parent_model.setEditStrategy(QSqlTableModel.OnManualSubmit)
-        self.parameter_as_child_model = QSqlTableModel(self, database)
-        self.parameter_as_child_model.setTable("parameter")
-        self.parameter_as_child_model.select()
-        self.parameter_as_child_model.setEditStrategy(QSqlTableModel.OnManualSubmit)
+        self.object_parameter_model.setEditStrategy(QSqlRelationalTableModel.OnManualSubmit)
+        self.relationship_parameter_model = QSqlRelationalTableModel(self, database)
+        self.relationship_parameter_model.setTable("parameter_value")
+        self.relationship_parameter_model.select()
+        self.relationship_parameter_model.setEditStrategy(QSqlRelationalTableModel.OnManualSubmit)
         # object and relationship parameter view
         self.ui.tableView_object_parameter.setModel(self.object_parameter_model)
-        object_name_sec = self.object_parameter_model.record().indexOf("object_name")
-        self.ui.tableView_object_parameter.hideColumn(object_name_sec)
-        self.ui.tableView_parameter_as_parent.setModel(self.parameter_as_parent_model)
-        self.ui.tableView_parameter_as_child.setModel(self.parameter_as_child_model)
+        object_id_sec = self.object_parameter_model.record().indexOf("object_id")
+        self.ui.tableView_object_parameter.hideColumn(object_id_sec)
+        self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_model)
 
     @Slot("QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, index):
-        """Populate tableViews whenever an object item is selected on the treeView"""
-        # logging.debug("filter_parameter_models")
+        """Populate tableViews whenever an object item is selected in the treeView"""
+        logging.debug("filter_parameter_models")
         if not index.isValid():
+            # invisible root
             return
-        if index.internalId() == sys.maxsize:
+        if index.internalId() < self.object_tree_model.base:
+            # object class
             return
-        object_name = index.data()
-        class_name = self.class_object_count_model.record(index.internalId()).value("class_name")
-        clause = "object_name='{}'".format(object_name)
-        self.object_parameter_model.setFilter(clause)
-        clause = """object_name in
-            (SELECT r.name from relationship as r
-            join relationship_class as rc
-            on r.class_name=rc.name
-            where r.parent_object_name='{}'
-            and rc.parent_class_name='{}')
-        """.format(object_name, class_name)
-        self.parameter_as_parent_model.setFilter(clause)
-        clause = """object_name in
-            (SELECT r.name from relationship as r
-            join relationship_class as rc
-            on r.class_name=rc.name
-            where r.child_object_name='{}'
-            and rc.child_class_name='{}')
-        """.format(object_name, class_name)
-        self.parameter_as_child_model.setFilter(clause)
+        if index.internalId() < self.object_tree_model.base**2:
+            # object
+            object_row = self.object_tree_model.mapToSource(index).row()
+            object_id = self.join_model.record(object_row).value("object_id")
+            object_class_id = self.join_model.record(object_row).value("object_class_id")
+            clause = "object_id={}".format(object_id)
+            self.object_parameter_model.setFilter(clause)
+            return
+            #clause = """object_id in
+            #    (SELECT r.id from relationship as r
+            #    join relationship_class as rc
+            #    on r.class_id=rc.id
+            #    where r.parent_object_id='{}'
+            #    and rc.parent_class_id='{}')
+            #""".format(object_id, class_id)
+            #self.parameter_as_parent_model.setFilter(clause)
+            #clause = """object_id in
+            #    (SELECT r.id from relationship as r
+            #    join relationship_class as rc
+            #    on r.class_id=rc.id
+            #    where r.child_object_id='{}'
+            #    and rc.child_class_id='{}')
+            #""".format(object_id, class_id)
+            #self.parameter_as_child_model.setFilter(clause)
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
@@ -209,7 +229,7 @@ class DataStoreForm(QWidget):
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, ind)#
         option = self.object_tree_context_menu.get_action()
         if option.startswith("New"):
-            if self.object_class_join_model.insertRow(ind.row(), ind.parent()):
+            if self.join_model.insertRow(ind.row(), ind.parent()):
                 self.ui.treeView_object.edit(ind)
             #self.object_tree_model.setData(ind.child(0,0), option)
             #self.ui.treeView_object.setCurrentIndex(ind.child(0,0))
@@ -246,6 +266,21 @@ class DataStoreForm(QWidget):
         if event:
             event.accept()
 
+# TODO: try to put these inside the model
+class ObjectClass:
+    def __init__(self):
+        self.object = list()
+        self.offset = None
+
+class Object:
+    def __init__(self):
+        self.relationship_class = list()
+        self.offset = None
+
+class RelationshipClass:
+    def __init__(self):
+        self.count = 0
+        self.offset = None
 
 class QTreeProxyModel(QAbstractProxyModel):
     """A class to view the object table in a tree view"""
@@ -253,48 +288,116 @@ class QTreeProxyModel(QAbstractProxyModel):
     def __init__(self, parent=None):
         """Init class"""
         super().__init__(parent)
-        self.class_object_count_model = None
-        self.class_display_order = dict()
-        self.class_object_count = dict()
-        self.class_offset = dict()
-        self.class_name_sec = None
-        self.class_description_sec = None
+        self.object_class = list()
+        self.object_class_name_sec = None
         self.object_name_sec = None
-        self.object_description_sec = None
+        self.relationship_class_name_sec = None
+        self.related_object_name_sec = None
+        self.base = None
 
     def setSourceModel(self, model):
         """Sets the given sourceModel to be processed by the proxy model."""
         #logging.debug("set source")
         self.beginResetModel()
         super().setSourceModel(model)
-        self.endResetModel()
-
-    def set_models(self, object_class_join_model, class_object_count_model):
-        """Setup models"""
-        self.setSourceModel(object_class_join_model)
-        self.class_object_count_model = class_object_count_model
         # Find out sections in each source model
         header = self.sourceModel().record()
-        self.class_name_sec = header.indexOf("class_name")
-        self.class_description_sec = header.indexOf("class_description")
+        self.object_class_name_sec = header.indexOf("object_class_name")
         self.object_name_sec = header.indexOf("object_name")
-        self.object_description_sec = header.indexOf("object_description")
-        self.reset_models()
+        self.relationship_class_name_sec = header.indexOf("relationship_class_name")
+        self.related_object_name_sec = header.indexOf("related_object_name")
+        self.reset_model()
+        self.endResetModel()
 
-    def reset_models(self):
-        offset = 0
-        for i in range(self.class_object_count_model.rowCount()):
-            class_name = self.class_object_count_model.record(i).value("class_name")
-            self.class_offset[class_name] = offset
-            object_count = self.class_object_count_model.record(i).value("object_count")
-            if not object_count:
-                object_count = 0
-            self.class_object_count[class_name] = object_count
-            if object_count == 0:
-                offset += 1
-            else:
-                offset += object_count
-            self.class_display_order[class_name] = i
+    def reset_model(self):
+        """
+            Sweep the source query and find out offset of each element
+        """
+        new_object_class = None
+        new_object = None
+        new_relationship_class = None
+        last_object_class_id = -1
+        last_object_id = -1
+        last_relationship_class_id = -1
+        for i in range(self.sourceModel().rowCount()):
+            rec = self.sourceModel().record(i)
+            object_class_id = rec.value("object_class_id")
+            object_id = rec.value("object_id")
+            relationship_class_id = rec.value("relationship_class_id")
+            related_object_id = rec.value("related_object_id")
+            if object_class_id != last_object_class_id:
+                last_object_class_id = object_class_id
+                last_object_id = object_id
+                last_relationship_class_id = relationship_class_id
+                if new_object_class:
+                    if new_object:
+                        if new_relationship_class:
+                            new_object.relationship_class.append(new_relationship_class)
+                            new_relationship_class = None
+                        new_object_class.object.append(new_object)
+                        new_object = None
+                    self.object_class.append(new_object_class)
+                new_object_class = ObjectClass()
+                new_object_class.offset = i
+                if object_id:
+                    new_object = Object()
+                    new_object.offset = i
+                    if relationship_class_id:
+                        new_relationship_class = RelationshipClass()
+                        new_relationship_class.offset = i
+                        if related_object_id:
+                            new_relationship_class.count += 1
+            elif object_id != last_object_id:
+                last_object_id = object_id
+                last_relationship_class_id = relationship_class_id
+                if new_object:
+                    if new_relationship_class:
+                        new_object.relationship_class.append(new_relationship_class)
+                        new_relationship_class = None
+                    new_object_class.object.append(new_object)
+                    new_object = None
+                if object_id:
+                    new_object = Object()
+                    new_object.offset = i
+                    if relationship_class_id:
+                        new_relationship_class = RelationshipClass()
+                        new_relationship_class.offset = i
+                        if related_object_id:
+                            new_relationship_class.count += 1
+            elif relationship_class_id != last_relationship_class_id:
+                last_relationship_class_id = relationship_class_id
+                if new_relationship_class:
+                    new_object.relationship_class.append(new_relationship_class)
+                    new_relationship_class = None
+                if relationship_class_id:
+                    new_relationship_class = RelationshipClass()
+                    new_relationship_class.offset = i
+                    if related_object_id:
+                        new_relationship_class.count += 1
+            elif related_object_id:
+                new_relationship_class.count += 1
+        # last row
+        if new_object_class:
+            if new_object:
+                if new_relationship_class:
+                    new_object.relationship_class.append(new_relationship_class)
+                    new_relationship_class = None
+                new_object_class.object.append(new_object)
+                new_object = None
+            self.object_class.append(new_object_class)
+
+        # compute base for handling internal indices
+        self.base = len(self.object_class)
+        for object_class in self.object_class:
+            if len(object_class.object) > self.base:
+                self.base = len(object_class.object)
+            for object_ in object_class.object:
+                if len(object_.relationship_class) > self.base:
+                    self.base = len(object_.relationship_class)
+                for relationship_class in object_.relationship_class:
+                    if relationship_class.count > self.base:
+                        self.base = relationship_class.count
+        self.base += 1
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -303,16 +406,29 @@ class QTreeProxyModel(QAbstractProxyModel):
     def columnCount(self, parent):
         """Returns the number of columns under the given parent"""
         #logging.debug("colcount")
-        return 2
+        return 1
 
     def rowCount(self, parent):
         """Returns the number of rows under the given parent"""
         #logging.debug("rowcount")
-        if not parent.isValid(): # root
-            return self.class_object_count_model.rowCount()
-        if parent.internalId() == sys.maxsize: # class
-            class_name = self.class_object_count_model.record(parent.row()).value("class_name")
-            return self.class_object_count[class_name]
+        if not parent.isValid():
+            # root
+            return len(self.object_class)
+        if parent.internalId() < self.base:
+            # object class
+            object_class = self.object_class[parent.row()]
+            return len(object_class.object)
+        if parent.internalId() < self.base**2:
+            # object
+            object_class = self.object_class[parent.parent().row()]
+            object_ = object_class.object[parent.row()]
+            return len(object_.relationship_class)
+        if parent.internalId() < self.base**3:
+            # relationship class
+            object_class = self.object_class[parent.parent().parent().row()]
+            object_ = object_class.object[parent.parent().row()]
+            relationship_class = object_.relationship_class[parent.row()]
+            return relationship_class.count
         return 0
 
     def index(self, row, column, parent=QModelIndex()):
@@ -320,70 +436,104 @@ class QTreeProxyModel(QAbstractProxyModel):
         column and parent index.
         """
         #logging.debug("index")
+        if row < 0 or column < 0:
+            return QModelIndex()
         if not parent.isValid():
-            return self.createIndex(row, column, sys.maxsize)
-        return self.createIndex(row, column, parent.row())
+            # object class
+            return self.createIndex(row, column, row + 1)
+        if parent.internalId() < self.base:
+            # object
+            return self.createIndex(row, column, parent.internalId() + (row + 1) * self.base)
+        if parent.internalId() < self.base**2:
+            # relationship class
+            return self.createIndex(row, column, parent.internalId() + (row + 1) * (self.base**2))
+        # related object
+        return self.createIndex(row, column, parent.internalId() + (row + 1) * (self.base**3))
 
     def parent(self, index):
         """Returns the parent of the model item with the given index. """
         #logging.debug("parent")
         if not index.isValid():
+            # invisible root
             return QModelIndex()
-        if index.internalId() == sys.maxsize:
+        if index.internalId() < self.base:
+            # object class
             return QModelIndex()
-        parent_row = index.internalId()
-        return self.createIndex(parent_row, 0, sys.maxsize)
+        if index.internalId() < self.base**2:
+            # object
+            parent_index = index.internalId() % self.base
+            parent_row = parent_index - 1
+            return self.createIndex(parent_row, 0, parent_index)
+        if index.internalId() < self.base**3:
+            # relationship class
+            parent_index = index.internalId() % self.base**2
+            parent_row = int(parent_index / self.base) - 1
+            return self.createIndex(parent_row, 0, parent_index)
+        # related object
+        parent_index = index.internalId() % self.base**3
+        parent_row = int(parent_index / self.base**2) - 1
+        return self.createIndex(parent_row, 0, parent_index)
 
     def mapToSource(self, proxy_index):
         """Return the model index in the source model that corresponds to the
         proxy_index in the proxy model"""
-        # logging.debug("mapto")
+        #logging.debug("mapto")
         if not proxy_index.isValid():
             return QModelIndex()
-        if proxy_index.internalId() == sys.maxsize: # class
-            class_name = self.class_object_count_model.record(proxy_index.row()).value("class_name")
-            row = self.class_offset[class_name]
-            column = self.class_name_sec if proxy_index.column() == 0 else\
-                    self.class_description_sec
-            return self.sourceModel().index(row, column)
-        class_name = self.class_object_count_model.record(proxy_index.internalId()).value("class_name")
-        row = self.class_offset[class_name] + proxy_index.row()
-        column = self.object_name_sec if proxy_index.column() == 0 else self.object_description_sec
-        return self.sourceModel().index(row, column)
+        if proxy_index.internalId() < self.base:
+            # object class
+            object_class = self.object_class[proxy_index.row()]
+            return self.sourceModel().index(object_class.offset, self.object_class_name_sec)
+        if proxy_index.internalId() < self.base**2:
+            # object
+            object_class = self.object_class[proxy_index.parent().row()]
+            object_ = object_class.object[proxy_index.row()]
+            return self.sourceModel().index(object_.offset, self.object_name_sec)
+        if proxy_index.internalId() < self.base**3:
+            # relationship class
+            object_class = self.object_class[proxy_index.parent().parent().row()]
+            object_ = object_class.object[proxy_index.parent().row()]
+            relationship_class = object_.relationship_class[proxy_index.row()]
+            return self.sourceModel().index(relationship_class.offset, self.relationship_class_name_sec)
+        # related object
+        object_class = self.object_class[proxy_index.parent().parent().parent().row()]
+        object_ = object_class.object[proxy_index.parent().parent().row()]
+        relationship_class = object_.relationship_class[proxy_index.parent().row()]
+        related_object_row = proxy_index.row()
+        return self.sourceModel().index(relationship_class.offset + related_object_row, self.related_object_name_sec)
 
     def mapFromSource(self, source_index):
         """Return the model index in the proxy model that corresponds to the
         source_index from the source model"""
         #logging.debug("mapfrom")
-        class_name = self.sourceModel().record(source_index.row()).value("class_name")
-        source_column = source_index.column()
-        if source_column in [self.object_name_sec, self.object_description_sec]:
-            row = source_index.row() - self.class_offset[class_name]
-            column = 0 if source_column == self.object_name_sec else 1
-            parent_row = self.class_display_order[class_name]
-            return self.createIndex(row, column, parent_row)
-        elif source_column in [self.class_name_sec, self.class_description_sec]:
-            row = self.class_display_order[class_name]
-            column = 0 if source_column == self.class_name_sec else 1
-            return self.createIndex(row, column, sys.maxsize)
+        #class_id = self.sourceModel().record(source_index.row()).value("class_id")
+        #source_column = source_index.column()
+        #if source_column in [self.object_name_sec, self.object_description_sec]:
+        #    row = source_index.row() - self.class_offset[class_id]
+        #    column = 0 if source_column == self.object_name_sec else 1
+        #    parent_row = self.class_display_order[class_id]
+        #    return self.createIndex(row, column, parent_row)
+        #elif source_column in [self.class_name_sec, self.class_description_sec]:
+        #    row = self.class_display_order[class_id]
+        #    column = 0 if source_column == self.class_name_sec else 1
+        #    return self.createIndex(row, column, 0)
         return QModelIndex()
 
     def hasChildren(self, parent):
         """Return whether or not parent has children in the model"""
         #logging.debug("haschildren")
+        if parent.internalId() >= self.base**3:
+            # related object
+            return False
         return True
-        if not parent.isValid():
-            return True
-        if parent.internalId() == sys.maxsize:
-            return True
-        return False
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
         Items in the new row will be children of the item represented
         by the parent model index.
         """
-        if index.internalId() == sys.maxsize: # object_class table
+        logging.debug("insert rows")
+        if index.internalId() == 0: # object_class table
             pass
 
     def setData(self, index, value, role=Qt.EditRole):

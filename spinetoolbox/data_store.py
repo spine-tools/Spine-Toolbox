@@ -165,7 +165,7 @@ class DataStore(MetaObject):
         table_names = [
             'object_class', 'object',
             'relationship_class', 'relationship',
-            'parameter_definition', 'parameter'
+            'parameter', 'parameter_value'
         ]
         for table in table_names:
             sqlite_cnxn.cursor().execute("DROP TABLE IF EXISTS {}".format(table))
