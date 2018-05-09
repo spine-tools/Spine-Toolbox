@@ -170,9 +170,16 @@ class DataStore(MetaObject):
         for table in table_names:
             sqlite_cnxn.cursor().execute("DROP TABLE IF EXISTS {}".format(table))
             header = list()
+            pk = None
+            row = obdc_cnxn.cursor().primaryKeys(table=table).fetchone()
+            if row:
+                pk = row.column_name
             for row in obdc_cnxn.cursor().columns(table=table):
-                header.append(row.column_name)
-            sql = "CREATE TABLE {0} (`{1}`)".format(table, '`, `'.join(header))
+                column = '`' + row.column_name + '`'
+                if row.column_name == pk:
+                    column += ' INTEGER PRIMARY KEY'
+                header.append(column)
+            sql = "CREATE TABLE {0} ({1})".format(table, ', '.join(header))
             sqlite_cnxn.cursor().execute(sql)
             for row in obdc_cnxn.cursor().execute("SELECT * FROM {0}".format(table)):
                 sql = "INSERT INTO {0} VALUES (".format(table)\

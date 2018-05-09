@@ -92,7 +92,7 @@
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="editTriggers">
-            <set>QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
+            <set>QAbstractItemView::EditKeyPressed|QAbstractItemView::SelectedClicked</set>
            </property>
           </widget>
          </item>

@@ -27,7 +27,7 @@ Note: These are Spine Toolbox internal data models.
 """
 
 import logging
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel, QAbstractProxyModel
 
 
 class ToolTemplateModel(QAbstractListModel):
@@ -451,6 +451,7 @@ class MinimalTableModel(QAbstractTableModel):
     """Table model for outlining simple tabular data."""
 
     def __init__(self, parent=None):
+        """Initialize class"""
         super().__init__()
         self._parent = parent  # QMainWindow
         self._data = list()
@@ -636,3 +637,266 @@ class MinimalTableModel(QAbstractTableModel):
     def set_tool_tip(self, tool_tip):
         """Set tool tip"""
         self._tool_tip = tool_tip
+
+
+
+class QTreeProxyModel(QAbstractProxyModel):
+    """A class to view the object table in a tree view"""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.object_class = list()
+        self.object_class_name_sec = None
+        self.object_name_sec = None
+        self.relationship_class_name_sec = None
+        self.related_object_name_sec = None
+        self.base = None
+        self.base_2 = None
+        self.base_3 = None
+
+    class ObjectClass:
+        """Helper class to represent an object class item"""
+        def __init__(self):
+            self.object = list()
+            self.source_row = None
+
+    class Object:
+        """Helper class to represent an object item"""
+        def __init__(self):
+            self.relationship_class = list()
+            self.source_row = None
+
+    class RelationshipClass:
+        """Helper class to represent an relationship class item"""
+        def __init__(self):
+            self.count = 0
+            self.source_row = None
+
+    def setSourceModel(self, model):
+        """Sets the given sourceModel to be processed by the proxy model."""
+        #logging.debug("set source")
+        self.beginResetModel()
+        super().setSourceModel(model)
+        # Find out sections in each source model
+        header = self.sourceModel().record()
+        self.object_class_name_sec = header.indexOf("object_class_name")
+        self.object_name_sec = header.indexOf("object_name")
+        self.relationship_class_name_sec = header.indexOf("relationship_class_name")
+        self.related_object_name_sec = header.indexOf("related_object_name")
+        self.reset_model()
+        self.endResetModel()
+
+    def reset_model(self):
+        """Sweep the source query and find out source_row of each element
+        """
+        del self.object_class[:]
+        logging.debug(self.object_class)
+        new_object_class = None
+        new_object = None
+        new_relationship_class = None
+        last_object_class_id = -1
+        for i in range(self.sourceModel().rowCount()):
+            rec = self.sourceModel().record(i)
+            object_class_id = rec.value("object_class_id")
+            object_id = rec.value("object_id")
+            relationship_class_id = rec.value("relationship_class_id")
+            related_object_id = rec.value("related_object_id")
+            if object_class_id != last_object_class_id:
+                last_object_class_id = object_class_id
+                last_object_id = object_id
+                last_relationship_class_id = relationship_class_id
+                if new_object_class:
+                    if new_object:
+                        if new_relationship_class:
+                            new_object.relationship_class.append(new_relationship_class)
+                            new_relationship_class = None
+                        new_object_class.object.append(new_object)
+                        new_object = None
+                    self.object_class.append(new_object_class)
+                new_object_class = self.ObjectClass()
+                new_object_class.source_row = i
+                if object_id:
+                    new_object = self.Object()
+                    new_object.source_row = i
+                    if relationship_class_id:
+                        new_relationship_class = self.RelationshipClass()
+                        new_relationship_class.source_row = i
+                        if related_object_id:
+                            new_relationship_class.count += 1
+            elif object_id != last_object_id:
+                last_object_id = object_id
+                last_relationship_class_id = relationship_class_id
+                if new_object:
+                    if new_relationship_class:
+                        new_object.relationship_class.append(new_relationship_class)
+                        new_relationship_class = None
+                    new_object_class.object.append(new_object)
+                    new_object = None
+                if object_id:
+                    new_object = self.Object()
+                    new_object.source_row = i
+                    if relationship_class_id:
+                        new_relationship_class = self.RelationshipClass()
+                        new_relationship_class.source_row = i
+                        if related_object_id:
+                            new_relationship_class.count += 1
+            elif relationship_class_id != last_relationship_class_id:
+                last_relationship_class_id = relationship_class_id
+                if new_relationship_class:
+                    new_object.relationship_class.append(new_relationship_class)
+                    new_relationship_class = None
+                if relationship_class_id:
+                    new_relationship_class = self.RelationshipClass()
+                    new_relationship_class.source_row = i
+                    if related_object_id:
+                        new_relationship_class.count += 1
+            elif related_object_id:
+                new_relationship_class.count += 1
+        # last row
+        if new_object_class:
+            if new_object:
+                if new_relationship_class:
+                    new_object.relationship_class.append(new_relationship_class)
+                    new_relationship_class = None
+                new_object_class.object.append(new_object)
+                new_object = None
+            self.object_class.append(new_object_class)
+
+        # compute base for handling internal indices
+        self.base = len(self.object_class)
+        for object_class in self.object_class:
+            if len(object_class.object) > self.base:
+                self.base = len(object_class.object)
+            for object_ in object_class.object:
+                if len(object_.relationship_class) > self.base:
+                    self.base = len(object_.relationship_class)
+                for relationship_class in object_.relationship_class:
+                    if relationship_class.count > self.base:
+                        self.base = relationship_class.count
+        self.base += 1
+        self.base_2 = self.base**2
+        self.base_3 = self.base**3
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """inserts count rows into the model before the given row"""
+        pass
+        #self.beginInsertRows(parent, row, row + count - 1)
+        #self.endInsertRows()
+
+
+    def flags(self, index):
+        """Returns flags for table items."""
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def columnCount(self, parent):
+        """Returns the number of columns under the given parent"""
+        #logging.debug("colcount")
+        return 1
+
+    def rowCount(self, parent):
+        """Returns the number of rows under the given parent"""
+        #logging.debug("rowcount")
+        if not parent.isValid():
+            # root
+            return len(self.object_class)
+        if parent.internalId() < self.base:
+            # object class
+            object_class = self.object_class[parent.row()]
+            return len(object_class.object)
+        if parent.internalId() < self.base_2:
+            # object
+            object_class = self.object_class[parent.parent().row()]
+            object_ = object_class.object[parent.row()]
+            return len(object_.relationship_class)
+        if parent.internalId() < self.base_3:
+            # relationship class
+            object_class = self.object_class[parent.parent().parent().row()]
+            object_ = object_class.object[parent.parent().row()]
+            relationship_class = object_.relationship_class[parent.row()]
+            return relationship_class.count
+        return 0
+
+    def index(self, row, column, parent=QModelIndex()):
+        """Returns the index of the item in the model specified by the given row,
+        column and parent index.
+        """
+        #logging.debug("index")
+        if row < 0 or column < 0:
+            return QModelIndex()
+        if not parent.isValid():
+            # object class
+            return self.createIndex(row, column, row + 1)
+        if parent.internalId() < self.base:
+            # object
+            return self.createIndex(row, column, parent.internalId() + (row + 1) * self.base)
+        if parent.internalId() < self.base_2:
+            # relationship class
+            return self.createIndex(row, column, parent.internalId() + (row + 1) * (self.base_2))
+        # related object
+        return self.createIndex(row, column, parent.internalId() + (row + 1) * (self.base_3))
+
+    def parent(self, index):
+        """Returns the parent of the model item with the given index. """
+        #logging.debug("parent")
+        if not index.isValid():
+            # invisible root
+            return QModelIndex()
+        if index.internalId() < self.base:
+            # object class
+            return QModelIndex()
+        if index.internalId() < self.base_2:
+            # object
+            parent_index = index.internalId() % self.base
+            parent_row = parent_index - 1
+            return self.createIndex(parent_row, 0, parent_index)
+        if index.internalId() < self.base_3:
+            # relationship class
+            parent_index = index.internalId() % self.base**2
+            parent_row = int(parent_index / self.base) - 1
+            return self.createIndex(parent_row, 0, parent_index)
+        # related object
+        parent_index = index.internalId() % self.base_3
+        parent_row = int(parent_index / self.base_2) - 1
+        return self.createIndex(parent_row, 0, parent_index)
+
+    def hasChildren(self, parent):
+        """Return whether or not parent has children in the model"""
+        #logging.debug("haschildren")
+        if parent.internalId() < self.base_3:
+            return True
+        # related object
+        return True
+
+    def mapToSource(self, proxy_index):
+        """Return the model index in the source model that corresponds to the
+        proxy_index in the proxy model"""
+        #logging.debug("mapto")
+        if not proxy_index.isValid():
+            return QModelIndex()
+        if proxy_index.internalId() < self.base:
+            # object class
+            object_class = self.object_class[proxy_index.row()]
+            return self.sourceModel().index(object_class.source_row, self.object_class_name_sec)
+        if proxy_index.internalId() < self.base_2:
+            # object
+            object_class = self.object_class[proxy_index.parent().row()]
+            object_ = object_class.object[proxy_index.row()]
+            return self.sourceModel().index(object_.source_row, self.object_name_sec)
+        if proxy_index.internalId() < self.base_3:
+            # relationship class
+            object_class = self.object_class[proxy_index.parent().parent().row()]
+            object_ = object_class.object[proxy_index.parent().row()]
+            relationship_class = object_.relationship_class[proxy_index.row()]
+            return self.sourceModel().index(relationship_class.source_row, self.relationship_class_name_sec)
+        # related object
+        object_class = self.object_class[proxy_index.parent().parent().parent().row()]
+        object_ = object_class.object[proxy_index.parent().parent().row()]
+        relationship_class = object_.relationship_class[proxy_index.parent().row()]
+        related_object_row = proxy_index.row()
+        return self.sourceModel().index(relationship_class.source_row + related_object_row, self.related_object_name_sec)
+
+    def mapFromSource(self, source_index):
+        """Return the model index in the proxy model that corresponds to the
+        source_index from the source model. Note: this model does not need it."""
+        return QModelIndex()

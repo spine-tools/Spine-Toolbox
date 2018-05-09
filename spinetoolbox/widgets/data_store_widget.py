@@ -25,12 +25,14 @@ Widget to show Data Store Form.
 """
 
 from PySide2.QtSql import QSqlRelationalTableModel, QSqlDatabase, QSqlQueryModel, QSqlQuery, QSqlRelation
-from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView
+from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView,\
+    QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QInputDialog
 from PySide2.QtCore import Slot, Qt, QAbstractProxyModel, QModelIndex
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu
 from helpers import busy_effect
+from models import QTreeProxyModel
 import logging
 import os
 import sys
@@ -82,17 +84,8 @@ class DataStoreForm(QWidget):
         #self.ui.pushButton_reset.clicked.connect(self.reset_clicked)
         self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
-        #self.object_class_model.primeInsert.connect(self.object_class_inserted)
 
-    @Slot("int", "QSqlRecord", name="object_class_inserted")
-    def object_class_inserted(self, row, record):
-        """Populate new object class record with initial values"""
-        logging.debug("obj class inserted")
-        record.setValue("name", "New object class")
-        record.setValue("description", "Type description here...")
-        # TODO: Fill in remaining fields
 
-    @busy_effect
     def init_models(self, file_path):
         """Import data from sqlite file into models.
         Args:
@@ -155,11 +148,10 @@ class DataStoreForm(QWidget):
 			) as r
 			ON r.class_id=rc.id
             AND o.id=r.object_id
-            ORDER BY object_class_display_order, object_id, relationship_class_id, related_object_id
+            ORDER BY object_class_display_order, object_class_id, object_id, relationship_class_id, related_object_id
         """)
         # TODO: Check if query is ok
         # object tree model and view
-        self.object_tree_model = QTreeProxyModel(self)
         self.object_tree_model.setSourceModel(self.join_model)
         self.ui.treeView_object.setModel(self.object_tree_model)
         #self.ui.treeView_object.expandAll()
@@ -169,16 +161,19 @@ class DataStoreForm(QWidget):
         self.object_parameter_model = QSqlRelationalTableModel(self, database)
         self.object_parameter_model.setTable("parameter_value")
         self.object_parameter_model.setRelation(0, QSqlRelation("parameter", "id", "name"));
+        self.object_parameter_model.setRelation(1, QSqlRelation("object", "id", "name"));
         self.object_parameter_model.select()
         self.object_parameter_model.setEditStrategy(QSqlRelationalTableModel.OnManualSubmit)
+        self.object_parameter_model.setHeaderData(0, Qt.Horizontal, "parameter name")
+        self.object_parameter_model.setHeaderData(1, Qt.Horizontal, "object name")
         self.relationship_parameter_model = QSqlRelationalTableModel(self, database)
         self.relationship_parameter_model.setTable("parameter_value")
         self.relationship_parameter_model.select()
         self.relationship_parameter_model.setEditStrategy(QSqlRelationalTableModel.OnManualSubmit)
         # object and relationship parameter view
         self.ui.tableView_object_parameter.setModel(self.object_parameter_model)
-        object_id_sec = self.object_parameter_model.record().indexOf("object_id")
-        self.ui.tableView_object_parameter.hideColumn(object_id_sec)
+        #object_id_sec = self.object_parameter_model.record().indexOf("object_id")
+        #self.ui.tableView_object_parameter.hideColumn(object_id_sec)
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_model)
 
     @Slot("QModelIndex", name="filter_parameter_models")
@@ -190,8 +185,12 @@ class DataStoreForm(QWidget):
             return
         if index.internalId() < self.object_tree_model.base:
             # object class
+            object_class_row = self.object_tree_model.mapToSource(index).row()
+            object_class_id = self.join_model.record(object_class_row).value("object_class_id")
+            clause = "object_id IN (SELECT id FROM object WHERE class_id={})".format(object_class_id)
+            self.object_parameter_model.setFilter(clause)
             return
-        if index.internalId() < self.object_tree_model.base**2:
+        if index.internalId() < self.object_tree_model.base_2:
             # object
             object_row = self.object_tree_model.mapToSource(index).row()
             object_id = self.join_model.record(object_row).value("object_id")
@@ -225,23 +224,78 @@ class DataStoreForm(QWidget):
         """
         logging.debug("object tree context menu")
         ind = self.ui.treeView_object.indexAt(pos)
+        if ind.internalId() < ind.model().base:
+            table = 'object_class'
+        elif ind.internalId() < ind.model().base_2:
+            table = 'object'
+        else:
+            table = 'relationship_class'
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, ind)#
         option = self.object_tree_context_menu.get_action()
         if option.startswith("New"):
-            if self.join_model.insertRow(ind.row(), ind.parent()):
-                self.ui.treeView_object.edit(ind)
-            #self.object_tree_model.setData(ind.child(0,0), option)
-            #self.ui.treeView_object.setCurrentIndex(ind.child(0,0))
-            #self.ui.treeView_object.edit(ind.child(0,0))
+            dialog = CustomQDialog(self, option,
+                name="Type name here...",
+                description="Type description here...")
+            answer = dialog.exec_()
+            if answer == QDialog.Accepted:
+                name = dialog.answer["name"]
+                description = dialog.answer["description"]
+                source_row = ind.model().mapToSource(ind).row()
+                source_record = ind.model().sourceModel().record(source_row)
+                if table == 'object_class':
+                    display_order = source_record.value("object_class_display_order")
+                    self.add_item(table, name=name, description=description, display_order=display_order)
+                elif table == 'object':
+                    class_id = source_record.value("object_class_id")
+                    self.add_item(table, class_id=class_id, name=name, description=description)
         elif option == "Rename":
-            self.ui.treeView_object.edit(ind)
+            name = ind.data()
+            answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
+                QLineEdit.Normal, name)
+            new_name = answer[0]
+            if not new_name: # cancel clicked
+                return
+            if new_name == name:
+                return
+            self.rename_item(table, name, new_name)
         elif option == "Remove":
             self.object_tree_model.removeRow(ind.row(), ind.parent())
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
+
+    def add_item(self, table, **kwargs): #name, description, display_order):
+        """Add new item given by kwargs to table"""
+        q = QSqlQuery()
+        columns = list()
+        values = list()
+        for key in kwargs:
+            columns.append("`{}`".format(key))
+            values.append("?")
+        columns = ', '.join(columns)
+        values = ', '.join(values)
+        sql = "INSERT INTO `{}` ({}) VALUES ({})".format(table, columns, values)
+        q.prepare(sql)
+        for key,value in kwargs.items():
+            q.addBindValue(value)
+        q.exec_()
+        del q
+        self.join_model.query().exec_()
+        self.object_tree_model.reset_model()
+
+    def rename_item(self, table, name, new_name):
+        """Rename item in table from name to new_name"""
+        q = QSqlQuery()
+        sql = "UPDATE `{}` SET name=? WHERE name=?".format(table)
+        q.prepare(sql)
+        q.addBindValue(new_name)
+        q.addBindValue(name)
+        q.exec_()
+        del q
+        self.join_model.query().exec_()
+
 
     @Slot(name="close_clicked")
     def close_clicked(self):
@@ -266,332 +320,36 @@ class DataStoreForm(QWidget):
         if event:
             event.accept()
 
-# TODO: try to put these inside the model
-class ObjectClass:
-    def __init__(self):
-        self.object = list()
-        self.offset = None
 
-class Object:
-    def __init__(self):
-        self.relationship_class = list()
-        self.offset = None
+class CustomQDialog(QDialog):
+    """A class to create custom forms with several line edits,
+    used when creating new object classes, objects, and so on"""
+    def __init__(self, parent=None, title="", **kwargs):
+        """Initialize class
 
-class RelationshipClass:
-    def __init__(self):
-        self.count = 0
-        self.offset = None
-
-class QTreeProxyModel(QAbstractProxyModel):
-    """A class to view the object table in a tree view"""
-
-    def __init__(self, parent=None):
-        """Init class"""
+        Args:
+            parent (QWidget): the parent of this dialog, needed to center it properly
+            title (str): window title
+            kwargs (dict): keys to use when collecting the answer in output dict, values are placeholder texts
+        """
         super().__init__(parent)
-        self.object_class = list()
-        self.object_class_name_sec = None
-        self.object_name_sec = None
-        self.relationship_class_name_sec = None
-        self.related_object_name_sec = None
-        self.base = None
+        self.line_edit = dict()
+        self.answer = dict()
+        self.setWindowTitle(title)
+        form = QFormLayout(self)
+        for key,value in kwargs.items():
+            line_edit = QLineEdit(self)
+            line_edit.setPlaceholderText(value)
+            self.line_edit[key] = line_edit
+            form.addRow(line_edit)
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.save_and_accept)
+        button_box.rejected.connect(self.reject)
+        form.addRow(button_box)
 
-    def setSourceModel(self, model):
-        """Sets the given sourceModel to be processed by the proxy model."""
-        #logging.debug("set source")
-        self.beginResetModel()
-        super().setSourceModel(model)
-        # Find out sections in each source model
-        header = self.sourceModel().record()
-        self.object_class_name_sec = header.indexOf("object_class_name")
-        self.object_name_sec = header.indexOf("object_name")
-        self.relationship_class_name_sec = header.indexOf("relationship_class_name")
-        self.related_object_name_sec = header.indexOf("related_object_name")
-        self.reset_model()
-        self.endResetModel()
-
-    def reset_model(self):
-        """
-            Sweep the source query and find out offset of each element
-        """
-        new_object_class = None
-        new_object = None
-        new_relationship_class = None
-        last_object_class_id = -1
-        last_object_id = -1
-        last_relationship_class_id = -1
-        for i in range(self.sourceModel().rowCount()):
-            rec = self.sourceModel().record(i)
-            object_class_id = rec.value("object_class_id")
-            object_id = rec.value("object_id")
-            relationship_class_id = rec.value("relationship_class_id")
-            related_object_id = rec.value("related_object_id")
-            if object_class_id != last_object_class_id:
-                last_object_class_id = object_class_id
-                last_object_id = object_id
-                last_relationship_class_id = relationship_class_id
-                if new_object_class:
-                    if new_object:
-                        if new_relationship_class:
-                            new_object.relationship_class.append(new_relationship_class)
-                            new_relationship_class = None
-                        new_object_class.object.append(new_object)
-                        new_object = None
-                    self.object_class.append(new_object_class)
-                new_object_class = ObjectClass()
-                new_object_class.offset = i
-                if object_id:
-                    new_object = Object()
-                    new_object.offset = i
-                    if relationship_class_id:
-                        new_relationship_class = RelationshipClass()
-                        new_relationship_class.offset = i
-                        if related_object_id:
-                            new_relationship_class.count += 1
-            elif object_id != last_object_id:
-                last_object_id = object_id
-                last_relationship_class_id = relationship_class_id
-                if new_object:
-                    if new_relationship_class:
-                        new_object.relationship_class.append(new_relationship_class)
-                        new_relationship_class = None
-                    new_object_class.object.append(new_object)
-                    new_object = None
-                if object_id:
-                    new_object = Object()
-                    new_object.offset = i
-                    if relationship_class_id:
-                        new_relationship_class = RelationshipClass()
-                        new_relationship_class.offset = i
-                        if related_object_id:
-                            new_relationship_class.count += 1
-            elif relationship_class_id != last_relationship_class_id:
-                last_relationship_class_id = relationship_class_id
-                if new_relationship_class:
-                    new_object.relationship_class.append(new_relationship_class)
-                    new_relationship_class = None
-                if relationship_class_id:
-                    new_relationship_class = RelationshipClass()
-                    new_relationship_class.offset = i
-                    if related_object_id:
-                        new_relationship_class.count += 1
-            elif related_object_id:
-                new_relationship_class.count += 1
-        # last row
-        if new_object_class:
-            if new_object:
-                if new_relationship_class:
-                    new_object.relationship_class.append(new_relationship_class)
-                    new_relationship_class = None
-                new_object_class.object.append(new_object)
-                new_object = None
-            self.object_class.append(new_object_class)
-
-        # compute base for handling internal indices
-        self.base = len(self.object_class)
-        for object_class in self.object_class:
-            if len(object_class.object) > self.base:
-                self.base = len(object_class.object)
-            for object_ in object_class.object:
-                if len(object_.relationship_class) > self.base:
-                    self.base = len(object_.relationship_class)
-                for relationship_class in object_.relationship_class:
-                    if relationship_class.count > self.base:
-                        self.base = relationship_class.count
-        self.base += 1
-
-    def flags(self, index):
-        """Returns flags for table items."""
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-    def columnCount(self, parent):
-        """Returns the number of columns under the given parent"""
-        #logging.debug("colcount")
-        return 1
-
-    def rowCount(self, parent):
-        """Returns the number of rows under the given parent"""
-        #logging.debug("rowcount")
-        if not parent.isValid():
-            # root
-            return len(self.object_class)
-        if parent.internalId() < self.base:
-            # object class
-            object_class = self.object_class[parent.row()]
-            return len(object_class.object)
-        if parent.internalId() < self.base**2:
-            # object
-            object_class = self.object_class[parent.parent().row()]
-            object_ = object_class.object[parent.row()]
-            return len(object_.relationship_class)
-        if parent.internalId() < self.base**3:
-            # relationship class
-            object_class = self.object_class[parent.parent().parent().row()]
-            object_ = object_class.object[parent.parent().row()]
-            relationship_class = object_.relationship_class[parent.row()]
-            return relationship_class.count
-        return 0
-
-    def index(self, row, column, parent=QModelIndex()):
-        """Returns the index of the item in the model specified by the given row,
-        column and parent index.
-        """
-        #logging.debug("index")
-        if row < 0 or column < 0:
-            return QModelIndex()
-        if not parent.isValid():
-            # object class
-            return self.createIndex(row, column, row + 1)
-        if parent.internalId() < self.base:
-            # object
-            return self.createIndex(row, column, parent.internalId() + (row + 1) * self.base)
-        if parent.internalId() < self.base**2:
-            # relationship class
-            return self.createIndex(row, column, parent.internalId() + (row + 1) * (self.base**2))
-        # related object
-        return self.createIndex(row, column, parent.internalId() + (row + 1) * (self.base**3))
-
-    def parent(self, index):
-        """Returns the parent of the model item with the given index. """
-        #logging.debug("parent")
-        if not index.isValid():
-            # invisible root
-            return QModelIndex()
-        if index.internalId() < self.base:
-            # object class
-            return QModelIndex()
-        if index.internalId() < self.base**2:
-            # object
-            parent_index = index.internalId() % self.base
-            parent_row = parent_index - 1
-            return self.createIndex(parent_row, 0, parent_index)
-        if index.internalId() < self.base**3:
-            # relationship class
-            parent_index = index.internalId() % self.base**2
-            parent_row = int(parent_index / self.base) - 1
-            return self.createIndex(parent_row, 0, parent_index)
-        # related object
-        parent_index = index.internalId() % self.base**3
-        parent_row = int(parent_index / self.base**2) - 1
-        return self.createIndex(parent_row, 0, parent_index)
-
-    def mapToSource(self, proxy_index):
-        """Return the model index in the source model that corresponds to the
-        proxy_index in the proxy model"""
-        #logging.debug("mapto")
-        if not proxy_index.isValid():
-            return QModelIndex()
-        if proxy_index.internalId() < self.base:
-            # object class
-            object_class = self.object_class[proxy_index.row()]
-            return self.sourceModel().index(object_class.offset, self.object_class_name_sec)
-        if proxy_index.internalId() < self.base**2:
-            # object
-            object_class = self.object_class[proxy_index.parent().row()]
-            object_ = object_class.object[proxy_index.row()]
-            return self.sourceModel().index(object_.offset, self.object_name_sec)
-        if proxy_index.internalId() < self.base**3:
-            # relationship class
-            object_class = self.object_class[proxy_index.parent().parent().row()]
-            object_ = object_class.object[proxy_index.parent().row()]
-            relationship_class = object_.relationship_class[proxy_index.row()]
-            return self.sourceModel().index(relationship_class.offset, self.relationship_class_name_sec)
-        # related object
-        object_class = self.object_class[proxy_index.parent().parent().parent().row()]
-        object_ = object_class.object[proxy_index.parent().parent().row()]
-        relationship_class = object_.relationship_class[proxy_index.parent().row()]
-        related_object_row = proxy_index.row()
-        return self.sourceModel().index(relationship_class.offset + related_object_row, self.related_object_name_sec)
-
-    def mapFromSource(self, source_index):
-        """Return the model index in the proxy model that corresponds to the
-        source_index from the source model"""
-        #logging.debug("mapfrom")
-        #class_id = self.sourceModel().record(source_index.row()).value("class_id")
-        #source_column = source_index.column()
-        #if source_column in [self.object_name_sec, self.object_description_sec]:
-        #    row = source_index.row() - self.class_offset[class_id]
-        #    column = 0 if source_column == self.object_name_sec else 1
-        #    parent_row = self.class_display_order[class_id]
-        #    return self.createIndex(row, column, parent_row)
-        #elif source_column in [self.class_name_sec, self.class_description_sec]:
-        #    row = self.class_display_order[class_id]
-        #    column = 0 if source_column == self.class_name_sec else 1
-        #    return self.createIndex(row, column, 0)
-        return QModelIndex()
-
-    def hasChildren(self, parent):
-        """Return whether or not parent has children in the model"""
-        #logging.debug("haschildren")
-        if parent.internalId() >= self.base**3:
-            # related object
-            return False
-        return True
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        """Inserts count rows into the model before the given row.
-        Items in the new row will be children of the item represented
-        by the parent model index.
-        """
-        logging.debug("insert rows")
-        if index.internalId() == 0: # object_class table
-            pass
-
-    def setData(self, index, value, role=Qt.EditRole):
-        """Sets the role data for the item at index to value."""
-        logging.debug("set data")
-        if role != Qt.EditRole:
-            return False
-        q = QSqlQuery()
-        name = index.sibling(index.row(), 0).data()
-        if index.internalId() == sys.maxsize: # object_class table
-            if index.column() == 0: # name
-                # object_class table
-                q.prepare("""
-                    UPDATE object_class
-                    SET name=? WHERE name=?
-                """)
-                q.addBindValue(value)
-                q.addBindValue(name)
-                q.exec_()
-                # object table
-                q.prepare("""
-                    UPDATE object
-                    SET class_name=? WHERE class_name=?
-                """)
-                q.addBindValue(value)
-                q.addBindValue(name)
-                q.exec_()
-            if index.column() == 1: # description
-                # object_class table
-                q.prepare("""
-                    UPDATE object_class
-                    SET description=? WHERE name=?
-                """)
-                q.addBindValue(value)
-                q.addBindValue(name)
-                q.exec_()
-        else: # object table
-            if index.column() == 0: # name
-                q.prepare("""
-                    UPDATE object
-                    SET name=? WHERE name=?
-                """)
-                q.addBindValue(value)
-                q.addBindValue(name)
-                q.exec_()
-            if index.column() == 1: # description
-                q.prepare("""
-                    UPDATE object
-                    SET description=? WHERE name=?
-                """)
-                q.addBindValue(value)
-                q.addBindValue(name)
-                q.exec_()
-        # commit
-        self.sourceModel().query().exec_()
-        self.class_object_count_model.query().exec_()
-        self.reset_models()
-        self.dataChanged.emit(index, index, Qt.EditRole)
-        # TODO: keep going with remaining tables
-        # TODO: save all executed sql statements
-        return True
+    @Slot(name="save_and_accept")
+    def save_and_accept(self):
+        """Collect answer in output dict and accept"""
+        for key,value in self.line_edit.items():
+            self.answer[key] = value.text()
+        self.accept()
