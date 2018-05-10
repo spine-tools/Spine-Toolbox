@@ -86,6 +86,9 @@ LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']
 # Required fields for Connection Strings
 CS_REQUIRED_KEYS = ['DRIVER', 'SERVER', 'DATABASE']
 
+# Required fields for db references
+DB_REF_REQUIRED_KEYS = ['dialect', 'host', 'database']
+
 # Default settings
 SETTINGS = {"project_directory": "",
             "open_previous_project": "false",

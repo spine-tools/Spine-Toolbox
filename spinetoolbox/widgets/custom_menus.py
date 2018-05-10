@@ -157,11 +157,12 @@ class ObjectTreeContextMenu(QMenu):
         if index.isValid():
             if index.internalId() < index.model().base:
                 self.add_action("New object class")
-                self.add_action("Edit relationship classes")
-            if index.internalId() < index.model().base_2:
                 self.add_action("New object")
-            else:
-                self.add_action("New relationship")
+                self.add_action("New relationship class")
+            elif index.internalId() < index.model().base_2:
+                pass
+            elif index.internalId() < index.model().base_3:
+                self.add_action("New related object")
             self.add_action("Rename")
             self.add_action("Remove")
         self.exec_(position)

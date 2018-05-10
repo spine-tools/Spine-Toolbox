@@ -96,18 +96,17 @@ class DataStoreWidget(QWidget):
         h.setFont(font)
         self.data_model.setHorizontalHeaderItem(0, h)
 
-    def populate_reference_list(self, references):
+    def populate_reference_list(self, items):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
         """
         self.reference_model.clear()
         self.make_header_for_references()
-        if references is not None:
-            for ref in references:
-                connection_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in ref.items() if v)
-                qitem = QStandardItem(connection_string)
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item[0])
                 qitem.setFlags(~Qt.ItemIsEditable)
-                qitem.setData(connection_string.replace(';', ';<br>'), Qt.ToolTipRole)
+                qitem.setData(item[1], Qt.ToolTipRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):

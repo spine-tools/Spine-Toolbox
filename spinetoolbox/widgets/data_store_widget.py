@@ -24,28 +24,27 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtSql import QSqlRelationalTableModel, QSqlDatabase, QSqlQueryModel, QSqlQuery, QSqlRelation
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView,\
-    QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QInputDialog
-from PySide2.QtCore import Slot, Qt, QAbstractProxyModel, QModelIndex
+    QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QInputDialog, QComboBox
+from PySide2.QtCore import Slot, Qt
+from PySide2.QtGui import QStandardItem, QStandardItemModel
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu
 from helpers import busy_effect
-from models import QTreeProxyModel
+from models import MinimalTableModel, CustomSortFilterProxyModel
 import logging
-import os
-import sys
+from sqlalchemy import inspect, create_engine, text
 
 class DataStoreForm(QWidget):
     """A widget to show and edit Spine objects in a data store."""
 
-    def __init__(self, parent, file_path):
+    def __init__(self, parent, reference):
         """ Initialize class.
 
         Args:
             parent (ToolBoxUI): QMainWindow instance
-            file_path (str): Path to the SQLite file with the database
+            reference (tuple): Database name and url to create sqlalchemy engine
         """
         super().__init__()
         # Setup UI from Qt Designer file
@@ -53,13 +52,13 @@ class DataStoreForm(QWidget):
         self.ui.setupUi(self)
         # Class attributes
         self._parent = parent
-        # Sql query model
-        self.join_model = None
-        # Proxy models
-        self.object_tree_model = QTreeProxyModel(self)
-        # Sql table models
-        self.object_parameter_model = None
-        self.relationship_parameter_model = None
+        # Object tree model
+        self.object_tree_model = QStandardItemModel(self)
+        # Parameter models
+        self.object_parameter_model = MinimalTableModel(self)
+        self.object_parameter_proxy_model = CustomSortFilterProxyModel(self)
+        self.relationship_parameter_model = MinimalTableModel(self)
+        self.relationship_parameter_proxy_model = CustomSortFilterProxyModel(self)
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -72,7 +71,7 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         # context menus
         self.object_tree_context_menu = None
-        self.init_models(file_path)
+        self.init_models(reference)
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -85,135 +84,144 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
 
-
-    def init_models(self, file_path):
+    def init_models(self, reference):
         """Import data from sqlite file into models.
         Args:
-            file_path (str): A path to a sqlite file.
+            db_url (tuple): Database name and url to create sqlalchemy engine.
         Returns:
             true
         """
-        database_name = os.path.basename(file_path)
-        self.setWindowTitle("Spine Data Store    -- {} --".format(database_name))
-        database = QSqlDatabase.addDatabase("QSQLITE")
-        database.setDatabaseName(file_path)
-        if not database.open():
-            self._parent.msg.emit("Connection to <b>{0}</b> failed.".format(database_name))
-            return
-        # object class join model
-        self.join_model = QSqlQueryModel()
-        self.join_model.setQuery("""
-            SELECT oc.id as object_class_id,
-                oc.name as object_class_name,
-                oc.description as object_class_description,
-                oc.display_order as object_class_display_order,
-                o.id as object_id,
-                o.name as object_name,
-                o.description as object_description,
-				rc.id as relationship_class_id,
-				rc.name as relationship_class_name,
-				r.related_object_id as related_object_id,
-				r.related_object_name as related_object_name
-            FROM object_class as oc
-            LEFT JOIN object as o
-            ON oc.id=o.class_id
-			LEFT JOIN (
-                SELECT parent_class_id as object_class_id,
-                    id,
-                    name
-                FROM relationship_class as rc
-				UNION ALL
-                    SELECT child_class_id as object_class_id,
-                    id,
-                    name
-                    FROM relationship_class as rc
-			) as rc
-            ON oc.id=rc.object_class_id
-			LEFT JOIN (
-                SELECT r.parent_object_id as object_id,
-					r.class_id,
-                    o.id as related_object_id,
-                    o.name as related_object_name
-                FROM relationship as r
-				JOIN object as o
-				ON r.child_object_id=o.id
-				UNION ALL
-					SELECT r.child_object_id as object_id,
-						r.class_id,
-						o.id as related_object_id,
-						o.name as related_object_name
-					FROM relationship as r
-					JOIN object as o
-					ON r.parent_object_id=o.id
-			) as r
-			ON r.class_id=rc.id
-            AND o.id=r.object_id
-            ORDER BY object_class_display_order, object_class_id, object_id, relationship_class_id, related_object_id
+        db_name = reference[0]
+        db_url = reference[1]
+        self.setWindowTitle("Spine Data Store    -- {} --".format(db_name))
+        # Create source engine to obtain data for our models
+        source_engine = create_engine(db_url)
+        # Populate object tree model
+        root_item = QStandardItem(db_name)
+        object_class_result = source_engine.execute("""
+            SELECT id, name FROM object_class ORDER BY display_order
         """)
-        # TODO: Check if query is ok
-        # object tree model and view
-        self.object_tree_model.setSourceModel(self.join_model)
+        for object_class_row in object_class_result:
+            relationship_class_result = source_engine.execute(
+                text("""
+                    SELECT parent_class_id as object_class_id,
+                        id,
+                        name
+                    FROM relationship_class as rc
+                    WHERE parent_type='object_class'
+                    AND parent_class_id=:object_class_id
+                    UNION ALL
+                        SELECT child_class_id as object_class_id,
+                        id,
+                        name
+                        FROM relationship_class as rc
+                        WHERE parent_type='object_class'
+                        AND child_class_id=:object_class_id
+                """),
+                object_class_id=object_class_row['id']
+            )
+            relationship_class_list = [row for row in relationship_class_result]
+            object_class_item = QStandardItem(object_class_row['name'])
+            object_class_item.setData(object_class_row['id'], Qt.UserRole)
+            object_result = source_engine.execute(
+                text("""
+                    SELECT id, name FROM object WHERE class_id=:object_class_id
+                """),
+                object_class_id=object_class_row['id']
+            )
+            for object_row in object_result:
+                object_item = QStandardItem(object_row['name'])
+                object_item.setData(object_row['id'], Qt.UserRole)
+                for relationship_class_row in relationship_class_list:
+                    relationship_class_item = QStandardItem(relationship_class_row['name'])
+                    related_object_result = source_engine.execute(
+                        text("""
+                            SELECT o.id as id,
+                                o.name as name
+                            FROM relationship as r
+                            JOIN object as o
+                            ON r.child_object_id=o.id
+                            WHERE r.class_id=:relationship_class_id
+                            AND r.parent_object_id=:object_id
+                            UNION ALL
+                                SELECT o.id as id,
+                                    o.name as name
+                                FROM relationship as r
+                                JOIN object as o
+                                ON r.parent_object_id=o.id
+                                WHERE r.class_id=:relationship_class_id
+                                AND r.child_object_id=:object_id
+                        """),
+                        relationship_class_id=relationship_class_row['id'],
+                        object_id=object_row['id']
+                    )
+                    for related_object_row in related_object_result:
+                        related_object_item = QStandardItem(related_object_row['name'])
+                        relationship_class_item.appendRow(related_object_item)
+                    object_item.appendRow(relationship_class_item)
+                object_class_item.appendRow(object_item)
+            root_item.appendRow(object_class_item)
+        self.object_tree_model.appendRow(root_item)
+        # setup object tree view
         self.ui.treeView_object.setModel(self.object_tree_model)
-        #self.ui.treeView_object.expandAll()
+        self.ui.treeView_object.header().hide()
+        self.ui.treeView_object.expand(root_item.index())
         self.ui.treeView_object.resizeColumnToContents(0)
-        #self.ui.treeView_object.colapseAll()
-        # object and relationship parameter
-        self.object_parameter_model = QSqlRelationalTableModel(self, database)
-        self.object_parameter_model.setTable("parameter_value")
-        self.object_parameter_model.setRelation(0, QSqlRelation("parameter", "id", "name"));
-        self.object_parameter_model.setRelation(1, QSqlRelation("object", "id", "name"));
-        self.object_parameter_model.select()
-        self.object_parameter_model.setEditStrategy(QSqlRelationalTableModel.OnManualSubmit)
-        self.object_parameter_model.setHeaderData(0, Qt.Horizontal, "parameter name")
-        self.object_parameter_model.setHeaderData(1, Qt.Horizontal, "object name")
-        self.relationship_parameter_model = QSqlRelationalTableModel(self, database)
-        self.relationship_parameter_model.setTable("parameter_value")
-        self.relationship_parameter_model.select()
-        self.relationship_parameter_model.setEditStrategy(QSqlRelationalTableModel.OnManualSubmit)
-        # object and relationship parameter view
-        self.ui.tableView_object_parameter.setModel(self.object_parameter_model)
-        #object_id_sec = self.object_parameter_model.record().indexOf("object_id")
-        #self.ui.tableView_object_parameter.hideColumn(object_id_sec)
-        self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_model)
+
+        parameter_data = list()
+        results = source_engine.execute("""
+            SELECT o.name as object_name,
+                p.name as parameter_name,
+                p.object_class_id,
+                pv.*
+            FROM parameter_value as pv
+            JOIN parameter as p
+            ON p.id=pv.parameter_id
+            JOIN object as o
+            ON pv.object_id=o.id
+            WHERE p.object_type='object_class'
+        """)
+        column_names = results.keys()
+        for parameter_row in results:
+            parameter_data.append(parameter_row)
+        self.object_parameter_model.header = column_names
+        self.object_parameter_model.reset_model(parameter_data)
+        self.object_parameter_proxy_model.setSourceModel(self.object_parameter_model)
+        self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
+        self.ui.tableView_object_parameter.hideColumn(column_names.index("object_class_id"))
+        self.ui.tableView_object_parameter.hideColumn(column_names.index("object_id"))
+        self.ui.tableView_object_parameter.hideColumn(column_names.index("parameter_id"))
+        self.relationship_parameter_model.header = column_names
+        self.relationship_parameter_model.reset_model(parameter_data)
+        self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy_model)
+
 
     @Slot("QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, index):
         """Populate tableViews whenever an object item is selected in the treeView"""
-        logging.debug("filter_parameter_models")
-        if not index.isValid():
-            # invisible root
+        # logging.debug("filter_parameter_models")
+        tree_level = 0
+        index_copy = index
+        while index_copy.parent().isValid():
+            index_copy = index_copy.parent()
+            tree_level += 1
+        if tree_level == 0: # root
             return
-        if index.internalId() < self.object_tree_model.base:
-            # object class
-            object_class_row = self.object_tree_model.mapToSource(index).row()
-            object_class_id = self.join_model.record(object_class_row).value("object_class_id")
-            clause = "object_id IN (SELECT id FROM object WHERE class_id={})".format(object_class_id)
-            self.object_parameter_model.setFilter(clause)
-            return
-        if index.internalId() < self.object_tree_model.base_2:
-            # object
-            object_row = self.object_tree_model.mapToSource(index).row()
-            object_id = self.join_model.record(object_row).value("object_id")
-            object_class_id = self.join_model.record(object_row).value("object_class_id")
-            clause = "object_id={}".format(object_id)
-            self.object_parameter_model.setFilter(clause)
-            return
-            #clause = """object_id in
-            #    (SELECT r.id from relationship as r
-            #    join relationship_class as rc
-            #    on r.class_id=rc.id
-            #    where r.parent_object_id='{}'
-            #    and rc.parent_class_id='{}')
-            #""".format(object_id, class_id)
-            #self.parameter_as_parent_model.setFilter(clause)
-            #clause = """object_id in
-            #    (SELECT r.id from relationship as r
-            #    join relationship_class as rc
-            #    on r.class_id=rc.id
-            #    where r.child_object_id='{}'
-            #    and rc.child_class_id='{}')
-            #""".format(object_id, class_id)
-            #self.parameter_as_child_model.setFilter(clause)
+        elif tree_level == 1: # object class
+            object_class_item = index.model().itemFromIndex(index)
+            object_class_id = object_class_item.data(Qt.UserRole)
+            self.object_parameter_proxy_model.filter_object_class_id = object_class_id
+            self.object_parameter_proxy_model.filter_object_id = None
+            self.object_parameter_proxy_model.setFilterRegExp("")   # trick to trigger sorting
+        elif tree_level == 2: # object class
+            object_class_item = index.model().itemFromIndex(index.parent())
+            object_item = index.model().itemFromIndex(index)
+            object_class_id = object_class_item.data(Qt.UserRole)
+            object_id = object_item.data(Qt.UserRole)
+            self.object_parameter_proxy_model.filter_object_class_id = object_class_id
+            self.object_parameter_proxy_model.filter_object_id = object_id
+            self.object_parameter_proxy_model.setFilterRegExp("")   # trick to trigger sorting
+
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
@@ -222,19 +230,13 @@ class DataStoreForm(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        logging.debug("object tree context menu")
+        # logging.debug("object tree context menu")
         ind = self.ui.treeView_object.indexAt(pos)
-        if ind.internalId() < ind.model().base:
-            table = 'object_class'
-        elif ind.internalId() < ind.model().base_2:
-            table = 'object'
-        else:
-            table = 'relationship_class'
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, ind)#
         option = self.object_tree_context_menu.get_action()
-        if option.startswith("New"):
-            dialog = CustomQDialog(self, option,
+        if option == "New object class":
+            dialog = CustomQDialog(self, "New object class",
                 name="Type name here...",
                 description="Type description here...")
             answer = dialog.exec_()
@@ -243,12 +245,34 @@ class DataStoreForm(QWidget):
                 description = dialog.answer["description"]
                 source_row = ind.model().mapToSource(ind).row()
                 source_record = ind.model().sourceModel().record(source_row)
-                if table == 'object_class':
-                    display_order = source_record.value("object_class_display_order")
-                    self.add_item(table, name=name, description=description, display_order=display_order)
-                elif table == 'object':
-                    class_id = source_record.value("object_class_id")
-                    self.add_item(table, class_id=class_id, name=name, description=description)
+                display_order = source_record.value("object_class_display_order")
+                self.add_item('object_class', name=name, description=description, display_order=display_order)
+        elif option == "New object":
+            dialog = CustomQDialog(self, "New object",
+                name="Type name here...",
+                description="Type description here...")
+            answer = dialog.exec_()
+            if answer == QDialog.Accepted:
+                name = dialog.answer["name"]
+                description = dialog.answer["description"]
+                source_row = ind.model().mapToSource(ind).row()
+                source_record = ind.model().sourceModel().record(source_row)
+                class_id = source_record.value("object_class_id")
+                self.add_item('object', class_id=class_id, name=name, description=description)
+        elif option == "New relationship class":
+            q = QSqlQuery()
+            q.exec_("SELECT name FROM object_class ORDER BY display_order")
+            related_class_name = list()
+            related_class_name.append("Select related class name...")
+            while q.next():
+                related_class_name.append(q.value(0))
+            dialog = CustomQDialog(self, "New relationship class",
+                name="Type name here...",
+                related_class_name=related_class_name)
+            answer = dialog.exec_()
+            if answer == QDialog.Accepted:
+                name = dialog.answer["name"]
+                related_class_name = dialog.answer["related_class_name"]
         elif option == "Rename":
             name = ind.data()
             answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
@@ -282,7 +306,7 @@ class DataStoreForm(QWidget):
             q.addBindValue(value)
         q.exec_()
         del q
-        self.join_model.query().exec_()
+        self.join_model.select() #query().exec_()
         self.object_tree_model.reset_model()
 
     def rename_item(self, table, name, new_name):
@@ -320,7 +344,7 @@ class DataStoreForm(QWidget):
         if event:
             event.accept()
 
-
+# TODO: move this to another file
 class CustomQDialog(QDialog):
     """A class to create custom forms with several line edits,
     used when creating new object classes, objects, and so on"""
@@ -333,15 +357,19 @@ class CustomQDialog(QDialog):
             kwargs (dict): keys to use when collecting the answer in output dict, values are placeholder texts
         """
         super().__init__(parent)
-        self.line_edit = dict()
+        self.input = dict()
         self.answer = dict()
         self.setWindowTitle(title)
         form = QFormLayout(self)
         for key,value in kwargs.items():
-            line_edit = QLineEdit(self)
-            line_edit.setPlaceholderText(value)
-            self.line_edit[key] = line_edit
-            form.addRow(line_edit)
+            if isinstance(value, str): # line edit
+                input_ = QLineEdit(self)
+                input_.setPlaceholderText(value)
+            elif isinstance(value, list): # combo box
+                input_ = QComboBox(self)
+                input_.addItems(value)
+            self.input[key] = input_
+            form.addRow(input_)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.accepted.connect(self.save_and_accept)
         button_box.rejected.connect(self.reject)
@@ -350,6 +378,9 @@ class CustomQDialog(QDialog):
     @Slot(name="save_and_accept")
     def save_and_accept(self):
         """Collect answer in output dict and accept"""
-        for key,value in self.line_edit.items():
-            self.answer[key] = value.text()
+        for key,value in self.input.items():
+            if isinstance(value, QLineEdit):
+                self.answer[key] = value.text()
+            elif isinstance(value, QComboBox):
+                self.answer[key] = value.currentText()
         self.accept()

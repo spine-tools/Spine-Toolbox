@@ -25,16 +25,16 @@ Module for data store class.
 """
 
 import os
-import pyodbc, sqlite3
 import logging
 from PySide2.QtGui import QDesktopServices
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from PySide2.QtCore import Qt, Slot, QUrl
-from widgets.add_connection_string_widget import AddConnectionStringWidget
+from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
-from helpers import create_dir
+from helpers import create_dir, busy_effect
+from sqlalchemy import create_engine, Table, MetaData, select, insert
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -70,7 +70,7 @@ class DataStore(MetaObject):
         # Populate data (files) model
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
-        self.add_connection_string_form = None
+        self.add_db_reference_form = None
         self.data_store_form = None
         self._graphics_item = DataStoreImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
@@ -78,10 +78,11 @@ class DataStore(MetaObject):
     def connect_signals(self):
         """Connect this data store's signals to slots."""
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
+        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_file)
+        self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
 
     def set_icon(self, icon):
@@ -104,11 +105,11 @@ class DataStore(MetaObject):
         if not res:
             self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    @Slot(name="show_add_connection_string_form")
-    def show_add_connection_string_form(self):
+    @Slot(name="show_add_db_reference_form")
+    def show_add_db_reference_form(self):
         """Show the form for specifying connection strings."""
-        self.add_connection_string_form = AddConnectionStringWidget(self._parent, self)
-        self.add_connection_string_form.show()
+        self.add_db_reference_form = AddDbReferenceWidget(self._parent, self)
+        self.add_db_reference_form.show()
 
     def add_reference(self, reference):
         """Add reference to reference list and populate widget's reference list"""
@@ -148,49 +149,50 @@ class DataStore(MetaObject):
         for reference in references_to_import:
             try:
                 self.import_reference(reference)
-            except pyodbc.Error as e:
-                self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
+            except Exception as e:
+                self._parent.msg_error.emit("Import failed: {}".format(e))
                 continue
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
 
+    @busy_effect
     def import_reference(self, reference):
         """Import reference database into local SQLite file"""
+        database = reference[0]
+        self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
+        # Source
+        source_url = reference[1]
+        source_engine = create_engine(source_url)
+        # Destination
+        dest_filename = os.path.join(self.data_dir, database + ".sqlite")
+        try:
+            os.remove(dest_filename)
+        except OSError:
+            pass
+        dest_url = "sqlite:///" + dest_filename
+        dest_engine = create_engine(dest_url)#, echo=True)
+        # Meta reflection
+        meta = MetaData()
+        meta.reflect(source_engine)
+        meta.create_all(dest_engine)
+        # Copy tables
+        source_meta = MetaData(bind=source_engine)
+        dest_meta = MetaData(bind=dest_engine)
+        for t in meta.sorted_tables:
+            source_table = Table(t, source_meta, autoload=True)
+            dest_table = Table(t, dest_meta, autoload=True)
+            sel = select([source_table])
+            result = source_engine.execute(sel)
+            values = [row for row in result]
+            if values:
+                ins = dest_table.insert()
+                dest_engine.execute(ins, values)
+        self.databases.append(database)
 
-        database_name = reference["DATABASE"]
-        self._parent.msg.emit("Importing database <b>{0}</b>".format(database_name))
-        odbc_cnxn_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in reference.items() if v)
-        obdc_cnxn = pyodbc.connect(odbc_cnxn_string, autocommit=True, timeout=3)
-        sqlite_cnxn = sqlite3.connect(os.path.join(self.data_dir, database_name + ".sqlite"))
-        table_names = [
-            'object_class', 'object',
-            'relationship_class', 'relationship',
-            'parameter', 'parameter_value'
-        ]
-        for table in table_names:
-            sqlite_cnxn.cursor().execute("DROP TABLE IF EXISTS {}".format(table))
-            header = list()
-            pk = None
-            row = obdc_cnxn.cursor().primaryKeys(table=table).fetchone()
-            if row:
-                pk = row.column_name
-            for row in obdc_cnxn.cursor().columns(table=table):
-                column = '`' + row.column_name + '`'
-                if row.column_name == pk:
-                    column += ' INTEGER PRIMARY KEY'
-                header.append(column)
-            sql = "CREATE TABLE {0} ({1})".format(table, ', '.join(header))
-            sqlite_cnxn.cursor().execute(sql)
-            for row in obdc_cnxn.cursor().execute("SELECT * FROM {0}".format(table)):
-                sql = "INSERT INTO {0} VALUES (".format(table)\
-                    + ', '.join(["?" for i in range(len(row))]) + ")"
-                sqlite_cnxn.cursor().execute(sql, row)
-        sqlite_cnxn.commit()
-        self.databases.append(database_name)
-
+    @busy_effect
     @Slot("QModelIndex", name="open_file")
     def open_file(self, index):
-        """Open reference in spine data explorer."""
+        """Open file in spine data explorer."""
         if not index:
             return
         if not index.isValid():
@@ -199,7 +201,22 @@ class DataStore(MetaObject):
         else:
             data_file = os.listdir(self.data_dir)[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
-            self.data_store_form = DataStoreForm(self._parent, data_file_path)
+            reference = (data_file, "sqlite:///" + data_file_path)
+            self.data_store_form = DataStoreForm(self._parent, reference)
+            self.data_store_form.show()
+
+    @busy_effect
+    @Slot("QModelIndex", name="open_reference")
+    def open_reference(self, index):
+        """Open reference in spine data explorer."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            reference = self.references[index.row()]
+            self.data_store_form = DataStoreForm(self._parent, reference)
             self.data_store_form.show()
 
     @Slot(name="show_connections")
@@ -224,3 +241,17 @@ class DataStore(MetaObject):
     def data_references(self):
         """Return a list connections strings that are in this item as references (self.references)."""
         return self.references
+
+# TODO: find a way better place for this
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.mysql import TINYINT, DOUBLE
+
+@compiles(TINYINT, 'sqlite')
+def compile_TINYINT_mysql_sqlite(element, compiler, **kw):
+    """ Handles mysql TINYINT datatype as INTEGER in sqlite """
+    return compiler.visit_INTEGER(element, **kw)
+
+@compiles(DOUBLE, 'sqlite')
+def compile_DOUBLE_mysql_sqlite(element, compiler, **kw):
+    """ Handles mysql DOUBLE datatype as REAL in sqlite """
+    return compiler.visit_REAL(element, **kw)
