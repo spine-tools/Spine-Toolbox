@@ -25,6 +25,7 @@ Module for data store class.
 """
 
 import os
+import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
 from metaobject import MetaObject
@@ -158,10 +159,10 @@ class DataStore(MetaObject):
     @busy_effect
     def import_reference(self, reference):
         """Import reference database into local SQLite file"""
-        database = reference[0]
+        database = reference['database']
         self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
         # Source
-        source_url = reference[1]
+        source_url = reference['url']
         source_engine = create_engine(source_url)
         # Destination
         dest_filename = os.path.join(self.data_dir, database + ".sqlite")
@@ -201,7 +202,11 @@ class DataStore(MetaObject):
         else:
             data_file = os.listdir(self.data_dir)[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
-            reference = (data_file, "sqlite:///" + data_file_path)
+            reference = {
+                'database': data_file,
+                'username': getpass.getuser(),
+                'url': "sqlite:///" + data_file_path
+            }
             self.data_store_form = DataStoreForm(self._parent, reference)
             self.data_store_form.show()
 

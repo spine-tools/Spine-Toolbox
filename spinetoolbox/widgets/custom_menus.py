@@ -154,14 +154,21 @@ class ObjectTreeContextMenu(QMenu):
         self._parent = parent
         self.index = index
         self.option = "None"
-        if index.isValid():
-            if index.internalId() < index.model().base:
+        tree_level = 0
+        index_copy = index
+        while index_copy.parent().isValid():
+            index_copy = index_copy.parent()
+            tree_level += 1
+        if tree_level == 0:
+            self.add_action("New object class")
+        else:
+            if tree_level == 1:
                 self.add_action("New object class")
                 self.add_action("New object")
                 self.add_action("New relationship class")
-            elif index.internalId() < index.model().base_2:
+            elif tree_level == 2:
                 pass
-            elif index.internalId() < index.model().base_3:
+            elif tree_level == 3:
                 self.add_action("New related object")
             self.add_action("Rename")
             self.add_action("Remove")

@@ -104,9 +104,9 @@ class DataStoreWidget(QWidget):
         self.make_header_for_references()
         if items is not None:
             for item in items:
-                qitem = QStandardItem(item[0])
+                qitem = QStandardItem(item['database'])
                 qitem.setFlags(~Qt.ItemIsEditable)
-                qitem.setData(item[1], Qt.ToolTipRole)
+                qitem.setData(item['url'], Qt.ToolTipRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):

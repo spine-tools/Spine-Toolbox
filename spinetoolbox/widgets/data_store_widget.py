@@ -34,10 +34,29 @@ from widgets.custom_menus import ObjectTreeContextMenu
 from helpers import busy_effect
 from models import MinimalTableModel, CustomSortFilterProxyModel
 import logging
-from sqlalchemy import inspect, create_engine, text
+import datetime
+from sqlalchemy import MetaData, Table, create_engine, text
 
 class DataStoreForm(QWidget):
     """A widget to show and edit Spine objects in a data store."""
+
+    class RootItem(QStandardItem):
+        def __init__(self, text=None):
+            super().__init__(text)
+            self.id = None
+            self.object_class_data = None
+
+    class ObjectClassItem(QStandardItem):
+        def __init__(self, text=None):
+            super().__init__(text)
+            self.id = None
+            self.display_order = None
+            self.relationship_class_data = None
+
+    class ObjectItem(QStandardItem):
+        def __init__(self, text=None):
+            super().__init__(text)
+            self.id = None
 
     def __init__(self, parent, reference):
         """ Initialize class.
@@ -52,6 +71,11 @@ class DataStoreForm(QWidget):
         self.ui.setupUi(self)
         # Class attributes
         self._parent = parent
+        self.reference = reference
+        self.source_engine = None
+        self.source_meta = None
+        self.source_conn = None
+        self.source_trans = None
         # Object tree model
         self.object_tree_model = QStandardItemModel(self)
         # Parameter models
@@ -71,38 +95,86 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         # context menus
         self.object_tree_context_menu = None
-        self.init_models(reference)
+        self.setup_connection(self.reference['url'])
+        self.init_models(self.reference['database'])
         self.connect_signals()
+        self.setWindowTitle("Spine Data Store    -- {} --".format(self.reference['database']))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def connect_signals(self):
         """Connect signals to slots."""
-        #self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
+        self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
         self.ui.pushButton_close.clicked.connect(self.close_clicked)
         #self.ui.pushButton_reset.clicked.connect(self.reset_clicked)
         self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
 
-    def init_models(self, reference):
+    @Slot(name="commit_clicked")
+    def commit_clicked(self):
+        """Coomit changes to source database."""
+        comment = self.ui.lineEdit_commit_msg.text()
+        if not comment:
+            msg = "Commit message missing."
+            self.statusbar.showMessage(msg, 3000)
+            return
+        if not self.source_conn:
+            msg = "Not connected!"
+            self.statusbar.showMessage(msg, 3000)
+            return
+        if not self.source_trans:
+            msg = "No transaction!"
+            self.statusbar.showMessage(msg, 3000)
+            return
+        date = datetime.datetime.now()
+        commit_table = Table('commit', self.source_meta, autoload=True)
+        upd = commit_table.update().where(commit_table.c.id == self.commit_id).\
+            values(comment=comment, date=date)
+        self.source_conn.execute(upd)
+        self.source_trans.commit()
+        self.source_trans = self.source_conn.begin()
+        self.update_commit_id()
+
+    def setup_connection(self, db_url):
+        """Create engine, metadata, connection and transactions.
+        Args:
+            db_url (str): Database url to create sqlalchemy engine.
+        """
+        # Create source engine to obtain data for our models
+        self.source_engine = create_engine(db_url)
+        self.source_meta = MetaData(bind=self.source_engine)
+        self.source_conn = self.source_engine.connect()
+        self.source_trans = self.source_conn.begin()
+        self.update_commit_id()
+
+    def update_commit_id(self):
+        """Get new commit id"""
+        commit_table = Table('commit', self.source_meta, autoload=True)
+        user = self.reference['username']
+        date = datetime.datetime.now()
+        ins = commit_table.insert().values(comment='in progress', date=date, user=user)
+        result = self.source_conn.execute(ins)
+        self.commit_id = result.inserted_primary_key[0]
+
+    def init_models(self, db_name):
         """Import data from sqlite file into models.
         Args:
-            db_url (tuple): Database name and url to create sqlalchemy engine.
+            db_name (str): Database name.
         Returns:
             true
         """
-        db_name = reference[0]
-        db_url = reference[1]
-        self.setWindowTitle("Spine Data Store    -- {} --".format(db_name))
-        # Create source engine to obtain data for our models
-        source_engine = create_engine(db_url)
-        # Populate object tree model
-        root_item = QStandardItem(db_name)
-        object_class_result = source_engine.execute("""
-            SELECT id, name FROM object_class ORDER BY display_order
+        # Populate object tree model from source database
+        root_item = self.RootItem(db_name)
+        object_class_result = self.source_conn.execute("""
+            SELECT id, name, display_order FROM object_class ORDER BY display_order
         """)
-        for object_class_row in object_class_result:
-            relationship_class_result = source_engine.execute(
+        object_class_data = [{k:v for k,v in row.items()} for row in object_class_result]
+        root_item.object_class_data = object_class_data
+        for object_class_row in object_class_data:
+            object_class_item = self.ObjectClassItem(object_class_row['name'])
+            object_class_item.id = object_class_row['id']
+            object_class_item.display_order = object_class_row['display_order']
+            relationship_class_result = self.source_conn.execute(
                 text("""
                     SELECT parent_class_id as object_class_id,
                         id,
@@ -115,26 +187,26 @@ class DataStoreForm(QWidget):
                         id,
                         name
                         FROM relationship_class as rc
-                        WHERE parent_type='object_class'
+                        WHERE child_type='object_class'
                         AND child_class_id=:object_class_id
                 """),
                 object_class_id=object_class_row['id']
             )
-            relationship_class_list = [row for row in relationship_class_result]
-            object_class_item = QStandardItem(object_class_row['name'])
-            object_class_item.setData(object_class_row['id'], Qt.UserRole)
-            object_result = source_engine.execute(
+            relationship_class_data = [{k:v for k,v in row.items()} for row in relationship_class_result]
+            object_class_item.relationship_class_data = relationship_class_data
+
+            object_result = self.source_conn.execute(
                 text("""
                     SELECT id, name FROM object WHERE class_id=:object_class_id
                 """),
                 object_class_id=object_class_row['id']
             )
             for object_row in object_result:
-                object_item = QStandardItem(object_row['name'])
-                object_item.setData(object_row['id'], Qt.UserRole)
-                for relationship_class_row in relationship_class_list:
+                object_item = self.ObjectItem(object_row['name'])
+                object_item.id = object_row['id']
+                for relationship_class_row in relationship_class_data:
                     relationship_class_item = QStandardItem(relationship_class_row['name'])
-                    related_object_result = source_engine.execute(
+                    related_object_result = self.source_conn.execute(
                         text("""
                             SELECT o.id as id,
                                 o.name as name
@@ -169,7 +241,7 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.resizeColumnToContents(0)
 
         parameter_data = list()
-        results = source_engine.execute("""
+        results = self.source_conn.execute("""
             SELECT o.name as object_name,
                 p.name as parameter_name,
                 p.object_class_id,
@@ -206,21 +278,130 @@ class DataStoreForm(QWidget):
             index_copy = index_copy.parent()
             tree_level += 1
         if tree_level == 0: # root
-            return
+            pass
         elif tree_level == 1: # object class
             object_class_item = index.model().itemFromIndex(index)
-            object_class_id = object_class_item.data(Qt.UserRole)
+            object_class_id = object_class_item.id
             self.object_parameter_proxy_model.filter_object_class_id = object_class_id
             self.object_parameter_proxy_model.filter_object_id = None
             self.object_parameter_proxy_model.setFilterRegExp("")   # trick to trigger sorting
         elif tree_level == 2: # object class
             object_class_item = index.model().itemFromIndex(index.parent())
             object_item = index.model().itemFromIndex(index)
-            object_class_id = object_class_item.data(Qt.UserRole)
-            object_id = object_item.data(Qt.UserRole)
+            object_class_id = object_class_item.id
+            object_id = object_item.id
             self.object_parameter_proxy_model.filter_object_class_id = object_class_id
             self.object_parameter_proxy_model.filter_object_id = object_id
-            self.object_parameter_proxy_model.setFilterRegExp("")   # trick to trigger sorting
+            self.object_parameter_proxy_model.setFilterRegExp("")   # trick to trigger filtering
+
+    def new_object_class(self, ind):
+        """Insert new object class.
+
+        Args:
+            ind (QModelIndex): the index of either the root or an object class item
+        """
+        dialog = CustomQDialog(self, "New object class",
+            name="Type name here...",
+            description="Type description here...")
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            name = dialog.answer["name"]
+            description = dialog.answer["description"]
+            if ind.parent().isValid(): # we are on an object class item
+                root_item = ind.model().itemFromIndex(ind.parent())
+                insert_at_row = ind.row() # insert before
+                display_order = root_item.child(insert_at_row).display_order - 1 # insert before
+            else: # we are on the root item
+                root_item = ind.model().itemFromIndex(ind)
+                insert_at_row = root_item.rowCount() # insert last
+                display_order = root_item.child(insert_at_row-1).display_order # insert last
+            object_class_id = self.insert_item(
+                'object_class',
+                name=name,
+                description=description,
+                display_order=display_order
+            )
+            # if insert is successful, add item to model as well
+            if object_class_id:
+                object_class_item = self.ObjectClassItem(name)
+                object_class_item.id = object_class_id
+                object_class_item.display_order = display_order
+                root_item.insertRow(insert_at_row, QStandardItem())
+                root_item.setChild(insert_at_row, 0, object_class_item) # TODO: find out why is this necessary
+                object_class_ind = ind.model().indexFromItem(object_class_item)
+                self.ui.treeView_object.setCurrentIndex(object_class_ind)
+
+    def new_object(self, ind):
+        """Insert new object.
+
+        Args:
+            ind (QModelIndex): the index of an object class item
+        """
+        dialog = CustomQDialog(self, "New object",
+            name="Type name here...",
+            description="Type description here...")
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            object_class_item = ind.model().itemFromIndex(ind)
+            name = dialog.answer["name"]
+            description = dialog.answer["description"]
+            class_id = object_class_item.id
+            object_id = self.insert_item('object', class_id=class_id, name=name, description=description)
+            # if insert is successful, add item to model as well
+            if object_id:
+                object_item = self.ObjectItem(name)
+                object_item.id = object_id
+                # append relationship class items from object class item
+                relationship_class_data = object_class_item.relationship_class_data
+                relationship_class_name = [row['name'] for row in relationship_class_data]
+                for rc_name in relationship_class_name:
+                    relationship_class_item = QStandardItem(rc_name)
+                    object_item.appendRow(relationship_class_item)
+                object_class_item.appendRow(object_item)
+                self.ui.treeView_object.expand(ind)
+                self.ui.treeView_object.setCurrentIndex(ind.model().indexFromItem(object_item))
+
+    def new_relationship_class(self, ind):
+        """Insert new relationship class.
+
+        Args:
+            ind (QModelIndex): the index of an object class item
+        """
+        object_class_data = ind.model().itemFromIndex(ind.parent()).object_class_data
+        object_class_name = [row['name'] for row in object_class_data]
+        related_class_name = ['Select related class...']
+        related_class_name.extend(object_class_name)
+        dialog = CustomQDialog(self, "New relationship class",
+            name="Type name here...",
+            related_class_name=related_class_name)
+        answer = dialog.exec_()
+        if answer == QDialog.Accepted:
+            name = dialog.answer['name']
+            parent_type='object_class'
+            parent_class_id = ind.model().itemFromIndex(ind).id
+            child_type='object_class'
+            child_class_row = dialog.answer['related_class_name']['index'] - 1
+            child_class_id = object_class_data[child_class_row]['id']
+            relationship_class_id = self.insert_item(
+                'relationship_class',
+                name=name,
+                parent_type=parent_type,
+                parent_class_id=parent_class_id,
+                child_type=child_type,
+                child_class_id=child_class_id
+            )
+            # if insert is successful, add item to model as well
+            if relationship_class_id:
+                object_class_item = ind.model().itemFromIndex(ind)
+                object_class_item.relationship_class_data.append({
+                    'object_class_id': parent_class_id,
+                    'id': relationship_class_id,
+                    'name': name,
+                })
+                for row in range(object_class_item.rowCount()):
+                    object_item = object_class_item.child(row)
+                    relationship_class_item = QStandardItem(name)
+                    object_item.appendRow(relationship_class_item)
 
 
     @Slot("QPoint", name="show_object_tree_context_menu")
@@ -236,43 +417,11 @@ class DataStoreForm(QWidget):
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, ind)#
         option = self.object_tree_context_menu.get_action()
         if option == "New object class":
-            dialog = CustomQDialog(self, "New object class",
-                name="Type name here...",
-                description="Type description here...")
-            answer = dialog.exec_()
-            if answer == QDialog.Accepted:
-                name = dialog.answer["name"]
-                description = dialog.answer["description"]
-                source_row = ind.model().mapToSource(ind).row()
-                source_record = ind.model().sourceModel().record(source_row)
-                display_order = source_record.value("object_class_display_order")
-                self.add_item('object_class', name=name, description=description, display_order=display_order)
+            self.new_object_class(ind)
         elif option == "New object":
-            dialog = CustomQDialog(self, "New object",
-                name="Type name here...",
-                description="Type description here...")
-            answer = dialog.exec_()
-            if answer == QDialog.Accepted:
-                name = dialog.answer["name"]
-                description = dialog.answer["description"]
-                source_row = ind.model().mapToSource(ind).row()
-                source_record = ind.model().sourceModel().record(source_row)
-                class_id = source_record.value("object_class_id")
-                self.add_item('object', class_id=class_id, name=name, description=description)
+            self.new_object(ind)
         elif option == "New relationship class":
-            q = QSqlQuery()
-            q.exec_("SELECT name FROM object_class ORDER BY display_order")
-            related_class_name = list()
-            related_class_name.append("Select related class name...")
-            while q.next():
-                related_class_name.append(q.value(0))
-            dialog = CustomQDialog(self, "New relationship class",
-                name="Type name here...",
-                related_class_name=related_class_name)
-            answer = dialog.exec_()
-            if answer == QDialog.Accepted:
-                name = dialog.answer["name"]
-                related_class_name = dialog.answer["related_class_name"]
+            self.new_relationship_class(ind)
         elif option == "Rename":
             name = ind.data()
             answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
@@ -284,32 +433,27 @@ class DataStoreForm(QWidget):
                 return
             self.rename_item(table, name, new_name)
         elif option == "Remove":
-            self.object_tree_model.removeRow(ind.row(), ind.parent())
+            ind.model().removeRow(ind.row(), ind.parent())
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
 
-    def add_item(self, table, **kwargs): #name, description, display_order):
-        """Add new item given by kwargs to table"""
-        q = QSqlQuery()
-        columns = list()
-        values = list()
-        for key in kwargs:
-            columns.append("`{}`".format(key))
-            values.append("?")
-        columns = ', '.join(columns)
-        values = ', '.join(values)
-        sql = "INSERT INTO `{}` ({}) VALUES ({})".format(table, columns, values)
-        q.prepare(sql)
-        for key,value in kwargs.items():
-            q.addBindValue(value)
-        q.exec_()
-        del q
-        self.join_model.select() #query().exec_()
-        self.object_tree_model.reset_model()
+    def insert_item(self, table, **kwargs):
+        """Add new insert statement commit list"""
+        # TODO: find the most correct way to manage return codes
+        source_table = Table(table, self.source_meta, autoload=True)
+        kwargs['commit_id'] = self.commit_id
+        try:
+            ins = source_table.insert().values(**kwargs)
+            result = self.source_conn.execute(ins)
+            last_id = result.inserted_primary_key[0]
+            return last_id
+        except Exception as e:
+            self.statusbar.showMessage(str(e), 3000)
+            return False
 
-    def rename_item(self, table, name, new_name):
+    def update_item(self, table, name, new_name):
         """Rename item in table from name to new_name"""
         q = QSqlQuery()
         sql = "UPDATE `{}` SET name=? WHERE name=?".format(table)
@@ -342,6 +486,13 @@ class DataStoreForm(QWidget):
             event (QEvent): Closing event if 'X' is clicked.
         """
         if event:
+            if self.source_trans:
+                self.source_trans.rollback()
+                self.source_trans.close()
+            if self.source_conn:
+                self.source_conn.close()
+            if self.source_engine:
+                self.source_engine.dispose()
             event.accept()
 
 # TODO: move this to another file
@@ -382,5 +533,8 @@ class CustomQDialog(QDialog):
             if isinstance(value, QLineEdit):
                 self.answer[key] = value.text()
             elif isinstance(value, QComboBox):
-                self.answer[key] = value.currentText()
+                self.answer[key] = {
+                    'text': value.currentText(),
+                    'index': value.currentIndex()
+                }
         self.accept()

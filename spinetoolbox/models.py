@@ -649,7 +649,10 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.filter_object_id = None
 
     def filterAcceptsRow(self, source_row, source_parent):
-        logging.debug("accept rows")
+        """Returns true if the item in the row indicated by the given source_row
+        and source_parent should be included in the model; otherwise returns false
+        """
+        # logging.debug("accept rows")
         h = self.sourceModel().header
         object_class_id = self.sourceModel().index(source_row, h.index("object_class_id"), source_parent).data()
         object_id = self.sourceModel().index(source_row, h.index("object_id"), source_parent).data()
