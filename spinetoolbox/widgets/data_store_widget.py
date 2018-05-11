@@ -43,10 +43,9 @@ class DataStoreForm(QWidget):
     class RootItem(QStandardItem):
         def __init__(self, text=None):
             super().__init__(text)
-            self.id = None
             self.object_class_data = None
 
-    class ObjectClassItem(QStandardItem):
+    class ClassItem(QStandardItem):
         def __init__(self, text=None):
             super().__init__(text)
             self.id = None
@@ -57,13 +56,15 @@ class DataStoreForm(QWidget):
         def __init__(self, text=None):
             super().__init__(text)
             self.id = None
+            self.class_id = None
+            self.relationship_id = None
 
     def __init__(self, parent, reference):
         """ Initialize class.
 
         Args:
             parent (ToolBoxUI): QMainWindow instance
-            reference (tuple): Database name and url to create sqlalchemy engine
+            reference (dict): Dictionary containing information about the data source
         """
         super().__init__()
         # Setup UI from Qt Designer file
@@ -95,8 +96,9 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         # context menus
         self.object_tree_context_menu = None
-        self.setup_connection(self.reference['url'])
-        self.init_models(self.reference['database'])
+        self.setup_connection()
+        self.init_object_tree_model()
+        self.init_parameter_models()
         self.connect_signals()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.reference['database']))
         # Ensure this window gets garbage-collected when closed
@@ -106,9 +108,10 @@ class DataStoreForm(QWidget):
         """Connect signals to slots."""
         self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
         self.ui.pushButton_close.clicked.connect(self.close_clicked)
-        #self.ui.pushButton_reset.clicked.connect(self.reset_clicked)
+        self.ui.pushButton_reset.clicked.connect(self.reset_clicked)
         self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
+        self.ui.treeView_object.doubleClicked.connect(self.expand_leaf)
 
     @Slot(name="commit_clicked")
     def commit_clicked(self):
@@ -135,12 +138,15 @@ class DataStoreForm(QWidget):
         self.source_trans = self.source_conn.begin()
         self.update_commit_id()
 
-    def setup_connection(self, db_url):
-        """Create engine, metadata, connection and transactions.
-        Args:
-            db_url (str): Database url to create sqlalchemy engine.
-        """
-        # Create source engine to obtain data for our models
+    @Slot(name="reset_clicked")
+    def reset_clicked(self):
+        if self.source_trans:
+            self.source_trans.rollback()
+
+
+    def setup_connection(self):
+        """Create engine, metadata, connection and transaction."""
+        db_url = self.reference['url']
         self.source_engine = create_engine(db_url)
         self.source_meta = MetaData(bind=self.source_engine)
         self.source_conn = self.source_engine.connect()
@@ -156,14 +162,10 @@ class DataStoreForm(QWidget):
         result = self.source_conn.execute(ins)
         self.commit_id = result.inserted_primary_key[0]
 
-    def init_models(self, db_name):
-        """Import data from sqlite file into models.
-        Args:
-            db_name (str): Database name.
-        Returns:
-            true
-        """
-        # Populate object tree model from source database
+
+    def init_object_tree_model(self):
+        """Initialize object tree model from source database."""
+        db_name = self.reference['database']
         root_item = self.RootItem(db_name)
         object_class_result = self.source_conn.execute("""
             SELECT id, name, display_order FROM object_class ORDER BY display_order
@@ -171,65 +173,34 @@ class DataStoreForm(QWidget):
         object_class_data = [{k:v for k,v in row.items()} for row in object_class_result]
         root_item.object_class_data = object_class_data
         for object_class_row in object_class_data:
-            object_class_item = self.ObjectClassItem(object_class_row['name'])
+            object_class_item = self.ClassItem(object_class_row['name'])
             object_class_item.id = object_class_row['id']
             object_class_item.display_order = object_class_row['display_order']
             relationship_class_result = self.source_conn.execute(
                 text("""
-                    SELECT parent_class_id as object_class_id,
-                        id,
-                        name
+                    SELECT id, name
                     FROM relationship_class as rc
                     WHERE parent_type='object_class'
-                    AND parent_class_id=:object_class_id
-                    UNION ALL
-                        SELECT child_class_id as object_class_id,
-                        id,
-                        name
-                        FROM relationship_class as rc
-                        WHERE child_type='object_class'
-                        AND child_class_id=:object_class_id
+                    AND child_type='object_class'
+                    AND (
+                        parent_class_id=:object_class_id
+                        OR child_class_id=:object_class_id
+                    )
                 """),
-                object_class_id=object_class_row['id']
+                object_class_id=object_class_item.id
             )
             relationship_class_data = [{k:v for k,v in row.items()} for row in relationship_class_result]
             object_class_item.relationship_class_data = relationship_class_data
-
             object_result = self.source_conn.execute(
-                text("""
-                    SELECT id, name FROM object WHERE class_id=:object_class_id
-                """),
-                object_class_id=object_class_row['id']
+                text("SELECT id, name FROM object WHERE class_id=:object_class_id"),
+                object_class_id=object_class_item.id
             )
             for object_row in object_result:
                 object_item = self.ObjectItem(object_row['name'])
                 object_item.id = object_row['id']
+                object_item.class_id = object_class_item.id
                 for relationship_class_row in relationship_class_data:
-                    relationship_class_item = QStandardItem(relationship_class_row['name'])
-                    related_object_result = self.source_conn.execute(
-                        text("""
-                            SELECT o.id as id,
-                                o.name as name
-                            FROM relationship as r
-                            JOIN object as o
-                            ON r.child_object_id=o.id
-                            WHERE r.class_id=:relationship_class_id
-                            AND r.parent_object_id=:object_id
-                            UNION ALL
-                                SELECT o.id as id,
-                                    o.name as name
-                                FROM relationship as r
-                                JOIN object as o
-                                ON r.parent_object_id=o.id
-                                WHERE r.class_id=:relationship_class_id
-                                AND r.child_object_id=:object_id
-                        """),
-                        relationship_class_id=relationship_class_row['id'],
-                        object_id=object_row['id']
-                    )
-                    for related_object_row in related_object_result:
-                        related_object_item = QStandardItem(related_object_row['name'])
-                        relationship_class_item.appendRow(related_object_item)
+                    relationship_class_item = self.visit(object_item, relationship_class_row)
                     object_item.appendRow(relationship_class_item)
                 object_class_item.appendRow(object_item)
             root_item.appendRow(object_class_item)
@@ -240,6 +211,62 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.expand(root_item.index())
         self.ui.treeView_object.resizeColumnToContents(0)
 
+    def visit(self, object_item, relationship_class_row):
+        """Recursive function to create branches for relationships of relationships"""
+        relationship_class_item = self.ClassItem(relationship_class_row['name'])
+        relationship_class_item.id = relationship_class_row['id']
+        relationship_class_result = self.source_conn.execute(
+            text("""
+                SELECT id, name
+                FROM relationship_class as rc
+                WHERE parent_type='relationship_class'
+                AND child_type='object_class'
+                AND parent_class_id=:relationship_class_id
+            """),
+            relationship_class_id=relationship_class_item.id
+        )
+        relationship_class_data = [{k:v for k,v in row.items()} for row in relationship_class_result]
+        relationship_class_item.relationship_class_data = relationship_class_data
+        if not object_item.relationship_id:
+            related_object_result = self.source_conn.execute(
+                text("""
+                    SELECT o.id, o.name, o.class_id, r.id as relationship_id
+                    FROM relationship as r
+                    JOIN object as o
+                    ON r.child_object_id=o.id
+                    WHERE r.class_id=:relationship_class_id
+                    AND r.parent_object_id=:object_id
+                """),
+                relationship_class_id=relationship_class_item.id,
+                object_id=object_item.id
+            )
+        else:
+            related_object_result = self.source_conn.execute(
+                text("""
+                    SELECT o.id, o.name, o.class_id, r.id as relationship_id
+                    FROM relationship as r
+                    JOIN object as o
+                    ON r.child_object_id=o.id
+                    WHERE r.class_id=:relationship_class_id
+                    AND r.parent_object_id=:relationship_id
+                """),
+                relationship_class_id=relationship_class_item.id,
+                relationship_id=object_item.relationship_id
+            )
+        for related_object_row in related_object_result:
+            related_object_item = self.ObjectItem(related_object_row['name'])
+            related_object_item.id = related_object_row['id']
+            related_object_item.class_id = related_object_row['class_id']
+            related_object_item.relationship_id = related_object_row['relationship_id']
+            for relationship_class_row2 in relationship_class_data:
+                relationship_class_item2 = self.visit(related_object_item, relationship_class_row2)
+                related_object_item.appendRow(relationship_class_item2)
+            relationship_class_item.appendRow(related_object_item)
+        return relationship_class_item
+
+
+    def init_parameter_models(self):
+        """Initialize parameter models from source database."""
         parameter_data = list()
         results = self.source_conn.execute("""
             SELECT o.name as object_name,
@@ -266,6 +293,23 @@ class DataStoreForm(QWidget):
         self.relationship_parameter_model.header = column_names
         self.relationship_parameter_model.reset_model(parameter_data)
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy_model)
+
+
+    @Slot("QModelIndex", name="expand_leaf")
+    def expand_leaf(self, index):
+        """Expand leaf object into 'first class' object"""
+        # logging.debug("expand leaf")
+        clicked_item = index.model().itemFromIndex(index)
+        if isinstance(clicked_item, self.ObjectItem) and not clicked_item.hasChildren():
+            leaf_object_name = clicked_item.data(Qt.DisplayRole)
+            items = index.model().findItems(leaf_object_name, Qt.MatchRecursive, column=0)
+            for item in items:
+                candidate_index = index.model().indexFromItem(item)
+                if candidate_index != index:
+                    self.ui.treeView_object.setCurrentIndex(candidate_index)
+                    self.ui.treeView_object.scrollTo(candidate_index)
+                    self.ui.treeView_object.expand(candidate_index)
+                    break
 
 
     @Slot("QModelIndex", name="filter_parameter_models")
@@ -323,7 +367,7 @@ class DataStoreForm(QWidget):
             )
             # if insert is successful, add item to model as well
             if object_class_id:
-                object_class_item = self.ObjectClassItem(name)
+                object_class_item = self.ClassItem(name)
                 object_class_item.id = object_class_id
                 object_class_item.display_order = display_order
                 root_item.insertRow(insert_at_row, QStandardItem())
@@ -394,7 +438,6 @@ class DataStoreForm(QWidget):
             if relationship_class_id:
                 object_class_item = ind.model().itemFromIndex(ind)
                 object_class_item.relationship_class_data.append({
-                    'object_class_id': parent_class_id,
                     'id': relationship_class_id,
                     'name': name,
                 })
@@ -423,7 +466,7 @@ class DataStoreForm(QWidget):
         elif option == "New relationship class":
             self.new_relationship_class(ind)
         elif option == "Rename":
-            name = ind.data()
+            name = ind.data(Qt.DisplayRole)
             answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
                 QLineEdit.Normal, name)
             new_name = answer[0]
