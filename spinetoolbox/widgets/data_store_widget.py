@@ -24,7 +24,7 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QAbstractItemView,\
+from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView,\
     QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QInputDialog, QComboBox
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
@@ -36,6 +36,7 @@ from models import MinimalTableModel, CustomSortFilterProxyModel
 import logging
 import datetime
 from sqlalchemy import MetaData, Table, create_engine, text
+from copy import deepcopy
 
 class DataStoreForm(QWidget):
     """A widget to show and edit Spine objects in a data store."""
@@ -43,14 +44,29 @@ class DataStoreForm(QWidget):
     class RootItem(QStandardItem):
         def __init__(self, text=None):
             super().__init__(text)
-            self.object_class_data = None
+            # store row-less ClassItems here, for when creating new relationship classes
+            self.related_class_item = list()
+
+        def append_class_item(self, class_item):
+            self.related_class_item.append(class_item)
 
     class ClassItem(QStandardItem):
         def __init__(self, text=None):
             super().__init__(text)
             self.id = None
             self.display_order = None
-            self.relationship_class_data = None
+            # store row-less relationship-ClassItems here, for when creating new objects
+            self.related_class_item = list()
+
+        def append_class_item(self, class_item):
+            self.related_class_item.append(class_item)
+
+        def clone(self):
+            other = self.__class__(self.data(Qt.DisplayRole))
+            other.id = self.id
+            other.display_order = self.display_order
+            other.related_class_item = self.related_class_item
+            return other
 
     class ObjectItem(QStandardItem):
         def __init__(self, text=None):
@@ -91,7 +107,6 @@ class DataStoreForm(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.ui.treeView_object.setEditTriggers(QAbstractItemView.SelectedClicked|QAbstractItemView.EditKeyPressed)
         self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         # context menus
@@ -171,7 +186,6 @@ class DataStoreForm(QWidget):
             SELECT id, name, display_order FROM object_class ORDER BY display_order
         """)
         object_class_data = [{k:v for k,v in row.items()} for row in object_class_result]
-        root_item.object_class_data = object_class_data
         for object_class_row in object_class_data:
             object_class_item = self.ClassItem(object_class_row['name'])
             object_class_item.id = object_class_row['id']
@@ -190,7 +204,11 @@ class DataStoreForm(QWidget):
                 object_class_id=object_class_item.id
             )
             relationship_class_data = [{k:v for k,v in row.items()} for row in relationship_class_result]
-            object_class_item.relationship_class_data = relationship_class_data
+            # recursively gather class item information
+            for relationship_class_row in relationship_class_data:
+                relationship_class_item = self.visit_relationship_node(relationship_class_row)
+                object_class_item.append_class_item(relationship_class_item)
+            root_item.append_class_item(object_class_item)
             object_result = self.source_conn.execute(
                 text("SELECT id, name FROM object WHERE class_id=:object_class_id"),
                 object_class_id=object_class_item.id
@@ -199,8 +217,9 @@ class DataStoreForm(QWidget):
                 object_item = self.ObjectItem(object_row['name'])
                 object_item.id = object_row['id']
                 object_item.class_id = object_class_item.id
+                # recursively populate branches
                 for relationship_class_row in relationship_class_data:
-                    relationship_class_item = self.visit(object_item, relationship_class_row)
+                    relationship_class_item = self.visit_relationship_node(relationship_class_row, object_item)
                     object_item.appendRow(relationship_class_item)
                 object_class_item.appendRow(object_item)
             root_item.appendRow(object_class_item)
@@ -211,8 +230,14 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.expand(root_item.index())
         self.ui.treeView_object.resizeColumnToContents(0)
 
-    def visit(self, object_item, relationship_class_row):
-        """Recursive function to create branches for relationships of relationships"""
+    def visit_relationship_node(self, relationship_class_row, object_item=None):
+        """Recursive function to create branches for relationships of relationships
+
+        Args:
+            relationship_class_row (list): row of relationship data to explore
+            object_item (self.ObjectItem): the parent object. If none, only
+                collect class information
+        """
         relationship_class_item = self.ClassItem(relationship_class_row['name'])
         relationship_class_item.id = relationship_class_row['id']
         relationship_class_result = self.source_conn.execute(
@@ -225,9 +250,15 @@ class DataStoreForm(QWidget):
             """),
             relationship_class_id=relationship_class_item.id
         )
-        relationship_class_data = [{k:v for k,v in row.items()} for row in relationship_class_result]
-        relationship_class_item.relationship_class_data = relationship_class_data
-        if not object_item.relationship_id:
+        next_relationship_class_data = [{k:v for k,v in row.items()} for row in relationship_class_result]
+
+        if object_item is None:
+            for next_relationship_class_row in next_relationship_class_data:
+                next_relationship_class_item = self.visit_relationship_node(next_relationship_class_row)
+                relationship_class_item.append_class_item(next_relationship_class_item)
+            return relationship_class_item
+
+        if not object_item.relationship_id: # object
             related_object_result = self.source_conn.execute(
                 text("""
                     SELECT o.id, o.name, o.class_id, r.id as relationship_id
@@ -240,7 +271,7 @@ class DataStoreForm(QWidget):
                 relationship_class_id=relationship_class_item.id,
                 object_id=object_item.id
             )
-        else:
+        else:   # relationship
             related_object_result = self.source_conn.execute(
                 text("""
                     SELECT o.id, o.name, o.class_id, r.id as relationship_id
@@ -258,9 +289,9 @@ class DataStoreForm(QWidget):
             related_object_item.id = related_object_row['id']
             related_object_item.class_id = related_object_row['class_id']
             related_object_item.relationship_id = related_object_row['relationship_id']
-            for relationship_class_row2 in relationship_class_data:
-                relationship_class_item2 = self.visit(related_object_item, relationship_class_row2)
-                related_object_item.appendRow(relationship_class_item2)
+            for next_relationship_class_row in next_relationship_class_data:
+                next_relationship_class_item = self.visit_relationship_node(next_relationship_class_row, related_object_item)
+                related_object_item.appendRow(next_relationship_class_item)
             relationship_class_item.appendRow(related_object_item)
         return relationship_class_item
 
@@ -317,9 +348,9 @@ class DataStoreForm(QWidget):
         """Populate tableViews whenever an object item is selected in the treeView"""
         # logging.debug("filter_parameter_models")
         tree_level = 0
-        index_copy = index
-        while index_copy.parent().isValid():
-            index_copy = index_copy.parent()
+        root_index = index
+        while root_index.parent().isValid():
+            root_index = root_index.parent()
             tree_level += 1
         if tree_level == 0: # root
             pass
@@ -338,11 +369,11 @@ class DataStoreForm(QWidget):
             self.object_parameter_proxy_model.filter_object_id = object_id
             self.object_parameter_proxy_model.setFilterRegExp("")   # trick to trigger filtering
 
-    def new_object_class(self, ind):
+    def new_object_class(self, index):
         """Insert new object class.
 
         Args:
-            ind (QModelIndex): the index of either the root or an object class item
+            index (QModelIndex): the index of either the root or an object class item
         """
         dialog = CustomQDialog(self, "New object class",
             name="Type name here...",
@@ -351,12 +382,12 @@ class DataStoreForm(QWidget):
         if answer == QDialog.Accepted:
             name = dialog.answer["name"]
             description = dialog.answer["description"]
-            if ind.parent().isValid(): # we are on an object class item
-                root_item = ind.model().itemFromIndex(ind.parent())
-                insert_at_row = ind.row() # insert before
+            if index.parent().isValid(): # we are on an object class item
+                root_item = index.model().itemFromIndex(index.parent())
+                insert_at_row = index.row() # insert before
                 display_order = root_item.child(insert_at_row).display_order - 1 # insert before
             else: # we are on the root item
-                root_item = ind.model().itemFromIndex(ind)
+                root_item = index.model().itemFromIndex(index)
                 insert_at_row = root_item.rowCount() # insert last
                 display_order = root_item.child(insert_at_row-1).display_order # insert last
             object_class_id = self.insert_item(
@@ -372,21 +403,22 @@ class DataStoreForm(QWidget):
                 object_class_item.display_order = display_order
                 root_item.insertRow(insert_at_row, QStandardItem())
                 root_item.setChild(insert_at_row, 0, object_class_item) # TODO: find out why is this necessary
-                object_class_ind = ind.model().indexFromItem(object_class_item)
+                root_item.append_class_item(object_class_item)
+                object_class_ind = index.model().indexFromItem(object_class_item)
                 self.ui.treeView_object.setCurrentIndex(object_class_ind)
 
-    def new_object(self, ind):
+    def new_object(self, index):
         """Insert new object.
 
         Args:
-            ind (QModelIndex): the index of an object class item
+            index (QModelIndex): the index of an object class item
         """
         dialog = CustomQDialog(self, "New object",
             name="Type name here...",
             description="Type description here...")
         answer = dialog.exec_()
         if answer == QDialog.Accepted:
-            object_class_item = ind.model().itemFromIndex(ind)
+            object_class_item = index.model().itemFromIndex(index)
             name = dialog.answer["name"]
             description = dialog.answer["description"]
             class_id = object_class_item.id
@@ -396,23 +428,25 @@ class DataStoreForm(QWidget):
                 object_item = self.ObjectItem(name)
                 object_item.id = object_id
                 # append relationship class items from object class item
-                relationship_class_data = object_class_item.relationship_class_data
-                relationship_class_name = [row['name'] for row in relationship_class_data]
-                for rc_name in relationship_class_name:
-                    relationship_class_item = QStandardItem(rc_name)
-                    object_item.appendRow(relationship_class_item)
+                for class_item in object_class_item.related_class_item:
+                    object_item.appendRow(class_item.clone())
                 object_class_item.appendRow(object_item)
-                self.ui.treeView_object.expand(ind)
-                self.ui.treeView_object.setCurrentIndex(ind.model().indexFromItem(object_item))
+                self.ui.treeView_object.expand(index)
+                self.ui.treeView_object.setCurrentIndex(index.model().indexFromItem(object_item))
 
-    def new_relationship_class(self, ind):
+    def new_relationship_class(self, index):
         """Insert new relationship class.
 
         Args:
-            ind (QModelIndex): the index of an object class item
+            index (QModelIndex): the index of an object or relationship class item
         """
-        object_class_data = ind.model().itemFromIndex(ind.parent()).object_class_data
-        object_class_name = [row['name'] for row in object_class_data]
+        root_index = index
+        tree_level = 0
+        while root_index.parent().isValid():
+            root_index = root_index.parent()
+            tree_level += 1
+        related_class_item = index.model().itemFromIndex(root_index).related_class_item
+        object_class_name = [class_item.data(Qt.DisplayRole) for class_item in related_class_item]
         related_class_name = ['Select related class...']
         related_class_name.extend(object_class_name)
         dialog = CustomQDialog(self, "New relationship class",
@@ -421,11 +455,12 @@ class DataStoreForm(QWidget):
         answer = dialog.exec_()
         if answer == QDialog.Accepted:
             name = dialog.answer['name']
-            parent_type='object_class'
-            parent_class_id = ind.model().itemFromIndex(ind).id
-            child_type='object_class'
+            parent_type = 'object_class' if tree_level == 1 else 'relationship_class'
+            parent_class_id = index.model().itemFromIndex(index).id
+            child_type = 'object_class'
+            # get row from the combobox, to extract id from related_class_item
             child_class_row = dialog.answer['related_class_name']['index'] - 1
-            child_class_id = object_class_data[child_class_row]['id']
+            child_class_id = related_class_item[child_class_row].id
             relationship_class_id = self.insert_item(
                 'relationship_class',
                 name=name,
@@ -436,14 +471,15 @@ class DataStoreForm(QWidget):
             )
             # if insert is successful, add item to model as well
             if relationship_class_id:
-                object_class_item = ind.model().itemFromIndex(ind)
-                object_class_item.relationship_class_data.append({
-                    'id': relationship_class_id,
-                    'name': name,
-                })
-                for row in range(object_class_item.rowCount()):
-                    object_item = object_class_item.child(row)
-                    relationship_class_item = QStandardItem(name)
+                class_item = index.model().itemFromIndex(index)
+                # append row-less ClassItem
+                relationship_class_item = self.ClassItem(name)
+                relationship_class_item.id = relationship_class_id
+                class_item.append_class_item(relationship_class_item)
+                for row in range(class_item.rowCount()):
+                    object_item = class_item.child(row)
+                    relationship_class_item = self.ClassItem(name)
+                    relationship_class_item.id = relationship_class_id
                     object_item.appendRow(relationship_class_item)
 
 
@@ -455,18 +491,18 @@ class DataStoreForm(QWidget):
             pos (QPoint): Mouse position
         """
         # logging.debug("object tree context menu")
-        ind = self.ui.treeView_object.indexAt(pos)
+        index = self.ui.treeView_object.indexAt(pos)
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
-        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, ind)#
+        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
         option = self.object_tree_context_menu.get_action()
         if option == "New object class":
-            self.new_object_class(ind)
+            self.new_object_class(index)
         elif option == "New object":
-            self.new_object(ind)
+            self.new_object(index)
         elif option == "New relationship class":
-            self.new_relationship_class(ind)
+            self.new_relationship_class(index)
         elif option == "Rename":
-            name = ind.data(Qt.DisplayRole)
+            name = index.data(Qt.DisplayRole)
             answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
                 QLineEdit.Normal, name)
             new_name = answer[0]
@@ -476,7 +512,7 @@ class DataStoreForm(QWidget):
                 return
             self.rename_item(table, name, new_name)
         elif option == "Remove":
-            ind.model().removeRow(ind.row(), ind.parent())
+            index.model().removeRow(index.row(), index.parent())
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()

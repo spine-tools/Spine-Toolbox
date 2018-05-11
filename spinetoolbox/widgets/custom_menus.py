@@ -164,12 +164,13 @@ class ObjectTreeContextMenu(QMenu):
         else:
             if tree_level == 1:
                 self.add_action("New object class")
-                self.add_action("New object")
                 self.add_action("New relationship class")
-            elif tree_level == 2:
-                pass
+                self.add_action("New object")
             elif tree_level == 3:
-                self.add_action("New related object")
+                self.add_action("New relationship class")
+                self.add_action("New relationship")
+            elif tree_level == 5:
+                self.add_action("New relationship")
             self.add_action("Rename")
             self.add_action("Remove")
         self.exec_(position)

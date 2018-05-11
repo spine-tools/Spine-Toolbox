@@ -56,7 +56,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.treeView_object.sizePolicy().hasHeightForWidth())
         self.treeView_object.setSizePolicy(sizePolicy)
         self.treeView_object.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed|QtWidgets.QAbstractItemView.SelectedClicked)
+        self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.treeView_object.setObjectName("treeView_object")
         self.verticalLayout_3.addWidget(self.treeView_object)
         self.splitter = QtWidgets.QSplitter(self.splitter_2)
