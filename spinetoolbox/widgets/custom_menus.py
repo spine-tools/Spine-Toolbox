@@ -25,7 +25,7 @@ Classes for custom context menus.
 """
 
 from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import SLOT
+from PySide2.QtCore import Qt, SLOT
 import sys
 
 
@@ -154,25 +154,40 @@ class ObjectTreeContextMenu(QMenu):
         self._parent = parent
         self.index = index
         self.option = "None"
-        tree_level = 0
-        index_copy = index
-        while index_copy.parent().isValid():
-            index_copy = index_copy.parent()
-            tree_level += 1
-        if tree_level == 0:
+        if not index.parent().isValid(): # root item
             self.add_action("New object class")
         else:
-            if tree_level == 1:
+            item = index.model().itemFromIndex(index)
+            entity = item.data(Qt.UserRole)
+            if isinstance(entity, parent.ObjectClass):
                 self.add_action("New object class")
                 self.add_action("New relationship class")
                 self.add_action("New object")
-            elif tree_level == 3:
-                self.add_action("New relationship class")
-                self.add_action("New relationship")
-            elif tree_level == 5:
+            elif isinstance(entity, parent.RelationshipClass):
+                parent_item = index.model().itemFromIndex(index.parent())
+                relationship_id = parent_item.data(Qt.UserRole+1)
+                if not relationship_id:
+                    self.add_action("New relationship class")
                 self.add_action("New relationship")
             self.add_action("Rename")
             self.add_action("Remove")
+        #tree_level = 0
+        #root_index = index
+        #while root_index.parent().isValid():
+        #    root_index = root_index.parent()
+        #    tree_level += 1
+        #if tree_level == 0:
+        #    self.add_action("New object class")
+        #else:
+        #    if tree_level == 1:
+        #        self.add_action("New object class")
+        #        self.add_action("New relationship class")
+        #        self.add_action("New object")
+        #    elif tree_level == 3:
+        #        self.add_action("New relationship class")
+        #        self.add_action("New relationship")
+        #    elif tree_level == 5:
+        #        self.add_action("New relationship")
         self.exec_(position)
 
     def add_action(self, text):
