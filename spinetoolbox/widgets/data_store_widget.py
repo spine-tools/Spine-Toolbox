@@ -66,6 +66,7 @@ class DataStoreForm(QWidget):
         self.ParameterValue = None
         self.Commit = None
         self.session = None
+        self.bold_font = None
         # Object tree model
         self.object_tree_model = QStandardItemModel(self)
         # Parameter models
@@ -157,36 +158,51 @@ class DataStoreForm(QWidget):
         db_name = self.reference['database']
         # create root item
         root_item = QStandardItem(db_name)
+        self.bold_font = root_item.font()
+        self.bold_font.setBold(True)
+        root_item.setFont(self.bold_font)
         # query object_class table
         for object_class in self.session.query(self.ObjectClass).\
                 order_by(self.ObjectClass.display_order):
             # create object class item
             object_class_item = QStandardItem(object_class.name)
+            object_class_item.setFont(self.bold_font)
             object_class_item.setData(object_class, Qt.UserRole)
             # query object table
             object_list = self.session.query(self.Object).filter_by(class_id=object_class.id).all()
             # query relationship_class table (only once for all objects)
-            parent_matches = self.session.query(
+            relationship_class_as_parent_list = self.session.query(
                 RelationshipClass,
                 RelationshipClass.child_class_id.label('child_class_id')).\
                 filter_by(parent_type='object_class').\
                 filter_by(child_type='object_class').\
                 filter_by(parent_class_id=object_class.id)
-            child_matches = self.session.query(
+            relationship_class_as_child_list = self.session.query(
                 RelationshipClass,
                 RelationshipClass.parent_class_id.label('child_class_id')).\
                 filter_by(parent_type='object_class').\
                 filter_by(child_type='object_class').\
                 filter_by(child_class_id=object_class.id)
-            relationship_class_list = parent_matches.union(child_matches).all()
             # recursively populate branches
             for object_ in object_list:
                 # create object item
                 object_item = QStandardItem(object_.name)
                 object_item.setData(object_, Qt.UserRole)
-                for relationship_class in relationship_class_list:
+                for relationship_class in relationship_class_as_parent_list:
                     # create relationship class item
-                    relationship_class_item = self.visit_relationship_node(relationship_class, object_)
+                    relationship_class_item = self.visit_relationship_class(
+                        relationship_class,
+                        object_,
+                        role='parent'
+                    )
+                    object_item.appendRow(relationship_class_item)
+                for relationship_class in relationship_class_as_child_list:
+                    # create relationship class item
+                    relationship_class_item = self.visit_relationship_class(
+                        relationship_class,
+                        object_,
+                        role='child'
+                    )
                     object_item.appendRow(relationship_class_item)
                 object_class_item.appendRow(object_item)
             root_item.appendRow(object_class_item)
@@ -197,7 +213,7 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.expand(root_item.index())
         self.ui.treeView_object.resizeColumnToContents(0)
 
-    def visit_relationship_node(self, relationship_class, object_):
+    def visit_relationship_class(self, relationship_class, object_, role=None, relationship_id=None):
         """Recursive function to create branches for relationships of relationships
 
         Args:
@@ -206,6 +222,7 @@ class DataStoreForm(QWidget):
         """
         # create relationship class item
         relationship_class_item = QStandardItem(relationship_class.RelationshipClass.name)
+        relationship_class_item.setFont(self.bold_font)
         relationship_class_item.setData(relationship_class.RelationshipClass, Qt.UserRole)
         relationship_class_item.setData(relationship_class.child_class_id, Qt.UserRole+1)
         # query relationship_class table
@@ -219,16 +236,22 @@ class DataStoreForm(QWidget):
             filter_by(parent_class_id=relationship_class.RelationshipClass.id).all()
         # query object and relationship tables
         Object = aliased(self.Object, name='Object') # this is required to access result without using 'self'
-        if isinstance(object_, self.Object): # first class object
+        if relationship_id: # child object
             new_object_list = self.session.query(Object, self.Relationship.id.label('relationship_id')).\
                 filter(Object.id == self.Relationship.child_object_id).\
                 filter(self.Relationship.class_id == relationship_class.RelationshipClass.id).\
-                filter(self.Relationship.parent_object_id == object_.id).all()
-        elif 'relationship_id' in object_.keys(): # child object
-            new_object_list = self.session.query(Object, self.Relationship.id.label('relationship_id')).\
-                filter(Object.id == self.Relationship.child_object_id).\
-                filter(self.Relationship.class_id == relationship_class.RelationshipClass.id).\
-                filter(self.Relationship.parent_object_id == object_.relationship_id).all()
+                filter(self.Relationship.parent_object_id == relationship_id).all()
+        else: # first class object
+            if role == 'parent':
+                new_object_list = self.session.query(Object, self.Relationship.id.label('relationship_id')).\
+                    filter(Object.id == self.Relationship.child_object_id).\
+                    filter(self.Relationship.class_id == relationship_class.RelationshipClass.id).\
+                    filter(self.Relationship.parent_object_id == object_.id).all()
+            elif role == 'child':
+                new_object_list = self.session.query(Object, self.Relationship.id.label('relationship_id')).\
+                    filter(Object.id == self.Relationship.parent_object_id).\
+                    filter(self.Relationship.class_id == relationship_class.RelationshipClass.id).\
+                    filter(self.Relationship.child_object_id == object_.id).all()
         # recursively populate branches
         for new_object in new_object_list:
             # create child object item
@@ -237,7 +260,11 @@ class DataStoreForm(QWidget):
             new_object_item.setData(new_object.relationship_id, Qt.UserRole+1)
             for new_relationship_class in new_relationship_class_list:
                 # create next relationship class item
-                new_relationship_class_item = self.visit_relationship_node(new_relationship_class, new_object)
+                new_relationship_class_item = self.visit_relationship_class(
+                    new_relationship_class,
+                    new_object.Object,
+                    relationship_id=new_object.relationship_id
+                )
                 new_object_item.appendRow(new_relationship_class_item)
             relationship_class_item.appendRow(new_object_item)
         return relationship_class_item
@@ -277,22 +304,26 @@ class DataStoreForm(QWidget):
     def expand_leaf(self, index):
         """Expand leaf object into 'first class' object"""
         # logging.debug("expand leaf")
-        data = index.data(Qt.UserRole)
-        if isinstance(data, self.ObjectClass) or isinstance(data, self.RelationshipClass):
+        clicked = index.data(Qt.UserRole)
+        if not isinstance(clicked, self.Object):
             return
         clicked_item = index.model().itemFromIndex(index)
         if clicked_item.hasChildren():
             return
-        leaf_object_name = clicked_item.text()
-        items = index.model().findItems(leaf_object_name, Qt.MatchRecursive, column=0)
-        for item in items:
-            candidate_index = index.model().indexFromItem(item)
-            if candidate_index != index:
-                self.ui.treeView_object.setCurrentIndex(candidate_index)
-                self.ui.treeView_object.scrollTo(candidate_index)
-                self.ui.treeView_object.expand(candidate_index)
-                break
-
+        root_item = index.model().invisibleRootItem().child(0)
+        for i in range(root_item.rowCount()):
+            object_class_item = root_item.child(i)
+            object_class = object_class_item.data(Qt.UserRole)
+            if object_class.id == clicked.class_id:
+                for j in range(object_class_item.rowCount()):
+                    object_item = object_class_item.child(j)
+                    object_ = object_item.data(Qt.UserRole)
+                    if object_.id == clicked.id:
+                        object_index = index.model().indexFromItem(object_item)
+                        self.ui.treeView_object.setCurrentIndex(object_index)
+                        self.ui.treeView_object.scrollTo(object_index)
+                        self.ui.treeView_object.expand(object_index)
+                        return
 
     @Slot("QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, index):
@@ -330,37 +361,39 @@ class DataStoreForm(QWidget):
             name="Type name here...",
             description="Type description here...")
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            name = dialog.answer["name"]
-            description = dialog.answer["description"]
-            if index.parent().isValid(): # we are on an object class item
-                # prepare to insert the new item just before the selected one
-                root_item = index.model().itemFromIndex(index.parent())
-                insert_at_row = index.row()
-                child_item = root_item.child(insert_at_row)
-                display_order = child_item.data(Qt.UserRole).display_order - 1
-            else: # we are on the root item
-                # prepare to insert the new item and the end
-                root_item = index.model().itemFromIndex(index)
-                insert_at_row = root_item.rowCount()
-                child_item = root_item.child(insert_at_row - 1)
-                display_order = child_item.data(Qt.UserRole).display_order
-            object_class = self.ObjectClass(
-                name=name,
-                description=description,
-                display_order=display_order,
-                commit_id=self.commit.id
-            )
-            self.session.add(object_class)
-            # manually add item to model as well
-            object_class_item = QStandardItem(name)
-            object_class_item.setData(object_class, Qt.UserRole)
-            root_item.insertRow(insert_at_row, QStandardItem())
-            root_item.setChild(insert_at_row, 0, object_class_item) # TODO: find out why is this necessary
-            # scroll to newly inserted item in treeview
-            object_class_index = index.model().indexFromItem(object_class_item)
-            self.ui.treeView_object.setCurrentIndex(object_class_index)
-            self.ui.treeView_object.scrollTo(object_class_index)
+        if answer != QDialog.Accepted:
+            return
+        name = dialog.answer["name"]
+        description = dialog.answer["description"]
+        if index.parent().isValid(): # we are on an object class item
+            # prepare to insert the new item just before the selected one
+            root_item = index.model().itemFromIndex(index.parent())
+            insert_at_row = index.row()
+            child_item = root_item.child(insert_at_row)
+            display_order = child_item.data(Qt.UserRole).display_order - 1
+        else: # we are on the root item
+            # prepare to insert the new item and the end
+            root_item = index.model().itemFromIndex(index)
+            insert_at_row = root_item.rowCount()
+            child_item = root_item.child(insert_at_row - 1)
+            display_order = child_item.data(Qt.UserRole).display_order
+        object_class = self.ObjectClass(
+            name=name,
+            description=description,
+            display_order=display_order,
+            commit_id=self.commit.id
+        )
+        self.session.add(object_class)
+        # manually add item to model as well
+        object_class_item = QStandardItem(name)
+        object_class_item.setFont(self.bold_font)
+        object_class_item.setData(object_class, Qt.UserRole)
+        root_item.insertRow(insert_at_row, QStandardItem())
+        root_item.setChild(insert_at_row, 0, object_class_item) # TODO: find out why is this necessary
+        # scroll to newly inserted item in treeview
+        object_class_index = index.model().indexFromItem(object_class_item)
+        self.ui.treeView_object.setCurrentIndex(object_class_index)
+        self.ui.treeView_object.scrollTo(object_class_index)
 
     def new_object(self, index):
         """Insert new object.
@@ -372,49 +405,52 @@ class DataStoreForm(QWidget):
             name="Type name here...",
             description="Type description here...")
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            object_class_item = index.model().itemFromIndex(index)
-            name = dialog.answer["name"]
-            description = dialog.answer["description"]
-            class_id = object_class_item.data(Qt.UserRole).id
-            object_ = self.Object(
-                class_id=class_id,
-                name=name,
-                description=description,
-                commit_id=self.commit.id
-            )
-            self.session.add(object_)
-            # manually add item to model as well
-            object_class = object_class_item.data(Qt.UserRole)
-            object_item = QStandardItem(name)
-            object_item.setData(object_, Qt.UserRole)
-            # query relationship_class table
-            # this alias is required to access relationship_class_list items without using 'self'
-            RelationshipClass = aliased(self.RelationshipClass, name='RelationshipClass')
-            parent_matches = self.session.query(
-                RelationshipClass,
-                RelationshipClass.child_class_id.label('child_class_id')).\
-                filter_by(parent_type='object_class').\
-                filter_by(child_type='object_class').\
-                filter_by(parent_class_id=object_class.id)
-            child_matches = self.session.query(
-                RelationshipClass,
-                RelationshipClass.parent_class_id.label('child_class_id')).\
-                filter_by(parent_type='object_class').\
-                filter_by(child_type='object_class').\
-                filter_by(child_class_id=object_class.id)
-            relationship_class_list = parent_matches.union(child_matches).all()
-            # create and append relationship class items
-            for relationship_class in relationship_class_list:
-                relationship_class_item = QStandardItem(relationship_class.name)
-                relationship_class_item.setData(relationship_class.RelationshipClass, Qt.UserRole)
-                relationship_class_item.setData(relationship_class.child_class_id, Qt.UserRole+1)
-                object_item.appendRow(relationship_class_item)
-            object_class_item.appendRow(object_item)
-            # scroll to newly inserted item in treeview
-            object_index = index.model().indexFromItem(object_item)
-            self.ui.treeView_object.setCurrentIndex(object_index)
-            self.ui.treeView_object.scrollTo(object_index)
+        if answer != QDialog.Accepted:
+            return
+        object_class_item = index.model().itemFromIndex(index)
+        name = dialog.answer["name"]
+        description = dialog.answer["description"]
+        class_id = object_class_item.data(Qt.UserRole).id
+        object_ = self.Object(
+            class_id=class_id,
+            name=name,
+            description=description,
+            commit_id=self.commit.id
+        )
+        self.session.add(object_)
+        # manually add item to model as well
+        object_class = object_class_item.data(Qt.UserRole)
+        object_item = QStandardItem(name)
+        object_item.setData(object_, Qt.UserRole)
+        # query relationship_class table
+        # this alias is required to access relationship_class_list items without using 'self'
+        RelationshipClass = aliased(self.RelationshipClass, name='RelationshipClass')
+        as_parent_list = self.session.query(
+            RelationshipClass,
+            RelationshipClass.child_class_id.label('child_class_id')).\
+            filter_by(parent_type='object_class').\
+            filter_by(child_type='object_class').\
+            filter_by(parent_class_id=object_class.id)
+        as_child_list = self.session.query(
+            RelationshipClass,
+            RelationshipClass.parent_class_id.label('child_class_id')).\
+            filter_by(parent_type='object_class').\
+            filter_by(child_type='object_class').\
+            filter_by(child_class_id=object_class.id)
+        relationship_class_list = as_parent_list.union(as_child_list).all()
+        # create and append relationship class items
+        for relationship_class in relationship_class_list:
+            # no need to visit the relationship class here, since this object has no relationships
+            relationship_class_item = QStandardItem(relationship_class.RelationshipClass.name)
+            relationship_class_item.setFont(self.bold_font)
+            relationship_class_item.setData(relationship_class.RelationshipClass, Qt.UserRole)
+            relationship_class_item.setData(relationship_class.child_class_id, Qt.UserRole+1)
+            object_item.appendRow(relationship_class_item)
+        object_class_item.appendRow(object_item)
+        # scroll to newly inserted item in treeview
+        object_index = index.model().indexFromItem(object_item)
+        self.ui.treeView_object.setCurrentIndex(object_index)
+        self.ui.treeView_object.scrollTo(object_index)
 
     def new_relationship_class(self, index):
         """Insert new relationship class.
@@ -431,36 +467,57 @@ class DataStoreForm(QWidget):
             name="Type name here...",
             child_class_name_list=child_class_name_list)
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            name = dialog.answer['name']
-            parent_class_item = index.model().itemFromIndex(index)
-            parent_class = parent_class_item.data(Qt.UserRole)
-            if isinstance(parent_class, self.ObjectClass):
-                parent_type = 'object_class'
-            elif 'child_class_id' in parent_class.keys():
-                parent_type = 'relationship_class'
-            parent_class_id = parent_class.id
-            child_type = 'object_class'
-            # get selected index from combobox, to look it up in child_class_list
-            ind = dialog.answer['child_class_name_list']['index'] - 1
-            child_class_id = child_class_list[ind].id
-            relationship_class = self.RelationshipClass(
-                name=name,
-                parent_type=parent_type,
-                parent_class_id=parent_class_id,
-                child_type=child_type,
-                child_class_id=child_class_id,
-                commit_id=self.commit.id
-            )
-            self.session.add(relationship_class)
-            # manually add corresponding items to model as well
-            for row in range(parent_class_item.rowCount()):
-                object_item = parent_class_item.child(row)
-                relationship_class_item = QStandardItem(name)
-                relationship_class_item.setData(relationship_class, Qt.UserRole)
-                object_item.appendRow(relationship_class_item)
-            # TODO: add items to the other side
-            # now it seems meaningless to scroll somewhere
+        if answer != QDialog.Accepted:
+            return
+        name = dialog.answer['name']
+        parent_class_item = index.model().itemFromIndex(index)
+        parent_class = parent_class_item.data(Qt.UserRole)
+        if isinstance(parent_class, self.ObjectClass):
+            parent_type = 'object_class'
+        elif isinstance(parent_class, self.RelationshipClass):
+            parent_type = 'relationship_class'
+        parent_class_id = parent_class.id
+        child_type = 'object_class'
+        # get selected index from combobox, to look it up in child_class_list
+        ind = dialog.answer['child_class_name_list']['index'] - 1
+        child_class_id = child_class_list[ind].id
+        relationship_class = self.RelationshipClass(
+            name=name,
+            parent_type=parent_type,
+            parent_class_id=parent_class_id,
+            child_type=child_type,
+            child_class_id=child_class_id,
+            commit_id=self.commit.id
+        )
+        self.session.add(relationship_class)
+        # manually add corresponding items to model as well
+        # to objects of parent_class
+        for row in range(parent_class_item.rowCount()):
+            object_item = parent_class_item.child(row)
+            relationship_class_item = QStandardItem(name)
+            relationship_class_item.setFont(self.bold_font)
+            relationship_class_item.setData(relationship_class, Qt.UserRole)
+            relationship_class_item.setData(child_class_id, Qt.UserRole+1)
+            object_item.appendRow(relationship_class_item)
+        # ...and to objects of child class if parent class is an object class
+        # (if parent class is a relationship class, do nothing)
+        if parent_type == 'object_class':
+            # find child_class_item in the first level
+            child_class_item = None
+            root_item = index.model().invisibleRootItem().child(0)
+            for row in range(root_item.rowCount()):
+                object_class_item = root_item.child(row)
+                object_class = object_class_item.data(Qt.UserRole)
+                if object_class.id == child_class_id:
+                    for row in range(object_class_item.rowCount()):
+                        object_item = object_class_item.child(row)
+                        relationship_class_item = QStandardItem(name)
+                        relationship_class_item.setFont(self.bold_font)
+                        relationship_class_item.setData(relationship_class, Qt.UserRole)
+                        relationship_class_item.setData(relationship_class.id, Qt.UserRole+1)
+                        object_item.appendRow(relationship_class_item)
+                    return
+        # now it seems meaningless to scroll somewhere
 
     def new_relationship(self, index):
         """Insert new relationship.
@@ -473,59 +530,118 @@ class DataStoreForm(QWidget):
         child_class_id = relationship_class_item.data(Qt.UserRole+1)
         child_object_list = self.session.query(self.Object).\
             filter_by(class_id=child_class_id).all()
+        if not child_object_list:
+            child_class_name = self.session.query(self.ObjectClass).\
+                filter_by(id=child_class_id).one().name
+            msg = "There are no objects of child class {}.".format(child_class_name)
+            self.statusbar.showMessage(msg, 3000)
+            return
         child_object_name_list = ['Select child object...']
         child_object_name_list.extend([item.name for item in child_object_list])
         dialog = CustomQDialog(self, "New relationship",
             name="Type name here...",
             child_object_name_list=child_object_name_list)
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            class_id = relationship_class.id
-            name = dialog.answer["name"]
-            parent_object_item = index.model().itemFromIndex(index.parent())
-            relationship_id = parent_object_item.data(Qt.UserRole+1)
-            if relationship_id:
-                parent_object_id = relationship_id
-            else:
-                parent_object = parent_object_item.data(Qt.UserRole)
-                parent_object_id = parent_object.id
-            # get selected index from combobox, to look it up in child_object_list
-            ind = dialog.answer['child_object_name_list']['index'] - 1
-            child_object_id = child_object_list[ind].id
-            relationship = self.Relationship(
-                class_id=class_id,
-                name=name,
-                parent_object_id=parent_object_id,
-                child_object_id=child_object_id
+        if answer != QDialog.Accepted:
+            return
+        class_id = relationship_class.id
+        name = dialog.answer["name"]
+        parent_object_item = index.model().itemFromIndex(index.parent())
+        relationship_id = parent_object_item.data(Qt.UserRole+1)
+        if relationship_id:
+            parent_object_id = relationship_id
+        else:
+            parent_object = parent_object_item.data(Qt.UserRole)
+            parent_object_id = parent_object.id
+        # get selected index from combobox, to look it up in child_object_list
+        ind = dialog.answer['child_object_name_list']['index'] - 1
+        child_object_id = child_object_list[ind].id
+        relationship = self.Relationship(
+            class_id=class_id,
+            name=name,
+            parent_object_id=parent_object_id,
+            child_object_id=child_object_id
+        )
+        self.session.add(relationship)
+        self.session.flush() # to get the relationship id
+        # manually add item to model
+        # at the parent end as child object...
+        new_object_name = dialog.answer['child_object_name_list']['text']
+        new_object_item = QStandardItem(new_object_name)
+        # query object table
+        new_object = self.session.query(self.Object).\
+            filter_by(id=child_object_id).one_or_none()
+        new_object_item.setData(new_object, Qt.UserRole)
+        new_object_item.setData(relationship.id, Qt.UserRole+1)
+        # query relationship_class table
+        # this alias below is required to access relationship_class_list items without using 'self'
+        RelationshipClass = aliased(self.RelationshipClass, name='RelationshipClass')
+        new_relationship_class_list = self.session.query(
+            RelationshipClass,
+            RelationshipClass.child_class_id.label('child_class_id')).\
+            filter_by(parent_type='relationship_class').\
+            filter_by(child_type='object_class').\
+            filter_by(parent_class_id=relationship_class.id).all()
+        # create and append relationship class items
+        for new_relationship_class in new_relationship_class_list:
+            new_relationship_class_item = self.visit_relationship_class(
+                new_relationship_class,
+                new_object,
+                relationship_id=relationship.id
             )
-            self.session.add(relationship)
-            self.session.flush() # we need the relationship id, so flush
-            child_object_name = dialog.answer['child_object_name_list']['text']
-            child_object_item = QStandardItem(child_object_name)
-            child_object = self.session.query(self.Object).\
-                filter_by(id=child_object_id).one_or_none()
-            child_object_item.setData(child_object, Qt.UserRole)
-            child_object_item.setData(relationship.id, Qt.UserRole+1)
-            # query relationship_class table
-            # this alias is required to access relationship_class_list items without using 'self'
-            RelationshipClass = aliased(self.RelationshipClass, name='RelationshipClass')
-            new_relationship_class_list = self.session.query(
-                RelationshipClass,
-                RelationshipClass.child_class_id.label('child_class_id')).\
-                filter_by(parent_type='relationship_class').\
-                filter_by(child_type='object_class').\
-                filter_by(parent_class_id=relationship_class.id).all()
-            # create and append relationship class items
-            for new_relationship_class in new_relationship_class_list:
-                new_relationship_class_item = QStandardItem(new_relationship_class.RelationshipClass.name)
-                new_relationship_class_item.setData(new_relationship_class.RelationshipClass, Qt.UserRole)
-                new_relationship_class_item.setData(new_relationship_class.child_class_id, Qt.UserRole+1)
-                child_object_item.appendRow(new_relationship_class_item)
-            relationship_class_item.appendRow(child_object_item)
-            # scroll to newly inserted item in treeview
-            child_object_index = index.model().indexFromItem(child_object_item)
-            self.ui.treeView_object.setCurrentIndex(child_object_index)
-            self.ui.treeView_object.scrollTo(child_object_index)
+            new_object_item.appendRow(new_relationship_class_item)
+        relationship_class_item.appendRow(new_object_item)
+        # scroll to newly inserted item in treeview
+        new_object_index = index.model().indexFromItem(new_object_item)
+        self.ui.treeView_object.setCurrentIndex(new_object_index)
+        self.ui.treeView_object.scrollTo(new_object_index)
+        # ...and if parent class is an object class, then
+        # also add the item at the child end as parent (first-class) object
+        # (if parent class is a relationship class, do nothing)
+        if relationship_class.parent_type == 'object_class':
+            # find inverse relationship class item by traversing the tree from the root
+            root_item = index.model().invisibleRootItem().child(0)
+            inv_relationship_class_item = None
+            for i in range(root_item.rowCount()):
+                object_class_item = root_item.child(i)
+                object_class = object_class_item.data(Qt.UserRole)
+                if object_class.id == child_class_id:
+                    for j in range(object_class_item.rowCount()):
+                        object_item = object_class_item.child(j)
+                        object_ = object_item.data(Qt.UserRole)
+                        if object_.id == child_object_id:
+                            for k in range(object_item.rowCount()):
+                                relationship_class_item = object_item.child(k)
+                                relationship_class = relationship_class_item.data(Qt.UserRole)
+                                if relationship_class.id == class_id:
+                                    inv_relationship_class_item = relationship_class_item
+                                    break
+                            break
+                    break
+            if inv_relationship_class_item:
+                new_object_item = QStandardItem(parent_object.name)
+                new_object = self.session.query(self.Object).\
+                    filter_by(id=parent_object.id).one_or_none()
+                new_object_item.setData(new_object, Qt.UserRole)
+                new_object_item.setData(relationship.id, Qt.UserRole+1)
+                # query relationship_class table
+                # this alias is required to access relationship_class_list items without using 'self'
+                RelationshipClass = aliased(self.RelationshipClass, name='RelationshipClass')
+                new_relationship_class_list = self.session.query(
+                    RelationshipClass,
+                    RelationshipClass.child_class_id.label('child_class_id')).\
+                    filter_by(parent_type='relationship_class').\
+                    filter_by(child_type='object_class').\
+                    filter_by(parent_class_id=class_id).all()
+                # create and append relationship class items
+                for new_relationship_class in new_relationship_class_list:
+                    new_relationship_class_item = self.visit_relationship_class(
+                        new_relationship_class,
+                        new_object,
+                        relationship_id=relationship.id
+                    )
+                    new_object_item.appendRow(new_relationship_class_item)
+                inv_relationship_class_item.appendRow(new_object_item)
 
 
     @Slot("QPoint", name="show_object_tree_context_menu")
