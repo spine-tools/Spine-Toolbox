@@ -25,12 +25,13 @@ Widget to show Data Store Form.
 """
 
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView,\
-    QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QInputDialog, QComboBox
+    QDialog, QLineEdit, QInputDialog
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu
+from widgets.custom_qdialog import CustomQDialog
 from helpers import busy_effect
 from models import MinimalTableModel, CustomSortFilterProxyModel
 import logging
@@ -168,6 +169,7 @@ class DataStoreForm(QWidget):
 
     def init_object_tree_model(self):
         """Initialize object tree model from source database."""
+        self.object_tree_model.clear()
         db_name = self.reference['database']
         # create root item
         root_item = QStandardItem(db_name)
@@ -196,20 +198,17 @@ class DataStoreForm(QWidget):
             relationship_class_as_parent_list = self.session.query(
                     self.RelationshipClass.id,
                     self.RelationshipClass.name,
-                    self.RelationshipClass.child_class_id.label('child_class_id'),
-                    self.RelationshipClass.parent_type.label('parent_type')
-                ).filter_by(parent_type='object_class').\
-                filter_by(child_type='object_class').\
-                filter_by(parent_class_id=object_class.id)
+                    self.RelationshipClass.child_object_class_id,
+                    self.RelationshipClass.parent_object_class_id
+                ).filter_by(parent_object_class_id=object_class.id)
             # ...as child
             relationship_class_as_child_list = self.session.query(
                     self.RelationshipClass.id,
                     self.RelationshipClass.name,
-                    self.RelationshipClass.parent_class_id.label('child_class_id'),
-                    self.RelationshipClass.child_type.label('parent_type')
-                ).filter_by(parent_type='object_class').\
-                filter_by(child_type='object_class').\
-                filter_by(child_class_id=object_class.id)
+                    self.RelationshipClass.parent_object_class_id.label('child_object_class_id'),
+                    self.RelationshipClass.child_object_class_id.label('parent_object_class_id')
+                ).filter_by(parent_relationship_class_id=None).\
+                filter_by(child_object_class_id=object_class.id)
             # recursively populate branches
             for object_ in object_list:
                 # create object item
@@ -259,22 +258,20 @@ class DataStoreForm(QWidget):
         new_relationship_class_list = self.session.query(
                 self.RelationshipClass.id,
                 self.RelationshipClass.name,
-                self.RelationshipClass.child_class_id,
-                self.RelationshipClass.parent_type
-            ).filter_by(parent_type='relationship_class').\
-            filter_by(child_type='object_class').\
-            filter_by(parent_class_id=relationship_class.id).all()
-        if 'relationship_id' in object_.keys():
+                self.RelationshipClass.child_object_class_id,
+                self.RelationshipClass.parent_relationship_class_id
+            ).filter_by(parent_relationship_class_id=relationship_class.id).all()
+        if 'parent_relationship_id' in object_.keys():
             # the parent object is itself a child object in other relationship
             # get new child objects in this new relationship class
             new_object_list = self.session.query(
                     self.Object.id,
                     self.Object.class_id,
                     self.Object.name,
-                    self.Relationship.id.label('relationship_id')
+                    self.Relationship.id.label('parent_relationship_id')
                 ).filter(self.Object.id == self.Relationship.child_object_id).\
                 filter(self.Relationship.class_id == relationship_class.id).\
-                filter(self.Relationship.parent_object_id == object_.relationship_id).all()
+                filter(self.Relationship.parent_relationship_id == object_.parent_relationship_id).all()
         else:
             # the parent object is a 'first-class' object. In the tree, this
             # object is located directly beneath an object class
@@ -284,7 +281,7 @@ class DataStoreForm(QWidget):
                         self.Object.id,
                         self.Object.class_id,
                         self.Object.name,
-                        self.Relationship.id.label('relationship_id')
+                        self.Relationship.id.label('parent_relationship_id')
                     ).filter(self.Object.id == self.Relationship.child_object_id).\
                     filter(self.Relationship.class_id == relationship_class.id).\
                     filter(self.Relationship.parent_object_id == object_.id).all()
@@ -294,7 +291,7 @@ class DataStoreForm(QWidget):
                         self.Object.id,
                         self.Object.class_id,
                         self.Object.name,
-                        self.Relationship.id.label('relationship_id')
+                        self.Relationship.id.label('parent_relationship_id')
                     ).filter(self.Object.id == self.Relationship.parent_object_id).\
                     filter(self.Relationship.class_id == relationship_class.id).\
                     filter(self.Relationship.child_object_id == object_.id).all()
@@ -438,7 +435,6 @@ class DataStoreForm(QWidget):
             self.session.rollback()
             return
         # manually add item to model as well
-        # manually add item to model as well
         object_class_item = QStandardItem(name)
         object_class_item.setFont(self.bold_font)
         object_class_item.setData('object_class', Qt.UserRole)
@@ -490,18 +486,17 @@ class DataStoreForm(QWidget):
         relationship_class_as_parent_list = self.session.query(
                 self.RelationshipClass.id,
                 self.RelationshipClass.name,
-                self.RelationshipClass.child_class_id.label('child_class_id')
-            ).filter_by(parent_type='object_class').\
-            filter_by(child_type='object_class').\
-            filter_by(parent_class_id=object_class['id'])
-        # as child
+                self.RelationshipClass.child_object_class_id,
+                self.RelationshipClass.parent_object_class_id
+            ).filter_by(parent_object_class_id=object_class['id'])
+        # ...as child
         relationship_class_as_child_list = self.session.query(
                 self.RelationshipClass.id,
                 self.RelationshipClass.name,
-                self.RelationshipClass.parent_class_id.label('child_class_id')
-            ).filter_by(parent_type='object_class').\
-            filter_by(child_type='object_class').\
-            filter_by(child_class_id=object_class['id'])
+                self.RelationshipClass.parent_object_class_id.label('child_object_class_id'),
+                self.RelationshipClass.child_object_class_id.label('parent_object_class_id')
+            ).filter_by(parent_relationship_class_id=None).\
+            filter_by(child_object_class_id=object_class['id'])
         relationship_class_list = relationship_class_as_parent_list.\
                                     union(relationship_class_as_child_list).all()
         # create and append relationship class items
@@ -526,13 +521,13 @@ class DataStoreForm(QWidget):
             index (QModelIndex): the index of an object or relationship class item
         """
         # query object_class table
-        child_class_list = self.session.query(self.ObjectClass).\
+        child_object_class_list = self.session.query(self.ObjectClass).\
                 order_by(self.ObjectClass.display_order)
-        child_class_name_list = ['Select child class...']
-        child_class_name_list.extend([item.name for item in child_class_list])
+        child_object_class_name_list = ['Select child object class...']
+        child_object_class_name_list.extend([item.name for item in child_object_class_list])
         dialog = CustomQDialog(self, "New relationship class",
             name="Type name here...",
-            child_class_name_list=child_class_name_list)
+            child_object_class_name_list=child_object_class_name_list)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
@@ -541,18 +536,21 @@ class DataStoreForm(QWidget):
         parent_class_item = index.model().itemFromIndex(index)
         parent_type = parent_class_item.data(Qt.UserRole)
         parent_class = parent_class_item.data(Qt.UserRole+1)
-        parent_class_id = parent_class['id']
+        if parent_type == 'relationship_class':
+            parent_relationship_class_id = parent_class['id']
+            parent_object_class_id = None
+        elif parent_type == 'object_class':
+            parent_relationship_class_id = None
+            parent_object_class_id = parent_class['id']
         # and about the child
-        child_type = 'object_class'
         # get selected index from combobox, to look it up in child_class_list
-        ind = dialog.answer['child_class_name_list']['index'] - 1
-        child_class_id = child_class_list[ind].id
+        ind = dialog.answer['child_object_class_name_list']['index'] - 1
+        child_object_class_id = child_object_class_list[ind].id
         relationship_class = self.RelationshipClass(
             name=name,
-            parent_type=parent_type,
-            parent_class_id=parent_class_id,
-            child_type=child_type,
-            child_class_id=child_class_id,
+            parent_relationship_class_id=parent_relationship_class_id,
+            parent_object_class_id=parent_object_class_id,
+            child_object_class_id=child_object_class_id,
             commit_id=self.commit.id
         )
         self.session.add(relationship_class)
@@ -565,31 +563,30 @@ class DataStoreForm(QWidget):
             return
         # manually add items to model
         # append new relationship class item to objects of parent_class
+        relationship_class_dict = relationship_class.__dict__
         for row in range(parent_class_item.rowCount()):
             object_item = parent_class_item.child(row)
             relationship_class_item = QStandardItem(name)
             relationship_class_item.setFont(self.bold_font)
             relationship_class_item.setData('relationship_class', Qt.UserRole)
-            relationship_class_dict = relationship_class.__dict__
             relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
             object_item.appendRow(relationship_class_item)
         # ...and to objects of child class if parent class is an object class
         if parent_type == 'object_class':
             # find child_class_item in the first level
-            child_class_item = None
             root_item = index.model().invisibleRootItem().child(0)
             for row in range(root_item.rowCount()):
                 object_class_item = root_item.child(row)
                 object_class = object_class_item.data(Qt.UserRole+1)
-                if object_class['id'] == child_class_id:
+                if object_class['id'] == child_object_class_id:
                     for row in range(object_class_item.rowCount()):
                         object_item = object_class_item.child(row)
                         relationship_class_item = QStandardItem(name)
                         relationship_class_item.setFont(self.bold_font)
                         relationship_class_item.setData('relationship_class', Qt.UserRole)
                         # invert relationship class and save it
-                        relationship_class_dict['child_class_id'] = parent_class_id
-                        relationship_class_dict['parent_class_id'] = child_class_id
+                        relationship_class_dict['child_object_class_id'] = parent_object_class_id
+                        relationship_class_dict['parent_object_class_id'] = child_object_class_id
                         relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
                         object_item.appendRow(relationship_class_item)
                     return
@@ -603,13 +600,13 @@ class DataStoreForm(QWidget):
         """
         relationship_class_item = index.model().itemFromIndex(index)
         relationship_class = relationship_class_item.data(Qt.UserRole+1)
-        child_class_id = relationship_class['child_class_id']
+        child_object_class_id = relationship_class['child_object_class_id']
         child_object_list = self.session.query(self.Object).\
-            filter_by(class_id=child_class_id).all()
+            filter_by(class_id=child_object_class_id).all()
         if not child_object_list:
-            child_class_name = self.session.query(self.ObjectClass).\
-                filter_by(id=child_class_id).one().name
-            msg = "There are no objects of child class {}.".format(child_class_name)
+            child_object_class_name = self.session.query(self.ObjectClass).\
+                filter_by(id=child_object_class_id).one().name
+            msg = "There are no objects of child class {}.".format(child_object_class_name)
             self.statusbar.showMessage(msg, 3000)
             return
         child_object_name_list = ['Select child object...']
@@ -624,9 +621,11 @@ class DataStoreForm(QWidget):
         name = dialog.answer["name"]
         parent_object_item = index.model().itemFromIndex(index.parent())
         parent_object = parent_object_item.data(Qt.UserRole+1)
-        if 'relationship_id' in parent_object.keys():
-            parent_object_id = parent_object['relationship_id']
+        if 'parent_relationship_id' in parent_object.keys():
+            parent_relationship_id = parent_object['parent_relationship_id']
+            parent_object_id = None
         else:
+            parent_relationship_id = None
             parent_object_id = parent_object['id']
         # get selected index from combobox, to look it up in child_object_list
         ind = dialog.answer['child_object_name_list']['index'] - 1
@@ -634,6 +633,7 @@ class DataStoreForm(QWidget):
         relationship = self.Relationship(
             class_id=class_id,
             name=name,
+            parent_relationship_id=parent_relationship_id,
             parent_object_id=parent_object_id,
             child_object_id=child_object_id
         )
@@ -641,11 +641,14 @@ class DataStoreForm(QWidget):
         try:
             self.session.flush() # to get the relationship id
         except IntegrityError as e:
-            msg = "Could not insert new relationship class: {}".format(e)
+            msg = "Could not insert new relationship: {}".format(e)
             self.statusbar.showMessage(msg, 3000)
             self.session.rollback()
             return
-        # manually add items to model
+        # alternative 1, rebuild the whole model
+        # self.init_object_tree_model()
+        # alternative 2, manually add items to model
+        # (pros: faster, doesn't collapse all items. cons: ugly, harder to maintain?)
         # add child object item to relationship class...
         # create new object
         new_object_name = dialog.answer['child_object_name_list']['text']
@@ -656,19 +659,18 @@ class DataStoreForm(QWidget):
                 self.Object.class_id,
                 self.Object.name
             ).filter_by(id=child_object_id).one_or_none()._asdict()
-        # add relationship id manually
+        # add parent relationship id manually
         # (this is better than joining relationship table in the query above)
-        new_object['relationship_id'] = relationship.id
+        new_object['parent_relationship_id'] = relationship.id
         new_object_item.setData('object', Qt.UserRole)
         new_object_item.setData(new_object, Qt.UserRole+1)
         # get relationship classes having the present relationship class as parent
         new_relationship_class_list = self.session.query(
                 self.RelationshipClass.id,
                 self.RelationshipClass.name,
-                self.RelationshipClass.child_class_id
-            ).filter_by(parent_type='relationship_class').\
-            filter_by(child_type='object_class').\
-            filter_by(parent_class_id=relationship_class['id']).all()
+                self.RelationshipClass.child_object_class_id,
+                self.RelationshipClass.parent_relationship_class_id
+            ).filter_by(parent_relationship_class_id=relationship_class['id']).all()
         # create and append relationship class items
         for new_relationship_class in new_relationship_class_list:
             new_relationship_class_item = self.visit_relationship_class(
@@ -683,14 +685,15 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.scrollTo(new_object_index)
         # ...and if parent class is an object class,
         # then add child object item to inverse relationship class...
-        if relationship_class['parent_type'] == 'object_class':
+        if 'parent_object_class_id' in relationship_class.keys()\
+                and relationship_class['parent_object_class_id'] is not None:
             # find inverse relationship class item by traversing the tree from the root
             root_item = index.model().invisibleRootItem().child(0)
             inv_relationship_class_item = None
             for i in range(root_item.rowCount()):
                 object_class_item = root_item.child(i)
                 object_class = object_class_item.data(Qt.UserRole+1)
-                if object_class['id'] == child_class_id:
+                if object_class['id'] == child_object_class_id:
                     for j in range(object_class_item.rowCount()):
                         object_item = object_class_item.child(j)
                         object_ = object_item.data(Qt.UserRole+1)
@@ -712,8 +715,8 @@ class DataStoreForm(QWidget):
                         self.Object.class_id,
                         self.Object.name
                     ).filter_by(id=parent_object_id).one_or_none()._asdict()
-                # add relationship id manually
-                new_object['relationship_id'] = relationship.id
+                # add parent relationship id manually
+                new_object['parent_relationship_id'] = relationship.id
                 new_object_item.setData('object', Qt.UserRole)
                 new_object_item.setData(new_object, Qt.UserRole+1)
                 # create and append relationship class items
@@ -724,6 +727,103 @@ class DataStoreForm(QWidget):
                     )
                     new_object_item.appendRow(new_relationship_class_item)
                 inv_relationship_class_item.appendRow(new_object_item)
+
+
+    def rename_item(self, index):
+        """Rename item in the database and treeview"""
+        item = index.model().itemFromIndex(index)
+        name = item.text()
+        answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
+            QLineEdit.Normal, name)
+        new_name = answer[0]
+        if not new_name: # cancel clicked
+            return
+        if new_name == name: # nothing to do here
+            return
+        # find out which table
+        entity_type = item.data(Qt.UserRole)
+        if entity_type == 'object_class':
+            table = self.ObjectClass
+        elif entity_type == 'object':
+            table = self.Object
+        elif entity_type == 'relationship_class':
+            table = self.RelationshipClass
+        else:
+            return # should never happen
+        # get item from table
+        entity = item.data(Qt.UserRole+1)
+        instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
+        if instance:
+            instance.name = new_name
+            try:
+                self.session.flush()
+            except IntegrityError as e:
+                msg = "Could not rename item: {}".format(e)
+                self.statusbar.showMessage(msg, 3000)
+                self.session.rollback()
+                return
+            # manually rename all items in model
+            items = index.model().findItems(name, Qt.MatchRecursive)
+            for it in items:
+                ent_type = it.data(Qt.UserRole)
+                ent = it.data(Qt.UserRole+1)
+                if ent_type == entity_type and ent['id'] == entity['id']:
+                    ent['name'] = new_name
+                    it.setText(new_name)
+
+    def remove_item(self, index):
+        """Remove item from the treeview"""
+        item = index.model().itemFromIndex(index)
+        # find out which table
+        entity_type = item.data(Qt.UserRole)
+        if entity_type == 'object_class':
+            table = self.ObjectClass
+        elif entity_type == 'object':
+            table = self.Object
+        elif entity_type == 'relationship_class':
+            table = self.RelationshipClass
+        else:
+            return # should never happen
+        # get item from table
+        entity = item.data(Qt.UserRole+1)
+        instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
+        if instance:
+            self.session.delete(instance)
+            try:
+                self.session.flush()
+            except IntegrityError as e:
+                msg = "Could not insert new relationship class: {}".format(e)
+                self.statusbar.showMessage(msg, 3000)
+                self.session.rollback()
+                return
+            # manually remove all items in model
+            def visit_and_remove(it):
+                """Visit item and remove it if necessary.
+                Returns:
+                    True if item was removed, False otherwise
+                """
+                logging.debug(it.text())
+                ent_type = it.data(Qt.UserRole)
+                ent = it.data(Qt.UserRole+1)
+                if ent_type == entity_type and ent['id'] == entity['id']:
+                    ind = index.model().indexFromItem(it)
+                    index.model().removeRows(ind.row(), 1, ind.parent())
+                    return True
+                if ent_type == 'relationship_class':
+                    child_object_class_id = ent['child_object_class_id']
+                    if child_object_class_id == entity['id']:
+                        ind = index.model().indexFromItem(it)
+                        index.model().removeRows(ind.row(), 1, ind.parent())
+                        return True
+                i = 0
+                while True:
+                    if i == it.rowCount():
+                        break
+                    if not visit_and_remove(it.child(i)):
+                        i += 1
+                return False
+            root_item = index.model().invisibleRootItem().child(0)
+            visit_and_remove(root_item)
 
 
     @Slot("QPoint", name="show_object_tree_context_menu")
@@ -747,17 +847,9 @@ class DataStoreForm(QWidget):
         elif option == "New relationship":
             self.new_relationship(index)
         elif option == "Rename":
-            name = index.text()
-            answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
-                QLineEdit.Normal, name)
-            new_name = answer[0]
-            if not new_name: # cancel clicked
-                return
-            if new_name == name:
-                return
-            self.rename_item(table, name, new_name)
+            self.rename_item(index)
         elif option == "Remove":
-            index.model().removeRow(index.row(), index.parent())
+            self.remove_item(index)
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
@@ -791,47 +883,3 @@ class DataStoreForm(QWidget):
             if self.engine:
                 self.engine.dispose()
             event.accept()
-
-# TODO: move this to another file
-class CustomQDialog(QDialog):
-    """A class to create custom forms with several line edits,
-    used when creating new object classes, objects, and so on"""
-    def __init__(self, parent=None, title="", **kwargs):
-        """Initialize class
-
-        Args:
-            parent (QWidget): the parent of this dialog, needed to center it properly
-            title (str): window title
-            kwargs (dict): keys to use when collecting the answer in output dict, values are placeholder texts
-        """
-        super().__init__(parent)
-        self.input = dict()
-        self.answer = dict()
-        self.setWindowTitle(title)
-        form = QFormLayout(self)
-        for key,value in kwargs.items():
-            if isinstance(value, str): # line edit
-                input_ = QLineEdit(self)
-                input_.setPlaceholderText(value)
-            elif isinstance(value, list): # combo box
-                input_ = QComboBox(self)
-                input_.addItems(value)
-            self.input[key] = input_
-            form.addRow(input_)
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.save_and_accept)
-        button_box.rejected.connect(self.reject)
-        form.addRow(button_box)
-
-    @Slot(name="save_and_accept")
-    def save_and_accept(self):
-        """Collect answer in output dict and accept"""
-        for key,value in self.input.items():
-            if isinstance(value, QLineEdit):
-                self.answer[key] = value.text()
-            elif isinstance(value, QComboBox):
-                self.answer[key] = {
-                    'text': value.currentText(),
-                    'index': value.currentIndex()
-                }
-        self.accept()
