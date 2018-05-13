@@ -35,6 +35,19 @@ from PySide2.QtWidgets import QApplication
 from PySide2.QtGui import QCursor
 from config import DEFAULT_PROJECT_DIR
 from PySide2.QtWidgets import QFileDialog
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.dialects.mysql import TINYINT, DOUBLE
+
+# TODO: check if this is the right place for this
+@compiles(TINYINT, 'sqlite')
+def compile_TINYINT_mysql_sqlite(element, compiler, **kw):
+    """ Handles mysql TINYINT datatype as INTEGER in sqlite """
+    return compiler.visit_INTEGER(element, **kw)
+
+@compiles(DOUBLE, 'sqlite')
+def compile_DOUBLE_mysql_sqlite(element, compiler, **kw):
+    """ Handles mysql DOUBLE datatype as REAL in sqlite """
+    return compiler.visit_REAL(element, **kw)
 
 
 def busy_effect(func):

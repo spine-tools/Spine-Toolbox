@@ -798,11 +798,11 @@ class DataStoreForm(QWidget):
                 return
             # manually remove all items in model
             def visit_and_remove(it):
-                """Visit item and remove it if necessary.
+                """Visit item, remove it if necessary and visit children.
+
                 Returns:
                     True if item was removed, False otherwise
                 """
-                logging.debug(it.text())
                 ent_type = it.data(Qt.UserRole)
                 ent = it.data(Qt.UserRole+1)
                 if ent_type == entity_type and ent['id'] == entity['id']:
