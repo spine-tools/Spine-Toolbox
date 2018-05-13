@@ -29,6 +29,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
+        Form.setWindowModality(QtCore.Qt.NonModal)
         Form.resize(524, 559)
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_5.setSpacing(0)

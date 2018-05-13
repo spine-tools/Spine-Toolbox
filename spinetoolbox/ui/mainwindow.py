@@ -378,6 +378,6 @@ class Ui_MainWindow(object):
         self.actionSelected_Item.setText(QtWidgets.QApplication.translate("MainWindow", "Selected Item", None, -1))
         self.actionSelected_Item.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc
