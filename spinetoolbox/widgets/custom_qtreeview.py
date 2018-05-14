@@ -25,7 +25,7 @@ Class for a custom QTreeView for the spine data explorer.
 """
 
 import logging
-from PySide2.QtWidgets import QTreeView
+from PySide2.QtWidgets import QTreeView, QAbstractItemView
 from PySide2.QtCore import Signal, Slot
 
 
@@ -37,6 +37,7 @@ class CustomQTreeView(QTreeView):
     """
 
     currentIndexChanged = Signal("QModelIndex", name="currentIndexChanged")
+    editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
 
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
@@ -45,3 +46,9 @@ class CustomQTreeView(QTreeView):
     @Slot("QModelIndex", "QModelIndex", name="currentChanged")
     def currentChanged(self, current, previous):
         self.currentIndexChanged.emit(current)
+
+    @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
+    def edit(self, index, trigger, event):
+        if trigger == QTreeView.EditKeyPressed:
+            self.editKeyPressed.emit(index)
+        return False

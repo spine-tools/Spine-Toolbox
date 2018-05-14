@@ -27,7 +27,8 @@ Note: These are Spine Toolbox internal data models.
 """
 
 import logging
-from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel, QSortFilterProxyModel, QAbstractProxyModel
+from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel,\
+    QSortFilterProxyModel, QAbstractProxyModel
 
 
 class ToolTemplateModel(QAbstractListModel):
@@ -639,14 +640,18 @@ class MinimalTableModel(QAbstractTableModel):
         self._tool_tip = tool_tip
 
 
-class CustomSortFilterProxyModel(QSortFilterProxyModel):
+class ObjectSortFilterProxyModel(QSortFilterProxyModel):
     """A class to filter the parameter table in Data Store"""
 
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
-        self.filter_object_class_id = None
-        self.filter_object_id = None
+        self.object_class_id_filter = None
+        self.object_id_filter = None
+
+    def clear_filter(self):
+        self.object_class_id_filter = None
+        self.object_id_filter = None
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
@@ -654,8 +659,52 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         """
         # logging.debug("accept rows")
         h = self.sourceModel().header
-        object_class_id = self.sourceModel().index(source_row, h.index("object_class_id"), source_parent).data()
-        object_id = self.sourceModel().index(source_row, h.index("object_id"), source_parent).data()
-        if not self.filter_object_id:
-            return object_class_id == self.filter_object_class_id
-        return object_class_id == self.filter_object_class_id and object_id == self.filter_object_id
+        def source_data(column_name):
+            return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
+        object_class_id = source_data("object_class_id")
+        object_id = source_data("object_id")
+        if self.object_id_filter:
+            return object_id == self.object_id_filter
+        if self.object_class_id_filter:
+            return object_class_id == self.object_class_id_filter
+        return False
+
+
+class RelationshipSortFilterProxyModel(QSortFilterProxyModel):
+    """A class to filter the parameter table in Data Store"""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.relationship_class_id_filter = None
+        self.relationship_id_filter = None
+        self.object_id_filter = None
+        self.parent_object_id_filter = None
+
+    def clear_filter(self):
+        self.relationship_class_id_filter = None
+        self.relationship_id_filter = None
+        self.object_id_filter = None
+        self.parent_object_id_filter = None
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Returns true if the item in the row indicated by the given source_row
+        and source_parent should be included in the model; otherwise returns false
+        """
+        # logging.debug("accept rows")
+        h = self.sourceModel().header
+        def source_data(column_name):
+            return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
+        if self.relationship_id_filter:
+            relationship_id = source_data("relationship_id")
+            return relationship_id == self.relationship_id_filter
+        if self.relationship_class_id_filter:
+            parent_object_id = source_data("parent_object_id")
+            relationship_class_id = source_data("relationship_class_id")
+            return parent_object_id == self.parent_object_id_filter\
+                and relationship_class_id == self.relationship_class_id_filter
+        if self.object_id_filter:
+            parent_object_id = source_data("parent_object_id")
+            child_object_id = source_data("child_object_id")
+            return parent_object_id == self.object_id_filter or child_object_id == self.object_id_filter
+        return False

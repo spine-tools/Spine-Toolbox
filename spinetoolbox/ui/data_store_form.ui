@@ -95,7 +95,7 @@
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="editTriggers">
-            <set>QAbstractItemView::NoEditTriggers</set>
+            <set>QAbstractItemView::EditKeyPressed</set>
            </property>
           </widget>
          </item>
@@ -269,9 +269,9 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_reset">
+        <widget class="QPushButton" name="pushButton_revert">
          <property name="text">
-          <string>Reset</string>
+          <string>Revert</string>
          </property>
         </widget>
        </item>

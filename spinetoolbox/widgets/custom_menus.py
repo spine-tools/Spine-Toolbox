@@ -164,10 +164,15 @@ class ObjectTreeContextMenu(QMenu):
                 self.add_action("New relationship class")
                 self.add_action("New object")
             elif item_type == 'relationship_class':
-                parent_item = index.model().itemFromIndex(index.parent())
-                if 'relationship_id' not in parent_item.data(Qt.UserRole+1).keys():
+                relationship_class = index.data(Qt.UserRole+1)
+                if 'parent_object_class_id' in relationship_class.keys()\
+                        and relationship_class['parent_object_class_id'] is not None:
                     self.add_action("New relationship class")
                 self.add_action("New relationship")
+            elif item_type == 'object':
+                parent_type = index.parent().data(Qt.UserRole)
+                if parent_type == 'relationship_class':
+                     self.add_action("Expand at top level")
             self.add_action("Rename")
             self.add_action("Remove")
         self.exec_(position)

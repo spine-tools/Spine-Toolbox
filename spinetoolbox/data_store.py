@@ -246,17 +246,3 @@ class DataStore(MetaObject):
     def data_references(self):
         """Return a list connections strings that are in this item as references (self.references)."""
         return self.references
-
-# TODO: find a way better place for this
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.dialects.mysql import TINYINT, DOUBLE
-
-@compiles(TINYINT, 'sqlite')
-def compile_TINYINT_mysql_sqlite(element, compiler, **kw):
-    """ Handles mysql TINYINT datatype as INTEGER in sqlite """
-    return compiler.visit_INTEGER(element, **kw)
-
-@compiles(DOUBLE, 'sqlite')
-def compile_DOUBLE_mysql_sqlite(element, compiler, **kw):
-    """ Handles mysql DOUBLE datatype as REAL in sqlite """
-    return compiler.visit_REAL(element, **kw)
