@@ -37,7 +37,7 @@ from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
 from graphics_items import DataConnectionImage
-
+import inspect
 
 class DataConnection(MetaObject):
     """Data Connection class.
@@ -222,6 +222,8 @@ class DataConnection(MetaObject):
 
     def data_files(self):
         """Return a list of files that are in the data directory."""
+        if not os.path.isdir(self.data_dir):
+            return None
         return os.listdir(self.data_dir)
 
     @Slot(name="refresh")

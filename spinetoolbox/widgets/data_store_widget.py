@@ -411,8 +411,10 @@ class DataStoreForm(QWidget):
     def expand_at_top_level(self, index):
         """Expand object at the top level"""
         # logging.debug("expand_at_top_level leaf")
+        if not index.isValid():
+            return # just to be safe
         clicked_type = index.data(Qt.UserRole)
-        if not clicked_type == 'object':
+        if not clicked_type.endswith('object'):
             return
         clicked_item = index.model().itemFromIndex(index)
         if clicked_item.hasChildren():

@@ -160,7 +160,6 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        logging.debug("mouse press event")
         self._main.ui.graphicsView.scene().clearSelection()
         self.show_item_info()
 
@@ -210,18 +209,13 @@ class ItemImage(QGraphicsItem):
         # TODO: Try setting QGraphicsEffect(QGraphicsItem.not_shadow) or something
         self.connector_button.setBrush(self.connector_brush)
 
-    def contextMenuEvent(self, e):
-        """Show context menu unless mouse is over one of the slot buttons.
+    def context_menu_event(self, event):
+        """Show item context menu.
 
         Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
+            event (QGraphicsSceneMouseEvent): Mouse event
         """
-        logging.debug("contex menu event")
-        if self.conn_button().isUnderMouse():
-            pass
-            #e.ignore()
-        else:
-            self._qmainwindow.show_item_image_context_menu(e.screenPos(), self.name())
+        self._main.show_item_image_context_menu(event.screenPos(), self.name())
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item in a QDockWidget."""
@@ -260,6 +254,7 @@ class DataConnectionImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self._master.contextMenuEvent = self.context_menu_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -306,6 +301,10 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         super().connector_hover_leave_event(event)
 
+    def context_menu_event(self, event):
+        """Calls super class method."""
+        return super().context_menu_event(event)
+
 
 class ToolImage(ItemImage):
     """Tool item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -334,6 +333,7 @@ class ToolImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self._master.contextMenuEvent = self.context_menu_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -380,6 +380,10 @@ class ToolImage(ItemImage):
         """Calls super class method."""
         super().connector_hover_leave_event(event)
 
+    def context_menu_event(self, event):
+        """Calls super class method."""
+        return super().context_menu_event(event)
+
 
 class DataStoreImage(ItemImage):
     """Data Store item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -408,6 +412,7 @@ class DataStoreImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self._master.contextMenuEvent = self.context_menu_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -482,6 +487,7 @@ class ViewImage(ItemImage):
         self._master.mouseMoveEvent = self.mouse_move_event
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
+        self._master.contextMenuEvent = self.context_menu_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -527,6 +533,10 @@ class ViewImage(ItemImage):
     def connector_hover_leave_event(self, event):
         """Calls super class method."""
         super().connector_hover_leave_event(event)
+
+    def context_menu_event(self, event):
+        """Calls super class method."""
+        return super().context_menu_event(event)
 
 
 class Link(QGraphicsLineItem):

@@ -34,8 +34,8 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
-from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, LinkContextMenu, \
-    addToolTemplatePopupMenu
+from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
+    ItemImageContextMenu, LinkContextMenu, addToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -50,6 +50,7 @@ from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBA
     SPLITTER_SS, SEPARATOR_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates
 from models import ToolTemplateModel, ConnectionModel
+import gc
 
 
 class ToolboxUI(QMainWindow):
@@ -84,6 +85,7 @@ class ToolboxUI(QMainWindow):
         self.data_store_form = None
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
+        self.item_image_context_menu = None
         self.link_context_menu = None
         self.add_tool_template_popup_menu = None
         self.project_form = None
@@ -1291,14 +1293,23 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
 
-    def show_item_image_context_menu(self, pos, item_name):
+    def show_item_image_context_menu(self, pos, name):
         """Context menu for item images.
 
         Args:
             pos (QPoint): Mouse position
             item_name (QGraphicsItem): The name of the concerned item
         """
-        logging.debug(item_name)
+        ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
+        self.item_image_context_menu = ItemImageContextMenu(self, pos, ind)
+        option = self.item_image_context_menu.get_action()
+        if option == "Remove":
+            self.remove_item(ind, delete_item=True)
+            return
+        else:  # No option selected
+            pass
+        self.item_image_context_menu.deleteLater()
+        self.item_image_context_menu = None
 
     def show_link_context_menu(self, pos, src_item_name, dst_item_name):
         """Context menu for connection links.
