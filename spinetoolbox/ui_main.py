@@ -50,7 +50,6 @@ from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBA
     SPLITTER_SS, SEPARATOR_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates
 from models import ToolTemplateModel, ConnectionModel
-import gc
 
 
 class ToolboxUI(QMainWindow):

@@ -37,7 +37,6 @@ from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
 from graphics_items import DataConnectionImage
-import inspect
 
 class DataConnection(MetaObject):
     """Data Connection class.
