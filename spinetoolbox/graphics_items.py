@@ -160,6 +160,7 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
+        logging.debug("mouse press event")
         self._main.ui.graphicsView.scene().clearSelection()
         self.show_item_info()
 
@@ -208,6 +209,19 @@ class ItemImage(QGraphicsItem):
         """
         # TODO: Try setting QGraphicsEffect(QGraphicsItem.not_shadow) or something
         self.connector_button.setBrush(self.connector_brush)
+
+    def contextMenuEvent(self, e):
+        """Show context menu unless mouse is over one of the slot buttons.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        logging.debug("contex menu event")
+        if self.conn_button().isUnderMouse():
+            pass
+            #e.ignore()
+        else:
+            self._qmainwindow.show_item_image_context_menu(e.screenPos(), self.name())
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item in a QDockWidget."""
@@ -697,7 +711,6 @@ class LinkDrawer(QGraphicsLineItem):
         self.arrow_head.append(arrow_p0)
         self.arrow_head.append(arrow_p1)
         self.arrow_head.append(arrow_p2)
-        # p = QPoint(self.pen_width, self.pen_width)
         brush = QBrush(self.pen_color, Qt.SolidPattern)
         painter.setBrush(brush)
         painter.drawEllipse(self.src, self.pen_width, self.pen_width)

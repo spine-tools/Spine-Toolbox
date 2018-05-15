@@ -31,7 +31,7 @@ from PySide2.QtGui import QDesktopServices
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
-from PySide2.QtCore import Qt, Slot, QUrl
+from PySide2.QtCore import Qt, Slot, QUrl, QFileSystemWatcher
 from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
@@ -57,11 +57,13 @@ class DataStore(MetaObject):
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()
-        self.references = references
+        self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.references = references
         try:
             create_dir(self.data_dir)
+            self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
             self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
@@ -69,7 +71,7 @@ class DataStore(MetaObject):
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Populate data (files) model
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self.add_db_reference_form = None
         self.data_store_form = None
@@ -84,6 +86,7 @@ class DataStore(MetaObject):
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_file)
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
+        self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -152,7 +155,7 @@ class DataStore(MetaObject):
             except Exception as e:
                 self._parent.msg_error.emit("Import failed: {}".format(e))
                 continue
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
 
     @busy_effect
@@ -199,7 +202,7 @@ class DataStore(MetaObject):
             logging.error("Index not valid")
             return
         else:
-            data_file = os.listdir(self.data_dir)[index.row()]
+            data_file = self.data_files()[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
             reference = {
                 'database': data_file,
@@ -226,3 +229,13 @@ class DataStore(MetaObject):
     def data_references(self):
         """Return a list connections strings that are in this item as references (self.references)."""
         return self.references
+
+    def data_files(self):
+        """Return a list of files that are in the data directory."""
+        return os.listdir(self.data_dir)
+
+    def refresh(self):
+        """Refresh data files QTreeView.
+        NOTE: Might lead to performance issues."""
+        d = self.data_files()
+        self._widget.populate_data_list(d)

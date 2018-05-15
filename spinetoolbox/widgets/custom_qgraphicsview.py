@@ -28,7 +28,7 @@ import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide2.QtCore import Slot, Qt, QTimer
 from graphics_items import LinkDrawer, Link
-from config import ITEM_TYPE, FPS
+from config import ITEM_TYPE
 
 
 class CustomQGraphicsView(QGraphicsView):

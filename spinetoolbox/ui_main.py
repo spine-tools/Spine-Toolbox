@@ -576,7 +576,7 @@ class ToolboxUI(QMainWindow):
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
-        if item_data.item_type == "Data Connection":
+        if item_data.item_type == "Data Connection" or item_data.item_type == "Data Store":
             item_data.refresh()
 
     def clear_info_area(self):
@@ -1290,6 +1290,15 @@ class ToolboxUI(QMainWindow):
             pass
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
+
+    def show_item_image_context_menu(self, pos, item_name):
+        """Context menu for item images.
+
+        Args:
+            pos (QPoint): Mouse position
+            item_name (QGraphicsItem): The name of the concerned item
+        """
+        logging.debug(item_name)
 
     def show_link_context_menu(self, pos, src_item_name, dst_item_name):
         """Context menu for connection links.

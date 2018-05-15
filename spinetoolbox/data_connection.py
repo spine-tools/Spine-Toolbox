@@ -27,7 +27,7 @@ Module for data connection class.
 import os
 import shutil
 import logging
-from PySide2.QtCore import Slot, QUrl
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QMessageBox, QFileDialog
 from metaobject import MetaObject
@@ -59,18 +59,20 @@ class DataConnection(MetaObject):
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()
+        self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Connection
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         self.references = references
         try:
             create_dir(self.data_dir)
+            self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
             self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Populate data (files) model
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self._graphics_item = DataConnectionImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
@@ -84,6 +86,7 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
+        self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -156,7 +159,7 @@ class DataConnection(MetaObject):
             except OSError:
                 self._parent.msg_error.emit("[OSError] Copying failed")
                 continue
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
 
     @Slot("QModelIndex", name="open_data_file")
@@ -168,7 +171,7 @@ class DataConnection(MetaObject):
             logging.error("Index not valid")
             return
         else:
-            data_file = os.listdir(self.data_dir)[index.row()]
+            data_file = self.data_files()[index.row()]
             url = "file:///" + os.path.join(self.data_dir, data_file)
             # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
@@ -177,7 +180,7 @@ class DataConnection(MetaObject):
 
     @Slot(name="create_datapackage")
     def create_datapackage(self):
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
             self._parent.msg_error.emit("The folder <b>{}</b> does not have any CSV files."
                                         " Add some and try again.".format(self.data_dir))
@@ -185,7 +188,7 @@ class DataConnection(MetaObject):
         self.package = CustomPackage(base_path = self.data_dir)
         self.package.infer(os.path.join(self.data_dir, '*.csv'))
         self.save_datapackage()
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
 
     @Slot(name="show_edit_keys_form")
@@ -224,7 +227,7 @@ class DataConnection(MetaObject):
     def refresh(self):
         """Refresh data files QTreeView.
         NOTE: Might lead to performance issues."""
-        d = os.listdir(self.data_dir)
+        d = self.data_files()
         self._widget.populate_data_list(d)
 
 
