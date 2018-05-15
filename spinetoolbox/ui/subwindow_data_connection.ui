@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -372,22 +372,6 @@ color: rgb(255, 255, 255);</string>
         <number>6</number>
        </property>
        <item>
-        <widget class="QPushButton" name="pushButton_open">
-         <property name="maximumSize">
-          <size>
-           <width>75</width>
-           <height>23</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Connection directory in File Explorer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string>Open</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer name="horizontalSpacer_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -401,7 +385,7 @@ color: rgb(255, 255, 255);</string>
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_connections">
+        <widget class="QPushButton" name="pushButton_open">
          <property name="maximumSize">
           <size>
            <width>75</width>
@@ -409,10 +393,10 @@ color: rgb(255, 255, 255);</string>
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show connections&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Connection directory in File Explorer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
-          <string>Conn.</string>
+          <string>Open</string>
          </property>
         </widget>
        </item>
@@ -430,7 +414,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>toolButton_add</tabstop>
   <tabstop>treeView_data</tabstop>
   <tabstop>pushButton_open</tabstop>
-  <tabstop>pushButton_connections</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

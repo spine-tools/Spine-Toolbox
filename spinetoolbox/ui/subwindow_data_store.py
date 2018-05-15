@@ -158,16 +158,12 @@ class Ui_Form(object):
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem1)
         self.pushButton_open = QtWidgets.QPushButton(Form)
         self.pushButton_open.setMaximumSize(QtCore.QSize(75, 23))
         self.pushButton_open.setObjectName("pushButton_open")
         self.horizontalLayout.addWidget(self.pushButton_open)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem1)
-        self.pushButton_connections = QtWidgets.QPushButton(Form)
-        self.pushButton_connections.setMaximumSize(QtCore.QSize(75, 23))
-        self.pushButton_connections.setObjectName("pushButton_connections")
-        self.horizontalLayout.addWidget(self.pushButton_connections)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.verticalLayout_3.addLayout(self.verticalLayout_2)
 
@@ -177,8 +173,6 @@ class Ui_Form(object):
         Form.setTabOrder(self.toolButton_plus, self.toolButton_minus)
         Form.setTabOrder(self.toolButton_minus, self.toolButton_add)
         Form.setTabOrder(self.toolButton_add, self.treeView_data)
-        Form.setTabOrder(self.treeView_data, self.pushButton_open)
-        Form.setTabOrder(self.pushButton_open, self.pushButton_connections)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Data Store", None, -1))
@@ -188,7 +182,5 @@ class Ui_Form(object):
         self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Create or update Spine data objects in memory.</p></body></html>", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open data objects in Spine Data Explorer</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open", None, -1))
-        self.pushButton_connections.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Show connections</p></body></html>", None, -1))
-        self.pushButton_connections.setText(QtWidgets.QApplication.translate("Form", "Conn.", None, -1))
 
 import resources_icons_rc

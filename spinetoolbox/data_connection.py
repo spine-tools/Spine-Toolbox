@@ -83,7 +83,6 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
-        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
 
     def set_icon(self, icon):
@@ -213,25 +212,6 @@ class DataConnection(MetaObject):
         else:
             self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
             self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
-
-    @Slot(name="show_connections")
-    def show_connections(self):
-        """Show connections of this item."""
-        inputs = self._parent.connection_model.input_items(self.name)
-        outputs = self._parent.connection_model.output_items(self.name)
-        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
-        self._parent.msg.emit("Input items")
-        if not inputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in inputs:
-                self._parent.msg_warning.emit("{0}".format(item))
-        self._parent.msg.emit("Output items")
-        if not outputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in outputs:
-                self._parent.msg_warning.emit("{0}".format(item))
 
     def file_references(self):
         """Return a list of paths to files that are in this item as references (self.references)."""

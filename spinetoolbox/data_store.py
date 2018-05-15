@@ -81,7 +81,6 @@ class DataStore(MetaObject):
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_file)
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
@@ -223,25 +222,6 @@ class DataStore(MetaObject):
             reference = self.references[index.row()]
             self.data_store_form = DataStoreForm(self._parent, reference)
             self.data_store_form.show()
-
-    @Slot(name="show_connections")
-    def show_connections(self):
-        """Show connections of this item."""
-        inputs = self._parent.connection_model.input_items(self.name)
-        outputs = self._parent.connection_model.output_items(self.name)
-        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
-        self._parent.msg.emit("Input items")
-        if not inputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in inputs:
-                self._parent.msg_warning.emit("{0}".format(item))
-        self._parent.msg.emit("Output items")
-        if not outputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in outputs:
-                self._parent.msg_warning.emit("{0}".format(item))
 
     def data_references(self):
         """Return a list connections strings that are in this item as references (self.references)."""

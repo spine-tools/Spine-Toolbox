@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -296,26 +296,17 @@ color: rgb(255, 255, 255);</string>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_connections">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
          </property>
-         <property name="maximumSize">
+         <property name="sizeHint" stdset="0">
           <size>
-           <width>65</width>
-           <height>23</height>
+           <width>40</width>
+           <height>20</height>
           </size>
          </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show connections&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string>Conn.</string>
-         </property>
-        </widget>
+        </spacer>
        </item>
        <item>
         <widget class="QPushButton" name="pushButton_execute">
@@ -340,7 +331,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>treeView_input_files</tabstop>
   <tabstop>treeView_output_files</tabstop>
   <tabstop>pushButton_details</tabstop>
-  <tabstop>pushButton_connections</tabstop>
   <tabstop>pushButton_execute</tabstop>
  </tabstops>
  <resources>

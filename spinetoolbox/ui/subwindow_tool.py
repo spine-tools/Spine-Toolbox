@@ -155,15 +155,8 @@ class Ui_Form(object):
         self.pushButton_details.setAutoFillBackground(False)
         self.pushButton_details.setObjectName("pushButton_details")
         self.horizontalLayout.addWidget(self.pushButton_details)
-        self.pushButton_connections = QtWidgets.QPushButton(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_connections.sizePolicy().hasHeightForWidth())
-        self.pushButton_connections.setSizePolicy(sizePolicy)
-        self.pushButton_connections.setMaximumSize(QtCore.QSize(65, 23))
-        self.pushButton_connections.setObjectName("pushButton_connections")
-        self.horizontalLayout.addWidget(self.pushButton_connections)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem)
         self.pushButton_execute = QtWidgets.QPushButton(Form)
         self.pushButton_execute.setMaximumSize(QtCore.QSize(65, 23))
         self.pushButton_execute.setObjectName("pushButton_execute")
@@ -175,8 +168,7 @@ class Ui_Form(object):
         QtCore.QMetaObject.connectSlotsByName(Form)
         Form.setTabOrder(self.treeView_input_files, self.treeView_output_files)
         Form.setTabOrder(self.treeView_output_files, self.pushButton_details)
-        Form.setTabOrder(self.pushButton_details, self.pushButton_connections)
-        Form.setTabOrder(self.pushButton_connections, self.pushButton_execute)
+        Form.setTabOrder(self.pushButton_details, self.pushButton_execute)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Tool", None, -1))
@@ -186,8 +178,6 @@ class Ui_Form(object):
         self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool command line arguments. Edit tool definition file to change these.</p></body></html>", None, -1))
         self.pushButton_details.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Show selected Tool details</p></body></html>", None, -1))
         self.pushButton_details.setText(QtWidgets.QApplication.translate("Form", "Info", None, -1))
-        self.pushButton_connections.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Show connections</p></body></html>", None, -1))
-        self.pushButton_connections.setText(QtWidgets.QApplication.translate("Form", "Conn.", None, -1))
         self.pushButton_execute.setText(QtWidgets.QApplication.translate("Form", "Exec.", None, -1))
 
 import resources_icons_rc
