@@ -234,6 +234,7 @@ class DataStore(MetaObject):
         """Return a list of files that are in the data directory."""
         return os.listdir(self.data_dir)
 
+    @Slot(name="refresh")
     def refresh(self):
         """Refresh data files QTreeView.
         NOTE: Might lead to performance issues."""
