@@ -478,8 +478,8 @@ class MinimalTableModel(QAbstractTableModel):
             except IndexError:
                 return None
             return h
-        else:
-            return None
+        elif orientation == Qt.Vertical and role == Qt.DisplayRole:
+            return section + 1
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index.
@@ -679,13 +679,19 @@ class RelationshipSortFilterProxyModel(QSortFilterProxyModel):
         self.relationship_class_id_filter = None
         self.relationship_id_filter = None
         self.object_id_filter = None
+        self.parent_relationship_id_filter = None
         self.parent_object_id_filter = None
+        self.hide_all_columns = True
+        self.hide_column = None
 
     def clear_filter(self):
         self.relationship_class_id_filter = None
         self.relationship_id_filter = None
         self.object_id_filter = None
+        self.parent_relationship_id_filter = None
         self.parent_object_id_filter = None
+        self.hide_all_columns = True
+        self.hide_column = None
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
@@ -696,15 +702,36 @@ class RelationshipSortFilterProxyModel(QSortFilterProxyModel):
         def source_data(column_name):
             return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
         if self.relationship_id_filter:
+            # related object
             relationship_id = source_data("relationship_id")
             return relationship_id == self.relationship_id_filter
-        if self.relationship_class_id_filter:
+        if self.parent_relationship_id_filter and self.relationship_class_id_filter:
+            # meta_relationship_class
+            parent_relationship_id = source_data("parent_relationship_id")
+            relationship_class_id = source_data("relationship_class_id")
+            return parent_relationship_id == self.parent_relationship_id_filter\
+                and relationship_class_id == self.relationship_class_id_filter
+        if self.parent_object_id_filter and self.relationship_class_id_filter:
+            # relationship_class
             parent_object_id = source_data("parent_object_id")
             relationship_class_id = source_data("relationship_class_id")
             return parent_object_id == self.parent_object_id_filter\
                 and relationship_class_id == self.relationship_class_id_filter
         if self.object_id_filter:
+            # object
             parent_object_id = source_data("parent_object_id")
             child_object_id = source_data("child_object_id")
             return parent_object_id == self.object_id_filter or child_object_id == self.object_id_filter
         return False
+
+    def filterAcceptsColumn(self, source_column, source_parent):
+        """Returns true if the item in the column indicated by the given source_column
+        and source_parent should be included in the model; otherwise returns false
+        """
+
+        h = self.sourceModel().header
+        #if self.hide_all_columns:
+        #    return False
+        if self.hide_column is not None:
+            return source_column != self.hide_column
+        return True
