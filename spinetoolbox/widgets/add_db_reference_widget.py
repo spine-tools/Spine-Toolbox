@@ -25,14 +25,17 @@ QWidget that is shown to user when adding Connection strings to a Data Store.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QStatusBar
+from PySide2.QtWidgets import QWidget, QStatusBar, QMessageBox
 from PySide2.QtCore import Slot, Qt
 from ui.add_db_reference import Ui_Form
 from config import STATUSBAR_SS
 from helpers import busy_effect
 import logging
 from sqlalchemy import create_engine
-from config import DB_REF_REQUIRED_KEYS
+from sqlalchemy.exc import SQLAlchemyError
+from config import DB_REF_REQUIRED_KEYS, SQL_DIALECT_API
+import conda.cli
+import pip
 
 
 class AddDbReferenceWidget(QWidget):
@@ -52,7 +55,7 @@ class AddDbReferenceWidget(QWidget):
         # Class attributes
         self._parent = parent
         self._data_store = data_store
-        self.dialects = list()
+        self.dialects = list(SQL_DIALECT_API.keys())
         self.string_dict = dict()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
@@ -61,7 +64,7 @@ class AddDbReferenceWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.refresh_dialects()
+        #self.refresh_dialects()
         self.ui.comboBox_dialect.addItem("Select dialect...")
         self.ui.comboBox_dialect.addItems(self.dialects)
         self.ui.comboBox_dialect.setFocus()
@@ -71,28 +74,63 @@ class AddDbReferenceWidget(QWidget):
         """Connect signals to slots."""
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        self.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
+
+    @Slot("str", name="check_dialect")
+    def check_dialect(self, dialect):
+        """Check if selected dialect is supported. Offer to install DBAPI if not.
+
+        Returns:
+            True if dialog is supported, False if not.
+        """
+        if dialect == 'Select dialect...':
+            return
+        try:
+            if dialect == 'sqlite':
+                create_engine('sqlite://')
+            else:
+                create_engine('{}://username:password@host/database'.format(dialect))
+            return True
+        except ModuleNotFoundError:
+            dbapi = SQL_DIALECT_API[dialect]
+            msg = "There is no DBAPI installed for the dialect '{0}'. "\
+                    "The default one is '{1}'. "\
+                    "Do you want to install it?".format(dialect, dbapi)
+            answer = QMessageBox.question(self, 'Dialect not supported', msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                self.ui.comboBox_dialect.setCurrentIndex(0)
+                return
+            if self.install_dbapi(dbapi):
+                if not self.check_dialect(dialect):
+                    self.ui.comboBox_dialect.setCurrentIndex(0)
+            return
+        msg = "Unable to use dialect '{}'.".format(dialect)
+        self.statusbar.showMessage(msg, 3000)
+        return False
 
     @busy_effect
-    @Slot(name="refresh_dialects")
-    def refresh_dialects(self):
-        """Find out which dialects are possible and populate the list"""
-        # TODO: explore whether is there a better way to do this
-        self.dialects[:] = []
+    def install_dbapi(self, dbapi):
         try:
-            create_engine('mysql://username:password@host/database')
-            self.dialects.append("mysql")
+            msg = "Installing module '{}' via 'pip'.".format(dbapi)
+            self.statusbar.showMessage(msg)
+            pip.main(['install', dbapi])
+            msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)
+            self.statusbar.showMessage(msg, 3000)
+            return True
         except:
-            pass
-        try:
-            create_engine('sqlite://')
-            self.dialects.append("sqlite")
-        except:
-            pass
-        try:
-            create_engine('postgresql://username:password@host/database')
-            self.dialects.append("postgresql")
-        except:
-            pass
+            try:
+                msg = "Installing module '{}' via 'conda'.".format(dbapi)
+                self.statusbar.showMessage(msg)
+                conda.cli.main('conda', 'install',  '-y', dbapi)
+                msg = "Module '{}' successfully installed via 'conda'.".format(dbapi)
+                self.statusbar.showMessage(msg, 3000)
+                return True
+            except:
+                msg = "Failed to install module '{}'.".format(dbapi)
+                self.statusbar.showMessage(msg, 3000)
+                self.ui.comboBox_dialect.setCurrentIndex(0)
+                return False
+
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
@@ -125,8 +163,8 @@ class AddDbReferenceWidget(QWidget):
         engine = create_engine(url)
         try:
             engine.connect()
-        except Exception as e:
-            self.statusbar.showMessage("Connection failed: {}".format(e))
+        except SQLAlchemyError as e:
+            self.statusbar.showMessage("Connection failed: {}".format(e.orig.args))
             return
         reference = {
             'database': answer['database'],

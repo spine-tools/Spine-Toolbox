@@ -235,7 +235,7 @@ class Tool(MetaObject):
 
     def find_file(self, fname):
         """Find required input file for this Tool Instance. Search file from Data
-        Connection items that are input items for the Tool that instantiates this
+        Connection or Data Store items that are input items for the Tool that instantiates this
         ToolInstance.
 
         Args:
@@ -255,8 +255,16 @@ class Tool(MetaObject):
                 self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 return path
             item_data = found_item.data(Qt.UserRole)
+            # Find file from parent Data Stores
+            if item_data.item_type == "Data Store":
+                # Search in Data Store data directory
+                ds_files = item_data.data_files()  # List of file names (no path)
+                if fname in ds_files:
+                    self._parent.msg.emit("\t<b>{0}</b> found in DS <b>{1}</b>".format(fname, item_data.name))
+                    path = os.path.join(item_data.data_dir, fname)
+                    break
             # Find file from parent Data Connections
-            if item_data.item_type == "Data Connection":
+            elif item_data.item_type == "Data Connection":
                 # Search in Data Connection data directory
                 dc_files = item_data.data_files()  # List of file names (no path)
                 if fname in dc_files:
@@ -304,6 +312,60 @@ class Tool(MetaObject):
                 self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
                                             .format(src_path, dst_path))
                 return False
+        self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+        return True
+
+    def collect_output_folders(self):
+        """Iterate connected items and collect data directories if Data Store or Data Connection.
+
+        Returns:
+            List of data folders.
+        """
+        folder_paths = list()
+        for output_item in self._parent.connection_model.output_items(self.name):
+            found_item = self._parent.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(output_item))
+                continue
+            item_data = found_item.data(Qt.UserRole)
+            # Get data directory from child Data Store
+            if item_data.item_type == "Data Store":
+                if os.path.isdir(item_data.data_dir):
+                    folder_paths.append(item_data.data_dir)
+            # Get data directory from child Data Connection
+            elif item_data.item_type == "Data Connection":
+                if os.path.isdir(item_data.data_dir):
+                    folder_paths.append(item_data.data_dir)
+        return folder_paths
+
+    def copy_output_files(self, paths):
+        """Copy files from work directory to the given paths.
+
+        Args:
+            paths (list): Destination folders, where output files need to be copied.
+
+        Returns:
+            Boolean variable depending on operation success
+        """
+        output_files = definition["outputfiles"] # this is the full relative path with directory included
+        n_copied_files = 0
+        for dst_folder in paths():
+            for output_file in output_files:
+                fname = os.path.split(src_path)[1]
+                # Join filename to dst folder
+                dst_path = os.path.abspath(os.path.join(dst_folder, fname))
+                self._parent.msg.emit("\tCopying <b>{0}</b>".format(fname))
+                if not os.path.exists(src_path):
+                    self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                    return False
+                try:
+                    shutil.copyfile(src_path, dst_path)
+                    n_copied_files += 1
+                except OSError as e:
+                    logging.error(e)
+                    self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
+                                                .format(src_path, dst_path))
+                    return False
         self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
         return True
 

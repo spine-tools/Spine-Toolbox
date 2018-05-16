@@ -106,7 +106,7 @@ class DataStoreForm(QWidget):
         self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
         self.ui.pushButton_close.clicked.connect(self.close_clicked)
         self.ui.pushButton_revert.clicked.connect(self.revert_clicked)
-        self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
+        #self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_at_top_level)

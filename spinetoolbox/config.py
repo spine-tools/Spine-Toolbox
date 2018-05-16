@@ -138,3 +138,11 @@ DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
+
+SQL_DIALECT_API = {
+    'mysql': 'mysqlclient',
+    'sqlite': 'sqlite3',
+    'mssql': 'pyodbc',
+    'postgresql': 'psycopg2',
+    'oracle': 'cx_oracle'
+}
