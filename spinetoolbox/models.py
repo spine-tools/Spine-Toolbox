@@ -669,6 +669,14 @@ class ObjectSortFilterProxyModel(QSortFilterProxyModel):
             return object_class_id == self.object_class_id_filter
         return False
 
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        column_name = self.sourceModel().header[index.column()]
+
+        if column_name in ('object_class_name', 'object_name', 'parameter_name'):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+
 
 class RelationshipSortFilterProxyModel(QSortFilterProxyModel):
     """A class to filter the parameter table in Data Store"""

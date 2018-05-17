@@ -110,6 +110,12 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_at_top_level)
+        self.object_parameter_model.dataChanged.connect(self.test)
+
+    def test(self, top_left, bottom_right, roles=list()):
+        logging.debug(self.ui.tableView_object_parameter.selectedIndexes())
+
+
 
     @Slot(name="commit_clicked")
     def commit_clicked(self):
