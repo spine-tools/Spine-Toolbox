@@ -193,13 +193,15 @@ class ObjectTreeContextMenu(QMenu):
         else:
             item = index.model().itemFromIndex(index)
             item_type = item.data(Qt.UserRole)
+            logging.debug(item_type)
             if item_type == 'object_class':
                 self.add_action("New object class")
                 self.add_action("New relationship class")
                 self.add_action("New object")
             elif item_type == 'relationship_class':
                 self.add_action("New relationship class")
-            elif item_type.endswith('relationship_class'):
+                self.add_action("New relationship")
+            elif item_type == 'meta_relationship_class':
                 self.add_action("New relationship")
             elif item_type == 'related_object':
                 self.add_action("Expand at top level")

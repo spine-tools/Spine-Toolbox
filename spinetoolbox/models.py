@@ -711,17 +711,19 @@ class RelationshipSortFilterProxyModel(QSortFilterProxyModel):
             relationship_class_id = source_data("relationship_class_id")
             return parent_relationship_id == self.parent_relationship_id_filter\
                 and relationship_class_id == self.relationship_class_id_filter
-        if self.parent_object_id_filter and self.relationship_class_id_filter:
+        if self.object_id_filter and self.relationship_class_id_filter:
             # relationship_class
             parent_object_id = source_data("parent_object_id")
+            child_object_id = source_data("child_object_id")
             relationship_class_id = source_data("relationship_class_id")
-            return parent_object_id == self.parent_object_id_filter\
+            return self.object_id_filter in (parent_object_id, child_object_id)\
                 and relationship_class_id == self.relationship_class_id_filter
         if self.object_id_filter:
             # object
             parent_object_id = source_data("parent_object_id")
             child_object_id = source_data("child_object_id")
-            return parent_object_id == self.object_id_filter or child_object_id == self.object_id_filter
+            return child_object_id is not None and parent_object_id is not None\
+                and self.object_id_filter in (parent_object_id, child_object_id)
         return False
 
     def filterAcceptsColumn(self, source_column, source_parent):
