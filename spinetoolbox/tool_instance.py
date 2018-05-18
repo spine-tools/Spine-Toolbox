@@ -52,6 +52,7 @@ class ToolInstance(QObject):
         self.ui = ui
         self._project = project
         self.tool_process = None
+        self.tool_failed = None
         self.tool_output_dir = tool_output_dir
         wrk_dir = self._project.work_dir
         self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool.short_name + '__', dir=wrk_dir)
@@ -138,18 +139,18 @@ class ToolInstance(QObject):
             if self.tool_process.process_failed_to_start:
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
                                        "Julia is installed properly on your computer.")
-                return
-            try:
-                return_msg = self.tool.return_codes[ret]
-                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-            except KeyError:
-                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-            self.instance_finished_signal.emit(ret)
-            return
+            else:
+                try:
+                    return_msg = self.tool.return_codes[ret]
+                    self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
+            self.tool_failed = True
         else:  # Return code 0: success
             self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
+            self.tool_failed = False
         self.instance_finished_signal.emit(ret)
-        return
+        self.save_output_files()
 
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
@@ -164,20 +165,20 @@ class ToolInstance(QObject):
                                        "Julia is installed properly on your computer.")
                 self.tool_process.deleteLater()
                 self.tool_process = None
-                return  # or emit instance_finished_signal
-            try:
-                return_msg = self.tool.return_codes[ret]
-                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-            except KeyError:
-                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-            self.instance_finished_signal.emit(ret)
-            return
+            else:
+                try:
+                    return_msg = self.tool.return_codes[ret]
+                    self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
+            self.tool_failed = True
         else:  # Return code 0: success
             self.tool_process.deleteLater()
             self.tool_process = None
             self.ui.msg.emit("\tJulia tool finished successfully. Return code:{0}".format(ret))
+            self.tool_failed = False
         self.instance_finished_signal.emit(ret)
-        return
+        self.save_output_files()
 
     @Slot(int, name="gams_tool_finished")
     def gams_tool_finished(self, ret):
@@ -194,28 +195,26 @@ class ToolInstance(QObject):
                                        "and GAMS directory is given in Settings (F1).")
                 self.tool_process.deleteLater()
                 self.tool_process = None
-                return  # or emit instance_finished_signal
-            try:
-                return_msg = self.tool.return_codes[ret]
-                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-            except KeyError:
-                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-            self.instance_finished_signal.emit(ret)
-            return
+            else:
+                try:
+                    return_msg = self.tool.return_codes[ret]
+                    self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
+            self.tool_failed = True
         else:  # Return code 0: success
             self.tool_process.deleteLater()
             self.tool_process = None
             self.ui.msg.emit("\tGAMS tool finished successfully. Return code:{0}".format(ret))
+            self.tool_failed = False
         self.instance_finished_signal.emit(ret)
-        return
+        self.save_output_files()
 
-        # TODO: Deal with output files
-
-    def save_output_files(self, tool_failed):
+    def save_output_files(self):
         # Get timestamp when tool finished
         output_dir_timestamp = create_output_dir_timestamp()
         # Create an output folder with timestamp and copy output directly there
-        if tool_failed:
+        if self.tool_failed:
             result_path = os.path.abspath(os.path.join(self.tool_output_dir, 'failed', output_dir_timestamp))
         else:
             result_path = os.path.abspath(os.path.join(self.tool_output_dir, output_dir_timestamp))
@@ -224,41 +223,36 @@ class ToolInstance(QObject):
         except OSError:
             self.ui.msg_error.emit("\tError creating timestamped result directory. "
                                    "Tool output files not copied. Check folder permissions")
-            self.instance_finished_signal.emit(9999)
             return
-        self.ui.add_msg_signal.emit("\t*** Saving result files ***", 0)
+        self.ui.msg.emit("\t*** Saving result files ***")
         saved_files, failed_files = self.copy_output(result_path)
         if len(saved_files) == 0:
             # If no files were saved
             logging.error("No files saved to result directory '{0}'".format(result_path))
-            self.ui.add_msg_signal.emit("\tNo files saved to result directory", 2)
+            self.ui.msg_error.emit("\tNo files saved to result directory")
             if len(failed_files) == 0:
                 # If there were no failed files either
                 logging.error("No failed files")
-                self.ui.add_msg_signal.emit("\tWarning: Check 'outfiles' parameter in tool definition file.", 3)
-                # TODO: Test this
-                self.instance_finished_signal.emit(ret)
+                self.ui.msg_warning.emit("\tWarning: Check 'outputfiles' in tool definition.")
         if len(saved_files) > 0:
             # If there are saved files
-            self.ui.add_msg_signal.emit("\tThe following result files were saved successfully", 0)
+            self.ui.msg.emit("\tThe following result files were saved successfully")
             for i in range(len(saved_files)):
                 fname = os.path.split(saved_files[i])[1]
-                self.ui.add_msg_signal.emit("\t\t{0}".format(fname), 0)
+                self.ui.msg.emit("\t\t{0}".format(fname))
         if len(failed_files) > 0:
             # If some files failed
-            self.ui.add_msg_signal.emit("\tThe following result files were not found", 2)
+            self.ui.msg_warning.emit("\tThe following result files were not found")
             for i in range(len(failed_files)):
                 failed_fname = os.path.split(failed_files[i])[1]
-                self.ui.add_msg_signal.emit("\t\t{0}".format(failed_fname), 2)
-        self.ui.add_msg_signal.emit("\tDone", 1)
+                self.ui.msg_warning.emit("\t\t{0}".format(failed_fname))
+        self.ui.msg.emit("\tDone")
         # Show result folder
         logging.debug("Result files saved to <{0}>".format(result_path))
         result_anchor = "<a href='file:///" + result_path + "'>" + result_path + "</a>"
-        self.ui.add_msg_signal.emit("\tResult Directory: {}".format(result_anchor), 0)
+        self.ui.msg.emit("\tResult Directory: {}".format(result_anchor))
         if tool_failed:
             self.tool.debug(self.ui, self.basedir, self.tool.short_name)
-        # Emit signal to Setup that tool instance has finished with return code
-        self.instance_finished_signal.emit(ret)
 
     def terminate_instance(self):
         """Terminate tool process execution."""
@@ -282,7 +276,7 @@ class ToolInstance(QObject):
             failed_files = list()
             saved_files = list()
             logging.debug("Saving result files to <{0}>".format(target_dir))
-            for pattern in self.outfiles:
+            for pattern in self.outputfiles:
                 # Check for wildcards in pattern
                 if ('*' in pattern) or ('?' in pattern):
                     for fname in glob.glob(pattern):
