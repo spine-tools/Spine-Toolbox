@@ -52,8 +52,9 @@ class ToolInstance(QObject):
         self.ui = ui
         self._project = project
         self.tool_process = None
-        self.tool_failed = None
         self.tool_output_dir = tool_output_dir
+        # Directory where results were saved
+        self.output_dir = None
         wrk_dir = self._project.work_dir
         self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool.short_name + '__', dir=wrk_dir)
         self.command = ''  # command is created after ToolInstance is initialized
@@ -145,12 +146,9 @@ class ToolInstance(QObject):
                     self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-            self.tool_failed = True
         else:  # Return code 0: success
             self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
-            self.tool_failed = False
-        self.instance_finished_signal.emit(ret)
-        self.save_output_files()
+        self.save_output_files(ret)
 
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
@@ -171,14 +169,11 @@ class ToolInstance(QObject):
                     self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-            self.tool_failed = True
         else:  # Return code 0: success
             self.tool_process.deleteLater()
             self.tool_process = None
             self.ui.msg.emit("\tJulia tool finished successfully. Return code:{0}".format(ret))
-            self.tool_failed = False
-        self.instance_finished_signal.emit(ret)
-        self.save_output_files()
+        self.save_output_files(ret)
 
     @Slot(int, name="gams_tool_finished")
     def gams_tool_finished(self, ret):
@@ -201,20 +196,18 @@ class ToolInstance(QObject):
                     self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-            self.tool_failed = True
         else:  # Return code 0: success
             self.tool_process.deleteLater()
             self.tool_process = None
             self.ui.msg.emit("\tGAMS tool finished successfully. Return code:{0}".format(ret))
-            self.tool_failed = False
-        self.instance_finished_signal.emit(ret)
-        self.save_output_files()
+        self.save_output_files(ret)
 
-    def save_output_files(self):
+    def save_output_files(self, ret):
+        """Copy output files from work directory to Tool ouput directory"""
         # Get timestamp when tool finished
         output_dir_timestamp = create_output_dir_timestamp()
         # Create an output folder with timestamp and copy output directly there
-        if self.tool_failed:
+        if ret != 0:
             result_path = os.path.abspath(os.path.join(self.tool_output_dir, 'failed', output_dir_timestamp))
         else:
             result_path = os.path.abspath(os.path.join(self.tool_output_dir, output_dir_timestamp))
@@ -223,7 +216,10 @@ class ToolInstance(QObject):
         except OSError:
             self.ui.msg_error.emit("\tError creating timestamped result directory. "
                                    "Tool output files not copied. Check folder permissions")
+            self.output_dir = None
+            self.instance_finished_signal.emit(ret)
             return
+        self.output_dir = result_path
         self.ui.msg.emit("\t*** Saving result files ***")
         saved_files, failed_files = self.copy_output(result_path)
         if len(saved_files) == 0:
@@ -251,8 +247,10 @@ class ToolInstance(QObject):
         logging.debug("Result files saved to <{0}>".format(result_path))
         result_anchor = "<a href='file:///" + result_path + "'>" + result_path + "</a>"
         self.ui.msg.emit("\tResult Directory: {}".format(result_anchor))
-        if self.tool_failed:
+        if ret != 0:
             self.tool.debug(self.ui, self.basedir, self.tool.short_name)
+        self.instance_finished_signal.emit(ret)
+
 
     def terminate_instance(self):
         """Terminate tool process execution."""

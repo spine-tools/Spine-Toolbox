@@ -235,8 +235,7 @@ class Tool(MetaObject):
 
     def find_file(self, fname):
         """Find required input file for this Tool Instance. Search file from Data
-        Connection or Data Store items that are input items for the Tool that instantiates this
-        ToolInstance.
+        Connection or Data Store items that are input items for this Tool.
 
         Args:
             fname (str): File name (no path)
@@ -315,8 +314,9 @@ class Tool(MetaObject):
         self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
         return True
 
-    def collect_output_folders(self):
-        """Iterate connected items and collect data directories if Data Store or Data Connection.
+    def find_output_folders(self):
+        """Find output data folders from Data Store and Data Connection items
+        that are output items for this Tool.
 
         Returns:
             List of data folders.
@@ -338,23 +338,26 @@ class Tool(MetaObject):
                     folder_paths.append(item_data.data_dir)
         return folder_paths
 
-    def copy_output_files(self, paths):
+    def copy_output_files(self, folder_paths):
         """Copy files from work directory to the given paths.
 
         Args:
-            paths (list): Destination folders, where output files need to be copied.
+            folder_paths (list): Destination folders, where output files need to be copied.
 
         Returns:
             Boolean variable depending on operation success
         """
-        output_files = definition["outputfiles"] # this is the full relative path with directory included
+        def_path = self.tool_template().get_def_path()
+        definition = self.read_tool_def(def_path)
+        output_files = definition["outputfiles"]
         n_copied_files = 0
-        for dst_folder in paths():
-            for output_file in output_files:
-                fname = os.path.split(src_path)[1]
+        for dst_folder in folder_paths:
+            for output_file in self._tool_template.outputfiles:
+                self.instance.output_dir # if we are here, this is not None
+                src_path = os.path.join(self.instance.output_dir, output_file)
                 # Join filename to dst folder
-                dst_path = os.path.abspath(os.path.join(dst_folder, fname))
-                self._parent.msg.emit("\tCopying <b>{0}</b>".format(fname))
+                dst_path = os.path.join(dst_folder, output_file)
+                self._parent.msg.emit("\tCopying <b>{0}</b>".format(output_file))
                 if not os.path.exists(src_path):
                     self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
                     return False
@@ -374,6 +377,10 @@ class Tool(MetaObject):
         """Tool execution finished."""
         if return_code == 0:
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
+            # copy outputfiles to data directories of connected items
+            folder_paths = self.find_output_folders()
+            if folder_paths:
+                self.copy_output_files(folder_paths)
         else:
             self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.tool_template().name))
 
