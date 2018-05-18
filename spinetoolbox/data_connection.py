@@ -172,7 +172,6 @@ class DataConnection(MetaObject):
             return
         else:
             reference = self.file_references()[index.row()]
-            logging.debug(reference)
             url = "file:///" + reference
             # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))

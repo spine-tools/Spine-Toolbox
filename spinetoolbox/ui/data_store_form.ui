@@ -214,7 +214,7 @@
               </layout>
              </item>
              <item>
-              <widget class="QTableView" name="tableView_object_parameter">
+              <widget class="CustomQTableView" name="tableView_object_parameter">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>2</horstretch>
@@ -308,7 +308,7 @@
               </layout>
              </item>
              <item>
-              <widget class="QTableView" name="tableView_object_parameter_def">
+              <widget class="CustomQTableView" name="tableView_object_parameter_def">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>2</horstretch>
@@ -413,7 +413,7 @@
               </layout>
              </item>
              <item>
-              <widget class="QTableView" name="tableView_relationship_parameter">
+              <widget class="CustomQTableView" name="tableView_relationship_parameter">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>2</horstretch>
@@ -504,7 +504,7 @@
               </layout>
              </item>
              <item>
-              <widget class="QTableView" name="tableView_relationship_parameter_def">
+              <widget class="CustomQTableView" name="tableView_relationship_parameter_def">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                  <horstretch>2</horstretch>
@@ -594,6 +594,11 @@
    <class>CustomQTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomQTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

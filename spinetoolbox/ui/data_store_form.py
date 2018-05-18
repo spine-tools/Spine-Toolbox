@@ -114,7 +114,7 @@ class Ui_Form(object):
         self.toolButton_add_object_parameter.setObjectName("toolButton_add_object_parameter")
         self.horizontalLayout.addWidget(self.toolButton_add_object_parameter)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
-        self.tableView_object_parameter = QtWidgets.QTableView(self.tab)
+        self.tableView_object_parameter = CustomQTableView(self.tab)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -155,7 +155,7 @@ class Ui_Form(object):
         self.toolButton_add_object_parameter_def.setObjectName("toolButton_add_object_parameter_def")
         self.horizontalLayout_4.addWidget(self.toolButton_add_object_parameter_def)
         self.verticalLayout_5.addLayout(self.horizontalLayout_4)
-        self.tableView_object_parameter_def = QtWidgets.QTableView(self.tab_2)
+        self.tableView_object_parameter_def = CustomQTableView(self.tab_2)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -203,7 +203,7 @@ class Ui_Form(object):
         self.toolButton_add_relationship_parameter.setObjectName("toolButton_add_relationship_parameter")
         self.horizontalLayout_3.addWidget(self.toolButton_add_relationship_parameter)
         self.verticalLayout.addLayout(self.horizontalLayout_3)
-        self.tableView_relationship_parameter = QtWidgets.QTableView(self.tab_3)
+        self.tableView_relationship_parameter = CustomQTableView(self.tab_3)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -243,7 +243,7 @@ class Ui_Form(object):
         self.toolButton_add_relationship_parameter_def.setObjectName("toolButton_add_relationship_parameter_def")
         self.horizontalLayout_5.addWidget(self.toolButton_add_relationship_parameter_def)
         self.verticalLayout_7.addLayout(self.horizontalLayout_5)
-        self.tableView_relationship_parameter_def = QtWidgets.QTableView(self.tab_4)
+        self.tableView_relationship_parameter_def = CustomQTableView(self.tab_4)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -316,4 +316,5 @@ class Ui_Form(object):
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
 from widgets.custom_qtreeview import CustomQTreeView
+from widgets.custom_qtableview import CustomQTableView
 import resources_icons_rc

@@ -41,6 +41,7 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, aliased
 import time # just to measure loading time and sqlalchemy ORM performance
+from widgets.lineedit_delegate import LineEditDelegate
 
 
 class DataStoreForm(QWidget):
@@ -76,6 +77,7 @@ class DataStoreForm(QWidget):
         self.Commit = None
         self.session = None
         self.bold_font = None
+        self.parameter_value_id_column = None
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter models
@@ -113,11 +115,6 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_at_top_level)
-        self.object_parameter_model.dataChanged.connect(self.test)
-
-    def test(self, top_left, bottom_right, roles=list()):
-        logging.debug(self.ui.tableView_object_parameter.selectedIndexes())
-
 
 
     @Slot(name="commit_clicked")
@@ -338,6 +335,7 @@ class DataStoreForm(QWidget):
         # get all parameters
         parameter_subquery = self.session.query(
             self.Parameter.name.label('parameter_name'),
+            self.ParameterValue.id.label('parameter_value_id'),
             self.ParameterValue.relationship_id,
             self.ParameterValue.object_id,
             self.ParameterValue.index,
@@ -354,6 +352,7 @@ class DataStoreForm(QWidget):
             self.ObjectClass.name.label('object_class_name'),
             parameter_subquery.c.object_id,
             self.Object.name.label('object_name'),
+            parameter_subquery.c.parameter_value_id,
             parameter_subquery.c.parameter_name,
             parameter_subquery.c.index,
             parameter_subquery.c.value,
@@ -381,6 +380,7 @@ class DataStoreForm(QWidget):
             parent_relationship.name.label('parent_relationship_name'),
             parent_object.name.label('parent_object_name'),
             child_object.name.label('child_object_name'),
+            parameter_subquery.c.parameter_value_id,
             parameter_subquery.c.parameter_name,
             parameter_subquery.c.index,
             parameter_subquery.c.value,
@@ -401,9 +401,7 @@ class DataStoreForm(QWidget):
             self.object_parameter_model.header = header
             self.object_parameter_model.reset_model(object_parameter)
             self.object_parameter_proxy_model.setSourceModel(self.object_parameter_model)
-            self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
-            self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
-            self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
+            self.init_object_parameter_view(header)
 
         if relationship_parameter_list:
             # get header from the first row
@@ -418,6 +416,41 @@ class DataStoreForm(QWidget):
             self.ui.tableView_relationship_parameter.hideColumn(header.index("parent_object_id"))
             self.ui.tableView_relationship_parameter.hideColumn(header.index("child_object_id"))
             self.ui.tableView_relationship_parameter.hideColumn(header.index("relationship_id"))
+
+    def init_object_parameter_view(self, header):
+
+        self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
+        self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
+        self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
+        self.ui.tableView_object_parameter.hideColumn(header.index("parameter_value_id"))
+        #self.ui.tableView_object_parameter.setItemDelegateForColumn(header.index("value"), LineEditDelegate(self))
+        #self.ui.tableView_object_parameter.itemDelegateForColumn(header.index("value")).\
+        #    closeEditor.connect(self.update_parameter_value)
+        self.ui.tableView_object_parameter.setItemDelegate(LineEditDelegate(self))
+        self.ui.tableView_object_parameter.itemDelegate().\
+            closeEditor.connect(self.update_parameter_value)
+        self.parameter_value_id_column = self.object_parameter_model.header.index('parameter_value_id')
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
+    def update_parameter_value(self, editor, hint):
+        logging.debug("data update_parameter_value")
+        index = self.ui.tableView_object_parameter.currentIndex()
+        field_name = self.object_parameter_model.header[index.column()]
+        logging.debug(field_name)
+        sibling = index.sibling(index.row(), self.parameter_value_id_column)
+        parameter_value_id = sibling.data()
+        parameter_value = self.session.query(self.ParameterValue).\
+            filter_by(id=parameter_value_id).one_or_none()
+        if parameter_value:
+            parameter_value.commit_id = self.commit.id
+            setattr(parameter_value, field_name, editor.text())
+            try:
+                self.session.flush()
+            except DBAPIError as e:
+                msg = "Could not update parameter: {}".format(e.orig.args)
+                self.statusbar.showMessage(msg, 5000)
+                self.session.rollback()
+                return
 
 
     @Slot("QModelIndex", name="expand_at_top_level")

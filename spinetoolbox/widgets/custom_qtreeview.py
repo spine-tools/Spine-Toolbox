@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Class for a custom QTreeView for the spine data explorer.
+Class for a custom QTreeView for the Data Store form.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   25.4.2018
