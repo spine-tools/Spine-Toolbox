@@ -84,6 +84,7 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
+        self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
@@ -160,6 +161,23 @@ class DataConnection(MetaObject):
                 continue
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
+
+    @Slot("QModelIndex", name="open_reference")
+    def open_reference(self, index):
+        """Open reference in default program."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            reference = self.file_references()[index.row()]
+            logging.debug(reference)
+            url = "file:///" + reference
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._parent.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
 
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):

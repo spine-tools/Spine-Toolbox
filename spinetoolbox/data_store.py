@@ -207,7 +207,7 @@ class DataStore(MetaObject):
             data_file_path = os.path.join(self.data_dir, data_file)
             engine = create_engine("sqlite:///" + data_file_path)
             try:
-                engine.execute('pragma integrity_check;')
+                engine.execute('pragma quick_check;')
             except DatabaseError as e:
                 self._parent.msg_error.emit("Could not open <b>{}</b> as SQLite database: {}".format(data_file, e.orig.args))
                 return
