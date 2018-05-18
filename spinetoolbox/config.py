@@ -79,7 +79,7 @@ else:
 TOOL_TYPES = ['GAMS', 'Julia']
 
 # Required and optional keywords for Tool template definition files
-REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
+REQUIRED_KEYS = ['name', 'tooltype', 'includes']
 OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 

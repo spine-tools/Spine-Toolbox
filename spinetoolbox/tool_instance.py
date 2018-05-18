@@ -110,10 +110,10 @@ class ToolInstance(QObject):
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self._project.julia_subprocess
                 self.tool_process.start_if_not_running()
-                self.tool_process.repl_finished_signal.connect(self.julia_tool_finished)
+                self.tool_process.repl_finished_signal.connect(self.julia_repl_tool_finished)
+                self.tool_process.write_on_process(self.command)
                 if not self.tool_process.write_on_process(self.command):
-                    self.ui.msg_error.emit("Julia Tool failed to start. Make sure you have Julia installed properly.")
-                    self.instance_finished_signal.emit(-9999)
+                    self.julia_repl_tool_finished(-9999)
                     return
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
@@ -124,6 +124,36 @@ class ToolInstance(QObject):
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
 
+
+    @Slot(int, name="julia_repl_tool_finished")
+    def julia_repl_tool_finished(self, ret):
+        """Run when Julia tool using REPL has finished processing.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        # disconnect REPL signal if connected
+        if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
+            self.tool_process.repl_finished_signal.disconnect(self.julia_tool_finished)
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
+                                       "Julia is installed properly on your computer.")
+                return
+            try:
+                return_msg = self.tool.return_codes[ret]
+                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
+            self.instance_finished_signal.emit(ret)
+            return
+        else:  # Return code 0: success
+            self.tool_process.deleteLater()
+            self.tool_process = None
+            self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
+        self.instance_finished_signal.emit(ret)
+        return
+
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
         """Run when Julia tool has finished processing.
@@ -131,10 +161,26 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
-        self.ui.msg.emit("\t Julia Tool finished. Return code:{0}".format(ret))
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
+                                       "Julia is installed properly on your computer.")
+                self.tool_process.deleteLater()
+                self.tool_process = None
+                return  # or emit instance_finished_signal
+            try:
+                return_msg = self.tool.return_codes[ret]
+                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
+            self.instance_finished_signal.emit(ret)
+            return
+        else:  # Return code 0: success
+            self.tool_process.deleteLater()
+            self.tool_process = None
+            self.ui.msg.emit("\tJulia tool finished successfully. Return code:{0}".format(ret))
         self.instance_finished_signal.emit(ret)
-        if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
-            self.tool_process.repl_finished_signal.disconnect(self.julia_tool_finished)
+        return
 
     @Slot(int, name="gams_tool_finished")
     def gams_tool_finished(self, ret):
@@ -147,7 +193,7 @@ class ToolInstance(QObject):
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
-                                       "GAMS is installed properly on your computer"
+                                       "GAMS is installed properly on your computer "
                                        "and GAMS directory is given in Settings (F1).")
                 self.tool_process.deleteLater()
                 self.tool_process = None
@@ -162,12 +208,13 @@ class ToolInstance(QObject):
         else:  # Return code 0: success
             self.tool_process.deleteLater()
             self.tool_process = None
-            self.ui.msg.emit("\tTool finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tGAMS tool finished successfully. Return code:{0}".format(ret))
         self.instance_finished_signal.emit(ret)
         return
 
         # TODO: Deal with output files
 
+    def save_output_files(self, tool_failed):
         # Get timestamp when tool finished
         output_dir_timestamp = create_output_dir_timestamp()
         # Create an output folder with timestamp and copy output directly there

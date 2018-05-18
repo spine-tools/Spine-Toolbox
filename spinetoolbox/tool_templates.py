@@ -45,8 +45,8 @@ class ToolTemplate(MetaObject):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, parent, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(name, description)
@@ -151,12 +151,12 @@ class GAMSTool(ToolTemplate):
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
 
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, parent, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, tooltype, path, includes,
-                         inputfiles, inputfiles_opt, outputfiles,
+        super().__init__(parent, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         # Add .lst file to list of output files
@@ -237,12 +237,12 @@ class JuliaTool(ToolTemplate):
         cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
     """
 
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, parent, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, tooltype, path, includes,
-                         inputfiles, inputfiles_opt, outputfiles,
+        super().__init__(parent, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)

@@ -57,8 +57,7 @@ class QSubProcess(QObject):
         """
         if self._process is None:
             self._process = QProcess(self)
-            self.start_process(workdir=workdir)
-        elif self._process.state() != QProcess.Running:
+        if self._process.state() != QProcess.Running:
             self.start_process(workdir=workdir)
 
     # noinspection PyUnresolvedReferences

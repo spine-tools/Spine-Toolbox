@@ -35,7 +35,7 @@ from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
-from helpers import blocking_updates
+from helpers import blocking_updates, busy_effect
 import logging
 import inspect
 
@@ -113,6 +113,8 @@ class ToolTemplateWidget(QWidget):
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
         self.ui.toolButton_minus_inputfiles.clicked.connect(self.remove_inputfiles)
+        self.ui.toolButton_plus_outputfiles.clicked.connect(self.add_outputfiles)
+        self.ui.toolButton_minus_outputfiles.clicked.connect(self.remove_outputfiles)
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
@@ -216,7 +218,7 @@ class ToolTemplateWidget(QWidget):
             self.includes.append(path_to_add)
         self.populate_includes_list(self.includes)
 
-
+    @busy_effect
     @Slot("QModelIndex", name="open_includes_file")
     def open_includes_file(self, index):
         """Open source file in default program."""
@@ -232,17 +234,6 @@ class ToolTemplateWidget(QWidget):
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
                 self._parent.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
-
-    @Slot(name="add_inputfiles")
-    def add_inputfiles(self):
-        """Let user select input files for this tool template."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "Add input file", "Input file name (eg data.csv):")
-        file_name = answer[0]
-        if not file_name:  # Cancel button clicked
-            return
-        self.inputfiles.append(file_name)
-        self.populate_inputfiles_list(self.inputfiles)
 
     @Slot(name="remove_includes")
     def remove_includes(self):
@@ -278,9 +269,20 @@ class ToolTemplateWidget(QWidget):
             self.statusbar.showMessage("Selected (and invalid) includes removed", 3000)
         self.populate_includes_list(self.includes)
 
+    @Slot(name="add_inputfiles")
+    def add_inputfiles(self):
+        """Let user select input files for this tool template."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self, "Add input file", "Input file name (eg data.csv):")
+        file_name = answer[0]
+        if not file_name:  # Cancel button clicked
+            return
+        self.inputfiles.append(file_name)
+        self.populate_inputfiles_list(self.inputfiles)
+
     @Slot(name="remove_inputfiles")
     def remove_inputfiles(self):
-        """Remove selected source files from include list.
+        """Remove selected input files from list.
         Removes all files if nothing is selected.
         """
         indexes = self.ui.treeView_inputfiles.selectedIndexes()
@@ -294,6 +296,34 @@ class ToolTemplateWidget(QWidget):
                 self.inputfiles.pop(row)
             self.statusbar.showMessage("Selected input files removed", 3000)
         self.populate_inputfiles_list(self.inputfiles)
+
+    @Slot(name="add_outputfiles")
+    def add_outputfiles(self):
+        """Let user select output files for this tool template."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self, "Add output file", "Output file name (eg results.csv):")
+        file_name = answer[0]
+        if not file_name:  # Cancel button clicked
+            return
+        self.outputfiles.append(file_name)
+        self.populate_outputfiles_list(self.outputfiles)
+
+    @Slot(name="remove_outputfiles")
+    def remove_outputfiles(self):
+        """Remove selected output files from list.
+        Removes all files if nothing is selected.
+        """
+        indexes = self.ui.treeView_outputfiles.selectedIndexes()
+        if not indexes:  # Nothing selected
+            self.outputfiles.clear()
+            self.statusbar.showMessage("All output files removed", 3000)
+        else:
+            rows = [ind.row() for ind in indexes]
+            rows.sort(reverse=True)
+            for row in rows:
+                self.outputfiles.pop(row)
+            self.statusbar.showMessage("Selected output files removed", 3000)
+        self.populate_outputfiles_list(self.outputfiles)
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
