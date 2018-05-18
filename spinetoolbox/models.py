@@ -29,6 +29,7 @@ Note: These are Spine Toolbox internal data models.
 import logging
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel,\
     QSortFilterProxyModel, QAbstractProxyModel
+from PySide2.QtGui import QStandardItemModel
 
 
 class ToolTemplateModel(QAbstractListModel):
@@ -676,6 +677,14 @@ class ObjectSortFilterProxyModel(QSortFilterProxyModel):
         if column_name in ('object_class_name', 'object_name', 'parameter_name'):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+
+
+class ObjectTreeModel(QStandardItemModel):
+    """A class to show Spine data structure in a treeview"""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
 
 
 class RelationshipSortFilterProxyModel(QSortFilterProxyModel):

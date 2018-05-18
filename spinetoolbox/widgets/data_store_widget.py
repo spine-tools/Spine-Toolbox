@@ -27,16 +27,16 @@ Widget to show Data Store Form.
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView,\
     QDialog, QLineEdit, QInputDialog
 from PySide2.QtCore import Slot, Qt
-from PySide2.QtGui import QStandardItem, QStandardItemModel
+from PySide2.QtGui import QStandardItem
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu
 from widgets.custom_qdialog import CustomQDialog
 from helpers import busy_effect
-from models import MinimalTableModel, ObjectSortFilterProxyModel, RelationshipSortFilterProxyModel
+from models import ObjectTreeModel, MinimalTableModel, ObjectSortFilterProxyModel, RelationshipSortFilterProxyModel
 import logging
 from datetime import datetime, timezone
-from sqlalchemy import create_engine, or_
+from sqlalchemy import or_
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, aliased
@@ -46,12 +46,14 @@ import time # just to measure loading time and sqlalchemy ORM performance
 class DataStoreForm(QWidget):
     """A widget to show and edit Spine objects in a data store."""
 
-    def __init__(self, parent, reference):
+    def __init__(self, parent, engine, database, username):
         """ Initialize class.
 
         Args:
             parent (ToolBoxUI): QMainWindow instance
-            reference (dict): Dictionary containing information about the data source
+            engine (): The sql alchemy engine to use with this Store
+            database (str): The database name
+            username (str): The user name
         """
         tic = time.clock()
         super().__init__()
@@ -60,9 +62,10 @@ class DataStoreForm(QWidget):
         self.ui.setupUi(self)
         # Class attributes
         self._parent = parent
-        self.reference = reference
+        self.engine = engine
+        self.database = database
+        self.username = username
         self.Base = None
-        self.engine = None
         self.ObjectClass = None
         self.Object = None
         self.RelationshipClass = None
@@ -74,7 +77,7 @@ class DataStoreForm(QWidget):
         self.session = None
         self.bold_font = None
         # Object tree model
-        self.object_tree_model = QStandardItemModel(self)
+        self.object_tree_model = ObjectTreeModel(self)
         # Parameter models
         self.object_parameter_model = MinimalTableModel(self)
         self.object_parameter_proxy_model = ObjectSortFilterProxyModel(self)
@@ -95,7 +98,7 @@ class DataStoreForm(QWidget):
         self.init_object_tree_model()
         self.init_parameter_models()
         self.connect_signals()
-        self.setWindowTitle("Spine Data Store    -- {} --".format(self.reference['database']))
+        self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
@@ -134,7 +137,7 @@ class DataStoreForm(QWidget):
         try:
             self.session.commit()
         except DBAPIError as e:
-            msg = "Error while trying to commit changes: {}".format(e)
+            msg = "Error while trying to commit changes: {}".format(e.orig.args)
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
@@ -155,12 +158,9 @@ class DataStoreForm(QWidget):
             msg = "All changes (since last commit) reverted successfully."
             self.statusbar.showMessage(msg, 3000)
 
-
     def create_session(self):
         """Create base, engine, reflect tables and create session."""
-        db_url = self.reference['url']
         self.Base = automap_base()
-        self.engine = create_engine(db_url) #, echo=True)
         self.Base.prepare(self.engine, reflect=True)
         self.ObjectClass = self.Base.classes.object_class
         self.Object = self.Base.classes.object
@@ -175,7 +175,7 @@ class DataStoreForm(QWidget):
     def new_commit(self):
         """Add row to commit table"""
         comment = 'in progress'
-        user = self.reference['username']
+        user = self.username
         date = datetime.now(timezone.utc)
         self.commit = self.Commit(comment=comment, date=date, user=user)
         self.session.add(self.commit)
@@ -202,7 +202,7 @@ class DataStoreForm(QWidget):
     def init_object_tree_model(self):
         """Initialize object tree model from source database."""
         self.object_tree_model.clear()
-        db_name = self.reference['database']
+        db_name = self.database
         # create root item
         root_item = QStandardItem(db_name)
         self.bold_font = root_item.font()
@@ -539,7 +539,7 @@ class DataStoreForm(QWidget):
         try:
             self.session.flush() # to get object class id
         except DBAPIError as e:
-            msg = "Could not insert new object class: {}".format(e)
+            msg = "Could not insert new object class: {}".format(e.orig.args)
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
@@ -581,7 +581,7 @@ class DataStoreForm(QWidget):
         try:
             self.session.flush() # to get object id
         except DBAPIError as e:
-            msg = "Could not insert new object: {}".format(e)
+            msg = "Could not insert new object: {}".format(e.orig.args)
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
@@ -654,7 +654,7 @@ class DataStoreForm(QWidget):
         try:
             self.session.flush() # to get the relationship class id
         except DBAPIError as e:
-            msg = "Could not insert new relationship class: {}".format(e)
+            msg = "Could not insert new relationship class: {}".format(e.orig.args)
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
@@ -740,7 +740,7 @@ class DataStoreForm(QWidget):
         try:
             self.session.flush() # to get the relationship id
         except DBAPIError as e:
-            msg = "Could not insert new relationship: {}".format(e)
+            msg = "Could not insert new relationship: {}".format(e.orig.args)
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
@@ -859,7 +859,7 @@ class DataStoreForm(QWidget):
             try:
                 self.session.flush()
             except DBAPIError as e:
-                msg = "Could not rename item: {}".format(e)
+                msg = "Could not rename item: {}".format(e.orig.args)
                 self.statusbar.showMessage(msg, 5000)
                 self.session.rollback()
                 return
@@ -868,7 +868,8 @@ class DataStoreForm(QWidget):
             for it in items:
                 ent_type = it.data(Qt.UserRole)
                 ent = it.data(Qt.UserRole+1)
-                if ent_type == entity_type and ent['id'] == entity['id']:
+                if (ent_type in entity_type or entity_type in ent_type)\
+                        and ent['id'] == entity['id']:
                     ent['name'] = new_name
                     it.setText(new_name)
 
@@ -893,7 +894,7 @@ class DataStoreForm(QWidget):
             try:
                 self.session.flush()
             except DBAPIError as e:
-                msg = "Could not insert new relationship class: {}".format(e)
+                msg = "Could not insert new relationship class: {}".format(e.orig.args)
                 self.statusbar.showMessage(msg, 5000)
                 self.session.rollback()
                 return

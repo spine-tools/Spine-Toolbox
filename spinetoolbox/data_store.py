@@ -36,6 +36,7 @@ from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from sqlalchemy import create_engine, Table, MetaData, select, insert
+from sqlalchemy.exc import DatabaseError
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -83,7 +84,7 @@ class DataStore(MetaObject):
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.treeView_data.doubleClicked.connect(self.open_file)
+        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
@@ -193,8 +194,8 @@ class DataStore(MetaObject):
         self.databases.append(database)
 
     @busy_effect
-    @Slot("QModelIndex", name="open_file")
-    def open_file(self, index):
+    @Slot("QModelIndex", name="open_data_file")
+    def open_data_file(self, index):
         """Open file in spine data explorer."""
         if not index:
             return
@@ -204,12 +205,15 @@ class DataStore(MetaObject):
         else:
             data_file = self.data_files()[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
-            reference = {
-                'database': data_file,
-                'username': getpass.getuser(),
-                'url': "sqlite:///" + data_file_path
-            }
-            self.data_store_form = DataStoreForm(self._parent, reference)
+            engine = create_engine("sqlite:///" + data_file_path)
+            try:
+                engine.execute('pragma integrity_check;')
+            except DatabaseError as e:
+                self._parent.msg_error.emit("Could not open <b>{}</b> as SQLite database: {}".format(data_file, e.orig.args))
+                return
+            database = data_file
+            username = getpass.getuser()
+            self.data_store_form = DataStoreForm(self._parent, engine, database, username)
             self.data_store_form.show()
 
     @busy_effect
@@ -223,7 +227,16 @@ class DataStore(MetaObject):
             return
         else:
             reference = self.references[index.row()]
-            self.data_store_form = DataStoreForm(self._parent, reference)
+            db_url = reference['url']
+            database = reference['database']
+            username = reference['username']
+            engine = create_engine(db_url)
+            try:
+                engine.connect()
+            except DatabaseError as e:
+                self._parent.msg_error.emit("Could not connect to <b>{}</b>: {}".format(db_url, e.orig.args))
+                return
+            self.data_store_form = DataStoreForm(self._parent, engine, database, username)
             self.data_store_form.show()
 
     def data_references(self):

@@ -343,24 +343,17 @@ class Tool(MetaObject):
 
         Args:
             folder_paths (list): Destination folders, where output files need to be copied.
-
-        Returns:
-            Boolean variable depending on operation success
         """
-        def_path = self.tool_template().get_def_path()
-        definition = self.read_tool_def(def_path)
-        output_files = definition["outputfiles"]
         n_copied_files = 0
-        for dst_folder in folder_paths:
-            for output_file in self._tool_template.outputfiles:
-                self.instance.output_dir # if we are here, this is not None
-                src_path = os.path.join(self.instance.output_dir, output_file)
+        for output_file in self._tool_template.outputfiles:
+            src_path = os.path.join(self.instance.output_dir, output_file)
+            if not os.path.exists(src_path):
+                self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                continue
+            for dst_folder in folder_paths:
                 # Join filename to dst folder
                 dst_path = os.path.join(dst_folder, output_file)
                 self._parent.msg.emit("\tCopying <b>{0}</b>".format(output_file))
-                if not os.path.exists(src_path):
-                    self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
-                    return False
                 try:
                     shutil.copyfile(src_path, dst_path)
                     n_copied_files += 1
@@ -368,9 +361,7 @@ class Tool(MetaObject):
                     logging.error(e)
                     self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
                                                 .format(src_path, dst_path))
-                    return False
         self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
-        return True
 
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):

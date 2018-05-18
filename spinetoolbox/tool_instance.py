@@ -247,8 +247,6 @@ class ToolInstance(QObject):
         logging.debug("Result files saved to <{0}>".format(result_path))
         result_anchor = "<a href='file:///" + result_path + "'>" + result_path + "</a>"
         self.ui.msg.emit("\tResult Directory: {}".format(result_anchor))
-        if ret != 0:
-            self.tool.debug(self.ui, self.basedir, self.tool.short_name)
         self.instance_finished_signal.emit(ret)
 
 
