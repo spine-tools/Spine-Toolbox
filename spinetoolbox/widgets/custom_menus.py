@@ -181,13 +181,15 @@ class ToolTemplateContextMenu(QMenu):
 
 
 class ObjectTreeContextMenu(QMenu):
-    """Context menu class for Spine data explorer object tree items."""
+    """Context menu class for Data store form, object tree items."""
 
     def __init__(self, parent, position, index):
         super().__init__()
         self._parent = parent
         self.index = index
         self.option = "None"
+        if not index.isValid():
+            return
         if not index.parent().isValid(): # root item
             self.add_action("New object class")
         else:
@@ -216,6 +218,46 @@ class ObjectTreeContextMenu(QMenu):
             text (str): Text description of the action
         """
         action = self.addAction(text)
+        action.triggered.connect(lambda: self.set_action(text))
+
+    def set_action(self, option):
+        """Sets the action which was clicked.
+
+        Args:
+            option (str): string with the text description of the action
+        """
+        self.option = option
+
+    def get_action(self):
+        """Returns the clicked action, a string with a description."""
+        return self.option
+
+
+class ObjectParameterContextMenu(QMenu):
+    """Context menu class for Data store form, object parameter items."""
+
+    def __init__(self, parent, position, index):
+        super().__init__()
+        self._parent = parent
+        self.index = index
+        self.option = "None"
+        if not index.isValid():
+            return
+        self.add_action("New parameter")
+        self.add_action("Remove")
+        disabled = not (index.flags() & Qt.ItemIsEditable)
+        self.add_action("Edit", disabled=disabled)
+        self.exec_(position)
+
+    def add_action(self, text, disabled=False):
+        """Adds an action to the context menu.
+
+        Args:
+            text (str): Text description of the action
+        """
+        action = self.addAction(text)
+        if disabled:
+            action.setEnabled(False)
         action.triggered.connect(lambda: self.set_action(text))
 
     def set_action(self, option):

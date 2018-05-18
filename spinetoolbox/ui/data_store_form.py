@@ -76,6 +76,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
         self.tabWidget.setSizePolicy(sizePolicy)
+        self.tabWidget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tabWidget.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tabWidget.setTabPosition(QtWidgets.QTabWidget.East)
         self.tabWidget.setObjectName("tabWidget")
@@ -120,6 +121,8 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_object_parameter.sizePolicy().hasHeightForWidth())
         self.tableView_object_parameter.setSizePolicy(sizePolicy)
+        self.tableView_object_parameter.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableView_object_parameter.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tableView_object_parameter.setSortingEnabled(True)
         self.tableView_object_parameter.setObjectName("tableView_object_parameter")
         self.verticalLayout_2.addWidget(self.tableView_object_parameter)
@@ -161,6 +164,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_object_parameter_def.sizePolicy().hasHeightForWidth())
         self.tableView_object_parameter_def.setSizePolicy(sizePolicy)
+        self.tableView_object_parameter_def.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tableView_object_parameter_def.setSortingEnabled(True)
         self.tableView_object_parameter_def.setObjectName("tableView_object_parameter_def")
         self.verticalLayout_5.addWidget(self.tableView_object_parameter_def)
@@ -172,6 +176,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tabWidget_2.sizePolicy().hasHeightForWidth())
         self.tabWidget_2.setSizePolicy(sizePolicy)
+        self.tabWidget_2.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tabWidget_2.setTabPosition(QtWidgets.QTabWidget.East)
         self.tabWidget_2.setObjectName("tabWidget_2")
         self.tab_3 = QtWidgets.QWidget()
@@ -209,6 +214,8 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_relationship_parameter.sizePolicy().hasHeightForWidth())
         self.tableView_relationship_parameter.setSizePolicy(sizePolicy)
+        self.tableView_relationship_parameter.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.tableView_relationship_parameter.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tableView_relationship_parameter.setSortingEnabled(True)
         self.tableView_relationship_parameter.setObjectName("tableView_relationship_parameter")
         self.verticalLayout.addWidget(self.tableView_relationship_parameter)
@@ -249,6 +256,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_relationship_parameter_def.sizePolicy().hasHeightForWidth())
         self.tableView_relationship_parameter_def.setSizePolicy(sizePolicy)
+        self.tableView_relationship_parameter_def.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.tableView_relationship_parameter_def.setSortingEnabled(True)
         self.tableView_relationship_parameter_def.setObjectName("tableView_relationship_parameter_def")
         self.verticalLayout_7.addWidget(self.tableView_relationship_parameter_def)
@@ -315,6 +323,6 @@ class Ui_Form(object):
         self.pushButton_revert.setText(QtWidgets.QApplication.translate("Form", "Revert", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
-from widgets.custom_qtreeview import CustomQTreeView
 from widgets.custom_qtableview import CustomQTableView
+from widgets.custom_qtreeview import CustomQTreeView
 import resources_icons_rc

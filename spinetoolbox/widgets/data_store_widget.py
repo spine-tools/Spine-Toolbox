@@ -30,7 +30,7 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QStandardItem
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
-from widgets.custom_menus import ObjectTreeContextMenu
+from widgets.custom_menus import ObjectTreeContextMenu, ObjectParameterContextMenu
 from widgets.custom_qdialog import CustomQDialog
 from helpers import busy_effect
 from models import ObjectTreeModel, MinimalTableModel, ObjectSortFilterProxyModel, RelationshipSortFilterProxyModel
@@ -96,6 +96,7 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         # context menus
         self.object_tree_context_menu = None
+        self.object_parameter_context_menu = None
         self.create_session()
         self.init_object_tree_model()
         self.init_parameter_models()
@@ -115,6 +116,8 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_at_top_level)
+        self.ui.tableView_object_parameter.customContextMenuRequested.\
+            connect(self.show_object_parameter_context_menu)
 
 
     @Slot(name="commit_clicked")
@@ -152,6 +155,7 @@ class DataStoreForm(QWidget):
                 self.statusbar.showMessage(msg, 3000)
             self.new_commit()
             self.init_object_tree_model()
+            self.init_parameter_models()
             msg = "All changes (since last commit) reverted successfully."
             self.statusbar.showMessage(msg, 3000)
 
@@ -433,10 +437,11 @@ class DataStoreForm(QWidget):
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
     def update_parameter_value(self, editor, hint):
-        logging.debug("data update_parameter_value")
+        """Update parameter_value table with newly edited data.
+        If successful, also update item in the model.
+        """
         index = self.ui.tableView_object_parameter.currentIndex()
         field_name = self.object_parameter_model.header[index.column()]
-        logging.debug(field_name)
         sibling = index.sibling(index.row(), self.parameter_value_id_column)
         parameter_value_id = sibling.data()
         parameter_value = self.session.query(self.ParameterValue).\
@@ -451,6 +456,8 @@ class DataStoreForm(QWidget):
                 self.statusbar.showMessage(msg, 5000)
                 self.session.rollback()
                 return
+            # manually update item in model
+            self.object_parameter_model.setData(index, editor.text())
 
 
     @Slot("QModelIndex", name="expand_at_top_level")
@@ -992,6 +999,45 @@ class DataStoreForm(QWidget):
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
+
+
+    @Slot("QPoint", name="show_object_parameter_context_menu")
+    def show_object_parameter_context_menu(self, pos):
+        """Context menu for object parameter table view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        #logging.debug("object parameter context menu")
+        index = self.ui.tableView_object_parameter.indexAt(pos)
+        global_pos = self.ui.tableView_object_parameter.viewport().mapToGlobal(pos)
+        self.object_parameter_context_menu = ObjectParameterContextMenu(self, global_pos, index)#
+        option = self.object_parameter_context_menu.get_action()
+        if option == "New parameter":
+            pass
+        elif option == "Remove":
+            self.remove_parameter(index)
+        elif option == "Edit":
+            self.ui.tableView_object_parameter.edit(index)
+
+    def remove_parameter(self, index):
+        """Remove row from parameter_value table.
+        If succesful, also remove row from model"""
+        sibling = index.sibling(index.row(), self.parameter_value_id_column)
+        parameter_value_id = sibling.data()
+        parameter_value = self.session.query(self.ParameterValue).\
+            filter_by(id=parameter_value_id).one_or_none()
+        if parameter_value:
+            self.session.delete(parameter_value)
+            try:
+                self.session.flush()
+            except DBAPIError as e:
+                msg = "Could not remove parameter: {}".format(e.orig.args)
+                self.statusbar.showMessage(msg, 5000)
+                self.session.rollback()
+                return
+            # manually remove row from model
+            self.object_parameter_proxy_model.removeRows(index.row(), 1)
 
 
     @Slot(name="close_clicked")
