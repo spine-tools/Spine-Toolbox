@@ -72,7 +72,7 @@ class Tool(MetaObject):
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
-        self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
+        self.output_dir = os.path.join(self._project.project_dir, self.short_name, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
         self.connect_signals()
 
