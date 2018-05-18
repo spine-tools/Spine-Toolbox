@@ -111,9 +111,8 @@ class ToolInstance(QObject):
                 self.tool_process = self._project.julia_subprocess
                 self.tool_process.start_if_not_running()
                 self.tool_process.repl_finished_signal.connect(self.julia_repl_tool_finished)
-                self.tool_process.write_on_process(self.command)
                 if not self.tool_process.write_on_process(self.command):
-                    self.julia_repl_tool_finished(-9999)
+                    #self.julia_repl_tool_finished(-9999)
                     return
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
@@ -134,7 +133,7 @@ class ToolInstance(QObject):
         """
         # disconnect REPL signal if connected
         if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
-            self.tool_process.repl_finished_signal.disconnect(self.julia_tool_finished)
+            self.tool_process.repl_finished_signal.disconnect(self.julia_repl_tool_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
@@ -148,8 +147,6 @@ class ToolInstance(QObject):
             self.instance_finished_signal.emit(ret)
             return
         else:  # Return code 0: success
-            self.tool_process.deleteLater()
-            self.tool_process = None
             self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
         self.instance_finished_signal.emit(ret)
         return
