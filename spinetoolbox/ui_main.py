@@ -29,13 +29,13 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QLineEdit
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    ItemImageContextMenu, LinkContextMenu, addToolTemplatePopupMenu
+    ItemImageContextMenu, LinkContextMenu, addToolTemplatePopupMenu, ProcessOutputContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -86,6 +86,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu = None
         self.item_image_context_menu = None
         self.link_context_menu = None
+        self.process_output_context_menu = None
         self.add_tool_template_popup_menu = None
         self.project_form = None
         self.add_data_store_form = None
@@ -105,6 +106,8 @@ class ToolboxUI(QMainWindow):
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
+        # hide process command line
+        self.ui.lineEdit_process_command.hide()
         # Make keyboard shortcuts
         self.test1_action = QAction(self)
         self.test1_action.setShortcut("F5")
@@ -183,6 +186,7 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+        self.ui.textBrowser_process_output.customContextMenuRequested.connect(self.show_process_output_context_menu)
 
     @Slot(name="init_project")
     def init_project(self):
@@ -1246,6 +1250,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="open_data_store_view")
     def open_data_store_view(self):
+        # OBSOLETE?
         self.data_store_form = DataStoreWidget(self)
         self.data_store_form.show()
 
@@ -1330,6 +1335,25 @@ class ToolboxUI(QMainWindow):
             pass
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
+
+    def show_process_output_context_menu(self, pos):
+        """Context menu for process output QTextBrowser.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        global_pos = self.ui.textBrowser_process_output.mapToGlobal(pos)
+        self.process_output_context_menu = ProcessOutputContextMenu(self, global_pos)
+        option = self.process_output_context_menu.get_action()
+        if option == "Clear":
+            self.ui.textBrowser_process_output.clear()
+        if option == "Issue Julia commands":
+            if not self._project:
+                self.ui.statusbar.showMessage("Open or create a project first.", 3000)
+                return
+            self.ui.lineEdit_process_command.setup_command_line(self, self._project)
+            self.ui.lineEdit_process_command.show()
+            self.ui.lineEdit_process_command.setFocus()
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.

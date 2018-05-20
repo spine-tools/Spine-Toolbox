@@ -343,7 +343,7 @@ class Ui_Form(object):
         self.verticalLayout_9.addLayout(self.horizontalLayout_statusbar_placeholder)
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
         Form.setTabOrder(self.lineEdit_name, self.pushButton_ok)
         Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)

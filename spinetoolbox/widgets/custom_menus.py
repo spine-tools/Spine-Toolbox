@@ -24,13 +24,39 @@ Classes for custom context menus.
 :date:   9.1.2018
 """
 
-from PySide2.QtWidgets import QMenu
+from PySide2.QtWidgets import QMenu, QTextBrowser
 from PySide2.QtCore import Qt, SLOT
 import sys
 import logging
 
 
-class ProjectItemContextMenu(QMenu):
+class CustomContextMenu(QMenu):
+    """Context menu master class for several context menus."""
+    def __init__(self):
+        super().__init__()
+
+    def add_action(self, text):
+        """Adds an action to the context menu.
+
+        Args:
+            text (str): Text description of the action
+        """
+        action = self.addAction(text)
+        action.triggered.connect(lambda: self.set_action(text))
+
+    def set_action(self, option):
+        """Sets the action which was clicked.
+
+        Args:
+            option (str): string with the text description of the action
+        """
+        self.option = option
+
+    def get_action(self):
+        """Returns the clicked action, a string with a description."""
+        return self.option
+
+class ProjectItemContextMenu(CustomContextMenu):
     """Context menu class for project items."""
 
     def __init__(self, parent, position, index):
@@ -48,28 +74,7 @@ class ProjectItemContextMenu(QMenu):
             self.add_action("Remove Item")
         self.exec_(position)
 
-    def add_action(self, text):
-        """Adds an action to the context menu.
-
-        Args:
-            text (str): Text description of the action
-        """
-        action = self.addAction(text)
-        action.triggered.connect(lambda: self.set_action(text))
-
-    def set_action(self, option):
-        """Sets the action which was clicked.
-
-        Args:
-            option (str): string with the text description of the action
-        """
-        self.option = option
-
-    def get_action(self):
-        """Returns the clicked action, a string with a description."""
-        return self.option
-
-class ItemImageContextMenu(QMenu):
+class ItemImageContextMenu(CustomContextMenu):
     """Context menu class for item images."""
 
     def __init__(self, parent, position, index):
@@ -81,29 +86,8 @@ class ItemImageContextMenu(QMenu):
             self.add_action("Remove")
         self.exec_(position)
 
-    def add_action(self, text):
-        """Adds an action to the context menu.
 
-        Args:
-            text (str): Text description of the action
-        """
-        action = self.addAction(text)
-        action.triggered.connect(lambda: self.set_action(text))
-
-    def set_action(self, option):
-        """Sets the action which was clicked.
-
-        Args:
-            option (str): string with the text description of the action
-        """
-        self.option = option
-
-    def get_action(self):
-        """Returns the clicked action, a string with a description."""
-        return self.option
-
-
-class LinkContextMenu(QMenu):
+class LinkContextMenu(CustomContextMenu):
     """Context menu class for connection links."""
 
     def __init__(self, parent, position, index):
@@ -115,29 +99,7 @@ class LinkContextMenu(QMenu):
             self.add_action("Remove")
         self.exec_(position)
 
-    def add_action(self, text):
-        """Adds an action to the context menu.
-
-        Args:
-            text (str): Text description of the action
-        """
-        action = self.addAction(text)
-        action.triggered.connect(lambda: self.set_action(text))
-
-    def set_action(self, option):
-        """Sets the action which was clicked.
-
-        Args:
-            option (str): string with the text description of the action
-        """
-        self.option = option
-
-    def get_action(self):
-        """Returns the clicked action, a string with a description."""
-        return self.option
-
-
-class ToolTemplateContextMenu(QMenu):
+class ToolTemplateContextMenu(CustomContextMenu):
     """Context menu class for tool templates."""
 
     def __init__(self, parent, position, index):
@@ -158,29 +120,8 @@ class ToolTemplateContextMenu(QMenu):
             self.add_action("Remove")
         self.exec_(position)
 
-    def add_action(self, text):
-        """Adds an action to the context menu.
 
-        Args:
-            text (str): Text description of the action
-        """
-        action = self.addAction(text)
-        action.triggered.connect(lambda: self.set_action(text))
-
-    def set_action(self, option):
-        """Sets the action which was clicked.
-
-        Args:
-            option (str): string with the text description of the action
-        """
-        self.option = option
-
-    def get_action(self):
-        """Returns the clicked action, a string with a description."""
-        return self.option
-
-
-class ObjectTreeContextMenu(QMenu):
+class ObjectTreeContextMenu(CustomContextMenu):
     """Context menu class for Data store form, object tree items."""
 
     def __init__(self, parent, position, index):
@@ -212,29 +153,8 @@ class ObjectTreeContextMenu(QMenu):
             self.add_action("Remove")
         self.exec_(position)
 
-    def add_action(self, text):
-        """Adds an action to the context menu.
 
-        Args:
-            text (str): Text description of the action
-        """
-        action = self.addAction(text)
-        action.triggered.connect(lambda: self.set_action(text))
-
-    def set_action(self, option):
-        """Sets the action which was clicked.
-
-        Args:
-            option (str): string with the text description of the action
-        """
-        self.option = option
-
-    def get_action(self):
-        """Returns the clicked action, a string with a description."""
-        return self.option
-
-
-class ObjectParameterContextMenu(QMenu):
+class ObjectParameterContextMenu(CustomContextMenu):
     """Context menu class for Data store form, object parameter items."""
 
     def __init__(self, parent, position, index):
@@ -261,17 +181,21 @@ class ObjectParameterContextMenu(QMenu):
             action.setEnabled(False)
         action.triggered.connect(lambda: self.set_action(text))
 
-    def set_action(self, option):
-        """Sets the action which was clicked.
 
-        Args:
-            option (str): string with the text description of the action
-        """
-        self.option = option
+class ProcessOutputContextMenu(CustomContextMenu):
+    """Popup menu class for add tool template button."""
 
-    def get_action(self):
-        """Returns the clicked action, a string with a description."""
-        return self.option
+    def __init__(self, parent, position):
+        super().__init__()
+        self._parent = parent
+        menu = self._parent.ui.textBrowser_process_output.createStandardContextMenu()
+        for action in menu.actions():
+            self.addAction(action)
+        self.addSeparator()
+        self.option = "None"
+        self.add_action("Clear")
+        self.add_action("Issue Julia commands")
+        self.exec_(position)
 
 
 class addToolTemplatePopupMenu(QMenu):

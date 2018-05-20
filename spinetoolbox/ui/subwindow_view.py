@@ -56,7 +56,7 @@ class Ui_Form(object):
         font.setWeight(75)
         font.setBold(True)
         self.label_name.setFont(font)
-        self.label_name.setStyleSheet("background-color: rgb(0, 255, 255);\n"
+        self.label_name.setStyleSheet("background-color: rgb(0, 255, 0);\n"
 "color: rgb(255, 255, 255);")
         self.label_name.setAlignment(QtCore.Qt.AlignCenter)
         self.label_name.setWordWrap(True)

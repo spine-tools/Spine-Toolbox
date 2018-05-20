@@ -41,7 +41,7 @@ class CustomQTableView(QTableView):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
 
-
+    # TODO: Work in progress
     def edit(self, index, trigger=None, event=None):
 
         logging.debug(event)

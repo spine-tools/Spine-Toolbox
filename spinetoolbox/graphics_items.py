@@ -556,7 +556,7 @@ class Link(QGraphicsLineItem):
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
         self.dst_connector = self.dst_icon.conn_button()
         self.setZValue(1)   # TODO: is this better than stackBefore?
-        self.normal_color = QColor(255, 255, 0, 176)
+        self.normal_color = QColor(255, 255, 0, 204)
         self.pen_width = 10
         self.arrow_size = 20
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "

@@ -291,14 +291,6 @@ class SpineToolboxProject(MetaObject):
         if _tooltype == "gams":
             return GAMSTool.load(self._parent, path, definition)
         elif _tooltype == "julia":
-            if not self.julia_subprocess:
-                # TODO: This is so that Julia REPL stays open between executions. Check for a better place for this.
-                julia_path = self._parent._config.get("settings", "julia_path")
-                if not julia_path == '':
-                    julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
-                else:
-                    julia_exe_path = JULIA_EXECUTABLE
-                self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
             return JuliaTool.load(self._parent, path, definition)
         elif _tooltype == 'executable':
             self._parent.msg_warning.emit("Executable tools not supported yet")
@@ -306,6 +298,18 @@ class SpineToolboxProject(MetaObject):
         else:
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
+
+    def get_julia_subprocess(self):
+        """Setup the julia REPL subprocess that will stay open between executions.
+        """
+        if not self.julia_subprocess:
+            julia_path = self._parent._config.get("settings", "julia_path")
+            if not julia_path == '':
+                julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
+            else:
+                julia_exe_path = JULIA_EXECUTABLE
+            self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
+        return self.julia_subprocess
 
     def add_data_store(self, name, description, references, x=0, y=0):
         """Add data store to project item model."""

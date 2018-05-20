@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -353,7 +353,7 @@
      <x>0</x>
      <y>0</y>
      <width>1014</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -476,7 +476,7 @@
    <property name="minimumSize">
     <size>
      <width>80</width>
-     <height>100</height>
+     <height>133</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -493,6 +493,9 @@
      </sizepolicy>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_6">
+     <property name="spacing">
+      <number>0</number>
+     </property>
      <property name="leftMargin">
       <number>0</number>
      </property>
@@ -519,10 +522,20 @@
         </font>
        </property>
        <property name="contextMenuPolicy">
-        <enum>Qt::DefaultContextMenu</enum>
+        <enum>Qt::CustomContextMenu</enum>
        </property>
        <property name="openLinks">
         <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="CustomQLineEdit" name="lineEdit_process_command">
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>24</height>
+        </size>
        </property>
       </widget>
      </item>
@@ -532,7 +545,7 @@
   <widget class="QDockWidget" name="dockWidget_item">
    <property name="minimumSize">
     <size>
-     <width>137</width>
+     <width>140</width>
      <height>138</height>
     </size>
    </property>
@@ -708,6 +721,11 @@
    <class>CustomQGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>widgets/custom_qgraphicsview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>widgets/custom_qlineedit.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

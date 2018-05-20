@@ -44,6 +44,10 @@ class CustomQTreeView(QTreeView):
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):
+        """Send signal instead of editing item.
+        The DataStoreWidget will catch this signal and open a custom QDialog
+        for edition.
+        """
         if trigger == QTreeView.EditKeyPressed:
             self.editKeyPressed.emit(index)
         return False
