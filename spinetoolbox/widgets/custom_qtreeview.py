@@ -36,16 +36,11 @@ class CustomQTreeView(QTreeView):
         parent (QWidget): The parent of this view
     """
 
-    currentIndexChanged = Signal("QModelIndex", name="currentIndexChanged")
     editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
 
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
-
-    @Slot("QModelIndex", "QModelIndex", name="currentChanged")
-    def currentChanged(self, current, previous):
-        self.currentIndexChanged.emit(current)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):

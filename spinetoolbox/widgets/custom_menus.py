@@ -195,11 +195,12 @@ class ObjectTreeContextMenu(QMenu):
         else:
             item = index.model().itemFromIndex(index)
             item_type = item.data(Qt.UserRole)
-            logging.debug(item_type)
             if item_type == 'object_class':
                 self.add_action("New object class")
                 self.add_action("New relationship class")
                 self.add_action("New object")
+            elif item_type == 'object':
+                self.add_action("New parameter")
             elif item_type == 'relationship_class':
                 self.add_action("New relationship class")
                 self.add_action("New relationship")
@@ -246,7 +247,7 @@ class ObjectParameterContextMenu(QMenu):
         self.add_action("New parameter")
         self.add_action("Remove")
         disabled = not (index.flags() & Qt.ItemIsEditable)
-        self.add_action("Edit", disabled=disabled)
+        self.add_action("Edit field", disabled=disabled)
         self.exec_(position)
 
     def add_action(self, text, disabled=False):

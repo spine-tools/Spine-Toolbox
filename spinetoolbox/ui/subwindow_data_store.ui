@@ -120,7 +120,7 @@
           </font>
          </property>
          <property name="styleSheet">
-          <string notr="true">background-color: rgb(0,255, 0);
+          <string notr="true">background-color: rgb(0,255, 255);
 color: rgb(255, 255, 255);</string>
          </property>
          <property name="text">

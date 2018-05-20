@@ -39,8 +39,9 @@ class LineEditDelegate(QItemDelegate):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        editor = QLineEdit(parent)
+        editor = CustomLineEditor(parent)
         data = index.data(Qt.DisplayRole)
+        editor.original_data = str(data)
         if type(data) == int:
             editor.setValidator(QIntValidator(editor))
         return editor
@@ -58,3 +59,23 @@ class LineEditDelegate(QItemDelegate):
     #@Slot(int, name='current_index_changed')
     #def current_index_changed(self):
     #    self.commit_data.emit(self.sender())
+
+
+class CustomLineEditor(QLineEdit):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.original_data = None
+
+    # TODO: try to make this work
+    def keyPressEvent(self, e):
+        """Restore inital text when escape key is pressed.
+
+        Args:
+            e (QKeyEvent): Received key press event.
+        """
+        if e.key() == Qt.Key_Escape:
+            logging.debug(self.original_data)
+            self.setText(self.original_data)
+        else:
+            super().keyPressEvent(e)

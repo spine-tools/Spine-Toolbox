@@ -245,7 +245,7 @@ class DataConnectionImage(ItemImage):
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
         self.brush = QBrush(QColor(0, 0, 255, 128))  # QBrush is used to fill the item
-        self.hover_brush = QBrush(QColor(0, 0, 179, 128))  # QBrush while hovering
+        self.hover_brush = QBrush(QColor(0, 0, 204, 128))  # QBrush while hovering
         # Draw ellipse
         self._master = self.make_master(self.pen, self.brush)
         # Override event handlers
@@ -402,8 +402,8 @@ class DataStoreImage(ItemImage):
         """Class constructor."""
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
-        self.brush = QBrush(QColor(0, 255, 0, 128))  # QBrush is used to fill the item
-        self.hover_brush = QBrush(QColor(0, 200, 0, 128))  # QBrush while hovering
+        self.brush = QBrush(QColor(0, 255, 255, 128))  # QBrush is used to fill the item
+        self.hover_brush = QBrush(QColor(0, 204, 204, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_master(self.pen, self.brush)
         # Override event handlers
@@ -477,8 +477,8 @@ class ViewImage(ItemImage):
         """Class constructor."""
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
-        self.brush = QBrush(QColor(255, 0, 255, 128))  # QBrush is used to fill the item
-        self.hover_brush = QBrush(QColor(200, 0, 200, 128))  # QBrush while hovering
+        self.brush = QBrush(QColor(0, 255, 0, 128))  # QBrush is used to fill the item
+        self.hover_brush = QBrush(QColor(0, 204, 0, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_master(self.pen, self.brush)
         # Override event handlers
@@ -556,8 +556,7 @@ class Link(QGraphicsLineItem):
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
         self.dst_connector = self.dst_icon.conn_button()
         self.setZValue(1)   # TODO: is this better than stackBefore?
-        self.normal_color = QColor(0, 255, 0, 176)
-        self.covered_color = QColor(128, 128, 128, 128)
+        self.normal_color = QColor(255, 255, 0, 176)
         self.pen_width = 10
         self.arrow_size = 20
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "

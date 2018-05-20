@@ -26,7 +26,7 @@ Widget to show Data Store Form.
 
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView,\
     QDialog, QLineEdit, QInputDialog
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QItemSelectionModel, QItemSelection
 from PySide2.QtGui import QStandardItem
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
@@ -112,10 +112,12 @@ class DataStoreForm(QWidget):
         self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
         self.ui.pushButton_close.clicked.connect(self.close_clicked)
         self.ui.pushButton_revert.clicked.connect(self.revert_clicked)
-        self.ui.treeView_object.currentIndexChanged.connect(self.filter_parameter_models)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_at_top_level)
+        #self.ui.tableView_object_parameter.selectionModel().currentChanged.\
+        #    connect(self.update_object_parameter_selection)
         self.ui.tableView_object_parameter.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
 
@@ -420,13 +422,14 @@ class DataStoreForm(QWidget):
             self.ui.tableView_relationship_parameter.hideColumn(header.index("parent_object_id"))
             self.ui.tableView_relationship_parameter.hideColumn(header.index("child_object_id"))
             self.ui.tableView_relationship_parameter.hideColumn(header.index("relationship_id"))
+            self.ui.tableView_relationship_parameter.hideColumn(header.index("parameter_value_id"))
 
     def init_object_parameter_view(self, header):
 
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
-        self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
-        self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
-        self.ui.tableView_object_parameter.hideColumn(header.index("parameter_value_id"))
+        #self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
+        #self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
+        #self.ui.tableView_object_parameter.hideColumn(header.index("parameter_value_id"))
         #self.ui.tableView_object_parameter.setItemDelegateForColumn(header.index("value"), LineEditDelegate(self))
         #self.ui.tableView_object_parameter.itemDelegateForColumn(header.index("value")).\
         #    closeEditor.connect(self.update_parameter_value)
@@ -435,29 +438,22 @@ class DataStoreForm(QWidget):
             closeEditor.connect(self.update_parameter_value)
         self.parameter_value_id_column = self.object_parameter_model.header.index('parameter_value_id')
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
-    def update_parameter_value(self, editor, hint):
-        """Update parameter_value table with newly edited data.
-        If successful, also update item in the model.
-        """
-        index = self.ui.tableView_object_parameter.currentIndex()
-        field_name = self.object_parameter_model.header[index.column()]
-        sibling = index.sibling(index.row(), self.parameter_value_id_column)
-        parameter_value_id = sibling.data()
-        parameter_value = self.session.query(self.ParameterValue).\
-            filter_by(id=parameter_value_id).one_or_none()
-        if parameter_value:
-            parameter_value.commit_id = self.commit.id
-            setattr(parameter_value, field_name, editor.text())
-            try:
-                self.session.flush()
-            except DBAPIError as e:
-                msg = "Could not update parameter: {}".format(e.orig.args)
-                self.statusbar.showMessage(msg, 5000)
-                self.session.rollback()
-                return
-            # manually update item in model
-            self.object_parameter_model.setData(index, editor.text())
+    # TODO: try to make this work
+    @Slot("QModelIndex", "QModelIndex", name="update_object_parameter_selection")
+    def update_object_parameter_selection(self, current, previous):
+        """Select the entire row when the current index lays in specific columns"""
+        header = self.object_parameter_model.header
+        col1 = header.index("object_class_name")
+        col2 = header.index("object_name")
+        col3 = header.index("parameter_name")
+        if current.column() in (col1, col2, col3):
+            selection = QItemSelection(
+                current.sibling(current.row(), 0),
+                current.sibling(current.row(), self.object_parameter_proxy_model.columnCount()-1)
+            )
+            logging.debug(selection)
+            self.ui.tableView_object_parameter.selectionModel().select(selection, QItemSelectionModel.Select)
+
 
 
     @Slot("QModelIndex", name="expand_at_top_level")
@@ -492,48 +488,48 @@ class DataStoreForm(QWidget):
                         self.ui.treeView_object.expand(object_index)
                         return
 
-    @Slot("QModelIndex", name="filter_parameter_models")
-    def filter_parameter_models(self, index):
+    @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
+    def filter_parameter_models(self, current, previous):
         """Populate tableViews whenever an object item is selected in the treeView"""
         # logging.debug("filter_parameter_models")
         self.object_parameter_proxy_model.clear_filter()
         self.relationship_parameter_proxy_model.clear_filter()
-        clicked_type = index.data(Qt.UserRole)
+        clicked_type = current.data(Qt.UserRole)
         header = self.relationship_parameter_model.header
         # row filter
         if clicked_type == 'object_class': # show all objects of this class
-            object_class_id = index.data(Qt.UserRole+1)['id']
+            object_class_id = current.data(Qt.UserRole+1)['id']
             self.object_parameter_proxy_model.object_class_id_filter = object_class_id
         elif clicked_type == 'object': # show only this object
             # filter rows
-            object_id = index.data(Qt.UserRole+1)['id']
+            object_id = current.data(Qt.UserRole+1)['id']
             self.object_parameter_proxy_model.object_id_filter = object_id
             self.relationship_parameter_proxy_model.object_id_filter = object_id
             # filter columns
             self.relationship_parameter_proxy_model.hide_column = header.index("parent_relationship_name")
         elif clicked_type == 'relationship_class': # show all related objects to this parent object, through this relationship class
             # filter rows
-            parent_object_id = index.parent().data(Qt.UserRole+1)['id']
-            relationship_class_id = index.data(Qt.UserRole+1)['id']
+            parent_object_id = current.parent().data(Qt.UserRole+1)['id']
+            relationship_class_id = current.data(Qt.UserRole+1)['id']
             self.relationship_parameter_proxy_model.object_id_filter = parent_object_id
             self.relationship_parameter_proxy_model.relationship_class_id_filter = relationship_class_id
             # filter columns
             self.relationship_parameter_proxy_model.hide_column = header.index("parent_relationship_name")
         elif clicked_type == 'related_object': # show only this object and this relationship
             # filter rows
-            object_id = index.data(Qt.UserRole+1)['id']
-            relationship_id = index.data(Qt.UserRole+1)['relationship_id']
+            object_id = current.data(Qt.UserRole+1)['id']
+            relationship_id = current.data(Qt.UserRole+1)['relationship_id']
             self.object_parameter_proxy_model.object_id_filter = object_id
             self.relationship_parameter_proxy_model.relationship_id_filter = relationship_id
             #filter columns
-            relationship_class_type = index.parent().data(Qt.UserRole)
+            relationship_class_type = current.parent().data(Qt.UserRole)
             if relationship_class_type == 'meta_relationship_class': # hide parent_object_name
                 self.relationship_parameter_proxy_model.hide_column = header.index("parent_object_name")
             elif relationship_class_type == 'relationship_class': # hide parent_relationship_name
                 self.relationship_parameter_proxy_model.hide_column = header.index("parent_relationship_name")
         elif clicked_type == 'meta_relationship_class': # show all related objects to this parent relationship, through this meta-relationship class
-            parent_relationship_id = index.parent().data(Qt.UserRole+1)['relationship_id']
-            relationship_class_id = index.data(Qt.UserRole+1)['id']
+            parent_relationship_id = current.parent().data(Qt.UserRole+1)['relationship_id']
+            relationship_class_id = current.data(Qt.UserRole+1)['id']
             self.relationship_parameter_proxy_model.parent_relationship_id_filter = parent_relationship_id
             self.relationship_parameter_proxy_model.relationship_class_id_filter = relationship_class_id
             # filter columns
@@ -541,6 +537,39 @@ class DataStoreForm(QWidget):
         # trick to trigger filtering
         self.object_parameter_proxy_model.setFilterRegExp("")
         self.relationship_parameter_proxy_model.setFilterRegExp("")
+
+    @Slot("QPoint", name="show_object_tree_context_menu")
+    def show_object_tree_context_menu(self, pos):
+        """Context menu for object tree.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        # logging.debug("object tree context menu")
+        index = self.ui.treeView_object.indexAt(pos)
+        global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
+        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
+        option = self.object_tree_context_menu.get_action()
+        if option == "New object class":
+            self.new_object_class(index)
+        elif option == "New object":
+            self.new_object(index)
+        elif option == "New relationship class":
+            self.new_relationship_class(index)
+        elif option == "New relationship":
+            self.new_relationship(index)
+        elif option == "Expand at top level":
+            self.expand_at_top_level_(index)
+        elif option == "Rename":
+            self.rename_item(index)
+        elif option == "Remove":
+            self.remove_item(index)
+        elif option == "New parameter":
+            self.new_parameter(index)
+        else:  # No option selected
+            pass
+        self.object_tree_context_menu.deleteLater()
+        self.object_tree_context_menu = None
 
 
     def new_object_class(self, index):
@@ -968,37 +997,35 @@ class DataStoreForm(QWidget):
             root_item = index.model().invisibleRootItem().child(0)
             visit_and_remove(root_item)
 
-
-    @Slot("QPoint", name="show_object_tree_context_menu")
-    def show_object_tree_context_menu(self, pos):
-        """Context menu for object tree.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        # logging.debug("object tree context menu")
-        index = self.ui.treeView_object.indexAt(pos)
-        global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
-        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
-        option = self.object_tree_context_menu.get_action()
-        if option == "New object class":
-            self.new_object_class(index)
-        elif option == "New object":
-            self.new_object(index)
-        elif option == "New relationship class":
-            self.new_relationship_class(index)
-        elif option == "New relationship":
-            self.new_relationship(index)
-        elif option == "Expand at top level":
-            self.expand_at_top_level_(index)
-        elif option == "Rename":
-            self.rename_item(index)
-        elif option == "Remove":
-            self.remove_item(index)
-        else:  # No option selected
-            pass
-        self.object_tree_context_menu.deleteLater()
-        self.object_tree_context_menu = None
+    def new_parameter(self, tree_index):
+        logging.debug("new parameter")
+        if self.object_parameter_model.insertRows(self.object_parameter_model.rowCount(), 1):
+            row = self.object_parameter_model.rowCount()-1
+            tree_index_data = tree_index.data(Qt.UserRole+1)
+            tree_parent_data = tree_index.parent().data(Qt.UserRole+1)
+            # add object_class_id
+            column = self.object_parameter_model.header.index("object_class_id")
+            parameter_index = self.object_parameter_model.index(row, column)
+            self.object_parameter_model.setData(parameter_index, tree_index_data['class_id'])
+            # add object_class_name
+            column = self.object_parameter_model.header.index("object_class_name")
+            parameter_index = self.object_parameter_model.index(row, column)
+            self.object_parameter_model.setData(parameter_index, tree_parent_data['name'])
+            # add object_id
+            column = self.object_parameter_model.header.index("object_id")
+            parameter_index = self.object_parameter_model.index(row, column)
+            self.object_parameter_model.setData(parameter_index, tree_index_data['id'])
+            # add object_name
+            column = self.object_parameter_model.header.index("object_name")
+            parameter_index = self.object_parameter_model.index(row, column)
+            self.object_parameter_model.setData(parameter_index, tree_index_data['name'])
+            # edit parameter_name
+            self.filter_parameter_models(tree_index, tree_index)
+            column = self.object_parameter_model.header.index("parameter_name")
+            parameter_index = self.object_parameter_model.index(row, column)
+            parameter_proxy_index = self.object_parameter_proxy_model.mapFromSource(parameter_index)
+            self.ui.tableView_object_parameter.setCurrentIndex(parameter_proxy_index)
+            self.ui.tableView_object_parameter.edit(parameter_proxy_index)
 
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
@@ -1014,11 +1041,40 @@ class DataStoreForm(QWidget):
         self.object_parameter_context_menu = ObjectParameterContextMenu(self, global_pos, index)#
         option = self.object_parameter_context_menu.get_action()
         if option == "New parameter":
-            pass
+            self.new_parameter(index)
         elif option == "Remove":
             self.remove_parameter(index)
-        elif option == "Edit":
+        elif option == "Edit field":
             self.ui.tableView_object_parameter.edit(index)
+
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
+    def update_parameter_value(self, editor, hint):
+        """Update parameter_value table with newly edited data.
+        If successful, also update item in the model.
+        """
+        index = self.ui.tableView_object_parameter.currentIndex()
+        field_name = self.object_parameter_model.header[index.column()]
+        sibling = index.sibling(index.row(), self.parameter_value_id_column)
+        parameter_value_id = sibling.data()
+        parameter_value = self.session.query(self.ParameterValue).\
+            filter_by(id=parameter_value_id).one_or_none()
+        if parameter_value:
+            parameter_value.commit_id = self.commit.id
+            setattr(parameter_value, field_name, editor.text())
+            try:
+                self.session.flush()
+            except DBAPIError as e:
+                msg = "Could not update parameter: {}".format(e.orig.args)
+                self.statusbar.showMessage(msg, 5000)
+                self.session.rollback()
+                return
+            # manually update item in model
+            # TODO: if we just set data in the proxy model and the items
+            # happen to be re-sorted we miss the right index, why?
+            # below is a work-around using the source model directly
+            source_index = self.object_parameter_proxy_model.mapToSource(index)
+            self.object_parameter_model.setData(source_index, editor.text())
 
     def remove_parameter(self, index):
         """Remove row from parameter_value table.

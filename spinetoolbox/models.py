@@ -674,7 +674,7 @@ class ObjectSortFilterProxyModel(QSortFilterProxyModel):
         """Returns the item flags for the given index."""
         column_name = self.sourceModel().header[index.column()]
 
-        if column_name in ('object_class_name', 'object_name', 'parameter_name'):
+        if column_name in ('object_class_name', 'object_name'):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 

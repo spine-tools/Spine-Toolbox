@@ -38,7 +38,7 @@ class ComboBoxDelegate(QItemDelegate):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        combo = QComboBox(parent)
+        combo = CustomComboEditor(parent)
         combo.row = index.row()
         combo.column = index.column()
         combo.previous_data = index.model().data(index)
@@ -59,3 +59,13 @@ class ComboBoxDelegate(QItemDelegate):
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):
         self.commit_data.emit(self.sender())
+
+
+class CustomComboEditor(QComboBox):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.original_data = None
+        self.previous_data = None
+        self.row = None
+        self.column = None
