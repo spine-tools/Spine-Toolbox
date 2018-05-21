@@ -179,7 +179,7 @@ class Ui_Form(object):
         self.label_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
         self.toolButton_plus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references</p></body></html>", None, -1))
         self.toolButton_minus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected references or all if nothing is selected</p></body></html>", None, -1))
-        self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Create or update Spine data objects in memory.</p></body></html>", None, -1))
+        self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project.  Copies selected references into SQLite files in Data store\'s directory.</p></body></html>", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open data objects in Spine Data Explorer</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open", None, -1))
 

@@ -78,13 +78,18 @@ class Tool(MetaObject):
         self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
         self._widget.ui.toolButton_tool_template_options.setMenu(self.tool_template_options_popup_menu)
+        self._widget.ui.pushButton_stop.setEnabled(False)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this tool's signals to slots."""
-        self._widget.ui.pushButton_details.clicked.connect(self.show_details)
+        self._widget.ui.pushButton_stop.clicked.connect(self.stop_process)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
+
+    @Slot(name="stop_process")
+    def stop_process(self):
+        self.instance.terminate_instance()
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -234,6 +239,7 @@ class Tool(MetaObject):
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
+        self._widget.ui.pushButton_stop.setEnabled(True)
         self._graphics_item.start_wheel_animation()
 
     def find_input_files(self):
@@ -389,6 +395,7 @@ class Tool(MetaObject):
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
         """Tool execution finished."""
+        self._widget.ui.pushButton_stop.setEnabled(False)
         self._graphics_item.stop_wheel_animation()
         if return_code == 0:
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))

@@ -254,7 +254,10 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        self.tool_process.terminate_process()
+        if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
+            self.tool_process.close_repl()
+        else:
+            self.tool_process.close_process()
 
     def remove(self):
         """Remove the tool instance files."""

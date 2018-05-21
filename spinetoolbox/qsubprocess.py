@@ -139,7 +139,20 @@ class QSubProcess(QObject):
         else:
             logging.debug("QProcess Unspecified error: {0}".format(process_error))
 
-    def terminate_process(self):
+    def close_repl(self):
+        """Stop execution of program in REPL."""
+        # TODO: try to send SIGINT signal (ctrl+c) to julia REPL, so it stays open afterwards
+        # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
+        logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
+                      .format(self._process.processId(), self._process.state(), self._process.error()))
+        self._user_stopped = True
+        self.process_failed = True
+        try:
+            self._process.close()
+        except Exception as ex:
+            logging.exception("Exception in closing QProcess: {}".format(ex))
+
+    def close_process(self):
         """Shutdown simulation in a QProcess."""
         # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
         logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
@@ -162,7 +175,7 @@ class QSubProcess(QObject):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             logging.error("QProcess CrashExit")
-            self._ui.msg_error("\tSubprocess crashed")
+            self._ui.msg_error.emit("\tSubprocess crashed")
             self.process_failed = True
         elif exit_status == QProcess.NormalExit:
             self._ui.msg.emit("\tSubprocess finished")
@@ -182,6 +195,7 @@ class QSubProcess(QObject):
         self._process.deleteLater()
         self._process = None
         self.subprocess_finished_signal.emit(exit_code)
+        self.repl_finished_signal.emit(exit_code)
 
     @Slot(name="on_ready_stdout")
     def on_ready_stdout(self):

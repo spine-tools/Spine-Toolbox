@@ -291,7 +291,7 @@ color: rgb(255, 255, 255);</string>
         <number>6</number>
        </property>
        <item>
-        <widget class="QPushButton" name="pushButton_details">
+        <widget class="QPushButton" name="pushButton_stop">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -302,13 +302,13 @@ color: rgb(255, 255, 255);</string>
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show selected Tool details&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Stop running process&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
          <property name="text">
-          <string>Info</string>
+          <string>Stop</string>
          </property>
         </widget>
        </item>
@@ -347,7 +347,7 @@ color: rgb(255, 255, 255);</string>
  <tabstops>
   <tabstop>treeView_input_files</tabstop>
   <tabstop>treeView_output_files</tabstop>
-  <tabstop>pushButton_details</tabstop>
+  <tabstop>pushButton_stop</tabstop>
   <tabstop>pushButton_execute</tabstop>
  </tabstops>
  <resources>
