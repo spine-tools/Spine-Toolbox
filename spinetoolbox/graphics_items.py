@@ -25,10 +25,11 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import logging
-from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF
+from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, \
-    QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem
-from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush
+    QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
+    QGraphicsItemAnimation, QGraphicsPixmapItem
+from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush, QPixmap
 from math import atan2, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
 
@@ -69,8 +70,8 @@ class ItemImage(QGraphicsItem):
         """Class constructor."""
         super().__init__()
         self._main = main
-        self.x = x  # x coordinate in the scene
-        self.y = y  # y coordinate in the scene
+        self.x_coord = x  # x coordinate in the scene
+        self.y_coord = y  # y coordinate in the scene
         self.w = w
         self.h = h
         self.connector_pen = QPen(QColor('black'))  # QPen is used to draw the item outline
@@ -79,7 +80,7 @@ class ItemImage(QGraphicsItem):
         self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))  # QBrush is used to fill the item
         self._name = name
         self.font_size = 8  # point size
-        self.q_rect = QRectF(self.x, self.y, self.w, self.h)  # Position and size of the drawn item
+        self.q_rect = QRectF(self.x_coord, self.y_coord, self.w, self.h)  # Position and size of the drawn item
         # Make QGraphicsSimpleTextItem for item name.
         self.name_item = QGraphicsSimpleTextItem(self._name)
         # Set font size and style
@@ -87,11 +88,11 @@ class ItemImage(QGraphicsItem):
         font.setPointSize(self.font_size)
         font.setBold(True)
         self.name_item.setFont(font)
-        self.name_item.setPos(self.x, self.y)  # TODO: Refine position
+        self.name_item.setPos(self.x_coord, self.y_coord)  # TODO: Refine position
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
-        self.connector_button.setRect(QRectF(self.x+25, self.y+25, 20, 20))  # TODO: Refine position
+        self.connector_button.setRect(QRectF(self.x_coord+25, self.y_coord+25, 20, 20))  # TODO: Refine position
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
@@ -343,6 +344,38 @@ class ToolImage(ItemImage):
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
+        # animation stuff
+        self.wheel = QGraphicsPixmapItem()
+        pixmap = QPixmap(":/icons/wheel.png").scaled(0.5*self.w, 0.5*self.h)
+        self.wheel.setPixmap(pixmap)
+        self.wheel_w = pixmap.width()
+        self.wheel_h = pixmap.height()
+        self.wheel.setPos(self._master.sceneBoundingRect().center())
+        self.wheel.moveBy(-0.5*self.wheel_w, -0.5*self.wheel_h)
+        self.wheel.setParentItem(self._master)
+        self.timer = QTimeLine()
+        self.timer.setLoopCount(0) # loop forever
+        self.timer.setFrameRange(0, 100) # TODO: find out what this does exactly
+        self.animation = QGraphicsItemAnimation()
+        self.animation.setItem(self.wheel)
+        self.animation.setTimeLine(self.timer)
+        self.center = None
+        #self.timer.frameChanged.connect(self.test)
+
+    def test(self, frame):
+        logging.debug(self.center)
+
+    def setup_animation(self):
+        """Set up the animation to be played when the Tool associated to this GraphicsItem
+        is running.
+        """
+        center = self._master.sceneBoundingRect().center()
+        for angle in range(360):
+            step = angle / 360.0
+            self.animation.setTranslationAt(step, 0.5*self.wheel_w, 0.5*self.wheel_h)
+            self.animation.setRotationAt(step, angle)
+            self.animation.setTranslationAt(step, -0.5*self.wheel_w, -0.5*self.wheel_h)
+            self.animation.setPosAt(step, center)
 
     def make_master(self, pen, brush):
         """Calls super class method."""

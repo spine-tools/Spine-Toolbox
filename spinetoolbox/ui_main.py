@@ -48,7 +48,7 @@ from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
     SPLITTER_SS, SEPARATOR_SS, JULIACOMANDLINE_SS
-from helpers import project_dir, get_datetime, erase_dir, blocking_updates
+from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
 from models import ToolTemplateModel, ConnectionModel
 
 
@@ -1052,6 +1052,7 @@ class ToolboxUI(QMainWindow):
         # Show the template in the Tool Template Form
         self.show_tool_template_form(tool_template)
 
+    @busy_effect
     @Slot("QModelIndex", name='open_tool_template_file')
     def open_tool_template_file(self, index):
         """Open the Tool template definition file in the default (.json) text-editor.
@@ -1083,6 +1084,7 @@ class ToolboxUI(QMainWindow):
                                 .format(file_path))
         return
 
+    @busy_effect
     @Slot("QModelIndex", name='open_tool_main_program_file')
     def open_tool_main_program_file(self, index):
         """Open the tool template's main program file in the default editor.
@@ -1094,7 +1096,7 @@ class ToolboxUI(QMainWindow):
             return
         tool = self.tool_template_model.tool_template(index.row())
         file_path = os.path.join(tool.path, tool.includes[0])
-        # Check if file exists first. openUrl may return True if file doesn't exist
+        # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for {0}".format(file_path))

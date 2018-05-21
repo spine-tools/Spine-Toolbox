@@ -4,6 +4,7 @@
   </qresource>
   <qresource prefix="icons">
     <file>dc_add.png</file>
+    <file>wheel.png</file>
     <file>datapkg.png</file>
     <file>tool_options.png</file>
     <file>keys.png</file>
