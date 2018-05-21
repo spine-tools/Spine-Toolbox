@@ -114,9 +114,9 @@ class ToolTemplateContextMenu(CustomContextMenu):
             # Don't show menu when clicking on No tool
             pass
         else:
-            self.add_action("Open")
-            self.add_action("Open in external editor")
-            self.add_action("Open main program")
+            self.add_action("Edit")
+            self.add_action("Open descriptor file")
+            self.add_action("Open main program file")
             self.add_action("Remove")
         self.exec_(position)
 
@@ -198,14 +198,26 @@ class ProcessOutputContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-class addToolTemplatePopupMenu(QMenu):
+class AddToolTemplatePopupMenu(QMenu):
     """Popup menu class for add tool template button."""
 
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
-        self.option = "None"
         # Open a tool template file
         action = self.addAction("Open", self._parent, SLOT("open_tool_template()"))
         # Show the Tool Template Form (empty)
         action = self.addAction("Create", self._parent, SLOT("show_tool_template_form()"))
+
+
+
+class ToolTemplateOptionsPopupMenu(QMenu):
+    """Popup menu class for tool template options button in Tool item."""
+
+    def __init__(self, parent):
+        super().__init__()
+        self._parent = parent
+        # Open a tool template file
+        action = self.addAction("Edit", self._parent, SLOT("edit_tool_template()"))
+        action = self.addAction("Open descriptor file", self._parent, SLOT("open_tool_template_file()"))
+        action = self.addAction("Open main program file", self._parent, SLOT("open_tool_main_program_file()"))

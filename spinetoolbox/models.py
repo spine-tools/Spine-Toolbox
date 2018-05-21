@@ -164,6 +164,14 @@ class ToolTemplateModel(QAbstractListModel):
         return -1
 
 
+    def tool_template_index(self, name):
+        """Returns the index (QModelIndex) on which the given template lives or -1 if not found."""
+        row = self.tool_template_row(name)
+        if row == -1:
+            return QModelIndex()
+        return self.createIndex(row, 0)
+
+
 class ConnectionModel(QAbstractTableModel):
     """Table model for storing connections between items."""
 

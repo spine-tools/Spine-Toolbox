@@ -34,6 +34,7 @@ from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
 from graphics_items import ToolImage
+from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 
 
 class Tool(MetaObject):
@@ -74,6 +75,8 @@ class Tool(MetaObject):
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, self.short_name, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
+        self._widget.ui.toolButton_tool_template_options.setMenu(self.tool_template_options_popup_menu)
         self.connect_signals()
 
     def connect_signals(self):
@@ -92,6 +95,18 @@ class Tool(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    @Slot(name="edit_tool_template")
+    def edit_tool_template(self):
+        self._parent.edit_tool_template(self._tool_template_index)
+
+    @Slot(name="open_tool_template_file")
+    def open_tool_template_file(self):
+        self._parent.open_tool_template_file(self._tool_template_index)
+
+    @Slot(name="open_tool_main_program_file")
+    def open_tool_main_program_file(self):
+        self._parent.open_tool_main_program_file(self._tool_template_index)
 
     @Slot(name='show_details')
     def show_details(self):
@@ -119,6 +134,7 @@ class Tool(MetaObject):
             ToolTemplate or None if no Tool Template set for this Tool.
         """
         self._tool_template = tool_template
+        self._tool_template_index = self._parent.tool_template_model.tool_template_index(tool_template.name)
         self.update_tool_ui()
 
     def update_tool_ui(self):

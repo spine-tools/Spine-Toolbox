@@ -52,7 +52,7 @@ class ToolTemplateWidget(QWidget):
             tool_template (ToolTemplate): If given, the form is pre-filled with data
                 from this template
         """
-        super().__init__()
+        super().__init__(f=Qt.Window)
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)

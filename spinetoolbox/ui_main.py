@@ -35,7 +35,7 @@ from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    ItemImageContextMenu, LinkContextMenu, addToolTemplatePopupMenu, ProcessOutputContextMenu
+    ItemImageContextMenu, LinkContextMenu, AddToolTemplatePopupMenu, ProcessOutputContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -87,13 +87,14 @@ class ToolboxUI(QMainWindow):
         self.item_image_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
-        self.add_tool_template_popup_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
         self.add_tool_form = None
         self.add_view_form = None
         self.tool_template_form = None
+        self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
+        self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # self.scene_bg = SceneBackground(self)
         # Initialize application
@@ -180,8 +181,6 @@ class ToolboxUI(QMainWindow):
         # self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
-        self.add_tool_template_popup_menu = addToolTemplatePopupMenu(self)
-        self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -1285,11 +1284,11 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.listView_tool_templates.viewport().mapToGlobal(pos)
         self.tool_template_context_menu = ToolTemplateContextMenu(self, global_pos, ind)
         option = self.tool_template_context_menu.get_action()
-        if option == "Open":
+        if option == "Edit":
             self.edit_tool_template(ind)
-        elif option == "Open in external editor":
+        elif option == "Open descriptor file":
             self.open_tool_template_file(ind)
-        elif option == "Open main program":
+        elif option == "Open main program file":
             self.open_tool_main_program_file(ind)
         elif option == "Remove":
             self.remove_tool_template(ind)
