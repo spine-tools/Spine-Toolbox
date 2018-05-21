@@ -234,8 +234,7 @@ class Tool(MetaObject):
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
-        self._graphics_item.setup_animation()
-        self._graphics_item.timer.start()
+        self._graphics_item.start_wheel_animation()
 
     def find_input_files(self):
         """Iterate files in required input files model and find them from connected items.
@@ -390,8 +389,7 @@ class Tool(MetaObject):
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
         """Tool execution finished."""
-        self._graphics_item.timer.stop()
-        self._graphics_item.timer.setCurrentTime(0)
+        self._graphics_item.stop_wheel_animation()
         if return_code == 0:
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
             # copy outputfiles to data directories of connected items

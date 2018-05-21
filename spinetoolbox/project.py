@@ -137,8 +137,6 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
                     item_dict[top_level_item_txt][name]["x"] = child_data.get_icon().master().sceneBoundingRect().x()
-                    logging.debug(child_data)
-                    logging.debug(item_dict[top_level_item_txt][name]["x"])
                     item_dict[top_level_item_txt][name]["y"] = child_data.get_icon().master().sceneBoundingRect().y()
                     if child_data.item_type == "Tool":
                         if not child_data.tool_template():

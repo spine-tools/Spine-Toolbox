@@ -353,29 +353,37 @@ class ToolImage(ItemImage):
         self.wheel.setPos(self._master.sceneBoundingRect().center())
         self.wheel.moveBy(-0.5*self.wheel_w, -0.5*self.wheel_h)
         self.wheel.setParentItem(self._master)
+        self.wheel.hide()
         self.timer = QTimeLine()
         self.timer.setLoopCount(0) # loop forever
         self.timer.setFrameRange(0, 100) # TODO: find out what this does exactly
-        self.animation = QGraphicsItemAnimation()
-        self.animation.setItem(self.wheel)
-        self.animation.setTimeLine(self.timer)
-        self.center = None
+        self.wheel_animation = QGraphicsItemAnimation()
+        self.wheel_animation.setItem(self.wheel)
+        self.wheel_animation.setTimeLine(self.timer)
         #self.timer.frameChanged.connect(self.test)
 
     def test(self, frame):
-        logging.debug(self.center)
+        logging.debug('timer elapsed')
 
-    def setup_animation(self):
-        """Set up the animation to be played when the Tool associated to this GraphicsItem
-        is running.
+    def start_wheel_animation(self):
+        """Start the animation that plays when the Tool associated to this GraphicsItem
+        is running (spinning wheel).
         """
-        center = self._master.sceneBoundingRect().center()
+        center = self.wheel.sceneBoundingRect().center()
         for angle in range(360):
             step = angle / 360.0
-            self.animation.setTranslationAt(step, 0.5*self.wheel_w, 0.5*self.wheel_h)
-            self.animation.setRotationAt(step, angle)
-            self.animation.setTranslationAt(step, -0.5*self.wheel_w, -0.5*self.wheel_h)
-            self.animation.setPosAt(step, center)
+            self.wheel_animation.setTranslationAt(step, 0.5*self.wheel_w, 0.5*self.wheel_h)
+            self.wheel_animation.setRotationAt(step, angle)
+            self.wheel_animation.setTranslationAt(step, -0.5*self.wheel_w, -0.5*self.wheel_h)
+            self.wheel_animation.setPosAt(step, center)
+        self.wheel.show()
+        self.timer.start()
+
+    def stop_wheel_animation(self):
+        """Stop wheel animation"""
+        self.timer.stop()
+        self.timer.setCurrentTime(0)
+        self.wheel.hide()
 
     def make_master(self, pen, brush):
         """Calls super class method."""
