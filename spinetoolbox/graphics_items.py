@@ -352,30 +352,31 @@ class ToolImage(ItemImage):
         self.wheel_h = pixmap.height()
         self.wheel.setPos(self._master.sceneBoundingRect().center())
         self.wheel.moveBy(-0.5*self.wheel_w, -0.5*self.wheel_h)
+        self.wheel_center = self.wheel.sceneBoundingRect().center()
         self.wheel.setParentItem(self._master)
         self.wheel.hide()
         self.timer = QTimeLine()
         self.timer.setLoopCount(0) # loop forever
-        self.timer.setFrameRange(0, 100) # TODO: find out what this does exactly
+        self.timer.setFrameRange(0, 10) # TODO: find out what this does exactly
         self.wheel_animation = QGraphicsItemAnimation()
         self.wheel_animation.setItem(self.wheel)
         self.wheel_animation.setTimeLine(self.timer)
-        #self.timer.frameChanged.connect(self.test)
+        self.timer.frameChanged.connect(self.test)
 
     def test(self, frame):
-        logging.debug('timer elapsed')
+        logging.debug(self.wheel_center)
 
     def start_wheel_animation(self):
         """Start the animation that plays when the Tool associated to this GraphicsItem
         is running (spinning wheel).
         """
-        center = self.wheel.sceneBoundingRect().center()
         for angle in range(360):
             step = angle / 360.0
             self.wheel_animation.setTranslationAt(step, 0.5*self.wheel_w, 0.5*self.wheel_h)
             self.wheel_animation.setRotationAt(step, angle)
             self.wheel_animation.setTranslationAt(step, -0.5*self.wheel_w, -0.5*self.wheel_h)
-            self.wheel_animation.setPosAt(step, center)
+            #self.wheel_animation.setPosAt(step, QPointF(0.5*self.wheel_w, 0.5*self.wheel_h))
+            self.wheel_animation.setPosAt(step, self.wheel_center)
         self.wheel.show()
         self.timer.start()
 

@@ -427,10 +427,10 @@ class DataStoreForm(QWidget):
     def init_object_parameter_view(self, header):
 
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
-        #self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
-        #self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
-        #self.ui.tableView_object_parameter.hideColumn(header.index("parameter_value_id"))
-        #self.ui.tableView_object_parameter.setItemDelegateForColumn(header.index("value"), LineEditDelegate(self))
+        self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
+        self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
+        self.ui.tableView_object_parameter.hideColumn(header.index("parameter_value_id"))
+        self.ui.tableView_object_parameter.setItemDelegateForColumn(header.index("value"), LineEditDelegate(self))
         #self.ui.tableView_object_parameter.itemDelegateForColumn(header.index("value")).\
         #    closeEditor.connect(self.update_parameter_value)
         self.ui.tableView_object_parameter.setItemDelegate(LineEditDelegate(self))
