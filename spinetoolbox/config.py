@@ -138,6 +138,7 @@ DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
+JULIACOMANDLINE_SS = "QLineEdit{border-radius: 0px; background: black; color: white; border: 1px solid white;}"
 
 SQL_DIALECT_API = {
     'mysql': 'mysqlclient',

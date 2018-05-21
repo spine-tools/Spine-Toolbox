@@ -44,15 +44,6 @@ class CustomQLineEdit(QLineEdit):
         self.julia_subprocess = None
         self.ui = None
         self._project = None
-        self.history = None
-        self.history_point = None
-        self.history_file_handle = None
-
-    def setup_command_line(self, ui, project):
-        self.ui = ui
-        self._project = project
-        self.julia_subprocess = self._project.get_julia_subprocess()
-        self.julia_subprocess.start_if_not_running()
         self.history = list()
         self.history_point = 0
         julia_history_file = os.path.join(Path.home(), ".spine_toolbox_julia_history")
@@ -60,6 +51,12 @@ class CustomQLineEdit(QLineEdit):
         with open(julia_history_file, 'r') as f:
             for line in f:
                 self.history.append(line.strip())
+
+    def setup_command_line(self, ui, project):
+        self.ui = ui
+        self._project = project
+        self.julia_subprocess = self._project.get_julia_subprocess()
+        self.julia_subprocess.start_if_not_running()
 
     def keyPressEvent(self, e):
         """Hide this widget when escape key is pressed.
@@ -76,7 +73,7 @@ class CustomQLineEdit(QLineEdit):
             command = self.text() + "\n"
             if self.julia_subprocess.write_on_process(command):
                 self.history_point = 0
-                # save command only if history is empty or command is different from last one 
+                # save command only if history is empty or command is different from last one
                 if not self.history or self.text() != self.history[-1]:
                     self.history.append(self.text())
                     self.history_file_handle.write(command)

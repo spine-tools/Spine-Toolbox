@@ -47,7 +47,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SPLITTER_SS, SEPARATOR_SS
+    SPLITTER_SS, SEPARATOR_SS, JULIACOMANDLINE_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates
 from models import ToolTemplateModel, ConnectionModel
 
@@ -100,6 +100,7 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
+        self.ui.lineEdit_process_command.setStyleSheet(JULIACOMANDLINE_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.ui.splitter.setStyleSheet(SPLITTER_SS)
         self.setStyleSheet(SEPARATOR_SS)
