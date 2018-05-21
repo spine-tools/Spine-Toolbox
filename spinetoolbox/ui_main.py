@@ -1043,6 +1043,8 @@ class ToolboxUI(QMainWindow):
         Args:
             index (QModelIndex): Index of the item (from double-click or contex menu signal)
         """
+        if not index.isValid():
+            return
         if index.row() == 0:
             return  # Don't do anything if No Tool option is double-clicked
         tool_template = self.tool_template_model.tool_template(index.row())
@@ -1057,6 +1059,8 @@ class ToolboxUI(QMainWindow):
         Args:
             index (QModelIndex): Index of the item
         """
+        if not index.isValid():
+            return
         tool_template = self.tool_template_model.tool_template(index.row())
         file_path = tool_template.def_file_path
         # Check if file exists first. openUrl may return True if file doesn't exist
@@ -1086,6 +1090,8 @@ class ToolboxUI(QMainWindow):
         Args:
             index (QModelIndex): Index of the item
         """
+        if not index.isValid():
+            return
         tool = self.tool_template_model.tool_template(index.row())
         file_path = os.path.join(tool.path, tool.includes[0])
         # Check if file exists first. openUrl may return True if file doesn't exist

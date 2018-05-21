@@ -60,6 +60,7 @@ class Tool(MetaObject):
         self._widget.make_header_for_output_files()
         self._widget.ui.comboBox_tool.setModel(self._parent.tool_template_model)
         self._tool_template = None
+        self._tool_template_index = None
         self.set_tool_template(tool_template)
         # Set correct row selected in the comboBox
         if not tool_template:
@@ -134,7 +135,12 @@ class Tool(MetaObject):
             ToolTemplate or None if no Tool Template set for this Tool.
         """
         self._tool_template = tool_template
-        self._tool_template_index = self._parent.tool_template_model.tool_template_index(tool_template.name)
+        if tool_template:
+            self._tool_template_index = self._parent.tool_template_model.tool_template_index(tool_template.name)
+            self._widget.ui.toolButton_tool_template_options.setEnabled(True)
+        else:
+            self._tool_template_index = None
+            self._widget.ui.toolButton_tool_template_options.setEnabled(False)
         self.update_tool_ui()
 
     def update_tool_ui(self):
