@@ -522,20 +522,10 @@
         </font>
        </property>
        <property name="contextMenuPolicy">
-        <enum>Qt::CustomContextMenu</enum>
+        <enum>Qt::DefaultContextMenu</enum>
        </property>
        <property name="openLinks">
         <bool>false</bool>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="CustomQLineEdit" name="lineEdit_process_command">
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>24</height>
-        </size>
        </property>
       </widget>
      </item>
@@ -583,6 +573,21 @@
         </item>
        </layout>
       </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_julia_qtconsole">
+   <property name="windowTitle">
+    <string>Julia console</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_julia_qtconsole">
+    <layout class="QVBoxLayout" name="verticalLayout_9">
+     <item>
+      <widget class="QWidget" name="widget_2" native="true"/>
      </item>
     </layout>
    </widget>
@@ -721,11 +726,6 @@
    <class>CustomQGraphicsView</class>
    <extends>QGraphicsView</extends>
    <header>widgets/custom_qgraphicsview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>CustomQLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>widgets/custom_qlineedit.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

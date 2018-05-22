@@ -234,14 +234,10 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setFamily("Segoe UI")
         self.textBrowser_process_output.setFont(font)
-        self.textBrowser_process_output.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        self.textBrowser_process_output.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
         self.textBrowser_process_output.setOpenLinks(False)
         self.textBrowser_process_output.setObjectName("textBrowser_process_output")
         self.verticalLayout_6.addWidget(self.textBrowser_process_output)
-        self.lineEdit_process_command = CustomQLineEdit(self.dockWidgetContents_2)
-        self.lineEdit_process_command.setMaximumSize(QtCore.QSize(16777215, 24))
-        self.lineEdit_process_command.setObjectName("lineEdit_process_command")
-        self.verticalLayout_6.addWidget(self.lineEdit_process_command)
         self.dockWidget_process_output.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_process_output)
         self.dockWidget_item = QtWidgets.QDockWidget(MainWindow)
@@ -263,6 +259,17 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.groupBox_subwindow)
         self.dockWidget_item.setWidget(self.dockWidgetContents_3)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_item)
+        self.dockWidget_julia_qtconsole = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_julia_qtconsole.setObjectName("dockWidget_julia_qtconsole")
+        self.dockWidgetContents_julia_qtconsole = QtWidgets.QWidget()
+        self.dockWidgetContents_julia_qtconsole.setObjectName("dockWidgetContents_julia_qtconsole")
+        self.verticalLayout_9 = QtWidgets.QVBoxLayout(self.dockWidgetContents_julia_qtconsole)
+        self.verticalLayout_9.setObjectName("verticalLayout_9")
+        self.widget_2 = QtWidgets.QWidget(self.dockWidgetContents_julia_qtconsole)
+        self.widget_2.setObjectName("widget_2")
+        self.verticalLayout_9.addWidget(self.widget_2)
+        self.dockWidget_julia_qtconsole.setWidget(self.dockWidgetContents_julia_qtconsole)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_julia_qtconsole)
         self.actionQuit = QtWidgets.QAction(MainWindow)
         self.actionQuit.setObjectName("actionQuit")
         self.actionData_Store = QtWidgets.QAction(MainWindow)
@@ -353,6 +360,7 @@ class Ui_MainWindow(object):
         self.dockWidget_process_output.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Subprocess Output", None, -1))
         self.dockWidget_item.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Selected Item", None, -1))
         self.groupBox_subwindow.setTitle(QtWidgets.QApplication.translate("MainWindow", "SubWindowArea", None, -1))
+        self.dockWidget_julia_qtconsole.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Julia console", None, -1))
         self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Quit", None, -1))
         self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Q", None, -1))
         self.actionData_Store.setText(QtWidgets.QApplication.translate("MainWindow", "Data Store", None, -1))
@@ -383,7 +391,6 @@ class Ui_MainWindow(object):
         self.actionSelected_Item.setText(QtWidgets.QApplication.translate("MainWindow", "Selected Item", None, -1))
         self.actionSelected_Item.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

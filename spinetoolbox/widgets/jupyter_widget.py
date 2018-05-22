@@ -18,34 +18,26 @@
 #############################################################################
 
 """
-Spine Toolbox application main file.
+Class for a custom QTextBrowser to add options to context menu.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-:date:   14.12.2017
+:author: Manuel Marin <manuelma@kth.se>
+:date:   22.5.2018
 """
 
-import sys
-import logging
-from PySide2.QtWidgets import QApplication
-from ui_main import ToolboxUI
+from qtconsole.rich_jupyter_widget import RichJupyterWidget
+from qtconsole.manager import QtKernelManager
+from config import JULIA_KERNEL
 
-def main(argv):
-    """Launch application.
-
-    Args:
-        argv (list): Command line arguments
+def make_jupyter_widget_with_kernel():
+    """Start a julia kernel, connect to it, and create a RichJupyterWidget to use it
     """
+    kernel_manager = QtKernelManager(kernel_name=JULIA_KERNEL)
+    kernel_manager.start_kernel()
 
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-                        format='%(asctime)s %(levelname)s: %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-    app = QApplication(argv)
-    window = ToolboxUI()
-    window.show()
-    # Enter main event loop and wait until exit() is called
-    return_code = app.exec_()
-    return return_code
+    kernel_client = kernel_manager.client()
+    kernel_client.start_channels()
 
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))
+    jupyter_widget = RichJupyterWidget()
+    jupyter_widget.kernel_manager = kernel_manager
+    jupyter_widget.kernel_client = kernel_client
+    return jupyter_widget

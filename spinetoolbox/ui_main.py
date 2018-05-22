@@ -47,9 +47,10 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SPLITTER_SS, SEPARATOR_SS, JULIACOMANDLINE_SS
+    SPLITTER_SS, SEPARATOR_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
 from models import ToolTemplateModel, ConnectionModel
+from widgets.jupyter_widget import make_jupyter_widget_with_kernel
 
 
 class ToolboxUI(QMainWindow):
@@ -101,7 +102,6 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
-        self.ui.lineEdit_process_command.setStyleSheet(JULIACOMANDLINE_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.ui.splitter.setStyleSheet(SPLITTER_SS)
         self.setStyleSheet(SEPARATOR_SS)
@@ -109,7 +109,8 @@ class ToolboxUI(QMainWindow):
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
         # hide process command line
-        self.ui.lineEdit_process_command.hide()
+        self.julia_qtconsole = make_jupyter_widget_with_kernel()
+        self.ui.dockWidgetContents_julia_qtconsole.layout().addWidget(self.julia_qtconsole)
         # Make keyboard shortcuts
         self.test1_action = QAction(self)
         self.test1_action.setShortcut("F5")
@@ -186,7 +187,6 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
-        self.ui.textBrowser_process_output.customContextMenuRequested.connect(self.show_process_output_context_menu)
 
     @Slot(name="init_project")
     def init_project(self):
@@ -1343,25 +1343,6 @@ class ToolboxUI(QMainWindow):
             pass
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
-
-    def show_process_output_context_menu(self, pos):
-        """Context menu for process output QTextBrowser.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        global_pos = self.ui.textBrowser_process_output.mapToGlobal(pos)
-        self.process_output_context_menu = ProcessOutputContextMenu(self, global_pos)
-        option = self.process_output_context_menu.get_action()
-        if option == "Clear":
-            self.ui.textBrowser_process_output.clear()
-        if option == "Issue Julia commands":
-            if not self._project:
-                self.ui.statusbar.showMessage("Open or create a project first.", 3000)
-                return
-            self.ui.lineEdit_process_command.setup_command_line(self, self._project)
-            self.ui.lineEdit_process_command.show()
-            self.ui.lineEdit_process_command.setFocus()
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.

@@ -110,12 +110,13 @@ class ToolInstance(QObject):
         self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
         if self.tool.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
-                self.tool_process = self._project.get_julia_subprocess()
-                self.tool_process.start_if_not_running()
-                self.tool_process.repl_finished_signal.connect(self.julia_repl_tool_finished)
-                if not self.tool_process.write_on_process(self.command):
-                    #self.julia_repl_tool_finished(-9999)
-                    return
+                self.ui.julia_qtconsole.kernel_client.execute(self.command)
+                #self.tool_process = self._project.get_julia_subprocess()
+                #self.tool_process.start_if_not_running()
+                #self.tool_process.repl_finished_signal.connect(self.julia_repl_tool_finished)
+                #if not self.tool_process.write_on_process(self.command):
+                #    #self.julia_repl_tool_finished(-9999)
+                #    return
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
