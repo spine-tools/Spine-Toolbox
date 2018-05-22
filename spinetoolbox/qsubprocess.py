@@ -27,6 +27,7 @@ Module to handle running tools in a QProcess.
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 import logging
 import os
+import sys
 import signal
 
 
@@ -142,19 +143,19 @@ class QSubProcess(QObject):
             logging.debug("QProcess Unspecified error: {0}".format(process_error))
 
     def close_repl(self):
-        """Stop execution of program in REPL."""
-        # TODO: try to send (ctrl+c) signal to julia REPL, so it stays open afterwards
+        """Stop execution of julia program in REPL.
+        On Linux, send SIGINT so that REPL stays open. On Windows this is not possible,
+        so just close the REPL gracefully."""
         # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
+        if sys.platform == "win32":
+            self.close_process()
+            return
         logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
                       .format(self._process.processId(), self._process.state(), self._process.error()))
         self._user_stopped = True
         self.process_failed = True
         try:
-            # TODO: this works on Linux, try to make it work on Windows
-            if not sys.platform == "win32":
-                os.kill(self._process.processId(), signal.SIGINT)
-            else:
-                os.kill(self._process.processId(), signal.CTRL_C_EVENT)
+            os.kill(self._process.processId(), signal.SIGINT)
         except Exception as ex:
             logging.exception("Exception in closing QProcess: {}".format(ex))
 
