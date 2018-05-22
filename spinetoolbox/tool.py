@@ -240,6 +240,7 @@ class Tool(MetaObject):
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
         self._widget.ui.pushButton_stop.setEnabled(True)
+        self._widget.ui.pushButton_execute.setEnabled(False)
         self._graphics_item.start_wheel_animation()
 
     def find_input_files(self):
@@ -396,6 +397,7 @@ class Tool(MetaObject):
     def execution_finished(self, return_code):
         """Tool execution finished."""
         self._widget.ui.pushButton_stop.setEnabled(False)
+        self._widget.ui.pushButton_execute.setEnabled(True)
         self._graphics_item.stop_wheel_animation()
         if return_code == 0:
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
