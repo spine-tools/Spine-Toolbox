@@ -50,7 +50,7 @@ from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBA
     SPLITTER_SS, SEPARATOR_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
 from models import ToolTemplateModel, ConnectionModel
-from widgets.jupyter_widget import make_jupyter_widget_with_kernel
+from widgets.julia_repl_widget import JuliaREPLWidget
 
 
 class ToolboxUI(QMainWindow):
@@ -109,8 +109,8 @@ class ToolboxUI(QMainWindow):
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
         # hide process command line
-        self.julia_qtconsole = make_jupyter_widget_with_kernel()
-        self.ui.dockWidgetContents_julia_qtconsole.layout().addWidget(self.julia_qtconsole)
+        self.julia_repl = JuliaREPLWidget(self)
+        self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
         # Make keyboard shortcuts
         self.test1_action = QAction(self)
         self.test1_action.setShortcut("F5")
@@ -168,6 +168,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
         self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
         self.ui.actionSelected_Item.triggered.connect(lambda: self.ui.dockWidget_item.show())
+        self.ui.actionJulia_REPL.triggered.connect(lambda: self.ui.dockWidget_julia_repl.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
         # noinspection PyUnresolvedReferences
@@ -1403,4 +1404,5 @@ class ToolboxUI(QMainWindow):
         if event:
             event.accept()
         # noinspection PyArgumentList
+        self.julia_repl.shutdown_jupyter_kernel()
         QApplication.quit()

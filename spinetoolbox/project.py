@@ -59,7 +59,6 @@ class SpineToolboxProject(MetaObject):
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
         self.project_contents = dict()
-        self.julia_subprocess = None  # Contains Julia REPL instance
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -298,18 +297,6 @@ class SpineToolboxProject(MetaObject):
         else:
             self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
-
-    def get_julia_subprocess(self):
-        """Setup the julia REPL subprocess that will stay open between executions.
-        """
-        if not self.julia_subprocess:
-            julia_path = self._parent._config.get("settings", "julia_path")
-            if not julia_path == '':
-                julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
-            else:
-                julia_exe_path = JULIA_EXECUTABLE
-            self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
-        return self.julia_subprocess
 
     def add_data_store(self, name, description, references, x=0, y=0):
         """Add data store to project item model."""

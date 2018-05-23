@@ -53,6 +53,7 @@ class ToolInstance(QObject):
         self._project = project
         self.tool_process = None
         self.tool_output_dir = tool_output_dir
+        self.using_julia_repl = None
         # Directory where results were saved
         self.output_dir = None
         wrk_dir = self._project.work_dir
@@ -110,13 +111,10 @@ class ToolInstance(QObject):
         self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
         if self.tool.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
-                self.ui.julia_qtconsole.kernel_client.execute(self.command)
-                #self.tool_process = self._project.get_julia_subprocess()
-                #self.tool_process.start_if_not_running()
-                #self.tool_process.repl_finished_signal.connect(self.julia_repl_tool_finished)
-                #if not self.tool_process.write_on_process(self.command):
-                #    #self.julia_repl_tool_finished(-9999)
-                #    return
+                self.ui.julia_repl.start_jupyter_kernel()
+                self.ui.julia_repl.execute_command(self.command)
+                self.ui.julia_repl.execution_finished_signal.connect(self.julia_repl_tool_finished)
+                self.using_julia_repl = True
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
@@ -127,29 +125,23 @@ class ToolInstance(QObject):
             self.tool_process.start_process(workdir=self.basedir)
 
 
-    @Slot(int, name="julia_repl_tool_finished")
     def julia_repl_tool_finished(self, ret):
         """Run when Julia tool using REPL has finished processing.
 
         Args:
             ret (int): Return code given by tool
         """
-        # disconnect REPL signal if connected
-        if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
-            self.tool_process.repl_finished_signal.disconnect(self.julia_repl_tool_finished)
-        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
-            if self.tool_process.process_failed_to_start:
-                self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
-                                       "Julia is installed properly on your computer.")
-            else:
-                try:
-                    return_msg = self.tool.return_codes[ret]
-                    self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-                except KeyError:
-                    self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:  # Return code 0: success
+        if ret != 0:
+            try:
+                return_msg = self.tool.return_codes[ret]
+                self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:
             self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
+        self.using_julia_repl = False
         self.save_output_files(ret)
+
 
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
@@ -255,8 +247,9 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        if self.tool_process.receivers(SIGNAL("repl_finished_signal(int)")):
-            self.tool_process.close_repl()
+        if self.using_julia_repl:
+            # TODO: interrupt julia REPL
+            pass
         else:
             self.tool_process.close_process()
 

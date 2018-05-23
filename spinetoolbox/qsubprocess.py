@@ -26,16 +26,12 @@ Module to handle running tools in a QProcess.
 
 from PySide2.QtCore import QObject, QProcess, Slot, Signal
 import logging
-import os
-import sys
-import signal
 
 
 class QSubProcess(QObject):
     """Class to handle starting, running, and finishing PySide2 QProcesses."""
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
-    repl_finished_signal = Signal(int, name="repl_finished_signal")
 
     def __init__(self, ui, command):
         """Class constructor.
@@ -52,16 +48,16 @@ class QSubProcess(QObject):
         self._user_stopped = False
         self._process = QProcess(self)
 
-    def start_if_not_running(self, workdir=None):
-        """Start a QProcess if is not running.
+    #def start_if_not_running(self, workdir=None):
+    #    """Start a QProcess if is not running.
 
-        Args:
-            workdir (str): Path to work directory
-        """
-        if self._process is None:
-            self._process = QProcess(self)
-        if self._process.state() != QProcess.Running:
-            self.start_process(workdir=workdir)
+    #    Args:
+    #        workdir (str): Path to work directory
+    #    """
+    #    if self._process is None:
+    #        self._process = QProcess(self)
+    #    if self._process.state() != QProcess.Running:
+    #        self.start_process(workdir=workdir)
 
     # noinspection PyUnresolvedReferences
     def start_process(self, workdir=None):
@@ -85,19 +81,19 @@ class QSubProcess(QObject):
             self._process = None
             self.subprocess_finished_signal.emit(0)
 
-    def write_on_process(self, command):
-        """Writes a command on a running process
+    #def write_on_process(self, command):
+    #    """Writes a command on a running process
 
-        Args:
-            command (str): command to write
+    #    Args:
+    #        command (str): command to write
 
-        Returns:
-            False if QProcess is None (failed to start), else True
-        """
-        if not self._process:
-            return False
-        self._process.write(command)
-        return True
+    #    Returns:
+    #        False if QProcess is None (failed to start), else True
+    #    """
+    #    if not self._process:
+    #        return False
+    #    self._process.write(command)
+    #    return True
 
     @Slot(name="process_started")
     def process_started(self):
@@ -142,23 +138,6 @@ class QSubProcess(QObject):
         else:
             logging.debug("QProcess Unspecified error: {0}".format(process_error))
 
-    def close_repl(self):
-        """Stop execution of julia program in REPL.
-        On Linux, send SIGINT so that REPL stays open. On Windows this is not possible,
-        so just close the REPL gracefully."""
-        # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
-        if sys.platform == "win32":
-            self.close_process()
-            return
-        logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
-                      .format(self._process.processId(), self._process.state(), self._process.error()))
-        self._user_stopped = True
-        self.process_failed = True
-        try:
-            os.kill(self._process.processId(), signal.SIGINT)
-        except Exception as ex:
-            logging.exception("Exception in closing QProcess: {}".format(ex))
-
     def close_process(self):
         """Shutdown simulation in a QProcess."""
         # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
@@ -202,7 +181,6 @@ class QSubProcess(QObject):
         self._process.deleteLater()
         self._process = None
         self.subprocess_finished_signal.emit(exit_code)
-        self.repl_finished_signal.emit(exit_code)
 
     @Slot(name="on_ready_stdout")
     def on_ready_stdout(self):
@@ -215,7 +193,3 @@ class QSubProcess(QObject):
         """Emit data from stderr."""
         out = str(self._process.readAllStandardError().data(), "utf-8")
         self._ui.msg_proc_error.emit(out.strip())
-        if out.strip().endswith("repl_succ"):
-            self.repl_finished_signal.emit(0)
-        elif out.strip().endswith("repl_err"):
-            self.repl_finished_signal.emit(-9999)

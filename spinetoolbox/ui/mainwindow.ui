@@ -75,7 +75,7 @@
         <enum>QTabWidget::South</enum>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>1</number>
        </property>
        <property name="documentMode">
         <bool>false</bool>
@@ -401,6 +401,7 @@
      <addaction name="actionEvent_Log"/>
      <addaction name="actionSubprocess_Output"/>
      <addaction name="actionSelected_Item"/>
+     <addaction name="actionJulia_REPL"/>
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
@@ -577,14 +578,14 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_julia_qtconsole">
+  <widget class="QDockWidget" name="dockWidget_julia_repl">
    <property name="windowTitle">
-    <string>Julia console</string>
+    <string>Julia REPL</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
    </attribute>
-   <widget class="QWidget" name="dockWidgetContents_julia_qtconsole">
+   <widget class="QWidget" name="dockWidgetContents_julia_repl">
     <layout class="QVBoxLayout" name="verticalLayout_9">
      <item>
       <widget class="QWidget" name="widget_2" native="true"/>
@@ -710,6 +711,14 @@
   <action name="actionSelected_Item">
    <property name="text">
     <string>Selected Item</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Make Selected Item widget visible&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionJulia_REPL">
+   <property name="text">
+    <string>Julia REPL</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Make Selected Item widget visible&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
