@@ -53,7 +53,6 @@ class ToolInstance(QObject):
         self._project = project
         self.tool_process = None
         self.tool_output_dir = tool_output_dir
-        self.using_julia_repl = None
         # Directory where results were saved
         self.output_dir = None
         wrk_dir = self._project.work_dir
@@ -111,10 +110,10 @@ class ToolInstance(QObject):
         self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
         if self.tool.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
-                self.ui.julia_repl.start_jupyter_kernel()
-                self.ui.julia_repl.execute_command(self.command)
-                self.ui.julia_repl.execution_finished_signal.connect(self.julia_repl_tool_finished)
-                self.using_julia_repl = True
+                self.tool_process = self.ui.julia_repl
+                self.tool_process.start_jupyter_kernel()
+                self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
+                self.tool_process.execute_command(self.command)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
@@ -139,7 +138,7 @@ class ToolInstance(QObject):
                 self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
             self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
-        self.using_julia_repl = False
+        self.tool_process = None
         self.save_output_files(ret)
 
 
@@ -154,8 +153,6 @@ class ToolInstance(QObject):
             if self.tool_process.process_failed_to_start:
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
                                        "Julia is installed properly on your computer.")
-                self.tool_process.deleteLater()
-                self.tool_process = None
             else:
                 try:
                     return_msg = self.tool.return_codes[ret]
@@ -163,9 +160,9 @@ class ToolInstance(QObject):
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self.tool_process.deleteLater()
-            self.tool_process = None
             self.ui.msg.emit("\tJulia tool finished successfully. Return code:{0}".format(ret))
+        self.tool_process.deleteLater()
+        self.tool_process = None
         self.save_output_files(ret)
 
     @Slot(int, name="gams_tool_finished")
@@ -181,8 +178,6 @@ class ToolInstance(QObject):
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
                                        "GAMS is installed properly on your computer "
                                        "and GAMS directory is given in Settings (F1).")
-                self.tool_process.deleteLater()
-                self.tool_process = None
             else:
                 try:
                     return_msg = self.tool.return_codes[ret]
@@ -190,9 +185,9 @@ class ToolInstance(QObject):
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self.tool_process.deleteLater()
-            self.tool_process = None
             self.ui.msg.emit("\tGAMS tool finished successfully. Return code:{0}".format(ret))
+        self.tool_process.deleteLater()
+        self.tool_process = None
         self.save_output_files(ret)
 
     def save_output_files(self, ret):
@@ -247,9 +242,8 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        if self.using_julia_repl:
-            # TODO: interrupt julia REPL
-            pass
+        if self.tool_process.is_julia_repl:
+            self.ui.julia_repl.interrupt_execution()
         else:
             self.tool_process.close_process()
 

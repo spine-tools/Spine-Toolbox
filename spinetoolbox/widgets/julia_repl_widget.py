@@ -41,14 +41,18 @@ class JuliaREPLWidget(RichJupyterWidget):
 
 
     def __init__(self, ui):
-        """Start a julia kernel, connect to it, and create a RichJupyterWidget to use it
-        """
         super().__init__()
         self.ui = ui
         self.kernel_manager = None
         self.kernel_client = None
+        self.is_julia_repl = True
+        self.running = False
+        self.command = None
+        self.kernel_execution_state = None
 
     def start_jupyter_kernel(self):
+        """Start a julia kernel, and connect to it.
+        """
         if self.kernel_manager is None:
             kernel_manager = QtKernelManager(kernel_name=JULIA_KERNEL)
             kernel_manager.start_kernel()
@@ -56,37 +60,73 @@ class JuliaREPLWidget(RichJupyterWidget):
             kernel_client.start_channels()
             self.kernel_manager = kernel_manager
             self.kernel_client = kernel_client
-            self.kernel_client.iopub_channel.message_received.connect(self.message_received)
-
-    def execute_command(self, command):
-        # TODO: if kernel busy, dismiss command
-        if self.kernel_client is None:
-            self.ui.msg_error.emit("Kernel client not initialized.")
-            return
-        self.kernel_client.execute(command)
-
-    def connect_signal_message_received(self, slot):
-        if self.kernel_client is None:
-            self.ui.msg_error.emit("Kernel client not initialized.")
-            return
+            self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
+            self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
 
 
-    @Slot("dict", name="message_received")
-    def message_received(self, msg):
-        """Run when a message is received from kernel.
+    @Slot("dict", name="shell_message_received")
+    def shell_message_received(self, msg):
+        """Run when a message is received on the shell channel.
+        Send execution finished signal if message is 'execute_reply'
+        """
+        #logging.debug("shell message received")
+        #logging.debug("id: {}".format(msg['msg_id']))
+        #logging.debug("type: {}".format(msg['msg_type']))
+        #logging.debug("content: {}".format(msg['content']))
+        try:
+            logging.debug("status: {}".format(msg['content']['status']))
+        except KeyError:
+            logging.debug("status key not found")
+        if self.running and msg['msg_type'] == 'execute_reply':
+            if msg['content']['status'] == 'ok':
+                self.execution_finished_signal.emit(0)
+            else:
+                self.execution_finished_signal.emit(-9999)
+            self.running = False
+
+
+    @Slot("dict", name="iopub_message_received")
+    def iopub_message_received(self, msg):
+        """Run when a message is received on the iopub channel.
+        Execute current command if the kernel reports status 'idle'
 
         Args:
             msg (int): Message sent by Julia ekernel
         """
-        logging.debug("message received")
-        logging.debug(msg)
-        if msg['header']['msg_type'] == 'execute_result':
-            if msg['content']['data']['text/plain'] == '101':
-                self.execution_finished_signal.emit(0)
-        elif msg['header']['msg_type'] == 'error':
-            self.execution_finished_signal.emit(-9999)
+        #logging.debug("iopub message received")
+        #logging.debug("id: {}".format(msg['msg_id']))
+        #logging.debug("type: {}".format(msg['msg_type']))
+        #logging.debug("content: {}".format(msg['content']))
+        if msg['msg_type'] == 'status':
+            self.kernel_execution_state = msg['content']['execution_state']
+            if self.command and self.kernel_execution_state == 'idle':
+                self.running = True
+                self.execute(self.command)
+                self.command = None
+
+    def execute_command(self, command):
+        """Execute command immediately if kernel is idle. If not, save it for later
+        execution
+        """
+        if not command:
+            return
+        if self.kernel_execution_state == 'idle':
+            self.running = True
+            self.execute(command)
+        else:
+            # store command. It will be executed as soon as the kernel is 'idle'
+            self.command = command
+
+
+    def interrupt_execution(self):
+        """Send interrupt signal to kernel"""
+        logging.debug("interrupt exec")
+        #self.request_interrupt_kernel()
+        self.kernel_manager.interrupt_kernel()
+        # TODO: get prompt back afer this!
 
     def shutdown_jupyter_kernel(self):
+        """Shut down the jupyter kernel"""
         logging.debug('Shutting down kernel...')
         self.ui.msg_proc.emit("Shutting down Julia REPL...")
         self.kernel_client.stop_channels()
