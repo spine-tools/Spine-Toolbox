@@ -430,10 +430,6 @@ class Tool(MetaObject):
                 mod_main_dir = main_dir.__repr__().strip("'")
                 self.instance.command = r'cd("{}");'\
                     r'include("{}")'.format(mod_main_dir, self.tool_template().main_prgm)
-                #self.instance.command = r'cd("{}");'\
-                #    r'try include("{}"); info("repl_succ")'\
-                #    r'catch e; info(e); info("repl_err") end{}'\
-                #    .format(mod_main_dir, self.tool_template().main_prgm, "\n")
             else:
                 # Run scripts with command "julia script.jl"
                 julia_dir = self._parent._config.get("settings", "julia_path")
