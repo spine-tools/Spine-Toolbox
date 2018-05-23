@@ -130,6 +130,10 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
+        if ret == -1: # 'give-up' code, IJulia not correctly installed
+            self.ui.msg_error.emit("\tUnable to start Julia REPL.")
+            self.instance_finished_signal.emit(ret)
+            return
         if ret != 0:
             try:
                 return_msg = self.tool.return_codes[ret]
@@ -237,15 +241,11 @@ class ToolInstance(QObject):
         self.ui.msg.emit("\tResult Directory: {}".format(result_anchor))
         self.instance_finished_signal.emit(ret)
 
-
     def terminate_instance(self):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        if self.tool_process.is_julia_repl:
-            self.ui.julia_repl.interrupt_execution()
-        else:
-            self.tool_process.close_process()
+        self.tool_process.terminate_process()
 
     def remove(self):
         """Remove the tool instance files."""

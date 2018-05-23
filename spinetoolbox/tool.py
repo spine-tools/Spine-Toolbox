@@ -396,6 +396,7 @@ class Tool(MetaObject):
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
         """Tool execution finished."""
+        # TODO: if return code is REPL give-up code (-1) run tool again without using the REPL
         self._widget.ui.pushButton_stop.setEnabled(False)
         self._widget.ui.pushButton_execute.setEnabled(True)
         self._graphics_item.stop_wheel_animation()

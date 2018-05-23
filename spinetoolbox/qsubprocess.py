@@ -48,17 +48,6 @@ class QSubProcess(QObject):
         self._user_stopped = False
         self._process = QProcess(self)
 
-    #def start_if_not_running(self, workdir=None):
-    #    """Start a QProcess if is not running.
-
-    #    Args:
-    #        workdir (str): Path to work directory
-    #    """
-    #    if self._process is None:
-    #        self._process = QProcess(self)
-    #    if self._process.state() != QProcess.Running:
-    #        self.start_process(workdir=workdir)
-
     # noinspection PyUnresolvedReferences
     def start_process(self, workdir=None):
         """Start the execution of a command in a QProcess.
@@ -80,20 +69,6 @@ class QSubProcess(QObject):
             self._process.deleteLater()
             self._process = None
             self.subprocess_finished_signal.emit(0)
-
-    #def write_on_process(self, command):
-    #    """Writes a command on a running process
-
-    #    Args:
-    #        command (str): command to write
-
-    #    Returns:
-    #        False if QProcess is None (failed to start), else True
-    #    """
-    #    if not self._process:
-    #        return False
-    #    self._process.write(command)
-    #    return True
 
     @Slot(name="process_started")
     def process_started(self):
@@ -138,7 +113,7 @@ class QSubProcess(QObject):
         else:
             logging.debug("QProcess Unspecified error: {0}".format(process_error))
 
-    def close_process(self):
+    def terminate_process(self):
         """Shutdown simulation in a QProcess."""
         # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
         logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
