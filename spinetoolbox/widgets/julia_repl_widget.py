@@ -40,7 +40,6 @@ class JuliaREPLWidget(RichJupyterWidget):
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
 
-
     def __init__(self, ui):
         super().__init__()
         self.ui = ui
@@ -73,7 +72,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
-                self.ui.msg_error.emit("Couldn't find a Julia kernel for Jupyter.")
+                self.ui.msg_error.emit("Couldn't find Julia kernel for Jupyter.")
                 if self.IJulia_installed: # problem is not due to IJulia installation
                     self.execution_finished_signal.emit(-9998) # emit 'give up' signal
                     return
@@ -126,6 +125,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             julia_exe = JULIA_EXECUTABLE
+        # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
         cmnd = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; '\
                 'Pkg.add("""IJulia"""); Pkg.build("""IJulia""")"'.format(julia_exe)
         self.IJulia_install = qsubprocess.QSubProcess(self.ui, cmnd)
@@ -135,7 +135,7 @@ class JuliaREPLWidget(RichJupyterWidget):
     @Slot(int, name="IJulia_install_finished")
     def IJulia_install_finished(self, ret):
         """Run when IJulia installation process finishes"""
-        if self.IJulia_install.process_failed:  # process_failed should be True if ret != 0
+        if self.IJulia_install.process_failed:
             self.ui.msg_error.emit("\tJulia kernel installation failed.")
             self.subprocess_finished_signal.emit(-9998) # emit 'give up' signal
         else:
@@ -190,6 +190,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """
         if not command:
             return
+        self.start_jupyter_kernel()
         if self.kernel_execution_state == 'idle':
             self.running = True
             self.execute(command)
@@ -208,5 +209,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Shut down the jupyter kernel"""
         logging.debug('Shutting down kernel...')
         self.ui.msg_proc.emit("Shutting down Julia REPL...")
-        self.kernel_client.stop_channels()
-        self.kernel_manager.shutdown_kernel(now=True)
+        if self.kernel_client:
+            self.kernel_client.stop_channels()
+        if self.kernel_manager:
+            self.kernel_manager.shutdown_kernel(now=True)

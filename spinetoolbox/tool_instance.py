@@ -111,7 +111,6 @@ class ToolInstance(QObject):
         if self.tool.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self.ui.julia_repl
-                self.tool_process.start_jupyter_kernel()
                 self.tool_process.subprocess_finished_signal.connect(self.julia_repl_tool_finished)
                 self.tool_process.start_process(self.command)
             else:
