@@ -58,6 +58,7 @@ class ToolInstance(QObject):
         wrk_dir = self._project.work_dir
         self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool.short_name + '__', dir=wrk_dir)
         self.command = ''  # command is created after ToolInstance is initialized
+        self.fallback_command = ''
         self.inputfiles = [os.path.join(self.basedir, f) for f in tool.inputfiles]
         self.inputfiles_opt = [os.path.join(self.basedir, f) for f in tool.inputfiles_opt]
         self.outputfiles = [os.path.join(self.basedir, f) for f in tool.outputfiles]
@@ -111,8 +112,8 @@ class ToolInstance(QObject):
         if self.tool.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self.ui.julia_repl
-                self.tool_process.subprocess_finished_signal.connect(self.julia_repl_tool_finished)
-                self.tool_process.start_process(self.command)
+                self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
+                self.tool_process.execute_instance(self.command)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
@@ -131,7 +132,10 @@ class ToolInstance(QObject):
         """
         if ret == -9998: # 'give-up' code, there is no usable Julia kernel for Jupyter
             self.ui.msg_error.emit("\tUnable to start Julia REPL.")
-            self.instance_finished_signal.emit(ret)
+            self.ui.msg.emit("Running without the REPL")
+            self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
+            self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
+            self.tool_process.start_process(workdir=self.basedir)
             return
         if ret != 0:
             try:
@@ -147,7 +151,7 @@ class ToolInstance(QObject):
 
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
-        """Run when Julia tool has finished processing.
+        """Run when Julia tool from command line (without REPL) has finished processing.
 
         Args:
             ret (int): Return code given by tool
