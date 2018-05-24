@@ -139,8 +139,6 @@ DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
 
-JULIA_KERNELS = ['julia-0.xx7', 'julia-0.xx6'] # add more kernels here as versions progress
-
 SQL_DIALECT_API = {
     'mysql': 'mysqlclient',
     'sqlite': 'sqlite3',

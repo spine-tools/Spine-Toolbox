@@ -112,8 +112,8 @@ class ToolInstance(QObject):
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self.ui.julia_repl
                 self.tool_process.start_jupyter_kernel()
-                self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
-                self.tool_process.execute_command(self.command)
+                self.tool_process.subprocess_finished_signal.connect(self.julia_repl_tool_finished)
+                self.tool_process.start_process(self.command)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
@@ -130,7 +130,7 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
-        if ret == -1: # 'give-up' code, IJulia not correctly installed
+        if ret == -9998: # 'give-up' code, there is no usable Julia kernel for Jupyter
             self.ui.msg_error.emit("\tUnable to start Julia REPL.")
             self.instance_finished_signal.emit(ret)
             return
