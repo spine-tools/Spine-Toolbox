@@ -23,23 +23,24 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   22.5.2018
 """
+import os
+import logging
+import qsubprocess
 from PySide2.QtWidgets import QMessageBox
 from PySide2.QtCore import Slot, Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs
 from config import JULIA_EXECUTABLE
-import logging
-import qsubprocess
+
 
 class JuliaREPLWidget(RichJupyterWidget):
     """
     Attributes:
         ui (ToolboxUI): QMainWindow instance
     """
-
+    # TODO: Consider changing the name of this signal. Same name is in use in QSubProcess class
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
-
 
     def __init__(self, ui):
         super().__init__()
@@ -52,12 +53,12 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.custom_restart = True  # Needed to get the custom_restart_kernel_died signal
         self.custom_restart_kernel_died.connect(self.kernel_died)
         self.kernel_died_count = None
-        self.IJulia_install = None # IJulia installation process (QSubProcess)
-        self.IJulia_installed = False # True if IJulia installation was succesfull
+        self.IJulia_install = None  # IJulia installation process (QSubProcess)
+        self.IJulia_installed = False  # True if IJulia installation was successful
 
     def find_julia_kernel(self):
         """Return the name of the most recent available julia kernel
-        or None if none is available"""
+        or None if none available."""
         kernel_specs = find_kernel_specs()
         julia_specs = [x for x in kernel_specs if x.startswith('julia')]
         if not julia_specs:
@@ -67,15 +68,15 @@ class JuliaREPLWidget(RichJupyterWidget):
         return julia_specs[0]
 
     def start_jupyter_kernel(self):
-        """Start a julia kernel, and connect to it.
-        """
+        """Start a julia kernel, and connect to it."""
         if not self.kernel_manager:
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
                 self.ui.msg_error.emit("Couldn't find a Julia kernel for Jupyter.")
-                if self.IJulia_installed: # problem is not due to IJulia installation
-                    self.execution_finished_signal.emit(-9998) # emit 'give up' signal
+                if self.IJulia_installed:  # problem is not due to IJulia installation
+                    # TODO: This signal is not connected to anything
+                    self.execution_finished_signal.emit(-9998)  # emit 'give up' signal
                     return
                 self.prompt_to_install_IJulia(
                     title="Unable to find Julia kernel for Jupyter",
@@ -106,7 +107,8 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_manager = None
             self.kernel_client = None
             if self.IJulia_installed: # problem is not due to IJulia installation
-                self.execution_finished_signal.emit(-9998) # emit 'give up' signal
+                # TODO: This signal is not connected to anything
+                self.execution_finished_signal.emit(-9998)  # emit 'give up' signal
                 return
             self.prompt_to_install_IJulia(
                 title="Unable to start Julia kernel for Jupyter",
@@ -119,7 +121,9 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Attempt to install IJulia via QSubProcess."""
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
-            self.subprocess_finished_signal.emit(-9998) # emit 'give up' signal
+            # TODO: I don't think anybody is listening this signal
+            # TODO: If user chooses 'No', the animated wheel keeps on rolling
+            self.subprocess_finished_signal.emit(-9998)  # emit 'give up' signal
             return
         julia_dir = self.ui._config.get("settings", "julia_path")
         if not julia_dir == '':
@@ -127,7 +131,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         else:
             julia_exe = JULIA_EXECUTABLE
         cmnd = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; '\
-                'Pkg.add("""IJulia"""); Pkg.build("""IJulia""")"'.format(julia_exe)
+               'Pkg.add("""IJulia"""); Pkg.build("""IJulia""")"'.format(julia_exe)
         self.IJulia_install = qsubprocess.QSubProcess(self.ui, cmnd)
         self.IJulia_install.subprocess_finished_signal.connect(self.IJulia_install_finished)
         self.IJulia_install.start_process()
@@ -137,7 +141,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when IJulia installation process finishes"""
         if self.IJulia_install.process_failed:  # process_failed should be True if ret != 0
             self.ui.msg_error.emit("\tJulia kernel installation failed.")
-            self.subprocess_finished_signal.emit(-9998) # emit 'give up' signal
+            self.subprocess_finished_signal.emit(-9998)  # emit 'give up' signal
         else:
             self.ui.msg.emit("\tJulia kernel for Jupyter successfully installed (via <b>IJulia</b>).")
             self.IJulia_installed = True
@@ -160,9 +164,9 @@ class JuliaREPLWidget(RichJupyterWidget):
             logging.debug("key status not found")
         if self.running and msg['msg_type'] == 'execute_reply':
             if msg['content']['status'] == 'ok':
-                self.subprocess_finished_signal.emit(0) # success code
+                self.subprocess_finished_signal.emit(0)  # success code
             else:
-                self.subprocess_finished_signal.emit(-9999) # any error code
+                self.subprocess_finished_signal.emit(-9999)  # any error code
             self.running = False
 
     @Slot("dict", name="iopub_message_received")
@@ -171,7 +175,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         Execute current command if the kernel reports status 'idle'
 
         Args:
-            msg (int): Message sent by Julia ekernel
+            msg (int): Message sent by Julia ekernel. #TODO: Is msg really integer?
         """
         logging.debug("iopub message received")
         logging.debug("id: {}".format(msg['msg_id']))
@@ -198,14 +202,14 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.command = command
 
     def terminate_process(self):
-        """Send interrupt signal to kernel"""
+        """Send interrupt signal to kernel."""
         logging.debug("interrupt exec")
-        #self.request_interrupt_kernel()
+        # self.request_interrupt_kernel()
         self.kernel_manager.interrupt_kernel()
-        # TODO: get prompt back afer this!
+        # TODO: get prompt back after this!
 
     def shutdown_jupyter_kernel(self):
-        """Shut down the jupyter kernel"""
+        """Shut down the jupyter kernel."""
         logging.debug('Shutting down kernel...')
         self.ui.msg_proc.emit("Shutting down Julia REPL...")
         self.kernel_client.stop_channels()

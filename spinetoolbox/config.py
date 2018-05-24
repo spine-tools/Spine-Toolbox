@@ -132,7 +132,8 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
 
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
 SPLITTER_SS = "QSplitter::handle:horizontal{background-color: lightgray; border: 1px solid white;}"
-SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"  # QDockWidget handle
+# QDockWidget handle
+SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"

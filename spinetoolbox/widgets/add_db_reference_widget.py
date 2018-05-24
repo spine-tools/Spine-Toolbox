@@ -81,7 +81,7 @@ class AddDbReferenceWidget(QWidget):
         """Check if selected dialect is supported. Offer to install DBAPI if not.
 
         Returns:
-            True if dialog is supported, False if not.
+            True if dialect is supported, False if not.
         """
         if dialect == 'Select dialect...':
             return
