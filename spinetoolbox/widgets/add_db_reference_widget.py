@@ -34,7 +34,7 @@ import logging
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from config import DB_REF_REQUIRED_KEYS, SQL_DIALECT_API
-import conda.cli
+# import conda.cli
 import pip
 
 
@@ -64,7 +64,7 @@ class AddDbReferenceWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        #self.refresh_dialects()
+        # self.refresh_dialects()
         self.ui.comboBox_dialect.addItem("Select dialect...")
         self.ui.comboBox_dialect.addItems(self.dialects)
         self.ui.comboBox_dialect.setFocus()
@@ -93,44 +93,79 @@ class AddDbReferenceWidget(QWidget):
             return True
         except ModuleNotFoundError:
             dbapi = SQL_DIALECT_API[dialect]
-            msg = "There is no DBAPI installed for the dialect '{0}'. "\
-                    "The default one is '{1}'. "\
-                    "Do you want to install it?".format(dialect, dbapi)
-            answer = QMessageBox.question(self, 'Dialect not supported', msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                self.ui.comboBox_dialect.setCurrentIndex(0)
-                return
-            if self.install_dbapi(dbapi):
-                if not self.check_dialect(dialect):
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Dialect not supported")
+            msg.setText("There is no DBAPI installed for dialect '{0}'. "
+                        "The default one is '{1}'.".format(dialect, dbapi))
+            msg.setInformativeText("Do you want to install it using pip or conda?")
+            pip_button = msg.addButton("pip", QMessageBox.YesRole)
+            conda_button = msg.addButton("conda", QMessageBox.NoRole)
+            cancel_button = msg.addButton("Cancel", QMessageBox.RejectRole)
+            msg.exec_()  # Show message box
+            if msg.clickedButton() == pip_button:
+                if not self.install_dbapi_pip(dbapi):
                     self.ui.comboBox_dialect.setCurrentIndex(0)
-            return
-        msg = "Unable to use dialect '{}'.".format(dialect)
-        self.statusbar.showMessage(msg, 3000)
-        return False
+                    return False
+            elif msg.clickedButton() == conda_button:
+                if not self.install_dbapi_conda(dbapi):
+                    self.ui.comboBox_dialect.setCurrentIndex(0)
+                    return False
+            else:
+                self.ui.comboBox_dialect.setCurrentIndex(0)
+                logging.debug("Cancelled")
+                msg = "Unable to use dialect '{}'.".format(dialect)
+                self.statusbar.showMessage(msg, 3000)
+                return False
+            # Check that dialect is not found
+            logging.debug("Checking dialect again")
+            if not self.check_dialect(dialect):
+                self.ui.comboBox_dialect.setCurrentIndex(0)
 
     @busy_effect
-    def install_dbapi(self, dbapi):
+    def install_dbapi_pip(self, dbapi):
+        """Install DBAPI using pip."""
         try:
             msg = "Installing module '{}' via 'pip'.".format(dbapi)
             self.statusbar.showMessage(msg)
             pip.main(['install', dbapi])
             msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)
             self.statusbar.showMessage(msg, 3000)
+            logging.debug("pip installation succeeded")
             return True
-        except:
-            try:
-                msg = "Installing module '{}' via 'conda'.".format(dbapi)
-                self.statusbar.showMessage(msg)
-                conda.cli.main('conda', 'install',  '-y', dbapi)
-                msg = "Module '{}' successfully installed via 'conda'.".format(dbapi)
-                self.statusbar.showMessage(msg, 3000)
-                return True
-            except:
-                msg = "Failed to install module '{}'.".format(dbapi)
-                self.statusbar.showMessage(msg, 3000)
-                self.ui.comboBox_dialect.setCurrentIndex(0)
-                return False
+        except Exception as e:
+            logging.exception(e)
+            logging.error("Failed to install module '{}' with pip.".format(dbapi))
+            msg = "Failed to install module '{}' with pip.".format(dbapi)
+            self.statusbar.showMessage(msg, 3000)
+            return False
 
+    @busy_effect
+    def install_dbapi_conda(self, dbapi):
+        """Install DBAPI using conda. Fails if conda is not installed."""
+        try:
+            import conda.cli
+        except ImportError:
+            logging.debug("Could not find conda. Installing {0} failed.".format(dbapi))
+            msg = "Conda is missing"
+            self.statusbar.showMessage(msg, 3000)
+            self.ui.comboBox_dialect.setCurrentIndex(0)
+            return False
+        try:
+            msg = "Installing module '{}' via 'conda'.".format(dbapi)
+            self.statusbar.showMessage(msg)
+            conda.cli.main('conda', 'install',  '-y', dbapi)
+            msg = "Module '{}' successfully installed via 'conda'.".format(dbapi)
+            self.statusbar.showMessage(msg, 3000)
+            logging.debug("conda installation succeeded")
+            return True
+        except Exception as e:
+            logging.exception(e)
+            logging.error("Failed to install module '{}' with conda.".format(dbapi))
+            msg = "Failed to install module '{}' with conda.".format(dbapi)
+            self.statusbar.showMessage(msg, 3000)
+            self.ui.comboBox_dialect.setCurrentIndex(0)
+            return False
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
