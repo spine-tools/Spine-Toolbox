@@ -27,6 +27,7 @@ Spine Toolbox default configurations.
 import sys
 import os
 from PySide2.QtGui import QColor
+from PySide2.QtCore import Qt
 
 # General
 SPINE_TOOLBOX_VERSION = "0.0.7"
@@ -41,7 +42,10 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # "." is actually valid in a folder name but this is
 # to prevent the user from creating folders like /..../
 
-# Application path, configuration file path, default project path, and default work path
+# QGraphicsItem arbitrary properties
+ITEM_TYPE = 0
+
+# Application path, configuration file path and default project path
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
@@ -77,6 +81,9 @@ TOOL_TYPES = ['GAMS', 'Julia']
 REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
 OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
+
+# Required fields for Connection Strings
+CS_REQUIRED_KEYS = ['DRIVER', 'SERVER', 'DATABASE']
 
 # Default settings
 SETTINGS = {"project_directory": "",
@@ -123,8 +130,23 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                   "QLabel{color:black;}"
 
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
-
+SPLITTER_SS = "QSplitter::handle:horizontal{background-color: lightgray; border: 1px solid white;}"
+# QDockWidget handle
+SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
+DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
+
+# QGraphicsView frame rate
+FPS = 50
+
+# Spine object tree item's user roles
+REFERENCE = Qt.UserRole
+TABLE = Qt.UserRole+1
+NAME = Qt.UserRole+2
+PARAMETER_HEADER = Qt.UserRole+3
+OBJECT_PARAMETER = Qt.UserRole+4
+PARAMETER_AS_PARENT = Qt.UserRole+5
+PARAMETER_AS_CHILD = Qt.UserRole+6

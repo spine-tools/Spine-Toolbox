@@ -114,18 +114,16 @@ class EditDatapackageKeysWidget(QWidget):
         # primary keys
         self.ui.tableView_pks.setItemDelegate(ComboBoxDelegate(self))
         self.ui.tableView_pks.setItemDelegateForColumn(PrimaryKeysHeader.RM.index, CheckBoxDelegate(self))
-        #self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_pks.setModel(self.pks_model)
         self.resize_tableView_pks()
-        #self.ui.tableView_pks.resizeColumnsToContents()
         # foreign keys
         self.ui.tableView_fks.setItemDelegate(ComboBoxDelegate(self))
         self.ui.tableView_fks.setItemDelegateForColumn(ForeignKeysHeader.RM.index, CheckBoxDelegate(self))
-        #self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_fks.setModel(self.fks_model)
         self.resize_tableView_fks()
+        # self.ui.tableView_fks.setEditTriggers(QAbstractItemView.AllEditTriggers)
 
     def resize_tableView_pks(self):
         self.ui.tableView_pks.resizeColumnsToContents()

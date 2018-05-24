@@ -19,7 +19,7 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/subwindow_data_connection.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/subwindow_data_store.ui'
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -36,7 +36,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
         Form.setSizePolicy(sizePolicy)
-        Form.setMinimumSize(QtCore.QSize(0, 0))
+        Form.setMinimumSize(QtCore.QSize(200, 275))
         Form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         Form.setToolTip("")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(Form)
@@ -51,7 +51,7 @@ class Ui_Form(object):
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName("verticalLayout")
         self.label_name = QtWidgets.QLabel(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.label_name.sizePolicy().hasHeightForWidth())
@@ -63,7 +63,7 @@ class Ui_Form(object):
         font.setWeight(75)
         font.setBold(True)
         self.label_name.setFont(font)
-        self.label_name.setStyleSheet("background-color: rgb(0, 0, 255);\n"
+        self.label_name.setStyleSheet("background-color: rgb(0,255, 0);\n"
 "color: rgb(255, 255, 255);")
         self.label_name.setAlignment(QtCore.Qt.AlignCenter)
         self.label_name.setWordWrap(True)
@@ -128,6 +128,8 @@ class Ui_Form(object):
         self.toolButton_minus.setIcon(icon1)
         self.toolButton_minus.setObjectName("toolButton_minus")
         self.horizontalLayout_2.addWidget(self.toolButton_minus)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
         self.toolButton_add = QtWidgets.QToolButton(Form)
         self.toolButton_add.setMaximumSize(QtCore.QSize(20, 20))
         self.toolButton_add.setText("")
@@ -136,26 +138,6 @@ class Ui_Form(object):
         self.toolButton_add.setIcon(icon2)
         self.toolButton_add.setObjectName("toolButton_add")
         self.horizontalLayout_2.addWidget(self.toolButton_add)
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem)
-        self.toolButton_datapkg = QtWidgets.QToolButton(Form)
-        self.toolButton_datapkg.setEnabled(True)
-        self.toolButton_datapkg.setMaximumSize(QtCore.QSize(20, 20))
-        self.toolButton_datapkg.setText("")
-        icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/icons/datapkg.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.toolButton_datapkg.setIcon(icon3)
-        self.toolButton_datapkg.setObjectName("toolButton_datapkg")
-        self.horizontalLayout_2.addWidget(self.toolButton_datapkg)
-        self.toolButton_datapkg_keys = QtWidgets.QToolButton(Form)
-        self.toolButton_datapkg_keys.setEnabled(True)
-        self.toolButton_datapkg_keys.setMaximumSize(QtCore.QSize(20, 20))
-        self.toolButton_datapkg_keys.setText("")
-        icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(":/icons/keys.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.toolButton_datapkg_keys.setIcon(icon4)
-        self.toolButton_datapkg_keys.setObjectName("toolButton_datapkg_keys")
-        self.horizontalLayout_2.addWidget(self.toolButton_datapkg_keys)
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
         self.treeView_data = QtWidgets.QTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -199,14 +181,12 @@ class Ui_Form(object):
         Form.setTabOrder(self.pushButton_open, self.pushButton_connections)
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Data Connection", None, -1))
+        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Data Store", None, -1))
         self.label_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
         self.toolButton_plus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references</p></body></html>", None, -1))
         self.toolButton_minus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected references or all if nothing is selected</p></body></html>", None, -1))
-        self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Copies files to Data connection\'s directory.</p></body></html>", None, -1))
-        self.toolButton_datapkg.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Generate datapackage.json file.</p></body></html>", None, -1))
-        self.toolButton_datapkg_keys.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit datapackage\'s keys.</p></body></html>", None, -1))
-        self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in File Explorer</p></body></html>", None, -1))
+        self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Create or update Spine data objects in memory.</p></body></html>", None, -1))
+        self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open data objects in Spine Data Explorer</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open", None, -1))
         self.pushButton_connections.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Show connections</p></body></html>", None, -1))
         self.pushButton_connections.setText(QtWidgets.QApplication.translate("Form", "Conn.", None, -1))

@@ -29,10 +29,11 @@ import os
 import json
 import shutil
 from metaobject import MetaObject
-from widgets.sw_tool_widget import ToolSubWindowWidget
+from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
+from graphics_items import ToolImage
 
 
 class Tool(MetaObject):
@@ -45,7 +46,7 @@ class Tool(MetaObject):
         project (SpineToolboxProject): Project
         tool_template (ToolTemplate): Template for this Tool
     """
-    def __init__(self, parent, name, description, project, tool_template):
+    def __init__(self, parent, name, description, project, tool_template, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
@@ -72,8 +73,7 @@ class Tool(MetaObject):
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
-        #setup connections buttons
-        self._widget.ui.toolButton_connector.is_connector = True
+        self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
         self.connect_signals()
 
     def connect_signals(self):
@@ -82,11 +82,17 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
-        self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
 
-    @Slot(name="draw_links")
-    def draw_links(self):
-        self._parent.ui.mdiArea.draw_links(self.sender())
+    def set_icon(self, icon):
+        self._graphics_item = icon
+
+    def get_icon(self):
+        """Returns the item representing this data connection in the scene."""
+        return self._graphics_item
+
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
 
     @Slot(name='show_details')
     def show_details(self):
@@ -328,10 +334,6 @@ class Tool(MetaObject):
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
         else:
             self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.tool_template().name))
-
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool

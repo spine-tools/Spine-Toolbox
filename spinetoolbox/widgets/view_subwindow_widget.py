@@ -18,21 +18,23 @@
 #############################################################################
 
 """
-QWidget that is used as an internal widget for a QMdiSubWindow.
+QWidget that is used to display information contained in a View.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-:date:   15.12.2017
+:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi
+:date:   25.4.2018
 """
 
+import logging
 from PySide2.QtWidgets import QWidget
-from ui.subwindow import Ui_Form
+from ui.subwindow_view import Ui_Form
 
 
-class SubWindowWidget(QWidget):
+class ViewWidget(QWidget):
     """Class constructor.
 
     Attributes:
-        item_type (str): Internal widget object type (e.g. 'Data Store')
+        owner (str): Name of the item that owns this widget
+        item_type (str): Internal widget object type (should always be 'View')
     """
     def __init__(self, owner, item_type):
         """ Initialize class."""
@@ -41,10 +43,11 @@ class SubWindowWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'Data Store 1', or 'GAMS MODEL A')
+        self._owner = owner  # Name of object that owns this object (e.g. 'View 1')
+        self.ui.label_name.setFocus()
 
     def set_owner(self, owner):
-        """Set owner of this SubWindowWidget.
+        """Set owner of this widget.
 
         Args:
             owner (str): New owner
@@ -52,20 +55,8 @@ class SubWindowWidget(QWidget):
         self._owner = owner
 
     def owner(self):
-        """Return owner of this SubWindowWidget."""
+        """Returns owner of this widget."""
         return self._owner
-
-    def set_type_label(self, txt):
-        """Set new text for the type label.
-
-        Args:
-            txt (str): Text to display in the QLabel
-        """
-        self.ui.label_type.setText(txt)
-
-    def type_label(self):
-        """Return type label text."""
-        return self.ui.label_type.text()
 
     def set_name_label(self, txt):
         """Set new text for the name label.
@@ -78,6 +69,18 @@ class SubWindowWidget(QWidget):
     def name_label(self):
         """Return name label text."""
         return self.ui.label_name.text()
+
+    def set_type_label(self, txt):
+        """Set new text for the type label.
+
+        Args:
+            txt (str): Text to display in the QLabel
+        """
+        self.ui.label_type.setText(txt)
+
+    def type_label(self):
+        """Return type label text."""
+        return self.ui.label_type.text()
 
     def set_data_label(self, txt):
         """Set new text for the data label.
@@ -92,12 +95,10 @@ class SubWindowWidget(QWidget):
         return self.ui.label_data.text()
 
     def closeEvent(self, event):
-        """Find QMdiSubWindow that initiated this closeEvent. Hide QMdiSubWindow
-        and its internal widget (SubWindowWidget) instead of closing them.
+        """Hide widget and is proxy instead of closing them.
 
         Args:
             event (QCloseEvent): Event initiated when user clicks 'X'
         """
         event.ignore()
-        self.hide()  # Hide SubWindowWidget (internal widget)
-        self.parent().hide()  # Hide QMdiSubWindow
+        self.hide()  # Hide widget and its proxy hides as well

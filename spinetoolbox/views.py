@@ -13,8 +13,9 @@ from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsLineItem, 
 from PySide2.QtGui import QColor, QPen, QBrush, QPainter, QTransform, QPolygonF
 from math import atan2, sin, cos, pi #arrow head
 
-#QGraphicsItem arbitrary properties
+# QGraphicsItem arbitrary properties
 ITEM_TYPE = 0
+
 
 class LinksView(QGraphicsView):
     """Pseudo-QMdiArea implemented as QGraphicsView.

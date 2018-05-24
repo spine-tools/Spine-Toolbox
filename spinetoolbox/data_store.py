@@ -24,11 +24,17 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import random
+import pyodbc
 import logging
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 from metaobject import MetaObject
-from widgets.subwindow_widget import SubWindowWidget
-from PySide2.QtCore import Slot
+from widgets.data_store_subwindow_widget import DataStoreWidget
+from PySide2.QtCore import Qt, Slot
+from widgets.add_connection_string_widget import AddConnectionStringWidget
+from widgets.spine_data_explorer_widget import SpineDataExplorerWidget
+from graphics_items import DataStoreImage
+from config import REFERENCE, TABLE, NAME, PARAMETER_HEADER, OBJECT_PARAMETER,\
+    PARAMETER_AS_PARENT, PARAMETER_AS_CHILD
 
 
 class DataStore(MetaObject):
@@ -39,29 +45,109 @@ class DataStore(MetaObject):
         name (str): Object name
         description (str): Object description
         project (SpineToolboxProject): Project
+        references (list): List of references (for now it's only database references)
     """
-    def __init__(self, parent, name, description, project):
+    def __init__(self, parent, name, description, project, references, x, y):
         super().__init__(name, description)
         self._parent = parent
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
         self._project = project
-        self._data = random.randint(1, 100)
-        self._widget = SubWindowWidget(name, self.item_type)
-        self._widget.set_type_label(self.item_type)
+        self._widget = DataStoreWidget(name, self.item_type)
         self._widget.set_name_label(name)
-        self._widget.set_data_label("Data:" + str(self._data))
+        self._widget.make_header_for_references()
+        self._widget.make_header_for_data()
+        self.references = references
+        self.databases = list() # name of imported databases
+        # Populate references model
+        self._widget.populate_reference_list(self.references)
+        self.add_connection_string_form = None
+        self.spine_data_explorer = SpineDataExplorerWidget(self._parent, self)
+        self.spine_data_explorer.object_tree_model.setHorizontalHeaderItem(0, QStandardItem(name))
+        self._graphics_item = DataStoreImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
+        # Import references into project
+        # TODO: implement this with automatic import setting
+        self.import_references()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.pushButton_edit.clicked.connect(self.edit_clicked)
+        self._widget.ui.pushButton_open.clicked.connect(self.open_explorer)
+        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
+        self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
+        self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
 
-    @Slot(name='edit_clicked')
-    def edit_clicked(self):
-        """Edit button clicked."""
-        logging.debug(self.name + " Data: " + str(self._data))
+    def set_icon(self, icon):
+        self._graphics_item = icon
+
+    def get_icon(self):
+        """Returns the item representing this data connection in the scene."""
+        return self._graphics_item
+
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
+
+    @Slot(name="open_explorer")
+    def open_explorer(self):
+        """Open Spine data explorer."""
+        # self.spine_data_explorer.showMaximized()
+        self.spine_data_explorer.show()
+
+    @Slot(name="show_add_connection_string_form")
+    def show_add_connection_string_form(self):
+        """Show the form for specifying connection strings."""
+        self.add_connection_string_form = AddConnectionStringWidget(self._parent, self)
+        self.add_connection_string_form.show()
+
+    def add_reference(self, reference):
+        """Add reference to reference list and populate widget's reference list"""
+        self.references.append(reference)
+        self._widget.populate_reference_list(self.references)
+        # import reference into project
+        # TODO: implement this with automatic import setting
+        # self.spine_data_explorer.import_reference(reference)
+        # self._widget.populate_data_list(self.databases)
+
+    @Slot(name="remove_references")
+    def remove_references(self):
+        """Remove selected references from reference list.
+        Removes all references if nothing is selected.
+        """
+        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        if not indexes:  # Nothing selected
+            self.references.clear()
+            self._parent.msg.emit("All references removed")
+        else:
+            rows = [ind.row() for ind in indexes]
+            rows.sort(reverse=True)
+            for row in rows:
+                self.references.pop(row)
+            self._parent.msg.emit("Selected references removed")
+        self._widget.populate_reference_list(self.references)
+        # TODO: remove reference imported to the project
+
+    @Slot(name="import_references")
+    def import_references(self):
+        """Import data from selected items in reference list and update database list.
+        If no item is selected then import all of them.
+        """
+        if not self.references:
+            self._parent.msg_warning.emit("No data to import")
+            return
+        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        if not indexes:  # Nothing selected, import all
+            references_to_import = self.references
+        else:
+            references_to_import = [self.references[ind.row()] for ind in indexes]
+        for reference in references_to_import:
+            try:
+                self.spine_data_explorer.import_reference(reference)
+            except pyodbc.Error as e:
+                self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
+                continue
+        self._widget.populate_data_list(self.databases)
 
     @Slot(name="show_connections")
     def show_connections(self):
@@ -82,15 +168,6 @@ class DataStore(MetaObject):
             for item in outputs:
                 self._parent.msg_warning.emit("{0}".format(item))
 
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
-
-    def set_data(self, d):
-        """Set data and update widgets representation of data."""
-        self._data = d
-        self._widget.set_data_label("Data:" + str(self._data))
-
-    def get_data(self):
-        """Returns data of object."""
-        return self._data
+    def data_references(self):
+        """Return a list connections strings that are in this item as references (self.references)."""
+        return self.references

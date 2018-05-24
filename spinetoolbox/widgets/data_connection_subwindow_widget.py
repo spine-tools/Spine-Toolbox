@@ -18,24 +18,25 @@
 #############################################################################
 
 """
-QWidget that is used as an internal widget for a Tool QMdiSubWindow.
+QWidget that is used to display information contained in a Data Connection.
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-:date:   31.1.2018
+:date:   22.2.2018
 """
 
+import logging
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
-from ui.subwindow_tool import Ui_Form
-from config import TOOL_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
+from ui.subwindow_data_connection import Ui_Form
+from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
-class ToolSubWindowWidget(QWidget):
+class DataConnectionWidget(QWidget):
     """Class constructor.
 
     Attributes:
-        item_type (str): Internal widget object type (should always be 'Tool')
+        item_type (str): Internal widget object type (should always be 'Data Connection')
     """
     def __init__(self, owner, item_type):
         """ Initialize class."""
@@ -44,13 +45,13 @@ class ToolSubWindowWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'Tool 1')
-        self.input_file_model = QStandardItemModel()
-        self.output_file_model = QStandardItemModel()
-        self.ui.treeView_input_files.setModel(self.input_file_model)
-        self.ui.treeView_output_files.setModel(self.output_file_model)
-        self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
-        self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        self._owner = owner  # Name of object that owns this object (e.g. 'DC 1')
+        self.reference_model = QStandardItemModel()  # References to files
+        self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory.
+        self.ui.treeView_references.setModel(self.reference_model)
+        self.ui.treeView_data.setModel(self.data_model)
+        self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
 
     def set_owner(self, owner):
@@ -77,47 +78,47 @@ class ToolSubWindowWidget(QWidget):
         """Return name label text."""
         return self.ui.label_name.text()
 
-    def make_header_for_input_files(self):
-        """Add header to input files model."""
-        h = QStandardItem("Required input files")
+    def make_header_for_references(self):
+        """Add header to files model. I.e. External Data Connection files."""
+        h = QStandardItem("References")
         # Decrease font size
         font = h.font()
         font.setPointSize(HEADER_POINTSIZE)
         h.setFont(font)
-        self.input_file_model.setHorizontalHeaderItem(0, h)
+        self.reference_model.setHorizontalHeaderItem(0, h)
 
-    def make_header_for_output_files(self):
-        """Add header to output files model."""
-        h = QStandardItem("Output files")
+    def make_header_for_data(self):
+        """Add header to data model. I.e. Internal Data Connection files."""
+        h = QStandardItem("Data")
         # Decrease font size
         font = h.font()
         font.setPointSize(HEADER_POINTSIZE)
         h.setFont(font)
-        self.output_file_model.setHorizontalHeaderItem(0, h)
+        self.data_model.setHorizontalHeaderItem(0, h)
 
-    def populate_input_files_list(self, items):
-        """Add required Tool input files into a model.
-        If items is None or an empty list, model is cleared."""
-        self.input_file_model.clear()
-        self.make_header_for_input_files()
+    def populate_reference_list(self, items):
+        """List file references in QTreeView.
+        If items is None or empty list, model is cleared.
+        """
+        self.reference_model.clear()
+        self.make_header_for_references()
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
-                self.input_file_model.appendRow(qitem)
-        # self.ui.treeView_input_files.setModel(self.input_file_model)
+                self.reference_model.appendRow(qitem)
 
-    def populate_output_files_list(self, items):
-        """Add Tool output files into a model.
-         If items is None or an empty list, model is cleared."""
-        self.output_file_model.clear()
-        self.make_header_for_output_files()
+    def populate_data_list(self, items):
+        """List project internal data (files) in QTreeView.
+        If items is None or empty list, model is cleared.
+        """
+        self.data_model.clear()
+        self.make_header_for_data()
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
-                self.output_file_model.appendRow(qitem)
-        # self.ui.treeView_output_files.setModel(self.output_file_model)
+                self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):
         """Hide widget and is proxy instead of closing them.
@@ -127,7 +128,3 @@ class ToolSubWindowWidget(QWidget):
         """
         event.ignore()
         self.hide()  # Hide widget and its proxy hides as well
-
-    def parent(self):
-        """Return embedding QGraphicsProxyWindow"""
-        return self.graphicsProxyWidget()

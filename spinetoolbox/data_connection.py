@@ -29,13 +29,14 @@ import shutil
 import logging
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtWidgets import QFileDialog, QMessageBox
+from PySide2.QtWidgets import QMessageBox, QFileDialog
 from metaobject import MetaObject
-from widgets.sw_data_connection_widget import DataConnectionWidget
-from helpers import create_dir
+from widgets.data_connection_subwindow_widget import DataConnectionWidget
+from helpers import create_dir, blocking_updates
 from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
+from graphics_items import DataConnectionImage
 
 
 class DataConnection(MetaObject):
@@ -48,7 +49,7 @@ class DataConnection(MetaObject):
         project (SpineToolboxProject): Project
         references (list): List of file references
     """
-    def __init__(self, parent, name, description, project, references):
+    def __init__(self, parent, name, description, project, references, x, y):
         super().__init__(name, description)
         self._parent = parent
         self.item_type = "Data Connection"
@@ -71,8 +72,7 @@ class DataConnection(MetaObject):
         # Populate data (files) model
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
-        #setup connections buttons
-        self._widget.ui.toolButton_connector.is_connector = True
+        self._graphics_item = DataConnectionImage(self._parent, x, y, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):
@@ -84,12 +84,18 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
-        self._widget.ui.toolButton_connector.clicked.connect(self.draw_links)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
 
-    @Slot(name="draw_links")
-    def draw_links(self):
-        self._parent.ui.mdiArea.draw_links(self.sender())
+    def set_icon(self, icon):
+        self._graphics_item = icon
+
+    def get_icon(self):
+        """Returns the item representing this data connection in the scene."""
+        return self._graphics_item
+
+    def get_widget(self):
+        """Returns the graphical representation (QWidget) of this object."""
+        return self._widget
 
     @Slot("QModelIndex", name="open_datafile")
     def open_data_file(self, index):
@@ -120,7 +126,8 @@ class DataConnection(MetaObject):
     def add_references(self):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileNames(self._widget, "Add file references", APPLICATION_PATH, "*.*")
+        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileNames)
+        answer = func(self._parent, "Add file references", APPLICATION_PATH, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
@@ -169,6 +176,22 @@ class DataConnection(MetaObject):
         data_files = os.listdir(self.data_dir)
         self._widget.populate_data_list(data_files)
 
+    @Slot("QModelIndex", name="open_data_file")
+    def open_data_file(self, index):
+        """Open data file in default program."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            data_file = os.listdir(self.data_dir)[index.row()]
+            url = "file:///" + os.path.join(self.data_dir, data_file)
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._parent.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
+
     @Slot(name="create_datapackage")
     def create_datapackage(self):
         data_files = os.listdir(self.data_dir)
@@ -192,7 +215,7 @@ class DataConnection(MetaObject):
         self.edit_datapackage_keys_form = EditDatapackageKeysWidget(self)
         self.edit_datapackage_keys_form.show()
 
-    def save_datapackage(self):  #TODO: handle zip as well?
+    def save_datapackage(self):  # TODO: handle zip as well?
         """Save datapackage.json to datadir"""
         if os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
             msg = '<b>Replacing file "datapackage.json" in "{}"</b>.'\
@@ -239,10 +262,6 @@ class DataConnection(MetaObject):
         NOTE: Might lead to performance issues."""
         d = os.listdir(self.data_dir)
         self._widget.populate_data_list(d)
-
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
 
 
 class CustomPackage(Package):
@@ -297,7 +316,7 @@ class CustomPackage(Package):
         i = self.resource_names.index(table)
         if 'primaryKey' in self.descriptor['resources'][i]['schema']:
             logging.debug("has pk")
-            if self.descriptor['resources'][i]['schema']['primaryKey'] == field:
+            if self.descriptor['resources'][i]['schema']['primaryKey'] == [field]:
                 logging.debug("same pk")
                 del self.descriptor['resources'][i]['schema']['primaryKey']
                 self.commit()

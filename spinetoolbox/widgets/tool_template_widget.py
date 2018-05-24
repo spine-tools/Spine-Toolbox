@@ -29,11 +29,13 @@ is filled with all the information from the Templated being edited
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog, QInputDialog, QMessageBox
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog
+from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, INVALID_CHARS, TT_TREEVIEW_HEADER_SS,\
+from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
+from helpers import blocking_updates
 import logging
 
 
@@ -66,8 +68,8 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setStyleSheet(STATUSBAR_SS)
-        # init ui
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
+        # init ui
         self.ui.treeView_includes.setModel(self.includes_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -106,6 +108,7 @@ class ToolTemplateWidget(QWidget):
         """Connect signals to slots."""
         #self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
+        self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
         self.ui.toolButton_minus_inputfiles.clicked.connect(self.remove_inputfiles)
@@ -185,7 +188,8 @@ class ToolTemplateWidget(QWidget):
         """Let user select source files for this tool template."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
-        answer = QFileDialog.getOpenFileNames(self, "Add source file", path, "*.*")
+        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileNames)
+        answer = func(self, "Add source file", path, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
@@ -210,6 +214,22 @@ class ToolTemplateWidget(QWidget):
                 continue
             self.includes.append(path_to_add)
         self.populate_includes_list(self.includes)
+
+    @Slot("QModelIndex", name="open_includes_file")
+    def open_includes_file(self, index):
+        """Open source file in default program."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            includes_file = self.includes[index.row()]
+            url = "file:///" + os.path.join(self.includes_main_path, includes_file)
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._parent.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
     @Slot(name="add_inputfiles")
     def add_inputfiles(self):
@@ -300,35 +320,52 @@ class ToolTemplateWidget(QWidget):
             self.close()
 
     def call_add_tool_template(self):
-        """Creates new Tool Template according to user's selections."""
-        answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path,\
-                                             'JSON (*.json)')
-        if answer[0] == '':  # Cancel button clicked
-            return False
-        def_file = os.path.abspath(answer[0]) # TODO: maybe check that extension is .json?
-        # Save path of main program file relative to definition file in case they difer
-        def_path = os.path.dirname(def_file)
-        if def_path != self.includes_main_path:
-            self.definition['includes_main_path'] = os.path.relpath(self.includes_main_path, def_path)
-        with open(def_file, 'w') as fp:
-            try:
-                json.dump(self.definition, fp)
-            except ValueError:
-                self.statusbar.showMessage("Error saving file", 3000)
-                logging.exception("Saving JSON file failed.")
-                return False
+        """Add or update Tool Template according to user's selections.
+        If the name is the same as an existing tool template, it is updated and
+        auto-saved to the definition file. (The user is editting an existing
+        tool template)
+        If the name is not in the tool template model, create a new one and
+        offer to save the definition file. (The user is creating a new template
+        from scratch or spawning from an existing one)
+        """
+        # Load tool template
         path = self.includes_main_path
         tool = self._project.load_tool_template_from_dict(self.definition, path)
         if not tool:
             self.statusbar.showMessage("Adding Tool template failed", 3000)
             return False
-        if self._parent.tool_template_model.find_tool_template(tool.name):
-            # Tool template already in project but possibly the definition changed
-            self._parent.refresh_tool_templates()
-            return True
-        # Add definition file path into tool
-        tool.set_def_path(def_file)
-        self._parent.add_tool_template(tool)
+        # Check if a tool template with this name already exists
+        row = self._parent.tool_template_model.tool_template_row(tool.name)
+        if row >= 0: # Note: Row 0 at this moment has 'No tool'
+            old_tool = self._parent.tool_template_model.tool_template(row)
+            def_file = old_tool.get_def_path()
+            tool.set_def_path(def_file)
+            if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
+                return True
+            logging.debug("Updating definition for tool template '{}'".format(tool.name))
+            self._parent.update_tool_template(row, tool)
+        else:
+            func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getSaveFileName)
+            answer = func(self, 'Save tool template file', \
+                                            self.def_file_path, 'JSON (*.json)')
+            if answer[0] == '':  # Cancel button clicked
+                return False
+            def_file = os.path.abspath(answer[0]) # TODO: maybe check that extension is .json?
+            tool.set_def_path(def_file)
+            self._parent.add_tool_template(tool)
+        # Save path of main program file relative to definition file in case they difer
+        def_path = os.path.dirname(def_file)
+        if def_path != self.includes_main_path:
+            self.definition['includes_main_path'] = os.path.relpath(self.includes_main_path, def_path)
+        # Save file descriptor
+        with open(def_file, 'w') as fp:
+            try:
+                json.dump(self.definition, fp, indent=4)
+            except ValueError:
+                self.statusbar.showMessage("Error saving file", 3000)
+                logging.exception("Saving JSON file failed.")
+                return False
+        logging.debug("Tool template added or updated.")
         return True
 
     def keyPressEvent(self, e):
