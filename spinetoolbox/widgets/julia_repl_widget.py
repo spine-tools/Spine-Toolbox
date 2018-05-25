@@ -26,7 +26,7 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 import os
 import logging
 import qsubprocess
-from PySide2.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox, QAction
 from PySide2.QtCore import Slot, Signal, SIGNAL
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
@@ -155,7 +155,10 @@ class JuliaREPLWidget(RichJupyterWidget):
     @Slot("dict", name="shell_message_received")
     def shell_message_received(self, msg):
         """Run when a message is received on the shell channel.
-        Finish execution if message is 'execute_reply'
+        Finish execution if message is 'execute_reply'.
+
+        Args:
+            msg (dict): Message sent by Julia ekernel.
         """
         logging.debug("shell message received")
         logging.debug("id: {}".format(msg['msg_id']))
@@ -178,7 +181,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         Execute current command if the kernel reports status 'idle'
 
         Args:
-            msg (int): Message sent by Julia ekernel. #TODO: Is msg really integer?
+            msg (dict): Message sent by Julia ekernel.
         """
         logging.debug("iopub message received")
         logging.debug("id: {}".format(msg['msg_id']))
@@ -222,3 +225,25 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.ui.msg_proc.emit("Shutting down Julia REPL...")
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
+
+    def restart_jupyter_kernel(self):
+        """Restart the jupyter kernel."""
+        if not self.kernel_manager:
+            return
+        self.clear()
+        self.kernel_manager.restart_kernel()
+
+    def _custom_context_menu_requested(self, pos):
+        """ Reimplemented method to add a (re)start REPL action into the default context menu.
+        """
+        menu = self._context_menu_make(pos)
+        menu.addSeparator()
+        if not self.kernel_manager:
+            start_repl_action = QAction("Start REPL", self)
+            start_repl_action.triggered.connect(lambda: self.start_jupyter_kernel())
+            menu.addAction(start_repl_action)
+        else:
+            restart_repl_action = QAction("Restart REPL", self)
+            restart_repl_action.triggered.connect(lambda: self.restart_jupyter_kernel())
+            menu.addAction(restart_repl_action)
+        menu.exec_(self._control.mapToGlobal(pos))
