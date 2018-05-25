@@ -34,7 +34,6 @@ from jupyter_client.kernelspec import find_kernel_specs
 from config import JULIA_EXECUTABLE
 import logging
 import qsubprocess
-import shutil
 
 class JuliaREPLWidget(RichJupyterWidget):
     """
@@ -111,7 +110,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_client = None
             if self.IJulia_installed: # problem is not due to missing IJulia
                 self.execution_failed_to_start = True
-                self.execution_finished_signal.emit(-9998)
+                self.execution_finished_signal.emit(-9999)
                 return
             self.prompt_to_install_IJulia(
                 title="Unable to start Julia kernel for Jupyter",
@@ -125,17 +124,16 @@ class JuliaREPLWidget(RichJupyterWidget):
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             self.execution_failed_to_start = True
-            self.execution_finished_signal.emit(-9998)
+            self.execution_finished_signal.emit(-9999)
             return
         julia_dir = self.ui._config.get("settings", "julia_path")
         if not julia_dir == '':
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             julia_exe = JULIA_EXECUTABLE
-        jupyter_exe = shutil.which("jupyter") # TODO: does this work on Windows?
         # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
-        command = '{0} -e "ENV["""JUPYTER"""]="""{1}"""; '\
-                'Pkg.add("""IJulia"""); Pkg.build("""IJulia""")"'.format(julia_exe, jupyter_exe)
+        command = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; '\
+                'Pkg.add("""IJulia"""); Pkg.build("""IJulia""")"'.format(julia_exe)
         self.IJulia_install = qsubprocess.QSubProcess(self.ui, command)
         self.IJulia_install.subprocess_finished_signal.connect(self.IJulia_install_finished)
         self.IJulia_install.start_process()
@@ -146,7 +144,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         if self.IJulia_install.process_failed:
             self.ui.msg_error.emit("\tJulia kernel installation failed.")
             self.execution_failed_to_start = True
-            self.execution_finished_signal.emit(-9998) 
+            self.execution_finished_signal.emit(-9999)
         else:
             self.ui.msg.emit("\tJulia kernel for Jupyter successfully installed (via <b>IJulia</b>).")
             self.IJulia_installed = True
