@@ -130,14 +130,14 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
-        if ret == -9998: # 'give-up' code, there is no usable Julia kernel for Jupyter
-            self.ui.msg_error.emit("\tUnable to start Julia REPL")
-            self.ui.msg.emit("*** Running Tool <b>{0}</b> without the REPL***".format(self.tool.name))
-            self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
-            self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
-            self.tool_process.start_process(workdir=self.basedir)
-            return
         if ret != 0:
+            if self.tool_process.execution_failed_to_start:
+                self.ui.msg_error.emit("\tUnable to start Julia REPL")
+                self.ui.msg.emit("*** Running Tool <b>{0}</b> without the REPL ***".format(self.tool.name))
+                self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
+                self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
+                self.tool_process.start_process(workdir=self.basedir)
+                return
             try:
                 return_msg = self.tool.return_codes[ret]
                 self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))

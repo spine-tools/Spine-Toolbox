@@ -56,6 +56,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_died_count = None
         self.IJulia_install = None  # IJulia installation process (QSubProcess)
         self.IJulia_installed = False  # True if IJulia installation was successful
+        self.execution_failed_to_start = False
 
     def find_julia_kernel(self):
         """Return the name of the most recent available julia kernel
@@ -74,9 +75,10 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
-                self.ui.msg_error.emit("Couldn't find Julia kernel for Jupyter.")
+                self.ui.msg_error.emit("\tCouldn't find Julia kernel for Jupyter.")
                 if self.IJulia_installed: # problem is not due to missing IJulia
-                    self.execution_finished_signal.emit(-9998) # emit 'give up' signal
+                    self.execution_failed_to_start = True
+                    self.execution_finished_signal.emit(-9999)
                     return
                 self.prompt_to_install_IJulia(
                     title="Unable to find Julia kernel for Jupyter",
@@ -103,12 +105,13 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_died_count += 1
         logging.debug("Failed to start Julia Jupyter kernel ({}/5)".format(self.kernel_died_count))
         if self.kernel_died_count == 5:
-            self.ui.msg_error.emit("Failed to start Julia Jupyter kernel.")
+            self.ui.msg_error.emit("\tFailed to start Julia Jupyter kernel.")
             self.kernel_died_count = None
             self.kernel_manager = None
             self.kernel_client = None
             if self.IJulia_installed: # problem is not due to missing IJulia
-                self.execution_finished_signal.emit(-9998) # emit 'give up' signal
+                self.execution_failed_to_start = True
+                self.execution_finished_signal.emit(-9998)
                 return
             self.prompt_to_install_IJulia(
                 title="Unable to start Julia kernel for Jupyter",
@@ -121,8 +124,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Prompt user to install IJulia via QSubProcess."""
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
-            # TODO: If user chooses 'No', the animated wheel keeps on rolling
-            self.execution_finished_signal.emit(-9998) # emit 'give up' signal
+            self.execution_failed_to_start = True
+            self.execution_finished_signal.emit(-9998)
             return
         julia_dir = self.ui._config.get("settings", "julia_path")
         if not julia_dir == '':
@@ -142,7 +145,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when IJulia installation process finishes"""
         if self.IJulia_install.process_failed:
             self.ui.msg_error.emit("\tJulia kernel installation failed.")
-            self.execution_finished_signal.emit(-9998) # emit 'give up' signal
+            self.execution_failed_to_start = True
+            self.execution_finished_signal.emit(-9998) 
         else:
             self.ui.msg.emit("\tJulia kernel for Jupyter successfully installed (via <b>IJulia</b>).")
             self.IJulia_installed = True
