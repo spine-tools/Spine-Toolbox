@@ -131,8 +131,8 @@ class ToolInstance(QObject):
             ret (int): Return code given by tool
         """
         if ret == -9998: # 'give-up' code, there is no usable Julia kernel for Jupyter
-            self.ui.msg_error.emit("\tUnable to start Julia REPL.")
-            self.ui.msg.emit("Running without the REPL")
+            self.ui.msg_error.emit("\tUnable to start Julia REPL")
+            self.ui.msg.emit("*** Running Tool <b>{0}</b> without the REPL***".format(self.tool.name))
             self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
             self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
@@ -224,7 +224,7 @@ class ToolInstance(QObject):
             if len(failed_files) == 0:
                 # If there were no failed files either
                 logging.error("No failed files")
-                self.ui.msg_warning.emit("\tWarning: Check 'outputfiles' in tool definition.")
+                self.ui.msg_warning.emit("\tWarning: Check 'outputfiles' in tool definition")
         if len(saved_files) > 0:
             # If there are saved files
             self.ui.msg.emit("\tThe following result files were saved successfully")

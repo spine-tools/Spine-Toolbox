@@ -23,6 +23,9 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   22.5.2018
 """
+import os
+import logging
+import qsubprocess
 from PySide2.QtWidgets import QMessageBox
 from PySide2.QtCore import Slot, Signal, SIGNAL
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
@@ -38,7 +41,6 @@ class JuliaREPLWidget(RichJupyterWidget):
     Attributes:
         ui (ToolboxUI): QMainWindow instance
     """
-
     execution_finished_signal = Signal(int, name="execution_finished_signal")
 
     def __init__(self, ui):
@@ -52,12 +54,12 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.custom_restart = True  # Needed to get the `custom_restart_kernel_died` signal
         self.custom_restart_kernel_died.connect(self.kernel_died)
         self.kernel_died_count = None
-        self.IJulia_install = None # IJulia installation process (QSubProcess)
-        self.IJulia_installed = False # True if IJulia installation was succesfull
+        self.IJulia_install = None  # IJulia installation process (QSubProcess)
+        self.IJulia_installed = False  # True if IJulia installation was successful
 
     def find_julia_kernel(self):
-        """Return the name of the most recent julia kernel available
-        or None if none is available"""
+        """Return the name of the most recent available julia kernel
+        or None if none available."""
         kernel_specs = find_kernel_specs()
         julia_specs = [x for x in kernel_specs if x.startswith('julia')]
         if not julia_specs:
@@ -67,8 +69,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         return julia_specs[0]
 
     def start_jupyter_kernel(self):
-        """Start a julia kernel, and connect to it.
-        """
+        """Start a julia kernel, and connect to it."""
         if not self.kernel_manager:
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
@@ -175,7 +176,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         Execute current command if the kernel reports status 'idle'
 
         Args:
-            msg (int): Message sent by Julia ekernel
+            msg (int): Message sent by Julia ekernel. #TODO: Is msg really integer?
         """
         logging.debug("iopub message received")
         logging.debug("id: {}".format(msg['msg_id']))
@@ -205,14 +206,14 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.command = command
 
     def terminate_process(self):
-        """Send interrupt signal to kernel"""
+        """Send interrupt signal to kernel."""
         logging.debug("interrupt exec")
-        #self.request_interrupt_kernel()
+        # self.request_interrupt_kernel()
         self.kernel_manager.interrupt_kernel()
-        # TODO: get prompt back afer this!
+        # TODO: get prompt back after this!
 
     def shutdown_jupyter_kernel(self):
-        """Shut down the jupyter kernel"""
+        """Shut down the jupyter kernel."""
         if not self.kernel_client:
             return
         logging.debug('Shutting down kernel...')
