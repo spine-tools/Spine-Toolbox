@@ -210,6 +210,8 @@ class JuliaREPLWidget(RichJupyterWidget):
 
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""
+        if not self.kernel_client:
+            return
         logging.debug('Shutting down kernel...')
         self.ui.msg_proc.emit("Shutting down Julia REPL...")
         self.kernel_client.stop_channels()
