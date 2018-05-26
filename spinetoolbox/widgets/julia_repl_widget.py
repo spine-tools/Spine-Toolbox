@@ -27,13 +27,12 @@ import os
 import logging
 import qsubprocess
 from PySide2.QtWidgets import QMessageBox, QAction
-from PySide2.QtCore import Slot, Signal, SIGNAL
+from PySide2.QtCore import Slot, Signal
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs
 from config import JULIA_EXECUTABLE
-import logging
-import qsubprocess
+from helpers import busy_effect
 
 class JuliaREPLWidget(RichJupyterWidget):
     """
@@ -58,7 +57,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.execution_failed_to_start = False
 
     def find_julia_kernel(self):
-        """Return the name of the most recent available julia kernel
+        """Return the name of the most recent julia kernel available
         or None if none available."""
         kernel_specs = find_kernel_specs()
         julia_specs = [x for x in kernel_specs if x.startswith('julia')]
@@ -68,6 +67,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         julia_specs.sort(reverse=True)
         return julia_specs[0]
 
+    @busy_effect
     def start_jupyter_kernel(self):
         """Start a julia kernel, and connect to it."""
         if not self.kernel_manager:
@@ -83,7 +83,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                     title="Unable to find Julia kernel for Jupyter",
                     message="There is no Julia kernel for Jupyter available. "
                             "A Julia kernel is provided by the <b>IJulia</b> package. "
-                            "Do you want to install it automatically?"
+                            "<p>Do you want to install it automatically?</p>"
                 )
                 return
             # try to start the kernel using the available spec
@@ -116,7 +116,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                 title="Unable to start Julia kernel for Jupyter",
                 message="The Julia kernel for Jupyter failed to start. "
                         "This may be due to a configuration problem in the <b>IJulia</b> package. "
-                        "Do you want to reconfigure it automatically?"
+                        "<p>Do you want to reconfigure it automatically?</p>"
             )
 
     def prompt_to_install_IJulia(self, title, message):
@@ -193,6 +193,9 @@ class JuliaREPLWidget(RichJupyterWidget):
                 self.running = True
                 self.execute(self.command)
                 self.command = None
+        # handle interrupt exection caused by pressing Stop button in tool item
+        elif self.running and msg['msg_type'] == 'error':
+            self.execution_finished_signal.emit(-9999) # any error code
 
     def execute_instance(self, command):
         """Execute command immediately if kernel is idle. If not, save it for later
@@ -200,8 +203,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         """
         if not command:
             return
-        n = self.receivers(SIGNAL("execution_finished_signal(int)"))
-        logging.debug(n)
         self.start_jupyter_kernel()
         if self.kernel_execution_state == 'idle':
             self.running = True
@@ -215,8 +216,9 @@ class JuliaREPLWidget(RichJupyterWidget):
         logging.debug("interrupt exec")
         # self.request_interrupt_kernel()
         self.kernel_manager.interrupt_kernel()
-        # TODO: get prompt back after this!
+        # TODO: stop simulation wheel
 
+    @busy_effect
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""
         if not self.kernel_client:
@@ -226,24 +228,34 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 
+    @busy_effect
     def restart_jupyter_kernel(self):
         """Restart the jupyter kernel."""
         if not self.kernel_manager:
             return
-        self.clear()
-        self.kernel_manager.restart_kernel()
+        self.kernel_client.stop_channels()
+        self.kernel_manager.restart_kernel(now=True)
+        kernel_client = self.kernel_manager.client()
+        kernel_client.start_channels()
+        self.kernel_client = kernel_client
+        # connect client signals
+        self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
+        self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
+
 
     def _custom_context_menu_requested(self, pos):
         """ Reimplemented method to add a (re)start REPL action into the default context menu.
         """
         menu = self._context_menu_make(pos)
-        menu.addSeparator()
+        first_action = menu.actions()[0]
+        menu.insertSeparator(first_action)
         if not self.kernel_manager:
             start_repl_action = QAction("Start REPL", self)
             start_repl_action.triggered.connect(lambda: self.start_jupyter_kernel())
-            menu.addAction(start_repl_action)
+            menu.insertAction(first_action, start_repl_action)
         else:
             restart_repl_action = QAction("Restart REPL", self)
             restart_repl_action.triggered.connect(lambda: self.restart_jupyter_kernel())
-            menu.addAction(restart_repl_action)
+            restart_repl_action.setEnabled(not self.command and not self.running)
+            menu.insertAction(first_action, restart_repl_action)
         menu.exec_(self._control.mapToGlobal(pos))
