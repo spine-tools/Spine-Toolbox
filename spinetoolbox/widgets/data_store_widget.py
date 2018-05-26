@@ -425,7 +425,7 @@ class DataStoreForm(QWidget):
             self.ui.tableView_relationship_parameter.hideColumn(header.index("parameter_value_id"))
 
     def init_object_parameter_view(self, header):
-
+        """Init the object parameter table view"""
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
         self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
         self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
@@ -433,9 +433,9 @@ class DataStoreForm(QWidget):
         self.ui.tableView_object_parameter.setItemDelegateForColumn(header.index("value"), LineEditDelegate(self))
         #self.ui.tableView_object_parameter.itemDelegateForColumn(header.index("value")).\
         #    closeEditor.connect(self.update_parameter_value)
-        self.ui.tableView_object_parameter.setItemDelegate(LineEditDelegate(self))
-        self.ui.tableView_object_parameter.itemDelegate().\
-            closeEditor.connect(self.update_parameter_value)
+        line_edit_delegate = LineEditDelegate(self)
+        line_edit_delegate.closeEditor.connect(self.update_parameter_value)
+        self.ui.tableView_object_parameter.setItemDelegate(line_edit_delegate)
         self.parameter_value_id_column = self.object_parameter_model.header.index('parameter_value_id')
 
     # TODO: try to make this work
@@ -474,19 +474,24 @@ class DataStoreForm(QWidget):
         """Expand object at the top level (suite)"""
         clicked_object = index.data(Qt.UserRole+1)
         root_item = index.model().invisibleRootItem().child(0)
+        founded_object_class_item = None
         for i in range(root_item.rowCount()):
             object_class_item = root_item.child(i)
             object_class = object_class_item.data(Qt.UserRole+1)
             if object_class['id'] == clicked_object['class_id']:
-                for j in range(object_class_item.rowCount()):
-                    object_item = object_class_item.child(j)
-                    object_ = object_item.data(Qt.UserRole+1)
-                    if object_['id'] == clicked_object['id']:
-                        object_index = index.model().indexFromItem(object_item)
-                        self.ui.treeView_object.setCurrentIndex(object_index)
-                        self.ui.treeView_object.scrollTo(object_index)
-                        self.ui.treeView_object.expand(object_index)
-                        return
+                founded_object_class_item = object_class_item
+                break
+        if not founded_object_class_item:
+            return
+        for j in range(founded_object_class_item.rowCount()):
+            object_item = founded_object_class_item.child(j)
+            object_ = object_item.data(Qt.UserRole+1)
+            if object_['id'] == clicked_object['id']:
+                object_index = index.model().indexFromItem(object_item)
+                self.ui.treeView_object.setCurrentIndex(object_index)
+                self.ui.treeView_object.scrollTo(object_index)
+                self.ui.treeView_object.expand(object_index)
+                return
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
@@ -738,24 +743,29 @@ class DataStoreForm(QWidget):
             relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
             object_item.appendRow(relationship_class_item)
         # ...and to objects of child class if relationship class is between object classes
-        if relationship_class_type == 'relationship_class':
-            # find child_class_item in the first level
-            root_item = index.model().invisibleRootItem().child(0)
-            for row in range(root_item.rowCount()):
-                object_class_item = root_item.child(row)
-                object_class = object_class_item.data(Qt.UserRole+1)
-                if object_class['id'] == child_object_class_id:
-                    for row in range(object_class_item.rowCount()):
-                        object_item = object_class_item.child(row)
-                        relationship_class_item = QStandardItem(name)
-                        relationship_class_item.setFont(self.bold_font)
-                        relationship_class_item.setData('relationship_class', Qt.UserRole)
-                        # invert relationship class and save it
-                        relationship_class_dict['child_object_class_id'] = parent_object_class_id
-                        relationship_class_dict['parent_object_class_id'] = child_object_class_id
-                        relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
-                        object_item.appendRow(relationship_class_item)
-                    return
+        if relationship_class_type != 'relationship_class':
+            return
+        # find child_class_item in the first level
+        root_item = index.model().invisibleRootItem().child(0)
+        founded_object_class_item = None
+        for row in range(root_item.rowCount()):
+            object_class_item = root_item.child(row)
+            object_class = object_class_item.data(Qt.UserRole+1)
+            if object_class['id'] == child_object_class_id:
+                founded_object_class_item = object_class_item
+                break
+        if not founded_object_class_item:
+            return
+        for row in range(founded_object_class_item.rowCount()):
+            object_item = founded_object_class_item.child(row)
+            relationship_class_item = QStandardItem(name)
+            relationship_class_item.setFont(self.bold_font)
+            relationship_class_item.setData('relationship_class', Qt.UserRole)
+            # invert relationship class and save it
+            relationship_class_dict['child_object_class_id'] = parent_object_class_id
+            relationship_class_dict['parent_object_class_id'] = child_object_class_id
+            relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
+            object_item.appendRow(relationship_class_item)
         # now it seems meaningless to scroll somewhere
 
     def new_relationship(self, index):
@@ -854,48 +864,58 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.scrollTo(new_object_index)
         # ...and if parent class is an object class,
         # then add child object item to inverse relationship class...
-        if relationship_class_type == 'relationship_class':
-            # find inverse relationship class item by traversing the tree from the root
-            root_item = index.model().invisibleRootItem().child(0)
-            inv_relationship_class_item = None
-            for i in range(root_item.rowCount()):
-                object_class_item = root_item.child(i)
-                object_class = object_class_item.data(Qt.UserRole+1)
-                if object_class['id'] == child_object_class_id:
-                    for j in range(object_class_item.rowCount()):
-                        object_item = object_class_item.child(j)
-                        object_ = object_item.data(Qt.UserRole+1)
-                        if object_['id'] == child_object_id:
-                            for k in range(object_item.rowCount()):
-                                relationship_class_item = object_item.child(k)
-                                relationship_class = relationship_class_item.data(Qt.UserRole+1)
-                                if relationship_class['id'] == class_id:
-                                    inv_relationship_class_item = relationship_class_item
-                                    break
-                            break
-                    break
-            if inv_relationship_class_item:
-                # create new object
-                new_object_item = QStandardItem(parent_object['name'])
-                # query object table to get new object directly as dict
-                new_object = self.session.query(
-                    self.Object.id,
-                    self.Object.class_id,
-                    self.Object.name
-                ).filter_by(id=parent_object_id).one_or_none()._asdict()
-                # add parent relationship id manually
-                new_object['relationship_id'] = relationship.id
-                new_object_item.setData('object', Qt.UserRole)
-                new_object_item.setData(new_object, Qt.UserRole+1)
-                # create and append relationship class items
-                for new_relationship_class in new_relationship_class_query:
-                    new_relationship_class_item = self.visit_relationship_class(
-                        new_relationship_class,
-                        new_object
-                    )
-                    new_relationship_class_item.setData('relationship_class', Qt.UserRole)
-                    new_object_item.appendRow(new_relationship_class_item)
-                inv_relationship_class_item.appendRow(new_object_item)
+        if relationship_class_type != 'relationship_class':
+            return
+        # find inverse relationship class item by traversing the tree from the root
+        root_item = index.model().invisibleRootItem().child(0)
+        founded_relationship_class_item = None
+        founded_object_class_item = None
+        founded_object_item = None
+        for i in range(root_item.rowCount()):
+            object_class_item = root_item.child(i)
+            object_class = object_class_item.data(Qt.UserRole+1)
+            if object_class['id'] == child_object_class_id:
+                founded_object_class_item = object_class_item
+                break
+        if not founded_object_class_item:
+            return
+        for j in range(founded_object_class_item.rowCount()):
+            object_item = founded_object_class_item.child(j)
+            object_ = object_item.data(Qt.UserRole+1)
+            if object_['id'] == child_object_id:
+                founded_object_item = object_item
+                break
+        if not founded_object_item:
+            return
+        for k in range(object_item.rowCount()):
+            relationship_class_item = object_item.child(k)
+            relationship_class = relationship_class_item.data(Qt.UserRole+1)
+            if relationship_class['id'] == class_id:
+                founded_relationship_class_item = relationship_class_item
+                break
+        if not founded_relationship_class_item:
+            return
+        # create new object
+        new_object_item = QStandardItem(parent_object['name'])
+        # query object table to get new object directly as dict
+        new_object = self.session.query(
+            self.Object.id,
+            self.Object.class_id,
+            self.Object.name
+        ).filter_by(id=parent_object_id).one_or_none()._asdict()
+        # add parent relationship id manually
+        new_object['relationship_id'] = relationship.id
+        new_object_item.setData('object', Qt.UserRole)
+        new_object_item.setData(new_object, Qt.UserRole+1)
+        # create and append relationship class items
+        for new_relationship_class in new_relationship_class_query:
+            new_relationship_class_item = self.visit_relationship_class(
+                new_relationship_class,
+                new_object
+            )
+            new_relationship_class_item.setData('relationship_class', Qt.UserRole)
+            new_object_item.appendRow(new_relationship_class_item)
+        founded_relationship_class_item.appendRow(new_object_item)
 
 
     def rename_item(self, index):
@@ -922,25 +942,26 @@ class DataStoreForm(QWidget):
         # get item from table
         entity = item.data(Qt.UserRole+1)
         instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
-        if instance:
-            instance.name = new_name
-            instance.commit_id = self.commit.id
-            try:
-                self.session.flush()
-            except DBAPIError as e:
-                msg = "Could not rename item: {}".format(e.orig.args)
-                self.statusbar.showMessage(msg, 5000)
-                self.session.rollback()
-                return
-            # manually rename all items in model
-            items = index.model().findItems(name, Qt.MatchRecursive)
-            for it in items:
-                ent_type = it.data(Qt.UserRole)
-                ent = it.data(Qt.UserRole+1)
-                if (ent_type in entity_type or entity_type in ent_type)\
-                        and ent['id'] == entity['id']:
-                    ent['name'] = new_name
-                    it.setText(new_name)
+        if not instance:
+            return
+        instance.name = new_name
+        instance.commit_id = self.commit.id
+        try:
+            self.session.flush()
+        except DBAPIError as e:
+            msg = "Could not rename item: {}".format(e.orig.args)
+            self.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
+            return
+        # manually rename all items in model
+        items = index.model().findItems(name, Qt.MatchRecursive)
+        for it in items:
+            ent_type = it.data(Qt.UserRole)
+            ent = it.data(Qt.UserRole+1)
+            if (ent_type in entity_type or entity_type in ent_type)\
+                    and ent['id'] == entity['id']:
+                ent['name'] = new_name
+                it.setText(new_name)
 
     def remove_item(self, index):
         """Remove item from the treeview"""
@@ -958,74 +979,80 @@ class DataStoreForm(QWidget):
         # get item from table
         entity = item.data(Qt.UserRole+1)
         instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
-        if instance:
-            self.session.delete(instance)
-            try:
-                self.session.flush()
-            except DBAPIError as e:
-                msg = "Could not insert new relationship class: {}".format(e.orig.args)
-                self.statusbar.showMessage(msg, 5000)
-                self.session.rollback()
-                return
-            # manually remove all items in model
-            def visit_and_remove(it):
-                """Visit item, remove it if necessary and visit children.
+        if not instance:
+            return
+        self.session.delete(instance)
+        try:
+            self.session.flush()
+        except DBAPIError as e:
+            msg = "Could not insert new relationship class: {}".format(e.orig.args)
+            self.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
+            return
+        # manually remove all items in model
+        def visit_and_remove(it):
+            """Visit item, remove it if necessary and visit children.
 
-                Returns:
-                    True if item was removed, False otherwise
-                """
-                ent_type = it.data(Qt.UserRole)
-                ent = it.data(Qt.UserRole+1)
-                if ent_type:
-                    if ent_type == entity_type and ent['id'] == entity['id']:
-                        ind = index.model().indexFromItem(it)
-                        index.model().removeRows(ind.row(), 1, ind.parent())
-                        return True
-                    if ent_type.endswith('relationship_class'):
-                        child_object_class_id = ent['child_object_class_id']
-                        if child_object_class_id == entity['id']:
-                            ind = index.model().indexFromItem(it)
-                            index.model().removeRows(ind.row(), 1, ind.parent())
-                            return True
-                i = 0
-                while True:
-                    if i == it.rowCount():
-                        break
-                    if not visit_and_remove(it.child(i)):
-                        i += 1
+            Returns:
+                True if item was removed, False otherwise
+            """
+            # visit children
+            i = 0
+            while True:
+                if i == it.rowCount(): # all children have been visited
+                    break
+                if not visit_and_remove(it.child(i)): # visit next children
+                    i += 1 # increment counter only if children wasn't removed
+            # visit item
+            ent_type = it.data(Qt.UserRole)
+            ent = it.data(Qt.UserRole+1)
+            if not ent_type: # root item
                 return False
-            root_item = index.model().invisibleRootItem().child(0)
-            visit_and_remove(root_item)
+            if ent_type == entity_type and ent['id'] == entity['id']:
+                ind = index.model().indexFromItem(it)
+                index.model().removeRows(ind.row(), 1, ind.parent())
+                return True
+            if ent_type.endswith('relationship_class'):
+                child_object_class_id = ent['child_object_class_id']
+                if child_object_class_id == entity['id']:
+                    ind = index.model().indexFromItem(it)
+                    index.model().removeRows(ind.row(), 1, ind.parent())
+                    return True
+            return False
+        root_item = index.model().invisibleRootItem().child(0)
+        visit_and_remove(root_item)
 
     def new_parameter(self, tree_index):
         logging.debug("new parameter")
-        if self.object_parameter_model.insertRows(self.object_parameter_model.rowCount(), 1):
-            row = self.object_parameter_model.rowCount()-1
-            tree_index_data = tree_index.data(Qt.UserRole+1)
-            tree_parent_data = tree_index.parent().data(Qt.UserRole+1)
-            # add object_class_id
-            column = self.object_parameter_model.header.index("object_class_id")
-            parameter_index = self.object_parameter_model.index(row, column)
-            self.object_parameter_model.setData(parameter_index, tree_index_data['class_id'])
-            # add object_class_name
-            column = self.object_parameter_model.header.index("object_class_name")
-            parameter_index = self.object_parameter_model.index(row, column)
-            self.object_parameter_model.setData(parameter_index, tree_parent_data['name'])
-            # add object_id
-            column = self.object_parameter_model.header.index("object_id")
-            parameter_index = self.object_parameter_model.index(row, column)
-            self.object_parameter_model.setData(parameter_index, tree_index_data['id'])
-            # add object_name
-            column = self.object_parameter_model.header.index("object_name")
-            parameter_index = self.object_parameter_model.index(row, column)
-            self.object_parameter_model.setData(parameter_index, tree_index_data['name'])
-            # edit parameter_name
-            self.filter_parameter_models(tree_index, tree_index)
-            column = self.object_parameter_model.header.index("parameter_name")
-            parameter_index = self.object_parameter_model.index(row, column)
-            parameter_proxy_index = self.object_parameter_proxy_model.mapFromSource(parameter_index)
-            self.ui.tableView_object_parameter.setCurrentIndex(parameter_proxy_index)
-            self.ui.tableView_object_parameter.edit(parameter_proxy_index)
+        last_row = self.object_parameter_model.rowCount()
+        if not self.object_parameter_model.insertRows(last_row, 1):
+            return
+        row = self.object_parameter_model.rowCount()-1
+        tree_index_data = tree_index.data(Qt.UserRole+1)
+        tree_parent_data = tree_index.parent().data(Qt.UserRole+1)
+        # add object_class_id
+        column = self.object_parameter_model.header.index("object_class_id")
+        parameter_index = self.object_parameter_model.index(row, column)
+        self.object_parameter_model.setData(parameter_index, tree_index_data['class_id'])
+        # add object_class_name
+        column = self.object_parameter_model.header.index("object_class_name")
+        parameter_index = self.object_parameter_model.index(row, column)
+        self.object_parameter_model.setData(parameter_index, tree_parent_data['name'])
+        # add object_id
+        column = self.object_parameter_model.header.index("object_id")
+        parameter_index = self.object_parameter_model.index(row, column)
+        self.object_parameter_model.setData(parameter_index, tree_index_data['id'])
+        # add object_name
+        column = self.object_parameter_model.header.index("object_name")
+        parameter_index = self.object_parameter_model.index(row, column)
+        self.object_parameter_model.setData(parameter_index, tree_index_data['name'])
+        # edit parameter_name
+        self.filter_parameter_models(tree_index, tree_index)
+        column = self.object_parameter_model.header.index("parameter_name")
+        parameter_index = self.object_parameter_model.index(row, column)
+        parameter_proxy_index = self.object_parameter_proxy_model.mapFromSource(parameter_index)
+        self.ui.tableView_object_parameter.setCurrentIndex(parameter_proxy_index)
+        self.ui.tableView_object_parameter.edit(parameter_proxy_index)
 
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
@@ -1059,22 +1086,23 @@ class DataStoreForm(QWidget):
         parameter_value_id = sibling.data()
         parameter_value = self.session.query(self.ParameterValue).\
             filter_by(id=parameter_value_id).one_or_none()
-        if parameter_value:
-            parameter_value.commit_id = self.commit.id
-            setattr(parameter_value, field_name, editor.text())
-            try:
-                self.session.flush()
-            except DBAPIError as e:
-                msg = "Could not update parameter: {}".format(e.orig.args)
-                self.statusbar.showMessage(msg, 5000)
-                self.session.rollback()
-                return
-            # manually update item in model
-            # TODO: if we just set data in the proxy model and the items
-            # happen to be re-sorted we miss the right index, why?
-            # below is a work-around using the source model directly
-            source_index = self.object_parameter_proxy_model.mapToSource(index)
-            self.object_parameter_model.setData(source_index, editor.text())
+        if not parameter_value:
+            return
+        parameter_value.commit_id = self.commit.id
+        setattr(parameter_value, field_name, editor.text())
+        try:
+            self.session.flush()
+        except DBAPIError as e:
+            msg = "Could not update parameter: {}".format(e.orig.args)
+            self.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
+            return
+        # manually update item in model
+        # TODO: if we just set data in the proxy model and the items
+        # happen to be re-sorted we miss the right index, why?
+        # below is a work-around using the source model directly
+        source_index = self.object_parameter_proxy_model.mapToSource(index)
+        self.object_parameter_model.setData(source_index, editor.text())
 
     def remove_parameter(self, index):
         """Remove row from parameter_value table.
@@ -1083,17 +1111,18 @@ class DataStoreForm(QWidget):
         parameter_value_id = sibling.data()
         parameter_value = self.session.query(self.ParameterValue).\
             filter_by(id=parameter_value_id).one_or_none()
-        if parameter_value:
-            self.session.delete(parameter_value)
-            try:
-                self.session.flush()
-            except DBAPIError as e:
-                msg = "Could not remove parameter: {}".format(e.orig.args)
-                self.statusbar.showMessage(msg, 5000)
-                self.session.rollback()
-                return
-            # manually remove row from model
-            self.object_parameter_proxy_model.removeRows(index.row(), 1)
+        if not parameter_value:
+            return
+        self.session.delete(parameter_value)
+        try:
+            self.session.flush()
+        except DBAPIError as e:
+            msg = "Could not remove parameter: {}".format(e.orig.args)
+            self.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
+            return
+        # manually remove row from model
+        self.object_parameter_proxy_model.removeRows(index.row(), 1)
 
 
     @Slot(name="close_clicked")
