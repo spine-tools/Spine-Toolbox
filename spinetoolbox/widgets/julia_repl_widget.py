@@ -193,7 +193,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                 self.running = True
                 self.execute(self.command)
                 self.command = None
-        # handle interrupt exection caused by pressing Stop button in tool item
+        # handle interrupt exception caused by pressing Stop button in tool item
         elif self.running and msg['msg_type'] == 'error':
             self.execution_finished_signal.emit(-9999) # any error code
 
