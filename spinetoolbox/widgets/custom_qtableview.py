@@ -41,24 +41,17 @@ class CustomQTableView(QTableView):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
 
-    # TODO: Work in progress
     def edit(self, index, trigger=None, event=None):
-
-        logging.debug(event)
-        if trigger == QAbstractItemView.NoEditTriggers:
-            logging.debug("noeditt")
-        elif trigger == QAbstractItemView.CurrentChanged:
-            logging.debug("currentch")
-        elif trigger == QAbstractItemView.DoubleClicked:
-            logging.debug("doublecl")
-        elif trigger == QAbstractItemView.SelectedClicked:
-            logging.debug("selcl")
-        elif trigger == QAbstractItemView.EditKeyPressed:
-            logging.debug("editkey")
-        elif trigger == QAbstractItemView.AnyKeyPressed:
-            logging.debug("anyke")
-        elif trigger == QAbstractItemView.AllEditTriggers:
-            logging.debug("all")
-        if trigger is not None:
+        # object parameter model header data
+        if not index.isValid():
+            return False
+        logging.debug("trigger {}".format(str(trigger)))
+        logging.debug("event {}".format(str(event)))
+        header = self.model().sourceModel().header
+        # don't edit parameter name from the view
+        if header[index.column()] == "parameter_name" and event:
+            # event not None means edition was triggered from the view
+            return False
+        if trigger:
             return super().edit(index, trigger, event)
         return super().edit(index)

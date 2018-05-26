@@ -678,6 +678,7 @@ class ObjectSortFilterProxyModel(QSortFilterProxyModel):
             return object_class_id == self.object_class_id_filter
         return False
 
+
     def flags(self, index):
         """Returns the item flags for the given index."""
         column_name = self.sourceModel().header[index.column()]

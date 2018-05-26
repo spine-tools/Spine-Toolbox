@@ -33,7 +33,6 @@ class LineEditDelegate(QItemDelegate):
     A delegate that places a fully functioning QComboBox in every
     cell of the column to which it's applied
     """
-    commit_data = Signal(QLineEdit, name="commit_data")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -55,10 +54,6 @@ class LineEditDelegate(QItemDelegate):
     def setModelData(self, editor, model, index):
         # do nothing here, we want to control it
         pass
-
-    #@Slot(int, name='current_index_changed')
-    #def current_index_changed(self):
-    #    self.commit_data.emit(self.sender())
 
 
 class CustomLineEditor(QLineEdit):

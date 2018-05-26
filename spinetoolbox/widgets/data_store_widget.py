@@ -26,7 +26,7 @@ Widget to show Data Store Form.
 
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView,\
     QDialog, QLineEdit, QInputDialog
-from PySide2.QtCore import Slot, Qt, QItemSelectionModel, QItemSelection
+from PySide2.QtCore import Slot, Qt, QItemSelectionModel, QItemSelection, QSettings
 from PySide2.QtGui import QStandardItem
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
@@ -42,6 +42,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, aliased
 import time # just to measure loading time and sqlalchemy ORM performance
 from widgets.lineedit_delegate import LineEditDelegate
+from widgets.combobox_delegate import ComboBoxDelegate
 
 
 class DataStoreForm(QWidget):
@@ -61,6 +62,7 @@ class DataStoreForm(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox Data Store")
         # Class attributes
         self._parent = parent
         self.engine = engine
@@ -101,6 +103,7 @@ class DataStoreForm(QWidget):
         self.init_object_tree_model()
         self.init_parameter_models()
         self.connect_signals()
+        self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -120,7 +123,6 @@ class DataStoreForm(QWidget):
         #    connect(self.update_object_parameter_selection)
         self.ui.tableView_object_parameter.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
-
 
     @Slot(name="commit_clicked")
     def commit_clicked(self):
@@ -425,7 +427,11 @@ class DataStoreForm(QWidget):
             self.ui.tableView_relationship_parameter.hideColumn(header.index("parameter_value_id"))
 
     def init_object_parameter_view(self, header):
-        """Init the object parameter table view"""
+        """Init the object parameter table view.
+
+        Args:
+            header (list): the header of the object parameter model
+        """
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy_model)
         self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
         self.ui.tableView_object_parameter.hideColumn(header.index("object_id"))
@@ -433,10 +439,40 @@ class DataStoreForm(QWidget):
         self.ui.tableView_object_parameter.setItemDelegateForColumn(header.index("value"), LineEditDelegate(self))
         #self.ui.tableView_object_parameter.itemDelegateForColumn(header.index("value")).\
         #    closeEditor.connect(self.update_parameter_value)
-        line_edit_delegate = LineEditDelegate(self)
-        line_edit_delegate.closeEditor.connect(self.update_parameter_value)
-        self.ui.tableView_object_parameter.setItemDelegate(line_edit_delegate)
+        lineedit_delegate = LineEditDelegate(self)
+        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
+        self.ui.tableView_object_parameter.setItemDelegate(lineedit_delegate)
+        combobox_delegate = ComboBoxDelegate(self)
+        combobox_delegate.closeEditor.connect(self.new_parameter_value)
+        self.ui.tableView_object_parameter.\
+            setItemDelegateForColumn(header.index("parameter_name"), combobox_delegate)
+        self.object_parameter_proxy_model.combo_items_method = self.object_class_parameter_names
+        # this below avoids retrieving the same value multiple times in other methods
         self.parameter_value_id_column = self.object_parameter_model.header.index('parameter_value_id')
+
+
+    def object_class_parameter_names(self, index):
+        """Return unasigned parameter names for object class given by index.
+        These should be used to initialize combo items when inserting new object parameters.
+
+        Args:
+            index (QModelIndex): an index of self.object_parameter_proxy_model
+        """
+        # Note: for new relationship parameters don't do it here,
+        # just create another method
+        header = self.object_parameter_model.header
+        object_class_id_column = header.index('object_class_id')
+        object_id_column = header.index('object_id')
+        object_class_id = index.sibling(index.row(), object_class_id_column).data()
+        object_id = index.sibling(index.row(), object_id_column).data()
+        parameter_names = self.session.query(self.Parameter.name).\
+            filter_by(object_class_id=object_class_id).\
+            filter(~self.Parameter.id.in_(
+                    self.session.query(self.ParameterValue.parameter_id).\
+                    filter_by(object_id=object_id)
+                )
+            )
+        return [row.name for row in parameter_names]
 
     # TODO: try to make this work
     @Slot("QModelIndex", "QModelIndex", name="update_object_parameter_selection")
@@ -1074,6 +1110,12 @@ class DataStoreForm(QWidget):
         elif option == "Edit field":
             self.ui.tableView_object_parameter.edit(index)
 
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="new_parameter_value")
+    def new_parameter_value(self, editor, hint):
+        """Update parameter_value table with newly created parameter.
+        If successful, also update item in the model.
+        """
+        logging.debug("new parameter value")
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
     def update_parameter_value(self, editor, hint):
@@ -1087,6 +1129,7 @@ class DataStoreForm(QWidget):
         parameter_value = self.session.query(self.ParameterValue).\
             filter_by(id=parameter_value_id).one_or_none()
         if not parameter_value:
+            logging.debug("entry not found in parameter_value table")
             return
         parameter_value.commit_id = self.commit.id
         setattr(parameter_value, field_name, editor.text())
@@ -1125,6 +1168,24 @@ class DataStoreForm(QWidget):
         self.object_parameter_proxy_model.removeRows(index.row(), 1)
 
 
+
+
+    def restore_ui(self):
+        """Restore UI state from previous session."""
+        window_size = self.qsettings.value("mainWindow/windowSize")
+        window_pos = self.qsettings.value("mainWindow/windowPosition")
+        #window_state = self.qsettings.value("mainWindow/windowState")
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
+        if window_size:
+            self.resize(window_size)
+        if window_pos:
+            self.move(window_pos)
+        #if window_state:
+        #    self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+
+
     @Slot(name="close_clicked")
     def close_clicked(self):
         """Close this form without commiting any changes."""
@@ -1146,6 +1207,16 @@ class DataStoreForm(QWidget):
             event (QEvent): Closing event if 'X' is clicked.
         """
         if event:
+            # save qsettings
+            #self.qsettings.setValue("mainWindow/splitterState", self.ui.splitter.saveState())
+            self.qsettings.setValue("mainWindow/windowSize", self.size())
+            self.qsettings.setValue("mainWindow/windowPosition", self.pos())
+            #self.qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
+            if self.windowState() == Qt.WindowMaximized:
+                self.qsettings.setValue("mainWindow/windowMaximized", True)
+            else:
+                self.qsettings.setValue("mainWindow/windowMaximized", False)
+            # close sql session
             if self.session:
                 self.session.rollback()
                 self.session.close()
