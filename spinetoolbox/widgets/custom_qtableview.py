@@ -28,7 +28,7 @@ import logging
 from PySide2.QtWidgets import QTableView
 from PySide2.QtCore import Qt, Signal
 
-class CustomQTableView(QTableView):
+class ParameterValueTableView(QTableView):
     """Custom QTableView class.
 
     Attributes:
@@ -55,6 +55,18 @@ class CustomQTableView(QTableView):
             super().edit(index, trigger, event)
             return True
         return super().edit(index, trigger, event)
+
+
+class ParameterTableView(QTableView):
+    """Custom QTableView class.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
 
 
 class DataPackageKeyTableView(QTableView):

@@ -140,6 +140,8 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.add_action("New object class")
                 self.add_action("New relationship class")
                 self.add_action("New object")
+                self.addSeparator()
+                self.add_action("New parameter")
             elif item_type == 'object':
                 self.add_action("New parameter value")
             elif item_type == 'relationship_class':
@@ -149,13 +151,30 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.add_action("New relationship")
             elif item_type == 'related_object':
                 self.add_action("Expand at top level")
+            self.addSeparator()
             self.add_action("Rename")
             self.add_action("Remove")
         self.exec_(position)
 
 
-class ObjectParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for Data store form, object parameter items."""
+class ParameterValueContextMenu(CustomContextMenu):
+    """Context menu class for Data store form, object parameter value items."""
+
+    def __init__(self, parent, position, index):
+        super().__init__()
+        self._parent = parent
+        self.index = index
+        self.option = "None"
+        if not index.isValid():
+            return
+        self.add_action("New parameter value")
+        self.add_action("Remove")
+        self.add_action("Edit field")
+        self.exec_(position)
+
+
+class ParameterContextMenu(CustomContextMenu):
+    """Context menu class for Data store form, object parameter value items."""
 
     def __init__(self, parent, position, index):
         super().__init__()
@@ -166,20 +185,8 @@ class ObjectParameterValueContextMenu(CustomContextMenu):
             return
         self.add_action("New parameter")
         self.add_action("Remove")
-        disabled = not (index.flags() & Qt.ItemIsEditable)
-        self.add_action("Edit field", disabled=disabled)
+        self.add_action("Edit field")
         self.exec_(position)
-
-    def add_action(self, text, disabled=False):
-        """Adds an action to the context menu.
-
-        Args:
-            text (str): Text description of the action
-        """
-        action = self.addAction(text)
-        if disabled:
-            action.setEnabled(False)
-        action.triggered.connect(lambda: self.set_action(text))
 
 
 class ProcessOutputContextMenu(CustomContextMenu):

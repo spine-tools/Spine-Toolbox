@@ -143,11 +143,11 @@ class EditDatapackageKeysWidget(QWidget):
     def connect_signals(self):
         """Connect signals to slots."""
         # primary keys
-        self.ui.tableView_pks.itemDelegate().commit_data.connect(self.pk_data_commited)
+        self.ui.tableView_pks.itemDelegate().closeEditor.connect(self.pk_data_commited)
         self.ui.toolButton_add_pk.clicked.connect(self.add_pk_clicked)
         self.ui.toolButton_rm_pks.clicked.connect(self.rm_pks_clicked)
         # foreign keys
-        self.ui.tableView_fks.itemDelegate().commit_data.connect(self.fk_data_commited)
+        self.ui.tableView_fks.itemDelegate().closeEditor.connect(self.fk_data_commited)
         self.ui.toolButton_add_fk.clicked.connect(self.add_fk_clicked)
         self.ui.toolButton_rm_fks.clicked.connect(self.rm_fks_clicked)
         # common

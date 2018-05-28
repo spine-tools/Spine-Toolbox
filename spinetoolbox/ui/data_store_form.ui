@@ -126,7 +126,7 @@
            <property name="handleWidth">
             <number>6</number>
            </property>
-           <widget class="QTabWidget" name="tabWidget">
+           <widget class="QTabWidget" name="tabWidget_object">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>2</horstretch>
@@ -145,7 +145,7 @@
             <property name="currentIndex">
              <number>0</number>
             </property>
-            <widget class="QWidget" name="tab">
+            <widget class="QWidget" name="tab_object_parameter_value">
              <attribute name="title">
               <string>Value</string>
              </attribute>
@@ -176,7 +176,7 @@
                    <number>0</number>
                   </property>
                   <item>
-                   <widget class="QLabel" name="label_object_parameter">
+                   <widget class="QLabel" name="label_object_parameter_value">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                       <horstretch>2</horstretch>
@@ -191,7 +191,7 @@
                  </layout>
                 </item>
                 <item>
-                 <widget class="CustomQTableView" name="tableView_object_parameter_value">
+                 <widget class="ParameterValueTableView" name="tableView_object_parameter_value">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>2</horstretch>
@@ -213,7 +213,7 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_2">
+            <widget class="QWidget" name="tab_object_parameter">
              <attribute name="title">
               <string>Definition</string>
              </attribute>
@@ -241,7 +241,7 @@
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_4">
                   <item>
-                   <widget class="QLabel" name="label_object_parameter_def">
+                   <widget class="QLabel" name="label_object_parameter">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                       <horstretch>2</horstretch>
@@ -256,12 +256,15 @@
                  </layout>
                 </item>
                 <item>
-                 <widget class="CustomQTableView" name="tableView_object_parameter">
+                 <widget class="ParameterTableView" name="tableView_object_parameter">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>2</horstretch>
                     <verstretch>0</verstretch>
                    </sizepolicy>
+                  </property>
+                  <property name="contextMenuPolicy">
+                   <enum>Qt::CustomContextMenu</enum>
                   </property>
                   <property name="selectionBehavior">
                    <enum>QAbstractItemView::SelectItems</enum>
@@ -276,7 +279,7 @@
              </layout>
             </widget>
            </widget>
-           <widget class="QTabWidget" name="tabWidget_2">
+           <widget class="QTabWidget" name="tabWidget_relationship">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
               <horstretch>2</horstretch>
@@ -292,7 +295,7 @@
             <property name="currentIndex">
              <number>0</number>
             </property>
-            <widget class="QWidget" name="tab_3">
+            <widget class="QWidget" name="tab_relationship_parameter_value">
              <attribute name="title">
               <string>Value</string>
              </attribute>
@@ -317,7 +320,7 @@
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_3">
                   <item>
-                   <widget class="QLabel" name="label_relationship_parameter">
+                   <widget class="QLabel" name="label_relationship_parameter_value">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                       <horstretch>2</horstretch>
@@ -332,7 +335,7 @@
                  </layout>
                 </item>
                 <item>
-                 <widget class="CustomQTableView" name="tableView_relationship_parameter_value">
+                 <widget class="ParameterValueTableView" name="tableView_relationship_parameter_value">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>2</horstretch>
@@ -354,7 +357,7 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_4">
+            <widget class="QWidget" name="tab_relationship_parameter">
              <attribute name="title">
               <string>Definition</string>
              </attribute>
@@ -379,7 +382,7 @@
                 <item>
                  <layout class="QHBoxLayout" name="horizontalLayout_5">
                   <item>
-                   <widget class="QLabel" name="label_relationship_parameter_def">
+                   <widget class="QLabel" name="label_relationship_parameter">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                       <horstretch>2</horstretch>
@@ -394,7 +397,7 @@
                  </layout>
                 </item>
                 <item>
-                 <widget class="CustomQTableView" name="tableView_relationship_parameter">
+                 <widget class="ParameterTableView" name="tableView_relationship_parameter">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                     <horstretch>2</horstretch>
@@ -492,7 +495,12 @@
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>CustomQTableView</class>
+   <class>ParameterValueTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ParameterTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

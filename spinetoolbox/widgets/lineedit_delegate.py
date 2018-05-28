@@ -18,19 +18,19 @@
 #############################################################################
 
 """
-A delegate to edit table cells with custom lineEdits.
+A delegate to edit table cells with custom QLineEdits.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   18.5.2018
 """
-from PySide2.QtCore import Qt, Slot, Signal
+from PySide2.QtCore import Qt, Slot, Signal, QEvent
 from PySide2.QtGui import QIntValidator
 from PySide2.QtWidgets import QItemDelegate, QLineEdit, QSpinBox
 import logging
 
 class LineEditDelegate(QItemDelegate):
     """
-    A delegate that places a fully functioning QComboBox in every
+    A delegate that places a fully functioning QLineEdit in every
     cell of the column to which it's applied
     """
 
@@ -38,20 +38,35 @@ class LineEditDelegate(QItemDelegate):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
+        """Return CustomLineEditor. Set up a validator depending on datatype
+        """
         editor = CustomLineEditor(parent)
         data = index.data(Qt.DisplayRole)
         editor.original_data = data
+        editor.index = index
         if type(data) is int:
             editor.setValidator(QIntValidator(editor))
         return editor
 
     def setEditorData(self, editor, index):
+        """Init the line editor with previous data from the index"""
         data = index.data(Qt.DisplayRole)
         editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
-        # do nothing here, we want to control it
+        """Do nothing. Model data is updated by handling the `closeEditor` signal
+        """
         pass
+
+
+    def editorEvent(self, event, model, option, index):
+        """WIP: Restore inital text when escape key is pressed"""
+        logging.debug(event.type())
+        if event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Escape:
+                logging.debug(self.original_data)
+                logging.debug("escape pressed")
+        return False
 
 
 class CustomLineEditor(QLineEdit):
@@ -59,16 +74,15 @@ class CustomLineEditor(QLineEdit):
     def __init__(self, parent):
         super().__init__(parent)
         self.original_data = None
+        self.index = None
 
-    # TODO: try to make this work
-    # careful with this, restoring data may change its type from int to str and complicate things
     def keyPressEvent(self, e):
-        """Restore inital text when escape key is pressed.
+        """WIP: Restore inital text when escape key is pressed.
 
         Args:
             e (QKeyEvent): Received key press event.
         """
-        logging.debug("key pressed")
+        # logging.debug("key pressed")
         if e.key() == Qt.Key_Escape:
             logging.debug(self.original_data)
             logging.debug("escape pressed")
@@ -78,7 +92,6 @@ class CustomLineEditor(QLineEdit):
 
     def close(self):
         logging.debug("close")
-
         return super().close()
 
     def closeEvent(self, e):

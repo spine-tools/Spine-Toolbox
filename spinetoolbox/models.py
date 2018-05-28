@@ -655,15 +655,6 @@ class MinimalTableModel(QAbstractTableModel):
         self._tool_tip = tool_tip
 
 
-class DataPackageKeyModel(MinimalTableModel):
-    """A class to hold data package key data"""
-
-    def __init__(self, parent=None):
-        """Initialize class"""
-        super().__init__(parent)
-        self.combo_items_method = None
-
-
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview"""
 
@@ -679,6 +670,30 @@ class ObjectParameterProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
+        self.object_class_id_filter = None
+
+    def clear_filter(self):
+        self.object_class_id_filter = None
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Returns true if the item in the row indicated by the given source_row
+        and source_parent should be included in the model; otherwise returns false
+        """
+        # logging.debug("accept rows")
+        h = self.sourceModel().header
+        def source_data(column_name):
+            return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
+        object_class_id = source_data("object_class_id")
+        if self.object_class_id_filter:
+            return object_class_id == self.object_class_id_filter
+        return False
+
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        column_name = self.sourceModel().header[index.column()]
+        if column_name is 'object_class_name':
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
 
 class ObjectParameterValueProxy(QSortFilterProxyModel):
@@ -710,14 +725,14 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
             return object_class_id == self.object_class_id_filter
         return False
 
-
     def flags(self, index):
         """Returns the item flags for the given index."""
-        column_name = self.sourceModel().header[index.column()]
-
+        source_index = self.mapToSource(index)
+        column_name = self.sourceModel().header[source_index.column()]
         if column_name in ('object_class_name', 'object_name'):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+
 
 class RelationshipParameterProxy(QSortFilterProxyModel):
     """A class to filter the relationship parameter table in Data Store"""
@@ -725,6 +740,25 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
+        self.object_class_id_filter = None
+
+    def clear_filter(self):
+        self.object_class_id_filter = None
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Returns true if the item in the row indicated by the given source_row
+        and source_parent should be included in the model; otherwise returns false
+        """
+        # logging.debug("accept rows")
+        h = self.sourceModel().header
+        def source_data(column_name):
+            return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
+        if self.object_class_id_filter:
+            parent_object_class_id = source_data("parent_object_class_id")
+            child_object_class_id = source_data("child_object_class_id")
+            return self.object_class_id_filter in (parent_object_class_id, child_object_class_id)
+        return False
+
 
 class RelationshipParameterValueProxy(QSortFilterProxyModel):
     """A class to filter the relationship parameter value table in Data Store"""
