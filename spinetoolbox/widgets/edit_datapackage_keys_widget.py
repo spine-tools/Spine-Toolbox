@@ -36,7 +36,7 @@ from widgets.combobox_delegate import ComboBoxDelegate
 from widgets.checkbox_delegate import CheckBoxDelegate
 
 class PrimaryKeysHeader(Enum):
-    """A Class for handling tableview headers"""
+    """A Class for handling primary key tableview headers"""
     RM = 0, 'Select'
     TABLE = 1, 'Table'
     FIELD = 2, 'Field'
@@ -48,7 +48,7 @@ class PrimaryKeysHeader(Enum):
         return member
 
 class ForeignKeysHeader(Enum):
-    """A Class for handling tableview headers"""
+    """A Class for handling foreign key tableview headers"""
     RM = 0, 'Select'
     CHILD_TABLE = 1, 'Child table'
     CHILD_FIELD = 2, 'Child field'
@@ -62,7 +62,7 @@ class ForeignKeysHeader(Enum):
         return member
 
 class EditDatapackageKeysWidget(QWidget):
-    """A widget to allow the user to define keys for a datapackage.
+    """A widget to request the user to define keys for a datapackage.
 
     Attributes:
         dc (DataConnection): Data connection object that calls this widget
@@ -98,7 +98,6 @@ class EditDatapackageKeysWidget(QWidget):
         self.pks_model.reset_model(data)
         self.pks_model.set_tool_tip("<p>Double click to start editing.")
         self.pks_model.insertColumns(PrimaryKeysHeader.RM.index, 1)
-        self.pks_model.combo_items_method = self.pk_combo_items
         # foreign keys
         self.fks_model = MinimalTableModel()
         for header in ForeignKeysHeader:
@@ -108,7 +107,6 @@ class EditDatapackageKeysWidget(QWidget):
         self.fks_model.reset_model(data)
         self.fks_model.set_tool_tip("<p>Double click to start editing.")
         self.fks_model.insertColumns(ForeignKeysHeader.RM.index, 1)
-        self.fks_model.combo_items_method = self.fk_combo_items
 
     def init_tableViews(self):
         """Initialize fhe Keys data view"""
@@ -117,12 +115,14 @@ class EditDatapackageKeysWidget(QWidget):
         self.ui.tableView_pks.setItemDelegateForColumn(PrimaryKeysHeader.RM.index, CheckBoxDelegate(self))
         self.ui.tableView_pks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_pks.setModel(self.pks_model)
+        self.ui.tableView_pks.setup_combo_items = self.pk_setup_combo_items
         self.resize_tableView_pks()
         # foreign keys
         self.ui.tableView_fks.setItemDelegate(ComboBoxDelegate(self))
         self.ui.tableView_fks.setItemDelegateForColumn(ForeignKeysHeader.RM.index, CheckBoxDelegate(self))
         self.ui.tableView_fks.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_fks.setModel(self.fks_model)
+        self.ui.tableView_fks.setup_combo_items = self.fk_setup_combo_items
         self.resize_tableView_fks()
         #self.ui.tableView_fks.setEditTriggers(QAbstractItemView.AllEditTriggers)
 
@@ -140,49 +140,6 @@ class EditDatapackageKeysWidget(QWidget):
             new_width += self.ui.tableView_fks.columnWidth(h.index)
         self.ui.tableView_fks.setMinimumWidth(new_width)
 
-    def pk_combo_items(self, index):
-        """Return combobox items depending on index"""
-        row = index.row()
-        column = index.column()
-        header = self.pks_model.headerData(column)
-        if header == 'Table':
-            items = self.dc.package.resource_names
-            # filter out items already in the model
-            column_data = self.pks_model.columnData(column)
-            items = [i for i in items if i not in column_data]
-        elif header == 'Field':
-            header = 'Table'
-            column = next(h.index for h in PrimaryKeysHeader if h.fullname == header)
-            index = self.pks_model.createIndex(row, column)
-            table_name = self.pks_model.data(index)
-            if table_name:
-                items = self.dc.package.get_resource(table_name).schema.field_names
-            else:
-                msg = "{} not selected. Select one first.".format(header)
-                self.statusbar.showMessage(msg, 3000)
-                items = None
-        return items
-
-    def fk_combo_items(self, index):
-        """Return combobox items depending on index"""
-        row = index.row()
-        column = index.column()
-        header = self.fks_model.headerData(column)
-        if header.endswith('table'):
-            items = self.dc.package.resource_names
-        elif header.endswith('field'):
-            header = header.replace('field', 'table')
-            column = next(h.index for h in ForeignKeysHeader if h.fullname == header)
-            index = self.fks_model.createIndex(row, column)
-            table_name = self.fks_model.data(index)
-            if table_name:
-                items = self.dc.package.get_resource(table_name).schema.field_names
-            else:
-                msg = "{} not selected. Select one first.".format(header)
-                self.statusbar.showMessage(msg, 3000)
-                items = None
-        return items
-
     def connect_signals(self):
         """Connect signals to slots."""
         # primary keys
@@ -197,6 +154,49 @@ class EditDatapackageKeysWidget(QWidget):
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
+    def pk_setup_combo_items(self, index):
+        """Determine combobox items depending on index and store them in Qt.UserRole"""
+        row = index.row()
+        column = index.column()
+        header = self.pks_model.headerData(column)
+        if header == 'Table':
+            items = self.dc.package.resource_names
+            # filter out items already in the model
+            column_data = self.pks_model.columnData(column)
+            items = [i for i in items if i not in column_data]
+        elif header == 'Field':
+            header = 'Table'
+            next_column = next(h.index for h in PrimaryKeysHeader if h.fullname == header)
+            next_index = self.pks_model.index(row, next_column)
+            table_name = self.pks_model.data(next_index)
+            if table_name:
+                items = self.dc.package.get_resource(table_name).schema.field_names
+            else:
+                msg = "{} not selected. Select one first.".format(header)
+                self.statusbar.showMessage(msg, 3000)
+                items = None
+        self.pks_model.setData(index, items, Qt.UserRole)
+
+
+    def fk_setup_combo_items(self, index):
+        """Determine combobox items depending on index and store them in Qt.UserRole"""
+        row = index.row()
+        column = index.column()
+        header = self.fks_model.headerData(column)
+        if header.endswith('table'):
+            items = self.dc.package.resource_names
+        elif header.endswith('field'):
+            header = header.replace('field', 'table')
+            next_column = next(h.index for h in ForeignKeysHeader if h.fullname == header)
+            next_index = self.fks_model.index(row, next_column)
+            table_name = self.fks_model.data(next_index)
+            if table_name:
+                items = self.dc.package.get_resource(table_name).schema.field_names
+            else:
+                msg = "{} not selected. Select one first.".format(header)
+                self.statusbar.showMessage(msg, 3000)
+                items = None
+        self.fks_model.setData(index, items, Qt.UserRole)
 
     @Slot(int, name='pk_data_commited')
     def pk_data_commited(self, sender):
@@ -209,13 +209,13 @@ class EditDatapackageKeysWidget(QWidget):
             sender.previous_data = current_table
             row = sender.row
             column = sender.column
-            index = self.pks_model.createIndex(row, column)
+            index = self.pks_model.index(row, column)
             self.pks_model.setData(index, current_table)
             header = self.pks_model.headerData(column)
             if header == 'Table':
                 header = 'Field'
                 column = next(h.index for h in PrimaryKeysHeader if h.fullname == header)
-                index = self.pks_model.createIndex(row, column)
+                index = self.pks_model.index(row, column)
                 item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.pks_model.setData(index, item)
                 self.ui.tableView_pks.update(index)
@@ -232,13 +232,13 @@ class EditDatapackageKeysWidget(QWidget):
             sender.previous_data = current_table
             row = sender.row
             column = sender.column
-            index = self.fks_model.createIndex(row, column)
+            index = self.fks_model.index(row, column)
             self.fks_model.setData(index, current_table)
             header = self.fks_model.headerData(column)
             if header.endswith('table'):
                 header = header.replace('table', 'field')
                 column = next(h.index for h in ForeignKeysHeader if h.fullname == header)
-                index = self.fks_model.createIndex(row, column)
+                index = self.fks_model.index(row, column)
                 item = self.dc.package.get_resource(current_table).schema.field_names[0]
                 self.fks_model.setData(index, item)
                 self.ui.tableView_fks.update(index)
@@ -320,7 +320,7 @@ class EditDatapackageKeysWidget(QWidget):
         """Removes selected rows from Primary Keys model."""
         new_data = []
         for row in range(self.pks_model.rowCount()):
-            index = self.pks_model.createIndex(row, PrimaryKeysHeader.RM.index)
+            index = self.pks_model.index(row, PrimaryKeysHeader.RM.index)
             if not self.pks_model.data(index):
                 new_data.append(self.pks_model.rowData(row))
         self.pks_model.reset_model(new_data)
@@ -330,7 +330,7 @@ class EditDatapackageKeysWidget(QWidget):
         """Removes selected rows from Foreign Keys model."""
         new_data = []
         for row in range(self.fks_model.rowCount()):
-            index = self.fks_model.createIndex(row, ForeignKeysHeader.RM.index)
+            index = self.fks_model.index(row, ForeignKeysHeader.RM.index)
             if not self.fks_model.data(index):
                 new_data.append(self.fks_model.rowData(row))
         self.fks_model.reset_model(new_data)

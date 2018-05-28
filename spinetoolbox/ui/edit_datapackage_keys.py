@@ -56,7 +56,7 @@ class Ui_Form(object):
         self.label_2 = QtWidgets.QLabel(self.frame_pks)
         self.label_2.setObjectName("label_2")
         self.verticalLayout_3.addWidget(self.label_2)
-        self.tableView_pks = QtWidgets.QTableView(self.frame_pks)
+        self.tableView_pks = DataPackageKeyTableView(self.frame_pks)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -105,7 +105,7 @@ class Ui_Form(object):
         self.label = QtWidgets.QLabel(self.frame_fks)
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
-        self.tableView_fks = QtWidgets.QTableView(self.frame_fks)
+        self.tableView_fks = DataPackageKeyTableView(self.frame_fks)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -189,4 +189,5 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
+from widgets.custom_qtableview import DataPackageKeyTableView
 import resources_icons_rc

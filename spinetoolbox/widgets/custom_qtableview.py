@@ -25,9 +25,8 @@ Class for a custom QTableView for the Data store form.
 """
 
 import logging
-from PySide2.QtWidgets import QTableView, QAbstractItemView
-from PySide2.QtCore import Signal, Slot
-
+from PySide2.QtWidgets import QTableView
+from PySide2.QtCore import Qt, Signal
 
 class CustomQTableView(QTableView):
     """Custom QTableView class.
@@ -36,22 +35,46 @@ class CustomQTableView(QTableView):
         parent (QWidget): The parent of this view
     """
 
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+        self.adding_new_parameter_value = False
+
+    def edit(self, index, trigger=QTableView.AllEditTriggers, event=None):
+        """Starts editing the item corresponding to the given index if it is editable.
+        To edit parameter_name, set the attribute `adding_new_parameter_value`
+        before calling this method.
+        """
+        if not index.isValid():
+            return False
+        header = index.model().sourceModel().header
+        if header[index.column()] == "parameter_name":
+            if not self.adding_new_parameter_value:
+                return False
+            self.adding_new_parameter_value = False
+            super().edit(index, trigger, event)
+            return True
+        return super().edit(index, trigger, event)
+
+
+class DataPackageKeyTableView(QTableView):
+    """Custom QTableView class.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
 
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
+        self.setup_combo_items = None
 
-    def edit(self, index, trigger=None, event=None):
-        # object parameter model header data
+    def edit(self, index, trigger=QTableView.AllEditTriggers, event=None):
+        """Starts editing the item corresponding to the given index if it is editable.
+        """
         if not index.isValid():
             return False
-        logging.debug("trigger {}".format(str(trigger)))
-        logging.debug("event {}".format(str(event)))
-        header = self.model().sourceModel().header
-        # don't edit parameter name from the view
-        if header[index.column()] == "parameter_name" and event:
-            # event not None means edition was triggered from the view
+        if not trigger & self.editTriggers():
             return False
-        if trigger:
-            return super().edit(index, trigger, event)
-        return super().edit(index)
+        self.setup_combo_items(index)
+        return super().edit(index, trigger, event)

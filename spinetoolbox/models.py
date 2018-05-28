@@ -465,11 +465,12 @@ class MinimalTableModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent  # QMainWindow
         self._data = list()
+        self._user_role_data = list()
         self.header = list()
 
     def flags(self, index):
         """Returns flags for table items."""
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def rowCount(self, *args, **kwargs):
         """Number of rows in the model."""
@@ -504,8 +505,8 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         if role == Qt.DisplayRole:
             return self._data[index.row()][index.column()]
-        else:
-            return None
+        if role == Qt.UserRole:
+            return self._user_role_data[index.row()][index.column()]
 
     def rowData(self, row, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the given row.
@@ -521,8 +522,7 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         if role == Qt.DisplayRole:
             return self._data[row]
-        else:
-            return None
+        return None
 
     def columnData(self, column, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the given column.
@@ -538,8 +538,7 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         if role == Qt.DisplayRole:
             return [self._data[row][column] for row in range(self.rowCount())]
-        else:
-            return None
+        return None
 
     def modelData(self, role=Qt.DisplayRole):
         """Returns all the model data.
@@ -552,14 +551,18 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if role == Qt.DisplayRole:
             return self._data
-        else:
-            return None
+        return None
 
     def setData(self, index, value, role=Qt.DisplayRole):
         if not index.isValid():
             return False
-        self._data[index.row()][index.column()] = value
-        return True
+        if role == Qt.DisplayRole:
+            self._data[index.row()][index.column()] = value
+            return True
+        if role == Qt.UserRole:
+            self._user_role_data[index.row()][index.column()] = value
+            return True
+        return False
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -580,14 +583,14 @@ class MinimalTableModel(QAbstractTableModel):
             logging.error("Insert 1 row at a time")
             return False
         self.beginInsertRows(parent, row, row)
-        new_row = list()
         if self.columnCount() == 0:
-            new_row.append(None)
+            new_row = [None]
         else:
             # noinspection PyUnusedLocal
-            [new_row.append(None) for i in range(self.columnCount())]
+            new_row = [None for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self._data.insert(row, new_row)
+        self._user_role_data.insert(row, new_row)
         self.endInsertRows()
         return True
 
@@ -613,6 +616,7 @@ class MinimalTableModel(QAbstractTableModel):
         for j in range(self.rowCount()):
             # Notice if insert index > rowCount(), new object is inserted to end
             self._data[j].insert(column, None)
+            self._user_role_data[j].insert(column, None)
         self.endInsertColumns()
         return True
 
@@ -642,6 +646,8 @@ class MinimalTableModel(QAbstractTableModel):
         """Reset model."""
         self.beginResetModel()
         self._data = new_data
+        if new_data:
+            self._user_role_data = [[None for j in new_data[i]] for i in range(len(new_data))]
         self.endResetModel()
 
     def set_tool_tip(self, tool_tip):
@@ -649,8 +655,34 @@ class MinimalTableModel(QAbstractTableModel):
         self._tool_tip = tool_tip
 
 
-class ObjectSortFilterProxyModel(QSortFilterProxyModel):
-    """A class to filter the parameter table in Data Store"""
+class DataPackageKeyModel(MinimalTableModel):
+    """A class to hold data package key data"""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.combo_items_method = None
+
+
+class ObjectTreeModel(QStandardItemModel):
+    """A class to hold Spine data structure in a treeview"""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+
+
+
+class ObjectParameterProxy(QSortFilterProxyModel):
+    """A class to filter the object parameter table in Data Store"""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+
+
+class ObjectParameterValueProxy(QSortFilterProxyModel):
+    """A class to filter the object parameter value table in Data Store"""
 
     def __init__(self, parent=None):
         """Initialize class"""
@@ -687,17 +719,15 @@ class ObjectSortFilterProxyModel(QSortFilterProxyModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
-
-class ObjectTreeModel(QStandardItemModel):
-    """A class to show Spine data structure in a treeview"""
+class RelationshipParameterProxy(QSortFilterProxyModel):
+    """A class to filter the relationship parameter table in Data Store"""
 
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
 
-
-class RelationshipSortFilterProxyModel(QSortFilterProxyModel):
-    """A class to filter the parameter table in Data Store"""
+class RelationshipParameterValueProxy(QSortFilterProxyModel):
+    """A class to filter the relationship parameter value table in Data Store"""
 
     def __init__(self, parent=None):
         """Initialize class"""

@@ -141,7 +141,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.add_action("New relationship class")
                 self.add_action("New object")
             elif item_type == 'object':
-                self.add_action("New parameter")
+                self.add_action("New parameter value")
             elif item_type == 'relationship_class':
                 self.add_action("New relationship class")
                 self.add_action("New relationship")
@@ -154,7 +154,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-class ObjectParameterContextMenu(CustomContextMenu):
+class ObjectParameterValueContextMenu(CustomContextMenu):
     """Context menu class for Data store form, object parameter items."""
 
     def __init__(self, parent, position, index):

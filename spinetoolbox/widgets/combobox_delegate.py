@@ -23,7 +23,7 @@ A delegate to edit table cells with comboboxes.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtWidgets import QItemDelegate, QComboBox
 import logging
 
@@ -38,16 +38,16 @@ class ComboBoxDelegate(QItemDelegate):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
+        """Return combobox editor. Combo items are obtained from index's Qt.UserRole"""
         combo = CustomComboEditor(parent)
         combo.row = index.row()
         combo.column = index.column()
         combo.previous_data = index.model().data(index)
-        combo_items = index.model().combo_items_method
-        items = combo_items(index)
-        if items:
-            combo.addItems(items)
-            combo.setCurrentIndex(-1)   #force index change
-            combo.currentIndexChanged.connect(self.current_index_changed)
+        items = index.data(Qt.UserRole)
+        logging.debug(items)
+        combo.addItems(items)
+        combo.setCurrentIndex(-1)   #force index change
+        combo.currentIndexChanged.connect(self.current_index_changed)
         return combo
 
     def setEditorData(self, editor, index):
@@ -59,6 +59,7 @@ class ComboBoxDelegate(QItemDelegate):
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):
         self.commit_data.emit(self.sender())
+        self.sender().close()
 
 
 class CustomComboEditor(QComboBox):

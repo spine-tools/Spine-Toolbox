@@ -1401,8 +1401,8 @@ class ToolboxUI(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
-        if event:
-            event.accept()
         # noinspection PyArgumentList
         self.julia_repl.shutdown_jupyter_kernel()
+        if event:
+            event.accept()
         QApplication.quit()

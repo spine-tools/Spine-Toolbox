@@ -40,16 +40,14 @@ class LineEditDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         editor = CustomLineEditor(parent)
         data = index.data(Qt.DisplayRole)
-        editor.original_data = str(data)
-        if type(data) == int:
+        editor.original_data = data
+        if type(data) is int:
             editor.setValidator(QIntValidator(editor))
         return editor
 
     def setEditorData(self, editor, index):
         data = index.data(Qt.DisplayRole)
-        if type(data) == int:
-            data = str(data)
-        editor.setText(data)
+        editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
         # do nothing here, we want to control it
@@ -63,14 +61,27 @@ class CustomLineEditor(QLineEdit):
         self.original_data = None
 
     # TODO: try to make this work
+    # careful with this, restoring data may change its type from int to str and complicate things
     def keyPressEvent(self, e):
         """Restore inital text when escape key is pressed.
 
         Args:
             e (QKeyEvent): Received key press event.
         """
+        logging.debug("key pressed")
         if e.key() == Qt.Key_Escape:
             logging.debug(self.original_data)
+            logging.debug("escape pressed")
             self.setText(self.original_data)
         else:
             super().keyPressEvent(e)
+
+    def close(self):
+        logging.debug("close")
+
+        return super().close()
+
+    def closeEvent(self, e):
+        logging.debug("closeEvent")
+        logging.debug(e.type())
+        super().closeEvent(e)
