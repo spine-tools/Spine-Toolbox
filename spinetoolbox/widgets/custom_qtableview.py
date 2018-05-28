@@ -74,6 +74,10 @@ class DataPackageKeyTableView(QTableView):
         """
         if not index.isValid():
             return False
+        column = index.column()
+        header = self.model().headerData(column)
+        if header == 'Select': # this column should be editable with one click
+            return super().edit(index, trigger, event)
         if not trigger & self.editTriggers():
             return False
         self.setup_combo_items(index)

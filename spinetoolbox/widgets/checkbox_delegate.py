@@ -23,6 +23,8 @@ A delegate to edit table cells with checkboxes.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
+
+import logging
 from PySide2.QtCore import Slot, Qt, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication
 
@@ -90,7 +92,7 @@ class CheckBoxDelegate(QItemDelegate):
         The user wanted to change the old state in the opposite.
         '''
         newValue = not index.data()
-        model.setData(index, newValue, Qt.EditRole)
+        model.setData(index, newValue, Qt.DisplayRole)
 
     def getCheckBoxRect(self, option):
         check_box_style_option = QStyleOptionButton()

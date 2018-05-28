@@ -1108,7 +1108,7 @@ class DataStoreForm(QWidget):
         object_id = tree_index_data['id']
         parameter_names = self.object_class_parameter_names(object_class_id, object_id)
         if not parameter_names:
-            self.statusbar.showMessage("All parameters for this object are already created.", 3000)
+            self.statusbar.showMessage("All parameters for this object are already created", 3000)
             return
         # insert new row
         last_row = model.rowCount()

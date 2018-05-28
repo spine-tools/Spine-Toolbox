@@ -44,7 +44,6 @@ class ComboBoxDelegate(QItemDelegate):
         combo.column = index.column()
         combo.previous_data = index.model().data(index)
         items = index.data(Qt.UserRole)
-        logging.debug(items)
         combo.addItems(items)
         combo.setCurrentIndex(-1)   #force index change
         combo.currentIndexChanged.connect(self.current_index_changed)
