@@ -301,6 +301,8 @@ class Ui_MainWindow(object):
         self.actionAdd_Item_Toolbar = QtWidgets.QAction(MainWindow)
         self.actionAdd_Item_Toolbar.setObjectName("actionAdd_Item_Toolbar")
         self.actionEvent_Log = QtWidgets.QAction(MainWindow)
+        self.actionEvent_Log.setCheckable(False)
+        self.actionEvent_Log.setChecked(False)
         self.actionEvent_Log.setObjectName("actionEvent_Log")
         self.actionSubprocess_Output = QtWidgets.QAction(MainWindow)
         self.actionSubprocess_Output.setObjectName("actionSubprocess_Output")
@@ -321,11 +323,6 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionAdd_Data_Connection)
         self.menuEdit.addAction(self.actionAdd_Tool)
         self.menuEdit.addAction(self.actionAdd_View)
-        self.menuToolbars.addAction(self.actionAdd_Item_Toolbar)
-        self.menuDock_Widgets.addAction(self.actionEvent_Log)
-        self.menuDock_Widgets.addAction(self.actionSubprocess_Output)
-        self.menuDock_Widgets.addAction(self.actionSelected_Item)
-        self.menuDock_Widgets.addAction(self.actionJulia_REPL)
         self.menuView.addAction(self.menuToolbars.menuAction())
         self.menuView.addAction(self.menuDock_Widgets.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
@@ -396,6 +393,6 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

@@ -392,16 +392,11 @@
      <property name="title">
       <string>Toolbars</string>
      </property>
-     <addaction name="actionAdd_Item_Toolbar"/>
     </widget>
     <widget class="QMenu" name="menuDock_Widgets">
      <property name="title">
       <string>Dock Widgets</string>
      </property>
-     <addaction name="actionEvent_Log"/>
-     <addaction name="actionSubprocess_Output"/>
-     <addaction name="actionSelected_Item"/>
-     <addaction name="actionJulia_REPL"/>
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
@@ -693,6 +688,12 @@
    </property>
   </action>
   <action name="actionEvent_Log">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Event Log</string>
    </property>

@@ -49,7 +49,7 @@ class ComboBoxDelegate(QItemDelegate):
         return combo
 
     def setEditorData(self, editor, index):
-        """Show pop up as soon as edition starts"""
+        """Show pop up as soon as editing starts"""
         editor.showPopup()
 
     def setModelData(self, editor, model, index):

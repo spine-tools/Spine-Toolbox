@@ -158,7 +158,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
 
 
 class ParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for Data store form, object parameter value items."""
+    """Context menu class for object parameter value items in Data Store."""
 
     def __init__(self, parent, position, index):
         super().__init__()
@@ -174,7 +174,7 @@ class ParameterValueContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for Data store form, object parameter value items."""
+    """Context menu class for object parameter items in Data Store."""
 
     def __init__(self, parent, position, index):
         super().__init__()
@@ -186,22 +186,6 @@ class ParameterContextMenu(CustomContextMenu):
         self.add_action("New parameter")
         self.add_action("Remove")
         self.add_action("Edit field")
-        self.exec_(position)
-
-
-class ProcessOutputContextMenu(CustomContextMenu):
-    """Popup menu class for add tool template button."""
-
-    def __init__(self, parent, position):
-        super().__init__()
-        self._parent = parent
-        menu = self._parent.ui.textBrowser_process_output.createStandardContextMenu()
-        for action in menu.actions():
-            self.addAction(action)
-        self.addSeparator()
-        self.option = "None"
-        self.add_action("Clear")
-        self.add_action("Issue Julia commands")
         self.exec_(position)
 
 

@@ -200,7 +200,6 @@ class DataStoreForm(QWidget):
         self.session.add(self.commit)
         self.session.flush() # there shouldn't be any DBAPIError here
 
-
     def relationship_class_query(self, object_class_id):
         """Return relationship classes involving a given object class."""
         as_parent_query = self.session.query(
@@ -351,7 +350,6 @@ class DataStoreForm(QWidget):
             relationship_class_item.appendRow(new_object_item)
         return relationship_class_item
 
-
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         # get all parameters
@@ -430,7 +428,6 @@ class DataStoreForm(QWidget):
             self.relationship_parameter_value_model.header = header
             self.relationship_parameter_value_model.reset_model(relationship_parameter_value)
             self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
-
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
@@ -542,7 +539,6 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_id"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parameter_value_id"))
 
-
     def init_parameter_views(self):
         self.init_object_parameter_view()
         self.init_relationship_parameter_view()
@@ -565,7 +561,6 @@ class DataStoreForm(QWidget):
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_parameter)
         self.ui.tableView_object_parameter.setItemDelegate(lineedit_delegate)
-
 
     def init_relationship_parameter_view(self):
         """Init the object parameter table view.
@@ -738,7 +733,6 @@ class DataStoreForm(QWidget):
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
-
 
     def new_object_class(self, index):
         """Insert new object class.
@@ -1190,7 +1184,6 @@ class DataStoreForm(QWidget):
         self.init_parameter_value_models()
         self.init_parameter_models()
 
-
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
         """Context menu for object parameter value table view.
@@ -1274,7 +1267,6 @@ class DataStoreForm(QWidget):
         self.ui.tableView_object_parameter_value.adding_new_parameter_value = True
         self.ui.tableView_object_parameter_value.edit(proxy_index)
 
-
     @Slot("CustomComboEditor", name="new_parameter_value_")
     def new_parameter_value_(self, combo):
         """Insert new parameter value.
@@ -1324,8 +1316,6 @@ class DataStoreForm(QWidget):
         #self.object_parameter_value_model.setData(source_id_index, parameter_value.id)
         ## parameter name
         #self.object_parameter_value_model.setData(source_index, parameter_name)
-
-
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
     def update_parameter_value(self, editor, hint):
@@ -1391,7 +1381,6 @@ class DataStoreForm(QWidget):
         # manually remove row from model
         self.object_parameter_value_model.removeRows(source_index.row(), 1)
 
-
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):
         """Context menu for object parameter table view.
@@ -1447,7 +1436,6 @@ class DataStoreForm(QWidget):
         self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
         self.ui.tableView_object_parameter.edit(proxy_index)
 
-
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter")
     def update_parameter(self, editor, hint):
         """Update parameter table with newly edited data.
@@ -1494,8 +1482,6 @@ class DataStoreForm(QWidget):
         if field_name is 'name':
             self.init_parameter_value_models()
 
-
-
     def remove_parameter(self, proxy_index):
         """Remove row from parameter table.
         If succesful, also remove row from model"""
@@ -1521,7 +1507,6 @@ class DataStoreForm(QWidget):
         # refresh parameter value models to reflect any change
         self.init_parameter_value_models()
 
-
     def restore_ui(self):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("mainWindow/windowSize")
@@ -1536,7 +1521,6 @@ class DataStoreForm(QWidget):
             self.setWindowState(Qt.WindowMaximized)
         if splitter_tree_parameter_state:
             self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
-
 
     @Slot(name="close_clicked")
     def close_clicked(self):

@@ -35,7 +35,7 @@ from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    ItemImageContextMenu, LinkContextMenu, AddToolTemplatePopupMenu, ProcessOutputContextMenu
+    ItemImageContextMenu, LinkContextMenu, AddToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -108,9 +108,11 @@ class ToolboxUI(QMainWindow):
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
-        # hide process command line
+        # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
+        # Add toggleview actions
+        self.add_toggle_view_actions()
         # Make keyboard shortcuts
         self.test1_action = QAction(self)
         self.test1_action.setShortcut("F5")
@@ -123,6 +125,14 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.init_project()
         self.restore_ui()
+
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu"""
+        self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -164,11 +174,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
-        self.ui.actionAdd_Item_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
-        self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
-        self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
-        self.ui.actionSelected_Item.triggered.connect(lambda: self.ui.dockWidget_item.show())
-        self.ui.actionJulia_REPL.triggered.connect(lambda: self.ui.dockWidget_julia_repl.show())
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
         # noinspection PyUnresolvedReferences
@@ -1373,6 +1378,9 @@ class ToolboxUI(QMainWindow):
             else:
                 return False
         return True
+
+    def actionEvent(self, event):
+        logging.debug(event)
 
     def closeEvent(self, event=None):
         """Method for handling application exit.
