@@ -124,7 +124,6 @@ class EditDatapackageKeysWidget(QWidget):
         self.ui.tableView_fks.setModel(self.fks_model)
         self.ui.tableView_fks.setup_combo_items = self.fk_setup_combo_items
         self.resize_tableView_fks()
-        #self.ui.tableView_fks.setEditTriggers(QAbstractItemView.AllEditTriggers)
 
     def resize_tableView_pks(self):
         self.ui.tableView_pks.resizeColumnsToContents()
