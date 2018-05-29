@@ -147,10 +147,16 @@ class ObjectTreeContextMenu(CustomContextMenu):
             elif item_type == 'relationship_class':
                 self.add_action("New relationship class")
                 self.add_action("New relationship")
+                self.addSeparator()
+                self.add_action("New parameter")
             elif item_type == 'meta_relationship_class':
                 self.add_action("New relationship")
+                self.addSeparator()
+                self.add_action("New parameter")
             elif item_type == 'related_object':
                 self.add_action("Expand at top level")
+                self.addSeparator()
+                self.add_action("New parameter value")
             self.addSeparator()
             self.add_action("Rename")
             self.add_action("Remove")
@@ -167,7 +173,7 @@ class ParameterValueContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             return
-        self.add_action("New parameter value")
+        #self.add_action("New parameter value")
         self.add_action("Remove")
         self.add_action("Edit field")
         self.exec_(position)

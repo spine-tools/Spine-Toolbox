@@ -1379,9 +1379,6 @@ class ToolboxUI(QMainWindow):
                 return False
         return True
 
-    def actionEvent(self, event):
-        logging.debug(event)
-
     def closeEvent(self, event=None):
         """Method for handling application exit.
 

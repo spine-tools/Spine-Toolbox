@@ -40,21 +40,22 @@ class ParameterValueTableView(QTableView):
         super().__init__(parent)
         self.adding_new_parameter_value = False
 
-    def edit(self, index, trigger=QTableView.AllEditTriggers, event=None):
+    def edit(self, proxy_index, trigger=QTableView.AllEditTriggers, event=None):
         """Starts editing the item corresponding to the given index if it is editable.
-        To edit parameter_name, set the attribute `adding_new_parameter_value`
+        To edit `parameter_name`, set the attribute `adding_new_parameter_value`
         before calling this method.
         """
-        if not index.isValid():
+        if not proxy_index.isValid():
             return False
-        header = index.model().sourceModel().header
-        if header[index.column()] == "parameter_name":
+        source_index = proxy_index.model().mapToSource(proxy_index)
+        header = proxy_index.model().sourceModel().header
+        if header[source_index.column()] == "parameter_name":
             if not self.adding_new_parameter_value:
                 return False
             self.adding_new_parameter_value = False
-            super().edit(index, trigger, event)
+            super().edit(proxy_index, trigger, event)
             return True
-        return super().edit(index, trigger, event)
+        return super().edit(proxy_index, trigger, event)
 
 
 class ParameterTableView(QTableView):

@@ -206,10 +206,17 @@ class DataStore(MetaObject):
             data_file = self.data_files()[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
             engine = create_engine("sqlite:///" + data_file_path)
+            # check if SQLite database
             try:
                 engine.execute('pragma quick_check;')
             except DatabaseError as e:
                 self._parent.msg_error.emit("Could not open <b>{}</b> as SQLite database: {}".format(data_file, e.orig.args))
+                return
+            # check if locked
+            try:
+                engine.execute('BEGIN IMMEDIATE')
+            except DatabaseError as e:
+                self._parent.msg_error.emit("Could not open <b>{}</b>: {}".format(data_file, e.orig.args))
                 return
             database = data_file
             username = getpass.getuser()

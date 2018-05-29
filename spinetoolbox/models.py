@@ -741,9 +741,13 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
         """Initialize class"""
         super().__init__(parent)
         self.object_class_id_filter = None
+        self.relationship_class_id_filter = None
+        # self.hide_column = None
 
     def clear_filter(self):
         self.object_class_id_filter = None
+        self.relationship_class_id_filter = None
+        # self.hide_column = None
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
@@ -757,7 +761,22 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
             parent_object_class_id = source_data("parent_object_class_id")
             child_object_class_id = source_data("child_object_class_id")
             return self.object_class_id_filter in (parent_object_class_id, child_object_class_id)
+        if self.relationship_class_id_filter:
+            relationship_class_id = source_data("relationship_class_id")
+            return self.relationship_class_id_filter == relationship_class_id
         return False
+
+    # def filterAcceptsColumn(self, source_column, source_parent):
+    #     """Returns true if the item in the column indicated by the given source_column
+    #     and source_parent should be included in the model; otherwise returns false
+    #     """
+
+    #     h = self.sourceModel().header
+    #     #if self.hide_all_columns:
+    #     #    return False
+    #     if self.hide_column is not None:
+    #         return source_column != self.hide_column
+    #     return True
 
 
 class RelationshipParameterValueProxy(QSortFilterProxyModel):
@@ -770,8 +789,6 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
         self.relationship_id_filter = None
         self.object_id_filter = None
         self.parent_relationship_id_filter = None
-        self.parent_object_id_filter = None
-        self.hide_all_columns = True
         self.hide_column = None
 
     def clear_filter(self):
@@ -779,8 +796,6 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
         self.relationship_id_filter = None
         self.object_id_filter = None
         self.parent_relationship_id_filter = None
-        self.parent_object_id_filter = None
-        self.hide_all_columns = True
         self.hide_column = None
 
     def filterAcceptsRow(self, source_row, source_parent):
@@ -822,8 +837,18 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
         """
 
         h = self.sourceModel().header
-        #if self.hide_all_columns:
-        #    return False
         if self.hide_column is not None:
             return source_column != self.hide_column
         return True
+
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        column_name = self.sourceModel().header[index.column()]
+        if column_name in [
+                    'relationship_class_name',
+                    'parent_object_name',
+                    'parent_relationship_name',
+                    'child_object_name'
+                ]:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
