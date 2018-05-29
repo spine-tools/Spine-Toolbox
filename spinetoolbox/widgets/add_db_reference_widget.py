@@ -35,7 +35,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError
 from config import DB_REF_REQUIRED_KEYS, SQL_DIALECT_API
 # import conda.cli
-import pip
+import qsubprocess
 
 
 class AddDbReferenceWidget(QWidget):
@@ -57,6 +57,7 @@ class AddDbReferenceWidget(QWidget):
         self._data_store = data_store
         self.dialects = list(SQL_DIALECT_API.keys())
         self.string_dict = dict()
+        self.pip_install = None # pip install process (QSubProcess)
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -125,20 +126,20 @@ class AddDbReferenceWidget(QWidget):
     @busy_effect
     def install_dbapi_pip(self, dbapi):
         """Install DBAPI using pip."""
-        try:
-            msg = "Installing module '{}' via 'pip'.".format(dbapi)
-            self.statusbar.showMessage(msg)
-            pip.main(['install', dbapi])
+        msg = "Installing module '{}' via 'pip'.".format(dbapi)
+        self.statusbar.showMessage(msg)
+        command = 'pip install {0}'.format(dbapi)
+        self.pip_install = qsubprocess.QSubProcess(self._parent, command)
+        self.pip_install.start_process()
+        if self.pip_install.wait_for_finished():
             msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)
             self.statusbar.showMessage(msg, 3000)
             logging.debug("pip installation succeeded")
             return True
-        except Exception as e:
-            logging.exception(e)
-            logging.error("Failed to install module '{}' with pip.".format(dbapi))
-            msg = "Failed to install module '{}' with pip.".format(dbapi)
-            self.statusbar.showMessage(msg, 3000)
-            return False
+        logging.error("Failed to install module '{}' with pip.".format(dbapi))
+        msg = "Failed to install module '{}' with pip.".format(dbapi)
+        self.statusbar.showMessage(msg, 3000)
+        return False
 
     @busy_effect
     def install_dbapi_conda(self, dbapi):

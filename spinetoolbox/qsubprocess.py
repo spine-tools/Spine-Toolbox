@@ -70,6 +70,18 @@ class QSubProcess(QObject):
             self._process = None
             self.subprocess_finished_signal.emit(0)
 
+    def wait_for_finished(self, msecs=30000):
+        """Wait for subprocess to finish.
+
+        Return:
+            True if process finished successfully, False otherwise
+        """
+        if not self._process:
+            return False
+        if self.process_failed or self.process_failed_to_start:
+            return False
+        return self._process.waitForFinished(msecs)
+
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
