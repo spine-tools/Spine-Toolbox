@@ -80,7 +80,6 @@ class DataStoreForm(QWidget):
         self.object_class = None
         self.Commit = None
         self.session = None
-        self.bold_font = None
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
@@ -227,9 +226,6 @@ class DataStoreForm(QWidget):
         db_name = self.database
         # create root item
         root_item = QStandardItem(db_name)
-        self.bold_font = root_item.font()
-        self.bold_font.setBold(True)
-        root_item.setFont(self.bold_font)
         # get all object_classes
         for object_class in self.session.query(
                     self.ObjectClass.id,
@@ -238,7 +234,6 @@ class DataStoreForm(QWidget):
                 ).order_by(self.ObjectClass.display_order):
             # create object class item
             object_class_item = QStandardItem(object_class.name)
-            object_class_item.setFont(self.bold_font)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
             # get objects of this class
@@ -291,7 +286,6 @@ class DataStoreForm(QWidget):
         """
         # create relationship class item
         relationship_class_item = QStandardItem(relationship_class.name)
-        relationship_class_item.setFont(self.bold_font)
         relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole+1)
         # get relationship classes having this relationship class as parent
         # (in our current convention, relationship classes are never child classes
@@ -792,7 +786,6 @@ class DataStoreForm(QWidget):
             return
         # manually add item to model as well
         object_class_item = QStandardItem(name)
-        object_class_item.setFont(self.bold_font)
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class.__dict__, Qt.UserRole+1)
         root_item.insertRow(insert_at_row, QStandardItem())
@@ -846,7 +839,6 @@ class DataStoreForm(QWidget):
             # no need to visit the relationship class here,
             # since this object does not have any relationships yet
             relationship_class_item = QStandardItem(relationship_class.name)
-            relationship_class_item.setFont(self.bold_font)
             relationship_class_item.setData('relationship_class', Qt.UserRole)
             relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole+1)
             object_item.appendRow(relationship_class_item)
@@ -911,7 +903,6 @@ class DataStoreForm(QWidget):
         for row in range(parent_class_item.rowCount()):
             object_item = parent_class_item.child(row)
             relationship_class_item = QStandardItem(name)
-            relationship_class_item.setFont(self.bold_font)
             relationship_class_item.setData(relationship_class_type, Qt.UserRole)
             relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
             object_item.appendRow(relationship_class_item)
@@ -932,7 +923,6 @@ class DataStoreForm(QWidget):
         for row in range(founded_object_class_item.rowCount()):
             object_item = founded_object_class_item.child(row)
             relationship_class_item = QStandardItem(name)
-            relationship_class_item.setFont(self.bold_font)
             relationship_class_item.setData('relationship_class', Qt.UserRole)
             # invert relationship class and save it
             relationship_class_dict['child_object_class_id'] = parent_object_class_id

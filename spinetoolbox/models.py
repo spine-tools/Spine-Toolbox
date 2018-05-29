@@ -29,7 +29,7 @@ Note: These are Spine Toolbox internal data models.
 import logging
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel,\
     QSortFilterProxyModel, QAbstractProxyModel
-from PySide2.QtGui import QStandardItemModel
+from PySide2.QtGui import QStandardItemModel, QBrush, QFont
 
 
 class ToolTemplateModel(QAbstractListModel):
@@ -661,6 +661,24 @@ class ObjectTreeModel(QStandardItemModel):
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.ForegroundRole:
+            item_type = index.data(Qt.UserRole)
+            if not item_type:
+                return super().data(index, role)
+            if item_type.endswith('class') and not self.hasChildren(index):
+                return QBrush(Qt.gray)
+        if role == Qt.FontRole:
+            item_type = index.data(Qt.UserRole)
+            if not item_type:
+                return super().data(index, role)
+            if item_type.endswith('class'):
+                return self.bold_font
+        return super().data(index, role)
 
 
 
