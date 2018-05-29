@@ -680,8 +680,6 @@ class ObjectTreeModel(QStandardItemModel):
                 return self.bold_font
         return super().data(index, role)
 
-
-
 class ObjectParameterProxy(QSortFilterProxyModel):
     """A class to filter the object parameter table in Data Store"""
 
@@ -808,6 +806,9 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
         self.object_id_filter = None
         self.parent_relationship_id_filter = None
         self.hide_column = None
+        self.bold_name = None
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
 
     def clear_filter(self):
         self.relationship_class_id_filter = None
@@ -815,6 +816,15 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
         self.object_id_filter = None
         self.parent_relationship_id_filter = None
         self.hide_column = None
+        self.bold_name = None
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.FontRole:
+            if index.data(Qt.DisplayRole) == self.bold_name:
+                return self.bold_font
+        return super().data(index, role)
+
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
