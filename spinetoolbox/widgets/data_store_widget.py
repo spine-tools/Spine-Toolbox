@@ -634,61 +634,55 @@ class DataStoreForm(QWidget):
         self.object_parameter_value_proxy.clear_filter()
         self.relationship_parameter_value_proxy.clear_filter()
         clicked_type = current.data(Qt.UserRole)
-        header = self.relationship_parameter_value_model.header
+        # filter rows and bold name
         if clicked_type == 'object_class': # show all objects of this class
-            # filter rows
             object_class_id = current.data(Qt.UserRole+1)['id']
             self.object_parameter_value_proxy.object_class_id_filter = object_class_id
         elif clicked_type == 'object': # show only this object
-            # filter rows
             object_id = current.data(Qt.UserRole+1)['id']
             object_name = current.data(Qt.UserRole+1)['name']
             self.object_parameter_value_proxy.object_id_filter = object_id
             self.relationship_parameter_value_proxy.object_id_filter = object_id
-            # filter columns
-            self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
-            # bold name
             self.relationship_parameter_value_proxy.bold_name = object_name
         elif clicked_type == 'relationship_class':
             # show all related objects to this parent object, through this relationship class
-            # filter rows
             parent_object_id = current.parent().data(Qt.UserRole+1)['id']
             relationship_class_id = current.data(Qt.UserRole+1)['id']
             relationship_class_name = current.data(Qt.UserRole+1)['name']
             self.relationship_parameter_value_proxy.object_id_filter = parent_object_id
             self.relationship_parameter_value_proxy.relationship_class_id_filter = relationship_class_id
-            # filter columns
-            self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
-            # bold name
             self.relationship_parameter_value_proxy.bold_name = relationship_class_name
         elif clicked_type == 'related_object':
             # show only this object and this relationship
-            # filter rows
             object_id = current.data(Qt.UserRole+1)['id']
             object_name = current.data(Qt.UserRole+1)['name']
             relationship_id = current.data(Qt.UserRole+1)['relationship_id']
             self.object_parameter_value_proxy.object_id_filter = object_id
             self.relationship_parameter_value_proxy.relationship_id_filter = relationship_id
-            #filter columns
-            relationship_class_type = current.parent().data(Qt.UserRole)
-            if relationship_class_type == 'meta_relationship_class': # hide parent_object_name
-                self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
-            elif relationship_class_type == 'relationship_class': # hide parent_relationship_name
-                self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
-            # bold name
             self.relationship_parameter_value_proxy.bold_name = object_name
         elif clicked_type == 'meta_relationship_class':
             # show all related objects to this parent relationship, through this meta-relationship class
-            # filter rows
             parent_relationship_id = current.parent().data(Qt.UserRole+1)['relationship_id']
             relationship_class_id = current.data(Qt.UserRole+1)['id']
             relationship_class_name = current.data(Qt.UserRole+1)['name']
             self.relationship_parameter_value_proxy.parent_relationship_id_filter = parent_relationship_id
             self.relationship_parameter_value_proxy.relationship_class_id_filter = relationship_class_id
-            # filter columns
-            self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
-            # bold name
             self.relationship_parameter_value_proxy.bold_name = relationship_class_name
+        # filter columns in relationship parameter value model
+        header = self.relationship_parameter_value_model.header
+        if header:
+            if clicked_type == 'object':
+                self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
+            elif clicked_type == 'relationship_class':
+                self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
+            elif clicked_type == 'related_object':
+                relationship_class_type = current.parent().data(Qt.UserRole)
+                if relationship_class_type == 'meta_relationship_class': # hide parent_object_name
+                    self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
+                elif relationship_class_type == 'relationship_class': # hide parent_relationship_name
+                    self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
+            elif clicked_type == 'meta_relationship_class':
+                self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
         # trick to trigger filtering
         self.ui.tableView_relationship_parameter_value.reset()
         self.object_parameter_value_proxy.setFilterRegExp("")
@@ -701,21 +695,17 @@ class DataStoreForm(QWidget):
         self.object_parameter_proxy.clear_filter()
         self.relationship_parameter_proxy.clear_filter()
         clicked_type = current.data(Qt.UserRole)
-        header = self.relationship_parameter_model.header
+        # filter rows
         if clicked_type == 'object_class': # show only this class
-            # filter rows
             object_class_id = current.data(Qt.UserRole+1)['id']
             self.object_parameter_proxy.object_class_id_filter = object_class_id
         elif clicked_type == 'object': # show only this object's class
-            # filter rows
             object_class_id = current.data(Qt.UserRole+1)['class_id']
             self.object_parameter_proxy.object_class_id_filter = object_class_id
         elif clicked_type and clicked_type.endswith('relationship_class'):
-            # filter rows
             relationship_class_id = current.data(Qt.UserRole+1)['id']
             self.relationship_parameter_proxy.relationship_class_id_filter = relationship_class_id
         elif clicked_type == 'related_object':
-            # filter rows
             relationship_class_id = current.parent().data(Qt.UserRole+1)['id']
             self.relationship_parameter_proxy.relationship_class_id_filter = relationship_class_id
         # trick to trigger filtering
