@@ -117,6 +117,7 @@ class Ui_Form(object):
         self.tableView_object_parameter_value.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableView_object_parameter_value.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.tableView_object_parameter_value.setSortingEnabled(True)
+        self.tableView_object_parameter_value.setWordWrap(False)
         self.tableView_object_parameter_value.setObjectName("tableView_object_parameter_value")
         self.tableView_object_parameter_value.verticalHeader().setVisible(False)
         self.verticalLayout_2.addWidget(self.tableView_object_parameter_value)
@@ -151,6 +152,7 @@ class Ui_Form(object):
         self.tableView_object_parameter.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableView_object_parameter.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.tableView_object_parameter.setSortingEnabled(True)
+        self.tableView_object_parameter.setWordWrap(False)
         self.tableView_object_parameter.setObjectName("tableView_object_parameter")
         self.tableView_object_parameter.verticalHeader().setVisible(False)
         self.verticalLayout_5.addWidget(self.tableView_object_parameter)
@@ -193,6 +195,7 @@ class Ui_Form(object):
         self.tableView_relationship_parameter_value.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableView_relationship_parameter_value.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.tableView_relationship_parameter_value.setSortingEnabled(True)
+        self.tableView_relationship_parameter_value.setWordWrap(False)
         self.tableView_relationship_parameter_value.setObjectName("tableView_relationship_parameter_value")
         self.tableView_relationship_parameter_value.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.tableView_relationship_parameter_value)
@@ -225,6 +228,7 @@ class Ui_Form(object):
         self.tableView_relationship_parameter.setSizePolicy(sizePolicy)
         self.tableView_relationship_parameter.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.tableView_relationship_parameter.setSortingEnabled(True)
+        self.tableView_relationship_parameter.setWordWrap(False)
         self.tableView_relationship_parameter.setObjectName("tableView_relationship_parameter")
         self.tableView_relationship_parameter.verticalHeader().setVisible(False)
         self.verticalLayout_7.addWidget(self.tableView_relationship_parameter)
@@ -284,6 +288,6 @@ class Ui_Form(object):
         self.pushButton_revert.setText(QtWidgets.QApplication.translate("Form", "Revert", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
-from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
 from widgets.custom_qtreeview import CustomQTreeView
+from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
 import resources_icons_rc

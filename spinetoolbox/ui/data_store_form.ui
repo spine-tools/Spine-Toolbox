@@ -207,6 +207,9 @@
                   <property name="sortingEnabled">
                    <bool>true</bool>
                   </property>
+                  <property name="wordWrap">
+                   <bool>false</bool>
+                  </property>
                   <attribute name="verticalHeaderVisible">
                    <bool>false</bool>
                   </attribute>
@@ -274,6 +277,9 @@
                   </property>
                   <property name="sortingEnabled">
                    <bool>true</bool>
+                  </property>
+                  <property name="wordWrap">
+                   <bool>false</bool>
                   </property>
                   <attribute name="verticalHeaderVisible">
                    <bool>false</bool>
@@ -357,6 +363,9 @@
                   <property name="sortingEnabled">
                    <bool>true</bool>
                   </property>
+                  <property name="wordWrap">
+                   <bool>false</bool>
+                  </property>
                   <attribute name="verticalHeaderVisible">
                    <bool>false</bool>
                   </attribute>
@@ -418,6 +427,9 @@
                   </property>
                   <property name="sortingEnabled">
                    <bool>true</bool>
+                  </property>
+                  <property name="wordWrap">
+                   <bool>false</bool>
                   </property>
                   <attribute name="verticalHeaderVisible">
                    <bool>false</bool>

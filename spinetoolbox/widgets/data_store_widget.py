@@ -509,7 +509,7 @@ class DataStoreForm(QWidget):
             return
         # set column resize mode
         self.ui.tableView_object_parameter_value.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
@@ -522,6 +522,7 @@ class DataStoreForm(QWidget):
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_parameter_value)
         self.ui.tableView_object_parameter_value.setItemDelegate(lineedit_delegate)
+        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
         """Init the relationship parameter table view.
@@ -531,7 +532,7 @@ class DataStoreForm(QWidget):
             return
         # set column resize mode
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
@@ -547,6 +548,7 @@ class DataStoreForm(QWidget):
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_parameter_value)
         self.ui.tableView_relationship_parameter_value.setItemDelegate(lineedit_delegate)
+        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_views(self):
         self.init_object_parameter_view()
@@ -560,7 +562,7 @@ class DataStoreForm(QWidget):
             return
         # set column resize mode
         self.ui.tableView_object_parameter.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
@@ -572,6 +574,7 @@ class DataStoreForm(QWidget):
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_parameter)
         self.ui.tableView_object_parameter.setItemDelegate(lineedit_delegate)
+        self.ui.tableView_object_parameter.resizeColumnsToContents()
 
     def init_relationship_parameter_view(self):
         """Init the object parameter table view.
@@ -581,7 +584,7 @@ class DataStoreForm(QWidget):
             return
         # set column resize mode
         self.ui.tableView_relationship_parameter.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
@@ -596,6 +599,7 @@ class DataStoreForm(QWidget):
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_parameter)
         self.ui.tableView_relationship_parameter.setItemDelegate(lineedit_delegate)
+        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
     @Slot("QModelIndex", name="expand_at_top_level")
     def expand_at_top_level(self, index):
@@ -695,6 +699,9 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter_value.reset()
         self.object_parameter_value_proxy.setFilterRegExp("")
         self.relationship_parameter_value_proxy.setFilterRegExp("")
+        # resize columns
+        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
+        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
@@ -719,6 +726,9 @@ class DataStoreForm(QWidget):
         # trick to trigger filtering
         self.object_parameter_proxy.setFilterRegExp("")
         self.relationship_parameter_proxy.setFilterRegExp("")
+        # resize columns
+        self.ui.tableView_object_parameter.resizeColumnsToContents()
+        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
