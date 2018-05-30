@@ -510,6 +510,8 @@ class DataStoreForm(QWidget):
         # set column resize mode
         self.ui.tableView_object_parameter_value.horizontalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_object_parameter_value.verticalHeader().\
+            setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         # hide id columns
@@ -529,6 +531,8 @@ class DataStoreForm(QWidget):
             return
         # set column resize mode
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
+            setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_relationship_parameter_value.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
@@ -557,6 +561,8 @@ class DataStoreForm(QWidget):
         # set column resize mode
         self.ui.tableView_object_parameter.horizontalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_object_parameter.verticalHeader().\
+            setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         # hide id columns
@@ -575,6 +581,8 @@ class DataStoreForm(QWidget):
             return
         # set column resize mode
         self.ui.tableView_relationship_parameter.horizontalHeader().\
+            setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_relationship_parameter.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
         # set model
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
