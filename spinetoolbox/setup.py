@@ -34,7 +34,7 @@ import sys
 from cx_Freeze import setup, Executable
 from config import SPINE_TOOLBOX_VERSION
 
-PYTHON_DIR = os.path.dirname(os.path.dirname(os.__file__))
+PYTHON_DIR = os.path.dirname(sys.executable)
 os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_DIR, 'tcl', 'tcl8.6')
 os.environ['TK_LIBRARY'] = os.path.join(PYTHON_DIR, 'tcl', 'tk8.6')
 
