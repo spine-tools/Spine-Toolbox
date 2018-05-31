@@ -27,7 +27,7 @@ import os
 import logging
 import qsubprocess
 from PySide2.QtWidgets import QMessageBox, QAction
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs
@@ -55,6 +55,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.IJulia_process = None  # IJulia installation/reconfiguration process (QSubProcess)
         self.IJulia_process_succeeded = False  # True if IJulia installation was successful
         self.execution_failed_to_start = False
+        self.starting = False
+        self.cursor = self._control.viewport().cursor()
 
     def find_julia_kernel(self):
         """Return the name of the most recent julia kernel available
@@ -70,6 +72,8 @@ class JuliaREPLWidget(RichJupyterWidget):
     def start_jupyter_kernel(self):
         """Start a julia kernel, and connect to it."""
         if not self.kernel_manager:
+            self.starting = True
+            self.ui.msg.emit("Starting Julia REPL...")
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
@@ -127,6 +131,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
             return
+        self.ui.msg.emit("*** Reconfiguring <b>IJulia</b> ***")
         julia_dir = self.ui._config.get("settings", "julia_path")
         if not julia_dir == '':
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
@@ -150,6 +155,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
             return
+        self.ui.msg.emit("*** Installing <b>IJulia</b> ***")
         julia_dir = self.ui._config.get("settings", "julia_path")
         if not julia_dir == '':
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
@@ -171,7 +177,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
         else:
-            self.ui.msg.emit("\tJulia kernel for Jupyter successfully installed (via <b>IJulia</b>).")
+            self.ui.msg.emit("Julia kernel for Jupyter successfully installed.")
             self.IJulia_process_succeeded = True
             self.start_jupyter_kernel()
         self.IJulia_process.deleteLater()
@@ -214,6 +220,9 @@ class JuliaREPLWidget(RichJupyterWidget):
         # logging.debug("content: {}".format(msg['content']))
         if msg['msg_type'] == 'status':
             self.kernel_execution_state = msg['content']['execution_state']
+            if self.starting and self.kernel_execution_state == 'idle':
+                self.starting = False
+                self._control.viewport().setCursor(self.cursor)
             if self.command and self.kernel_execution_state == 'idle':
                 self.running = True
                 self.execute(self.command)
@@ -243,7 +252,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_manager.interrupt_kernel()
         # TODO: stop simulation wheel
 
-    @busy_effect
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""
         if not self.kernel_client:
@@ -253,11 +261,12 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 
-    @busy_effect
     def restart_jupyter_kernel(self):
         """Restart the jupyter kernel."""
         if not self.kernel_manager:
             return
+        self.starting = True
+        self.ui.msg.emit("Restarting Julia REPL...")
         self.kernel_client.stop_channels()
         self.kernel_manager.restart_kernel(now=True)
         kernel_client = self.kernel_manager.client()
@@ -284,3 +293,9 @@ class JuliaREPLWidget(RichJupyterWidget):
             restart_repl_action.setEnabled(not self.command and not self.running)
             menu.insertAction(first_action, restart_repl_action)
         menu.exec_(self._control.mapToGlobal(pos))
+
+
+    def enterEvent(self, event):
+        logging.debug("here")
+        if self.starting:
+            self._control.viewport().setCursor(Qt.BusyCursor)
