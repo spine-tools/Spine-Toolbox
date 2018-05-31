@@ -5,8 +5,9 @@ spinetoolbox/__pycache__/
 spinetoolbox/ui/__pycache__/
 spinetoolbox/widgets/__pycache__/
 tool_templates/Swedish_hydro/
-tool_templates/magic/input/data.gdx
 projects/
 work/
+build/
+dist/
 resources_icons_rc.py
 resources_logos_rc.py

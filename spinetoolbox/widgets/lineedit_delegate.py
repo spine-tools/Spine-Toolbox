@@ -23,23 +23,22 @@ A delegate to edit table cells with custom QLineEdits.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   18.5.2018
 """
+
 from PySide2.QtCore import Qt, Slot, Signal, QEvent
 from PySide2.QtGui import QIntValidator
-from PySide2.QtWidgets import QItemDelegate, QLineEdit, QSpinBox
+from PySide2.QtWidgets import QItemDelegate, QLineEdit
 import logging
 
+
 class LineEditDelegate(QItemDelegate):
-    """
-    A delegate that places a fully functioning QLineEdit in every
-    cell of the column to which it's applied
-    """
+    """A delegate that places a fully functioning QLineEdit in every
+    cell of the column to which it's applied."""
 
     def __init__(self, parent):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        """Return CustomLineEditor. Set up a validator depending on datatype
-        """
+        """Return CustomLineEditor. Set up a validator depending on datatype."""
         editor = CustomLineEditor(parent)
         data = index.data(Qt.DisplayRole)
         editor.original_data = data
@@ -49,18 +48,16 @@ class LineEditDelegate(QItemDelegate):
         return editor
 
     def setEditorData(self, editor, index):
-        """Init the line editor with previous data from the index"""
+        """Init the line editor with previous data from the index."""
         data = index.data(Qt.DisplayRole)
         editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `closeEditor` signal
-        """
+        """Do nothing. Model data is updated by handling the `closeEditor` signal."""
         pass
 
-
     def editorEvent(self, event, model, option, index):
-        """WIP: Restore inital text when escape key is pressed"""
+        """WIP: Restore initial text when escape key is pressed."""
         logging.debug(event.type())
         if event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Escape:
@@ -77,7 +74,7 @@ class CustomLineEditor(QLineEdit):
         self.index = None
 
     def keyPressEvent(self, e):
-        """WIP: Restore inital text when escape key is pressed.
+        """WIP: Restore initial text when escape key is pressed.
 
         Args:
             e (QKeyEvent): Received key press event.

@@ -29,6 +29,7 @@ import logging
 from PySide2.QtWidgets import QApplication
 from ui_main import ToolboxUI
 
+
 def main(argv):
     """Launch application.
 

@@ -356,12 +356,12 @@ class ToolImage(ItemImage):
         self.wheel.setParentItem(self._master)
         self.wheel.hide()
         self.timer = QTimeLine()
-        self.timer.setLoopCount(0) # loop forever
+        self.timer.setLoopCount(0)  # loop forever
         self.timer.setFrameRange(0, 10)
         self.wheel_animation = QGraphicsItemAnimation()
         self.wheel_animation.setItem(self.wheel)
         self.wheel_animation.setTimeLine(self.timer)
-        #self.timer.frameChanged.connect(self.test)
+        # self.timer.frameChanged.connect(self.test)
 
     def test(self, frame):
         logging.debug(self.wheel_center)
