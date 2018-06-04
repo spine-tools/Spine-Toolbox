@@ -30,7 +30,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QLineEdit
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices, QPixmap, QCursor
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
@@ -1412,11 +1412,3 @@ class ToolboxUI(QMainWindow):
         if event:
             event.accept()
         QApplication.quit()
-
-    def mousePressEvent(self, e):
-        if self.placing_item:
-            return
-            QApplication.restoreOverrideCursor()
-            self.ui.graphicsView.marker.hide()
-            self.placing_item = ""
-        super().mousePressEvent(e)

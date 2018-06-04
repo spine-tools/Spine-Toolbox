@@ -62,7 +62,7 @@ class ItemToolBar(QToolBar):
 
 
 class DraggableWidget(QLabel):
-    """A dragable QLabel"""
+    """A draggable QLabel"""
     def __init__(self, parent, pixmap, text):
         super().__init__(parent)
         self.text = text

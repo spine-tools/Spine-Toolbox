@@ -25,7 +25,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import logging
-from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine, QEvent
+from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem
