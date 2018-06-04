@@ -26,7 +26,7 @@ Functions to make and handle QToolBars.
 
 import logging
 from PySide2.QtGui import QIcon, QPixmap, QDrag
-from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QSizePolicy
+from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication
 from PySide2.QtCore import Qt, QMimeData
 from config import ICON_TOOLBAR_SS
 
@@ -69,9 +69,9 @@ class DraggableWidget(QLabel):
         self.setPixmap(pixmap.scaled(32, 32))
         self.drag_start_pos = None
         self.setToolTip("""
-            <p>Drag this icon and drop it onto the main view to create a new <b>{}</b> item.</p>
+            <p>Drag-and-drop this icon onto the project view to create a new <b>{}</b> item.</p>
         """.format(self.text))
-        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred) # WIP: try to center label horizontally
+        self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def mousePressEvent(self, event):

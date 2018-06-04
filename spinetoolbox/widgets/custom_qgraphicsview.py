@@ -26,7 +26,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF
+from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link
 from config import ITEM_TYPE
@@ -68,6 +68,8 @@ class CustomQGraphicsView(QGraphicsView):
         top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
         bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
         qrect = QRectF(top_left, bottom_right)
+        # qrect |= self.scene().itemsBoundingRect()
+        qrect += QMarginsF(1, 1, 1, 1) # TODO: find out why is this helpful
         for changed_qrect in changed_qrects:
             qrect |= changed_qrect
         qrect |= self.sceneRect()
@@ -185,14 +187,20 @@ class CustomQGraphicsView(QGraphicsView):
 
     def dragEnterEvent(self, event):
         """Accept any proposed action"""
-        event.acceptProposedAction()
+        if event:
+            event.accept()
+            event.acceptProposedAction()
 
     def dragMoveEvent(self, event):
         """Accept any proposed action"""
-        event.acceptProposedAction()
+        if event:
+            event.accept()
+            event.acceptProposedAction()
 
     def dropEvent(self, event):
         """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
+        if not event:
+            return
         event.acceptProposedAction()
         text = event.mimeData().text()
         pos = self.mapToScene(event.pos())
