@@ -218,6 +218,17 @@ class ItemImage(QGraphicsItem):
         """
         self._main.show_item_image_context_menu(event.screenPos(), self.name())
 
+    def key_press_event(self, event):
+        """Remove item when pressing delete. Note: it has to be selected
+
+        Args:
+            event (QKeyEvent): Key event
+        """
+        if event.key() == Qt.Key_Delete:
+            name = self.name()
+            ind = self._main.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
+            self._main.remove_item(ind, delete_item=True)
+
     def show_item_info(self):
         """Update GUI to show the details of the selected item in a QDockWidget."""
         self._main.show_info(self.name())
@@ -256,6 +267,7 @@ class DataConnectionImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
+        self._master.keyPressEvent = self.key_press_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -306,6 +318,10 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         return super().context_menu_event(event)
 
+    def key_press_event(self, event):
+        """Calls super class method."""
+        return super().key_press_event(event)
+
 
 class ToolImage(ItemImage):
     """Tool item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -335,6 +351,7 @@ class ToolImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
+        self._master.keyPressEvent = self.key_press_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -425,6 +442,10 @@ class ToolImage(ItemImage):
         """Calls super class method."""
         return super().context_menu_event(event)
 
+    def key_press_event(self, event):
+        """Calls super class method."""
+        return super().key_press_event(event)
+
 
 class DataStoreImage(ItemImage):
     """Data Store item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -454,6 +475,7 @@ class DataStoreImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
+        self._master.keyPressEvent = self.key_press_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -503,6 +525,10 @@ class DataStoreImage(ItemImage):
     def context_menu_event(self, event):
         """Calls super class method."""
         return super().context_menu_event(event)
+
+    def key_press_event(self, event):
+        """Calls super class method."""
+        return super().key_press_event(event)
 
 
 class ViewImage(ItemImage):
@@ -533,6 +559,7 @@ class ViewImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
+        self._master.keyPressEvent = self.key_press_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -582,6 +609,10 @@ class ViewImage(ItemImage):
     def context_menu_event(self, event):
         """Calls super class method."""
         return super().context_menu_event(event)
+
+    def key_press_event(self, event):
+        """Calls super class method."""
+        return super().key_press_event(event)
 
 
 class Link(QGraphicsLineItem):
