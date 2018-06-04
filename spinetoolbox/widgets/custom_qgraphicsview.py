@@ -25,8 +25,9 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Slot, Qt, QTimer
+from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QApplication
+from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
+from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link
 from config import ITEM_TYPE
 
@@ -47,10 +48,11 @@ class CustomQGraphicsView(QGraphicsView):
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
+        self.item_shadow = None
         self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
-        # self.scene().changed.connect(self.scene_changed)
+        self.scene().changed.connect(self.scene_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
@@ -58,8 +60,18 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot(name='scene_changed')
     def scene_changed(self, changed_qrects):
-        """Not in use at the moment."""
-        logging.debug("scene changed. {0}".format(changed_qrects))
+        """Expand scene to contain at least the viewport.
+        This prevents glitches when adding new items on specific positions,
+        due to the scene centering itself in the view
+        """
+        # logging.debug("scene changed. {0}".format(changed_qrects))
+        top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
+        bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
+        qrect = QRectF(top_left, bottom_right)
+        for changed_qrect in changed_qrects:
+            qrect |= changed_qrect
+        qrect |= self.sceneRect()
+        self.setSceneRect(qrect)
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
@@ -165,3 +177,36 @@ class CustomQGraphicsView(QGraphicsView):
             else:
                 self._parent.msg.emit("<b>{}</b>'s output is already connected to"
                                       " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
+
+    def dragLeaveEvent(self, event):
+        """Accept event"""
+        if event:
+            event.accept()
+
+    def dragEnterEvent(self, event):
+        """Accept any proposed action"""
+        event.acceptProposedAction()
+
+    def dragMoveEvent(self, event):
+        """Accept any proposed action"""
+        event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
+        event.acceptProposedAction()
+        text = event.mimeData().text()
+        pos = self.mapToScene(event.pos())
+        self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)
+        self.item_shadow.setPos(pos.x() - 35, pos.y() - 35)
+        if text == "Data Store":
+            self.item_shadow.setBrush(QBrush(QColor(0, 255, 255, 128)))
+            self._qmainwindow.show_add_data_store_form(pos.x(), pos.y())
+        elif text == "Data Connection":
+            self.item_shadow.setBrush(QBrush(QColor(0, 0, 255, 128)))
+            self._qmainwindow.show_add_data_connection_form(pos.x(), pos.y())
+        elif text == "Tool":
+            self.item_shadow.setBrush(QBrush(QColor(255, 0, 0, 128)))
+            self._qmainwindow.show_add_tool_form(pos.x(), pos.y())
+        elif text == "View":
+            self.item_shadow.setBrush(QBrush(QColor(0, 255, 0, 128)))
+            self._qmainwindow.show_add_view_form(pos.x(), pos.y())

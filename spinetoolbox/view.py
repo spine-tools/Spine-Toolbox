@@ -51,7 +51,7 @@ class View(MetaObject):
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label(self._data)
-        self._graphics_item = ViewImage(self._parent, x, y, 70, 70, self.name)
+        self._graphics_item = ViewImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):

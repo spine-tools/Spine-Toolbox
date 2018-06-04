@@ -25,7 +25,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import logging
-from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine
+from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine, QEvent
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem
@@ -499,6 +499,10 @@ class DataStoreImage(ItemImage):
     def connector_hover_leave_event(self, event):
         """Calls super class method."""
         super().connector_hover_leave_event(event)
+
+    def context_menu_event(self, event):
+        """Calls super class method."""
+        return super().context_menu_event(event)
 
 
 class ViewImage(ItemImage):

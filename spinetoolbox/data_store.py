@@ -76,7 +76,7 @@ class DataStore(MetaObject):
         self._widget.populate_data_list(data_files)
         self.add_db_reference_form = None
         self.data_store_form = None
-        self._graphics_item = DataStoreImage(self._parent, x, y, 70, 70, self.name)
+        self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):

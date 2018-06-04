@@ -289,5 +289,5 @@ class Ui_Form(object):
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
 from widgets.custom_qtreeview import CustomQTreeView
-from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
+from widgets.custom_qtableview import ParameterValueTableView, ParameterTableView
 import resources_icons_rc

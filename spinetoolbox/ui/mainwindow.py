@@ -29,7 +29,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1014, 626)
+        MainWindow.resize(743, 524)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -151,6 +151,7 @@ class Ui_MainWindow(object):
         brush = QtGui.QBrush(QtGui.QColor(240, 240, 240))
         brush.setStyle(QtCore.Qt.SolidPattern)
         self.graphicsView.setBackgroundBrush(brush)
+        self.graphicsView.setAlignment(QtCore.Qt.AlignCenter)
         self.graphicsView.setRenderHints(QtGui.QPainter.Antialiasing|QtGui.QPainter.TextAntialiasing)
         self.graphicsView.setDragMode(QtWidgets.QGraphicsView.NoDrag)
         self.graphicsView.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
@@ -158,7 +159,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1014, 26))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 743, 25))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -279,12 +280,24 @@ class Ui_MainWindow(object):
         self.actionAbout = QtWidgets.QAction(MainWindow)
         self.actionAbout.setObjectName("actionAbout")
         self.actionAdd_Data_Connection = QtWidgets.QAction(MainWindow)
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/icons/dc_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_Data_Connection.setIcon(icon3)
         self.actionAdd_Data_Connection.setObjectName("actionAdd_Data_Connection")
         self.actionAdd_Data_Store = QtWidgets.QAction(MainWindow)
+        icon4 = QtGui.QIcon()
+        icon4.addPixmap(QtGui.QPixmap(":/icons/ds_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_Data_Store.setIcon(icon4)
         self.actionAdd_Data_Store.setObjectName("actionAdd_Data_Store")
         self.actionAdd_Tool = QtWidgets.QAction(MainWindow)
+        icon5 = QtGui.QIcon()
+        icon5.addPixmap(QtGui.QPixmap(":/icons/tool_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_Tool.setIcon(icon5)
         self.actionAdd_Tool.setObjectName("actionAdd_Tool")
         self.actionAdd_View = QtWidgets.QAction(MainWindow)
+        icon6 = QtGui.QIcon()
+        icon6.addPixmap(QtGui.QPixmap(":/icons/view_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_View.setIcon(icon6)
         self.actionAdd_View.setObjectName("actionAdd_View")
         self.actionSave = QtWidgets.QAction(MainWindow)
         self.actionSave.setObjectName("actionSave")
@@ -393,6 +406,6 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

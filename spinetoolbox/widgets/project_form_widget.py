@@ -116,6 +116,8 @@ class NewProjectForm(QWidget):
         """
         if e.key() == Qt.Key_Escape:
             self.close()
+        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
+            self.ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.

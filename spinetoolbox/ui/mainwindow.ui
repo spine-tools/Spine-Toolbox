@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -26,8 +26,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1014</width>
-    <height>626</height>
+    <width>743</width>
+    <height>524</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -333,6 +333,9 @@
          </color>
         </brush>
        </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
        <property name="renderHints">
         <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
        </property>
@@ -352,8 +355,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1014</width>
-     <height>26</height>
+     <width>743</width>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -615,21 +618,37 @@
    </property>
   </action>
   <action name="actionAdd_Data_Connection">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/dc_icon.png</normaloff>:/icons/dc_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add Data Connection</string>
    </property>
   </action>
   <action name="actionAdd_Data_Store">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/ds_icon.png</normaloff>:/icons/ds_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add Data Store</string>
    </property>
   </action>
   <action name="actionAdd_Tool">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/tool_icon.png</normaloff>:/icons/tool_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add Tool</string>
    </property>
   </action>
   <action name="actionAdd_View">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/view_icon.png</normaloff>:/icons/view_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add View</string>
    </property>

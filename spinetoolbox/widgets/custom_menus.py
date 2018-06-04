@@ -66,12 +66,11 @@ class ProjectItemContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             # If no item at index
-            pass
-        elif not index.parent().isValid():
+            return
+        if not index.parent().isValid():
             # If index is at a category item
-            pass
-        else:
-            self.add_action("Remove Item")
+            return
+        self.add_action("Remove Item")
         self.exec_(position)
 
 class ItemImageContextMenu(CustomContextMenu):
@@ -82,8 +81,9 @@ class ItemImageContextMenu(CustomContextMenu):
         self._parent = parent
         self.index = index
         self.option = "None"
-        if index.isValid():
-            self.add_action("Remove")
+        if not index.isValid():
+            return
+        self.add_action("Remove")
         self.exec_(position)
 
 
@@ -95,8 +95,9 @@ class LinkContextMenu(CustomContextMenu):
         self._parent = parent
         self.index = index
         self.option = "None"
-        if index.isValid():
-            self.add_action("Remove")
+        if not index.isValid():
+            return
+        self.add_action("Remove")
         self.exec_(position)
 
 class ToolTemplateContextMenu(CustomContextMenu):
@@ -109,15 +110,14 @@ class ToolTemplateContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             # If no item at index
-            pass
-        elif index.row() == 0:
+            return
+        if index.row() == 0:
             # Don't show menu when clicking on No tool
-            pass
-        else:
-            self.add_action("Edit")
-            self.add_action("Open descriptor file")
-            self.add_action("Open main program file")
-            self.add_action("Remove")
+            return
+        self.add_action("Edit")
+        self.add_action("Open descriptor file")
+        self.add_action("Open main program file")
+        self.add_action("Remove")
         self.exec_(position)
 
 

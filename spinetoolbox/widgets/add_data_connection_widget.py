@@ -39,11 +39,13 @@ class AddDataConnectionWidget(QWidget):
         parent (ToolboxUI): Parent widget
         project (SpineToolboxProject): Project for the new item
     """
-    def __init__(self, parent, project):
+    def __init__(self, parent, project, x, y):
         """Initialize class."""
         super().__init__(f=Qt.Window)
         self._parent = parent
         self._project = project
+        self._x = x
+        self._y = y
         #  Set up the user interface from Designer.
         self.ui = ui.add_data_connection.Ui_Form()
         self.ui.setupUi(self)
@@ -106,7 +108,7 @@ class AddDataConnectionWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_data_connection(self.name, self.description, list())
+        self._project.add_data_connection(self.name, self.description, list(), self._x, self._y)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
@@ -116,6 +118,8 @@ class AddDataConnectionWidget(QWidget):
         """
         if e.key() == Qt.Key_Escape:
             self.close()
+        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
+            self.ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -125,3 +129,5 @@ class AddDataConnectionWidget(QWidget):
         """
         if event:
             event.accept()
+            item_shadow = self._parent.ui.graphicsView.item_shadow
+            self._parent.ui.graphicsView.scene().removeItem(item_shadow)

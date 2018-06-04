@@ -278,7 +278,7 @@ class JuliaREPLWidget(RichJupyterWidget):
 
 
     def _custom_context_menu_requested(self, pos):
-        """ Reimplemented method to add a (re)start REPL action into the default context menu.
+        """Reimplemented method to add a (re)start REPL action into the default context menu.
         """
         menu = self._context_menu_make(pos)
         first_action = menu.actions()[0]
@@ -296,6 +296,6 @@ class JuliaREPLWidget(RichJupyterWidget):
 
 
     def enterEvent(self, event):
-        logging.debug("here")
+        """Set busy cursor during REPL (re)starts"""
         if self.starting:
             self._control.viewport().setCursor(Qt.BusyCursor)

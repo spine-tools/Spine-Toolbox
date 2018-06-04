@@ -73,7 +73,7 @@ class DataConnection(MetaObject):
         # Populate data (files) model
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
-        self._graphics_item = DataConnectionImage(self._parent, x, y, 70, 70, self.name)
+        self._graphics_item = DataConnectionImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):

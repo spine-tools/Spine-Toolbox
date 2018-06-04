@@ -75,7 +75,7 @@ class Tool(MetaObject):
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, self.short_name, TOOL_OUTPUT_DIR)
-        self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
+        self._graphics_item = ToolImage(self._parent, x - 35, y - 35, w=70, h=70, name=self.name)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
         self._widget.ui.toolButton_tool_template_options.setMenu(self.tool_template_options_popup_menu)
         self._widget.ui.pushButton_stop.setEnabled(False)

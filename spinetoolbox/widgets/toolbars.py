@@ -24,60 +24,77 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-from PySide2.QtGui import QIcon, QPixmap
-from PySide2.QtWidgets import QToolBar, QLabel, QComboBox, QAction
-from PySide2.QtCore import Qt, QSize
+import logging
+from PySide2.QtGui import QIcon, QPixmap, QDrag
+from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QSizePolicy
+from PySide2.QtCore import Qt, QMimeData
 from config import ICON_TOOLBAR_SS
 
+class ItemToolBar(QToolBar):
+    """A toolbar to add items using drag and drop actions"""
+    def __init__(self, parent):
+        """Init class"""
+        super().__init__("Add Item Toolbar", parent)
+        label = QLabel("Add Item")
+        self.addWidget(label)
+        data_store_pixmap = QPixmap(":/icons/ds_icon.png")
+        data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
+        data_store_action = self.addWidget(data_store_widget)
+        data_connection_pixmap = QPixmap(":/icons/dc_icon.png")
+        data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
+        data_connection_action = self.addWidget(data_connection_widget)
+        tool_pixmap = QPixmap(":/icons/tool_icon.png")
+        tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
+        tool_action = self.addWidget(tool_widget)
+        view_pixmap = QPixmap(":/icons/view_icon.png")
+        view_widget = DraggableWidget(self, view_pixmap, "View")
+        view_action = self.addWidget(view_widget)
+        # set remove all action
+        remove_all_icon = QIcon()
+        remove_all_icon.addPixmap(QPixmap(":/icons/remove_all.png"), QIcon.Normal, QIcon.On)
+        remove_all = QAction(remove_all_icon, "Remove All", parent)
+        remove_all.triggered.connect(parent.remove_all_items)
+        self.addSeparator()
+        self.addAction(remove_all)
+        # Set stylesheet
+        self.setStyleSheet(ICON_TOOLBAR_SS)
+        self.setObjectName("ItemToolbar")
 
-# noinspection PyUnresolvedReferences
-def make_item_toolbar(ui):
-    """Initialize item toolbar.
 
-    Args:
-        ui (ToolboxUI): Application QMainWindow
-    """
-    toolbar = QToolBar("Add Item Toolbar", ui)
-    add_data_store_icon = QIcon()
-    add_data_store_icon.addPixmap(QPixmap(":/icons/ds_icon.png"), QIcon.Normal, QIcon.On)
-    add_data_connection_icon = QIcon()
-    add_data_connection_icon.addPixmap(QPixmap(":/icons/dc_icon.png"), QIcon.Normal, QIcon.On)
-    add_tool_icon = QIcon()
-    add_tool_icon.addPixmap(QPixmap(":/icons/tool_icon.png"), QIcon.Normal, QIcon.On)
-    add_view_icon = QIcon()
-    add_view_icon.addPixmap(QPixmap(":/icons/view_icon.png"), QIcon.Normal, QIcon.On)
-    remove_all_icon = QIcon()
-    remove_all_icon.addPixmap(QPixmap(":/icons/remove_all.png"), QIcon.Normal, QIcon.On)
+class DraggableWidget(QLabel):
+    """A dragable QLabel"""
+    def __init__(self, parent, pixmap, text):
+        super().__init__(parent)
+        self.text = text
+        self.setPixmap(pixmap.scaled(32, 32))
+        self.drag_start_pos = None
+        self.setToolTip("""
+            <p>Drag this icon and drop it onto the main view to create a new <b>{}</b> item.</p>
+        """.format(self.text))
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred) # WIP: try to center label horizontally
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
-    label = QLabel("Add Item")
-    add_data_store = QAction(add_data_store_icon, "Data Store", ui)
-    add_data_connection = QAction(add_data_connection_icon, "Data Connection", ui)
-    add_tool = QAction(add_tool_icon, "Tool", ui)
-    add_view = QAction(add_view_icon, "View", ui)
-    remove_all = QAction(remove_all_icon, "Remove All", ui)
-    # Set tooltips
-    add_data_store.setToolTip("Add Data Store to project")
-    add_data_connection.setToolTip("Add Data Connection to project")
-    add_tool.setToolTip("Add Tool to project")
-    add_view.setToolTip("Add View to project")
-    remove_all.setToolTip("Remove all items from project")
-    # Add actions to toolbar
-    toolbar.addWidget(label)
-    toolbar.addAction(add_data_store)
-    toolbar.addAction(add_data_connection)
-    toolbar.addAction(add_tool)
-    toolbar.addAction(add_view)
-    toolbar.addSeparator()
-    toolbar.addAction(remove_all)
-    toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
-    toolbar.setIconSize(QSize(20, 20))
-    # Connect signals
-    add_data_store.triggered.connect(ui.show_add_data_store_form)
-    add_data_connection.triggered.connect(ui.show_add_data_connection_form)
-    add_tool.triggered.connect(ui.show_add_tool_form)
-    add_view.triggered.connect(ui.show_add_view_form)
-    remove_all.triggered.connect(ui.remove_all_items)
-    # Set stylesheet
-    toolbar.setStyleSheet(ICON_TOOLBAR_SS)
-    toolbar.setObjectName("ItemToolbar")
-    return toolbar
+    def mousePressEvent(self, event):
+        """Register drag start position"""
+        if event.button() == Qt.LeftButton:
+            self.drag_start_pos = event.pos()
+
+    def mouseMoveEvent(self, event):
+        """Start dragging action if needed"""
+        if not event.buttons() & Qt.LeftButton:
+            return
+        if not self.drag_start_pos:
+            return
+        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+        drag = QDrag(self)
+        mimeData = QMimeData()
+        mimeData.setText(self.text)
+        drag.setMimeData(mimeData)
+        drag.setPixmap(self.pixmap())
+        drag.setHotSpot(self.pixmap().rect().center())
+        dropAction = drag.exec_()
+
+    def mouseReleaseEvent(self, event):
+        """Forget drag start position"""
+        self.drag_start_pos = None

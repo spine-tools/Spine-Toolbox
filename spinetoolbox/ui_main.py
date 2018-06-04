@@ -30,7 +30,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QLineEdit
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices, QPixmap, QCursor
 from ui.mainwindow import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
@@ -94,6 +94,7 @@ class ToolboxUI(QMainWindow):
         self.add_tool_form = None
         self.add_view_form = None
         self.tool_template_form = None
+        self.placing_item = ""
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
         self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
@@ -106,7 +107,7 @@ class ToolboxUI(QMainWindow):
         self.ui.splitter.setStyleSheet(SPLITTER_SS)
         self.setStyleSheet(SEPARATOR_SS)
         # Make and initialize toolbars
-        self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
+        self.item_toolbar = widgets.toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
@@ -1205,40 +1206,40 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(name="show_add_data_store_form")
-    def show_add_data_store_form(self):
+    @Slot("float", "float", name="show_add_data_store_form")
+    def show_add_data_store_form(self, x=0, y=0):
         """Show add data store widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_store_form = AddDataStoreWidget(self, self._project)
+        self.add_data_store_form = AddDataStoreWidget(self, self._project, x, y)
         self.add_data_store_form.show()
 
-    @Slot(name="show_add_data_connection_form")
-    def show_add_data_connection_form(self):
+    @Slot("float", "float", name="show_add_data_connection_form")
+    def show_add_data_connection_form(self, x=0, y=0):
         """Show add data connection widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_connection_form = AddDataConnectionWidget(self, self._project)
+        self.add_data_connection_form = AddDataConnectionWidget(self, self._project, x, y)
         self.add_data_connection_form.show()
 
-    @Slot(name="show_add_tool_form")
-    def show_add_tool_form(self):
+    @Slot("float", "float", name="show_add_tool_form")
+    def show_add_tool_form(self, x=0, y=0):
         """Show add tool widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_tool_form = AddToolWidget(self, self._project)
+        self.add_tool_form = AddToolWidget(self, self._project, x, y)
         self.add_tool_form.show()
 
-    @Slot(name="show_add_view_form")
-    def show_add_view_form(self):
+    @Slot("float", "float", name="show_add_view_form")
+    def show_add_view_form(self, x=0, y=0):
         """Show add view widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_view_form = AddViewWidget(self, self._project)
+        self.add_view_form = AddViewWidget(self, self._project, x, y)
         self.add_view_form.show()
 
     @Slot(name="show_tool_template_form")
@@ -1411,3 +1412,11 @@ class ToolboxUI(QMainWindow):
         if event:
             event.accept()
         QApplication.quit()
+
+    def mousePressEvent(self, e):
+        if self.placing_item:
+            return
+            QApplication.restoreOverrideCursor()
+            self.ui.graphicsView.marker.hide()
+            self.placing_item = ""
+        super().mousePressEvent(e)

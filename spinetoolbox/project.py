@@ -135,8 +135,10 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name] = dict()
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
-                    item_dict[top_level_item_txt][name]["x"] = child_data.get_icon().master().sceneBoundingRect().x()
-                    item_dict[top_level_item_txt][name]["y"] = child_data.get_icon().master().sceneBoundingRect().y()
+                    x = child_data.get_icon().master().sceneBoundingRect().center().x()
+                    y = child_data.get_icon().master().sceneBoundingRect().center().y()
+                    item_dict[top_level_item_txt][name]["x"] = x
+                    item_dict[top_level_item_txt][name]["y"] = y
                     if child_data.item_type == "Tool":
                         if not child_data.tool_template():
                             item_dict[top_level_item_txt][name]["tool"] = ""
@@ -316,7 +318,7 @@ class SpineToolboxProject(MetaObject):
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
 
-    def add_view(self, name, description, data="View data", x=0, y=0):
+    def add_view(self, name, description, x=0, y=0, data="View data"):
         """Add View to project item model."""
         view = View(self._parent, name, description, self, x, y)
         view.set_data(data)
