@@ -52,7 +52,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
-        # self.scene().changed.connect(self.scene_changed)
+        self.scene().changed.connect(self.scene_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
@@ -60,8 +60,12 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot(name='scene_changed')
     def scene_changed(self, changed_qrects):
-        """Not in use at the moment."""
+        """Make the scene larger as items get moved."""
         # logging.debug("scene changed. {0}".format(changed_qrects))
+        qrect = self.sceneRect()
+        for changed in changed_qrects:
+            qrect |= changed
+        self.setSceneRect(qrect)
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
