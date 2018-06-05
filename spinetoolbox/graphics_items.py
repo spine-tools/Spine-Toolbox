@@ -97,6 +97,7 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.connector_button.is_connector = True
+        self.links = list()
 
     def make_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -112,15 +113,15 @@ class ItemImage(QGraphicsItem):
         # icon.setAcceptHoverEvents(True)
         return icon
 
-    def links(self):
-        """Returns a list of Link items that are connected to this item."""
-        link_list = list()
-        for item in self._main.ui.graphicsView.scene().items():
-            if item.data(ITEM_TYPE) == "link":
-                if item.src_icon == self or item.dst_icon == self:
-                    # logging.debug("Found link for item: {0}".format(self.name()))
-                    link_list.append(item)
-        return link_list
+    # def links(self):
+    #     """Returns a list of Link items that are connected to this item."""
+    #     link_list = list()
+    #     for item in self._main.ui.graphicsView.scene().items():
+    #         if item.data(ITEM_TYPE) == "link":
+    #             if item.src_icon == self or item.dst_icon == self:
+    #                 # logging.debug("Found link for item: {0}".format(self.name()))
+    #                 link_list.append(item)
+    #     return link_list
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
@@ -171,9 +172,11 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        link_list = self.links()
-        for link in link_list:
-            link.update_line()
+        logging.debug(self.links)
+        for link in self.links:
+            pass
+            # NOTE: apparently we don't need this... links get updated anyways
+            # link.update_line()
         QGraphicsItem.mouseMoveEvent(self._master, event)
 
     def mouse_release_event(self, event):

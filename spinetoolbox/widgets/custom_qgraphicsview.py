@@ -104,7 +104,7 @@ class CustomQGraphicsView(QGraphicsView):
     # def subWindowList(self):
     #     """Return list of subwindows (replicate QMdiArea.subWindowList)."""
     #     # TODO: This returns an empty list now since no items have that type
-    #     # TODO: But I don't believe it's needed at all -Manuel
+    #     # TODO: But I believe it isn't needed at all -Manuel
     #     return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
@@ -126,10 +126,19 @@ class CustomQGraphicsView(QGraphicsView):
                     link = Link(self._qmainwindow, from_item.get_icon(), to_item.get_icon())
                     self.scene().addItem(link)
                     self.connection_model().save_link(row, column, link)
+                    # append link to ItemImage instances
+                    from_item.get_icon().links.append(link)
+                    to_item.get_icon().links.append(link)
                 else:   # connection destroyed, remove link widget
                     link = self.connection_model().link(row, column)
                     if link:
                         self.scene().removeItem(link)
+                        # remove link from ItemImage instances
+                        try:
+                            from_item.get_icon().links.remove(link)
+                            to_item.get_icon().links.remove(link)
+                        except ValueError:
+                            pass
 
 
     @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')

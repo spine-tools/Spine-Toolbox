@@ -658,7 +658,7 @@ class ToolboxUI(QMainWindow):
 
     def update_tool_template(self, row, tool_template):
         """Update a ToolTemplate instance in the project."""
-        # NOTE: this trick below works for adding a tool template to the model.
+        # NOTE: this trick below works for updating a tool template in the model.
         self.tool_template_model.insertRow(tool_template, row)
         self.tool_template_model.removeRow(row + 1)
         self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool_template.name))
@@ -806,7 +806,8 @@ class ToolboxUI(QMainWindow):
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
         # Remove tool template also from Tools that use it
-        # NOTE: calling self.tool_template_model.removeRow(index.row()) automatically does this
+        # NOTE: We don't seem to need this below;
+        # NOTE: calling self.tool_template_model.removeRow(index.row()) does the work for us
         # tools_item = self.find_item("Tools")
         # if tools_item.hasChildren():
         #     n_tool_items = tools_item.rowCount()
