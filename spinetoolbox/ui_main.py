@@ -520,7 +520,12 @@ class ToolboxUI(QMainWindow):
         top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
         for top_level_item in top_level_items:
             # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
-            if top_level_item.hasChildren():
+            # if top_level_item.hasChildren():
+            #     n_children = top_level_item.rowCount()
+            #     for i in range(n_children):
+            #         child = top_level_item.child(i, 0)
+            #         self.msg.emit("{0}".format(child.data(Qt.DisplayRole)))
+            if top_level_item.data(Qt.DisplayRole) == "Tools":
                 n_children = top_level_item.rowCount()
                 for i in range(n_children):
                     child = top_level_item.child(i, 0)
@@ -565,6 +570,8 @@ class ToolboxUI(QMainWindow):
         item_data = item.data(Qt.UserRole)
         # Clear QGroupBox layout
         self.clear_info_area()
+        # Set QDockWidget title to selected item's type
+        self.ui.dockWidget_item.setWindowTitle(item_data.item_type)
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
@@ -572,7 +579,7 @@ class ToolboxUI(QMainWindow):
             item_data.refresh()
 
     def clear_info_area(self):
-        """Clear SubWindowArea QDockWidget."""
+        """Clear QGroupBox inside selected item QDockWidget."""
         layout = self.ui.groupBox_subwindow.layout()
         for i in reversed(range(layout.count())):
             widget_to_remove = layout.itemAt(i).widget()
@@ -580,11 +587,12 @@ class ToolboxUI(QMainWindow):
             layout.removeWidget(widget_to_remove)
             # Remove it from the gui
             widget_to_remove.setParent(None)
+        self.ui.dockWidget_item.setWindowTitle("Item Info")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
-        """Open a file dialog so that the user can select an existant tool template .json file.
-        Continue loading the tool template into the Project if succesfull.
+        """Open a file dialog so the user can select an existing tool template .json file.
+        Continue loading the tool template into the Project if successful.
         """
         if not self._project:
             self.msg.emit("No project open")
@@ -614,7 +622,7 @@ class ToolboxUI(QMainWindow):
         """Add a ToolTemplate instance to project, which then can be added to a Tool item."""
         # Get definition file path
         def_file = tool.get_def_path()
-        # Insert tool into model
+        # Insert tool template into model
         self.tool_template_model.insertRow(tool)
         # Save Tool def file path to project file
         project_file = self._project.path  # Path to project file
@@ -647,17 +655,31 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
             return
 
-    def update_tool_template(self, row, tool):
-        """Update a ToolTemplate instance in the project.
-        """
+    def update_tool_template(self, row, tool_template):
+        """Update a ToolTemplate instance in the project."""
         # Insert tool into model
         index = self.tool_template_model.createIndex(row, 0)
         self.tool_template_model.removeRow(row)
-        self.tool_template_model.insertRow(tool, row)
-        self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool.name))
+        self.tool_template_model.insertRow(tool_template, row)
+        self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
-        logging.debug("Reattaching tool template {}".format(tool.name))
-        self.reattach_tool_templates(tool.name)
+        logging.debug("Reattaching tool template {}".format(tool_template.name))
+        # Find the updated tool template from ToolTemplateModel
+        template = self.tool_template_model.find_tool_template(tool_template.name)
+        if not template:
+            self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(tool_template.name))
+            return
+        # TODO: Iterate all Tools and reattach Tool template to Tools that have the edited tool template. Does not work yet.
+        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
+        for top_level_item in top_level_items:
+            if top_level_item.data(Qt.DisplayRole) == "Tools":
+                n_children = top_level_item.rowCount()
+                for i in range(n_children):
+                    tool = top_level_item.child(i, 0).data(Qt.UserRole)
+                    # self.msg.emit("{0}".format(tool.data(Qt.DisplayRole)))
+                    if tool.tool_template().name == template:
+                        tool.set_tool_template(template)
+                        self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
 
     @Slot(name="refresh_tool_templates")
     def refresh_tool_templates(self):

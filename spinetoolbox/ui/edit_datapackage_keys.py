@@ -30,7 +30,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(569, 330)
+        Form.resize(571, 330)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -122,7 +122,7 @@ class Ui_Form(object):
         self.tableView_fks.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.tableView_fks)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setSpacing(0)
+        self.horizontalLayout_2.setSpacing(6)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.toolButton_add_fk = QtWidgets.QToolButton(self.frame_fks)
         self.toolButton_add_fk.setIcon(icon)
