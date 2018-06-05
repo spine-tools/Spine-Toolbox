@@ -52,7 +52,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
-        self.scene().changed.connect(self.scene_changed)
+        # self.scene().changed.connect(self.scene_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
@@ -60,20 +60,8 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot(name='scene_changed')
     def scene_changed(self, changed_qrects):
-        """Expand scene to contain at least the viewport.
-        This prevents glitches when adding new items on specific positions,
-        due to the scene centering itself in the view
-        """
+        """Not in use at the moment."""
         # logging.debug("scene changed. {0}".format(changed_qrects))
-        top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
-        bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
-        qrect = QRectF(top_left, bottom_right)
-        # qrect |= self.scene().itemsBoundingRect()
-        qrect += QMarginsF(1, 1, 1, 1) # TODO: find out why is this helpful
-        for changed_qrect in changed_qrects:
-            qrect |= changed_qrect
-        qrect |= self.sceneRect()
-        self.setSceneRect(qrect)
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
@@ -186,10 +174,17 @@ class CustomQGraphicsView(QGraphicsView):
             event.accept()
 
     def dragEnterEvent(self, event):
-        """Accept any proposed action"""
+        """Expand scene so as to fit the viewport. In this way, when the new item is created in the drop position
+        the scene does not need to get bigger and recenter itself at that point. That would cause a displacement
+        of all items and it looks bad."""
         if event:
             event.accept()
             event.acceptProposedAction()
+            top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
+            bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
+            qrect = QRectF(top_left, bottom_right)
+            qrect |= self.sceneRect()
+            self.setSceneRect(qrect)
 
     def dragMoveEvent(self, event):
         """Accept any proposed action"""
