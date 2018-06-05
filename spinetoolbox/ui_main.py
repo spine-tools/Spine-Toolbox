@@ -440,7 +440,6 @@ class ToolboxUI(QMainWindow):
         # Restore connections
         self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
-        # Recenter scene
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 

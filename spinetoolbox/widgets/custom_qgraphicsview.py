@@ -25,7 +25,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QWidget
+from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link
