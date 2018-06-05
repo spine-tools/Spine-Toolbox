@@ -1300,17 +1300,13 @@ class ToolboxUI(QMainWindow):
         self.item_image_context_menu.deleteLater()
         self.item_image_context_menu = None
 
-    def show_link_context_menu(self, pos, src_item_name, dst_item_name):
+    def show_link_context_menu(self, pos, ind):
         """Context menu for connection links.
 
         Args:
             pos (QPoint): Mouse position
-            src_item_name (QGraphicsItem): The item this link originates from
-            dst_item_name (QGraphicsItem): The item this link lands on
+            ind (QModelIndex): The model index associated with this link
         """
-        row = self.connection_model.header.index(src_item_name)
-        column = self.connection_model.header.index(dst_item_name)
-        ind = self.connection_model.index(row, column)
         self.link_context_menu = LinkContextMenu(self, pos, ind)
         option = self.link_context_menu.get_action()
         if option == "Remove":

@@ -28,7 +28,7 @@ import logging
 from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
-    QGraphicsItemAnimation, QGraphicsPixmapItem
+    QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
 from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush, QPixmap
 from math import atan2, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
@@ -216,15 +216,16 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Mouse event
         """
+        self._master.setSelected(True)
         self._main.show_item_image_context_menu(event.screenPos(), self.name())
 
     def key_press_event(self, event):
-        """Remove item when pressing delete. NOTE: it has to have focus
+        """Remove item when pressing delete if it is selected.
 
         Args:
             event (QKeyEvent): Key event
         """
-        if event.key() == Qt.Key_Delete:
+        if event.key() == Qt.Key_Delete and self._master.isSelected():
             name = self.name()
             ind = self._main.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
             self._main.remove_item(ind, delete_item=True)
@@ -634,6 +635,7 @@ class Link(QGraphicsLineItem):
         self.setZValue(1)   # TODO: is this better than stackBefore?
         self.normal_color = QColor(255, 255, 0, 204)
         self.pen_width = 10
+        self.ellipse_radius = 10
         self.arrow_size = 20
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
@@ -641,18 +643,27 @@ class Link(QGraphicsLineItem):
         self.src_rect = self.src_connector.sceneBoundingRect()
         self.dst_rect = self.dst_connector.sceneBoundingRect()
         self.arrow_head = QPolygonF()
-        self.update_line()
         self.setData(ITEM_TYPE, "link")
         self.src_center = None
         self.dst_center = None
+        self.model_index = None
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
 
     def update_line(self):
-        """Update source and destination connector positions and repaint line."""
+        """Update source and destination connector positions."""
         self.src_rect = self.src_connector.sceneBoundingRect()
         self.dst_rect = self.dst_connector.sceneBoundingRect()
         self.src_center = self.src_rect.center()
         self.dst_center = self.dst_rect.center()
-        self.setLine(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
+        # NOTE: we don't need to call setLine here since we do it in paint() method
+        # self.setLine(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
+
+    def update_model_index(self):
+        """Update model index from connection model."""
+        row = self._qmainwindow.connection_model.header.index(self.src_icon.name())
+        column = self._qmainwindow.connection_model.header.index(self.dst_icon.name())
+        self.model_index = self._qmainwindow.connection_model.index(row, column)
 
     def mousePressEvent(self, e):
         """Trigger slot button if it is underneath.
@@ -679,7 +690,15 @@ class Link(QGraphicsLineItem):
         if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
             e.ignore()
         else:
-            self._qmainwindow.show_link_context_menu(e.screenPos(), self.src_icon.name(), self.dst_icon.name())
+            self.setSelected(True)
+            self.update_model_index()
+            self._qmainwindow.show_link_context_menu(e.screenPos(), self.model_index)
+
+    def keyPressEvent(self, event):
+        """Remove associated connection if this is selected and delete is pressed"""
+        if event.key() == Qt.Key_Delete and self.isSelected():
+            self.update_model_index()
+            self._qmainwindow.connection_clicked(self.model_index)
 
     def paint(self, painter, option, widget):
         """Paint ellipse and arrow at from and to positions, respectively."""
@@ -691,7 +710,9 @@ class Link(QGraphicsLineItem):
         line = QLineF(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
         angle = atan2(-line.dy(), line.dx())
         arrow_p0 = line.p2()
-        line.setLength(line.length() - self.arrow_size)
+        line.setLength(line.length() - self.arrow_size - self.ellipse_radius - 6)
+        translation = (line.unitVector().p2() - line.unitVector().p1()) * (self.ellipse_radius + 4)
+        line.translate(translation)
         self.setLine(line)
         arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
                                       cos(angle + pi / 3) * self.arrow_size)
@@ -703,10 +724,23 @@ class Link(QGraphicsLineItem):
         self.arrow_head.append(arrow_p2)
         brush = QBrush(self.normal_color, Qt.SolidPattern)
         painter.setBrush(brush)
-        painter.drawEllipse(self.src_center, self.pen_width, self.pen_width)
+        if option.state & QStyle.State_Selected:
+            option.state &= ~QStyle.State_Selected
+            pen = QPen(Qt.gray)
+            pen.setWidth(2)
+            pen.setStyle(Qt.DotLine)
+            painter.setPen(pen)
+            normal_vector = line.normalVector()
+            translation = (normal_vector.p2() - normal_vector.p1()) / normal_vector.length() * (0.5 * self.pen_width)
+            painter.drawLine(line.translated(translation))
+            painter.drawLine(line.translated(-translation))
+        else:
+            painter.setPen(Qt.NoPen)
+        painter.drawEllipse(self.src_center, self.ellipse_radius, self.ellipse_radius)
         painter.drawPolygon(self.arrow_head)
         self.setPen(QPen(self.normal_color, self.pen_width))
         super().paint(painter, option, widget)
+
 
 
 class LinkDrawer(QGraphicsLineItem):
