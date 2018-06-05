@@ -179,6 +179,7 @@ class ConnectionModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent  # QMainWindow
         self.connections = []
+        self.links = []
         self.header = list()
 
     def flags(self, index):
@@ -281,6 +282,7 @@ class ConnectionModel(QAbstractTableModel):
             [new_row.append(False) for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self.connections.insert(row, new_row)
+        self.links.insert(row, new_row)
         self.endInsertRows()
         return True
 
@@ -311,6 +313,7 @@ class ConnectionModel(QAbstractTableModel):
             for j in range(self.rowCount()):
                 # Notice if insert index > rowCount(), new object is inserted to end
                 self.connections[j].insert(column, False)
+                self.links[j].insert(column, False)
         self.endInsertColumns()
         return True
 
@@ -333,6 +336,7 @@ class ConnectionModel(QAbstractTableModel):
         # beginRemoveRows(const QModelIndex & parent, int first, int last)
         self.beginRemoveRows(parent, row, row)
         removed_row = self.connections.pop(row)
+        removed_row = self.links.pop(row)
         # logging.debug("{0} removed from row:{1}".format(removed_row, row))
         self.endRemoveRows()
         return True
@@ -362,8 +366,11 @@ class ConnectionModel(QAbstractTableModel):
             removing_last_column = True
         for r in self.connections:
             removed_column.append(r.pop(column))
+        for r in self.links:
+            r.pop(column)
         if removing_last_column:
             self.connections = []
+            self.links = []
         # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
         return True
@@ -451,10 +458,26 @@ class ConnectionModel(QAbstractTableModel):
             return
         self.beginResetModel()
         self.connections = connection_table
+        self.links = [[False for j in connection_table[i]] for i in range(len(connection_table))]
         self.endResetModel()
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
+
+    def save_link(self, row, column, link):
+        """Save Link instance"""
+        try:
+            self.links[row][column] = link
+            return True
+        except IndexError:
+            return False
+
+    def link(self, row, column):
+        """The Link instance stored in `row` and `column`"""
+        try:
+            return self.links[row][column]
+        except IndexError:
+            return False
 
 
 class MinimalTableModel(QAbstractTableModel):

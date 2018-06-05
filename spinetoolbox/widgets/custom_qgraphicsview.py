@@ -62,9 +62,8 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot(name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Make the scene larger as items get moved."""
-        logging.debug("scene changed. {0}".format(changed_qrects))
+        # logging.debug("scene changed. {0}".format(changed_qrects))
         qrect = self.sceneRect()
-        logging.debug("qrect. {0}".format(self.sceneRect()))
         for changed in changed_qrects:
             qrect |= changed
         self.setSceneRect(qrect)
@@ -91,10 +90,8 @@ class CustomQGraphicsView(QGraphicsView):
         """Set connection model and connect signals."""
         self._connection_model = model
         self._connection_model.dataChanged.connect(self.connectionDataChanged)
-        # NOTE: since rows and columns are always removed together in our model,
-        # only one of these two lines below is strictly needed
-        self._connection_model.rowsRemoved.connect(self.connectionsRemoved)
-        # self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
+        self._connection_model.rowsAboutToBeRemoved.connect(self.connectionRowsRemoved)
+        self._connection_model.columnsAboutToBeRemoved.connect(self.connectionColumnsRemoved)
 
     def project_item_model(self):
         """Return project item model."""
@@ -108,14 +105,6 @@ class CustomQGraphicsView(QGraphicsView):
         """Return list of subwindows (replicate QMdiArea.subWindowList)."""
         # TODO: Check if needed
         return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
-
-    def find_link(self, src_icon, dst_icon):
-        """Find link in scene, by source and destination icon"""
-        for item in self.scene().items():
-            if item.data(ITEM_TYPE) == "link":
-                if item.src_icon == src_icon and item.dst_icon == dst_icon:
-                    return item
-        return None
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
     def connectionDataChanged(self, top_left, bottom_right, roles=None):
@@ -134,26 +123,39 @@ class CustomQGraphicsView(QGraphicsView):
                 to_item = self._parent.find_item(to_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
                 if data:  # connection made, add link widget
                     link = Link(self._qmainwindow, from_item.get_icon(), to_item.get_icon())
-                    self.scene().addItem(link)  # TODO: try QPersistentModelIndex to keep track of Links
-                    # TODO: Probably a better idea would be to store Link instances into
-                    # TODO: ConnectionModel (QAbstractTableModel)
+                    self.scene().addItem(link)
+                    self.connection_model().save_link(row, column, link)
                 else:   # connection destroyed, remove link widget
-                    link = self.find_link(from_item.get_icon(), to_item.get_icon())
-                    if link is not None:
+                    link = self.connection_model().link(row, column)
+                    if link:
                         self.scene().removeItem(link)
 
-    @Slot("QModelIndex", "int", "int", name='connectionsRemoved')
-    def connectionsRemoved(self, index, first, last):
+
+    @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
+    def connectionRowsRemoved(self, index, first, last):
         """Update view when connection model changes."""
-        # logging.debug("conns. removed")
+        logging.debug("conn. rows removed")
         for i in range(first, last+1):
-            removed_name = self.connection_model().headerData(i, orientation=Qt.Horizontal)
-            for item in self.scene().items():
-                if item.data(ITEM_TYPE) == "link":
-                    src_name = item.src_icon.name()
-                    dst_name = item.dst_icon.name()
-                    if removed_name == src_name or removed_name == dst_name:
-                        self.scene().removeItem(item)
+            for j in range(self.connection_model().columnCount()):
+                link = self.connection_model().link(i, j)
+                logging.debug(i)
+                logging.debug(j)
+                logging.debug(link)
+                if link:
+                    self.scene().removeItem(link)
+
+    @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
+    def connectionColumnsRemoved(self, index, first, last):
+        """Update view when connection model changes."""
+        logging.debug("conn. columns removed")
+        for j in range(first, last+1):
+            for i in range(self.connection_model().rowCount()):
+                link = self.connection_model().link(i, j)
+                logging.debug(i)
+                logging.debug(j)
+                logging.debug(link)
+                if link:
+                    self.scene().removeItem(link)
 
     def draw_links(self, src_point, name):
         """Draw links when slot button is clicked.

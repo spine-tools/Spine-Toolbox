@@ -721,13 +721,12 @@ class ToolboxUI(QMainWindow):
         tool_template_name (str): if None, reattach all tool templates in project.
             If a name is given, only reattach that one
         """
-        for subwindow in self.ui.graphicsView.subWindowList():
-            w = subwindow.widget()  # SubWindowWidget
-            w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-            if w_type == "Tool":
-                # Find item in project model
-                item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-                tool = item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
+        tools_item = self.find_item("Tools")
+        if tools_item.hasChildren():
+            n_tool_items = tools_item.rowCount()
+            for i in range(n_tool_items):
+                tool_item = tools_item.child(i, 0)
+                tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
                 if tool.tool_template() is not None:
                     # Get old tool template name
                     old_t_name = tool.tool_template().name

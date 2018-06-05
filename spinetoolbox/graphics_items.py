@@ -710,8 +710,8 @@ class Link(QGraphicsLineItem):
         line = QLineF(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
         angle = atan2(-line.dy(), line.dx())
         arrow_p0 = line.p2()
-        line.setLength(line.length() - self.arrow_size - self.ellipse_radius - 6)
-        translation = (line.unitVector().p2() - line.unitVector().p1()) * (self.ellipse_radius + 4)
+        line.setLength(line.length() - self.arrow_size - self.ellipse_radius - 0.5 * self.pen_width - 1)
+        translation = (line.unitVector().p2() - line.unitVector().p1()) * (self.ellipse_radius + 0.5 * self.pen_width - 1)
         line.translate(translation)
         self.setLine(line)
         arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
@@ -726,7 +726,7 @@ class Link(QGraphicsLineItem):
         painter.setBrush(brush)
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
-            pen = QPen(Qt.gray)
+            pen = QPen(Qt.darkGray)
             pen.setWidth(2)
             pen.setStyle(Qt.DotLine)
             painter.setPen(pen)
