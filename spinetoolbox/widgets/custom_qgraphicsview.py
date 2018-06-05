@@ -30,6 +30,7 @@ from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link
 from config import ITEM_TYPE
+from widgets.toolbars import DraggableWidget
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -177,19 +178,28 @@ class CustomQGraphicsView(QGraphicsView):
         event.accept()
 
     def dragEnterEvent(self, event):
-        """Expand scene so as to fit the viewport. In this way, when the new item is created in the drop position
+        """Only accept drops of DraggableWidget instances (from Add Item toolbar).
+        Expand scene so as to fit the viewport. In this way, when the new item is created in the drop position
         the scene does not need to get bigger and recenter itself at that point (causing all items in the view
         to abruptly shift)."""
-        event.accept()
-        top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
-        bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
-        qrect = QRectF(top_left, bottom_right)
-        qrect |= self.sceneRect()
-        self.setSceneRect(qrect)
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            event.ignore()
+        else:
+            event.accept()
+            top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
+            bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
+            qrect = QRectF(top_left, bottom_right)
+            qrect |= self.sceneRect()
+            self.setSceneRect(qrect)
 
     def dragMoveEvent(self, event):
-        """Accept any proposed action"""
-        event.accept()
+        """Only accept drops of DraggableWidget instances (from Add Item toolbar)"""
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            event.ignore()
+        else:
+            event.accept()
 
     def dropEvent(self, event):
         """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
