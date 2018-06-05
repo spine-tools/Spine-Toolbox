@@ -42,7 +42,7 @@ from sqlalchemy import or_
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, aliased
-import time # just to measure loading time and sqlalchemy ORM performance
+import time  # just to measure loading time and sqlalchemy ORM performance
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.combobox_delegate import ComboBoxDelegate
 

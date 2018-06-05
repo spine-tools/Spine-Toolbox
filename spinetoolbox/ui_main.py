@@ -29,10 +29,9 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction, QLineEdit
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
-from widgets.data_store_widget import DataStoreForm
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
     ItemImageContextMenu, LinkContextMenu, AddToolTemplatePopupMenu
@@ -170,7 +169,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
-        self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
         self.ui.actionAdd_Data_Store.triggered.connect(self.show_add_data_store_form)
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
@@ -210,7 +208,6 @@ class ToolboxUI(QMainWindow):
             msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
             self.ui.statusbar.showMessage(msg, 10000)
             return
-        self.msg.emit("Loading project from previous session")
         if not self.open_project(project_file_path):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
             logging.error("Loading project file '{0}' failed".format(project_file_path))
@@ -430,6 +427,9 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        # Clear QTextBrowsers
+        self.ui.textBrowser_eventlog.clear()
+        self.ui.textBrowser_process_output.clear()
         # Populate project model with items read from JSON file
         self.init_models(tool_template_paths)
         if not self._project.load(dicts['objects']):
@@ -508,26 +508,6 @@ class ToolboxUI(QMainWindow):
                 self.show_info(item_data.name)
             return
 
-    # @Slot("QModelIndex", name="show_subwindow")
-    # def show_subwindow(self, index):
-    #     """Show double-clicked item subwindow if it was hidden.
-    #     Sets both QMdiSubWindow and its internal widget visible.
-    #
-    #     Args:
-    #         index (QModelIndex): Index of clicked item, if available
-    #     """
-    #     if not index:
-    #         return
-    #     if not index.isValid():
-    #         logging.error("Index not valid")
-    #         return
-    #     else:
-    #         if index.parent().isValid():
-    #             item_data = self.project_item_model.itemFromIndex(index).data(Qt.UserRole)  # e.g. DataStore object
-    #             internal_widget = item_data.get_widget()  # QWidget of e.g. DataStore object
-    #             internal_widget.show()
-    #         return
-
     @Slot(name="test1")
     def test1(self):
         sub_windows = self.ui.graphicsView.subWindowList()
@@ -600,34 +580,6 @@ class ToolboxUI(QMainWindow):
             layout.removeWidget(widget_to_remove)
             # Remove it from the gui
             widget_to_remove.setParent(None)
-
-    # @Slot("QMdiSubWindow", name="update_details_frame")
-    # def update_details_frame(self, window):
-    #     """OBSOLETE: Update labels on main window according to the currently selected QMdiSubWindow.
-    #
-    #     Args:
-    #         window (QMdiSubWindow): Active sub-window
-    #     """
-    #     if window is not None:
-    #         w = window.widget()  # SubWindowWidget
-    #         obj_type = w.objectName()
-    #         name = w.owner()
-    #         # self.ui.lineEdit_type.setText(obj_type)
-    #         # self.ui.lineEdit_name.setText(name)
-    #         # Find object data from model. Note: Finds child items only if Qt.MatchRecursive is set.
-    #         selected_item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
-    #         if not selected_item:
-    #             logging.error("Item {0} not found".format(name))
-    #             return
-    #         item_data = selected_item.data(Qt.UserRole)
-    #         if item_data.item_type == "Data Connection":
-    #             # logging.debug("DC selected")
-    #             item_data.refresh()
-    #         # matching_item_data = selected_item.data(Qt.UserRole)
-    #     else:
-    #         pass
-    #         # self.ui.lineEdit_type.setText("")
-    #         # self.ui.lineEdit_name.setText("")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -947,6 +899,8 @@ class ToolboxUI(QMainWindow):
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
                     return
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
+        # Clear item info area
+        self.clear_info_area()
         return
 
     def find_item(self, name, match_flags=Qt.MatchExactly):
@@ -1263,12 +1217,6 @@ class ToolboxUI(QMainWindow):
         self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
         self.about_form.show()
 
-    @Slot(name="open_data_store_view")
-    def open_data_store_view(self):
-        # OBSOLETE?
-        self.data_store_form = DataStoreWidget(self)
-        self.data_store_form.show()
-
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):
         """Context menu for project items.
@@ -1317,7 +1265,7 @@ class ToolboxUI(QMainWindow):
 
         Args:
             pos (QPoint): Mouse position
-            item_name (QGraphicsItem): The name of the concerned item
+            name (QGraphicsItem): The name of the concerned item
         """
         ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
         self.item_image_context_menu = ItemImageContextMenu(self, pos, ind)

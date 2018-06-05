@@ -37,7 +37,6 @@ from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import blocking_updates, busy_effect
 import logging
-import inspect
 
 
 class ToolTemplateWidget(QWidget):
@@ -107,7 +106,7 @@ class ToolTemplateWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        #self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
+        # self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
         self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
@@ -207,9 +206,9 @@ class ToolTemplateWidget(QWidget):
                 # check if path is a descendant of main dir
                 common_prefix = os.path.commonprefix([self.includes_main_path, path])
                 if common_prefix != self.includes_main_path:
-                    self.statusbar.showMessage("Source file {0}'s location is invalid"\
-                                                " (should be in main directory)"\
-                                                .format(file_pattern), 3000)
+                    self.statusbar.showMessage("Source file {0}'s location is invalid "
+                                               "(should be in main directory)"
+                                               .format(file_pattern), 3000)
                     continue
                 path_to_add = os.path.relpath(path, self.includes_main_path)
             if path_to_add in self.includes:
@@ -254,16 +253,16 @@ class ToolTemplateWidget(QWidget):
             if not self.includes:
                 self.includes_main_path = None
                 self.ui.label_mainpath.clear()
-            elif 0 in rows: # main program was removed
-            # new main is the first one still in the list
-            # TODO: isn't it better to pick the new main as the one with the smallest path?
+            elif 0 in rows:  # main program was removed
+                # new main is the first one still in the list
+                # TODO: isn't it better to pick the new main as the one with the smallest path?
                 dirname = os.path.dirname(self.includes[0])
                 new_main_path = os.path.join(self.includes_main_path, dirname)
                 old_main_path = self.includes_main_path
                 old_includes_abspath = [os.path.join(old_main_path, path) for path in self.includes]
-                self.includes = [os.path.relpath(path, new_main_path)\
-                                    for path in old_includes_abspath\
-                                    if os.path.commonprefix([new_main_path, path]) == new_main_path]
+                self.includes = [os.path.relpath(path, new_main_path)
+                                 for path in old_includes_abspath
+                                 if os.path.commonprefix([new_main_path, path]) == new_main_path]
                 self.includes_main_path = new_main_path
                 self.ui.label_mainpath.setText(self.includes_main_path)
             self.statusbar.showMessage("Selected (and invalid) includes removed", 3000)
@@ -325,10 +324,10 @@ class ToolTemplateWidget(QWidget):
             self.statusbar.showMessage("Selected output files removed", 3000)
         self.populate_outputfiles_list(self.outputfiles)
 
-    @Slot(name='ok_clicked')
+    @Slot(name="ok_clicked")
     def ok_clicked(self):
         """Check that everything is valid, create definition dictionary and add template to project."""
-        # Check that tooltype is selected
+        # Check that tool type is selected
         if self.ui.comboBox_tooltype.currentIndex() == 0:
             self.statusbar.showMessage("Tool type not selected", 3000)
             return
@@ -340,7 +339,7 @@ class ToolTemplateWidget(QWidget):
         self.definition['inputfiles_opt'] = self.inputfiles_opt
         self.definition['outputfiles'] = self.outputfiles
         self.definition['cmdline_args'] = self.ui.lineEdit_args.text()
-        #logging.debug(self.definition)
+        # logging.debug(self.definition)
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k.capitalize()), 3000)
@@ -354,11 +353,11 @@ class ToolTemplateWidget(QWidget):
     def call_add_tool_template(self):
         """Add or update Tool Template according to user's selections.
         If the name is the same as an existing tool template, it is updated and
-        auto-saved to the definition file. (The user is editting an existing
+        auto-saved to the definition file. (The user is editing an existing
         tool template)
         If the name is not in the tool template model, create a new one and
         offer to save the definition file. (The user is creating a new template
-        from scratch or spawning from an existing one)
+        from scratch or spawning from an existing one).
         """
         # Load tool template
         path = self.includes_main_path
@@ -368,7 +367,7 @@ class ToolTemplateWidget(QWidget):
             return False
         # Check if a tool template with this name already exists
         row = self._parent.tool_template_model.tool_template_row(tool.name)
-        if row >= 0: #Note: Row 0 at this moment has 'No tool'
+        if row >= 0:  # Note: Row 0 at this moment has 'No tool'
             old_tool = self._parent.tool_template_model.tool_template(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)
@@ -378,14 +377,13 @@ class ToolTemplateWidget(QWidget):
             self._parent.update_tool_template(row, tool)
         else:
             func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getSaveFileName)
-            answer = func(self, 'Save tool template file', \
-                                            self.def_file_path, 'JSON (*.json)')
+            answer = func(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
             if answer[0] == '':  # Cancel button clicked
                 return False
-            def_file = os.path.abspath(answer[0]) # TODO: maybe check that extension is .json?
+            def_file = os.path.abspath(answer[0])  # TODO: maybe check that extension is .json?
             tool.set_def_path(def_file)
             self._parent.add_tool_template(tool)
-        # Save path of main program file relative to definition file in case they difer
+        # Save path of main program file relative to definition file in case they differ
         def_path = os.path.dirname(def_file)
         if def_path != self.includes_main_path:
             self.definition['includes_main_path'] = os.path.relpath(self.includes_main_path, def_path)

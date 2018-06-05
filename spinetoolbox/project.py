@@ -242,7 +242,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, data, x, y)
+            self.add_view(name, desc, x, y, data)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
