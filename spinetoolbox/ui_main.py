@@ -511,8 +511,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test1")
     def test1(self):
-        sub_windows = self.ui.graphicsView.subWindowList()
-        self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
+        # sub_windows = self.ui.graphicsView.subWindowList()
+        # self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
         logging.debug("Total number of items: {0}".format(self.n_items("all")))
         logging.debug("Number of Data Stores: {0}".format(self.n_items("Data Stores")))
         logging.debug("Number of Data Connections: {0}".format(self.n_items("Data Connections")))
@@ -658,10 +658,9 @@ class ToolboxUI(QMainWindow):
 
     def update_tool_template(self, row, tool_template):
         """Update a ToolTemplate instance in the project."""
-        # Insert tool into model
-        index = self.tool_template_model.createIndex(row, 0)
-        self.tool_template_model.removeRow(row)
+        # NOTE: this trick below works for adding a tool template to the model.
         self.tool_template_model.insertRow(tool_template, row)
+        self.tool_template_model.removeRow(row + 1)
         self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
         logging.debug("Reattaching tool template {}".format(tool_template.name))
@@ -670,17 +669,13 @@ class ToolboxUI(QMainWindow):
         if not template:
             self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(tool_template.name))
             return
-        # TODO: Iterate all Tools and reattach Tool template to Tools that have the edited tool template. Does not work yet.
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if top_level_item.data(Qt.DisplayRole) == "Tools":
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    tool = top_level_item.child(i, 0).data(Qt.UserRole)
-                    # self.msg.emit("{0}".format(tool.data(Qt.DisplayRole)))
-                    if tool.tool_template().name == template:
-                        tool.set_tool_template(template)
-                        self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
+        tools = self.find_item('Tools')
+        n_tool_items = tools.rowCount()
+        for i in range(n_tool_items):
+            tool = tools.child(i, 0).data(Qt.UserRole)
+            if tool.tool_template().name == tool_template.name:
+                tool.set_tool_template(template)
+                self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
 
     @Slot(name="refresh_tool_templates")
     def refresh_tool_templates(self):
@@ -721,25 +716,24 @@ class ToolboxUI(QMainWindow):
         tool_template_name (str): if None, reattach all tool templates in project.
             If a name is given, only reattach that one
         """
-        tools_item = self.find_item("Tools")
-        if tools_item.hasChildren():
-            n_tool_items = tools_item.rowCount()
-            for i in range(n_tool_items):
-                tool_item = tools_item.child(i, 0)
-                tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
-                if tool.tool_template() is not None:
-                    # Get old tool template name
-                    old_t_name = tool.tool_template().name
-                    if not tool_template_name or old_t_name == tool_template_name:
-                        # Find the same tool template from ToolTemplateModel
-                        new_template = self.tool_template_model.find_tool_template(old_t_name)
-                        if not new_template:
-                            self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
-                            tool.set_tool_template(None)
-                            continue
-                        tool.set_tool_template(new_template)
-                        self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
-                                      .format(new_template.name, tool.name))
+        tools = self.find_item("Tools")
+        n_tool_items = tools.rowCount()
+        for i in range(n_tool_items):
+            tool_item = tools.child(i, 0)
+            tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
+            if tool.tool_template() is not None:
+                # Get old tool template name
+                old_t_name = tool.tool_template().name
+                if not tool_template_name or old_t_name == tool_template_name:
+                    # Find the same tool template from ToolTemplateModel
+                    new_template = self.tool_template_model.find_tool_template(old_t_name)
+                    if not new_template:
+                        self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
+                        tool.set_tool_template(None)
+                        continue
+                    tool.set_tool_template(new_template)
+                    self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
+                                  .format(new_template.name, tool.name))
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
@@ -812,17 +806,18 @@ class ToolboxUI(QMainWindow):
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
         # Remove tool template also from Tools that use it
-        for subwindow in self.ui.graphicsView.subWindowList():
-            w = subwindow.widget()  # SubWindowWidget
-            w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-            if w_type == "Tool":
-                # Find item in project model
-                item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-                tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
-                if tool.tool_template() is not None:
-                    if tool.tool_template().name == sel_tool.name:
-                        tool.set_tool_template(None)
-                        self.msg.emit("Removed {0} from Tool <b>{1}</b>".format(sel_tool.name, tool.name))
+        # NOTE: calling self.tool_template_model.removeRow(index.row()) automatically does this
+        # tools_item = self.find_item("Tools")
+        # if tools_item.hasChildren():
+        #     n_tool_items = tools_item.rowCount()
+        #     for i in range(n_tool_items):
+        #         tool_item = tools_item.child(i, 0)
+        #         tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data ata
+        #         if tool.tool_template() is not None:
+        #             logging.debug(tool.tool_template().name)
+        #             if tool.tool_template().name == sel_tool.name:
+        #                 tool.set_tool_template(None)
+        #                 self.msg.emit("Removed {0} from Tool <b>{1}</b>".format(sel_tool.name, tool.name))
         self.msg_success.emit("Tool template removed successfully")
 
     def add_item_to_model(self, category, text, data):

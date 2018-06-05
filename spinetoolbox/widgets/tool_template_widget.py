@@ -354,9 +354,9 @@ class ToolTemplateWidget(QWidget):
         """Add or update Tool Template according to user's selections.
         If the name is the same as an existing tool template, it is updated and
         auto-saved to the definition file. (The user is editing an existing
-        tool template)
-        If the name is not in the tool template model, create a new one and
-        offer to save the definition file. (The user is creating a new template
+        tool template.)
+        If the name is not in the tool template model, create a new tool template and
+        offer to save the definition file. (The user is creating a new tool template
         from scratch or spawning from an existing one).
         """
         # Load tool template
@@ -367,7 +367,7 @@ class ToolTemplateWidget(QWidget):
             return False
         # Check if a tool template with this name already exists
         row = self._parent.tool_template_model.tool_template_row(tool.name)
-        if row >= 0:  # Note: Row 0 at this moment has 'No tool'
+        if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
             old_tool = self._parent.tool_template_model.tool_template(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)

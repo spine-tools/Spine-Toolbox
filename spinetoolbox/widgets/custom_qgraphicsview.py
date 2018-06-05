@@ -101,10 +101,11 @@ class CustomQGraphicsView(QGraphicsView):
         """Return connection model."""
         return self._connection_model
 
-    def subWindowList(self):
-        """Return list of subwindows (replicate QMdiArea.subWindowList)."""
-        # TODO: Check if needed
-        return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
+    # def subWindowList(self):
+    #     """Return list of subwindows (replicate QMdiArea.subWindowList)."""
+    #     # TODO: This returns an empty list now since no items have that type
+    #     # TODO: But I don't believe it's needed at all -Manuel
+    #     return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
     def connectionDataChanged(self, top_left, bottom_right, roles=None):
@@ -134,26 +135,20 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
     def connectionRowsRemoved(self, index, first, last):
         """Update view when connection model changes."""
-        logging.debug("conn. rows removed")
+        # logging.debug("conn. rows removed")
         for i in range(first, last+1):
             for j in range(self.connection_model().columnCount()):
                 link = self.connection_model().link(i, j)
-                logging.debug(i)
-                logging.debug(j)
-                logging.debug(link)
                 if link:
                     self.scene().removeItem(link)
 
     @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
     def connectionColumnsRemoved(self, index, first, last):
         """Update view when connection model changes."""
-        logging.debug("conn. columns removed")
+        # logging.debug("conn. columns removed")
         for j in range(first, last+1):
             for i in range(self.connection_model().rowCount()):
                 link = self.connection_model().link(i, j)
-                logging.debug(i)
-                logging.debug(j)
-                logging.debug(link)
                 if link:
                     self.scene().removeItem(link)
 
