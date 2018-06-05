@@ -341,6 +341,7 @@ class ToolboxUI(QMainWindow):
             self.remove_item(ind)
         self._project = None
         self.tool_template_model = None
+        self.ui.graphicsView.reset_scene()
         self.msg.emit("All {0} items removed from project".format(n))
 
     @Slot(name="new_project")
@@ -439,6 +440,7 @@ class ToolboxUI(QMainWindow):
         # Restore connections
         self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
+        # Recenter scene
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -1292,7 +1294,7 @@ class ToolboxUI(QMainWindow):
         ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
         self.item_image_context_menu = ItemImageContextMenu(self, pos, ind)
         option = self.item_image_context_menu.get_action()
-        if option == "Remove":
+        if option == "Remove Item":
             self.remove_item(ind, delete_item=True)
             return
         else:  # No option selected
@@ -1309,7 +1311,7 @@ class ToolboxUI(QMainWindow):
         """
         self.link_context_menu = LinkContextMenu(self, pos, ind)
         option = self.link_context_menu.get_action()
-        if option == "Remove":
+        if option == "Remove Connection":
             self.connection_clicked(ind)
             return
         else:  # No option selected

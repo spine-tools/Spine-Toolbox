@@ -83,7 +83,7 @@ class ItemImageContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             return
-        self.add_action("Remove")
+        self.add_action("Remove Item")
         self.exec_(position)
 
 
@@ -97,7 +97,7 @@ class LinkContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             return
-        self.add_action("Remove")
+        self.add_action("Remove Connection")
         self.exec_(position)
 
 class ToolTemplateContextMenu(CustomContextMenu):

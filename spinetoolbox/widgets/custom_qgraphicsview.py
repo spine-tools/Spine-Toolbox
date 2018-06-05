@@ -25,7 +25,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
+from PySide2.QtWidgets import QGraphicsView, QGraphicsScene, QWidget
 from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link
@@ -62,11 +62,21 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot(name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Make the scene larger as items get moved."""
-        # logging.debug("scene changed. {0}".format(changed_qrects))
+        logging.debug("scene changed. {0}".format(changed_qrects))
         qrect = self.sceneRect()
+        logging.debug("qrect. {0}".format(self.sceneRect()))
         for changed in changed_qrects:
             qrect |= changed
         self.setSceneRect(qrect)
+
+    def reset_scene(self):
+        """Get a new, clean scene. Needed when clearing the UI for a new project
+        so that new items are correctly placed."""
+        self.scene().changed.disconnect(self.scene_changed)
+        self._scene = QGraphicsScene(self)
+        self.setScene(self._scene)
+        self.scene().changed.connect(self.scene_changed)
+        self.setSceneRect(QRectF(0, 0, 0, 0))
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
