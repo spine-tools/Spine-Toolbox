@@ -80,7 +80,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Set connection model and connect signals."""
         self._connection_model = model
         self._connection_model.dataChanged.connect(self.connectionDataChanged)
-        # note: since rows and columns are always removed together in our model,
+        # NOTE: since rows and columns are always removed together in our model,
         # only one of these two lines below is strictly needed
         self._connection_model.rowsRemoved.connect(self.connectionsRemoved)
         # self._connection_model.columnsRemoved.connect(self.connectionsRemoved)
@@ -99,7 +99,7 @@ class CustomQGraphicsView(QGraphicsView):
         return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
     def find_link(self, src_icon, dst_icon):
-        """Find link in scene, by model index"""
+        """Find link in scene, by source and destination icon"""
         for item in self.scene().items():
             if item.data(ITEM_TYPE) == "link":
                 if item.src_icon == src_icon and item.dst_icon == dst_icon:
@@ -174,33 +174,25 @@ class CustomQGraphicsView(QGraphicsView):
 
     def dragLeaveEvent(self, event):
         """Accept event"""
-        if event:
-            event.accept()
+        event.accept()
 
     def dragEnterEvent(self, event):
         """Expand scene so as to fit the viewport. In this way, when the new item is created in the drop position
-        the scene does not need to get bigger and recenter itself at that point. That would cause a displacement
-        of all items and it looks bad."""
-        if event:
-            event.accept()
-            event.acceptProposedAction()
-            top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
-            bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
-            qrect = QRectF(top_left, bottom_right)
-            qrect |= self.sceneRect()
-            self.setSceneRect(qrect)
+        the scene does not need to get bigger and recenter itself at that point (causing all items in the view
+        to abruptly shift)."""
+        event.accept()
+        top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
+        bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
+        qrect = QRectF(top_left, bottom_right)
+        qrect |= self.sceneRect()
+        self.setSceneRect(qrect)
 
     def dragMoveEvent(self, event):
         """Accept any proposed action"""
-        if event:
-            event.accept()
-            event.acceptProposedAction()
+        event.accept()
 
     def dropEvent(self, event):
         """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
-        if not event:
-            return
-        event.acceptProposedAction()
         text = event.mimeData().text()
         pos = self.mapToScene(event.pos())
         self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)

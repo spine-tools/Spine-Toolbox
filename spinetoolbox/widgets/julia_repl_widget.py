@@ -33,6 +33,7 @@ from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs
 from config import JULIA_EXECUTABLE
 from helpers import busy_effect
+from widgets.toolbars import DraggableWidget
 
 class JuliaREPLWidget(RichJupyterWidget):
     """
@@ -299,3 +300,12 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Set busy cursor during REPL (re)starts"""
         if self.starting:
             self._control.viewport().setCursor(Qt.BusyCursor)
+
+
+    def dragEnterEvent(self, event):
+        """Don't accept drops from Add Item Toolbar."""
+        source = event.source()
+        if isinstance(source, DraggableWidget):
+            event.ignore()
+        else:
+            super().dragEnterEvent(event)

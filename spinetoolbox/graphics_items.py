@@ -219,7 +219,7 @@ class ItemImage(QGraphicsItem):
         self._main.show_item_image_context_menu(event.screenPos(), self.name())
 
     def key_press_event(self, event):
-        """Remove item when pressing delete. Note: it has to be selected
+        """Remove item when pressing delete. NOTE: it has to have focus
 
         Args:
             event (QKeyEvent): Key event
