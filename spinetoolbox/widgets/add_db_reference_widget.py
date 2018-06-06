@@ -146,12 +146,16 @@ class AddDbReferenceWidget(QWidget):
                 self.enable_sqlite()
             elif dialect == 'mssql':
                 import pyodbc
-                dsns = list(pyodbc.dataSources().keys())
-                if dsns:
-                    self.ui.comboBox_dsn.addItems(dsns)
+                dsns = pyodbc.dataSources()
+                mssql_dsns = list()
+                for k, v in dsns.items():
+                    if 'msodbcsql' in v.lower():
+                        mssql_dsns.append(k)
+                if mssql_dsns:
+                    self.ui.comboBox_dsn.addItems(mssql_dsns)
                     self.enable_mssql()
                 else:
-                    msg = "Please create an ODBC DSN first."
+                    msg = "Please create a SQL Server ODBC Data Source first."
                     self.statusbar.showMessage(msg)
             else:
                 self.enable_common()
