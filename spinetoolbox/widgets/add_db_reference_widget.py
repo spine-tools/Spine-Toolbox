@@ -108,6 +108,7 @@ class AddDbReferenceWidget(QWidget):
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
         self.ui.comboBox_dsn.setEnabled(False)
+        self.ui.comboBox_dsn.setCurrentIndex(0)
         self.ui.lineEdit_SQLite_file.setEnabled(True)
         self.ui.pushButton_browse.setEnabled(True)
         self.ui.lineEdit_host.setEnabled(False)
@@ -120,6 +121,7 @@ class AddDbReferenceWidget(QWidget):
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
         self.ui.comboBox_dsn.setEnabled(False)
+        self.ui.comboBox_dsn.setCurrentIndex(0)
         self.ui.lineEdit_SQLite_file.setEnabled(False)
         self.ui.pushButton_browse.setEnabled(False)
         self.ui.lineEdit_host.setEnabled(True)
