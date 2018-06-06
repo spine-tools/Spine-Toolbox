@@ -279,7 +279,7 @@ class Tool(MetaObject):
         for input_item in self._parent.connection_model.input_items(self.name):
             # self._parent.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
             # Find item from project model
-            found_item = self._parent.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
                 self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 return path
@@ -353,7 +353,7 @@ class Tool(MetaObject):
         """
         folder_paths = list()
         for output_item in self._parent.connection_model.output_items(self.name):
-            found_item = self._parent.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item = self._parent.project_item_model.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
                 self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(output_item))
                 continue

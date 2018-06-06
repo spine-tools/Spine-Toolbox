@@ -229,7 +229,7 @@ class ItemImage(QGraphicsItem):
         """
         if event.key() == Qt.Key_Delete and self._master.isSelected():
             name = self.name()
-            ind = self._main.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
+            ind = self._main.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
             self._main.remove_item(ind, delete_item=True)
 
     def show_item_info(self):
