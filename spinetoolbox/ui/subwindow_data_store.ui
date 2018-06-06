@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -130,33 +130,35 @@ color: rgb(255, 255, 255);</string>
       </widget>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView_references">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+      <widget class="QLabel" name="label">
+       <property name="text">
+        <string>References</string>
        </property>
-       <property name="font">
-        <font>
-         <pointsize>8</pointsize>
-        </font>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
        </property>
-       <property name="selectionMode">
-        <enum>QAbstractItemView::ExtendedSelection</enum>
+      </widget>
+     </item>
+     <item>
+      <widget class="QListView" name="listView_references">
+       <property name="iconSize">
+        <size>
+         <width>56</width>
+         <height>56</height>
+        </size>
        </property>
-       <property name="verticalScrollMode">
-        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       <property name="movement">
+        <enum>QListView::Static</enum>
        </property>
-       <property name="indentation">
-        <number>5</number>
+       <property name="viewMode">
+        <enum>QListView::IconMode</enum>
        </property>
-       <property name="uniformRowHeights">
+       <property name="uniformItemSizes">
         <bool>true</bool>
        </property>
-       <attribute name="headerStretchLastSection">
+       <property name="wordWrap">
         <bool>true</bool>
-       </attribute>
+       </property>
       </widget>
      </item>
      <item>
@@ -284,33 +286,35 @@ color: rgb(255, 255, 255);</string>
       </layout>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView_data">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+      <widget class="QLabel" name="label_2">
+       <property name="text">
+        <string>Data</string>
        </property>
-       <property name="font">
-        <font>
-         <pointsize>8</pointsize>
-        </font>
+       <property name="alignment">
+        <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
        </property>
-       <property name="selectionMode">
-        <enum>QAbstractItemView::ExtendedSelection</enum>
+      </widget>
+     </item>
+     <item>
+      <widget class="QListView" name="listView_data">
+       <property name="iconSize">
+        <size>
+         <width>56</width>
+         <height>56</height>
+        </size>
        </property>
-       <property name="verticalScrollMode">
-        <enum>QAbstractItemView::ScrollPerPixel</enum>
+       <property name="movement">
+        <enum>QListView::Static</enum>
        </property>
-       <property name="indentation">
-        <number>5</number>
+       <property name="viewMode">
+        <enum>QListView::IconMode</enum>
        </property>
-       <property name="uniformRowHeights">
+       <property name="uniformItemSizes">
         <bool>true</bool>
        </property>
-       <attribute name="headerStretchLastSection">
+       <property name="wordWrap">
         <bool>true</bool>
-       </attribute>
+       </property>
       </widget>
      </item>
      <item>
@@ -361,11 +365,9 @@ color: rgb(255, 255, 255);</string>
   <zorder></zorder>
  </widget>
  <tabstops>
-  <tabstop>treeView_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
-  <tabstop>treeView_data</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

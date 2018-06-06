@@ -83,8 +83,13 @@ REQUIRED_KEYS = ['name', 'tooltype', 'includes']
 OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
-# Required fields for db references
-DB_REF_REQUIRED_KEYS = ['dialect', 'host', 'database']
+SQL_DIALECT_API = {
+    'mysql': 'mysqlclient',
+    'sqlite': 'sqlite3',
+    'mssql': 'pyodbc',
+    'postgresql': 'psycopg2',
+    'oracle': 'cx_oracle'
+}
 
 # Default settings
 SETTINGS = {"project_directory": "",
@@ -136,14 +141,5 @@ SPLITTER_SS = "QSplitter::handle:horizontal{background-color: lightgray; border:
 SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
-DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
-
-SQL_DIALECT_API = {
-    'mysql': 'mysqlclient',
-    'sqlite': 'sqlite3',
-    'mssql': 'pyodbc',
-    'postgresql': 'psycopg2',
-    'oracle': 'cx_oracle'
-}

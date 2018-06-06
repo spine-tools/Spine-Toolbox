@@ -115,7 +115,7 @@ class ProjectItemModel(QStandardItemModel):
                     child = top_level_item.child(i, 0)
                     item_names.append(child.data(Qt.DisplayRole))
         return item_names
-        
+
 
 class ToolTemplateModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""

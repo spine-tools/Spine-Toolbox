@@ -56,8 +56,6 @@ class DataStore(MetaObject):
         self._project = project
         self._widget = DataStoreWidget(name, self.item_type)
         self._widget.set_name_label(name)
-        self._widget.make_header_for_references()
-        self._widget.make_header_for_data()
         self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
@@ -84,8 +82,8 @@ class DataStore(MetaObject):
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
-        self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
+        self._widget.ui.listView_data.doubleClicked.connect(self.open_data_file)
+        self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
@@ -125,7 +123,7 @@ class DataStore(MetaObject):
         """Remove selected references from reference list.
         Removes all references if nothing is selected.
         """
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
             self._parent.msg.emit("All references removed")
@@ -145,7 +143,7 @@ class DataStore(MetaObject):
         if not self.references:
             self._parent.msg_warning.emit("No data to import")
             return
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected, import all
             references_to_import = self.references
         else:

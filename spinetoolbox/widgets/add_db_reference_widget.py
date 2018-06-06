@@ -25,15 +25,16 @@ QWidget that is shown to user when adding Connection strings to a Data Store.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QStatusBar, QMessageBox
+import getpass
+import logging
+from PySide2.QtWidgets import QWidget, QStatusBar, QMessageBox, QFileDialog
 from PySide2.QtCore import Slot, Qt
 from ui.add_db_reference import Ui_Form
 from config import STATUSBAR_SS
-from helpers import busy_effect
-import logging
+from helpers import busy_effect, blocking_updates
 from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError
-from config import DB_REF_REQUIRED_KEYS, SQL_DIALECT_API
+from sqlalchemy.exc import SQLAlchemyError, DatabaseError
+from config import SQL_DIALECT_API, APPLICATION_PATH
 # import conda.cli
 import qsubprocess
 
@@ -48,7 +49,7 @@ class AddDbReferenceWidget(QWidget):
             parent (ToolBoxUI): QMainWindow instance
             data_store (DataStore): A data store instance
         """
-        super().__init__()
+        super().__init__(f=Qt.Window)
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -67,6 +68,7 @@ class AddDbReferenceWidget(QWidget):
         # init ui
         # self.refresh_dialects()
         self.ui.comboBox_dialect.addItem("Select dialect...")
+        self.ui.comboBox_dsn.addItem("Select ODBC DSN...")
         self.ui.comboBox_dialect.addItems(self.dialects)
         self.ui.comboBox_dialect.setFocus()
         self.connect_signals()
@@ -75,7 +77,57 @@ class AddDbReferenceWidget(QWidget):
         """Connect signals to slots."""
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        self.ui.pushButton_browse.clicked.connect(self.browse_clicked)
         self.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
+
+
+    @Slot(name='browse_clicked')
+    def browse_clicked(self):
+        """Open file browser where user can select the path to an SQLite
+        file that they want to use."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileName)
+        answer = func(self, 'Select SQlite file', APPLICATION_PATH, 'SQLite (*.*)')
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        self.ui.lineEdit_SQLite_file.setText(file_path)
+
+    def enable_mssql(self):
+        """Adjust controls to mssql connection specification."""
+        self.ui.comboBox_dsn.setEnabled(True)
+        self.ui.lineEdit_SQLite_file.setEnabled(False)
+        self.ui.pushButton_browse.setEnabled(False)
+        self.ui.lineEdit_host.setEnabled(False)
+        self.ui.lineEdit_port.setEnabled(False)
+        self.ui.lineEdit_database.setEnabled(False)
+        self.ui.lineEdit_username.setEnabled(True)
+        self.ui.lineEdit_password.setEnabled(True)
+        self.ui.comboBox_dsn.setFocus()
+
+    def enable_sqlite(self):
+        """Adjust controls to sqlite connection specification."""
+        self.ui.comboBox_dsn.setEnabled(False)
+        self.ui.lineEdit_SQLite_file.setEnabled(True)
+        self.ui.pushButton_browse.setEnabled(True)
+        self.ui.lineEdit_host.setEnabled(False)
+        self.ui.lineEdit_port.setEnabled(False)
+        self.ui.lineEdit_database.setEnabled(False)
+        self.ui.lineEdit_username.setEnabled(False)
+        self.ui.lineEdit_password.setEnabled(False)
+        self.ui.lineEdit_SQLite_file.setFocus()
+
+    def enable_common(self):
+        """Adjust controls to 'common' connection specification."""
+        self.ui.comboBox_dsn.setEnabled(False)
+        self.ui.lineEdit_SQLite_file.setEnabled(False)
+        self.ui.pushButton_browse.setEnabled(False)
+        self.ui.lineEdit_host.setEnabled(True)
+        self.ui.lineEdit_port.setEnabled(True)
+        self.ui.lineEdit_database.setEnabled(True)
+        self.ui.lineEdit_username.setEnabled(True)
+        self.ui.lineEdit_password.setEnabled(True)
+        self.ui.lineEdit_host.setFocus()
 
     @Slot("str", name="check_dialect")
     def check_dialect(self, dialect):
@@ -89,7 +141,18 @@ class AddDbReferenceWidget(QWidget):
         try:
             if dialect == 'sqlite':
                 create_engine('sqlite://')
+                self.enable_sqlite()
+            elif dialect == 'mssql':
+                import pyodbc
+                dsns = list(pyodbc.dataSources().keys())
+                if dsns:
+                    self.ui.comboBox_dsn.addItems(dsns)
+                    self.enable_mssql()
+                else:
+                    msg = "Please create an ODBC DSN first."
+                    self.statusbar.showMessage(msg)
             else:
+                self.enable_common()
                 create_engine('{}://username:password@host/database'.format(dialect))
             return True
         except ModuleNotFoundError:
@@ -172,39 +235,72 @@ class AddDbReferenceWidget(QWidget):
     def ok_clicked(self):
         """Check that everything is valid, create string and add it to data store."""
         answer = dict()
-        if self.ui.comboBox_dialect.currentIndex() > 0:
-            answer['dialect'] = self.ui.comboBox_dialect.currentText()
-        else:
-            answer['dialect'] = None
-        answer['host'] = self.ui.lineEdit_host.text()
-        answer['port'] = self.ui.lineEdit_port.text()
-        answer['database'] = self.ui.lineEdit_database.text()
-        answer['username'] = self.ui.lineEdit_username.text()
-        answer['password'] = self.ui.lineEdit_password.text()
-        for k in DB_REF_REQUIRED_KEYS:
-            if not answer[k]:
-                self.statusbar.showMessage("{} missing".format(k), 3000)
+        # Check that dialect is selected
+        if self.ui.comboBox_dialect.currentIndex() == 0:
+            self.statusbar.showMessage("Please select dialect first", 3000)
+            return
+        dialect = self.ui.comboBox_dialect.currentText()
+        if dialect == 'mssql':
+            if self.ui.comboBox_dsn.currentIndex() == 0:
+                self.statusbar.showMessage("Please select DSN first", 3000)
                 return
-        url = answer['dialect'] + "://"
-        if answer['username']:
-            url += answer['username']
-        if answer['password']:
-            url += ":" + answer['password']
-        if answer['host']:
-            url += "@" + answer['host']
-        if answer['port']:
-            url += ":" + answer['port']
-        if answer['database']:
-            url += "/" + answer['database']
+            dsn = self.ui.comboBox_dsn.currentText()
+            username = self.ui.lineEdit_username.text()
+            password = self.ui.lineEdit_password.text()
+            url = 'mssql+pyodbc://'
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += '@' + dsn
+            # Set database equal to dsn for creating the reference below
+            database = dsn
+        elif dialect == 'sqlite':
+            sqlite_file = self.ui.lineEdit_SQLite_file.text()
+            url = 'sqlite:///{0}'.format(sqlite_file)
+            # Set database equal to file's basename for creating the reference below
+            database = os.path.basename(sqlite_file)
+            username = getpass.getuser()
+        else:
+            host = self.ui.lineEdit_host.text()
+            if not host:
+                self.statusbar.showMessage("Host missing")
+                return
+            database = self.ui.lineEdit_database.text()
+            if not database:
+                self.statusbar.showMessage("Database missing")
+                return
+            port = self.ui.lineEdit_port.text()
+            username = self.ui.lineEdit_username.text()
+            password = self.ui.lineEdit_password.text()
+            url = dialect + "://"
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += "@" + host
+            if port:
+                url += ":" + port
+            url += "/" + database
         engine = create_engine(url)
         try:
             engine.connect()
         except SQLAlchemyError as e:
             self.statusbar.showMessage("Connection failed: {}".format(e.orig.args))
             return
+        if dialect == 'sqlite':
+            # check if SQLite database
+            try:
+                engine.execute('pragma quick_check;')
+            except DatabaseError as e:
+                self.statusbar.showMessage("Could not open {} as SQLite database: {}".format(database, e.orig.args))
+                return
+        # Get system's username if none given
+        if not username:
+            username = getpass.getuser()
         reference = {
-            'database': answer['database'],
-            'username': answer['username'],
+            'database': database,
+            'username': username,
             'url': url
         }
         self._data_store.add_reference(reference)
