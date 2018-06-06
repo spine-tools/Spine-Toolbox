@@ -30,7 +30,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
+from PySide2.QtGui import QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -48,7 +48,7 @@ from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
     SPLITTER_SS, SEPARATOR_SS
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
-from models import ToolTemplateModel, ConnectionModel
+from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
 
 
@@ -238,7 +238,13 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_template_paths (list): List of tool definition file paths used in this project
         """
-        self.project_item_model = QStandardItemModel()
+        self.init_project_item_model()
+        self.init_tool_template_model(tool_template_paths)
+        self.init_connection_model()
+
+    def init_project_item_model(self):
+        """Initializes Project item model."""
+        self.project_item_model = ProjectItemModel()
         self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
         self.project_item_model.appendRow(QStandardItem("Data Stores"))
         self.project_item_model.appendRow(QStandardItem("Data Connections"))
@@ -246,8 +252,6 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.graphicsView.setProjectItemModel(self.project_item_model)
-        self.init_tool_template_model(tool_template_paths)
-        self.init_connection_model()
 
     def init_tool_template_model(self, tool_template_paths):
         """Initializes Tool template model.
@@ -330,19 +334,20 @@ class ToolboxUI(QMainWindow):
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
-        item_names = self.return_item_names()
-        n = len(item_names)
-        if n == 0:
-            return
+        if self.project_item_model:
+            item_names = self.project_item_model.return_item_names()
+            n = len(item_names)
+            if n == 0:
+                return
+            for name in item_names:
+                ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+                self.remove_item(ind)            
+            self.msg.emit("All {0} items removed from project".format(n))
         # Clear widget info from QDockWidget
         self.clear_info_area()
-        for name in item_names:
-            ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
-            self.remove_item(ind)
         self._project = None
         self.tool_template_model = None
         self.ui.graphicsView.reset_scene()
-        self.msg.emit("All {0} items removed from project".format(n))
 
     @Slot(name="new_project")
     def new_project(self):
@@ -513,11 +518,11 @@ class ToolboxUI(QMainWindow):
     def test1(self):
         # sub_windows = self.ui.graphicsView.subWindowList()
         # self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
-        logging.debug("Total number of items: {0}".format(self.n_items("all")))
-        logging.debug("Number of Data Stores: {0}".format(self.n_items("Data Stores")))
-        logging.debug("Number of Data Connections: {0}".format(self.n_items("Data Connections")))
-        logging.debug("Number of Tools: {0}".format(self.n_items("Tools")))
-        logging.debug("Number of Views: {0}".format(self.n_items("Views")))
+        logging.debug("Total number of items: {0}".format(self.project_item_model.n_items("all")))
+        logging.debug("Number of Data Stores: {0}".format(self.project_item_model.n_items("Data Stores")))
+        logging.debug("Number of Data Connections: {0}".format(self.project_item_model.n_items("Data Connections")))
+        logging.debug("Number of Tools: {0}".format(self.project_item_model.n_items("Tools")))
+        logging.debug("Number of Views: {0}".format(self.project_item_model.n_items("Views")))
         top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
         for top_level_item in top_level_items:
             # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
@@ -557,14 +562,14 @@ class ToolboxUI(QMainWindow):
         #         size_policy = subwindow.sizePolicy()
         #         logging.debug("sizeHint:{0} minSize:{1} minSizeHint:{2} sizePolicy:{3}"
         #                       .format(size_hint, min_size, min_size_hint, size_policy))
-        #         item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
+        #         item = self.project_item_model.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         #         tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
         #         if tool.tool_template() is not None:
         #             self.msg.emit("Tool template of this Tool:{0}".format(tool.tool_template().name))
 
     def show_info(self, name):
         """Show information of selected item. Embed old item widgets into QDockWidget."""
-        item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item from project model
+        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item from project model
         if not item:
             logging.error("Item {0} not found".format(name))
             return
@@ -669,7 +674,7 @@ class ToolboxUI(QMainWindow):
         if not template:
             self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(tool_template.name))
             return
-        tools = self.find_item('Tools')
+        tools = self.project_item_model.find_item('Tools')
         n_tool_items = tools.rowCount()
         for i in range(n_tool_items):
             tool = tools.child(i, 0).data(Qt.UserRole)
@@ -716,7 +721,7 @@ class ToolboxUI(QMainWindow):
         tool_template_name (str): if None, reattach all tool templates in project.
             If a name is given, only reattach that one
         """
-        tools = self.find_item("Tools")
+        tools = self.project_item_model.find_item("Tools")
         n_tool_items = tools.rowCount()
         for i in range(n_tool_items):
             tool_item = tools.child(i, 0)
@@ -807,8 +812,8 @@ class ToolboxUI(QMainWindow):
             json.dump(dicts, fp, indent=4)
         # Remove tool template also from Tools that use it
         # NOTE: We don't seem to need this below;
-        # NOTE: calling self.tool_template_model.removeRow(index.row()) does the work for us
-        # tools_item = self.find_item("Tools")
+        # NOTE: calling self.tool_template_model.removeRow(index.row()) did the work for us
+        # tools_item = self.project_item_model.find_item("Tools")
         # if tools_item.hasChildren():
         #     n_tool_items = tools_item.rowCount()
         #     for i in range(n_tool_items):
@@ -832,21 +837,21 @@ class ToolboxUI(QMainWindow):
         # First, find QStandardItem category item where new child item is added
         found_items = self.project_item_model.findItems(category, Qt.MatchExactly, column=0)
         if not found_items:
-            logging.error("'{0}' item not found in project item model".format(category))
+            logging.error("'{0}' category not found in project item model".format(category))
             return False
         if len(found_items) > 1:
-            logging.error("More than one '{0}' items found in project item model".format(category))
+            logging.error("More than one '{0}' category found in project item model".format(category))
             return False
         item_index = found_items[0].index()
         parent_index = item_index.parent()
         if not parent_index.isValid():
-            # Parent index is not valid if item has no parent
+            # item_index is a top-level item, we are good
             new_item = QStandardItem(text)
             new_item.setData(data, role=Qt.UserRole)
             self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
             # Get row and column number (i.e. index) for the connection model. This is to
             # keep the project item model and connection model synchronized.
-            index = self.new_item_index(data.item_category)  # Get index according to item category
+            index = self.project_item_model.new_item_index(data.item_category)  # Get index according to item category
             self.connection_model.append_item(new_item, index)
             self.ui.treeView_project.expand(item_index)
         return True
@@ -862,17 +867,17 @@ class ToolboxUI(QMainWindow):
         answer = QMessageBox.question(self, 'Removing all items', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             return
-        item_names = self.return_item_names()
+        item_names = self.project_item_model.return_item_names()
         n = len(item_names)
         if n == 0:
             return
         for name in item_names:
-            ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
 
     def remove_item(self, ind, delete_item=False):
-        """Remove subwindow from project when it's index in the project model is known.
+        """Remove item from project when it's index in the project model is known.
         To remove all items in project, loop all indices through this method.
         This method is used in both opening and creating a new project as
         well as when item(s) are deleted from project.
@@ -885,7 +890,7 @@ class ToolboxUI(QMainWindow):
             delete_item: If set to True, deletes the directories and data associated with the item
         """
         name = ind.data(Qt.UserRole).get_widget().owner()
-        item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
+        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
         data_dir = None
         if item_data.item_type == "Data Connection":
@@ -921,86 +926,6 @@ class ToolboxUI(QMainWindow):
         self.clear_info_area()
         return
 
-    def find_item(self, name, match_flags=Qt.MatchExactly):
-        """Find item by name in project model (column 0)
-
-        Args:
-            name (str): Item name to find
-            match_flags (QFlags): Or combination of Qt.MatchFlag types
-
-        Returns:
-            Matching QStandardItem or None if item not found or more than one item with the same name found.
-        """
-        found_items = self.project_item_model.findItems(name, match_flags, column=0)
-        if len(found_items) == 0:
-            # logging.debug("Item '{0}' not found in project model".format(name))
-            return None
-        if len(found_items) > 1:
-            logging.error("More than one item with name '{0}' found".format(name))
-            return None
-        return found_items[0]
-
-    def n_items(self, typ):
-        """Returns the number of items in the project according to type.
-
-        Args:
-            typ (str): Type of item to count. "all" returns the number of items in project.
-        """
-        n = 0
-        if not self.project_item_model:
-            return n
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if typ == "all":
-                if top_level_item.hasChildren():
-                    n = n + top_level_item.rowCount()
-            elif typ == "Data Stores":
-                if top_level_item.data(Qt.DisplayRole) == "Data Stores":
-                    n = top_level_item.rowCount()
-            elif typ == "Data Connections":
-                if top_level_item.data(Qt.DisplayRole) == "Data Connections":
-                    n = top_level_item.rowCount()
-            elif typ == "Tools":
-                if top_level_item.data(Qt.DisplayRole) == "Tools":
-                    n = top_level_item.rowCount()
-            elif typ == "Views":
-                if top_level_item.data(Qt.DisplayRole) == "Views":
-                    n = top_level_item.rowCount()
-            else:
-                logging.error("Unknown type: {0}".format(typ))
-        return n
-
-    def new_item_index(self, category):
-        """Get index where a new item is appended according to category."""
-        if category == "Data Stores":
-            # Return number of data stores
-            return self.n_items("Data Stores") - 1
-        elif category == "Data Connections":
-            # Return number of data stores + data connections - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") - 1
-        elif category == "Tools":
-            # Return number of data stores + data connections + tools - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") + self.n_items("Tools") - 1
-        elif category == "Views":
-            # Return total number of items - 1
-            return self.n_items("all") - 1
-        else:
-            logging.error("Unknown category:{0}".format(category))
-            return 0
-
-    def return_item_names(self):
-        """Returns the names of all items in a list."""
-        item_names = list()
-        if not self.project_item_model:
-            return item_names
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    child = top_level_item.child(i, 0)
-                    item_names.append(child.data(Qt.DisplayRole))
-        return item_names
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):
@@ -1285,7 +1210,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             name (QGraphicsItem): The name of the concerned item
         """
-        ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
+        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
         self.item_image_context_menu = ItemImageContextMenu(self, pos, ind)
         option = self.item_image_context_menu.get_action()
         if option == "Remove Item":

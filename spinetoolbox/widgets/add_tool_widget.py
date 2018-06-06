@@ -116,7 +116,7 @@ class AddToolWidget(QWidget):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._parent.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
             return

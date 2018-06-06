@@ -32,6 +32,91 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableMo
 from PySide2.QtGui import QStandardItemModel, QBrush, QFont
 
 
+class ProjectItemModel(QStandardItemModel):
+    """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
+    def __init__(self, parent=None):
+        super().__init__()
+
+    def n_items(self, typ):
+        """Returns the number of items in the project according to type.
+
+        Args:
+            typ (str): Type of item to count. "all" returns the number of items in project.
+        """
+        n = 0
+        top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
+        for top_level_item in top_level_items:
+            if typ == "all":
+                if top_level_item.hasChildren():
+                    n = n + top_level_item.rowCount()
+            elif typ == "Data Stores":
+                if top_level_item.data(Qt.DisplayRole) == "Data Stores":
+                    n = top_level_item.rowCount()
+            elif typ == "Data Connections":
+                if top_level_item.data(Qt.DisplayRole) == "Data Connections":
+                    n = top_level_item.rowCount()
+            elif typ == "Tools":
+                if top_level_item.data(Qt.DisplayRole) == "Tools":
+                    n = top_level_item.rowCount()
+            elif typ == "Views":
+                if top_level_item.data(Qt.DisplayRole) == "Views":
+                    n = top_level_item.rowCount()
+            else:
+                logging.error("Unknown type: {0}".format(typ))
+        return n
+
+
+    def new_item_index(self, category):
+        """Get index where a new item is appended according to category."""
+        if category == "Data Stores":
+            # Return number of data stores
+            return self.n_items("Data Stores") - 1
+        elif category == "Data Connections":
+            # Return number of data stores + data connections - 1
+            return self.n_items("Data Stores") + self.n_items("Data Connections") - 1
+        elif category == "Tools":
+            # Return number of data stores + data connections + tools - 1
+            return self.n_items("Data Stores") + self.n_items("Data Connections") + self.n_items("Tools") - 1
+        elif category == "Views":
+            # Return total number of items - 1
+            return self.n_items("all") - 1
+        else:
+            logging.error("Unknown category:{0}".format(category))
+            return 0
+
+
+    def find_item(self, name, match_flags=Qt.MatchExactly):
+        """Find item by name in project model (column 0)
+
+        Args:
+            name (str): Item name to find
+            match_flags (QFlags): Or combination of Qt.MatchFlag types
+
+        Returns:
+            Matching QStandardItem or None if item not found or more than one item with the same name found.
+        """
+        found_items = self.findItems(name, match_flags, column=0)
+        if len(found_items) == 0:
+            # logging.debug("Item '{0}' not found in project model".format(name))
+            return None
+        if len(found_items) > 1:
+            logging.error("More than one item with name '{0}' found".format(name))
+            return None
+        return found_items[0]
+
+    def return_item_names(self):
+        """Returns the names of all items in a list."""
+        item_names = list()
+        top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
+        for top_level_item in top_level_items:
+            if top_level_item.hasChildren():
+                n_children = top_level_item.rowCount()
+                for i in range(n_children):
+                    child = top_level_item.child(i, 0)
+                    item_names.append(child.data(Qt.DisplayRole))
+        return item_names
+        
+
 class ToolTemplateModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
     def __init__(self, parent=None):

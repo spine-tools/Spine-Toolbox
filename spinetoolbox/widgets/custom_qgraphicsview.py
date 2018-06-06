@@ -120,8 +120,9 @@ class CustomQGraphicsView(QGraphicsView):
                 data = self.connection_model().data(index, Qt.DisplayRole)
                 from_name = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
                 to_name = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                from_item = self._parent.find_item(from_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
-                to_item = self._parent.find_item(to_name, Qt.MatchExactly | Qt.MatchRecursive).data(Qt.UserRole)
+                flags = Qt.MatchExactly | Qt.MatchRecursive
+                from_item = self.project_item_model().find_item(from_name, flags).data(Qt.UserRole)
+                to_item = self.project_item_model().find_item(to_name, flags).data(Qt.UserRole)
                 if data:  # connection made, add link widget
                     link = Link(self._qmainwindow, from_item.get_icon(), to_item.get_icon())
                     self.scene().addItem(link)

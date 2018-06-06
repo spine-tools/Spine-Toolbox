@@ -172,7 +172,6 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        logging.debug(self.links)
         for link in self.links:
             pass
             # NOTE: apparently we don't need this... links get updated anyways
