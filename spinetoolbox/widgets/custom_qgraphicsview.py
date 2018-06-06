@@ -76,6 +76,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.setScene(self._scene)
         self.scene().changed.connect(self.scene_changed)
         self.setSceneRect(QRectF(0, 0, 0, 0))
+        self.scene().addItem(self.link_drawer)
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""

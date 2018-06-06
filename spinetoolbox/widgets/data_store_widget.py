@@ -195,7 +195,8 @@ class DataStoreForm(QWidget):
             self.ParameterValue = self.Base.classes.parameter_value
             self.Commit = self.Base.classes.commit
         except AttributeError as e:
-            self._parent.msg_error.emit("Unable to parse database in the Spine format. Table <b>{}</b> is missing.".format(e))
+            self._parent.msg_error.emit("Unable to parse database in the Spine format. "
+                                        " Table <b>{}</b> is missing.".format(e))
             return False
         self.session = Session(self.engine)
         self.new_commit()
