@@ -152,11 +152,13 @@ class AddDbReferenceWidget(QWidget):
                     if 'msodbcsql' in v.lower():
                         mssql_dsns.append(k)
                 if mssql_dsns:
+                    self.ui.comboBox_dsn.clear()                  
+                    self.ui.comboBox_dsn.addItem("Select dialect...")
                     self.ui.comboBox_dsn.addItems(mssql_dsns)
                     self.enable_mssql()
                 else:
                     msg = "Please create a SQL Server ODBC Data Source first."
-                    self.statusbar.showMessage(msg)
+                    self.statusbar.showMessage(msg, 5000)
             else:
                 self.enable_common()
                 create_engine('{}://username:password@host/database'.format(dialect))
