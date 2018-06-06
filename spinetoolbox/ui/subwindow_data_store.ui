@@ -579,8 +579,8 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="iconSize">
           <size>
-           <width>48</width>
-           <height>48</height>
+           <width>40</width>
+           <height>40</height>
           </size>
          </property>
          <property name="movement">
@@ -1175,12 +1175,12 @@ color: rgb(255, 255, 255);</string>
           </font>
          </property>
          <property name="autoFillBackground">
-          <bool>true</bool>
+          <bool>false</bool>
          </property>
          <property name="iconSize">
           <size>
-           <width>48</width>
-           <height>48</height>
+           <width>40</width>
+           <height>40</height>
           </size>
          </property>
          <property name="movement">

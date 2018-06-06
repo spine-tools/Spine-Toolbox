@@ -48,6 +48,7 @@ class DataStoreWidget(QWidget):
         self.reference_model = QStandardItemModel()  # References to databases
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
         self.icon = QIcon(QPixmap(":/icons/ds_icon.png"))
+        self.ref_icon = QIcon(QPixmap(":/icons/ds_ref_icon.png"))
         self.ui.listView_references.setModel(self.reference_model)
         self.ui.listView_data.setModel(self.data_model)
         self.ui.label_name.setFocus()
@@ -86,7 +87,7 @@ class DataStoreWidget(QWidget):
                 qitem = QStandardItem(item['database'])
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(item['url'], Qt.ToolTipRole)
-                qitem.setData(self.icon, Qt.DecorationRole)
+                qitem.setData(self.ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):

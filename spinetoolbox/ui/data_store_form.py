@@ -288,6 +288,6 @@ class Ui_Form(object):
         self.pushButton_revert.setText(QtWidgets.QApplication.translate("Form", "Revert", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
+from widgets.custom_qtableview import ParameterValueTableView, ParameterTableView
 from widgets.custom_qtreeview import CustomQTreeView
-from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
 import resources_icons_rc

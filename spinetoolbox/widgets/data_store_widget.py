@@ -80,6 +80,11 @@ class DataStoreForm(QWidget):
         self.object_class = None
         self.Commit = None
         self.session = None
+        # Attempt to create sql session
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        if not self.create_session():
+            self.close()
+            return
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
@@ -104,8 +109,6 @@ class DataStoreForm(QWidget):
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
-        # create sql session
-        self.create_session()
         # init models and views
         self.init_object_tree_model()
         self.init_parameter_value_models()
@@ -116,7 +119,6 @@ class DataStoreForm(QWidget):
         self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
         logging.debug("Elapsed = {}".format(toc - tic))
 
@@ -184,15 +186,20 @@ class DataStoreForm(QWidget):
         """Create base, engine, reflect tables and create session."""
         self.Base = automap_base()
         self.Base.prepare(self.engine, reflect=True)
-        self.ObjectClass = self.Base.classes.object_class
-        self.Object = self.Base.classes.object
-        self.RelationshipClass = self.Base.classes.relationship_class
-        self.Relationship = self.Base.classes.relationship
-        self.Parameter = self.Base.classes.parameter
-        self.ParameterValue = self.Base.classes.parameter_value
-        self.Commit = self.Base.classes.commit
+        try:
+            self.ObjectClass = self.Base.classes.object_class
+            self.Object = self.Base.classes.object
+            self.RelationshipClass = self.Base.classes.relationship_class
+            self.Relationship = self.Base.classes.relationship
+            self.Parameter = self.Base.classes.parameter
+            self.ParameterValue = self.Base.classes.parameter_value
+            self.Commit = self.Base.classes.commit
+        except AttributeError as e:
+            self._parent.msg_error.emit("Unable to parse database in the Spine format. Table <b>{}</b> is missing.".format(e))
+            return False
         self.session = Session(self.engine)
         self.new_commit()
+        return True
 
     def new_commit(self):
         """Add row to commit table"""

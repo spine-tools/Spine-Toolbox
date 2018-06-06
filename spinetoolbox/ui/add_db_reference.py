@@ -113,6 +113,7 @@ class Ui_Form(object):
         self.lineEdit_password.setSizePolicy(sizePolicy)
         self.lineEdit_password.setMinimumSize(QtCore.QSize(220, 20))
         self.lineEdit_password.setMaximumSize(QtCore.QSize(5000, 5000))
+        self.lineEdit_password.setEchoMode(QtWidgets.QLineEdit.Password)
         self.lineEdit_password.setClearButtonEnabled(True)
         self.lineEdit_password.setObjectName("lineEdit_password")
         self.verticalLayout.addWidget(self.lineEdit_password)
