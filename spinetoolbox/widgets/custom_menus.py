@@ -114,10 +114,11 @@ class ToolTemplateContextMenu(CustomContextMenu):
         if index.row() == 0:
             # Don't show menu when clicking on No tool
             return
-        self.add_action("Edit")
-        self.add_action("Open descriptor file")
+        self.add_action("Edit Tool Template")
+        self.add_action("Remove Tool Template")
+        self.addSeparator()
         self.add_action("Open main program file")
-        self.add_action("Remove")
+        self.add_action("Open descriptor file")
         self.exec_(position)
 
 
@@ -132,34 +133,51 @@ class ObjectTreeContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         if not index.parent().isValid(): # root item
-            self.add_action("New object class")
+            self.add_action("Add object class")
         else:
             item = index.model().itemFromIndex(index)
             item_type = item.data(Qt.UserRole)
             if item_type == 'object_class':
-                self.add_action("New object class")
-                self.add_action("New relationship class")
-                self.add_action("New object")
+                self.add_action("Add object class")
+                self.add_action("Add relationship class")
+                self.add_action("Add object")
                 self.addSeparator()
-                self.add_action("New parameter")
+                self.add_action("Add parameter")
+                self.addSeparator()
+                self.add_action("Rename object class")
+                self.addSeparator()
+                self.add_action("Remove object class")
             elif item_type == 'object':
-                self.add_action("New parameter value")
+                self.add_action("Add parameter value")
+                self.addSeparator()
+                self.add_action("Rename object")
+                self.addSeparator()
+                self.add_action("Remove object")
             elif item_type == 'relationship_class':
-                self.add_action("New relationship class")
-                self.add_action("New relationship")
+                self.add_action("Add relationship class")
+                self.add_action("Add relationship")
                 self.addSeparator()
-                self.add_action("New parameter")
+                self.add_action("Add parameter")
+                self.addSeparator()
+                self.add_action("Rename relationship class")
+                self.addSeparator()
+                self.add_action("Remove relationship class")
             elif item_type == 'meta_relationship_class':
-                self.add_action("New relationship")
+                self.add_action("Add relationship")
                 self.addSeparator()
-                self.add_action("New parameter")
+                self.add_action("Add parameter")
+                self.addSeparator()
+                self.add_action("Rename relationship class")
+                self.addSeparator()
+                self.add_action("Remove relationship class")
             elif item_type == 'related_object':
                 self.add_action("Expand at top level")
                 self.addSeparator()
-                self.add_action("New parameter value")
-            self.addSeparator()
-            self.add_action("Rename")
-            self.add_action("Remove")
+                self.add_action("Add parameter value")
+                self.addSeparator()
+                self.add_action("Rename relationship")
+                self.addSeparator()
+                self.add_action("Remove relationship")
         self.exec_(position)
 
 
@@ -174,7 +192,7 @@ class ParameterValueContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         #self.add_action("New parameter value")
-        self.add_action("Remove")
+        self.add_action("Remove parameter value")
         self.add_action("Edit field")
         self.exec_(position)
 
@@ -189,8 +207,7 @@ class ParameterContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             return
-        self.add_action("New parameter")
-        self.add_action("Remove")
+        self.add_action("Remove parameter")
         self.add_action("Edit field")
         self.exec_(position)
 
@@ -201,10 +218,10 @@ class AddToolTemplatePopupMenu(QMenu):
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
-        # Open a tool template file
-        action = self.addAction("Open", self._parent, SLOT("open_tool_template()"))
         # Show the Tool Template Form (empty)
-        action = self.addAction("Create", self._parent, SLOT("show_tool_template_form()"))
+        action = self.addAction("New", self._parent, SLOT("show_tool_template_form()"))
+        # Open a tool template file
+        action = self.addAction("Open...", self._parent, SLOT("open_tool_template()"))
 
 
 
@@ -215,6 +232,7 @@ class ToolTemplateOptionsPopupMenu(QMenu):
         super().__init__()
         self._parent = parent
         # Open a tool template file
-        action = self.addAction("Edit", self._parent, SLOT("edit_tool_template()"))
+        action = self.addAction("Edit Tool Template", self._parent, SLOT("edit_tool_template()"))
+        self.addSeparator()
         action = self.addAction("Open descriptor file", self._parent, SLOT("open_tool_template_file()"))
         action = self.addAction("Open main program file", self._parent, SLOT("open_tool_main_program_file()"))

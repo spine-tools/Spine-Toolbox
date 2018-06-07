@@ -138,6 +138,8 @@ class DataStoreForm(QWidget):
             connect(self.show_relationship_parameter_value_context_menu)
         self.ui.tableView_object_parameter.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
+        self.ui.tableView_relationship_parameter.customContextMenuRequested.\
+            connect(self.show_relationship_parameter_context_menu)
 
     @Slot(name="commit_clicked")
     def commit_clicked(self):
@@ -750,36 +752,36 @@ class DataStoreForm(QWidget):
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
         option = self.object_tree_context_menu.get_action()
-        if option == "New object class":
-            self.new_object_class(index)
-        elif option == "New object":
-            self.new_object(index)
-        elif option == "New relationship class":
-            self.new_relationship_class(index)
-        elif option == "New relationship":
-            self.new_relationship(index)
+        if option == "Add object class":
+            self.add_object_class(index)
+        elif option == "Add object":
+            self.add_object(index)
+        elif option == "Add relationship class":
+            self.add_relationship_class(index)
+        elif option == "Add relationship":
+            self.add_relationship(index)
         elif option == "Expand at top level":
             self.expand_at_top_level_(index)
-        elif option == "Rename":
+        elif option.startswith("Rename"):
             self.rename_item(index)
-        elif option == "Remove":
+        elif option.startswith("Remove"):
             self.remove_item(index)
-        elif option == "New parameter":
-            self.new_parameter(index)
-        elif option == "New parameter value":
-            self.new_parameter_value(index)
+        elif option == "Add parameter":
+            self.add_parameter(index)
+        elif option == "Add parameter value":
+            self.add_parameter_value(index)
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
 
-    def new_object_class(self, index):
+    def add_object_class(self, index):
         """Insert new object class.
 
         Args:
             index (QModelIndex): the index of either the root or an object class item
         """
-        dialog = CustomQDialog(self, "New object class",
+        dialog = CustomQDialog(self, "Add object class",
             name="Type name here...",
             description="Type description here...")
         answer = dialog.exec_()
@@ -824,13 +826,13 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.setCurrentIndex(object_class_index)
         self.ui.treeView_object.scrollTo(object_class_index)
 
-    def new_object(self, index):
+    def add_object(self, index):
         """Insert new object.
 
         Args:
             index (QModelIndex): the index of an object class item
         """
-        dialog = CustomQDialog(self, "New object",
+        dialog = CustomQDialog(self, "Add object",
             name="Type name here...",
             description="Type description here...")
         answer = dialog.exec_()
@@ -877,7 +879,7 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.setCurrentIndex(object_index)
         self.ui.treeView_object.scrollTo(object_index)
 
-    def new_relationship_class(self, index):
+    def add_relationship_class(self, index):
         """Insert new relationship class.
 
         Args:
@@ -888,7 +890,7 @@ class DataStoreForm(QWidget):
                 order_by(self.ObjectClass.display_order)
         child_object_class_name_list = ['Select child object class...']
         child_object_class_name_list.extend([item.name for item in child_object_class_query])
-        dialog = CustomQDialog(self, "New relationship class",
+        dialog = CustomQDialog(self, "Add relationship class",
             name="Type name here...",
             child_object_class_name_list=child_object_class_name_list)
         answer = dialog.exec_()
@@ -927,40 +929,48 @@ class DataStoreForm(QWidget):
             self.session.rollback()
             return
         # manually add items to model
-        # append new relationship class item to objects of parent_class
-        relationship_class_dict = relationship_class.__dict__
-        for row in range(parent_class_item.rowCount()):
-            object_item = parent_class_item.child(row)
-            relationship_class_item = QStandardItem(name)
-            relationship_class_item.setData(relationship_class_type, Qt.UserRole)
-            relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
-            object_item.appendRow(relationship_class_item)
-        # ...and to objects of child class if relationship class is between object classes
-        if relationship_class_type != 'relationship_class':
-            return
-        # find child_class_item in the first level
-        root_item = index.model().invisibleRootItem().child(0)
-        founded_object_class_item = None
-        for row in range(root_item.rowCount()):
-            object_class_item = root_item.child(row)
-            object_class = object_class_item.data(Qt.UserRole+1)
-            if object_class['id'] == child_object_class_id:
-                founded_object_class_item = object_class_item
-                break
-        if not founded_object_class_item:
-            return
-        for row in range(founded_object_class_item.rowCount()):
-            object_item = founded_object_class_item.child(row)
-            relationship_class_item = QStandardItem(name)
-            relationship_class_item.setData('relationship_class', Qt.UserRole)
-            # invert relationship class and save it
-            relationship_class_dict['child_object_class_id'] = parent_object_class_id
-            relationship_class_dict['parent_object_class_id'] = child_object_class_id
-            relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
-            object_item.appendRow(relationship_class_item)
-        # now it seems meaningless to scroll somewhere
+        def visit_and_add_relationship_class(it):
+            """Visit item, add relationship class if necessary and visit children.
 
-    def new_relationship(self, index):
+            Returns:
+                True if item was removed, False otherwise
+            """
+            # visit children
+            i = 0
+            while True:
+                if i == it.rowCount(): # all children have been visited
+                    break
+                visit_and_add_relationship_class(it.child(i)) # visit next children
+                i += 1 # increment counter
+            # visit item
+            ent_type = it.data(Qt.UserRole)
+            if not ent_type: # root item
+                return False
+            if not ent_type.endswith('object'):
+                return
+            it_parent_class = it.parent().data(Qt.UserRole+1)
+            if it_parent_class['id'] == parent_class['id']:
+                relationship_class_item = QStandardItem(name)
+                relationship_class_item.setData(relationship_class_type, Qt.UserRole)
+                relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
+                it.appendRow(relationship_class_item)
+            if relationship_class_type == 'meta_relationship_class':
+                return  # we are done
+            if it_parent_class['id'] == child_object_class_id:
+                relationship_class_item = QStandardItem(name)
+                relationship_class_item.setData('relationship_class', Qt.UserRole)
+                relationship_class_item.setData(relationship_class_dict, Qt.UserRole+1)
+                it.appendRow(relationship_class_item)
+        relationship_class_dict = relationship_class.__dict__
+        # invert dict in case we need to add inverse relationship classes
+        if relationship_class_type == 'relationship_class':
+            inv_relationship_class_dict = dict(relationship_class_dict)
+            inv_relationship_class_dict['child_object_class_id'] = parent_object_class_id
+            inv_relationship_class_dict['parent_object_class_id'] = child_object_class_id
+        root_item = index.model().invisibleRootItem().child(0)
+        visit_and_add_relationship_class(root_item)
+
+    def add_relationship(self, index):
         """Insert new relationship.
 
         Args:
@@ -980,7 +990,7 @@ class DataStoreForm(QWidget):
             return
         child_object_name_list = ['Select child object...']
         child_object_name_list.extend([item.name for item in child_object_query])
-        dialog = CustomQDialog(self, "New relationship",
+        dialog = CustomQDialog(self, "Add relationship",
             name="Type name here...",
             child_object_name_list=child_object_name_list)
         answer = dialog.exec_()
@@ -1015,10 +1025,7 @@ class DataStoreForm(QWidget):
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
-        # alternative 1, rebuild the whole model
-        # self.init_object_tree_model()
-        # alternative 2, manually add items to model
-        # (pros: faster, doesn't collapse all items. cons: uglier, harder to maintain?)
+        # manually add items to model
         # add child object item to relationship class...
         # create new object
         new_object_name = dialog.answer['child_object_name_list']['text']
@@ -1030,7 +1037,7 @@ class DataStoreForm(QWidget):
             self.Object.name
         ).filter_by(id=child_object_id).one_or_none()._asdict()
         # add parent relationship id manually
-        # (this is better than joining relationship table in the query above)
+        # (this is faster than joining relationship table in the query above)
         new_object['relationship_id'] = relationship.id
         new_object_item.setData('related_object', Qt.UserRole)
         new_object_item.setData(new_object, Qt.UserRole+1)
@@ -1054,9 +1061,10 @@ class DataStoreForm(QWidget):
         new_object_index = index.model().indexFromItem(new_object_item)
         self.ui.treeView_object.setCurrentIndex(new_object_index)
         self.ui.treeView_object.scrollTo(new_object_index)
+
         # ...and if parent class is an object class,
         # then add child object item to inverse relationship class...
-        if relationship_class_type != 'relationship_class':
+        if relationship_class_type == 'meta_relationship_class':
             return
         # find inverse relationship class item by traversing the tree from the root
         root_item = index.model().invisibleRootItem().child(0)
@@ -1097,7 +1105,7 @@ class DataStoreForm(QWidget):
         ).filter_by(id=parent_object_id).one_or_none()._asdict()
         # add parent relationship id manually
         new_object['relationship_id'] = relationship.id
-        new_object_item.setData('object', Qt.UserRole)
+        new_object_item.setData('related_object', Qt.UserRole)
         new_object_item.setData(new_object, Qt.UserRole+1)
         # create and append relationship class items
         for new_relationship_class in new_relationship_class_query:
@@ -1164,10 +1172,12 @@ class DataStoreForm(QWidget):
         entity_type = item.data(Qt.UserRole)
         if entity_type == 'object_class':
             table = self.ObjectClass
-        elif entity_type.endswith('object'):
+        elif entity_type == 'object':
             table = self.Object
         elif entity_type.endswith('relationship_class'):
             table = self.RelationshipClass
+        elif entity_type == 'related_object':
+            table = self.Relationship
         else:
             return # should never happen
         # get item from table
@@ -1179,7 +1189,7 @@ class DataStoreForm(QWidget):
         try:
             self.session.flush()
         except DBAPIError as e:
-            msg = "Could not insert new relationship class: {}".format(e.orig.args)
+            msg = "Could not remove item: {}".format(e.orig.args)
             self.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
@@ -1202,10 +1212,13 @@ class DataStoreForm(QWidget):
             ent = it.data(Qt.UserRole+1)
             if not ent_type: # root item
                 return False
-            if ent_type == entity_type and ent['id'] == entity['id']:
+            if entity_type in ent_type and ent['id'] == entity['id']:
                 ind = index.model().indexFromItem(it)
                 index.model().removeRows(ind.row(), 1, ind.parent())
                 return True
+            # Remove also all relationship classes having the removed object class as child
+            if not entity_type.endswith('object_class'):
+                return
             if ent_type.endswith('relationship_class'):
                 child_object_class_id = ent['child_object_class_id']
                 if child_object_class_id == entity['id']:
@@ -1226,13 +1239,13 @@ class DataStoreForm(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        #logging.debug("object parameter value context menu")
+        # logging.debug("object parameter value context menu")
         index = self.ui.tableView_object_parameter_value.indexAt(pos)
         self.ui.tableView_object_parameter_value.selectRow(index.row())
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
         self.object_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
         option = self.object_parameter_value_context_menu.get_action()
-        if option == "Remove":
+        if option == "Remove parameter value":
             self.remove_parameter_value(index)
         elif option == "Edit field":
             self.ui.tableView_object_parameter_value.edit(index)
@@ -1247,13 +1260,13 @@ class DataStoreForm(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        #logging.debug("relationship parameter value context menu")
+        # logging.debug("relationship parameter value context menu")
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
         self.ui.tableView_relationship_parameter_value.selectRow(index.row())
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
         self.relationship_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
         option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove":
+        if option == "Remove parameter value":
             self.remove_parameter_value(index)
         elif option == "Edit field":
             self.ui.tableView_relationship_parameter_value.edit(index)
@@ -1261,7 +1274,7 @@ class DataStoreForm(QWidget):
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
 
-    def new_parameter_value(self, tree_index):
+    def add_parameter_value(self, tree_index):
         """Prepare to insert new parameter value. Insert known
         fields, and open editor to request for parameter name.
         """
@@ -1572,13 +1585,13 @@ class DataStoreForm(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        #logging.debug("object parameter value context menu")
+        # logging.debug("object parameter context menu")
         index = self.ui.tableView_object_parameter.indexAt(pos)
         self.ui.tableView_object_parameter.selectRow(index.row())
         global_pos = self.ui.tableView_object_parameter.viewport().mapToGlobal(pos)
         self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.object_parameter_context_menu.get_action()
-        if option == "Remove":
+        if option == "Remove parameter":
             self.remove_parameter(index)
         elif option == "Edit field":
             self.ui.tableView_object_parameter.edit(index)
@@ -1586,7 +1599,28 @@ class DataStoreForm(QWidget):
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
 
-    def new_parameter(self, tree_index):
+    @Slot("QPoint", name="show_relationship_parameter_context_menu")
+    def show_relationship_parameter_context_menu(self, pos):
+        """Context menu for relationship parameter table view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        logging.debug("relationship parameter context menu")
+        index = self.ui.tableView_relationship_parameter.indexAt(pos)
+        self.ui.tableView_relationship_parameter.selectRow(index.row())
+        global_pos = self.ui.tableView_relationship_parameter.viewport().mapToGlobal(pos)
+        self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
+        option = self.relationship_parameter_context_menu.get_action()
+        if option == "Remove parameter":
+            self.remove_parameter(index)
+        elif option == "Edit field":
+            self.ui.tableView_relationship_parameter.edit(index)
+        self.ui.tableView_relationship_parameter.selectionModel().clearSelection()
+        self.relationship_parameter_context_menu.deleteLater()
+        self.relationship_parameter_context_menu = None
+
+    def add_parameter(self, tree_index):
         """Prepare to insert new parameter value. Insert object and object class
         fields, and open editor to request for parameter name.
         """
@@ -1709,7 +1743,7 @@ class DataStoreForm(QWidget):
             self.init_parameter_value_models()
 
     def remove_parameter(self, proxy_index):
-        """Remove row from parameter table.
+        """Remove row from (object or relationship) parameter table.
         If succesful, also remove row from model"""
         proxy_model = proxy_index.model()
         source_model = proxy_model.sourceModel()

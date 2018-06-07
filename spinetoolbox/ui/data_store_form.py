@@ -226,6 +226,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_relationship_parameter.sizePolicy().hasHeightForWidth())
         self.tableView_relationship_parameter.setSizePolicy(sizePolicy)
+        self.tableView_relationship_parameter.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableView_relationship_parameter.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.tableView_relationship_parameter.setSortingEnabled(True)
         self.tableView_relationship_parameter.setWordWrap(False)
@@ -269,7 +270,7 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
         self.tabWidget_object.setCurrentIndex(0)
-        self.tabWidget_relationship.setCurrentIndex(0)
+        self.tabWidget_relationship.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):

@@ -58,11 +58,12 @@ class LineEditDelegate(QItemDelegate):
 
     def editorEvent(self, event, model, option, index):
         """WIP: Restore initial text when escape key is pressed."""
-        logging.debug(event.type())
+        # logging.debug(event.type())
         if event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Escape:
-                logging.debug(self.original_data)
-                logging.debug("escape pressed")
+                pass
+                # logging.debug(self.original_data)
+                # logging.debug("escape pressed")
         return False
 
 

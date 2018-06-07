@@ -148,17 +148,17 @@ class AddDbReferenceWidget(QWidget):
                 import pyodbc
                 dsns = pyodbc.dataSources()
                 mssql_dsns = list()
-                for k, v in dsns.items():
+                for k,v in dsns.items():
                     if 'msodbcsql' in v.lower():
                         mssql_dsns.append(k)
                 if mssql_dsns:
-                    self.ui.comboBox_dsn.clear()                  
-                    self.ui.comboBox_dsn.addItem("Select dialect...")
+                    self.ui.comboBox_dsn.clear()
+                    self.ui.comboBox_dsn.addItem("Select ODBC DSN...")
                     self.ui.comboBox_dsn.addItems(mssql_dsns)
                     self.enable_mssql()
                 else:
                     msg = "Please create a SQL Server ODBC Data Source first."
-                    self.statusbar.showMessage(msg, 5000)
+                    self.statusbar.showMessage(msg, 3000)
             else:
                 self.enable_common()
                 create_engine('{}://username:password@host/database'.format(dialect))
@@ -272,11 +272,11 @@ class AddDbReferenceWidget(QWidget):
         else:
             host = self.ui.lineEdit_host.text()
             if not host:
-                self.statusbar.showMessage("Host missing")
+                self.statusbar.showMessage("Host missing", 3000)
                 return
             database = self.ui.lineEdit_database.text()
             if not database:
-                self.statusbar.showMessage("Database missing")
+                self.statusbar.showMessage("Database missing", 3000)
                 return
             port = self.ui.lineEdit_port.text()
             username = self.ui.lineEdit_username.text()
@@ -294,14 +294,14 @@ class AddDbReferenceWidget(QWidget):
         try:
             engine.connect()
         except SQLAlchemyError as e:
-            self.statusbar.showMessage("Connection failed: {}".format(e.orig.args))
+            self.statusbar.showMessage("Connection failed: {}".format(e.orig.args), 3000)
             return
         if dialect == 'sqlite':
             # check if SQLite database
             try:
                 engine.execute('pragma quick_check;')
             except DatabaseError as e:
-                self.statusbar.showMessage("Could not open {} as SQLite database: {}".format(database, e.orig.args))
+                self.statusbar.showMessage("Could not open {} as SQLite database: {}".format(database, e.orig.args), 3000)
                 return
         # Get system's username if none given
         if not username:
