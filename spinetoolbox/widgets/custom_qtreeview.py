@@ -24,6 +24,7 @@ Classes for custom QTreeView.
 :date:   25.4.2018
 """
 
+import os
 import logging
 from PySide2.QtWidgets import QTreeView, QAbstractItemView
 from PySide2.QtCore import Signal, Slot, Qt
@@ -69,11 +70,15 @@ class ReferencesTreeView(QTreeView):
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
         urls = event.mimeData().urls()
-        if [x for x in urls if x.isLocalFile()]:
-            event.accept()
-            event.setDropAction(Qt.LinkAction)
-        else:
-            event.ignore()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.LinkAction)
 
     def dragMoveEvent(self, event):
         """Accept event."""
@@ -82,8 +87,7 @@ class ReferencesTreeView(QTreeView):
     def dropEvent(self, event):
         """Emit signal for each url dropped."""
         for url in event.mimeData().urls():
-            if url.isLocalFile():
-                self.file_dropped.emit(url.toLocalFile())
+            self.file_dropped.emit(url.toLocalFile())
 
 
 class DataTreeView(QTreeView):
@@ -102,11 +106,15 @@ class DataTreeView(QTreeView):
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
         urls = event.mimeData().urls()
-        if [x for x in urls if x.isLocalFile()]:
-            event.accept()
-            event.setDropAction(Qt.CopyAction)
-        else:
-            event.ignore()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.LinkAction)
 
     def dragMoveEvent(self, event):
         """Accept event."""
@@ -115,5 +123,4 @@ class DataTreeView(QTreeView):
     def dropEvent(self, event):
         """Emit signal for each url dropped."""
         for url in event.mimeData().urls():
-            if url.isLocalFile():
-                self.file_dropped.emit(url.toLocalFile())
+            self.file_dropped.emit(url.toLocalFile())

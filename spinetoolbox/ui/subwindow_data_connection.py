@@ -199,13 +199,15 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Data Connection", None, -1))
         self.label_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
+        self.treeView_references.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Drag-and-drop files here, they will be added as references.</p></body></html>", None, -1))
         self.toolButton_plus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references</p></body></html>", None, -1))
         self.toolButton_minus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected references or all if nothing is selected</p></body></html>", None, -1))
         self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Copies files to Data connection\'s directory.</p></body></html>", None, -1))
         self.toolButton_datapkg.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Generate datapackage.json file.</p></body></html>", None, -1))
         self.toolButton_datapkg_keys.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit datapackage\'s keys.</p></body></html>", None, -1))
+        self.treeView_data.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Drag-and-drop files here, they will be copied to the data directory.</p></body></html>", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Go to directory...", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc
