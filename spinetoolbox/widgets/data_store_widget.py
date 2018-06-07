@@ -389,7 +389,11 @@ class DataStoreForm(QWidget):
             parameter_value_subquery.c.time_series_id,
             parameter_value_subquery.c.stochastic_model_id
         ).filter(self.Object.id == parameter_value_subquery.c.object_id).\
-        filter(self.Object.class_id == self.ObjectClass.id).all()
+        filter(self.Object.class_id == self.ObjectClass.id)
+
+        # Get header
+        header = object_parameter_value_list.column_descriptions
+        self.object_parameter_value_model.header = [column['name'] for column in header]
 
         # here add the relationship_class_id and name,
         # parent relationship id and name, parent and child object id and name
@@ -421,23 +425,21 @@ class DataStoreForm(QWidget):
         filter(self.Relationship.class_id == self.RelationshipClass.id).\
         outerjoin(parent_relationship, parent_relationship.id == self.Relationship.parent_relationship_id).\
         outerjoin(parent_object, parent_object.id == self.Relationship.parent_object_id).\
-        filter(child_object.id == self.Relationship.child_object_id).all()
+        filter(child_object.id == self.Relationship.child_object_id)
 
-        if object_parameter_value_list:
-            # get column names from the first row
-            header = object_parameter_value_list[0].keys()
+        # Get header
+        header = relationship_parameter_value_list.column_descriptions
+        self.relationship_parameter_value_model.header = [column['name'] for column in header]
+
+        if object_parameter_value_list.all():
             object_parameter_value = [list(row._asdict().values()) for row in object_parameter_value_list]
-            self.object_parameter_value_model.header = header
             self.object_parameter_value_model.reset_model(object_parameter_value)
-            self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
+        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
 
-        if relationship_parameter_value_list:
-            # get header from the first row
-            header = relationship_parameter_value_list[0].keys()
+        if relationship_parameter_value_list.all():
             relationship_parameter_value = [list(row._asdict().values()) for row in relationship_parameter_value_list]
-            self.relationship_parameter_value_model.header = header
             self.relationship_parameter_value_model.reset_model(relationship_parameter_value)
-            self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
+        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
@@ -456,20 +458,15 @@ class DataStoreForm(QWidget):
             self.Parameter.minimum_value,
             self.Parameter.maximum_value
         ).filter(self.ObjectClass.id == self.Parameter.object_class_id).\
-        order_by(self.Parameter.id).all()
+        order_by(self.Parameter.id)
 
-        # parent_relationship_class = aliased(self.RelationshipClass)
-        # parent_object_class = aliased(self.ObjectClass)
-        # child_object_class = aliased(self.ObjectClass)
+        # Get header
+        header = object_parameter_list.column_descriptions
+        self.object_parameter_model.header = [column['name'] for column in header]
+
         relationship_parameter_list = self.session.query(
             self.RelationshipClass.id.label('relationship_class_id'),
             self.RelationshipClass.name.label('relationship_class_name'),
-            # self.RelationshipClass.parent_relationship_class_id,
-            # self.RelationshipClass.parent_object_class_id,
-            # self.RelationshipClass.child_object_class_id,
-            # parent_relationship_class.name.label('parent_relationship_class_name'),
-            # parent_object_class.name.label('parent_object_class_name'),
-            # child_object_class.name.label('child_object_class_name'),
             self.Parameter.id.label('parameter_id'),
             self.Parameter.name.label('parameter_name'),
             self.Parameter.can_have_time_series,
@@ -480,32 +477,22 @@ class DataStoreForm(QWidget):
             self.Parameter.precision,
             self.Parameter.minimum_value,
             self.Parameter.maximum_value
-        # don't bring relationships with no parameters
-        # ).outerjoin(self.Parameter, self.RelationshipClass.id == self.Parameter.relationship_class_id).\
         ).filter(self.RelationshipClass.id == self.Parameter.relationship_class_id).\
-        order_by(self.Parameter.id).all()
-        # outerjoin(
-        #     parent_relationship_class,
-        #     parent_relationship_class.id == self.RelationshipClass.parent_relationship_class_id
-        # ).outerjoin(parent_object_class, parent_object_class.id == self.RelationshipClass.parent_object_class_id).\
-        # filter(child_object_class.id == self.RelationshipClass.child_object_class_id).\
-        # order_by(self.Parameter.id).all()
+        order_by(self.Parameter.id)
 
-        if object_parameter_list:
-            # get column names from the first row
-            header = object_parameter_list[0].keys()
+        # Get header
+        header = relationship_parameter_list.column_descriptions
+        self.relationship_parameter_model.header = [column['name'] for column in header]
+
+        if object_parameter_list.all():
             object_parameter = [list(row._asdict().values()) for row in object_parameter_list]
-            self.object_parameter_model.header = header
             self.object_parameter_model.reset_model(object_parameter)
-            self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
+        self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
 
-        if relationship_parameter_list:
-            # get header from the first row
-            header = relationship_parameter_list[0].keys()
+        if relationship_parameter_list.all():
             relationship_parameter = [list(row._asdict().values()) for row in relationship_parameter_list]
-            self.relationship_parameter_model.header = header
             self.relationship_parameter_model.reset_model(relationship_parameter)
-            self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
+        self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
 
     def init_parameter_value_views(self):
         self.init_object_parameter_value_view()
@@ -1332,7 +1319,7 @@ class DataStoreForm(QWidget):
         add_field("object_class_name", object_class['name'])
         add_field("object_id", object_id)
         add_field("object_name", object_['name'])
-        # make new row visible
+        # make new row visible (NOTE: this also resizes columns)
         self.filter_parameter_value_models(tree_index, tree_index)
         # store parameter names in proxy index's Qt.UserRole
         source_column = source_model.header.index("parameter_name")
@@ -1451,7 +1438,7 @@ class DataStoreForm(QWidget):
                 one_or_none()
             add_field("parent_relationship_id", parent_relationship_id)
             add_field("parent_relationship_name", parent_relationship.name)
-        # make new row visible
+        # make new row visible (NOTE: this also resizes columns)
         self.filter_parameter_value_models(tree_index, tree_index)
         # store parameter names in proxy index's Qt.UserRole
         source_column = source_model.header.index("parameter_name")
@@ -1655,6 +1642,7 @@ class DataStoreForm(QWidget):
             self.session.rollback()
             return
         self.init_parameter_models()
+        self.ui.tableView_object_parameter.resizeColumnsToContents()
         # find proxy index
         source_row = self.object_parameter_model.rowCount()-1
         source_column = self.object_parameter_model.header.index("parameter_name")
@@ -1687,6 +1675,7 @@ class DataStoreForm(QWidget):
             self.session.rollback()
             return
         self.init_parameter_models()
+        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
         # find proxy index
         # TODO: sort relationship_parameter_model by relationship_id
         source_row = self.relationship_parameter_model.rowCount()-1
