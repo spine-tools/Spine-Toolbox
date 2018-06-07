@@ -24,7 +24,7 @@ Classes for custom context menus.
 :date:   9.1.2018
 """
 
-from PySide2.QtWidgets import QMenu, QTextBrowser
+from PySide2.QtWidgets import QMenu
 from PySide2.QtCore import Qt, SLOT
 import sys
 import logging
@@ -192,7 +192,7 @@ class ParameterValueContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         #self.add_action("New parameter value")
-        self.add_action("Remove parameter value")
+        self.add_action("Remove row")
         self.add_action("Edit field")
         self.exec_(position)
 
@@ -207,7 +207,7 @@ class ParameterContextMenu(CustomContextMenu):
         self.option = "None"
         if not index.isValid():
             return
-        self.add_action("Remove parameter")
+        self.add_action("Remove row")
         self.add_action("Edit field")
         self.exec_(position)
 

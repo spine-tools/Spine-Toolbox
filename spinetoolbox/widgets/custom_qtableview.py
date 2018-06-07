@@ -25,8 +25,9 @@ Class for a custom QTableView for the Data store form.
 """
 
 import logging
-from PySide2.QtWidgets import QTableView
+from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Signal
+from PySide2.QtGui import QKeySequence
 
 class ParameterValueTableView(QTableView):
     """Custom QTableView class.
@@ -57,6 +58,31 @@ class ParameterValueTableView(QTableView):
             return True
         return super().edit(proxy_index, trigger, event)
 
+    def keyPressEvent(self, event):
+        """Copy selection to clipboard so that it can be pasted into Excel"""
+        if not event.matches(QKeySequence.Copy):
+            event.ignore()
+            return
+        selection = self.selectionModel().selection()
+        if not selection:
+            event.ignore()
+            return
+        first = selection.first()
+        content = ""
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        for i in range(first.top(), first.bottom()+1):
+            if v_header.isSectionHidden(i):
+                continue
+            row = list()
+            for j in range(first.left(), first.right()+1):
+                if h_header.isSectionHidden(j):
+                    continue
+                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+            content += "\t".join(row)
+            content += "\n"
+        QApplication.clipboard().setText(content)
+
 
 class ParameterTableView(QTableView):
     """Custom QTableView class.
@@ -68,6 +94,31 @@ class ParameterTableView(QTableView):
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
+
+    def keyPressEvent(self, event):
+        """Copy selection to clipboard so that it can be pasted into Excel"""
+        if not event.matches(QKeySequence.Copy):
+            event.ignore()
+            return
+        selection = self.selectionModel().selection()
+        if not selection:
+            event.ignore()
+            return
+        first = selection.first()
+        content = ""
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        for i in range(first.top(), first.bottom()+1):
+            if v_header.isSectionHidden(i):
+                continue
+            row = list()
+            for j in range(first.left(), first.right()+1):
+                if h_header.isSectionHidden(j):
+                    continue
+                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+            content += "\t".join(row)
+            content += "\n"
+        QApplication.clipboard().setText(content)
 
 
 class DataPackageKeyTableView(QTableView):

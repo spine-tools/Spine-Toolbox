@@ -1231,15 +1231,15 @@ class DataStoreForm(QWidget):
         """
         # logging.debug("object parameter value context menu")
         index = self.ui.tableView_object_parameter_value.indexAt(pos)
-        self.ui.tableView_object_parameter_value.selectRow(index.row())
+        # self.ui.tableView_object_parameter_value.selectRow(index.row())
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
         self.object_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
         option = self.object_parameter_value_context_menu.get_action()
-        if option == "Remove parameter value":
+        if option == "Remove row":
             self.remove_parameter_value(index)
         elif option == "Edit field":
             self.ui.tableView_object_parameter_value.edit(index)
-        self.ui.tableView_object_parameter_value.selectionModel().clearSelection()
+        # self.ui.tableView_object_parameter_value.selectionModel().clearSelection()
         self.object_parameter_value_context_menu.deleteLater()
         self.object_parameter_value_context_menu = None
 
@@ -1252,15 +1252,15 @@ class DataStoreForm(QWidget):
         """
         # logging.debug("relationship parameter value context menu")
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
-        self.ui.tableView_relationship_parameter_value.selectRow(index.row())
+        # self.ui.tableView_relationship_parameter_value.selectRow(index.row())
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
         self.relationship_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
         option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove parameter value":
+        if option == "Remove row":
             self.remove_parameter_value(index)
         elif option == "Edit field":
             self.ui.tableView_relationship_parameter_value.edit(index)
-        self.ui.tableView_relationship_parameter_value.selectionModel().clearSelection()
+        # self.ui.tableView_relationship_parameter_value.selectionModel().clearSelection()
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
 
@@ -1578,15 +1578,15 @@ class DataStoreForm(QWidget):
         """
         # logging.debug("object parameter context menu")
         index = self.ui.tableView_object_parameter.indexAt(pos)
-        self.ui.tableView_object_parameter.selectRow(index.row())
+        # self.ui.tableView_object_parameter.selectRow(index.row())
         global_pos = self.ui.tableView_object_parameter.viewport().mapToGlobal(pos)
         self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.object_parameter_context_menu.get_action()
-        if option == "Remove parameter":
+        if option == "Remove row":
             self.remove_parameter(index)
         elif option == "Edit field":
             self.ui.tableView_object_parameter.edit(index)
-        self.ui.tableView_object_parameter.selectionModel().clearSelection()
+        # self.ui.tableView_object_parameter.selectionModel().clearSelection()
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
 
@@ -1597,17 +1597,17 @@ class DataStoreForm(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        logging.debug("relationship parameter context menu")
+        # logging.debug("relationship parameter context menu")
         index = self.ui.tableView_relationship_parameter.indexAt(pos)
-        self.ui.tableView_relationship_parameter.selectRow(index.row())
+        # self.ui.tableView_relationship_parameter.selectRow(index.row())
         global_pos = self.ui.tableView_relationship_parameter.viewport().mapToGlobal(pos)
         self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.relationship_parameter_context_menu.get_action()
-        if option == "Remove parameter":
+        if option == "Remove row":
             self.remove_parameter(index)
         elif option == "Edit field":
             self.ui.tableView_relationship_parameter.edit(index)
-        self.ui.tableView_relationship_parameter.selectionModel().clearSelection()
+        # self.ui.tableView_relationship_parameter.selectionModel().clearSelection()
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
@@ -1781,15 +1781,6 @@ class DataStoreForm(QWidget):
     def close_clicked(self):
         """Close this form without commiting any changes."""
         self.close()
-
-    def keyPressEvent(self, e):
-        """Close Setup form when escape key is pressed.
-
-        Args:
-            e (QKeyEvent): Received key press event.
-        """
-        if e.key() == Qt.Key_Escape:
-            self.close()
 
     def closeEvent(self, event=None):
         """Handle close window.
