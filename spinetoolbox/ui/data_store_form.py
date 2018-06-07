@@ -270,7 +270,7 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
         self.tabWidget_object.setCurrentIndex(0)
-        self.tabWidget_relationship.setCurrentIndex(1)
+        self.tabWidget_relationship.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
@@ -289,6 +289,6 @@ class Ui_Form(object):
         self.pushButton_revert.setText(QtWidgets.QApplication.translate("Form", "Revert", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
-from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
 from widgets.custom_qtreeview import CustomQTreeView
+from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
 import resources_icons_rc

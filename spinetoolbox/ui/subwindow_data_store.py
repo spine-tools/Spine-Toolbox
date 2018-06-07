@@ -249,6 +249,7 @@ class Ui_Form(object):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/plus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_plus.setIcon(icon)
+        self.toolButton_plus.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_plus.setObjectName("toolButton_plus")
         self.horizontalLayout_2.addWidget(self.toolButton_plus)
         self.toolButton_minus = QtWidgets.QToolButton(Form)

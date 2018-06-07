@@ -236,3 +236,14 @@ class ToolTemplateOptionsPopupMenu(QMenu):
         self.addSeparator()
         action = self.addAction("Open descriptor file", self._parent, SLOT("open_tool_template_file()"))
         action = self.addAction("Open main program file", self._parent, SLOT("open_tool_main_program_file()"))
+
+class AddDbReferencePopupMenu(QMenu):
+    """Popup menu class for add references button in Data Store item."""
+
+    def __init__(self, parent):
+        super().__init__()
+        self._parent = parent
+        # Open a tool template file
+        action = self.addAction("New Spine SQLite database", self._parent, SLOT("add_new_spine_reference()"))
+        self.addSeparator()
+        action = self.addAction("Other...", self._parent, SLOT("show_add_db_reference_form()"))

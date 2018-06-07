@@ -647,6 +647,9 @@ color: rgb(255, 255, 255);</string>
           <iconset resource="resources/resources_icons.qrc">
            <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
          </property>
+         <property name="popupMode">
+          <enum>QToolButton::InstantPopup</enum>
+         </property>
         </widget>
        </item>
        <item>

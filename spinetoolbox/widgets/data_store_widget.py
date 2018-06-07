@@ -799,8 +799,11 @@ class DataStoreForm(QWidget):
             # prepare to insert the new item and the end
             root_item = index.model().itemFromIndex(index)
             insert_at_row = root_item.rowCount()
-            child_item = root_item.child(insert_at_row - 1)
-            display_order = child_item.data(Qt.UserRole+1)['display_order']
+            if insert_at_row > 0:
+                child_item = root_item.child(insert_at_row - 1)
+                display_order = child_item.data(Qt.UserRole+1)['display_order']
+            else:
+                display_order = 1
         object_class = self.ObjectClass(
             name=name,
             description=description,
@@ -1063,7 +1066,7 @@ class DataStoreForm(QWidget):
         self.ui.treeView_object.scrollTo(new_object_index)
 
         # ...and if parent class is an object class,
-        # then add child object item to inverse relationship class...
+        # add child object item to inverse relationship class...
         if relationship_class_type == 'meta_relationship_class':
             return
         # find inverse relationship class item by traversing the tree from the root
@@ -1280,9 +1283,9 @@ class DataStoreForm(QWidget):
         """
         item_type = tree_index.data(Qt.UserRole)
         if item_type == 'object':
-            self.new_object_parameter_value(tree_index)
+            self.add_object_parameter_value(tree_index)
         elif item_type == 'related_object':
-            self.new_relationship_parameter_value(tree_index)
+            self.add_relationship_parameter_value(tree_index)
 
     def object_class_parameter_names(self, object_class_id, object_id):
         """Return unassigned parameter names for object class
@@ -1301,7 +1304,7 @@ class DataStoreForm(QWidget):
             )
         return [row.name for row in parameter_name_query]
 
-    def new_object_parameter_value(self, tree_index):
+    def add_object_parameter_value(self, tree_index):
         """Prepare to insert new object parameter value. Insert object and object class
         fields, and open editor to request for parameter name.
         """
@@ -1339,7 +1342,7 @@ class DataStoreForm(QWidget):
         # edit
         # create combobox delegate and connect signals
         combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.new_object_parameter_value_)
+        combobox_delegate.closeEditor.connect(self.add_object_parameter_value_)
         self.ui.tableView_object_parameter_value.\
             setItemDelegateForColumn(proxy_index.column(), combobox_delegate)
         self.ui.tabWidget_object.setCurrentIndex(0)
@@ -1347,8 +1350,8 @@ class DataStoreForm(QWidget):
         self.ui.tableView_object_parameter_value.adding_new_parameter_value = True
         self.ui.tableView_object_parameter_value.edit(proxy_index)
 
-    @Slot("CustomComboEditor", name="new_object_parameter_value_")
-    def new_object_parameter_value_(self, combo):
+    @Slot("CustomComboEditor", "QAbstractItemDelegate.EndEditHint", name="add_object_parameter_value_")
+    def add_object_parameter_value_(self, combo, hint):
         """Insert new parameter value.
         If successful, also add parameter value to model.
         """
@@ -1385,10 +1388,11 @@ class DataStoreForm(QWidget):
             self.session.rollback()
             return
         # manually add item in model
-        self.init_parameter_value_models() # this is better to get the defaults
-        # reset current index
-        proxy_index = self.object_parameter_value_proxy.index(combo.row, combo.column)
-        self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
+        self.init_parameter_value_models() # this is so that defaults are filled automatically
+        # edit next field in row
+        next_index = self.object_parameter_value_proxy.index(combo.row, combo.column+1)
+        self.ui.tableView_object_parameter_value.edit(next_index)
+
 
     def relationship_class_parameter_names(self, relationship_class_id, relationship_id):
         """Return unassigned parameter names for object class
@@ -1407,7 +1411,7 @@ class DataStoreForm(QWidget):
             )
         return [row.name for row in parameter_name_query]
 
-    def new_relationship_parameter_value(self, tree_index):
+    def add_relationship_parameter_value(self, tree_index):
         """Prepare to insert new relationship parameter value. Insert known
         fields, and open editor to request for parameter name.
         """
@@ -1457,7 +1461,7 @@ class DataStoreForm(QWidget):
         # edit
         # create combobox delegate and connect signals
         combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.new_relationship_parameter_value_)
+        combobox_delegate.closeEditor.connect(self.add_relationship_parameter_value_)
         self.ui.tableView_relationship_parameter_value.\
             setItemDelegateForColumn(proxy_index.column(), combobox_delegate)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
@@ -1465,8 +1469,8 @@ class DataStoreForm(QWidget):
         self.ui.tableView_relationship_parameter_value.adding_new_parameter_value = True
         self.ui.tableView_relationship_parameter_value.edit(proxy_index)
 
-    @Slot("CustomComboEditor", name="new_relationship_parameter_value_")
-    def new_relationship_parameter_value_(self, combo):
+    @Slot("CustomComboEditor", name="add_relationship_parameter_value_")
+    def add_relationship_parameter_value_(self, combo):
         """Insert new parameter value.
         If successful, also add parameter value to model.
         """
@@ -1503,10 +1507,10 @@ class DataStoreForm(QWidget):
             self.session.rollback()
             return
         # manually add item in model
-        self.init_parameter_value_models() # this is better to get the defaults
-        # reset current index
-        proxy_index = self.relationship_parameter_value_proxy.index(combo.row, combo.column)
-        self.ui.tableView_relationship_parameter_value.setCurrentIndex(proxy_index)
+        self.init_parameter_value_models() # this is so that defaults are filled automatically
+        # edit next field in row
+        next_index = self.object_parameter_value_proxy.index(combo.row, combo.column+1)
+        self.ui.tableView_object_parameter_value.edit(next_index)
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
     def update_parameter_value(self, editor, hint):
@@ -1626,11 +1630,11 @@ class DataStoreForm(QWidget):
         """
         item_type = tree_index.data(Qt.UserRole)
         if item_type == 'object_class':
-            self.new_object_parameter(tree_index)
+            self.add_object_parameter(tree_index)
         elif item_type.endswith('relationship_class'):
-            self.new_relationship_parameter(tree_index)
+            self.add_relationship_parameter(tree_index)
 
-    def new_object_parameter(self, tree_index):
+    def add_object_parameter(self, tree_index):
         """Prepare to insert new parameter. Insert object class fields,
         and open editor to request for parameter name.
         """
@@ -1661,7 +1665,7 @@ class DataStoreForm(QWidget):
         self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
         self.ui.tableView_object_parameter.edit(proxy_index)
 
-    def new_relationship_parameter(self, tree_index):
+    def add_relationship_parameter(self, tree_index):
         """Prepare to insert new parameter. Insert relationship class fields,
         and open editor to request for parameter name.
         """
