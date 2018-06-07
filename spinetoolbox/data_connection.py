@@ -101,7 +101,7 @@ class DataConnection(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot("QString", name="add_url_to_references")
+    @Slot("QString", name="add_file_to_references")
     def add_file_to_references(self, path):
         """Add filepath to reference list"""
         if path in self.references:

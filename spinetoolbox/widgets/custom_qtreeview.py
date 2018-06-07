@@ -26,7 +26,7 @@ Classes for custom QTreeView.
 
 import logging
 from PySide2.QtWidgets import QTreeView, QAbstractItemView
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Signal, Slot, Qt
 
 
 class ObjectTreeView(QTreeView):
@@ -53,8 +53,8 @@ class ObjectTreeView(QTreeView):
         return False
 
 
-class DataTreeView(QTreeView):
-    """Custom QTreeView class for references in Data Connection subwindow.
+class ReferencesTreeView(QTreeView):
+    """Custom QTreeView class for 'references' in Data Connection subwindow.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -69,10 +69,44 @@ class DataTreeView(QTreeView):
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
         urls = event.mimeData().urls()
-        if not urls:
-            event.ignore()
-        else:
+        if [x for x in urls if x.isLocalFile()]:
             event.accept()
+            event.setDropAction(Qt.LinkAction)
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dropEvent(self, event):
+        """Emit signal for each url dropped."""
+        for url in event.mimeData().urls():
+            if url.isLocalFile():
+                self.file_dropped.emit(url.toLocalFile())
+
+
+class DataTreeView(QTreeView):
+    """Custom QTreeView class for 'data' in Data Connection subwindow.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    file_dropped = Signal("QString", name="file_dropped")
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+
+    def dragEnterEvent(self, event):
+        """Accept file drops from the filesystem."""
+        urls = event.mimeData().urls()
+        if [x for x in urls if x.isLocalFile()]:
+            event.accept()
+            event.setDropAction(Qt.CopyAction)
+        else:
+            event.ignore()
 
     def dragMoveEvent(self, event):
         """Accept event."""

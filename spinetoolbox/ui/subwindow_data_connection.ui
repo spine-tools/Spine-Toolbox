@@ -130,7 +130,7 @@ color: rgb(255, 255, 255);</string>
       </widget>
      </item>
      <item>
-      <widget class="DataTreeView" name="treeView_references">
+      <widget class="ReferencesTreeView" name="treeView_references">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -415,6 +415,11 @@ color: rgb(255, 255, 255);</string>
  <customwidgets>
   <customwidget>
    <class>DataTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ReferencesTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>

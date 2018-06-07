@@ -66,7 +66,7 @@ class Ui_Form(object):
         self.label_name.setWordWrap(True)
         self.label_name.setObjectName("label_name")
         self.verticalLayout_2.addWidget(self.label_name)
-        self.treeView_references = DataTreeView(Form)
+        self.treeView_references = ReferencesTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -207,5 +207,5 @@ class Ui_Form(object):
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Go to directory...", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc
