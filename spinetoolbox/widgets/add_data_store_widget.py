@@ -87,6 +87,9 @@ class AddDataStoreWidget(QWidget):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
+        if not self.name:  # No name given
+            self.statusbar.showMessage("Name missing", 3000)
+            return
         # Check for invalid characters for a folder name
         if any((True for x in self.name if x in INVALID_CHARS)):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
