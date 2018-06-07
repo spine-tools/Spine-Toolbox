@@ -278,10 +278,15 @@ class DataStore(MetaObject):
         if not database:
             return
         filename = os.path.join(APPLICATION_PATH, "Spine.sqlite")
+        # Wipe out file. This is better for debug phase, but later we can reuse the same one
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
         url = "sqlite:///" + filename
         engine = create_engine(url)
         sql = """
-            CREATE TABLE "commit" (
+            CREATE TABLE IF NOT EXISTS "commit" (
             	id INTEGER NOT NULL,
             	comment VARCHAR(255) NOT NULL,
             	date DATETIME NOT NULL,
@@ -292,19 +297,19 @@ class DataStore(MetaObject):
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE object_class_category (
+            CREATE TABLE IF NOT EXISTS object_class_category (
             	id INTEGER NOT NULL,
             	name VARCHAR(255) NOT NULL,
             	description VARCHAR(255) DEFAULT NULL,
             	commit_id INTEGER,
             	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id)
+            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
-        engine.execute(text("DROP TABLE IF EXISTS `object_class`;"))
         sql = """
-            CREATE TABLE object_class (
+            CREATE TABLE IF NOT EXISTS object_class (
             	id INTEGER NOT NULL,
             	name VARCHAR(255) NOT NULL,
             	description VARCHAR(255) DEFAULT NULL,
@@ -315,12 +320,13 @@ class DataStore(MetaObject):
             	commit_id INTEGER,
             	PRIMARY KEY (id),
             	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(category_id) REFERENCES object_class_category (id)
+            	FOREIGN KEY(category_id) REFERENCES object_class_category (id),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE object_category (
+            CREATE TABLE IF NOT EXISTS object_category (
             	id INTEGER NOT NULL,
             	object_class_id INTEGER NOT NULL,
             	name VARCHAR(255) NOT NULL,
@@ -328,12 +334,13 @@ class DataStore(MetaObject):
             	commit_id INTEGER,
             	PRIMARY KEY (id),
             	FOREIGN KEY(object_class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id)
+            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE object (
+            CREATE TABLE IF NOT EXISTS object (
             	id INTEGER NOT NULL,
             	class_id INTEGER NOT NULL,
             	name VARCHAR(255) NOT NULL,
@@ -343,12 +350,13 @@ class DataStore(MetaObject):
             	PRIMARY KEY (id),
             	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
             	FOREIGN KEY(class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(category_id) REFERENCES object_category (id)
+            	FOREIGN KEY(category_id) REFERENCES object_category (id),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE relationship_class (
+            CREATE TABLE IF NOT EXISTS relationship_class (
             	id INTEGER NOT NULL,
             	name VARCHAR(155) NOT NULL,
             	parent_relationship_class_id INTEGER DEFAULT NULL,
@@ -363,12 +371,13 @@ class DataStore(MetaObject):
             	FOREIGN KEY(child_object_class_id) REFERENCES object_class (id),
             	FOREIGN KEY(parent_object_class_id) REFERENCES object_class (id),
             	FOREIGN KEY(parent_relationship_class_id) REFERENCES relationship_class (id),
-            	CHECK (`parent_relationship_class_id` IS NOT NULL OR `parent_object_class_id` IS NOT NULL)
+            	CHECK (`parent_relationship_class_id` IS NOT NULL OR `parent_object_class_id` IS NOT NULL),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE relationship (
+            CREATE TABLE IF NOT EXISTS relationship (
             	id INTEGER NOT NULL,
             	class_id INTEGER NOT NULL,
             	name VARCHAR(155) NOT NULL,
@@ -382,12 +391,13 @@ class DataStore(MetaObject):
             	FOREIGN KEY(child_object_id) REFERENCES object (id),
             	FOREIGN KEY(parent_object_id) REFERENCES object (id),
             	FOREIGN KEY(parent_relationship_id) REFERENCES relationship (id),
-            	CHECK (`parent_relationship_id` IS NOT NULL OR `parent_object_id` IS NOT NULL)
+            	CHECK (`parent_relationship_id` IS NOT NULL OR `parent_object_id` IS NOT NULL),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE parameter (
+            CREATE TABLE IF NOT EXISTS parameter (
             	id INTEGER NOT NULL,
             	name VARCHAR(155) NOT NULL,
             	description VARCHAR(155) DEFAULT NULL,
@@ -408,12 +418,13 @@ class DataStore(MetaObject):
             	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
             	FOREIGN KEY(object_class_id) REFERENCES object_class (id),
             	FOREIGN KEY(relationship_class_id) REFERENCES relationship_class (id),
-            	CHECK (`relationship_class_id` IS NOT NULL OR `object_class_id` IS NOT NULL)
+            	CHECK (`relationship_class_id` IS NOT NULL OR `object_class_id` IS NOT NULL),
+                UNIQUE(name)
             );
         """
         engine.execute(text(sql))
         sql = """
-            CREATE TABLE parameter_value (
+            CREATE TABLE IF NOT EXISTS parameter_value (
             	id INTEGER NOT NULL,
             	parameter_id INTEGER NOT NULL,
             	relationship_id INTEGER DEFAULT NULL,
@@ -435,7 +446,7 @@ class DataStore(MetaObject):
         """
         engine.execute(text(sql))
         sql = """
-            INSERT INTO `object_class` (`name`, `description`, `category_id`, `display_order`, `display_icon`, `hidden`, `commit_id`) VALUES
+            INSERT OR IGNORE INTO `object_class` (`name`, `description`, `category_id`, `display_order`, `display_icon`, `hidden`, `commit_id`) VALUES
             ('unittemplate', 'Template for a generic unit', 1, 1, NULL, 0, NULL),
             ('unit', 'Unit class', 1, 2, NULL, 0, NULL),
             ('commodity', 'Commodity class', 1, 3, NULL, 0, NULL),
