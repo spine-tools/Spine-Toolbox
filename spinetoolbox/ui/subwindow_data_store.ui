@@ -1238,7 +1238,7 @@ color: rgb(255, 255, 255);</string>
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open data objects in Spine Data Explorer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
-          <string>Open Data Explorer</string>
+          <string>Go to directory...</string>
          </property>
         </widget>
        </item>

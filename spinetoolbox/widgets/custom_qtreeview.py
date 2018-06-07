@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-Class for a custom QTreeView for the Data Store form.
+Classes for custom QTreeView.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   25.4.2018
@@ -29,8 +29,8 @@ from PySide2.QtWidgets import QTreeView, QAbstractItemView
 from PySide2.QtCore import Signal, Slot
 
 
-class CustomQTreeView(QTreeView):
-    """Custom QTreeView class.
+class ObjectTreeView(QTreeView):
+    """Custom QTreeView class for object tree in Data Store form.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -51,3 +51,35 @@ class CustomQTreeView(QTreeView):
         if trigger == QTreeView.EditKeyPressed:
             self.editKeyPressed.emit(index)
         return False
+
+
+class DataTreeView(QTreeView):
+    """Custom QTreeView class for references in Data Connection subwindow.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    file_dropped = Signal("QString", name="file_dropped")
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+
+    def dragEnterEvent(self, event):
+        """Accept file drops from the filesystem."""
+        urls = event.mimeData().urls()
+        if not urls:
+            event.ignore()
+        else:
+            event.accept()
+
+    def dragMoveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dropEvent(self, event):
+        """Emit signal for each url dropped."""
+        for url in event.mimeData().urls():
+            if url.isLocalFile():
+                self.file_dropped.emit(url.toLocalFile())

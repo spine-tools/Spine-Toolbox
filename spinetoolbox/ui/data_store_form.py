@@ -52,7 +52,7 @@ class Ui_Form(object):
         self.label_object_tree = QtWidgets.QLabel(self.layoutWidget)
         self.label_object_tree.setObjectName("label_object_tree")
         self.verticalLayout_3.addWidget(self.label_object_tree)
-        self.treeView_object = CustomQTreeView(self.layoutWidget)
+        self.treeView_object = ObjectTreeView(self.layoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
@@ -289,6 +289,6 @@ class Ui_Form(object):
         self.pushButton_revert.setText(QtWidgets.QApplication.translate("Form", "Revert", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
-from widgets.custom_qtreeview import CustomQTreeView
 from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

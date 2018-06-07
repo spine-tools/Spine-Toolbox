@@ -66,7 +66,7 @@ class Ui_Form(object):
         self.label_name.setWordWrap(True)
         self.label_name.setObjectName("label_name")
         self.verticalLayout_2.addWidget(self.label_name)
-        self.treeView_references = QtWidgets.QTreeView(Form)
+        self.treeView_references = DataTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -75,6 +75,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.treeView_references.setFont(font)
+        self.treeView_references.setAcceptDrops(True)
         self.treeView_references.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_references.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.treeView_references.setIndentation(5)
@@ -153,7 +154,7 @@ class Ui_Form(object):
         self.toolButton_datapkg_keys.setObjectName("toolButton_datapkg_keys")
         self.horizontalLayout_2.addWidget(self.toolButton_datapkg_keys)
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
-        self.treeView_data = QtWidgets.QTreeView(Form)
+        self.treeView_data = DataTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -162,6 +163,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(8)
         self.treeView_data.setFont(font)
+        self.treeView_data.setAcceptDrops(True)
         self.treeView_data.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_data.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.treeView_data.setIndentation(5)
@@ -205,4 +207,5 @@ class Ui_Form(object):
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Go to directory...", None, -1))
 
+from widgets.custom_qtreeview import DataTreeView
 import resources_icons_rc

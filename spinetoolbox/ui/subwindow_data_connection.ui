@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -130,7 +130,7 @@ color: rgb(255, 255, 255);</string>
       </widget>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView_references">
+      <widget class="DataTreeView" name="treeView_references">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -141,6 +141,9 @@ color: rgb(255, 255, 255);</string>
         <font>
          <pointsize>8</pointsize>
         </font>
+       </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -330,7 +333,7 @@ color: rgb(255, 255, 255);</string>
       </layout>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView_data">
+      <widget class="DataTreeView" name="treeView_data">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -341,6 +344,9 @@ color: rgb(255, 255, 255);</string>
         <font>
          <pointsize>8</pointsize>
         </font>
+       </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -406,6 +412,13 @@ color: rgb(255, 255, 255);</string>
   </layout>
   <zorder></zorder>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DataTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>treeView_references</tabstop>
   <tabstop>toolButton_plus</tabstop>

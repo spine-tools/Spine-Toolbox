@@ -24,27 +24,25 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
-from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView,\
-    QDialog, QLineEdit, QInputDialog
+import time  # just to measure loading time and sqlalchemy ORM performance
+import logging
+from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView, QDialog, QLineEdit, QInputDialog
 from PySide2.QtCore import Slot, Qt, QSettings
 from PySide2.QtGui import QStandardItem
 from ui.data_store_form import Ui_Form
 from config import STATUSBAR_SS
-from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu,\
-    ParameterContextMenu
+from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
+from widgets.lineedit_delegate import LineEditDelegate
+from widgets.combobox_delegate import ComboBoxDelegate
 from widgets.custom_qdialog import CustomQDialog
 from helpers import busy_effect
-from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy,\
-    RelationshipParameterValueProxy, ObjectParameterProxy, RelationshipParameterProxy
-import logging
+from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, RelationshipParameterValueProxy, \
+    ObjectParameterProxy, RelationshipParameterProxy
 from datetime import datetime, timezone
 from sqlalchemy import or_
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session, aliased
-import time  # just to measure loading time and sqlalchemy ORM performance
-from widgets.lineedit_delegate import LineEditDelegate
-from widgets.combobox_delegate import ComboBoxDelegate
 
 
 class DataStoreForm(QWidget):

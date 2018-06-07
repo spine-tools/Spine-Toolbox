@@ -86,6 +86,8 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
+        self._widget.ui.treeView_references.file_dropped.connect(self.add_file_to_references)
+        self._widget.ui.treeView_data.file_dropped.connect(self.add_file_to_data_dir)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def set_icon(self, icon):
@@ -98,6 +100,28 @@ class DataConnection(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    @Slot("QString", name="add_url_to_references")
+    def add_file_to_references(self, path):
+        """Add filepath to reference list"""
+        if path in self.references:
+            self._parent.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+            return
+        self.references.append(os.path.abspath(path))
+        self._widget.populate_reference_list(self.references)
+
+    @Slot("QString", name="add_file_to_data_dir")
+    def add_file_to_data_dir(self, file_path):
+        """Add file to data directory"""
+        src_dir, filename = os.path.split(file_path)
+        self._parent.msg.emit("Copying file <b>{0}</b>".format(filename))
+        try:
+            shutil.copy(file_path, self.data_dir)
+        except OSError:
+            self._parent.msg_error.emit("[OSError] Copying failed")
+            return
+        data_files = self.data_files()
+        self._widget.populate_data_list(data_files)
 
     @Slot(name="open_directory")
     def open_directory(self):
