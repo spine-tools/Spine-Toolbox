@@ -700,7 +700,7 @@ class Link(QGraphicsLineItem):
         """Remove associated connection if this is selected and delete is pressed"""
         if event.key() == Qt.Key_Delete and self.isSelected():
             self.update_model_index()
-            self._qmainwindow.connection_clicked(self.model_index)
+            self._qmainwindow.toggle_connection(self.model_index)
 
     def paint(self, painter, option, widget):
         """Paint ellipse and arrow at from and to positions, respectively."""

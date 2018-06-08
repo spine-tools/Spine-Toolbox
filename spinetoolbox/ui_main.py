@@ -42,6 +42,7 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.tool_template_widget import ToolTemplateWidget
+from widgets.checkbox_delegate import CheckBoxDelegate
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -308,20 +309,22 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
+        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
         self.ui.graphicsView.setConnectionModel(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
-        n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
-        if n_connected == 0:
-            # logging.debug("Connecting clicked signal for QTableView")
-            self.ui.tableView_connections.clicked.connect(self.connection_clicked)
-        elif n_connected > 1:
-            # Check that this never gets over 1
-            logging.error("Number of receivers for tableView_connections clicked signal is now:{0}".format(n_connected))
-        else:
-            pass  # signal already connected
+        # NOTE: it seems we don't need this below anymore, the CheckBoxDelegate takes care of it
+        # n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
+        # if n_connected == 0:
+        #     # logging.debug("Connecting clicked signal for QTableView")
+        #     self.ui.tableView_connections.clicked.connect(self.toggle_connection)
+        # elif n_connected > 1:
+        #     # Check that this never gets over 1
+        #     logging.error("Number of receivers for tableView_connections clicked signal is now:{0}".format(n_connected))
+        # else:
+        #     pass  # signal already connected
 
-    @Slot("QModelIndex", name="connection_clicked")
-    def connection_clicked(self, index):
+    @Slot("QModelIndex", name="toggle_connection")
+    def toggle_connection(self, index):
         """Toggle boolean value in the connection model.
 
         Args:
@@ -1231,7 +1234,7 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu = LinkContextMenu(self, pos, ind)
         option = self.link_context_menu.get_action()
         if option == "Remove Connection":
-            self.connection_clicked(ind)
+            self.toggle_connection(ind)
             return
         else:  # No option selected
             pass

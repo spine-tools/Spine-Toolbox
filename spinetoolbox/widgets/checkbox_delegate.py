@@ -92,7 +92,7 @@ class CheckBoxDelegate(QItemDelegate):
         The user wanted to change the old state in the opposite.
         '''
         newValue = not index.data()
-        model.setData(index, newValue, Qt.DisplayRole)
+        model.setData(index, newValue, Qt.EditRole)
 
     def getCheckBoxRect(self, option):
         check_box_style_option = QStyleOptionButton()

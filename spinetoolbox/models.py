@@ -269,7 +269,7 @@ class ConnectionModel(QAbstractTableModel):
 
     def flags(self, index):
         """Returns flags for table items."""
-        return Qt.ItemIsEnabled
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def rowCount(self, *args, **kwargs):
         """Number of rows in the model. This should be the same as the number of items in the project."""
@@ -661,10 +661,10 @@ class MinimalTableModel(QAbstractTableModel):
             return self._data
         return None
 
-    def setData(self, index, value, role=Qt.DisplayRole):
+    def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
             return False
-        if role == Qt.DisplayRole:
+        if role == Qt.EditRole:
             self._data[index.row()][index.column()] = value
             return True
         if role == Qt.UserRole:

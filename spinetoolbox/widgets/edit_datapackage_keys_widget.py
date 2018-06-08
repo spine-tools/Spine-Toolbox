@@ -197,17 +197,17 @@ class EditDatapackageKeysWidget(QWidget):
                 items = None
         self.fks_model.setData(index, items, Qt.UserRole)
 
-    @Slot(int, name='pk_data_commited')
-    def pk_data_commited(self, sender):
+    @Slot("QWidget", name='pk_data_commited')
+    def pk_data_commited(self, editor):
         """Whenever the table combobox changes, update the field combobox view"""
-        previous_table = sender.previous_data
-        current_table = sender.currentText()
+        previous_table = editor.previous_data
+        current_table = editor.currentText()
         #logging.debug("prev {}".format(previous_table))
         #logging.debug("curr {}".format(current_table))
         if current_table != previous_table:
-            sender.previous_data = current_table
-            row = sender.row
-            column = sender.column
+            editor.previous_data = current_table
+            row = editor.row
+            column = editor.column
             index = self.pks_model.index(row, column)
             self.pks_model.setData(index, current_table)
             header = self.pks_model.headerData(column)
@@ -220,17 +220,17 @@ class EditDatapackageKeysWidget(QWidget):
                 self.ui.tableView_pks.update(index)
         self.resize_tableView_pks()
 
-    @Slot(int, name='fk_data_commited')
-    def fk_data_commited(self, sender):
+    @Slot("QWidget", name='fk_data_commited')
+    def fk_data_commited(self, editor):
         """Whenever the table combobox changes, update the field combobox view"""
-        previous_table = sender.previous_data
-        current_table = sender.currentText()
+        previous_table = editor.previous_data
+        current_table = editor.currentText()
         #logging.debug("prev {}".format(previous_table))
         #logging.debug("curr {}".format(current_table))
         if current_table != previous_table:
-            sender.previous_data = current_table
-            row = sender.row
-            column = sender.column
+            editor.previous_data = current_table
+            row = editor.row
+            column = editor.column
             index = self.fks_model.index(row, column)
             self.fks_model.setData(index, current_table)
             header = self.fks_model.headerData(column)
