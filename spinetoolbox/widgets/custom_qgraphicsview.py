@@ -28,7 +28,7 @@ import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import LinkDrawer, Link
+from graphics_items import LinkDrawer, Link, ItemImage
 from config import ITEM_TYPE
 from widgets.toolbars import DraggableWidget
 
@@ -104,8 +104,8 @@ class CustomQGraphicsView(QGraphicsView):
 
     # def subWindowList(self):
     #     """Return list of subwindows (replicate QMdiArea.subWindowList)."""
-    #     # TODO: This returns an empty list now since no items have that type
-    #     # TODO: But I believe it isn't needed at all -Manuel
+    #     # TODO: This returns an empty list now since no items have the 'subwindow' type
+    #     # TODO: But I (Manuel) believe it isn't needed at all
     #     return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
     @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
@@ -223,17 +223,26 @@ class CustomQGraphicsView(QGraphicsView):
         """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
         text = event.mimeData().text()
         pos = self.mapToScene(event.pos())
-        self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)
-        self.item_shadow.setPos(pos.x() - 35, pos.y() - 35)
+        pen = QPen(QColor('black'))
+        x = pos.x() - 35
+        y = pos.y() - 35
+        w = 70
+        h = 70
+        # self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)
         if text == "Data Store":
-            self.item_shadow.setBrush(QBrush(QColor(0, 255, 255, 128)))
+            brush = QBrush(QColor(0, 255, 255, 128))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
             self._qmainwindow.show_add_data_store_form(pos.x(), pos.y())
         elif text == "Data Connection":
-            self.item_shadow.setBrush(QBrush(QColor(0, 0, 255, 128)))
+            brush = QBrush(QColor(0, 0, 255, 128))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
             self._qmainwindow.show_add_data_connection_form(pos.x(), pos.y())
         elif text == "Tool":
-            self.item_shadow.setBrush(QBrush(QColor(255, 0, 0, 128)))
+            brush = QBrush(QColor(255, 0, 0, 128))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._qmainwindow.show_add_tool_form(pos.x(), pos.y())
         elif text == "View":
-            self.item_shadow.setBrush(QBrush(QColor(0, 255, 0, 128)))
+            brush = QBrush(QColor(0, 255, 0, 128))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._qmainwindow.show_add_view_form(pos.x(), pos.y())
+        self.scene().addItem(self.item_shadow)
