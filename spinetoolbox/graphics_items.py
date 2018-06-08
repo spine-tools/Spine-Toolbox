@@ -26,10 +26,10 @@ Classes for drawing graphics items on QGraphicsScene.
 
 import logging
 from PySide2.QtCore import Qt, QPoint, QPointF, QLineF, QRectF, QTimeLine
-from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, \
+from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
-from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush, QPixmap
+from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush, QPixmap, QPainterPath
 from math import atan2, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
 
@@ -98,6 +98,32 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.connector_button.is_connector = True
         self.links = list()
+
+    def make_data_master(self, pen, brush):
+        """Make a parent of all other QGraphicsItems that
+        make up the icon drawn on the scene.
+        NOTE: setting the parent item moves the items as one!!
+        """
+        path = QPainterPath()
+        # move to top right point
+        path.moveTo(self.x_coord + self.w, self.y_coord + (1/4 - 1/8)*self.h)
+        scaled_rect = QRectF(self.q_rect)
+        scaled_rect.setHeight((1/4)*self.h)
+        top_ellipse = QGraphicsEllipseItem(scaled_rect)
+        path.arcTo(scaled_rect, 0, 180)
+        path.lineTo(self.x_coord, self.y_coord + (3/4 + 1/8)*self.h)
+        scaled_rect.translate(0, (3/4)*self.h)
+        path.arcTo(scaled_rect, 180, 180)
+        path.lineTo(self.x_coord + self.w, self.y_coord + (1/4 - 1/8)*self.h)
+        icon = QGraphicsPathItem(path)
+        top_ellipse.setParentItem(icon)
+        icon.setPen(pen)
+        icon.setBrush(brush)
+        icon.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+        icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        # icon.setAcceptHoverEvents(True)
+        return icon
 
     def make_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -262,7 +288,7 @@ class DataConnectionImage(ItemImage):
         self.brush = QBrush(QColor(0, 0, 255, 128))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 0, 204, 128))  # QBrush while hovering
         # Draw ellipse
-        self._master = self.make_master(self.pen, self.brush)
+        self._master = self.make_data_master(self.pen, self.brush)
         # Override event handlers
         self._master.mousePressEvent = self.mouse_press_event
         self._master.mouseReleaseEvent = self.mouse_release_event
@@ -470,7 +496,7 @@ class DataStoreImage(ItemImage):
         self.brush = QBrush(QColor(0, 255, 255, 128))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 204, 204, 128))  # QBrush while hovering
         # Draw icon
-        self._master = self.make_master(self.pen, self.brush)
+        self._master = self.make_data_master(self.pen, self.brush)
         # Override event handlers
         self._master.mousePressEvent = self.mouse_press_event
         self._master.mouseReleaseEvent = self.mouse_release_event
