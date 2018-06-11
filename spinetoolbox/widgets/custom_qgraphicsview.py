@@ -223,7 +223,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
         text = event.mimeData().text()
         pos = self.mapToScene(event.pos())
-        pen = QPen(QColor('black'))
+        pen = QPen(QColor('white'))
         x = pos.x() - 35
         y = pos.y() - 35
         w = 70

@@ -30,7 +30,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathIte
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
 from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush, QPixmap, QPainterPath
-from math import atan2, sin, cos, pi  # arrow head
+from math import atan2, acos, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
 
 
@@ -74,7 +74,7 @@ class ItemImage(QGraphicsItem):
         self.y_coord = y  # y coordinate in the scene
         self.w = w
         self.h = h
-        self.connector_pen = QPen(QColor('black'))  # QPen is used to draw the item outline
+        self.connector_pen = QPen(QColor('grey'))  # QPen is used to draw the item outline
         self.connector_pen.setStyle(Qt.DotLine)
         self.connector_brush = QBrush(QColor(255, 255, 255, 0))  # QBrush is used to fill the item
         self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))  # QBrush is used to fill the item
@@ -110,6 +110,7 @@ class ItemImage(QGraphicsItem):
         scaled_rect = QRectF(self.q_rect)
         scaled_rect.setHeight((1/4)*self.h)
         top_ellipse = QGraphicsEllipseItem(scaled_rect)
+        top_ellipse.setPen(pen)
         path.arcTo(scaled_rect, 0, 180)
         path.lineTo(self.x_coord, self.y_coord + (3/4 + 1/8)*self.h)
         scaled_rect.translate(0, (3/4)*self.h)
@@ -199,9 +200,9 @@ class ItemImage(QGraphicsItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         for link in self.links:
-            pass
             # NOTE: apparently we don't need this... links get updated anyways
             # link.update_line()
+            pass
         QGraphicsItem.mouseMoveEvent(self._master, event)
 
     def mouse_release_event(self, event):
@@ -644,7 +645,7 @@ class ViewImage(ItemImage):
         return super().key_press_event(event)
 
 
-class Link(QGraphicsLineItem):
+class Link(QGraphicsPathItem):
     """An item that represents a connection between project items.
 
     Attributes:
@@ -660,32 +661,26 @@ class Link(QGraphicsLineItem):
         self.dst_icon = dst_icon
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
         self.dst_connector = self.dst_icon.conn_button()
-        self.setZValue(1)   # TODO: is this better than stackBefore?
-        self.normal_color = QColor(255, 255, 0, 204)
-        self.pen_width = 10
-        self.ellipse_radius = 10
+        self.setZValue(1)
+        self.line_width = 10
         self.arrow_size = 20
+        # Path parameters
+        self.t1 = (self.arrow_size - self.line_width) / 2 / self.arrow_size
+        self.t2 = 1.0 - self.t1
+        conn_width = self.src_connector.rect().width()
+        beta = acos(self.line_width / conn_width)
+        self.alpha = 90*(pi - 2*beta)/pi
+        # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
-        self.setPen(QPen(self.normal_color, self.pen_width))
-        self.src_rect = self.src_connector.sceneBoundingRect()
-        self.dst_rect = self.dst_connector.sceneBoundingRect()
-        self.arrow_head = QPolygonF()
+        self.setBrush(QBrush(QColor(255, 255, 0, 204)))
+        self.selection_pen = QPen(Qt.darkGray)
+        self.selection_pen.setWidth(2)
+        self.selection_pen.setStyle(Qt.DotLine)
         self.setData(ITEM_TYPE, "link")
-        self.src_center = None
-        self.dst_center = None
         self.model_index = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-
-    def update_line(self):
-        """Update source and destination connector positions."""
-        self.src_rect = self.src_connector.sceneBoundingRect()
-        self.dst_rect = self.dst_connector.sceneBoundingRect()
-        self.src_center = self.src_rect.center()
-        self.dst_center = self.dst_rect.center()
-        # NOTE: we don't need to call setLine here since we do it in paint() method
-        # self.setLine(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
 
     def update_model_index(self):
         """Update model index from connection model."""
@@ -706,7 +701,6 @@ class Link(QGraphicsLineItem):
                 self.src_icon.mousePressEvent(e)
             elif self.dst_icon.conn_button().isUnderMouse():
                 self.dst_icon.mousePressEvent(e)
-                self.dst_icon.conn_button().animateClick()
 
     def contextMenuEvent(self, e):
         """Show context menu unless mouse is over one of the slot buttons.
@@ -730,48 +724,40 @@ class Link(QGraphicsLineItem):
 
     def paint(self, painter, option, widget):
         """Paint ellipse and arrow at from and to positions, respectively."""
-        self.src_rect = self.src_connector.sceneBoundingRect()
-        self.dst_rect = self.dst_connector.sceneBoundingRect()
-        self.src_center = self.src_rect.center()
-        self.dst_center = self.dst_rect.center()
-        # Make line shorter to make room for an arrow head
-        line = QLineF(self.src_center.x(), self.src_center.y(), self.dst_center.x(), self.dst_center.y())
-        angle = atan2(-line.dy(), line.dx())
-        arrow_p0 = line.p2()
-        line.setLength(line.length() - self.arrow_size - self.ellipse_radius - 0.5 * self.pen_width - 1)
-        translation = (line.unitVector().p2() - line.unitVector().p1()) * (self.ellipse_radius + 0.5 * self.pen_width - 1)
-        line.translate(translation)
-        self.setLine(line)
-        arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
-                                      cos(angle + pi / 3) * self.arrow_size)
-        arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
-                                      cos(angle + pi - pi / 3) * self.arrow_size)
-        self.arrow_head.clear()
-        self.arrow_head.append(arrow_p0)
-        self.arrow_head.append(arrow_p1)
-        self.arrow_head.append(arrow_p2)
-        brush = QBrush(self.normal_color, Qt.SolidPattern)
-        painter.setBrush(brush)
+        src_rect = self.src_connector.sceneBoundingRect()
+        dst_rect = self.dst_connector.sceneBoundingRect()
+        src_center = src_rect.center()
+        dst_center = dst_rect.center()
+        # Angle between connector centers
+        angle = atan2(src_center.y() - dst_center.y(), dst_center.x() - src_center.x())
+        # Path coordinaters
+        arrow_p0 = dst_center
+        arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
+        arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
+        line = QLineF(arrow_p1, arrow_p2)
+        p1 = line.pointAt(self.t1)
+        p2 = line.pointAt(self.t2)
+        path = QPainterPath()
+        path.moveTo(p2)
+        path.lineTo(arrow_p2)
+        path.lineTo(arrow_p0)
+        path.lineTo(arrow_p1)
+        path.lineTo(p1)
+        path.arcTo(src_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+        path.closeSubpath()
+        self.setPath(path)
+        # Set pen according to selection state
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
-            pen = QPen(Qt.darkGray)
-            pen.setWidth(2)
-            pen.setStyle(Qt.DotLine)
-            painter.setPen(pen)
-            normal_vector = line.normalVector()
-            translation = (normal_vector.p2() - normal_vector.p1()) / normal_vector.length() * (0.5 * self.pen_width)
-            painter.drawLine(line.translated(translation))
-            painter.drawLine(line.translated(-translation))
+            self.setPen(self.selection_pen)
         else:
             painter.setPen(Qt.NoPen)
-        painter.drawEllipse(self.src_center, self.ellipse_radius, self.ellipse_radius)
-        painter.drawPolygon(self.arrow_head)
-        self.setPen(QPen(self.normal_color, self.pen_width))
+            self.setPen(Qt.NoPen)
         super().paint(painter, option, widget)
 
 
 
-class LinkDrawer(QGraphicsLineItem):
+class LinkDrawer(QGraphicsPathItem):
     """An item that allows one to draw links between slot buttons in QGraphicsView.
 
     Attributes:
@@ -784,12 +770,16 @@ class LinkDrawer(QGraphicsLineItem):
         self.src = None  # source point
         self.dst = None  # destination point
         self.drawing = False
-        # set pen
-        self.pen_color = QColor(255, 0, 255)
-        self.pen_width = 6
-        self.arrow_size = 12
-        self.arrow_head = QPolygonF()
-        self.setPen(QPen(self.pen_color, self.pen_width))
+        self.line_width = 8
+        self.arrow_size = 16
+        # Path parameters
+        self.t1 = (self.arrow_size - self.line_width) / 2 / self.arrow_size
+        self.t2 = 1.0 - self.t1
+        self.w = 16
+        beta = acos(self.line_width / self.w)
+        self.alpha = 90*(pi - 2*beta)/pi
+        self.setBrush(QBrush(QColor(255, 0, 255, 204)))
+        self.setPen(Qt.NoPen)
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
         self.setData(ITEM_TYPE, "link-drawer")
@@ -802,7 +792,7 @@ class LinkDrawer(QGraphicsLineItem):
         """
         self.src = src_point
         self.dst = self.src
-        self.setLine(self.src.x(), self.src.y(), self.src.x(), self.src.y())
+        self.src_rect = QRectF(self.src.x()-self.w/2, self.src.y()-self.w/2, self.w, self.w)
         self.show()
         self.grabMouse()
 
@@ -844,22 +834,42 @@ class LinkDrawer(QGraphicsLineItem):
     def paint(self, painter, option, widget):
         """Draw ellipse at begin position and arrowhead at end position."""
         # Make the drawn line shorter so that the arrow head has room
-        line = QLineF(self.src.x(), self.src.y(), self.dst.x(), self.dst.y())
-        angle = atan2(-line.dy(), line.dx())
-        arrow_p0 = line.p2()
-        line.setLength(line.length() - self.arrow_size)
-        self.setLine(line)
-        arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
-                                      cos(angle + pi / 3) * self.arrow_size)
-        arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
-                                      cos(angle + pi - pi / 3) * self.arrow_size)
-        # Paint arrow head in the end of the line
-        self.arrow_head.clear()
-        self.arrow_head.append(arrow_p0)
-        self.arrow_head.append(arrow_p1)
-        self.arrow_head.append(arrow_p2)
-        brush = QBrush(self.pen_color, Qt.SolidPattern)
-        painter.setBrush(brush)
-        painter.drawEllipse(self.src, self.pen_width, self.pen_width)
-        painter.drawPolygon(self.arrow_head)
+        #line = QLineF(self.src.x(), self.src.y(), self.dst.x(), self.dst.y())
+        #angle = atan2(-line.dy(), line.dx())
+        #arrow_p0 = line.p2()
+        #line.setLength(line.length() - self.arrow_size)
+        #self.setLine(line)
+        #arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
+        #                              cos(angle + pi / 3) * self.arrow_size)
+        #arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
+        #                              cos(angle + pi - pi / 3) * self.arrow_size)
+        ## Paint arrow head in the end of the line
+        #self.arrow_head.clear()
+        #self.arrow_head.append(arrow_p0)
+        #self.arrow_head.append(arrow_p1)
+        #self.arrow_head.append(arrow_p2)
+        #brush = QBrush(self.pen_color, Qt.SolidPattern)
+        #painter.setBrush(brush)
+        #painter.drawEllipse(self.src, self.pen_width, self.pen_width)
+        #painter.drawPolygon(self.arrow_head)
+        #super().paint(painter, option, widget)
+
+        # Angle between connector centers
+        angle = atan2(self.src.y() - self.dst.y(), self.dst.x() - self.src.x())
+        # Path coordinaters
+        arrow_p0 = self.dst
+        arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
+        arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
+        line = QLineF(arrow_p1, arrow_p2)
+        p1 = line.pointAt(self.t1)
+        p2 = line.pointAt(self.t2)
+        path = QPainterPath()
+        path.moveTo(p2)
+        path.lineTo(arrow_p2)
+        path.lineTo(arrow_p0)
+        path.lineTo(arrow_p1)
+        path.lineTo(p1)
+        path.arcTo(self.src_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+        path.closeSubpath()
+        self.setPath(path)
         super().paint(painter, option, widget)
