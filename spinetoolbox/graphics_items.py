@@ -91,6 +91,7 @@ class ItemImage(QGraphicsItem):
         # Set name item position (centered)
         bounding_rect = self.name_item.sceneBoundingRect()
         self.name_item.setPos(self.x_coord + self.w/2 - bounding_rect.width()/2, self.y_coord)  # TODO: Refine position more?
+        self.name_item.setZValue(3)
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
@@ -106,14 +107,14 @@ class ItemImage(QGraphicsItem):
         make up the icon drawn on the scene.
         NOTE: setting the parent item moves the items as one!!
         """
-        path = QPainterPath()
-        # Move to top right corner
-        path.moveTo(self.x_coord + self.w, self.y_coord + (1/4 - 1/8)*self.h)
+        # Draw ellipse on the top
         scaled_rect = QRectF(self.q_rect)
         scaled_rect.setHeight((1/4)*self.h)
         top_ellipse = QGraphicsEllipseItem(scaled_rect)
         top_ellipse.setPen(pen)
-        # Draw database image segments counterclockwise
+        # Draw database image segments starting from top-right corner and moving counterclockwise
+        path = QPainterPath()
+        path.moveTo(self.x_coord + self.w, self.y_coord + (1/4 - 1/8)*self.h)
         path.arcTo(scaled_rect, 0, 180)
         path.lineTo(self.x_coord, self.y_coord + (3/4 + 1/8)*self.h)
         scaled_rect.translate(0, (3/4)*self.h)
@@ -668,18 +669,19 @@ class Link(QGraphicsPathItem):
         self.line_width = 10
         self.arrow_size = 20
         # Path parameters
+        self.arrow_length = self.arrow_size * sin(pi/3)
         self.t1 = (self.arrow_size - self.line_width) / 2 / self.arrow_size
         self.t2 = 1.0 - self.t1
-        conn_width = self.src_connector.rect().width()
-        beta = acos(self.line_width / conn_width)
+        self.conn_width = self.src_connector.rect().width()
+        beta = acos(self.line_width / self.conn_width)
         self.alpha = 90*(pi - 2*beta)/pi
         # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
-        self.setBrush(QBrush(QColor(255, 255, 0, 204)))
-        self.selection_pen = QPen(Qt.darkGray)
-        self.selection_pen.setWidth(2)
-        self.selection_pen.setStyle(Qt.DotLine)
+        # self.setBrush(QBrush(QColor(255, 255, 0, 204)))
+        self.setPen(QPen(Qt.gray))
+        self.selection_brush = QBrush(QColor(255, 0, 255, 204))
+        self.normal_brush = QBrush(QColor(255, 255, 0, 204))
         self.setData(ITEM_TYPE, "link")
         self.model_index = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -733,7 +735,7 @@ class Link(QGraphicsPathItem):
         dst_center = dst_rect.center()
         # Angle between connector centers
         angle = atan2(src_center.y() - dst_center.y(), dst_center.x() - src_center.x())
-        # Path coordinates
+        # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
         arrow_p0 = dst_center
         arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
         arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
@@ -741,21 +743,50 @@ class Link(QGraphicsPathItem):
         p1 = line.pointAt(self.t1)
         p2 = line.pointAt(self.t2)
         path = QPainterPath()
+        path.setFillRule(Qt.WindingFill)
         path.moveTo(p2)
         path.lineTo(arrow_p2)
         path.lineTo(arrow_p0)
         path.lineTo(arrow_p1)
         path.lineTo(p1)
+        if self.src_connector == self.dst_connector:
+            top_left = dst_center + QPointF(-2*self.line_width, -5*self.line_width)
+            bottom_right = dst_center + QPointF(2*self.line_width, 0)
+            inner_rect = QRectF(top_left, bottom_right)
+            inner_rect.translate(-self.arrow_length, -self.conn_width/4)
+            path.arcTo(inner_rect, 270, -90)
+            inner_rect.adjust(0, 0, 2*self.arrow_length, 0)
+            path.arcTo(inner_rect, 180, -90)
+            inner_rect.adjust(0, 0, -2*self.arrow_length, 0)
+            inner_rect.translate(2*self.arrow_length, 0)
+            inner_rect.adjust(-2*self.arrow_length, 0, 0, 0)
+            path.arcTo(inner_rect, 90, -90)
+            inner_rect.adjust(2*self.arrow_length, 0, 0, 0)
+            path.arcTo(inner_rect, 0, -90)
         path.arcTo(src_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+        if self.src_connector == self.dst_connector:
+            top_left = dst_center + QPointF(-3*self.line_width, -7*self.line_width)
+            bottom_right = dst_center + QPointF(3*self.line_width, 0)
+            outer_rect = QRectF(top_left, bottom_right)
+            outer_rect.translate(self.arrow_length, self.conn_width/4)
+            path.arcTo(outer_rect, 270, 90)
+            outer_rect.adjust(-2*self.arrow_length, 0, 0, 0)
+            path.arcTo(outer_rect, 0, 90)
+            outer_rect.adjust(2*self.arrow_length, 0, 0, 0)
+            outer_rect.translate(-2*self.arrow_length, 0)
+            outer_rect.adjust(0, 0, 2*self.arrow_length, 0)
+            path.arcTo(outer_rect, 90, 90)
+            outer_rect.adjust(0, 0, -2*self.arrow_length, 0)
+            path.arcTo(outer_rect, 180, 90)
         path.closeSubpath()
         self.setPath(path)
-        # Set pen according to selection state
+        # Set brush according to selection state
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
-            self.setPen(self.selection_pen)
+            self.setBrush(self.selection_brush)
         else:
             painter.setPen(Qt.NoPen)
-            self.setPen(Qt.NoPen)
+            self.setBrush(self.normal_brush)
         super().paint(painter, option, widget)
 
 
@@ -782,10 +813,10 @@ class LinkDrawer(QGraphicsPathItem):
         beta = acos(self.line_width / self.w)
         self.alpha = 90*(pi - 2*beta)/pi
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
-        self.setPen(Qt.NoPen)
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
         self.setData(ITEM_TYPE, "link-drawer")
+        self.setPen(QPen(Qt.gray))
 
     def start_drawing_at(self, src_point):
         """Start drawing from the center point of the clicked button.
