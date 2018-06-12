@@ -54,12 +54,13 @@ class CustomQGraphicsView(QGraphicsView):
         self.max_sw_width = 0
         self.max_sw_height = 0
         self.scene().changed.connect(self.scene_changed)
+        self.scene().selectionChanged.connect(self.selection_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
         self.show()
 
-    @Slot(name='scene_changed')
+    @Slot("QList", name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Make the scene larger as items get moved."""
         # logging.debug("scene changed. {0}".format(changed_qrects))
@@ -68,13 +69,27 @@ class CustomQGraphicsView(QGraphicsView):
             qrect |= changed
         self.setSceneRect(qrect)
 
+    @Slot(name='selection_changed')
+    def selection_changed(self):
+        """Bring selected item to top."""
+        # logging.debug("selection changed: {}.".format(self.scene().selectedItems()))
+        for selected in self.scene().selectedItems():
+            # Bring selected to top
+            if not selected.zValue():
+                continue
+            for item in selected.collidingItems():
+                if item != selected and item.zValue() == selected.zValue():
+                    item.stackBefore(selected)
+
     def reset_scene(self):
         """Get a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
         self.scene().changed.disconnect(self.scene_changed)
+        self.scene().selectionChanged.disconnect(self.selection_changed)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
         self.scene().changed.connect(self.scene_changed)
+        self.scene().selectionChanged.connect(self.selection_changed)
         self.setSceneRect(QRectF(0, 0, 0, 0))
         self.scene().addItem(self.link_drawer)
 
@@ -163,17 +178,17 @@ class CustomQGraphicsView(QGraphicsView):
                 if link:
                     self.scene().removeItem(link)
 
-    def draw_links(self, src_point, name):
+    def draw_links(self, src_rect, name):
         """Draw links when slot button is clicked.
 
         Args:
-            src_point (QPointF): Position on scene where to start drawing. Center point of connector button.
+            src_rect (QRectF): Position on scene where to start drawing. Rect of connector button.
             name (str): Name of item where to start drawing
         """
         if not self.link_drawer.drawing:
             # start drawing and remember connector
             self.link_drawer.drawing = True
-            self.link_drawer.start_drawing_at(src_point)
+            self.link_drawer.start_drawing_at(src_rect)
             self.from_widget = name  # owner is Name of Item (e.g. DC1)
         else:
             # stop drawing and make connection

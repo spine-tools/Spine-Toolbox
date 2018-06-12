@@ -91,7 +91,6 @@ class ItemImage(QGraphicsItem):
         # Set name item position (centered)
         bounding_rect = self.name_item.sceneBoundingRect()
         self.name_item.setPos(self.x_coord + self.w/2 - bounding_rect.width()/2, self.y_coord)  # TODO: Refine position more?
-        self.name_item.setZValue(3)
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
@@ -269,8 +268,8 @@ class ItemImage(QGraphicsItem):
 
     def start_drawing(self):
         """Start drawing a link from the center point of the connector button."""
-        center_point = self.conn_button().sceneBoundingRect().center()
-        self._main.ui.graphicsView.draw_links(center_point, self.name())
+        rect = self.conn_button().sceneBoundingRect()
+        self._main.ui.graphicsView.draw_links(rect, self.name())
 
 
 class DataConnectionImage(ItemImage):
@@ -666,15 +665,16 @@ class Link(QGraphicsPathItem):
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
         self.dst_connector = self.dst_icon.conn_button()
         self.setZValue(1)
-        self.line_width = 10
-        self.arrow_size = 20
-        # Path parameters
-        self.arrow_length = self.arrow_size * sin(pi/3)
-        self.t1 = (self.arrow_size - self.line_width) / 2 / self.arrow_size
-        self.t2 = 1.0 - self.t1
         self.conn_width = self.src_connector.rect().width()
-        beta = acos(self.line_width / self.conn_width)
-        self.alpha = 90*(pi - 2*beta)/pi
+        self.arrow_angle = pi/4
+        # Path parameters
+        self.line_width = self.conn_width/2
+        self.arrow_length = self.line_width
+        self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
+        arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
+        self.t1 = (arrow_base - self.line_width) / 2 / arrow_base
+        self.t2 = 1.0 - self.t1
+        self.alpha = 30
         # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
@@ -702,6 +702,7 @@ class Link(QGraphicsPathItem):
             try:
                 if item.src_icon == self.dst_icon and item.dst_icon == self.src_icon:
                     self.parallel_link = item
+                    break
             except AttributeError:
                 continue
 
@@ -719,6 +720,7 @@ class Link(QGraphicsPathItem):
         if e.button() != Qt.LeftButton:
             e.ignore()
         else:
+            # Trigger connector button if underneath
             if self.src_icon.conn_button().isUnderMouse():
                 self.src_icon.mousePressEvent(e)
             elif self.dst_icon.conn_button().isUnderMouse():
@@ -755,8 +757,10 @@ class Link(QGraphicsPathItem):
         angle = atan2(src_center.y() - dst_center.y(), dst_center.x() - src_center.x())
         # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
         arrow_p0 = dst_center
-        arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
-        arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
+        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
+        d2 = QPointF(sin(angle + (pi-self.arrow_angle)), cos(angle + (pi-self.arrow_angle)))
+        arrow_p1 = arrow_p0 - d1 * self.arrow_diag
+        arrow_p2 = arrow_p0 - d2 * self.arrow_diag
         line = QLineF(arrow_p1, arrow_p2)
         p1 = line.pointAt(self.t1)
         p2 = line.pointAt(self.t2)
@@ -823,34 +827,45 @@ class LinkDrawer(QGraphicsPathItem):
         self._qmainwindow = qmainwindow
         self.src = None  # source point
         self.dst = None  # destination point
+        self.drawing = False
+        self.arrow_angle = pi/4
+        # Path parameters
+        self.ellipse_width = None
+        self.line_width = None
+        self.arrow_length = None
+        self.arrow_diag = None
         self.src_rect = None
         self.ellipse_rect = None
-        self.drawing = False
-        self.line_width = 8
-        self.arrow_size = 16
-        # Path parameters
-        self.arrow_length = self.arrow_size * sin(pi/3)
-        self.t1 = (self.arrow_size - self.line_width) / 2 / self.arrow_size
-        self.t2 = 1.0 - self.t1
-        self.w = 20
-        beta = acos(self.line_width / self.w)
-        self.alpha = 90*(pi - 2*beta)/pi
+        self.t1 = None
+        self.t2 = None
+        self.alpha = 30
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
         self.setData(ITEM_TYPE, "link-drawer")
         self.setPen(QPen(Qt.gray))
 
-    def start_drawing_at(self, src_point):
+    #def start_drawing_at(self, src_point):
+    def start_drawing_at(self, src_rect):
         """Start drawing from the center point of the clicked button.
 
         Args:
-            src_point (QPointF): Center point of the clicked button
+            src_rect (QRecF): Rectangle of the clicked button
         """
-        self.src = src_point
+        self.src_rect = src_rect
+        self.src = self.src_rect.center()
         self.dst = self.src
-        self.src_rect = QRectF(self.src.x()-self.w/2, self.src.y()-self.w/2, self.w, self.w)
-        self.ellipse_rect = QRectF(self.src.x()-0.4*self.w, self.src.y()-0.4*self.w, 0.8*self.w, 0.8*self.w)
+        # Path parameters
+        conn_width = self.src_rect.width()
+        self.ellipse_width = (3/4)*conn_width
+        self.line_width = self.ellipse_width/2
+        self.arrow_length = self.line_width
+        self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
+        self.ellipse_rect = QRectF(0, 0, self.ellipse_width, self.ellipse_width)
+        self.ellipse_rect.moveCenter(self.src)
+        arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
+        self.t1 = (arrow_base - self.line_width) / 2 / arrow_base
+        self.t2 = 1.0 - self.t1
         self.show()
 
     def paint(self, painter, option, widget):
@@ -863,12 +878,15 @@ class LinkDrawer(QGraphicsPathItem):
             angle = atan2(self.src.y() - self.dst.y(), self.dst.x() - self.src.x())
         # Path coordinates
         arrow_p0 = self.dst
-        arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
-        arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
+        d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
+        d2 = QPointF(sin(angle + (pi-self.arrow_angle)), cos(angle + (pi-self.arrow_angle)))
+        arrow_p1 = arrow_p0 - d1 * self.arrow_diag
+        arrow_p2 = arrow_p0 - d2 * self.arrow_diag
         line = QLineF(arrow_p1, arrow_p2)
         p1 = line.pointAt(self.t1)
         p2 = line.pointAt(self.t2)
         path = QPainterPath()
+        path.setFillRule(Qt.WindingFill)
         path.moveTo(p2)
         path.lineTo(arrow_p2)
         path.lineTo(arrow_p0)
@@ -879,7 +897,7 @@ class LinkDrawer(QGraphicsPathItem):
             top_left = self.src + QPointF(-2.75*self.line_width, -4*self.line_width)
             bottom_right = self.src + QPointF(2.75*self.line_width, 0)
             inner_rect = QRectF(top_left, bottom_right)
-            inner_rect.translate(-self.arrow_length, -self.w/4)
+            inner_rect.translate(-self.arrow_length, -self.ellipse_width/4)
             path.arcTo(inner_rect, 270, -90)
             inner_rect.adjust(0, 0, 2*self.arrow_length, 0)
             path.arcTo(inner_rect, 180, -90)
@@ -894,7 +912,7 @@ class LinkDrawer(QGraphicsPathItem):
             top_left = self.src + QPointF(-3*self.line_width, -6*self.line_width)
             bottom_right = self.src + QPointF(3*self.line_width, 0)
             outer_rect = QRectF(top_left, bottom_right)
-            outer_rect.translate(self.arrow_length, self.w/4)
+            outer_rect.translate(self.arrow_length, self.ellipse_width/4)
             path.arcTo(outer_rect, 270, 90)
             outer_rect.adjust(-2*self.arrow_length, 0, 0, 0)
             path.arcTo(outer_rect, 0, 90)
