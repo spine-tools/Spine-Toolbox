@@ -679,19 +679,36 @@ class Link(QGraphicsPathItem):
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
         # self.setBrush(QBrush(QColor(255, 255, 0, 204)))
+        self.context_menu_title = "{0}->{1}".format(self.src_icon.name(), self.dst_icon.name())
         self.setPen(QPen(Qt.gray))
         self.selection_brush = QBrush(QColor(255, 0, 255, 204))
         self.normal_brush = QBrush(QColor(255, 255, 0, 204))
         self.setData(ITEM_TYPE, "link")
         self.model_index = None
+        self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
 
-    def update_model_index(self):
-        """Update model index from connection model."""
+    def find_model_index(self):
+        """Find model index from connection model."""
         row = self._qmainwindow.connection_model.header.index(self.src_icon.name())
         column = self._qmainwindow.connection_model.header.index(self.dst_icon.name())
         self.model_index = self._qmainwindow.connection_model.index(row, column)
+
+    def find_parallel_link(self):
+        """Find parallel link."""
+        self.parallel_link = None
+        for item in self.collidingItems():
+            try:
+                if item.src_icon == self.dst_icon and item.dst_icon == self.src_icon:
+                    self.parallel_link = item
+            except AttributeError:
+                continue
+
+    def send_to_bottom(self):
+        """"""
+        if self.parallel_link:
+            self.stackBefore(self.parallel_link)
 
     def mousePressEvent(self, e):
         """Trigger slot button if it is underneath.
@@ -718,13 +735,14 @@ class Link(QGraphicsPathItem):
             e.ignore()
         else:
             self.setSelected(True)
-            self.update_model_index()
-            self._qmainwindow.show_link_context_menu(e.screenPos(), self.model_index)
+            self.find_model_index()
+            self.find_parallel_link()
+            self._qmainwindow.show_link_context_menu(e.screenPos(), self)
 
     def keyPressEvent(self, event):
         """Remove associated connection if this is selected and delete is pressed"""
         if event.key() == Qt.Key_Delete and self.isSelected():
-            self.update_model_index()
+            self.find_model_index()
             self._qmainwindow.toggle_connection(self.model_index)
 
     def paint(self, painter, option, widget):
@@ -805,13 +823,16 @@ class LinkDrawer(QGraphicsPathItem):
         self._qmainwindow = qmainwindow
         self.src = None  # source point
         self.dst = None  # destination point
+        self.src_rect = None
+        self.ellipse_rect = None
         self.drawing = False
         self.line_width = 8
         self.arrow_size = 16
         # Path parameters
+        self.arrow_length = self.arrow_size * sin(pi/3)
         self.t1 = (self.arrow_size - self.line_width) / 2 / self.arrow_size
         self.t2 = 1.0 - self.t1
-        self.w = 16
+        self.w = 20
         beta = acos(self.line_width / self.w)
         self.alpha = 90*(pi - 2*beta)/pi
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
@@ -829,12 +850,17 @@ class LinkDrawer(QGraphicsPathItem):
         self.src = src_point
         self.dst = self.src
         self.src_rect = QRectF(self.src.x()-self.w/2, self.src.y()-self.w/2, self.w, self.w)
+        self.ellipse_rect = QRectF(self.src.x()-0.4*self.w, self.src.y()-0.4*self.w, 0.8*self.w, 0.8*self.w)
         self.show()
 
     def paint(self, painter, option, widget):
         """Draw ellipse at begin position and arrowhead at end position."""
         # Angle between connector centers
-        angle = atan2(self.src.y() - self.dst.y(), self.dst.x() - self.src.x())
+        if self.src_rect.contains(self.dst):
+            angle = 0
+            self.dst = self.src
+        else:
+            angle = atan2(self.src.y() - self.dst.y(), self.dst.x() - self.src.x())
         # Path coordinates
         arrow_p0 = self.dst
         arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
@@ -848,7 +874,36 @@ class LinkDrawer(QGraphicsPathItem):
         path.lineTo(arrow_p0)
         path.lineTo(arrow_p1)
         path.lineTo(p1)
-        path.arcTo(self.src_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+        # Draw half of feedback link
+        if self.src_rect.contains(self.dst):
+            top_left = self.src + QPointF(-2.75*self.line_width, -4*self.line_width)
+            bottom_right = self.src + QPointF(2.75*self.line_width, 0)
+            inner_rect = QRectF(top_left, bottom_right)
+            inner_rect.translate(-self.arrow_length, -self.w/4)
+            path.arcTo(inner_rect, 270, -90)
+            inner_rect.adjust(0, 0, 2*self.arrow_length, 0)
+            path.arcTo(inner_rect, 180, -90)
+            inner_rect.adjust(0, 0, -2*self.arrow_length, 0)
+            inner_rect.translate(2*self.arrow_length, 0)
+            inner_rect.adjust(-2*self.arrow_length, 0, 0, 0)
+            path.arcTo(inner_rect, 90, -90)
+            inner_rect.adjust(2*self.arrow_length, 0, 0, 0)
+            path.arcTo(inner_rect, 0, -90)
+        path.arcTo(self.ellipse_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+        if self.src_rect.contains(self.dst):
+            top_left = self.src + QPointF(-3*self.line_width, -6*self.line_width)
+            bottom_right = self.src + QPointF(3*self.line_width, 0)
+            outer_rect = QRectF(top_left, bottom_right)
+            outer_rect.translate(self.arrow_length, self.w/4)
+            path.arcTo(outer_rect, 270, 90)
+            outer_rect.adjust(-2*self.arrow_length, 0, 0, 0)
+            path.arcTo(outer_rect, 0, 90)
+            outer_rect.adjust(2*self.arrow_length, 0, 0, 0)
+            outer_rect.translate(-2*self.arrow_length, 0)
+            outer_rect.adjust(0, 0, 2*self.arrow_length, 0)
+            path.arcTo(outer_rect, 90, 90)
+            outer_rect.adjust(0, 0, -2*self.arrow_length, 0)
+            path.arcTo(outer_rect, 180, 90)
         path.closeSubpath()
         self.setPath(path)
         super().paint(painter, option, widget)

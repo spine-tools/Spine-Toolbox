@@ -35,13 +35,14 @@ class CustomContextMenu(QMenu):
     def __init__(self):
         super().__init__()
 
-    def add_action(self, text):
+    def add_action(self, text, enabled=True):
         """Adds an action to the context menu.
 
         Args:
             text (str): Text description of the action
         """
         action = self.addAction(text)
+        action.setEnabled(enabled)
         action.triggered.connect(lambda: self.set_action(text))
 
     def set_action(self, option):
@@ -90,7 +91,7 @@ class ItemImageContextMenu(CustomContextMenu):
 class LinkContextMenu(CustomContextMenu):
     """Context menu class for connection links."""
 
-    def __init__(self, parent, position, index):
+    def __init__(self, parent, position, index, parallel_link=None):
         super().__init__()
         self._parent = parent
         self.index = index
@@ -98,6 +99,8 @@ class LinkContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Remove Connection")
+        if parallel_link:
+            self.add_action("Send to bottom")
         self.exec_(position)
 
 class ToolTemplateContextMenu(CustomContextMenu):
