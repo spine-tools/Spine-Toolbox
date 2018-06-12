@@ -749,9 +749,10 @@ class Link(QGraphicsPathItem):
         path.lineTo(arrow_p0)
         path.lineTo(arrow_p1)
         path.lineTo(p1)
+        # Draw half of feedback link
         if self.src_connector == self.dst_connector:
-            top_left = dst_center + QPointF(-2*self.line_width, -5*self.line_width)
-            bottom_right = dst_center + QPointF(2*self.line_width, 0)
+            top_left = dst_center + QPointF(-2.75*self.line_width, -4*self.line_width)
+            bottom_right = dst_center + QPointF(2.75*self.line_width, 0)
             inner_rect = QRectF(top_left, bottom_right)
             inner_rect.translate(-self.arrow_length, -self.conn_width/4)
             path.arcTo(inner_rect, 270, -90)
@@ -764,8 +765,9 @@ class Link(QGraphicsPathItem):
             inner_rect.adjust(2*self.arrow_length, 0, 0, 0)
             path.arcTo(inner_rect, 0, -90)
         path.arcTo(src_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+        # Draw half of feedback link
         if self.src_connector == self.dst_connector:
-            top_left = dst_center + QPointF(-3*self.line_width, -7*self.line_width)
+            top_left = dst_center + QPointF(-3*self.line_width, -6*self.line_width)
             bottom_right = dst_center + QPointF(3*self.line_width, 0)
             outer_rect = QRectF(top_left, bottom_right)
             outer_rect.translate(self.arrow_length, self.conn_width/4)
