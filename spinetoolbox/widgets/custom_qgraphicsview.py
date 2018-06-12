@@ -246,3 +246,32 @@ class CustomQGraphicsView(QGraphicsView):
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._qmainwindow.show_add_view_form(pos.x(), pos.y())
         self.scene().addItem(self.item_shadow)
+
+    def mouseMoveEvent(self, e):
+        """Update line end position.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        if self.link_drawer and self.link_drawer.src:
+            self.link_drawer.dst = self.mapToScene(e.pos())
+            self.link_drawer.update()
+        super().mouseMoveEvent(e)
+
+    def mousePressEvent(self, e):
+        """If link lands on slot button, trigger click.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        if self.link_drawer and self.link_drawer.drawing:
+            self.link_drawer.hide()
+            if e.button() != Qt.LeftButton:
+                self.link_drawer.drawing = False
+            else:
+                connectors = [item for item in self.items(e.pos()) if hasattr(item, 'is_connector')]
+                if not connectors:
+                    self.link_drawer.drawing = False
+                    self._qmainwindow.msg_error.emit("Unable to make connection."
+                                                    " Try landing the connection onto a connector button.")
+        super().mousePressEvent(e)

@@ -70,8 +70,8 @@ class ItemImage(QGraphicsItem):
         """Class constructor."""
         super().__init__()
         self._main = main
-        self.x_coord = x  # x coordinate in the scene
-        self.y_coord = y  # y coordinate in the scene
+        self.x_coord = x  # x coordinate in the scene (top left corner)
+        self.y_coord = y  # y coordinate in the scene (top left corner)
         self.w = w
         self.h = h
         self.connector_pen = QPen(QColor('grey'))  # QPen is used to draw the item outline
@@ -88,7 +88,9 @@ class ItemImage(QGraphicsItem):
         font.setPointSize(self.font_size)
         font.setBold(True)
         self.name_item.setFont(font)
-        self.name_item.setPos(self.x_coord, self.y_coord)  # TODO: Refine position
+        # Set name item position (centered)
+        bounding_rect = self.name_item.sceneBoundingRect()
+        self.name_item.setPos(self.x_coord + self.w/2 - bounding_rect.width()/2, self.y_coord)  # TODO: Refine position more?
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
@@ -105,17 +107,18 @@ class ItemImage(QGraphicsItem):
         NOTE: setting the parent item moves the items as one!!
         """
         path = QPainterPath()
-        # move to top right point
+        # Move to top right corner
         path.moveTo(self.x_coord + self.w, self.y_coord + (1/4 - 1/8)*self.h)
         scaled_rect = QRectF(self.q_rect)
         scaled_rect.setHeight((1/4)*self.h)
         top_ellipse = QGraphicsEllipseItem(scaled_rect)
         top_ellipse.setPen(pen)
+        # Draw database image segments counterclockwise
         path.arcTo(scaled_rect, 0, 180)
         path.lineTo(self.x_coord, self.y_coord + (3/4 + 1/8)*self.h)
         scaled_rect.translate(0, (3/4)*self.h)
         path.arcTo(scaled_rect, 180, 180)
-        path.lineTo(self.x_coord + self.w, self.y_coord + (1/4 - 1/8)*self.h)
+        path.closeSubpath()
         icon = QGraphicsPathItem(path)
         top_ellipse.setParentItem(icon)
         icon.setPen(pen)
@@ -730,7 +733,7 @@ class Link(QGraphicsPathItem):
         dst_center = dst_rect.center()
         # Angle between connector centers
         angle = atan2(src_center.y() - dst_center.y(), dst_center.x() - src_center.x())
-        # Path coordinaters
+        # Path coordinates
         arrow_p0 = dst_center
         arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
         arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
@@ -794,69 +797,12 @@ class LinkDrawer(QGraphicsPathItem):
         self.dst = self.src
         self.src_rect = QRectF(self.src.x()-self.w/2, self.src.y()-self.w/2, self.w, self.w)
         self.show()
-        self.grabMouse()
-
-    def mouseMoveEvent(self, e):
-        """Update line end position.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        if self.src is not None:
-            self.dst = e.scenePos()  # QPointF. The same as e.pos()
-            self.update()
-
-    def mousePressEvent(self, e):
-        """If link lands on slot button, trigger click.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        self.ungrabMouse()
-        self.hide()
-        if e.button() != Qt.LeftButton:
-            self.drawing = False
-        else:
-            pos = e.scenePos()
-            view_pos = self._qmainwindow.ui.graphicsView.mapFromScene(pos)
-            for item in self._qmainwindow.ui.graphicsView.items(view_pos):
-                # logging.debug("item:{0}".format(item))
-                if isinstance(item, QGraphicsRectItem):  # TODO: Is this test needed?
-                    # logging.debug("QGraphicsRectItem found")
-                    if hasattr(item, 'is_connector'):  # only a connector_button should have this
-                        # Send mousePressEvent to QGraphicsRectItem (connector_button)
-                        item.mousePressEvent(e)
-                        return
-            self.drawing = False
-            self._qmainwindow.msg_error.emit("Unable to make connection."
-                                             " Try landing the connection onto a connector button.")
 
     def paint(self, painter, option, widget):
         """Draw ellipse at begin position and arrowhead at end position."""
-        # Make the drawn line shorter so that the arrow head has room
-        #line = QLineF(self.src.x(), self.src.y(), self.dst.x(), self.dst.y())
-        #angle = atan2(-line.dy(), line.dx())
-        #arrow_p0 = line.p2()
-        #line.setLength(line.length() - self.arrow_size)
-        #self.setLine(line)
-        #arrow_p1 = arrow_p0 - QPointF(sin(angle + pi / 3) * self.arrow_size,
-        #                              cos(angle + pi / 3) * self.arrow_size)
-        #arrow_p2 = arrow_p0 - QPointF(sin(angle + pi - pi / 3) * self.arrow_size,
-        #                              cos(angle + pi - pi / 3) * self.arrow_size)
-        ## Paint arrow head in the end of the line
-        #self.arrow_head.clear()
-        #self.arrow_head.append(arrow_p0)
-        #self.arrow_head.append(arrow_p1)
-        #self.arrow_head.append(arrow_p2)
-        #brush = QBrush(self.pen_color, Qt.SolidPattern)
-        #painter.setBrush(brush)
-        #painter.drawEllipse(self.src, self.pen_width, self.pen_width)
-        #painter.drawPolygon(self.arrow_head)
-        #super().paint(painter, option, widget)
-
         # Angle between connector centers
         angle = atan2(self.src.y() - self.dst.y(), self.dst.x() - self.src.x())
-        # Path coordinaters
+        # Path coordinates
         arrow_p0 = self.dst
         arrow_p1 = arrow_p0 - QPointF(sin(angle + (1/3)*pi), cos(angle + (1/3)*pi)) * self.arrow_size
         arrow_p2 = arrow_p0 - QPointF(sin(angle + (2/3)*pi), cos(angle + (2/3)*pi)) * self.arrow_size
