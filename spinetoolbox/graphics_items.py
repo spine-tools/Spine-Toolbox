@@ -30,7 +30,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsLineItem, QGraphicsPathIte
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
 from PySide2.QtGui import QColor, QPen, QPolygonF, QBrush, QPixmap, QPainterPath
-from math import atan2, acos, sin, cos, pi  # arrow head
+from math import atan2, degrees, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
 
 
@@ -665,16 +665,21 @@ class Link(QGraphicsPathItem):
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
         self.dst_connector = self.dst_icon.conn_button()
         self.setZValue(1)
-        self.conn_width = self.src_connector.rect().width()
+        conn_width = self.src_connector.rect().width()
         self.arrow_angle = pi/4
+        self.ellipse_angle = 30
+        self.feedback_size = 10
         # Path parameters
-        self.line_width = self.conn_width/2
+        self.line_width = conn_width/2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
         self.t1 = (arrow_base - self.line_width) / 2 / arrow_base
         self.t2 = 1.0 - self.t1
-        self.alpha = 30
+        self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
+        self.outer_rect = QRectF(0, 0, 8*self.feedback_size, 6*self.feedback_size + self.line_width)
+        self.inner_angle = degrees(atan2(conn_width/2, self.inner_rect.height()/2))
+        self.outer_angle = degrees(atan2(conn_width/2, self.outer_rect.height()/2))
         # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
@@ -771,37 +776,15 @@ class Link(QGraphicsPathItem):
         path.lineTo(arrow_p0)
         path.lineTo(arrow_p1)
         path.lineTo(p1)
-        # Draw half of feedback link
+        # Draw inner part of feedback link
         if self.src_connector == self.dst_connector:
-            top_left = dst_center + QPointF(-2.75*self.line_width, -4*self.line_width)
-            bottom_right = dst_center + QPointF(2.75*self.line_width, 0)
-            inner_rect = QRectF(top_left, bottom_right)
-            inner_rect.translate(-self.arrow_length, -self.conn_width/4)
-            path.arcTo(inner_rect, 270, -90)
-            inner_rect.adjust(0, 0, 2*self.arrow_length, 0)
-            path.arcTo(inner_rect, 180, -90)
-            inner_rect.adjust(0, 0, -2*self.arrow_length, 0)
-            inner_rect.translate(2*self.arrow_length, 0)
-            inner_rect.adjust(-2*self.arrow_length, 0, 0, 0)
-            path.arcTo(inner_rect, 90, -90)
-            inner_rect.adjust(2*self.arrow_length, 0, 0, 0)
-            path.arcTo(inner_rect, 0, -90)
-        path.arcTo(src_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
-        # Draw half of feedback link
+            self.inner_rect.moveCenter(dst_center - QPointF(0, self.inner_rect.height()/2 + self.line_width/2))
+            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2*self.inner_angle - 360)
+        path.arcTo(src_rect, (180/pi)*angle + self.ellipse_angle, 360 - 2*self.ellipse_angle)
+        # Draw outer part of feedback link
         if self.src_connector == self.dst_connector:
-            top_left = dst_center + QPointF(-3*self.line_width, -6*self.line_width)
-            bottom_right = dst_center + QPointF(3*self.line_width, 0)
-            outer_rect = QRectF(top_left, bottom_right)
-            outer_rect.translate(self.arrow_length, self.conn_width/4)
-            path.arcTo(outer_rect, 270, 90)
-            outer_rect.adjust(-2*self.arrow_length, 0, 0, 0)
-            path.arcTo(outer_rect, 0, 90)
-            outer_rect.adjust(2*self.arrow_length, 0, 0, 0)
-            outer_rect.translate(-2*self.arrow_length, 0)
-            outer_rect.adjust(0, 0, 2*self.arrow_length, 0)
-            path.arcTo(outer_rect, 90, 90)
-            outer_rect.adjust(0, 0, -2*self.arrow_length, 0)
-            path.arcTo(outer_rect, 180, 90)
+            self.outer_rect.moveCenter(dst_center - QPointF(0, self.outer_rect.height()/2 - self.line_width/2))
+            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
         # Set brush according to selection state
@@ -829,6 +812,8 @@ class LinkDrawer(QGraphicsPathItem):
         self.dst = None  # destination point
         self.drawing = False
         self.arrow_angle = pi/4
+        self.ellipse_angle = 30
+        self.feedback_size = 10
         # Path parameters
         self.ellipse_width = None
         self.line_width = None
@@ -838,7 +823,10 @@ class LinkDrawer(QGraphicsPathItem):
         self.ellipse_rect = None
         self.t1 = None
         self.t2 = None
-        self.alpha = 30
+        self.inner_rect = None
+        self.outer_rect = None
+        self.inner_angle = None
+        self.outer_angle = None
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
@@ -866,6 +854,10 @@ class LinkDrawer(QGraphicsPathItem):
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
         self.t1 = (arrow_base - self.line_width) / 2 / arrow_base
         self.t2 = 1.0 - self.t1
+        self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
+        self.outer_rect = QRectF(0, 0, 8*self.feedback_size, 6*self.feedback_size + self.line_width)
+        self.inner_angle = degrees(atan2(self.ellipse_width/2, self.inner_rect.height()/2))
+        self.outer_angle = degrees(atan2(self.ellipse_width/2, self.outer_rect.height()/2))
         self.show()
 
     def paint(self, painter, option, widget):
@@ -892,36 +884,15 @@ class LinkDrawer(QGraphicsPathItem):
         path.lineTo(arrow_p0)
         path.lineTo(arrow_p1)
         path.lineTo(p1)
-        # Draw half of feedback link
+        # Draw inner part of feedback link
         if self.src_rect.contains(self.dst):
-            top_left = self.src + QPointF(-2.75*self.line_width, -4*self.line_width)
-            bottom_right = self.src + QPointF(2.75*self.line_width, 0)
-            inner_rect = QRectF(top_left, bottom_right)
-            inner_rect.translate(-self.arrow_length, -self.ellipse_width/4)
-            path.arcTo(inner_rect, 270, -90)
-            inner_rect.adjust(0, 0, 2*self.arrow_length, 0)
-            path.arcTo(inner_rect, 180, -90)
-            inner_rect.adjust(0, 0, -2*self.arrow_length, 0)
-            inner_rect.translate(2*self.arrow_length, 0)
-            inner_rect.adjust(-2*self.arrow_length, 0, 0, 0)
-            path.arcTo(inner_rect, 90, -90)
-            inner_rect.adjust(2*self.arrow_length, 0, 0, 0)
-            path.arcTo(inner_rect, 0, -90)
-        path.arcTo(self.ellipse_rect, (180/pi)*angle + self.alpha, 360 - 2*self.alpha)
+            self.inner_rect.moveCenter(self.dst - QPointF(0, self.inner_rect.height()/2 + self.line_width/2))
+            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2*self.inner_angle - 360)
+        path.arcTo(self.ellipse_rect, (180/pi)*angle + self.ellipse_angle, 360 - 2*self.ellipse_angle)
+        # Draw outer part of feedback link
         if self.src_rect.contains(self.dst):
-            top_left = self.src + QPointF(-3*self.line_width, -6*self.line_width)
-            bottom_right = self.src + QPointF(3*self.line_width, 0)
-            outer_rect = QRectF(top_left, bottom_right)
-            outer_rect.translate(self.arrow_length, self.ellipse_width/4)
-            path.arcTo(outer_rect, 270, 90)
-            outer_rect.adjust(-2*self.arrow_length, 0, 0, 0)
-            path.arcTo(outer_rect, 0, 90)
-            outer_rect.adjust(2*self.arrow_length, 0, 0, 0)
-            outer_rect.translate(-2*self.arrow_length, 0)
-            outer_rect.adjust(0, 0, 2*self.arrow_length, 0)
-            path.arcTo(outer_rect, 90, 90)
-            outer_rect.adjust(0, 0, -2*self.arrow_length, 0)
-            path.arcTo(outer_rect, 180, 90)
+            self.outer_rect.moveCenter(self.dst - QPointF(0, self.outer_rect.height()/2 - self.line_width/2))
+            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
         super().paint(painter, option, widget)
