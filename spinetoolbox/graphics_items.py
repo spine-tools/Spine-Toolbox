@@ -99,7 +99,6 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.connector_button.is_connector = True
-        # self.links = list()
 
     def make_data_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -202,10 +201,6 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        # for link in self.links:
-        #     pass
-        #     # NOTE: apparently we don't need this... links get updated anyways
-        #     link.update_line()
         QGraphicsItem.mouseMoveEvent(self._master, event)
 
     def mouse_release_event(self, event):
@@ -701,7 +696,6 @@ class Link(QGraphicsPathItem):
         """Find model index from connection model."""
         row = self._qmainwindow.connection_model.header.index(self.src_icon.name())
         column = self._qmainwindow.connection_model.header.index(self.dst_icon.name())
-        logging.debug("[{0},{1}]".format(row, column))
         self.model_index = self._qmainwindow.connection_model.index(row, column)
 
     def find_parallel_link(self):
@@ -741,7 +735,6 @@ class Link(QGraphicsPathItem):
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
         """
-        # TODO: Context menu must be shown on feedback Links as well
         self.setSelected(True)
         self.find_model_index()
         self.find_parallel_link()
@@ -759,19 +752,11 @@ class Link(QGraphicsPathItem):
         """Remove associated connection if this is selected and delete is pressed"""
         if event.key() == Qt.Key_Delete and self.isSelected():
             self.find_model_index()
-            self._qmainwindow.toggle_connection(self.model_index)
-
-    # def boundingRect(self, *args, **kwargs):
-    #     rect = super().boundingRect()
-    #     logging.debug("rect:{0} - arrow rect:{1}".format(rect, self.arrow_head.boundingRect()))
-    #     arrow_head_rect = self.arrow_head.boundingRect()
-    #     if not rect.isValid():
-    #         logging.debug("rect not valid: {0}".format(rect))
-    #         return arrow_head_rect
-    #     return rect
+            self._qmainwindow.ui.graphicsView.remove_link(self.model_index)
 
     def shape(self):
         """Reimplemented to enable selecting the link by right-clicking on the arrow head and starting ellipse."""
+        # TODO: Apparently this is not needed due to this being a QGraphicsPathItem now
         path = super().shape()
         # path.addPolygon(self.arrow_head)
         # if self.src_center is not None:

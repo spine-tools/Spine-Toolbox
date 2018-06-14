@@ -277,7 +277,6 @@ class ConnectionModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent  # QMainWindow
         self.connections = []
-        # self.links = []
         self.header = list()
 
     def flags(self, index):
@@ -309,6 +308,7 @@ class ConnectionModel(QAbstractTableModel):
 
     def data(self, index, role):
         """Returns the data stored under the given role for the item referred to by the index.
+        DisplayRole is a string "False" or "True" depending on if a Link is present.
 
         Args:
             index (QModelIndex): Index of item
@@ -320,13 +320,10 @@ class ConnectionModel(QAbstractTableModel):
         if not index.isValid():
             return None
         if role == Qt.DisplayRole:
-            # If a link is present return True
             if not self.connections[index.row()][index.column()]:
-                # If there is no Link return "False"
-                return "False"
+                return "False"  # If there is no Link return "False"
             else:
-                # If a link is present return "True"
-                return "True"
+                return "True"  # If a link is present return "True"
         elif role == Qt.ToolTipRole:
             row_header = self.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
             column_header = self.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
@@ -384,7 +381,6 @@ class ConnectionModel(QAbstractTableModel):
             [new_row.append(None) for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self.connections.insert(row, new_row)
-        # self.links.insert(row, new_row)
         self.endInsertRows()
         return True
 
@@ -415,7 +411,6 @@ class ConnectionModel(QAbstractTableModel):
             for j in range(self.rowCount()):
                 # Notice if insert index > rowCount(), new object is inserted to end
                 self.connections[j].insert(column, None)
-                # self.links[j].insert(column, False)
         self.endInsertColumns()
         return True
 
@@ -437,8 +432,8 @@ class ConnectionModel(QAbstractTableModel):
             return False
         # beginRemoveRows(const QModelIndex & parent, int first, int last)
         self.beginRemoveRows(parent, row, row)
+        # noinspection PyUnusedLocal
         removed_row = self.connections.pop(row)
-        # removed_link = self.links.pop(row)
         # logging.debug("{0} removed from row:{1}".format(removed_link, row))
         self.endRemoveRows()
         return True
@@ -468,11 +463,8 @@ class ConnectionModel(QAbstractTableModel):
             removing_last_column = True
         for r in self.connections:
             removed_column.append(r.pop(column))
-        # for r in self.links:
-        #     r.pop(column)
         if removing_last_column:
             self.connections = []
-            # self.links = []
         # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
         return True
@@ -555,37 +547,25 @@ class ConnectionModel(QAbstractTableModel):
         return self.connections
 
     def reset_model(self, connection_table):
-        """Reset model. Used for restoring connections from project save file."""
+        """Reset model. Used in replacing the current model
+        with a boolean table that represents connections.
+        Overwrites the current model with a True or False
+        (boolean) table that is read from a project save
+        file (.json). This table is updated by restore_links()
+        method to add Link instances to True cells and Nones
+        to False cells."""
         if not connection_table:
             return
-        logging.debug("resetting model to:\n{0}".format(connection_table))
+        # logging.debug("resetting model to:\n{0}".format(connection_table))
         self.beginResetModel()
         self.connections = connection_table
-        # self.links = [[False for j in connection_table[i]] for i in range(len(connection_table))]
         self.endResetModel()
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
 
-    # def save_link(self, row, column, link):
-    #     """Save Link instance."""
-    #     try:
-    #         self.links[row][column] = link
-    #         return True
-    #     except IndexError:
-    #         logging.error("IndexError in save_link()")
-    #         return False
-
-    # def remove_link(self, row, column):
-    #     """Remove Link instance."""
-    #     try:
-    #         self.links[row][column] = False
-    #         return True
-    #     except IndexError:
-    #         logging.error("IndexError in remove_link()")
-    #         return False
-
     def link(self, row, column):
+        # TODO: Modify or remove this
         """Returns Link instance stored on row and column."""
         try:
             return self.connections[row][column]

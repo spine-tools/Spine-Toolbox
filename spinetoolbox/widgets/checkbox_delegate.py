@@ -42,26 +42,25 @@ class CheckBoxDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         """Paint a checkbox without the label."""
-        checked = index.data()
+        checked = True
+        if index.data() == "False" or not index.data():
+            checked = False
         check_box_style_option = QStyleOptionButton()
-
         if (index.flags() & Qt.ItemIsEditable) > 0:
             check_box_style_option.state |= QStyle.State_Enabled
         else:
             check_box_style_option.state |= QStyle.State_ReadOnly
-
         if checked:
             check_box_style_option.state |= QStyle.State_On
         else:
             check_box_style_option.state |= QStyle.State_Off
-
         check_box_style_option.rect = self.getCheckBoxRect(option)
-
+        # noinspection PyArgumentList
         QApplication.style().drawControl(QStyle.CE_CheckBox, check_box_style_option, painter)
 
     def editorEvent(self, event, model, option, index):
         """Change the data in the model and the state of the checkbox
-        if the user presses the left mousebutton and this cell is editable.
+        when user presses left mouse button and this cell is editable.
         Otherwise do nothing."""
         if not (index.flags() & Qt.ItemIsEditable) > 0:
             return False
@@ -78,9 +77,14 @@ class CheckBoxDelegate(QItemDelegate):
         return True
 
     def setModelData (self, editor, model, index):
-        """The user wanted to change the old state in the opposite."""
-        new_value = not index.data()
-        model.setData(index, new_value, Qt.EditRole)
+        """The user wanted to change the old state to opposite."""
+        d = model.data(index, Qt.DisplayRole)  # Current status
+        if d == "False":  # Add link
+            src_name = model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
+            dst_name = model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
+            self.parent().ui.graphicsView.add_link(src_name, dst_name, index)
+        else:  # Remove link
+            self.parent().ui.graphicsView.remove_link(index)
 
     def getCheckBoxRect(self, option):
         check_box_style_option = QStyleOptionButton()
