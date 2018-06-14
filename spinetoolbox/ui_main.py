@@ -309,7 +309,7 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
+        # self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
         self.ui.graphicsView.setConnectionModel(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         # NOTE: it seems we don't need this below anymore, the CheckBoxDelegate takes care of it
@@ -448,6 +448,7 @@ class ToolboxUI(QMainWindow):
         # Restore connections
         self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
+        self.ui.graphicsView.restore_links()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -542,12 +543,17 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="test2")
     def test2(self):
+        connections = self.connection_model.get_connections()
+        logging.debug("connections:\n{0}".format(connections))
+        # links = self.connection_model.get_links()
+        # logging.debug("links:\n{0}".format(links))
+
         logging.debug("Items on scene:{0}".format(len(self.ui.graphicsView.scene().items())))
         # for item in self.ui.graphicsView.scene().items():
         #     logging.debug(item)
-        scene_size = self.ui.graphicsView.scene().sceneRect()
-        logging.debug("sceneRect:{0}".format(scene_size))
-        mouse_item = self.ui.graphicsView.scene().mouseGrabberItem()
+        # scene_size = self.ui.graphicsView.scene().sceneRect()
+        # logging.debug("sceneRect:{0}".format(scene_size))
+        # mouse_item = self.ui.graphicsView.scene().mouseGrabberItem()
         # logging.debug("mouse grabber item:{0}".format(mouse_item))
         # self.ui.graphicsView.scene().addItem(self.dc)
         return
@@ -572,7 +578,7 @@ class ToolboxUI(QMainWindow):
 
     def show_info(self, name):
         """Show information of selected item. Embed old item widgets into QDockWidget."""
-        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item from project model
+        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item
         if not item:
             logging.error("Item {0} not found".format(name))
             return
@@ -681,7 +687,9 @@ class ToolboxUI(QMainWindow):
         n_tool_items = tools.rowCount()
         for i in range(n_tool_items):
             tool = tools.child(i, 0).data(Qt.UserRole)
-            if tool.tool_template().name == tool_template.name:
+            if not tool.tool_template():
+                continue
+            elif tool.tool_template().name == tool_template.name:
                 tool.set_tool_template(template)
                 self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
 
@@ -928,7 +936,6 @@ class ToolboxUI(QMainWindow):
         # Clear item info area
         self.clear_info_area()
         return
-
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):
@@ -1213,7 +1220,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             name (QGraphicsItem): The name of the concerned item
         """
-        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item from project model
+        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item
         self.item_image_context_menu = ItemImageContextMenu(self, pos, ind)
         option = self.item_image_context_menu.get_action()
         if option == "Remove Item":
@@ -1229,12 +1236,13 @@ class ToolboxUI(QMainWindow):
 
         Args:
             pos (QPoint): Mouse position
-            ind (Link(QGraphicsPathItem)): The concerned link
+            link (Link(QGraphicsPathItem)): The concerned link
         """
         self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
         option = self.link_context_menu.get_action()
         if option == "Remove Connection":
-            self.toggle_connection(link.model_index)
+            # self.toggle_connection(link.model_index)
+            self.ui.graphicsView.remove_link(link.model_index)
             return
         elif option == "Send to bottom":
             link.send_to_bottom()
@@ -1299,8 +1307,8 @@ class ToolboxUI(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
-        # noinspection PyArgumentList
         self.julia_repl.shutdown_jupyter_kernel()
         if event:
             event.accept()
+        # noinspection PyArgumentList
         QApplication.quit()

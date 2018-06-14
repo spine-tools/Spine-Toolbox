@@ -26,10 +26,9 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Slot, Qt, QTimer, QPointF, QRectF, QMarginsF
+from PySide2.QtCore import Slot, Qt, QPointF, QRectF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
-from config import ITEM_TYPE
 from widgets.toolbars import DraggableWidget
 
 
@@ -44,8 +43,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().__init__(parent)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
-        self._qmainwindow = parent.parent().parent()
-        self._parent = self._qmainwindow
+        self._ui = parent.parent().parent()  # ToolboxUI (QMainWindow) instance
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
@@ -95,7 +93,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
-        self.link_drawer = LinkDrawer(self._qmainwindow)
+        self.link_drawer = LinkDrawer(self._ui)
         self.scene().addItem(self.link_drawer)
 
     def setProjectItemModel(self, model):
@@ -105,7 +103,7 @@ class CustomQGraphicsView(QGraphicsView):
     def setConnectionModel(self, model):
         """Set connection model and connect signals."""
         self._connection_model = model
-        self._connection_model.dataChanged.connect(self.connectionDataChanged)
+        # self._connection_model.dataChanged.connect(self.connection_data_changed)
         self._connection_model.rowsAboutToBeRemoved.connect(self.connectionRowsRemoved)
         self._connection_model.columnsAboutToBeRemoved.connect(self.connectionColumnsRemoved)
 
@@ -123,15 +121,62 @@ class CustomQGraphicsView(QGraphicsView):
     #     # TODO: But I (Manuel) believe it isn't needed at all
     #     return [x for x in self.scene().items() if x.data(ITEM_TYPE) == 'subwindow']
 
-    @Slot("QModelIndex", "QModelIndex", name='connectionDataChanged')
-    def connectionDataChanged(self, top_left, bottom_right, roles=None):
+    def add_link(self, src_name, dst_name, index):
+        """Draw link between source and sink items on scene and add Link instance to connection model."""
+        # Find items from project model
+        flags = Qt.MatchExactly | Qt.MatchRecursive
+        src_item = self.project_item_model().find_item(src_name, flags).data(Qt.UserRole)
+        dst_item = self.project_item_model().find_item(dst_name, flags).data(Qt.UserRole)
+        logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
+        link = Link(self._ui, src_item.get_icon(), dst_item.get_icon())
+        self.scene().addItem(link)
+        self.connection_model().setData(index, link)
+
+    def remove_link(self, index):
+        """Remove link between source and sink items
+        on scene and remove Link instance from connection model."""
+        link = self.connection_model().data(index, Qt.UserRole)
+        if not link:
+            logging.error("Link not found. This should not happen.")
+            return False
+        logging.debug("Removing link in ({0},{1})".format(index.row(), index.column()))
+        self.scene().removeItem(link)
+        self.connection_model().setData(index, None)
+
+    def restore_links(self):
+        """Iterate connection model and draw links to all that are 'True'
+        Should be called only when a project is loaded from a save file."""
+        rows = self.connection_model().rowCount()
+        columns = self.connection_model().columnCount()
+        for row in range(rows):
+            for column in range(columns):
+                index = self.connection_model().index(row, column)
+                data = self.connection_model().data(index, Qt.DisplayRole)
+                from_name = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
+                to_name = self.connection_model().headerData(column, Qt.Horizontal, Qt.DisplayRole)
+                flags = Qt.MatchExactly | Qt.MatchRecursive
+                from_item = self.project_item_model().find_item(from_name, flags).data(Qt.UserRole)
+                to_item = self.project_item_model().find_item(to_name, flags).data(Qt.UserRole)
+                if data == "True":
+                    logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
+                    link = Link(self._ui, from_item.get_icon(), to_item.get_icon())
+                    self.scene().addItem(link)
+                    self.connection_model().setData(index, link)
+                else:
+                    logging.debug("Cell ({0},{1}):{2} -> No link".format(row, column, data))
+                    self.connection_model().setData(index, None)
+
+    @Slot("QModelIndex", "QModelIndex", name="connection_data_changed")
+    def connection_data_changed(self, top_left, bottom_right, roles=None):
         """Add or remove Link on scene between items when connection model changes."""
         top = top_left.row()
         left = top_left.column()
         bottom = bottom_right.row()
         right = bottom_right.column()
+        # logging.debug("connection_data_changed. top:{0} left:{1} bottom:{2} right:{3}".format(top, left, bottom, right))
         for row in range(top, bottom+1):
             for column in range(left, right+1):
+                logging.debug("Updating connection model ({0},{1})".format(row, column))
                 index = self.connection_model().index(row, column)
                 data = self.connection_model().data(index, Qt.DisplayRole)
                 from_name = self.connection_model().headerData(row, Qt.Vertical, Qt.DisplayRole)
@@ -140,28 +185,36 @@ class CustomQGraphicsView(QGraphicsView):
                 from_item = self.project_item_model().find_item(from_name, flags).data(Qt.UserRole)
                 to_item = self.project_item_model().find_item(to_name, flags).data(Qt.UserRole)
                 if data:  # connection made, add link widget
-                    link = Link(self._qmainwindow, from_item.get_icon(), to_item.get_icon())
+                    logging.debug("Adding link ({0},{1})".format(row, column))
+                    link = Link(self._ui, from_item.get_icon(), to_item.get_icon())
                     self.scene().addItem(link)
-                    self.connection_model().save_link(row, column, link)
+                    # self.connection_model().save_link(row, column, link)
+                    self.connection_model().setData(index, link)
                     # append link to ItemImage instances
-                    from_item.get_icon().links.append(link)
-                    to_item.get_icon().links.append(link)
-                else:   # connection destroyed, remove link widget
-                    link = self.connection_model().link(row, column)
-                    if link:
+                    # from_item.get_icon().links.append(link)
+                    # to_item.get_icon().links.append(link)
+                else:  # connection destroyed, remove link widget
+                    link = self.connection_model().data(index, Qt.UserRole)
+                    if not link:
+                        logging.error("Link not found in ({0},{1})".format(index.row(), index.column()))
+                    else:
+                        logging.debug("Removing link ({0},{1})".format(row, column))
                         self.scene().removeItem(link)
-                        # remove link from ItemImage instances
-                        try:
-                            from_item.get_icon().links.remove(link)
-                            to_item.get_icon().links.remove(link)
-                        except ValueError:
-                            pass
+                        self.connection_model().setData(index, None)
 
+                        # remove link from ItemImage instances
+                        # try:
+                        #     from_item.get_icon().links.remove(link)
+                        #     to_item.get_icon().links.remove(link)
+                        # except ValueError:
+                        #     logging.debug("Not found")
+                        # pass
 
     @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
     def connectionRowsRemoved(self, index, first, last):
-        """Update view when connection model changes."""
-        # logging.debug("conn. rows removed")
+        """[OBSOLETE?] Update view when connection model changes."""
+        # TODO: Check if this method can be removed.
+        logging.debug("conn. rows removed")
         for i in range(first, last+1):
             for j in range(self.connection_model().columnCount()):
                 link = self.connection_model().link(i, j)
@@ -170,8 +223,9 @@ class CustomQGraphicsView(QGraphicsView):
 
     @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
     def connectionColumnsRemoved(self, index, first, last):
-        """Update view when connection model changes."""
-        # logging.debug("conn. columns removed")
+        """[OBSOLETE?] Update view when connection model changes."""
+        # TODO: Check if this method can be removed.
+        logging.debug("conn. columns removed")
         for j in range(first, last+1):
             for i in range(self.connection_model().rowCount()):
                 link = self.connection_model().link(i, j)
@@ -198,13 +252,14 @@ class CustomQGraphicsView(QGraphicsView):
             row = self.connection_model().header.index(self.from_widget)
             column = self.connection_model().header.index(self.to_widget)
             index = self.connection_model().createIndex(row, column)
-            if not self.connection_model().data(index, Qt.DisplayRole):
-                self.connection_model().setData(index, "value", Qt.EditRole)  # value not used
-                self._parent.msg.emit("<b>{}</b>'s output is now connected to"
-                                      " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
-            else:
-                self._parent.msg.emit("<b>{}</b>'s output is already connected to"
-                                      " <b>{}</b>'s input.".format(self.from_widget, self.to_widget))
+            if self.connection_model().data(index, Qt.DisplayRole) == "False":
+                self.add_link(self.from_widget, self.to_widget, index)
+                # self.connection_model().setData(index, "value", Qt.EditRole)  # value not used
+                self._ui.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
+                                  .format(self.from_widget, self.to_widget))
+            elif self.connection_model().data(index, Qt.DisplayRole) == "True":
+                self._ui.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
+                                  .format(self.from_widget, self.to_widget))
 
     def dragLeaveEvent(self, event):
         """Accept event"""
@@ -247,19 +302,19 @@ class CustomQGraphicsView(QGraphicsView):
         if text == "Data Store":
             brush = QBrush(QColor(0, 255, 255, 128))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._qmainwindow.show_add_data_store_form(pos.x(), pos.y())
+            self._ui.show_add_data_store_form(pos.x(), pos.y())
         elif text == "Data Connection":
             brush = QBrush(QColor(0, 0, 255, 128))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._qmainwindow.show_add_data_connection_form(pos.x(), pos.y())
+            self._ui.show_add_data_connection_form(pos.x(), pos.y())
         elif text == "Tool":
             brush = QBrush(QColor(255, 0, 0, 128))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._qmainwindow.show_add_tool_form(pos.x(), pos.y())
+            self._ui.show_add_tool_form(pos.x(), pos.y())
         elif text == "View":
             brush = QBrush(QColor(0, 255, 0, 128))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._qmainwindow.show_add_view_form(pos.x(), pos.y())
+            self._ui.show_add_view_form(pos.x(), pos.y())
         self.scene().addItem(self.item_shadow)
 
     def mouseMoveEvent(self, e):
@@ -287,6 +342,6 @@ class CustomQGraphicsView(QGraphicsView):
                 connectors = [item for item in self.items(e.pos()) if hasattr(item, 'is_connector')]
                 if not connectors:
                     self.link_drawer.drawing = False
-                    self._qmainwindow.msg_error.emit("Unable to make connection."
-                                                    " Try landing the connection onto a connector button.")
+                    self._ui.msg_error.emit("Unable to make connection. "
+                                            "Try landing the connection onto a connector button.")
         super().mousePressEvent(e)

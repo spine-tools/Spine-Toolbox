@@ -207,7 +207,7 @@ class Ui_Form(object):
         self.toolButton_datapkg_keys.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit datapackage\'s keys.</p></body></html>", None, -1))
         self.treeView_data.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Drag-and-drop files here, they will be copied to the data directory.</p></body></html>", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
-        self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Go to directory...", None, -1))
+        self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc

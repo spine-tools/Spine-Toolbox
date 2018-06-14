@@ -1,10 +1,22 @@
 {
     "name": "MAGIC Operation",
     "description": "M A G I C   Power Scheduling Problem   A number of power stations are committed to meet demand for a particular day. three types of generators having different operating characteristics are available. Generating units can be shut down or operate between minimum and maximum output levels. Units can be started up or closed down in every demand block.",
-	"tooltype": "gams",
-    "includes": ["magic.gms", "input/", "output/"],
-    "inputfiles": ["input/data.gdx",
-                "input/investments.gdx"],
-    "inputfiles_opt": ["input/changes.inc"],
-    "outputfiles": ["output/report.gdx"]
+    "tooltype": "gams",
+    "includes": [
+        "magic.gms",
+        "input/",
+        "output/"
+    ],
+    "inputfiles": [
+        "input/data.gdx",
+        "input/investments.gdx"
+    ],
+    "inputfiles_opt": [
+        "input/changes.inc"
+    ],
+    "outputfiles": [
+        "output/report.gdx",
+        "magic.lst"
+    ],
+    "cmdline_args": ""
 }

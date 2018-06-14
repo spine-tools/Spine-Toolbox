@@ -159,7 +159,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 743, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 743, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -348,7 +348,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
         MainWindow.setTabOrder(self.treeView_project, self.listView_tool_templates)
@@ -409,6 +409,6 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

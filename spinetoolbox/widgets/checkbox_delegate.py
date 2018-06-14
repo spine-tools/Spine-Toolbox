@@ -25,29 +25,23 @@ A delegate to edit table cells with checkboxes.
 """
 
 import logging
-from PySide2.QtCore import Slot, Qt, QEvent, QPoint, QRect
+from PySide2.QtCore import Qt, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication
 
+
 class CheckBoxDelegate(QItemDelegate):
-    """
-    A delegate that places a fully functioning QCheckBox in every
-    cell of the column to which it's applied
-    """
+    """A delegate that places a fully functioning QCheckBox in every
+    cell of the column to which it's applied."""
     def __init__(self, parent):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        '''
-        Important, otherwise an editor is created if the user clicks in this cell.
-        ** Need to hook up a signal to the model
-        '''
+        """Important, otherwise an editor is created if the user clicks in this cell.
+        ** Need to hook up a signal to the model."""
         return None
 
     def paint(self, painter, option, index):
-        '''
-        Paint a checkbox without the label.
-        '''
-
+        """Paint a checkbox without the label."""
         checked = index.data()
         check_box_style_option = QStyleOptionButton()
 
@@ -66,14 +60,11 @@ class CheckBoxDelegate(QItemDelegate):
         QApplication.style().drawControl(QStyle.CE_CheckBox, check_box_style_option, painter)
 
     def editorEvent(self, event, model, option, index):
-        '''
-        Change the data in the model and the state of the checkbox
+        """Change the data in the model and the state of the checkbox
         if the user presses the left mousebutton and this cell is editable.
-        Otherwise do nothing.
-        '''
+        Otherwise do nothing."""
         if not (index.flags() & Qt.ItemIsEditable) > 0:
             return False
-
         # Do not change the checkbox-state
         if event.type() == QEvent.MouseButtonPress:
             return False
@@ -82,17 +73,14 @@ class CheckBoxDelegate(QItemDelegate):
                 return False
             if event.type() == QEvent.MouseButtonDblClick:
                 return True
-
         # Change the checkbox-state
         self.setModelData(None, model, index)
         return True
 
     def setModelData (self, editor, model, index):
-        '''
-        The user wanted to change the old state in the opposite.
-        '''
-        newValue = not index.data()
-        model.setData(index, newValue, Qt.EditRole)
+        """The user wanted to change the old state in the opposite."""
+        new_value = not index.data()
+        model.setData(index, new_value, Qt.EditRole)
 
     def getCheckBoxRect(self, option):
         check_box_style_option = QStyleOptionButton()

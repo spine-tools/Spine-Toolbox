@@ -28,20 +28,19 @@ import os
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Qt, Slot, QUrl, QFileSystemWatcher
-#from PySide2.QtWidgets import QDialog, QInputDialog
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
 from PySide2.QtWidgets import QInputDialog
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import AddDbReferencePopupMenu
 from widgets.add_db_reference_widget import AddDbReferenceWidget
-#from widgets.custom_qdialog import CustomQDialog
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import APPLICATION_PATH
-from sqlalchemy import create_engine, Table, MetaData, select, insert, text
+from sqlalchemy import create_engine, Table, MetaData, select, text
 from sqlalchemy.exc import DatabaseError
+
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -71,7 +70,7 @@ class DataStore(MetaObject):
         except OSError:
             self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
-        self.databases = list() # name of imported databases NOTE: Not in use at the moment
+        self.databases = list()  # name of imported databases NOTE: Not in use at the moment
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Populate data (files) model
@@ -98,7 +97,7 @@ class DataStore(MetaObject):
         self._graphics_item = icon
 
     def get_icon(self):
-        """Returns the item representing this data connection in the scene."""
+        """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
     def get_widget(self):
@@ -107,7 +106,7 @@ class DataStore(MetaObject):
 
     @Slot(name="open_directory")
     def open_directory(self):
-        """Open file explorer in Data Connection data directory."""
+        """Open file explorer in this Data Store's data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
@@ -120,9 +119,8 @@ class DataStore(MetaObject):
         self.add_db_reference_form = AddDbReferenceWidget(self._parent, self)
         self.add_db_reference_form.show()
 
-
     def add_reference(self, reference):
-        """Add reference to reference list and populate widget's reference list"""
+        """Add reference to reference list and populate widget's reference list."""
         self.references.append(reference)
         self._widget.populate_reference_list(self.references)
 
@@ -180,7 +178,7 @@ class DataStore(MetaObject):
         except OSError:
             pass
         dest_url = "sqlite:///" + dest_filename
-        dest_engine = create_engine(dest_url)#, echo=True)
+        dest_engine = create_engine(dest_url)  # , echo=True)
         # Meta reflection
         meta = MetaData()
         meta.reflect(source_engine)
@@ -216,7 +214,8 @@ class DataStore(MetaObject):
             try:
                 engine.execute('pragma quick_check;')
             except DatabaseError as e:
-                self._parent.msg_error.emit("Could not open <b>{}</b> as SQLite database: {}".format(data_file, e.orig.args))
+                self._parent.msg_error.emit("Could not open <b>{}</b> as SQLite database: {}"
+                                            .format(data_file, e.orig.args))
                 return
             # check if locked
             try:
@@ -253,11 +252,11 @@ class DataStore(MetaObject):
             self.data_store_form.show()
 
     def data_references(self):
-        """Return a list connections strings that are in this item as references (self.references)."""
+        """Returns a list of connection strings that are in this item as references (self.references)."""
         return self.references
 
     def data_files(self):
-        """Return a list of files that are in the data directory."""
+        """Return a list of files in the data directory."""
         if not os.path.isdir(self.data_dir):
             return None
         return os.listdir(self.data_dir)
@@ -268,7 +267,6 @@ class DataStore(MetaObject):
         NOTE: Might lead to performance issues."""
         d = self.data_files()
         self._widget.populate_data_list(d)
-
 
     @Slot(name="add_new_spine_reference")
     def add_new_spine_reference(self):

@@ -111,7 +111,25 @@ class SpineToolboxProject(MetaObject):
         project_dict['name'] = self.name
         project_dict['description'] = self.description
         project_dict['tool_templates'] = tool_def_paths
-        project_dict['connections'] = self._parent.connection_model.get_connections()
+
+        connection_table = self._parent.connection_model.get_connections()
+        # bool_con_table = [[None for j in connection_table[i]] for i in range(len(connection_table))]
+        bool_con_table = [[False if not j else True for j in connection_table[i]] for i in range(len(connection_table))]
+
+        # rows = self._parent.connection_model.rowCount()
+        # columns = self._parent.connection_model.columnCount()
+        # for row in range(rows):
+        #     for column in range(columns):
+        #         # logging.debug("row:{0} column:{1}".format(row, column))
+        #         if not connection_table[row][column]:
+        #             bool_con_table[row][column] = False
+        #         else:
+        #             bool_con_table[row][column] = True
+
+        logging.debug(bool_con_table)
+
+        project_dict['connections'] = bool_con_table
+        #project_dict['connections'] = self._parent.connection_model.get_connections()
         project_dict["scene_x"] = self._parent.ui.graphicsView.scene().sceneRect().x()
         project_dict["scene_y"] = self._parent.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._parent.ui.graphicsView.scene().sceneRect().width()

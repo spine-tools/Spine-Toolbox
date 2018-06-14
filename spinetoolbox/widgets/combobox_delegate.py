@@ -27,17 +27,16 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QItemDelegate, QComboBox
 import logging
 
+
 class ComboBoxDelegate(QItemDelegate):
-    """
-    A delegate that places a fully functioning QComboBox in every
-    cell of the column to which it's applied
-    """
+    """A delegate that places a fully functioning QComboBox in every
+    cell of the column to which it's applied."""
 
     def __init__(self, parent):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole"""
+        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
         combo = CustomComboEditor(parent)
         combo.row = index.row()
         combo.column = index.column()
@@ -49,23 +48,21 @@ class ComboBoxDelegate(QItemDelegate):
         return combo
 
     def setEditorData(self, editor, index):
-        """Show pop up as soon as editing starts"""
+        """Show pop up as soon as editing starts."""
         editor.showPopup()
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `closeEditor` signal
-        """
+        """Do nothing. Model data is updated by handling the `closeEditor` signal."""
         pass
 
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):
-        """Close combo editor, which causes `closeEditor` signal to be emitted"""
+        """Close combo editor, which causes `closeEditor` signal to be emitted."""
         self.sender().close()
 
 
 class CustomComboEditor(QComboBox):
-    """A custom QComboBox to handle data from the model"""
-
+    """A custom QComboBox to handle data from the model."""
     def __init__(self, parent):
         super().__init__(parent)
         self.original_data = None

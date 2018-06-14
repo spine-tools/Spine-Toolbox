@@ -28,7 +28,7 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel,\
-    QSortFilterProxyModel, QAbstractProxyModel
+    QSortFilterProxyModel
 from PySide2.QtGui import QStandardItemModel, QBrush, QFont
 
 
@@ -36,6 +36,7 @@ class ProjectItemModel(QStandardItemModel):
     """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
     def __init__(self, parent=None):
         super().__init__()
+        self._parent = parent
 
     def n_items(self, typ):
         """Returns the number of items in the project according to type.
@@ -65,7 +66,6 @@ class ProjectItemModel(QStandardItemModel):
                 logging.error("Unknown type: {0}".format(typ))
         return n
 
-
     def new_item_index(self, category):
         """Get index where a new item is appended according to category."""
         if category == "Data Stores":
@@ -83,7 +83,6 @@ class ProjectItemModel(QStandardItemModel):
         else:
             logging.error("Unknown category:{0}".format(category))
             return 0
-
 
     def find_item(self, name, match_flags=Qt.MatchExactly):
         """Find item by name in project model (column 0)
@@ -147,10 +146,9 @@ class ToolTemplateModel(QAbstractListModel):
             role (int): Data role
 
         Returns:
-            Tool name when display role requested
+            Data according to requested role
         """
         if not index.isValid() or self.rowCount() == 0:
-            # TODO: This was return QVariant in PyQt5, check what this should be.
             return None
         row = index.row()
         # TODO: Try to get rid of first item (str: 'No Tool') by just returning 'No Tool' when rowCount == 1 && row==0
@@ -230,12 +228,12 @@ class ToolTemplateModel(QAbstractListModel):
         Args:
             name (str): Name of tool template to find
         """
-        for tool in self._tools:
-            if isinstance(tool, str):
+        for template in self._tools:
+            if isinstance(template, str):
                 continue
             else:
-                if name.lower() == tool.name.lower():
-                    return tool
+                if name.lower() == template.name.lower():
+                    return template
         return None
 
     def tool_template_row(self, name):
@@ -247,7 +245,6 @@ class ToolTemplateModel(QAbstractListModel):
                 if name == self._tools[i].name:
                     return i
         return -1
-
 
     def tool_template_index(self, name):
         """Returns the index (QModelIndex) on which the given template lives or -1 if not found."""
@@ -264,7 +261,7 @@ class ConnectionModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent  # QMainWindow
         self.connections = []
-        self.links = []
+        # self.links = []
         self.header = list()
 
     def flags(self, index):
@@ -307,7 +304,13 @@ class ConnectionModel(QAbstractTableModel):
         if not index.isValid():
             return None
         if role == Qt.DisplayRole:
-            return self.connections[index.row()][index.column()]
+            # If a link is present return True
+            if not self.connections[index.row()][index.column()]:
+                # If there is no Link return "False"
+                return "False"
+            else:
+                # If a link is present return "True"
+                return "True"
         elif role == Qt.ToolTipRole:
             row_header = self.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
             column_header = self.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
@@ -315,26 +318,24 @@ class ConnectionModel(QAbstractTableModel):
                 return row_header + " (Feedback)"
             else:
                 return row_header + "->" + column_header + " - " + str(index.row()) + ":" + str(index.column())
+        elif role == Qt.UserRole:
+            return self.connections[index.row()][index.column()]
         else:
             return None
 
     def setData(self, index, value, role=Qt.EditRole):
-        """Set data of single cell in table. Toggles the boolean value at index.
+        """Set data of single cell in table. Toggles the checkbox state at index.
 
         Args:
             index (QModelIndex): Index of data to edit
-            value (QVariant): Value to write to index (Not used)
+            value (QVariant): Value to write to index (Link instance)
             role (int): Role for editing
         """
         if not index.isValid():
             return False
         if not role == Qt.EditRole:
             return False
-        current = self.connections[index.row()][index.column()]
-        if not current:
-            self.connections[index.row()][index.column()] = True
-        else:
-            self.connections[index.row()][index.column()] = False
+        self.connections[index.row()][index.column()] = value  # Should be a Link or None
         # noinspection PyUnresolvedReferences
         self.dataChanged.emit(index, index)
         return True
@@ -361,13 +362,13 @@ class ConnectionModel(QAbstractTableModel):
         self.beginInsertRows(parent, row, row)
         new_row = list()
         if self.columnCount() == 0:
-            new_row.append(False)
+            new_row.append(None)
         else:
             # noinspection PyUnusedLocal
-            [new_row.append(False) for i in range(self.columnCount())]
+            [new_row.append(None) for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self.connections.insert(row, new_row)
-        self.links.insert(row, new_row)
+        # self.links.insert(row, new_row)
         self.endInsertRows()
         return True
 
@@ -397,8 +398,8 @@ class ConnectionModel(QAbstractTableModel):
         else:
             for j in range(self.rowCount()):
                 # Notice if insert index > rowCount(), new object is inserted to end
-                self.connections[j].insert(column, False)
-                self.links[j].insert(column, False)
+                self.connections[j].insert(column, None)
+                # self.links[j].insert(column, False)
         self.endInsertColumns()
         return True
 
@@ -421,8 +422,8 @@ class ConnectionModel(QAbstractTableModel):
         # beginRemoveRows(const QModelIndex & parent, int first, int last)
         self.beginRemoveRows(parent, row, row)
         removed_row = self.connections.pop(row)
-        removed_row = self.links.pop(row)
-        # logging.debug("{0} removed from row:{1}".format(removed_row, row))
+        # removed_link = self.links.pop(row)
+        # logging.debug("{0} removed from row:{1}".format(removed_link, row))
         self.endRemoveRows()
         return True
 
@@ -445,17 +446,17 @@ class ConnectionModel(QAbstractTableModel):
         # beginRemoveColumns(const QModelIndex & parent, int first, int last)
         self.beginRemoveColumns(parent, column, column)
         # for loop all rows and remove the column from each
-        removed_column = list()
+        removed_column = list()  # for testing and debugging
         removing_last_column = False
         if self.columnCount() == 1:
             removing_last_column = True
         for r in self.connections:
             removed_column.append(r.pop(column))
-        for r in self.links:
-            r.pop(column)
+        # for r in self.links:
+        #     r.pop(column)
         if removing_last_column:
             self.connections = []
-            self.links = []
+            # self.links = []
         # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
         return True
@@ -484,7 +485,7 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def remove_item(self, item):
-        """Remove item from connections table.
+        """Remove project item from connections table.
 
         Args:
             item: Removed item
@@ -541,27 +542,39 @@ class ConnectionModel(QAbstractTableModel):
         """Reset model. Used for restoring connections from project save file."""
         if not connection_table:
             return
+        logging.debug("resetting model to:\n{0}".format(connection_table))
         self.beginResetModel()
         self.connections = connection_table
-        self.links = [[False for j in connection_table[i]] for i in range(len(connection_table))]
+        # self.links = [[False for j in connection_table[i]] for i in range(len(connection_table))]
         self.endResetModel()
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
 
-    def save_link(self, row, column, link):
-        """Save Link instance"""
-        try:
-            self.links[row][column] = link
-            return True
-        except IndexError:
-            return False
+    # def save_link(self, row, column, link):
+    #     """Save Link instance."""
+    #     try:
+    #         self.links[row][column] = link
+    #         return True
+    #     except IndexError:
+    #         logging.error("IndexError in save_link()")
+    #         return False
+
+    # def remove_link(self, row, column):
+    #     """Remove Link instance."""
+    #     try:
+    #         self.links[row][column] = False
+    #         return True
+    #     except IndexError:
+    #         logging.error("IndexError in remove_link()")
+    #         return False
 
     def link(self, row, column):
-        """The Link instance stored in `row` and `column`"""
+        """Returns Link instance stored on row and column."""
         try:
-            return self.links[row][column]
+            return self.connections[row][column]
         except IndexError:
+            logging.error("IndexError in link()")
             return False
 
 
@@ -613,14 +626,16 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         if role == Qt.DisplayRole:
             return self._data[index.row()][index.column()]
-        if role == Qt.UserRole:
+        elif role == Qt.UserRole:
             return self._user_role_data[index.row()][index.column()]
+        else:
+            return None
 
     def rowData(self, row, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the given row.
 
         Args:
-            index (QModelIndex): Index of item
+            row (int): Item row
             role (int): Data role
 
         Returns:
@@ -636,7 +651,7 @@ class MinimalTableModel(QAbstractTableModel):
         """Returns the data stored under the given role for the given column.
 
         Args:
-            index (QModelIndex): Index of item
+            column (int): Item column
             role (int): Data role
 
         Returns:
@@ -759,12 +774,13 @@ class MinimalTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def set_tool_tip(self, tool_tip):
-        """Set tool tip"""
+        """Set tool tip."""
+        # TODO: This probably does not work. Tooltip should be returned by data() method when role == Qt.ToolTipRole.
         self._tool_tip = tool_tip
 
 
 class ObjectTreeModel(QStandardItemModel):
-    """A class to hold Spine data structure in a treeview"""
+    """A class to hold Spine data structure in a treeview."""
 
     def __init__(self, parent=None):
         """Initialize class"""
@@ -788,11 +804,12 @@ class ObjectTreeModel(QStandardItemModel):
                 return self.bold_font
         return super().data(index, role)
 
+
 class ObjectParameterProxy(QSortFilterProxyModel):
-    """A class to filter the object parameter table in Data Store"""
+    """A class to filter the object parameter table in Data Store."""
 
     def __init__(self, parent=None):
-        """Initialize class"""
+        """Initialize class."""
         super().__init__(parent)
         self.object_class_id_filter = None
 
@@ -801,10 +818,11 @@ class ObjectParameterProxy(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false
+        and source_parent should be included in the model; otherwise returns false.
         """
         # logging.debug("accept rows")
         h = self.sourceModel().header
+
         def source_data(column_name):
             return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
         object_class_id = source_data("object_class_id")
@@ -821,10 +839,10 @@ class ObjectParameterProxy(QSortFilterProxyModel):
 
 
 class ObjectParameterValueProxy(QSortFilterProxyModel):
-    """A class to filter the object parameter value table in Data Store"""
+    """A class to filter the object parameter value table in Data Store."""
 
     def __init__(self, parent=None):
-        """Initialize class"""
+        """Initialize class."""
         super().__init__(parent)
         self.object_class_id_filter = None
         self.object_id_filter = None
@@ -835,10 +853,11 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false
+        and source_parent should be included in the model; otherwise returns false.
         """
         # logging.debug("accept rows")
         h = self.sourceModel().header
+
         def source_data(column_name):
             return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
         object_class_id = source_data("object_class_id")
@@ -859,10 +878,10 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
 
 
 class RelationshipParameterProxy(QSortFilterProxyModel):
-    """A class to filter the relationship parameter table in Data Store"""
+    """A class to filter the relationship parameter table in Data Store."""
 
     def __init__(self, parent=None):
-        """Initialize class"""
+        """Initialize class."""
         super().__init__(parent)
         self.object_class_id_filter = None
         self.relationship_class_id_filter = None
@@ -875,10 +894,11 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false
+        and source_parent should be included in the model; otherwise returns false.
         """
         # logging.debug("accept rows")
         h = self.sourceModel().header
+
         def source_data(column_name):
             return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
         if self.object_class_id_filter:
@@ -904,10 +924,10 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
 
 
 class RelationshipParameterValueProxy(QSortFilterProxyModel):
-    """A class to filter the relationship parameter value table in Data Store"""
+    """A class to filter the relationship parameter value table in Data Store."""
 
     def __init__(self, parent=None):
-        """Initialize class"""
+        """Initialize class."""
         super().__init__(parent)
         self.relationship_class_id_filter = None
         self.relationship_id_filter = None
@@ -933,13 +953,13 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
                 return self.bold_font
         return super().data(index, role)
 
-
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false
+        and source_parent should be included in the model; otherwise returns false.
         """
         # logging.debug("accept rows")
         h = self.sourceModel().header
+
         def source_data(column_name):
             return self.sourceModel().index(source_row, h.index(column_name), source_parent).data()
         if self.relationship_id_filter:
@@ -969,9 +989,8 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
 
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column
-        and source_parent should be included in the model; otherwise returns false
+        and source_parent should be included in the model; otherwise returns false.
         """
-
         h = self.sourceModel().header
         if self.hide_column is not None:
             return source_column != self.hide_column

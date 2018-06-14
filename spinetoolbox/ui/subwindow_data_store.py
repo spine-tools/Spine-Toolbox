@@ -476,6 +476,6 @@ class Ui_Form(object):
         self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project.  Copies selected references into SQLite files in Data store\'s directory.</p></body></html>", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("Form", "Data", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
-        self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Go to directory...", None, -1))
+        self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
 import resources_icons_rc
