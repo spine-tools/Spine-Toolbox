@@ -252,7 +252,7 @@ class ToolboxUI(QMainWindow):
         self.project_item_model.appendRow(QStandardItem("Tools"))
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
-        self.ui.graphicsView.setProjectItemModel(self.project_item_model)
+        self.ui.graphicsView.set_project_item_model(self.project_item_model)
 
     def init_tool_template_model(self, tool_template_paths):
         """Initializes Tool template model.
@@ -309,8 +309,8 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
-        # self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
-        self.ui.graphicsView.setConnectionModel(self.connection_model)
+        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
+        self.ui.graphicsView.set_connection_model(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         # NOTE: it seems we don't need this below anymore, the CheckBoxDelegate takes care of it
         # n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
@@ -322,18 +322,6 @@ class ToolboxUI(QMainWindow):
         #     logging.error("Number of receivers for tableView_connections clicked signal is now:{0}".format(n_connected))
         # else:
         #     pass  # signal already connected
-
-    @Slot("QModelIndex", name="toggle_connection")
-    def toggle_connection(self, index):
-        """Toggle boolean value in the connection model.
-
-        Args:
-            index (QModelIndex): Clicked index
-        """
-        if not index.isValid():
-            return
-        # logging.debug("index {0}:{1} clicked".format(index.row(), index.column()))
-        self.connection_model.setData(index, "value", Qt.EditRole)  # value not used
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -547,7 +535,6 @@ class ToolboxUI(QMainWindow):
         logging.debug("connections:\n{0}".format(connections))
         # links = self.connection_model.get_links()
         # logging.debug("links:\n{0}".format(links))
-
         logging.debug("Items on scene:{0}".format(len(self.ui.graphicsView.scene().items())))
         # for item in self.ui.graphicsView.scene().items():
         #     logging.debug(item)
@@ -556,25 +543,6 @@ class ToolboxUI(QMainWindow):
         # mouse_item = self.ui.graphicsView.scene().mouseGrabberItem()
         # logging.debug("mouse grabber item:{0}".format(mouse_item))
         # self.ui.graphicsView.scene().addItem(self.dc)
-        return
-        # for subwindow in self.ui.graphicsView.subWindowList():
-        #     w = subwindow.widget()  # SubWindowWidget
-        #     w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-        #     # w_parent = w.parent()  # QMdiSubWindow == subwindow
-        #     # w_owner = w.owner()  # item name
-        #     if w_type == "Tool":
-        #         self.msg.emit("Found Tool {0}".format(w.owner()))
-        #         # Find item in project model
-        #         size_hint = subwindow.sizeHint()
-        #         min_size = subwindow.minimumSize()
-        #         min_size_hint = subwindow.minimumSizeHint()
-        #         size_policy = subwindow.sizePolicy()
-        #         logging.debug("sizeHint:{0} minSize:{1} minSizeHint:{2} sizePolicy:{3}"
-        #                       .format(size_hint, min_size, min_size_hint, size_policy))
-        #         item = self.project_item_model.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-        #         tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
-        #         if tool.tool_template() is not None:
-        #             self.msg.emit("Tool template of this Tool:{0}".format(tool.tool_template().name))
 
     def show_info(self, name):
         """Show information of selected item. Embed old item widgets into QDockWidget."""
@@ -1241,7 +1209,6 @@ class ToolboxUI(QMainWindow):
         self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
         option = self.link_context_menu.get_action()
         if option == "Remove Connection":
-            # self.toggle_connection(link.model_index)
             self.ui.graphicsView.remove_link(link.model_index)
             return
         elif option == "Send to bottom":
