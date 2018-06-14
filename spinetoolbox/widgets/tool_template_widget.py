@@ -88,6 +88,7 @@ class ToolTemplateWidget(QWidget):
             tool_types = [x.lower() for x in TOOL_TYPES]
             index = tool_types.index(tool_template.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
+        # Init lists
         self.includes = list(tool_template.includes) if tool_template else list()
         self.inputfiles = list(tool_template.inputfiles) if tool_template else list()
         self.inputfiles_opt = list(tool_template.inputfiles_opt) if tool_template else list()
@@ -106,7 +107,6 @@ class ToolTemplateWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        # self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
         self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)

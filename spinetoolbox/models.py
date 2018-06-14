@@ -211,6 +211,22 @@ class ToolTemplateModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
+    def update_tool_template(self, tool, row):
+        """Update tool template.
+
+        Args:
+            tool (ToolTemplate): new tool, to replace the old one
+            row (int): Position of the tool to be updated
+
+        Returns:
+            Boolean value depending on the result of the operation
+        """
+        try:
+            self._tools[row] = tool
+            return True
+        except IndexError:
+            return False
+
     def tool_template(self, row):
         """Returns tool template on given row.
 

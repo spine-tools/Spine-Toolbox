@@ -672,10 +672,10 @@ class ToolboxUI(QMainWindow):
 
     def update_tool_template(self, row, tool_template):
         """Update a ToolTemplate instance in the project."""
-        # NOTE: this trick below works for updating a tool template in the model.
-        self.tool_template_model.insertRow(tool_template, row)
-        self.tool_template_model.removeRow(row + 1)
-        self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool_template.name))
+        if not self.tool_template_model.update_tool_template(tool_template, row):
+            self.msg_error.emit("Unable to update Tool template <b>{0}</b>".format(tool_template.name))
+            return
+        self.msg_success.emit("Tool template <b>{0}</b> successfully updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
         logging.debug("Reattaching tool template {}".format(tool_template.name))
         # Find the updated tool template from ToolTemplateModel
@@ -977,7 +977,7 @@ class ToolboxUI(QMainWindow):
         if not index.isValid():
             return
         tool_template = self.tool_template_model.tool_template(index.row())
-        file_path = tool_template.def_file_path
+        file_path = tool_template.get_def_path()
         # Check if file exists first. openUrl may return True if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):

@@ -165,31 +165,33 @@ class Tool(MetaObject):
         """Show input files in QListView."""
         if not self.tool_template():
             return
-        def_path = self.tool_template().get_def_path()
-        definition = self.read_tool_def(def_path)
-        if not definition:
-            return
-        try:
-            input_files = definition["inputfiles"]
-        except KeyError:
-            logging.error("Key 'inputfiles' not found in file {0}".format(def_path))
-            return
-        self._widget.populate_input_files_list(input_files)
+        self._widget.populate_input_files_list(self.tool_template().inputfiles)
+        # def_path = self.tool_template().get_def_path()
+        # definition = self.read_tool_def(def_path)
+        # if not definition:
+        #     return
+        # try:
+        #     input_files = definition["inputfiles"]
+        # except KeyError:
+        #     logging.error("Key 'inputfiles' not found in file {0}".format(def_path))
+        #     return
+        # self._widget.populate_input_files_list(input_files)
 
     def update_output_files(self):
         """Show output files in QListView."""
         if not self.tool_template():
             return
-        def_path = self.tool_template().get_def_path()
-        definition = self.read_tool_def(def_path)
-        if not definition:
-            return
-        try:
-            output_files = definition["outputfiles"]
-        except KeyError:
-            logging.error("Key 'outputfiles' not found in file {0}".format(def_path))
-            return
-        self._widget.populate_output_files_list(output_files)
+        self._widget.populate_input_files_list(self.tool_template().outputfiles)
+        # def_path = self.tool_template().get_def_path()
+        # definition = self.read_tool_def(def_path)
+        # if not definition:
+        #     return
+        # try:
+        #     output_files = definition["outputfiles"]
+        # except KeyError:
+        #     logging.error("Key 'outputfiles' not found in file {0}".format(def_path))
+        #     return
+        # self._widget.populate_output_files_list(output_files)
 
     def read_tool_def(self, tool_def_file):
         """Return tool template definition file contents or None if operation failed."""
