@@ -268,6 +268,31 @@ class DataStore(MetaObject):
         d = self.data_files()
         self._widget.populate_data_list(d)
 
+    def find_file(self, fname, visited_items):
+        """Search for filename in data and return the path if found."""
+        logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
+        if self in visited_items:
+            logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
+            return None
+        if fname in self.data_files():
+            logging.debug("{0} found in DS {1}".format(fname, self.name))
+            self._parent.msg.emit("\t<b>{0}</b> found in DS <b>{1}</b>".format(fname, self.name))
+            path = os.path.join(self.data_dir, fname)
+            return path
+        visited_items.append(self)
+        for input_item in self._parent.connection_model.input_items(self.name):
+            # Find item from project model
+            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item_data = found_item.data(Qt.UserRole)
+            if item_data.item_type in ["Data Store", "Data Connection"]:
+                path = item_data.find_file(fname, visited_items)
+                if path is not None:
+                    return path
+        return None
+
     @Slot(name="add_new_spine_reference")
     def add_new_spine_reference(self):
         """Add reference to a new Spine empty database."""

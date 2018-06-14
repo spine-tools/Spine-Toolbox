@@ -27,7 +27,7 @@ Module for data connection class.
 import os
 import shutil
 import logging
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QMessageBox, QFileDialog
 from metaobject import MetaObject
@@ -272,6 +272,38 @@ class DataConnection(MetaObject):
         NOTE: Might lead to performance issues."""
         d = self.data_files()
         self._widget.populate_data_list(d)
+
+    def find_file(self, fname, visited_items):
+        """Search for filename in references and data and return the path if found."""
+        logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
+        if self in visited_items:
+            logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
+            return None
+        if fname in self.data_files():
+            logging.debug("{0} found in DC {1}".format(fname, self.name))
+            self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, self.name))
+            path = os.path.join(self.data_dir, fname)
+            return path
+        for path in self.file_references():  # List of paths including file name
+            p, fn = os.path.split(path)
+            if fn == fname:
+                logging.debug("{0} found in DC {1}".format(fname, self.name))
+                self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
+                                        .format(fname, self.name))
+                return path
+        visited_items.append(self)
+        for input_item in self._parent.connection_model.input_items(self.name):
+            # Find item from project model
+            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item_data = found_item.data(Qt.UserRole)
+            if item_data.item_type in ["Data Store", "Data Connection"]:
+                path = item_data.find_file(fname, visited_items)
+                if path is not None:
+                    return path
+        return None
 
 
 class CustomPackage(Package):

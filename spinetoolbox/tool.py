@@ -181,7 +181,7 @@ class Tool(MetaObject):
         """Show output files in QListView."""
         if not self.tool_template():
             return
-        self._widget.populate_input_files_list(self.tool_template().outputfiles)
+        self._widget.populate_output_files_list(self.tool_template().outputfiles)
         # def_path = self.tool_template().get_def_path()
         # definition = self.read_tool_def(def_path)
         # if not definition:
@@ -286,32 +286,37 @@ class Tool(MetaObject):
                 self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 return path
             item_data = found_item.data(Qt.UserRole)
-            # Find file from parent Data Stores
-            if item_data.item_type == "Data Store":
-                # Search in Data Store data directory
-                ds_files = item_data.data_files()  # List of file names (no path)
-                if fname in ds_files:
-                    self._parent.msg.emit("\t<b>{0}</b> found in DS <b>{1}</b>".format(fname, item_data.name))
-                    path = os.path.join(item_data.data_dir, fname)
+            # Find file from parent Data Stores and Data Connections
+            if item_data.item_type in ["Data Store", "Data Connection"]:
+                path = item_data.find_file(fname, list())
+                if path is not None:
                     break
-            # Find file from parent Data Connections
-            elif item_data.item_type == "Data Connection":
-                # Search in Data Connection data directory
-                dc_files = item_data.data_files()  # List of file names (no path)
-                if fname in dc_files:
-                    self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, item_data.name))
-                    path = os.path.join(item_data.data_dir, fname)
-                    break
-                # Search in Data Connection references
-                else:
-                    refs = item_data.file_references()  # List of paths including file name
-                    for ref in refs:
-                        p, fn = os.path.split(ref)
-                        if fn == fname:
-                            self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
-                                                  .format(fname, item_data.name))
-                            path = ref
-                            break
+            # # Find file from parent Data Stores
+            # if item_data.item_type == "Data Store":
+            #     # Search in Data Store data directory
+            #     ds_files = item_data.data_files()  # List of file names (no path)
+            #     if fname in ds_files:
+            #         self._parent.msg.emit("\t<b>{0}</b> found in DS <b>{1}</b>".format(fname, item_data.name))
+            #         path = os.path.join(item_data.data_dir, fname)
+            #         break
+            # # Find file from parent Data Connections
+            # elif item_data.item_type == "Data Connection":
+            #     # Search in Data Connection data directory
+            #     dc_files = item_data.data_files()  # List of file names (no path)
+            #     if fname in dc_files:
+            #         self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, item_data.name))
+            #         path = os.path.join(item_data.data_dir, fname)
+            #         break
+            #     # Search in Data Connection references
+            #     else:
+            #         refs = item_data.file_references()  # List of paths including file name
+            #         for ref in refs:
+            #             p, fn = os.path.split(ref)
+            #             if fn == fname:
+            #                 self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
+            #                                       .format(fname, item_data.name))
+            #                 path = ref
+            #                 break
             elif item_data.item_type == "Tool":
                 # TODO: Find file from output files of parent Tools
                 pass
