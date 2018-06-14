@@ -112,6 +112,8 @@ class ToolTemplateWidget(QWidget):
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
         self.ui.toolButton_minus_inputfiles.clicked.connect(self.remove_inputfiles)
+        self.ui.toolButton_plus_inputfiles_opt.clicked.connect(self.add_inputfiles_opt)
+        self.ui.toolButton_minus_inputfiles_opt.clicked.connect(self.remove_inputfiles_opt)
         self.ui.toolButton_plus_outputfiles.clicked.connect(self.add_outputfiles)
         self.ui.toolButton_minus_outputfiles.clicked.connect(self.remove_outputfiles)
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
@@ -295,6 +297,34 @@ class ToolTemplateWidget(QWidget):
                 self.inputfiles.pop(row)
             self.statusbar.showMessage("Selected input files removed", 3000)
         self.populate_inputfiles_list(self.inputfiles)
+
+    @Slot(name="add_inputfiles_opt")
+    def add_inputfiles_opt(self):
+        """Let user select optional input files for this tool template."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self, "Add optional input file", "Optional input file name (eg other.csv):")
+        file_name = answer[0]
+        if not file_name:  # Cancel button clicked
+            return
+        self.inputfiles_opt.append(file_name)
+        self.populate_inputfiles_opt_list(self.inputfiles_opt)
+
+    @Slot(name="remove_inputfiles_opt")
+    def remove_inputfiles_opt(self):
+        """Remove selected optional input files from list.
+        Removes all files if nothing is selected.
+        """
+        indexes = self.ui.treeView_inputfiles_opt.selectedIndexes()
+        if not indexes:  # Nothing selected
+            self.inputfiles_opt.clear()
+            self.statusbar.showMessage("All optional input files removed", 3000)
+        else:
+            rows = [ind.row() for ind in indexes]
+            rows.sort(reverse=True)
+            for row in rows:
+                self.inputfiles_opt.pop(row)
+            self.statusbar.showMessage("Selected optional input files removed", 3000)
+        self.populate_inputfiles_opt_list(self.inputfiles_opt)
 
     @Slot(name="add_outputfiles")
     def add_outputfiles(self):

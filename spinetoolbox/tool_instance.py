@@ -118,7 +118,7 @@ class ToolInstance(QObject):
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
-        else:
+        elif self.tool.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)

@@ -238,12 +238,12 @@ class Tool(MetaObject):
             if not self.copy_input_files(file_copy_paths):
                 self._parent.msg_error.emit("Tool execution aborted")
                 return
-        self.update_instance()  # Make command and stuff
-        self.instance.instance_finished_signal.connect(self.execution_finished)
-        self.instance.execute()
         self._widget.ui.pushButton_stop.setEnabled(True)
         self._widget.ui.pushButton_execute.setEnabled(False)
         self._graphics_item.start_wheel_animation()
+        self.update_instance()  # Make command and stuff
+        self.instance.instance_finished_signal.connect(self.execution_finished)
+        self.instance.execute()
 
     def find_input_files(self):
         """Iterate files in required input files model and find them from connected items.

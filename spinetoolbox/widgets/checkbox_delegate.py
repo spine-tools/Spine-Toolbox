@@ -33,7 +33,7 @@ class CheckBoxDelegate(QItemDelegate):
     """A delegate that places a fully functioning QCheckBox in every
     cell of the column to which it's applied."""
 
-    commit_data = Signal("QModelIndex", name="data_committed")
+    commit_data = Signal("QModelIndex", name="commit_data")
 
     def __init__(self, parent):
         super().__init__(parent)
