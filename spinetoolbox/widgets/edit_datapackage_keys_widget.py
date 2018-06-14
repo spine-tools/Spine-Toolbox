@@ -150,10 +150,14 @@ class EditDatapackageKeysWidget(QWidget):
         """Connect signals to slots."""
         # primary keys
         self.ui.tableView_pks.itemDelegate().closeEditor.connect(self.pk_data_committed)
+        column = PrimaryKeysHeader.RM.index
+        self.ui.tableView_pks.itemDelegateForColumn(column).commit_data.connect(self.pk_checkbox_toggled)
         self.ui.toolButton_add_pk.clicked.connect(self.add_pk_clicked)
         self.ui.toolButton_rm_pks.clicked.connect(self.rm_pks_clicked)
         # foreign keys
         self.ui.tableView_fks.itemDelegate().closeEditor.connect(self.fk_data_committed)
+        column = ForeignKeysHeader.RM.index
+        self.ui.tableView_fks.itemDelegateForColumn(column).commit_data.connect(self.fk_checkbox_toggled)
         self.ui.toolButton_add_fk.clicked.connect(self.add_fk_clicked)
         self.ui.toolButton_rm_fks.clicked.connect(self.rm_fks_clicked)
         # common
@@ -202,6 +206,20 @@ class EditDatapackageKeysWidget(QWidget):
                 self.statusbar.showMessage(msg, 3000)
                 items = None
         self.fks_model.setData(index, items, Qt.UserRole)
+
+    @Slot("QModelIndex", name='pk_checkbox_toggled')
+    def pk_checkbox_toggled(self, index):
+        """Whenever the checkbox is toggled, also toggle the value in the model."""
+        d = self.pks_model.data(index)
+        self.pks_model.setData(index, not d)
+
+
+    @Slot("QModelIndex", name='fk_checkbox_toggled')
+    def fk_checkbox_toggled(self, index):
+        """Whenever the checkbox is toggled, also toggle the value in the model."""
+        d = self.fks_model.data(index)
+        self.fks_model.setData(index, not d)
+
 
     @Slot("QWidget", name='pk_data_committed')
     def pk_data_committed(self, editor):

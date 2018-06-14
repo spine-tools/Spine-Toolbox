@@ -310,6 +310,7 @@ class ToolboxUI(QMainWindow):
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
         self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
+        self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
         self.ui.graphicsView.set_connection_model(self.connection_model)
         # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
         # NOTE: it seems we don't need this below anymore, the CheckBoxDelegate takes care of it
@@ -998,6 +999,19 @@ class ToolboxUI(QMainWindow):
                                 "10, go to Control Panel -> Default Programs to do this."
                                 .format(filename, file_extension))
         return
+
+    @Slot("QModelIndex", name="connection_data_changed")
+    def connection_data_changed(self, index):
+        """Called when checkbox delegate wants to edit connection data. Add or remove Link instance accordingly."""
+        model = self.connection_model
+        d = model.data(index, Qt.DisplayRole)  # Current status
+        if d == "False":  # Add link
+            src_name = model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
+            dst_name = model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
+            self.ui.graphicsView.add_link(src_name, dst_name, index)
+        else:  # Remove link
+            self.ui.graphicsView.remove_link(index)
+
 
     @Slot(str, name="add_message")
     def add_message(self, msg):

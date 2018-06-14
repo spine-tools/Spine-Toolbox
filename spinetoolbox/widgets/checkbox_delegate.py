@@ -25,15 +25,19 @@ A delegate to edit table cells with checkboxes.
 """
 
 import logging
-from PySide2.QtCore import Qt, QEvent, QPoint, QRect
+from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication
 
 
 class CheckBoxDelegate(QItemDelegate):
     """A delegate that places a fully functioning QCheckBox in every
     cell of the column to which it's applied."""
+
+    commit_data = Signal("QModelIndex", name="data_committed")
+
     def __init__(self, parent):
         super().__init__(parent)
+        self.checkbox_pressed = False
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -45,18 +49,18 @@ class CheckBoxDelegate(QItemDelegate):
         checked = True
         if index.data() == "False" or not index.data():
             checked = False
-        check_box_style_option = QStyleOptionButton()
+        checkbox_style_option = QStyleOptionButton()
         if (index.flags() & Qt.ItemIsEditable) > 0:
-            check_box_style_option.state |= QStyle.State_Enabled
+            checkbox_style_option.state |= QStyle.State_Enabled
         else:
-            check_box_style_option.state |= QStyle.State_ReadOnly
+            checkbox_style_option.state |= QStyle.State_ReadOnly
         if checked:
-            check_box_style_option.state |= QStyle.State_On
+            checkbox_style_option.state |= QStyle.State_On
         else:
-            check_box_style_option.state |= QStyle.State_Off
-        check_box_style_option.rect = self.getCheckBoxRect(option)
+            checkbox_style_option.state |= QStyle.State_Off
+        checkbox_style_option.rect = self.get_checkbox_rect(option)
         # noinspection PyArgumentList
-        QApplication.style().drawControl(QStyle.CE_CheckBox, check_box_style_option, painter)
+        QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
 
     def editorEvent(self, event, model, option, index):
         """Change the data in the model and the state of the checkbox
@@ -64,35 +68,34 @@ class CheckBoxDelegate(QItemDelegate):
         Otherwise do nothing."""
         if not (index.flags() & Qt.ItemIsEditable) > 0:
             return False
-        # Do not change the checkbox-state
+        # Do nothing on double-click
+        if event.type() == QEvent.MouseButtonDblClick:
+            return True
         if event.type() == QEvent.MouseButtonPress:
-            return False
-        if event.type() == QEvent.MouseButtonRelease or event.type() == QEvent.MouseButtonDblClick:
-            if event.button() != Qt.LeftButton or not self.getCheckBoxRect(option).contains(event.pos()):
-                return False
-            if event.type() == QEvent.MouseButtonDblClick:
+            if event.button() == Qt.LeftButton and self.get_checkbox_rect(option).contains(event.pos()):
+                self.checkbox_pressed = True
                 return True
-        # Change the checkbox-state
-        self.setModelData(None, model, index)
-        return True
+        if event.type() == QEvent.MouseButtonRelease:
+            if self.checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+                # Change the checkbox-state
+                # self.setModelData(None, model, index)
+                self.commit_data.emit(index)
+                self.checkbox_pressed = False
+                return True
+            self.checkbox_pressed = False
+        return False
 
     def setModelData (self, editor, model, index):
-        """The user wanted to change the old state to opposite."""
-        d = model.data(index, Qt.DisplayRole)  # Current status
-        if d == "False":  # Add link
-            src_name = model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
-            dst_name = model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
-            self.parent().ui.graphicsView.add_link(src_name, dst_name, index)
-        else:  # Remove link
-            self.parent().ui.graphicsView.remove_link(index)
+        """Do nothing. Model data is updated by handling the `commit_data` signal."""
+        pass
 
-    def getCheckBoxRect(self, option):
-        check_box_style_option = QStyleOptionButton()
-        check_box_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, check_box_style_option, None)
-        check_box_point = QPoint (option.rect.x() +
+    def get_checkbox_rect(self, option):
+        checkbox_style_option = QStyleOptionButton()
+        checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
+        checkbox_point = QPoint (option.rect.x() +
                             option.rect.width() / 2 -
-                            check_box_rect.width() / 2,
+                            checkbox_rect.width() / 2,
                             option.rect.y() +
                             option.rect.height() / 2 -
-                            check_box_rect.height() / 2)
-        return QRect(check_box_point, check_box_rect.size())
+                            checkbox_rect.height() / 2)
+        return QRect(checkbox_point, checkbox_rect.size())
