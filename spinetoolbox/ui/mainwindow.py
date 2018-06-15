@@ -136,8 +136,12 @@ class Ui_MainWindow(object):
         self.tableView_connections = QtWidgets.QTableView(self.tab_connections)
         self.tableView_connections.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.tableView_connections.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.tableView_connections.setCornerButtonEnabled(False)
         self.tableView_connections.setObjectName("tableView_connections")
-        self.tableView_connections.horizontalHeader().setStretchLastSection(True)
+        self.tableView_connections.horizontalHeader().setHighlightSections(False)
+        self.tableView_connections.horizontalHeader().setMinimumSectionSize(35)
+        self.tableView_connections.horizontalHeader().setStretchLastSection(False)
+        self.tableView_connections.verticalHeader().setHighlightSections(False)
         self.verticalLayout_7.addWidget(self.tableView_connections)
         self.tabWidget.addTab(self.tab_connections, "")
         self.graphicsView = CustomQGraphicsView(self.splitter)
@@ -409,6 +413,6 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc
