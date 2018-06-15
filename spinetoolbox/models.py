@@ -546,6 +546,15 @@ class ConnectionModel(QAbstractTableModel):
         """Returns the internal data structure of the model."""
         return self.connections
 
+    def connected_links(self, name):
+        """Returns a list of connected links for the given item"""
+        item_row = self.header.index(name)  # Row or column of item in the model
+        row = self.connections[item_row]
+        column = [self.connections[i][item_row] for i in range(self.rowCount()) if i != item_row]
+        links = [x for x in row if x]
+        links.extend([x for x in column if x])
+        return links
+
     def reset_model(self, connection_table):
         """Reset model. Used in replacing the current model
         with a boolean table that represents connections.

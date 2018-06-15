@@ -142,16 +142,6 @@ class ItemImage(QGraphicsItem):
         # icon.setAcceptHoverEvents(True)
         return icon
 
-    # def links(self):
-    #     """Returns a list of Link items that are connected to this item."""
-    #     link_list = list()
-    #     for item in self._main.ui.graphicsView.scene().items():
-    #         if item.data(ITEM_TYPE) == "link":
-    #             if item.src_icon == self or item.dst_icon == self:
-    #                 # logging.debug("Found link for item: {0}".format(self.name()))
-    #                 link_list.append(item)
-    #     return link_list
-
     def name(self):
         """Returns name of the item that is represented by this icon."""
         return self._name
@@ -201,6 +191,9 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
+        links = self._main.connection_model.connected_links(self._name)
+        for link in links:
+            link.update_geometry()
         QGraphicsItem.mouseMoveEvent(self._master, event)
 
     def mouse_release_event(self, event):
@@ -681,16 +674,17 @@ class Link(QGraphicsPathItem):
         # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input<\html>".format(self.src_icon.name(), self.dst_icon.name()))
-        # self.setBrush(QBrush(QColor(255, 255, 0, 204)))
-        self.context_menu_title = "{0}->{1}".format(self.src_icon.name(), self.dst_icon.name())
-        self.setPen(QPen(Qt.gray))
-        self.selection_brush = QBrush(QColor(255, 0, 255, 204))
-        self.normal_brush = QBrush(QColor(255, 255, 0, 204))
+        # self.selected_brush = QBrush(QColor(255, 0, 255, 204))
+        # self.normal_brush = QBrush(QColor(255, 255, 0, 204))
+        self.setBrush(QBrush(QColor(255, 255, 0, 204)))
+        self.selected_pen = QPen(Qt.DashLine)
+        self.normal_pen = Qt.NoPen
         self.setData(ITEM_TYPE, "link")
         self.model_index = None
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.update_geometry()
 
     def find_model_index(self):
         """Find model index from connection model."""
@@ -763,8 +757,9 @@ class Link(QGraphicsPathItem):
         #     path.addEllipse(self.src_center, self.ellipse_radius, self.ellipse_radius)
         return path
 
-    def paint(self, painter, option, widget):
-        """Paint ellipse and arrow at from and to positions, respectively."""
+    def update_geometry(self):
+        """Update path."""
+        self.prepareGeometryChange()
         src_rect = self.src_connector.sceneBoundingRect()
         dst_rect = self.dst_connector.sceneBoundingRect()
         src_center = src_rect.center()
@@ -798,13 +793,19 @@ class Link(QGraphicsPathItem):
             path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
+
+    def paint(self, painter, option, widget):
+        """Paint ellipse and arrow at from and to positions, respectively."""
+        # logging.debug("paint link")
         # Set brush according to selection state
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
-            self.setBrush(self.selection_brush)
+            # self.setBrush(self.selected_brush)
+            self.setPen(self.selected_pen)
         else:
             painter.setPen(Qt.NoPen)
-            self.setBrush(self.normal_brush)
+            # self.setBrush(self.normal_brush)
+            self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
 
@@ -843,7 +844,6 @@ class LinkDrawer(QGraphicsPathItem):
         self.setData(ITEM_TYPE, "link-drawer")
         self.setPen(QPen(Qt.gray))
 
-    # def start_drawing_at(self, src_point):
     def start_drawing_at(self, src_rect):
         """Start drawing from the center point of the clicked button.
 
@@ -870,8 +870,9 @@ class LinkDrawer(QGraphicsPathItem):
         self.outer_angle = degrees(atan2(self.ellipse_width/2, self.outer_rect.height()/2))
         self.show()
 
-    def paint(self, painter, option, widget):
-        """Draw ellipse at begin position and arrowhead at end position."""
+    def update_geometry(self):
+        """Update path."""
+        self.prepareGeometryChange()
         # Angle between connector centers
         if self.src_rect.contains(self.dst):
             angle = 0
@@ -905,4 +906,3 @@ class LinkDrawer(QGraphicsPathItem):
             path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
-        super().paint(painter, option, widget)
