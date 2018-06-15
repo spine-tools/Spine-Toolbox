@@ -8,8 +8,8 @@
         "output/"
     ],
     "inputfiles": [
-        "input/data.gdx",
-        "input/investments.gdx"
+        "input/investments.gdx",
+        "input/data.gdx"
     ],
     "inputfiles_opt": [
         "input/changes.inc"

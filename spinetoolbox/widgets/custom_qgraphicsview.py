@@ -104,8 +104,8 @@ class CustomQGraphicsView(QGraphicsView):
         """Set connection model and connect signals."""
         self._connection_model = model
         # self._connection_model.dataChanged.connect(self.connection_data_changed)
-        self._connection_model.rowsAboutToBeRemoved.connect(self.connectionRowsRemoved)
-        self._connection_model.columnsAboutToBeRemoved.connect(self.connectionColumnsRemoved)
+        self._connection_model.rowsAboutToBeRemoved.connect(self.connection_rows_removed)
+        self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
     def add_link(self, src_name, dst_name, index):
         """Draw link between source and sink items on scene and add Link instance to connection model."""
@@ -137,7 +137,7 @@ class CustomQGraphicsView(QGraphicsView):
         for row in range(rows):
             for column in range(columns):
                 index = self._connection_model.index(row, column)
-                data = self._connection_model.data(index, Qt.DisplayRole)  # NOTE: data is a string
+                data = self._connection_model.data(index, Qt.DisplayRole)  # NOTE: data DisplayRole returns a string
                 src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                 dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
                 flags = Qt.MatchExactly | Qt.MatchRecursive
@@ -152,22 +152,18 @@ class CustomQGraphicsView(QGraphicsView):
                     # logging.debug("Cell ({0},{1}):{2} -> No link".format(row, column, data))
                     self._connection_model.setData(index, None)
 
-    @Slot("QModelIndex", "int", "int", name='connectionRowsRemoved')
-    def connectionRowsRemoved(self, index, first, last):
-        """[OBSOLETE?] Update view when connection model changes."""
-        # TODO: Check if this method can be removed.
-        logging.debug("conn. rows removed")
+    @Slot("QModelIndex", "int", "int", name='connection_rows_removed')
+    def connection_rows_removed(self, index, first, last):
+        """Update view when connection model changes."""
         for i in range(first, last+1):
             for j in range(self._connection_model.columnCount()):
                 link = self._connection_model.link(i, j)
                 if link:
                     self.scene().removeItem(link)
 
-    @Slot("QModelIndex", "int", "int", name='connectionColumnsRemoved')
-    def connectionColumnsRemoved(self, index, first, last):
-        """[OBSOLETE?] Update view when connection model changes."""
-        # TODO: Check if this method can be removed.
-        logging.debug("conn. columns removed")
+    @Slot("QModelIndex", "int", "int", name='connection_columns_removed')
+    def connection_columns_removed(self, index, first, last):
+        """Update view when connection model changes."""
         for j in range(first, last+1):
             for i in range(self._connection_model.rowCount()):
                 link = self._connection_model.link(i, j)
@@ -203,7 +199,7 @@ class CustomQGraphicsView(QGraphicsView):
                                   .format(self.from_widget, self.to_widget))
 
     def dragLeaveEvent(self, event):
-        """Accept event"""
+        """Accept event."""
         event.accept()
 
     def dragEnterEvent(self, event):
@@ -283,6 +279,6 @@ class CustomQGraphicsView(QGraphicsView):
                 connectors = [item for item in self.items(e.pos()) if hasattr(item, 'is_connector')]
                 if not connectors:
                     self.link_drawer.drawing = False
-                    self._ui.msg_error.emit("Unable to make connection. "
-                                            "Try landing the connection onto a connector button.")
+                    self._ui.msg_warning.emit("Unable to make connection. "
+                                              "Try landing the connection onto a connector button.")
         super().mousePressEvent(e)
