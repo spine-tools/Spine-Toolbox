@@ -90,7 +90,7 @@ class ItemImage(QGraphicsItem):
         self.name_item.setFont(font)
         # Set name item position (centered)
         bounding_rect = self.name_item.sceneBoundingRect()
-        self.name_item.setPos(self.x_coord + self.w/2 - bounding_rect.width()/2, self.y_coord)  # TODO: Refine position more?
+        self.name_item.setPos(self.x_coord + self.w/2 - bounding_rect.width()/2, self.y_coord)
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
@@ -141,16 +141,6 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
         return icon
-
-    # def links(self):
-    #     """Returns a list of Link items that are connected to this item."""
-    #     link_list = list()
-    #     for item in self._main.ui.graphicsView.scene().items():
-    #         if item.data(ITEM_TYPE) == "link":
-    #             if item.src_icon == self or item.dst_icon == self:
-    #                 # logging.debug("Found link for item: {0}".format(self.name()))
-    #                 link_list.append(item)
-    #     return link_list
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
@@ -243,9 +233,6 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Mouse event
         """
-        # TODO: If link is under mouse, then invoke Link contextMenuEvent
-        item = self._main.ui.graphicsView.scene().items(event.scenePos(), Qt.IntersectsItemShape, Qt.DescendingOrder, self._main.ui.graphicsView.transform())
-        logging.debug(item)
         self._master.setSelected(True)
         self._main.show_item_image_context_menu(event.screenPos(), self.name())
 
@@ -710,7 +697,7 @@ class Link(QGraphicsPathItem):
                 continue
 
     def send_to_bottom(self):
-        """"""
+        """Send link behind other links."""
         if self.parallel_link:
             self.stackBefore(self.parallel_link)
 
@@ -740,16 +727,8 @@ class Link(QGraphicsPathItem):
         self.find_parallel_link()
         self._qmainwindow.show_link_context_menu(e.screenPos(), self)
 
-        # if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
-        #     e.ignore()
-        # else:
-        #     self.setSelected(True)
-        #     self.find_model_index()
-        #     self.find_parallel_link()
-        #     self._qmainwindow.show_link_context_menu(e.screenPos(), self)
-
     def keyPressEvent(self, event):
-        """Remove associated connection if this is selected and delete is pressed"""
+        """Remove associated connection if this is selected and delete is pressed."""
         if event.key() == Qt.Key_Delete and self.isSelected():
             self.find_model_index()
             self._qmainwindow.ui.graphicsView.remove_link(self.model_index)
