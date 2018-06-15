@@ -56,16 +56,6 @@ class LineEditDelegate(QItemDelegate):
         """Do nothing. Model data is updated by handling the `closeEditor` signal."""
         pass
 
-    def editorEvent(self, event, model, option, index):
-        """WIP: Restore initial text when escape key is pressed."""
-        # logging.debug(event.type())
-        if event.type() == QEvent.KeyPress:
-            if event.key() == Qt.Key_Escape:
-                pass
-                # logging.debug(self.original_data)
-                # logging.debug("escape pressed")
-        return False
-
 
 class CustomLineEditor(QLineEdit):
 
@@ -73,26 +63,3 @@ class CustomLineEditor(QLineEdit):
         super().__init__(parent)
         self.original_data = None
         self.index = None
-
-    def keyPressEvent(self, e):
-        """WIP: Restore initial text when escape key is pressed.
-
-        Args:
-            e (QKeyEvent): Received key press event.
-        """
-        # logging.debug("key pressed")
-        if e.key() == Qt.Key_Escape:
-            logging.debug(self.original_data)
-            logging.debug("escape pressed")
-            self.setText(self.original_data)
-        else:
-            super().keyPressEvent(e)
-
-    def close(self):
-        logging.debug("close")
-        return super().close()
-
-    def closeEvent(self, e):
-        logging.debug("closeEvent")
-        logging.debug(e.type())
-        super().closeEvent(e)

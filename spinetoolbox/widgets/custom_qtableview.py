@@ -61,11 +61,11 @@ class ParameterValueTableView(QTableView):
     def keyPressEvent(self, event):
         """Copy selection to clipboard so that it can be pasted into Excel"""
         if not event.matches(QKeySequence.Copy):
-            event.ignore()
+            super().keyPressEvent(event)
             return
         selection = self.selectionModel().selection()
         if not selection:
-            event.ignore()
+            super().keyPressEvent(event)
             return
         first = selection.first()
         content = ""
@@ -98,11 +98,11 @@ class ParameterTableView(QTableView):
     def keyPressEvent(self, event):
         """Copy selection to clipboard so that it can be pasted into Excel"""
         if not event.matches(QKeySequence.Copy):
-            event.ignore()
+            super().keyPressEvent(event)
             return
         selection = self.selectionModel().selection()
         if not selection:
-            event.ignore()
+            super().keyPressEvent(event)
             return
         first = selection.first()
         content = ""
