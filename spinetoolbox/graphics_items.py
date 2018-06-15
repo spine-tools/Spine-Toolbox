@@ -784,7 +784,7 @@ class Link(QGraphicsPathItem):
         self.setPath(path)
 
     def paint(self, painter, option, widget):
-        """Paint ellipse and arrow at from and to positions, respectively."""
+        """Set pen according to selection state."""
         # logging.debug("paint link")
         # Set brush according to selection state
         if option.state & QStyle.State_Selected:
@@ -831,7 +831,7 @@ class LinkDrawer(QGraphicsPathItem):
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
         self.setData(ITEM_TYPE, "link-drawer")
-        self.setPen(QPen(Qt.gray))
+        self.setPen(Qt.NoPen)
 
     def start_drawing_at(self, src_rect):
         """Start drawing from the center point of the clicked button.
@@ -857,6 +857,7 @@ class LinkDrawer(QGraphicsPathItem):
         self.outer_rect = QRectF(0, 0, 8*self.feedback_size, 6*self.feedback_size + self.line_width)
         self.inner_angle = degrees(atan2(self.ellipse_width/2, self.inner_rect.height()/2))
         self.outer_angle = degrees(atan2(self.ellipse_width/2, self.outer_rect.height()/2))
+        self.update_geometry()
         self.show()
 
     def update_geometry(self):

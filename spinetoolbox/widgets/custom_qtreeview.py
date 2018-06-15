@@ -114,7 +114,7 @@ class DataTreeView(QTreeView):
                 event.ignore()
                 return
         event.accept()
-        event.setDropAction(Qt.LinkAction)
+        event.setDropAction(Qt.CopyAction)
 
     def dragMoveEvent(self, event):
         """Accept event."""

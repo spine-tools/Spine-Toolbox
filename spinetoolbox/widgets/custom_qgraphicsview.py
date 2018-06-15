@@ -260,7 +260,7 @@ class CustomQGraphicsView(QGraphicsView):
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
         """
-        if self.link_drawer and self.link_drawer.src:
+        if self.link_drawer and self.link_drawer.drawing:
             self.link_drawer.dst = self.mapToScene(e.pos())
             self.link_drawer.update_geometry()
         super().mouseMoveEvent(e)
