@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -336,15 +336,6 @@
        <property name="midLineWidth">
         <number>0</number>
        </property>
-       <property name="backgroundBrush">
-        <brush brushstyle="SolidPattern">
-         <color alpha="255">
-          <red>240</red>
-          <green>240</green>
-          <blue>240</blue>
-         </color>
-        </brush>
-       </property>
        <property name="alignment">
         <set>Qt::AlignCenter</set>
        </property>
@@ -368,7 +359,7 @@
      <x>0</x>
      <y>0</y>
      <width>743</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

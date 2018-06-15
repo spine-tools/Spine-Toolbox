@@ -467,7 +467,6 @@ class ToolboxUI(QMainWindow):
         file_name = os.path.split(file_path)[-1]
         if not file_name.lower().endswith('.proj'):
             self.msg_warning.emit("Only *.proj files supported")
-            logging.debug("Only *.proj files supported")
             return
         if not self._project:
             self.new_project()

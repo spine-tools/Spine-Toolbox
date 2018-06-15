@@ -152,9 +152,6 @@ class Ui_MainWindow(object):
         self.graphicsView.setSizePolicy(sizePolicy)
         self.graphicsView.setFrameShadow(QtWidgets.QFrame.Raised)
         self.graphicsView.setMidLineWidth(0)
-        brush = QtGui.QBrush(QtGui.QColor(240, 240, 240))
-        brush.setStyle(QtCore.Qt.SolidPattern)
-        self.graphicsView.setBackgroundBrush(brush)
         self.graphicsView.setAlignment(QtCore.Qt.AlignCenter)
         self.graphicsView.setRenderHints(QtGui.QPainter.Antialiasing|QtGui.QPainter.TextAntialiasing)
         self.graphicsView.setDragMode(QtWidgets.QGraphicsView.NoDrag)
@@ -163,7 +160,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.splitter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 743, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 743, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -413,6 +410,6 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

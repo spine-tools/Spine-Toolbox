@@ -655,8 +655,9 @@ class Link(QGraphicsPathItem):
         self.setZValue(1)
         conn_width = self.src_connector.rect().width()
         self.arrow_angle = pi/4
+        # self.ellipse_angle = 30
         self.ellipse_angle = 30
-        self.feedback_size = 10
+        self.feedback_size = 12
         # Path parameters
         self.line_width = conn_width/2
         self.arrow_length = self.line_width
@@ -674,9 +675,9 @@ class Link(QGraphicsPathItem):
         # self.selected_brush = QBrush(QColor(255, 0, 255, 204))
         # self.normal_brush = QBrush(QColor(255, 255, 0, 204))
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
-        self.selected_pen = QPen(Qt.DashLine)
-        self.normal_pen = Qt.NoPen
-        self.setData(ITEM_TYPE, "link")
+        self.selected_pen = QPen(Qt.black, 0.5, Qt.DashLine)
+        self.normal_pen = QPen(Qt.black, 0.5)
+        # self.setData(ITEM_TYPE, "link")
         self.model_index = None
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -737,22 +738,14 @@ class Link(QGraphicsPathItem):
             self.find_model_index()
             self._qmainwindow.ui.graphicsView.remove_link(self.model_index)
 
-    def shape(self):
-        """Reimplemented to enable selecting the link by right-clicking on the arrow head and starting ellipse."""
-        # TODO: Apparently this is not needed due to this being a QGraphicsPathItem now
-        path = super().shape()
-        # path.addPolygon(self.arrow_head)
-        # if self.src_center is not None:
-        #     path.addEllipse(self.src_center, self.ellipse_radius, self.ellipse_radius)
-        return path
-
     def update_geometry(self):
         """Update path."""
         self.prepareGeometryChange()
         src_rect = self.src_connector.sceneBoundingRect()
         dst_rect = self.dst_connector.sceneBoundingRect()
         src_center = src_rect.center()
-        dst_center = dst_rect.center()
+        # dst_center = dst_rect.center()
+        dst_center = QPointF(dst_rect.left(), dst_rect.center().y())  # dst point is the center left side of button
         # Angle between connector centers
         angle = atan2(src_center.y() - dst_center.y(), dst_center.x() - src_center.x())
         # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
@@ -792,7 +785,7 @@ class Link(QGraphicsPathItem):
             # self.setBrush(self.selected_brush)
             self.setPen(self.selected_pen)
         else:
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.NoPen)  # TODO: Does this do anything?
             # self.setBrush(self.normal_brush)
             self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
@@ -830,7 +823,7 @@ class LinkDrawer(QGraphicsPathItem):
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
-        self.setData(ITEM_TYPE, "link-drawer")
+        # self.setData(ITEM_TYPE, "link-drawer")
         self.setPen(Qt.NoPen)
 
     def start_drawing_at(self, src_rect):

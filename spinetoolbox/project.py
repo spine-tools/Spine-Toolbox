@@ -35,8 +35,7 @@ from data_connection import DataConnection
 from tool import Tool
 from view import View
 from tool_templates import GAMSTool, JuliaTool
-from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
-import qsubprocess
+from config import DEFAULT_WORK_DIR
 
 
 class SpineToolboxProject(MetaObject):
