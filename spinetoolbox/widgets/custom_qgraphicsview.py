@@ -52,7 +52,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.max_sw_width = 0
         self.max_sw_height = 0
         self._scene.changed.connect(self.scene_changed)
-        self._scene.selectionChanged.connect(self.selection_changed)
+        # self._scene.selectionChanged.connect(self.selection_changed)
         self.active_subwindow = None
         self.from_widget = None
         self.to_widget = None
@@ -67,27 +67,27 @@ class CustomQGraphicsView(QGraphicsView):
             qrect |= changed
         self.setSceneRect(qrect)
 
-    @Slot(name='selection_changed')
-    def selection_changed(self):
-        """Bring selected item to top."""
-        # logging.debug("selection changed: {}.".format(self.scene().selectedItems()))
-        for selected in self.scene().selectedItems():
-            # Bring selected to top
-            if not selected.zValue():
-                continue
-            for item in selected.collidingItems():
-                if item != selected and item.zValue() == selected.zValue():
-                    item.stackBefore(selected)
+#    @Slot(name='selection_changed')
+#    def selection_changed(self):
+#        """Bring selected item to top."""
+#        # logging.debug("selection changed: {}.".format(self.scene().selectedItems()))
+#        for selected in self.scene().selectedItems():
+#            # Bring selected to top
+#            if not selected.zValue():
+#                continue
+#            for item in selected.collidingItems():
+#                if item != selected and item.zValue() == selected.zValue():
+#                    item.stackBefore(selected)
 
     def reset_scene(self):
         """Get a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
         self._scene.changed.disconnect(self.scene_changed)
-        self._scene.selectionChanged.disconnect(self.selection_changed)
+        # self._scene.selectionChanged.disconnect(self.selection_changed)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
         self._scene.changed.connect(self.scene_changed)
-        self._scene.selectionChanged.connect(self.selection_changed)
+        # self._scene.selectionChanged.connect(self.selection_changed)
         self.setSceneRect(QRectF(0, 0, 0, 0))
         self._scene.addItem(self.link_drawer)
 
@@ -169,7 +169,6 @@ class CustomQGraphicsView(QGraphicsView):
                 link = self._connection_model.link(i, j)
                 if link:
                     self.scene().removeItem(link)
-
 
     def fit_scene_to_viewport(self):
         """Expand scene so as to fit the viewport. This avoids abrupt shifts when

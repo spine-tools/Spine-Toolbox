@@ -31,7 +31,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient
 from math import atan2, degrees, sin, cos, pi  # arrow head
-from config import ITEM_TYPE
+# from config import ITEM_TYPE
 
 
 class SceneBackground(QGraphicsRectItem):
@@ -200,12 +200,12 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
+        QGraphicsItem.mouseMoveEvent(self._master, event)
         links = self._main.connection_model.connected_links(self._name)
         for link in links:
             link.update_geometry()
         master_rect = self._master.sceneBoundingRect()
         self.name_item.setPos(master_rect.left() + self.w/2 - self.name_width/2, master_rect.top())
-        QGraphicsItem.mouseMoveEvent(self._master, event)
 
     def mouse_release_event(self, event):
         """Mouse button is released.
@@ -270,6 +270,13 @@ class ItemImage(QGraphicsItem):
         rect = self.conn_button().sceneBoundingRect()
         self._main.ui.graphicsView.draw_links(rect, self.name())
 
+    def item_change(self, change, value):
+        """Remove name_item when master is removed from scene."""
+        if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            self._master.scene().removeItem(self.name_item)
+            return value
+        return QGraphicsItem.itemChange(self._master, change, value)
+
 
 class DataConnectionImage(ItemImage):
     """Data Connection item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -300,6 +307,7 @@ class DataConnectionImage(ItemImage):
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
+        self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -354,6 +362,10 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         return super().key_press_event(event)
 
+    def item_change(self, change, value):
+        """Calls super class method."""
+        return super().item_change(change, value)
+
 
 class ToolImage(ItemImage):
     """Tool item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -384,6 +396,7 @@ class ToolImage(ItemImage):
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
+        self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -478,6 +491,10 @@ class ToolImage(ItemImage):
         """Calls super class method."""
         return super().key_press_event(event)
 
+    def item_change(self, change, value):
+        """Calls super class method."""
+        return super().item_change(change, value)
+
 
 class DataStoreImage(ItemImage):
     """Data Store item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -508,6 +525,7 @@ class DataStoreImage(ItemImage):
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
+        self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -561,6 +579,10 @@ class DataStoreImage(ItemImage):
     def key_press_event(self, event):
         """Calls super class method."""
         return super().key_press_event(event)
+
+    def item_change(self, change, value):
+        """Calls super class method."""
+        return super().item_change(change, value)
 
 
 class ViewImage(ItemImage):
@@ -592,6 +614,7 @@ class ViewImage(ItemImage):
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
+        self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -645,6 +668,10 @@ class ViewImage(ItemImage):
     def key_press_event(self, event):
         """Calls super class method."""
         return super().key_press_event(event)
+
+    def item_change(self, change, value):
+        """Calls super class method."""
+        return super().item_change(change, value)
 
 
 class Link(QGraphicsPathItem):
@@ -714,13 +741,11 @@ class Link(QGraphicsPathItem):
         """Find parallel link."""
         self.parallel_link = None
         for item in self.collidingItems():
-            try:
-                if item.src_icon == self.dst_icon and item.dst_icon == self.src_icon:
-                    self.parallel_link = item
-                    break
-            except AttributeError:
-                logging.debug("Weird. A Link collides with something that's not a Link: {}". format(item))
+            if not isinstance(item, Link):
                 continue
+            if item.src_icon == self.dst_icon and item.dst_icon == self.src_icon:
+                self.parallel_link = item
+                break
 
     def send_to_bottom(self):
         """Send link behind other links."""
@@ -804,19 +829,22 @@ class Link(QGraphicsPathItem):
 
     def paint(self, painter, option, widget):
         """Set pen according to selection state."""
-        # logging.debug("paint link")
-        # painter.drawRect(self.inner_rect)  # NOTE: this is for debug, should be removed soon
-        # painter.drawRect(self.outer_rect)  # NOTE: this is for debug, should be removed soon
-        # Set brush according to selection state
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
-            # self.setBrush(self.selected_brush)
             self.setPen(self.selected_pen)
         else:
-            # self.setBrush(self.normal_brush)
             self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
+    def itemChange(self, change, value):
+        """Bring selected link to top."""
+        if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
+            for item in self.collidingItems():
+                if not isinstance(item, Link):
+                    continue
+                item.stackBefore(self)
+            return value
+        return super().itemChange(change, value)
 
 class LinkDrawer(QGraphicsPathItem):
     """An item that allows one to draw links between slot buttons in QGraphicsView.
