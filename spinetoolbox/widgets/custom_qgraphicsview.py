@@ -173,7 +173,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     def fit_scene_to_viewport(self):
         """Expand scene so as to fit the viewport. This avoids abrupt shifts when
-        painting a new item that would make the scene grow larger.
+        painting a new item that makes the scene grow larger.
         """
         top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
         bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
@@ -191,6 +191,7 @@ class CustomQGraphicsView(QGraphicsView):
         if not self.link_drawer.drawing:
             # start drawing and remember connector
             self.link_drawer.drawing = True
+            self.fit_scene_to_viewport()
             self.link_drawer.start_drawing_at(src_rect)
             self.from_widget = name
         else:
@@ -220,6 +221,7 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
         else:
             event.accept()
+            self.fit_scene_to_viewport()
 
     def dragMoveEvent(self, event):
         """Only accept drops of DraggableWidget instances (from Add Item toolbar)"""

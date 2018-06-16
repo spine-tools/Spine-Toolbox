@@ -29,7 +29,7 @@ from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath
+from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient
 from math import atan2, degrees, sin, cos, pi  # arrow head
 from config import ITEM_TYPE
 
@@ -83,14 +83,15 @@ class ItemImage(QGraphicsItem):
         self.q_rect = QRectF(self.x_coord, self.y_coord, self.w, self.h)  # Position and size of the drawn item
         # Make QGraphicsSimpleTextItem for item name.
         self.name_item = QGraphicsSimpleTextItem(self._name)
+        self.name_item.setZValue(3)
         # Set font size and style
         font = self.name_item.font()
         font.setPointSize(self.font_size)
         font.setBold(True)
         self.name_item.setFont(font)
         # Set name item position (centered)
-        bounding_rect = self.name_item.sceneBoundingRect()
-        self.name_item.setPos(self.x_coord + self.w/2 - bounding_rect.width()/2, self.y_coord)
+        self.name_width = self.name_item.sceneBoundingRect().width()
+        self.name_item.setPos(self.x_coord + self.w/2 - self.name_width/2, self.y_coord)
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
@@ -121,7 +122,11 @@ class ItemImage(QGraphicsItem):
         icon = QGraphicsPathItem(path)
         top_ellipse.setParentItem(icon)
         icon.setPen(pen)
-        icon.setBrush(brush)
+        gradient = QRadialGradient(self.q_rect.topLeft(), self.w)
+        gradient.setColorAt(1, brush.color().darker())
+        gradient.setColorAt(0, brush.color().lighter())
+        icon.setBrush(QBrush(gradient))
+        # icon.setBrush(brush)
         icon.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
@@ -135,7 +140,11 @@ class ItemImage(QGraphicsItem):
         """
         icon = QGraphicsEllipseItem(self.q_rect)
         icon.setPen(pen)
-        icon.setBrush(brush)
+        gradient = QRadialGradient(self.q_rect.topLeft(), self.w)
+        gradient.setColorAt(1, brush.color().darker())
+        gradient.setColorAt(0, brush.color().lighter())
+        icon.setBrush(QBrush(gradient))
+        # icon.setBrush(brush)
         icon.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
@@ -194,6 +203,8 @@ class ItemImage(QGraphicsItem):
         links = self._main.connection_model.connected_links(self._name)
         for link in links:
             link.update_geometry()
+        master_rect = self._master.sceneBoundingRect()
+        self.name_item.setPos(master_rect.left() + self.w/2 - self.name_width/2, master_rect.top())
         QGraphicsItem.mouseMoveEvent(self._master, event)
 
     def mouse_release_event(self, event):
@@ -296,7 +307,7 @@ class DataConnectionImage(ItemImage):
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
         # Group the drawn items together by setting the master as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self._master)
+        # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
@@ -380,7 +391,7 @@ class ToolImage(ItemImage):
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self._master)
+        # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
         # animation stuff
         self.wheel = QGraphicsPixmapItem()
@@ -504,7 +515,7 @@ class DataStoreImage(ItemImage):
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self._master)
+        # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
@@ -588,7 +599,7 @@ class ViewImage(ItemImage):
         self._main.ui.graphicsView.scene().addItem(self._master)
         self._main.ui.graphicsView.scene().addItem(self.name_item)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self._master)
+        # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
 
     def make_master(self, pen, brush):
@@ -654,16 +665,15 @@ class Link(QGraphicsPathItem):
         self.dst_connector = self.dst_icon.conn_button()
         self.setZValue(1)
         self.conn_width = self.src_connector.rect().width()
-        self.arrow_angle = pi/4
-        # self.ellipse_angle = 30
-        self.ellipse_angle = 30
+        self.arrow_angle = pi/4  # In rads
+        self.ellipse_angle = 30  # In degrees
         self.feedback_size = 12
         # Path parameters
         self.line_width = self.conn_width/2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
-        self.t1 = (arrow_base - self.line_width) / 2 / arrow_base
+        self.t1 = (arrow_base - self.line_width) / arrow_base/2
         self.t2 = 1.0 - self.t1
         # Inner rect of feedback link (works, but it's probably too hard)
         self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
@@ -709,6 +719,7 @@ class Link(QGraphicsPathItem):
                     self.parallel_link = item
                     break
             except AttributeError:
+                logging.debug("Weird. A Link collides with something that's not a Link: {}". format(item))
                 continue
 
     def send_to_bottom(self):
@@ -794,15 +805,14 @@ class Link(QGraphicsPathItem):
     def paint(self, painter, option, widget):
         """Set pen according to selection state."""
         # logging.debug("paint link")
-        # painter.drawRect(self.inner_rect)
-        # painter.drawRect(self.outer_rect)
+        # painter.drawRect(self.inner_rect)  # NOTE: this is for debug, should be removed soon
+        # painter.drawRect(self.outer_rect)  # NOTE: this is for debug, should be removed soon
         # Set brush according to selection state
         if option.state & QStyle.State_Selected:
             option.state &= ~QStyle.State_Selected
             # self.setBrush(self.selected_brush)
             self.setPen(self.selected_pen)
         else:
-            painter.setPen(Qt.NoPen)  # TODO: Does this do anything?
             # self.setBrush(self.normal_brush)
             self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
