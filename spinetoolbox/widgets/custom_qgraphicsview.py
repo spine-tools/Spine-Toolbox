@@ -51,45 +51,38 @@ class CustomQGraphicsView(QGraphicsView):
         self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
-        self._scene.changed.connect(self.scene_changed)
-        # self._scene.selectionChanged.connect(self.selection_changed)
         self.active_subwindow = None
-        self.from_widget = None
-        self.to_widget = None
+        self.src_widget = None  # source widget when drawing links
+        self.dst_widget = None  # destination widget when drawing links
+        self.init_scene()
         self.show()
 
     @Slot("QList", name='scene_changed')
     def scene_changed(self, changed_qrects):
-        """Make the scene larger as items get moved."""
+        """Resize scene as it changes."""
         # logging.debug("scene changed. {0}".format(changed_qrects))
-        qrect = self.sceneRect()
-        for changed in changed_qrects:
-            qrect |= changed
-        self.setSceneRect(qrect)
+        self.resize_scene()
 
-#    @Slot(name='selection_changed')
-#    def selection_changed(self):
-#        """Bring selected item to top."""
-#        # logging.debug("selection changed: {}.".format(self.scene().selectedItems()))
-#        for selected in self.scene().selectedItems():
-#            # Bring selected to top
-#            if not selected.zValue():
-#                continue
-#            for item in selected.collidingItems():
-#                if item != selected and item.zValue() == selected.zValue():
-#                    item.stackBefore(selected)
-
-    def reset_scene(self):
-        """Get a new, clean scene. Needed when clearing the UI for a new project
+    def make_new_scene(self):
+        """Make a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
         self._scene.changed.disconnect(self.scene_changed)
-        # self._scene.selectionChanged.disconnect(self.selection_changed)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
-        self._scene.changed.connect(self.scene_changed)
-        # self._scene.selectionChanged.connect(self.selection_changed)
-        self.setSceneRect(QRectF(0, 0, 0, 0))
         self._scene.addItem(self.link_drawer)
+
+    def init_scene(self):
+        """Resize the scene and connect its `changed` signal. Needed after
+        loading a new project.
+        """
+        self._scene.changed.connect(self.scene_changed)
+        self.resize_scene()
+
+    def resize_scene(self):
+        """Make the scene at least as big as the viewport."""
+        view_rect = self.mapToScene(self.rect()).boundingRect()
+        items_rect = self._scene.itemsBoundingRect()
+        self._scene.setSceneRect(view_rect | items_rect)
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
@@ -170,16 +163,6 @@ class CustomQGraphicsView(QGraphicsView):
                 if link:
                     self.scene().removeItem(link)
 
-    def fit_scene_to_viewport(self):
-        """Expand scene so as to fit the viewport. This avoids abrupt shifts when
-        painting a new item that makes the scene grow larger.
-        """
-        top_left = self.mapToScene(self.viewport().frameGeometry().topLeft())
-        bottom_right = self.mapToScene(self.viewport().frameGeometry().bottomRight())
-        qrect = QRectF(top_left, bottom_right)
-        qrect |= self.sceneRect()
-        self.setSceneRect(qrect)
-
     def draw_links(self, src_rect, name):
         """Draw links when slot button is clicked.
 
@@ -190,24 +173,23 @@ class CustomQGraphicsView(QGraphicsView):
         if not self.link_drawer.drawing:
             # start drawing and remember connector
             self.link_drawer.drawing = True
-            self.fit_scene_to_viewport()
             self.link_drawer.start_drawing_at(src_rect)
-            self.from_widget = name
+            self.src_widget = name
         else:
             # stop drawing and make connection
             self.link_drawer.drawing = False
-            self.to_widget = name
+            self.dst_widget = name
             # create connection
-            row = self._connection_model.header.index(self.from_widget)
-            column = self._connection_model.header.index(self.to_widget)
+            row = self._connection_model.header.index(self.src_widget)
+            column = self._connection_model.header.index(self.dst_widget)
             index = self._connection_model.createIndex(row, column)
             if self._connection_model.data(index, Qt.DisplayRole) == "False":
-                self.add_link(self.from_widget, self.to_widget, index)
+                self.add_link(self.src_widget, self.dst_widget, index)
                 self._ui.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
-                                  .format(self.from_widget, self.to_widget))
+                                  .format(self.src_widget, self.dst_widget))
             elif self._connection_model.data(index, Qt.DisplayRole) == "True":
                 self._ui.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
-                                  .format(self.from_widget, self.to_widget))
+                                  .format(self.src_widget, self.dst_widget))
 
     def dragLeaveEvent(self, event):
         """Accept event."""
@@ -220,7 +202,6 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
         else:
             event.accept()
-            self.fit_scene_to_viewport()
 
     def dragMoveEvent(self, event):
         """Only accept drops of DraggableWidget instances (from Add Item toolbar)"""
@@ -270,25 +251,43 @@ class CustomQGraphicsView(QGraphicsView):
         super().mouseMoveEvent(e)
 
     def mousePressEvent(self, e):
-        """If link lands on slot button, trigger click.
+        """Manage drawing of links. Handle the case where a link is being
+        drawn and the user doesn't hit a connector button.
 
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
         """
-        if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.hide()
-            if e.button() != Qt.LeftButton:
-                self.link_drawer.drawing = False
-            else:
-                connectors = [item for item in self.items(e.pos()) if hasattr(item, 'is_connector')]
-                if not connectors:
-                    self.link_drawer.drawing = False
-                    self._ui.msg_warning.emit("Unable to make connection. "
-                                              "Try landing the connection onto a connector button.")
+        was_drawing = self.link_drawer.drawing if self.link_drawer else None
+        # This below will trigger connector button if any
         super().mousePressEvent(e)
+        if was_drawing:
+            self.link_drawer.hide()
+            # If `drawing` is still `True` here, it means we didn't hit a connector
+            if self.link_drawer.drawing:
+                self.link_drawer.drawing = False
+                if e.button() != Qt.LeftButton:
+                    return
+                self._ui.msg_warning.emit("Unable to make connection. "
+                                          "Try landing the connection onto a connector button.")
 
+        # if self.link_drawer and self.link_drawer.drawing:
+        #     self.link_drawer.hide()
+        #     if e.button() != Qt.LeftButton:
+        #         self.link_drawer.drawing = False
+        #     else:
+        #         connectors = [item for item in self.items(e.pos()) if hasattr(item, 'is_connector')]
+        #         if not connectors:
+        #             self.link_drawer.drawing = False
+        #             self._ui.msg_warning.emit("Unable to make connection. "
+        #                                       "Try landing the connection onto a connector button.")
+        # super().mousePressEvent(e)
 
     def showEvent(self, event):
-        """Make scene as big as the viewport."""
-        self.fit_scene_to_viewport()
+        """Make the scene at least as big as the viewport."""
         super().showEvent(event)
+        self.resize_scene()
+
+    def resizeEvent(self, event):
+        """Make the scene at least as big as the viewport."""
+        super().resizeEvent(event)
+        self.resize_scene()

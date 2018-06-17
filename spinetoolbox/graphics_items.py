@@ -99,7 +99,7 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.connector_button.is_connector = True
+        # self.connector_button.is_connector = True
 
     def make_data_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -221,7 +221,7 @@ class ItemImage(QGraphicsItem):
             event.accept()
         else:
             self.show_item_info()
-            self.start_drawing()
+            self.draw_link()
 
     def connector_hover_enter_event(self, event):
         """Set a darker shade to connector button when mouse enters icon boundaries.
@@ -265,8 +265,8 @@ class ItemImage(QGraphicsItem):
         """Update GUI to show the details of the selected item in a QDockWidget."""
         self._main.show_info(self.name())
 
-    def start_drawing(self):
-        """Start drawing a link from the center point of the connector button."""
+    def draw_link(self):
+        """Start or stop drawing a link from or to the center point of the connector button."""
         rect = self.conn_button().sceneBoundingRect()
         self._main.ui.graphicsView.draw_links(rect, self.name())
 
@@ -797,7 +797,10 @@ class Link(QGraphicsPathItem):
             angle = 0
         else:  # normal link
             line = QLineF(src_center, dst_center)
-            t = (line.length() - self.conn_width/2)/line.length()
+            try:
+                t = (line.length() - self.conn_width/2) / line.length()
+            except ZeroDivisionError:
+                t = 1
             arrow_p0 = line.pointAt(t)  # arrow tip is where the line intersects the button
             angle = atan2(-line.dy(), line.dx())
         # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
@@ -839,7 +842,7 @@ class Link(QGraphicsPathItem):
     def itemChange(self, change, value):
         """Bring selected link to top."""
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedChange and value == 1:
-            for item in self.collidingItems():
+            for item in self.collidingItems():  # TODO: try using scene().collidingItems() which is ordered
                 if not isinstance(item, Link):
                     continue
                 item.stackBefore(self)

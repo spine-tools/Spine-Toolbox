@@ -339,7 +339,7 @@ class ToolboxUI(QMainWindow):
         self.clear_info_area()
         self._project = None
         self.tool_template_model = None
-        self.ui.graphicsView.reset_scene()
+        self.ui.graphicsView.make_new_scene()
 
     @Slot(name="new_project")
     def new_project(self):
@@ -438,6 +438,7 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
         self.ui.graphicsView.restore_links()
+        self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
