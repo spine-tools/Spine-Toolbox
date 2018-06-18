@@ -74,7 +74,7 @@ class ItemImage(QGraphicsItem):
         self.y_coord = y  # y coordinate in the scene (top left corner)
         self.w = w
         self.h = h
-        self.connector_pen = QPen(QColor('grey'))  # QPen is used to draw the item outline
+        self.connector_pen = QPen(QColor('black'))  # QPen is used to draw the item outline
         self.connector_pen.setStyle(Qt.DotLine)
         self.connector_brush = QBrush(QColor(255, 255, 255, 0))  # QBrush is used to fill the item
         self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))  # QBrush is used to fill the item
@@ -295,7 +295,7 @@ class DataConnectionImage(ItemImage):
         """Class constructor."""
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
-        self.brush = QBrush(QColor(0, 0, 255, 128))  # QBrush is used to fill the item
+        self.brush = QBrush(QColor(0, 0, 255, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 0, 204, 128))  # QBrush while hovering
         # Draw ellipse
         self._master = self.make_data_master(self.pen, self.brush)
@@ -384,7 +384,7 @@ class ToolImage(ItemImage):
         """Class constructor."""
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
-        self.brush = QBrush(QColor(255, 0, 0, 128))  # QBrush is used to fill the item
+        self.brush = QBrush(QColor(255, 0, 0, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(204, 0, 0, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_master(self.pen, self.brush)
@@ -513,7 +513,7 @@ class DataStoreImage(ItemImage):
         """Class constructor."""
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
-        self.brush = QBrush(QColor(0, 255, 255, 128))  # QBrush is used to fill the item
+        self.brush = QBrush(QColor(0, 255, 255, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 204, 204, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_data_master(self.pen, self.brush)
@@ -602,7 +602,7 @@ class ViewImage(ItemImage):
         """Class constructor."""
         super().__init__(main, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
-        self.brush = QBrush(QColor(0, 255, 0, 128))  # QBrush is used to fill the item
+        self.brush = QBrush(QColor(0, 255, 0, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 204, 0, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_master(self.pen, self.brush)
@@ -902,7 +902,7 @@ class LinkDrawer(QGraphicsPathItem):
         self.ellipse_rect = QRectF(0, 0, self.ellipse_width, self.ellipse_width)
         self.ellipse_rect.moveCenter(self.src)
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
-        self.t1 = (arrow_base - self.line_width) / 2 / arrow_base
+        self.t1 = (arrow_base - self.line_width) / arrow_base/2
         self.t2 = 1.0 - self.t1
         # Inner rect of feedback link
         self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)

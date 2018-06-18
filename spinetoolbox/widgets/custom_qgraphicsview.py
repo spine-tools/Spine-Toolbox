@@ -76,12 +76,23 @@ class CustomQGraphicsView(QGraphicsView):
         loading a new project.
         """
         self._scene.changed.connect(self.scene_changed)
-        self.resize_scene()
+        self.resize_scene(recenter=True)
+        # TODO: try to make a nice scene background, or remove if nothing seems good
+        # pixmap = QPixmap(":/symbols/Spine_symbol.png").scaled(64, 64)
+        # painter = QPainter(pixmap)
+        # alpha = QPixmap(pixmap.size())
+        # alpha.fill(QColor(255, 255, 255, 255-24))
+        # painter.drawPixmap(0, 0, alpha)
+        # painter.end()
+        # self.setBackgroundBrush(QBrush(pixmap))
 
-    def resize_scene(self):
+    def resize_scene(self, recenter=False):
         """Make the scene at least as big as the viewport."""
         view_rect = self.mapToScene(self.rect()).boundingRect()
         items_rect = self._scene.itemsBoundingRect()
+        if recenter:
+            view_rect.moveCenter(items_rect.center())
+            self.centerOn(items_rect.center())
         self._scene.setSceneRect(view_rect | items_rect)
 
     def make_link_drawer(self):
@@ -222,19 +233,19 @@ class CustomQGraphicsView(QGraphicsView):
         h = 70
         # self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)
         if text == "Data Store":
-            brush = QBrush(QColor(0, 255, 255, 128))
+            brush = QBrush(QColor(0, 255, 255, 160))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
             self._ui.show_add_data_store_form(pos.x(), pos.y())
         elif text == "Data Connection":
-            brush = QBrush(QColor(0, 0, 255, 128))
+            brush = QBrush(QColor(0, 0, 255, 160))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
             self._ui.show_add_data_connection_form(pos.x(), pos.y())
         elif text == "Tool":
-            brush = QBrush(QColor(255, 0, 0, 128))
+            brush = QBrush(QColor(255, 0, 0, 160))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._ui.show_add_tool_form(pos.x(), pos.y())
         elif text == "View":
-            brush = QBrush(QColor(0, 255, 0, 128))
+            brush = QBrush(QColor(0, 255, 0, 160))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._ui.show_add_view_form(pos.x(), pos.y())
         self.scene().addItem(self.item_shadow)
@@ -285,9 +296,9 @@ class CustomQGraphicsView(QGraphicsView):
     def showEvent(self, event):
         """Make the scene at least as big as the viewport."""
         super().showEvent(event)
-        self.resize_scene()
+        self.resize_scene(recenter=True)
 
     def resizeEvent(self, event):
         """Make the scene at least as big as the viewport."""
         super().resizeEvent(event)
-        self.resize_scene()
+        self.resize_scene(recenter=True)
