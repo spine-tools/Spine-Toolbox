@@ -1101,6 +1101,7 @@ class ToolboxUI(QMainWindow):
         """Show add data store widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
+            self.ui.graphicsView.scene().removeItem(item_shadow)
             return
         self.add_data_store_form = AddDataStoreWidget(self, self._project, x, y)
         self.add_data_store_form.show()
@@ -1110,6 +1111,7 @@ class ToolboxUI(QMainWindow):
         """Show add data connection widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
+            self.ui.graphicsView.scene().removeItem(item_shadow)
             return
         self.add_data_connection_form = AddDataConnectionWidget(self, self._project, x, y)
         self.add_data_connection_form.show()
@@ -1119,6 +1121,7 @@ class ToolboxUI(QMainWindow):
         """Show add tool widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
+            self.ui.graphicsView.scene().removeItem(item_shadow)
             return
         self.add_tool_form = AddToolWidget(self, self._project, x, y)
         self.add_tool_form.show()
@@ -1128,6 +1131,7 @@ class ToolboxUI(QMainWindow):
         """Show add view widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
+            self.ui.graphicsView.scene().removeItem(item_shadow)
             return
         self.add_view_form = AddViewWidget(self, self._project, x, y)
         self.add_view_form.show()
