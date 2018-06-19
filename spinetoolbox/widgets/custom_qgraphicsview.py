@@ -248,7 +248,8 @@ class CustomQGraphicsView(QGraphicsView):
             brush = QBrush(QColor(0, 255, 0, 160))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._ui.show_add_view_form(pos.x(), pos.y())
-        self.scene().addItem(self.item_shadow)
+        if self.item_shadow:  # NOTE: item_shadow is set to `None` if there's no project open
+            self._scene.addItem(self.item_shadow)
 
     def mouseMoveEvent(self, e):
         """Update line end position.
