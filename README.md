@@ -40,7 +40,7 @@ in the Spine Toolbox root folder.
 
 Alternatively, create a separate environment for Spine Toolbox with
 
-	conda create --name spinetoolbox -c conda-forge -c manulero --file requirements.txt
+	conda create --name spinetoolbox -c conda-forge -c manulero "python>=3.5" --file requirements.txt
 
 The PySide2 GUI development tools (`designer`, `pyside2-uic`, and `pyside2-rcc`)
 are included for both Windows and Linux in the PySide2 installation.
