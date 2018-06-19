@@ -1,0 +1,222 @@
+widgets package
+===============
+
+Submodules
+----------
+
+widgets.about\_widget module
+----------------------------
+
+.. automodule:: widgets.about_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.add\_data\_connection\_widget module
+--------------------------------------------
+
+.. automodule:: widgets.add_data_connection_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.add\_data\_store\_widget module
+---------------------------------------
+
+.. automodule:: widgets.add_data_store_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.add\_db\_reference\_widget module
+-----------------------------------------
+
+.. automodule:: widgets.add_db_reference_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.add\_tool\_widget module
+--------------------------------
+
+.. automodule:: widgets.add_tool_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.add\_view\_widget module
+--------------------------------
+
+.. automodule:: widgets.add_view_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.checkbox\_delegate module
+---------------------------------
+
+.. automodule:: widgets.checkbox_delegate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.combobox\_delegate module
+---------------------------------
+
+.. automodule:: widgets.combobox_delegate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_menus module
+----------------------------
+
+.. automodule:: widgets.custom_menus
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_qdialog module
+------------------------------
+
+.. automodule:: widgets.custom_qdialog
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_qgraphicsview module
+------------------------------------
+
+.. automodule:: widgets.custom_qgraphicsview
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_qtableview module
+---------------------------------
+
+.. automodule:: widgets.custom_qtableview
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_qtextbrowser module
+-----------------------------------
+
+.. automodule:: widgets.custom_qtextbrowser
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_qtreeview module
+--------------------------------
+
+.. automodule:: widgets.custom_qtreeview
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.data\_connection\_subwindow\_widget module
+--------------------------------------------------
+
+.. automodule:: widgets.data_connection_subwindow_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.data\_store\_subwindow\_widget module
+---------------------------------------------
+
+.. automodule:: widgets.data_store_subwindow_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.data\_store\_widget module
+----------------------------------
+
+.. automodule:: widgets.data_store_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.edit\_datapackage\_keys\_widget module
+----------------------------------------------
+
+.. automodule:: widgets.edit_datapackage_keys_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.julia\_repl\_widget module
+----------------------------------
+
+.. automodule:: widgets.julia_repl_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.lineedit\_delegate module
+---------------------------------
+
+.. automodule:: widgets.lineedit_delegate
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.project\_form\_widget module
+------------------------------------
+
+.. automodule:: widgets.project_form_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.settings\_widget module
+-------------------------------
+
+.. automodule:: widgets.settings_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.tool\_subwindow\_widget module
+--------------------------------------
+
+.. automodule:: widgets.tool_subwindow_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.tool\_template\_widget module
+-------------------------------------
+
+.. automodule:: widgets.tool_template_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.toolbars module
+-----------------------
+
+.. automodule:: widgets.toolbars
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.view\_subwindow\_widget module
+--------------------------------------
+
+.. automodule:: widgets.view_subwindow_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+Module contents
+---------------
+
+.. automodule:: widgets
+    :members:
+    :undoc-members:
+    :show-inheritance:

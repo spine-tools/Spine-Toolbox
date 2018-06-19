@@ -47,7 +47,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SPLITTER_SS, SEPARATOR_SS
+    SPLITTER_SS, SEPARATOR_SS, APPLICATION_PATH
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
@@ -174,6 +174,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
+        self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
         # Keyboard shortcut actions
         # noinspection PyUnresolvedReferences
@@ -698,7 +699,7 @@ class ToolboxUI(QMainWindow):
         """Reattach tool templates that may have changed.
 
         Args:
-        tool_template_name (str): if None, reattach all tool templates in project.
+            tool_template_name (str): if None, reattach all tool templates in project.
             If a name is given, only reattach that one
         """
         tools = self.project_item_model.find_item("Tools")
@@ -1151,6 +1152,19 @@ class ToolboxUI(QMainWindow):
         """Show About Spine Toolbox form."""
         self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
         self.about_form.show()
+
+    @Slot(name="show_user_guide")
+    def show_user_guide(self):
+        """Open Spine Toolbox documentation index page in browser."""
+        index_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.pardir, "docs", "build", "html", "index.html"))
+        index_url = "file:///" + index_path
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        if not res:
+            logging.error("Failed to open editor for {0}".format(index_url))
+            # filename, file_extension = os.path.splitext(index_path)
+            self.msg_error.emit("Unable to open file <b>{0}</b>".format(index_path))
+        return
 
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):

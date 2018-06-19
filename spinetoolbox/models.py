@@ -130,8 +130,6 @@ class ToolTemplateModel(QAbstractListModel):
 
         Args:
             parent (QModelIndex): Not used (because this is a list)
-            *args:
-            **kwargs:
 
         Returns:
             Number of rows (available tools) in the model
@@ -179,8 +177,6 @@ class ToolTemplateModel(QAbstractListModel):
             tool (Tool): Tool added to the model
             row (str): Row to insert tool to
             parent (QModelIndex): Parent of child (not used)
-            *args:
-            **kwargs:
 
         Returns:
             Void
@@ -197,8 +193,6 @@ class ToolTemplateModel(QAbstractListModel):
         Args:
             row (int): Row to remove the tool from
             parent (QModelIndex): Parent of tool on row (not used)
-            *args:
-            **kwargs:
 
         Returns:
             Boolean variable

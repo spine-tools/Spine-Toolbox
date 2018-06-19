@@ -143,7 +143,7 @@ To start the application run
 
 from the command prompt in the `spinetoolbox` directory.
 
-If you have modified the user interface files (*.ui), with Qt Designer
+If you have modified the user interface files (.ui), with Qt Designer
 (`designer.exe`) you need to build the UI for the changes to take effect.
 On windows, run `build_ui.bat` to generate the code for Spine Toolbox
 user interface. This requires the PySide2 GUI development tools described

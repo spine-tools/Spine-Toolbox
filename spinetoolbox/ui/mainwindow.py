@@ -328,6 +328,8 @@ class Ui_MainWindow(object):
         self.actionSelected_Item.setObjectName("actionSelected_Item")
         self.actionJulia_REPL = QtWidgets.QAction(MainWindow)
         self.actionJulia_REPL.setObjectName("actionJulia_REPL")
+        self.actionUser_Guide = QtWidgets.QAction(MainWindow)
+        self.actionUser_Guide.setObjectName("actionUser_Guide")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
@@ -336,6 +338,7 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSettings)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
+        self.menuHelp.addAction(self.actionUser_Guide)
         self.menuHelp.addAction(self.actionAbout)
         self.menuEdit.addAction(self.actionAdd_Data_Store)
         self.menuEdit.addAction(self.actionAdd_Data_Connection)
@@ -409,7 +412,9 @@ class Ui_MainWindow(object):
         self.actionSelected_Item.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None, -1))
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
+        self.actionUser_Guide.setText(QtWidgets.QApplication.translate("MainWindow", "User Guide", None, -1))
+        self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

@@ -34,30 +34,37 @@ import sys
 from cx_Freeze import setup, Executable
 from config import SPINE_TOOLBOX_VERSION
 
-PYTHON_DIR = os.path.dirname(sys.executable)
-os.environ['TCL_LIBRARY'] = os.path.join(PYTHON_DIR, 'tcl', 'tcl8.6')
-os.environ['TK_LIBRARY'] = os.path.join(PYTHON_DIR, 'tcl', 'tk8.6')
 
-qt_conf = os.path.join(PYTHON_DIR, "qt.conf")
+def main(argv):
 
-# Most dependencies are automatically detected, but it might need fine tuning.
-buildOptions = dict(packages=[],
-                    excludes=["tkinter"],
-                    includes=["atexit", "idna.idnadata", "pygments.lexers.python", "pygments.lexers.shell",
-                              "pygments.lexers.julia", "qtconsole.client"],
-                    include_files=[qt_conf])
+    python_dir = os.path.dirname(sys.executable)
+    os.environ['TCL_LIBRARY'] = os.path.join(python_dir, 'tcl', 'tcl8.6')
+    os.environ['TK_LIBRARY'] = os.path.join(python_dir, 'tcl', 'tk8.6')
 
-# This does not show logging messages
-# base = "Win32GUI" if sys.platform == "win32" else None
+    qt_conf = os.path.join(python_dir, "qt.conf")
 
-# This opens a console that shows also logging messages
-base = "Console" if sys.platform == "win32" else None
+    # Most dependencies are automatically detected, but it might need fine tuning.
+    buildOptions = dict(packages=[],
+                        excludes=["tkinter"],
+                        includes=["atexit", "idna.idnadata", "pygments.lexers.python", "pygments.lexers.shell",
+                                  "pygments.lexers.julia", "qtconsole.client"],
+                        include_files=[qt_conf])
 
-executables = [Executable("spinetoolbox.py", base=base)]
+    # This does not show logging messages
+    # base = "Win32GUI" if sys.platform == "win32" else None
 
-setup(name="Spine Toolbox",
-      version=SPINE_TOOLBOX_VERSION,
-      description="An application to define, manage, and execute various energy system simulation models.",
-      author="Spine project",
-      options=dict(build_exe=buildOptions),
-      executables=executables)
+    # This opens a console that shows also logging messages
+    base = "Console" if sys.platform == "win32" else None
+
+    executables = [Executable("spinetoolbox.py", base=base)]
+
+    setup(name="Spine Toolbox",
+          version=SPINE_TOOLBOX_VERSION,
+          description="An application to define, manage, and execute various energy system simulation models.",
+          author="Spine project",
+          options=dict(build_exe=buildOptions),
+          executables=executables)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

@@ -143,14 +143,13 @@ class GAMSTool(ToolTemplate):
         name (str): GAMS Tool name
         description (str): GAMS Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path')
-                     First file in the list is the main GAMS program.
+        includes (str): List of files belonging to the tool (relative to 'path').
+        First file in the list is the main GAMS program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
-
     def __init__(self, parent, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
@@ -229,14 +228,13 @@ class JuliaTool(ToolTemplate):
         name (str): Julia Tool name
         description (str): Julia Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path')
-                     First file in the list is the main Julia program.
+        includes (str): List of files belonging to the tool (relative to 'path').
+        First file in the list is the main Julia program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
     """
-
     def __init__(self, parent, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):

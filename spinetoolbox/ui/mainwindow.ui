@@ -379,6 +379,7 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <addaction name="actionUser_Guide"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -772,6 +773,14 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Make Julia REPL widget visible&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionUser_Guide">
+   <property name="text">
+    <string>User Guide</string>
+   </property>
+   <property name="shortcut">
+    <string>F2</string>
    </property>
   </action>
  </widget>
