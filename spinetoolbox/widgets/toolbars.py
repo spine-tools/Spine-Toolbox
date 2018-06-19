@@ -25,28 +25,46 @@ Functions to make and handle QToolBars.
 """
 
 import logging
-from PySide2.QtGui import QIcon, QPixmap, QDrag
+from PySide2.QtGui import QIcon, QPixmap, QDrag, QPen, QBrush, QColor, QFont
 from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication
 from PySide2.QtCore import Qt, QMimeData
 from config import ICON_TOOLBAR_SS
+from graphics_items import ItemImage
+from helpers import item_to_pixmap
 
 class ItemToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions"""
     def __init__(self, parent):
         """Init class"""
         super().__init__("Add Item Toolbar", parent)
+        text_font = QFont("Helvetica", 24, QFont.Bold)
+        text_pen = QPen(Qt.white)
+        item_pen = Qt.NoPen
         label = QLabel("Add Item")
         self.addWidget(label)
-        data_store_pixmap = QPixmap(":/icons/ds_icon.png")
+        # Draw item pixmaps
+        # DS
+        data_store_brush = QBrush(QColor(0, 255, 255, 160))
+        data_store_item = ItemImage(None, 0, 0, 70, 70, '').make_data_master(item_pen, data_store_brush)
+        data_store_pixmap = item_to_pixmap(data_store_item, text="DS", pen=text_pen, font=text_font)
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
         data_store_action = self.addWidget(data_store_widget)
-        data_connection_pixmap = QPixmap(":/icons/dc_icon.png")
+        # DC
+        data_connection_brush = QBrush(QColor(0, 0, 255, 160))
+        data_connection_item = ItemImage(None, 0, 0, 70, 70, '').make_data_master(item_pen, data_connection_brush)
+        data_connection_pixmap = item_to_pixmap(data_connection_item, text="DC", pen=text_pen, font=text_font)
         data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
         data_connection_action = self.addWidget(data_connection_widget)
-        tool_pixmap = QPixmap(":/icons/tool_icon.png")
+        # Tool
+        tool_brush = QBrush(QColor(255, 0, 0, 160))
+        tool_item = ItemImage(None, 0, 0, 70, 70, '').make_master(item_pen, tool_brush)
+        tool_pixmap = item_to_pixmap(tool_item, text="T", pen=text_pen, font=text_font)
         tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
         tool_action = self.addWidget(tool_widget)
-        view_pixmap = QPixmap(":/icons/view_icon.png")
+        # View
+        view_brush = QBrush(QColor(0, 255, 0, 160))
+        view_item = ItemImage(None, 0, 0, 70, 70, '').make_master(item_pen, view_brush)
+        view_pixmap = item_to_pixmap(view_item, text="V", pen=text_pen, font=text_font)
         view_widget = DraggableWidget(self, view_pixmap, "View")
         view_action = self.addWidget(view_widget)
         # set remove all action
@@ -66,7 +84,7 @@ class DraggableWidget(QLabel):
     def __init__(self, parent, pixmap, text):
         super().__init__(parent)
         self.text = text
-        self.setPixmap(pixmap.scaled(32, 32))
+        self.setPixmap(pixmap.scaled(28, 28))
         self.drag_start_pos = None
         self.setToolTip("""
             <p>Drag-and-drop this icon onto the project view to create a new <b>{}</b> item.</p>

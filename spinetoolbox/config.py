@@ -133,7 +133,8 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                     "border-style: inset;" \
                     "border-color: darkslategray;" \
                     "border-radius: 2px;}" \
-                  "QLabel{color:black;}"
+                  "QLabel{color:black;" \
+                    "padding: 3px;}"
 
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
 SPLITTER_SS = "QSplitter::handle:horizontal{background-color: lightgray; border: 1px solid white;}"

@@ -31,8 +31,8 @@ import time
 import shutil
 import glob
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
-from PySide2.QtGui import QCursor
+from PySide2.QtWidgets import QApplication, QStyleOptionGraphicsItem, QWidget
+from PySide2.QtGui import QCursor, QPixmap, QPainter
 from config import DEFAULT_PROJECT_DIR
 from PySide2.QtWidgets import QFileDialog
 from sqlalchemy.ext.compiler import compiles
@@ -236,3 +236,24 @@ def blocking_updates(view, func):
         finally:
             view.setUpdatesEnabled(True)
     return new_function
+
+def item_to_pixmap(item, text="", pen=Qt.SolidLine, font=Qt.FontRole):
+    """Returns a pixmap corresponding to the input item.
+    Used to create icons and labels from graphics items.
+
+    Args:
+        item (QGraphicsItem): The item to be rendered as pixmap.
+        text (str): Optional text to write at the center of the pixmap.
+        pen (QPen): Optional pen for writing the text.
+        font (QFont): Optional font for writing the text.
+    """
+    pixmap = QPixmap(item.boundingRect().toRect().size())
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+    item.paint(painter, QStyleOptionGraphicsItem(), QWidget())
+    painter.setPen(pen)
+    painter.setFont(font)
+    painter.drawText(pixmap.rect(), Qt.AlignCenter, text)
+    painter.end()
+    return pixmap
