@@ -95,7 +95,7 @@ class ItemImage(QGraphicsItem):
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
-        self.connector_button.setRect(QRectF(self.x_coord+25, self.y_coord+25, 20, 20))  # TODO: Refine position
+        self.connector_button.setRect(self.q_rect.adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))  # TODO: Check if position is correct now
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
