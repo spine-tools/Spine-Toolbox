@@ -44,17 +44,20 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # QGraphicsItem arbitrary properties
 ITEM_TYPE = 0
 
-# Application path, configuration file path and default project path
+# Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
+    DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "build", "html", "index.html"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
+    DOC_INDEX_PATH = os.path.abspath(os.path.join(
+            APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html"))
 
 # Tool input/output directory names
 TOOL_INPUT_DIR = "input"

@@ -15,7 +15,7 @@
 
 import os
 import sys
-app_path = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "spinetoolbox")
+app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "spinetoolbox")
 sys.path.insert(0, os.path.abspath(app_path))
 from config import SPINE_TOOLBOX_VERSION
 
