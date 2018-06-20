@@ -454,6 +454,7 @@ class DataStore(MetaObject):
             	object_id INTEGER DEFAULT NULL,
             	"index" INTEGER DEFAULT '1',
             	value VARCHAR(155) DEFAULT NULL,
+            	json VARCHAR(255) DEFAULT NULL,
             	expression VARCHAR(255) DEFAULT NULL,
             	time_pattern VARCHAR(155) DEFAULT NULL,
             	time_series_id VARCHAR(155) DEFAULT NULL,
