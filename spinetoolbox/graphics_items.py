@@ -30,8 +30,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient
-from math import atan2, degrees, sin, cos, pi  # arrow head
-# from config import ITEM_TYPE
+from math import atan2, degrees, sin, cos, pi
 
 
 class SceneBackground(QGraphicsRectItem):
@@ -99,7 +98,6 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        # self.connector_button.is_connector = True
 
     def make_data_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -724,7 +722,6 @@ class Link(QGraphicsPathItem):
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.selected_pen = QPen(Qt.black, 0.5, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
-        # self.setData(ITEM_TYPE, "link")
         self.model_index = None
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -881,7 +878,6 @@ class LinkDrawer(QGraphicsPathItem):
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
-        # self.setData(ITEM_TYPE, "link-drawer")
         self.setPen(Qt.NoPen)
 
     def start_drawing_at(self, src_rect):

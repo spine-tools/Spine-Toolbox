@@ -32,23 +32,28 @@ CX-FREEZE setup file for Spine Toolbox.
 import os
 import sys
 from cx_Freeze import setup, Executable
-from config import SPINE_TOOLBOX_VERSION
+from config import SPINE_TOOLBOX_VERSION, APPLICATION_PATH
 
 
 def main(argv):
-
+    """Main of cx_Freeze setup.py."""
     python_dir = os.path.dirname(sys.executable)
     os.environ['TCL_LIBRARY'] = os.path.join(python_dir, 'tcl', 'tcl8.6')
     os.environ['TK_LIBRARY'] = os.path.join(python_dir, 'tcl', 'tk8.6')
-
+    # qt.conf
     qt_conf = os.path.join(python_dir, "qt.conf")
+    # Path to built documentation (No need for sources)
+    doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
+    # Set Windows .msi installer default install path to C:\SpineToolbox-version
+    systemdrive = os.environ['SYSTEMDRIVE']
+    default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
 
     # Most dependencies are automatically detected, but it might need fine tuning.
     buildOptions = dict(packages=[],
                         excludes=["tkinter"],
                         includes=["atexit", "idna.idnadata", "pygments.lexers.python", "pygments.lexers.shell",
-                                  "pygments.lexers.julia", "qtconsole.client"],
-                        include_files=[qt_conf])
+                                  "pygments.lexers.julia", "qtconsole.client", "sqlalchemy.sql.default_comparator"],
+                        include_files=[qt_conf] + [(doc_path, "docs/")])
 
     # This does not show logging messages
     # base = "Win32GUI" if sys.platform == "win32" else None
@@ -58,11 +63,13 @@ def main(argv):
 
     executables = [Executable("spinetoolbox.py", base=base)]
 
+    bdist_msi_options = dict(initial_target_dir=default_install_dir)
+
     setup(name="Spine Toolbox",
           version=SPINE_TOOLBOX_VERSION,
           description="An application to define, manage, and execute various energy system simulation models.",
           author="Spine project",
-          options=dict(build_exe=buildOptions),
+          options=dict(build_exe=buildOptions, bdist_msi=bdist_msi_options),
           executables=executables)
 
 

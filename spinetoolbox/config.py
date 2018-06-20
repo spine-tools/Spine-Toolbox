@@ -29,7 +29,7 @@ import os
 from PySide2.QtGui import QColor
 
 # General
-SPINE_TOOLBOX_VERSION = "0.0.11"
+SPINE_TOOLBOX_VERSION = "0.0.13"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -41,16 +41,13 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # "." is actually valid in a folder name but this is
 # to prevent the user from creating folders like /..../
 
-# QGraphicsItem arbitrary properties
-ITEM_TYPE = 0
-
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
-    DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "build", "html", "index.html"))
+    DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html", "index.html"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
