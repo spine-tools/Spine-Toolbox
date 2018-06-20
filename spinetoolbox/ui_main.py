@@ -47,7 +47,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SPLITTER_SS, SEPARATOR_SS, APPLICATION_PATH
+    SPLITTER_SS, SEPARATOR_SS, DOC_INDEX_PATH
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
@@ -194,6 +194,10 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+
+    def project(self):
+        """Returns current project or None if no project open."""
+        return self._project
 
     @Slot(name="init_project")
     def init_project(self):
@@ -1013,7 +1017,6 @@ class ToolboxUI(QMainWindow):
         else:  # Remove link
             self.ui.graphicsView.remove_link(index)
 
-
     @Slot(str, name="add_message")
     def add_message(self, msg):
         """Append regular message to Event Log.
@@ -1101,7 +1104,6 @@ class ToolboxUI(QMainWindow):
         """Show add data store widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
-            self.ui.graphicsView.item_shadow = None
             return
         self.add_data_store_form = AddDataStoreWidget(self, self._project, x, y)
         self.add_data_store_form.show()
@@ -1111,7 +1113,6 @@ class ToolboxUI(QMainWindow):
         """Show add data connection widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
-            self.ui.graphicsView.item_shadow = None
             return
         self.add_data_connection_form = AddDataConnectionWidget(self, self._project, x, y)
         self.add_data_connection_form.show()
@@ -1121,7 +1122,6 @@ class ToolboxUI(QMainWindow):
         """Show add tool widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
-            self.ui.graphicsView.item_shadow = None
             return
         self.add_tool_form = AddToolWidget(self, self._project, x, y)
         self.add_tool_form.show()
@@ -1131,7 +1131,6 @@ class ToolboxUI(QMainWindow):
         """Show add view widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
-            self.ui.graphicsView.item_shadow = None
             return
         self.add_view_form = AddViewWidget(self, self._project, x, y)
         self.add_view_form.show()
@@ -1160,14 +1159,14 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_user_guide")
     def show_user_guide(self):
         """Open Spine Toolbox documentation index page in browser."""
-        index_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.pardir, "docs", "build", "html", "index.html"))
-        index_url = "file:///" + index_path
+        # index_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.pardir, "docs", "build", "html", "index.html"))
+        index_url = "file:///" + DOC_INDEX_PATH
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
         if not res:
             logging.error("Failed to open editor for {0}".format(index_url))
             # filename, file_extension = os.path.splitext(index_path)
-            self.msg_error.emit("Unable to open file <b>{0}</b>".format(index_path))
+            self.msg_error.emit("Unable to open file <b>{0}</b>".format(DOC_INDEX_PATH))
         return
 
     @Slot("QPoint", name="show_item_context_menu")

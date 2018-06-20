@@ -223,7 +223,11 @@ class CustomQGraphicsView(QGraphicsView):
             event.accept()
 
     def dropEvent(self, event):
-        """Capture text from event's mimedata and show the appropriate 'Add Item form'"""
+        """Capture text from event's mimedata and show the appropriate 'Add Item form.'"""
+        if not self._ui.project():
+            self._ui.msg.emit("Create or open a project first")
+            event.ignore()
+            return
         text = event.mimeData().text()
         pos = self.mapToScene(event.pos())
         pen = QPen(QColor('white'))
@@ -248,8 +252,7 @@ class CustomQGraphicsView(QGraphicsView):
             brush = QBrush(QColor(0, 255, 0, 160))
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._ui.show_add_view_form(pos.x(), pos.y())
-        if self.item_shadow:  # NOTE: item_shadow is set to `None` if there's no project open
-            self._scene.addItem(self.item_shadow)
+        self._scene.addItem(self.item_shadow)
 
     def mouseMoveEvent(self, e):
         """Update line end position.
@@ -281,18 +284,6 @@ class CustomQGraphicsView(QGraphicsView):
                     return
                 self._ui.msg_warning.emit("Unable to make connection. "
                                           "Try landing the connection onto a connector button.")
-
-        # if self.link_drawer and self.link_drawer.drawing:
-        #     self.link_drawer.hide()
-        #     if e.button() != Qt.LeftButton:
-        #         self.link_drawer.drawing = False
-        #     else:
-        #         connectors = [item for item in self.items(e.pos()) if hasattr(item, 'is_connector')]
-        #         if not connectors:
-        #             self.link_drawer.drawing = False
-        #             self._ui.msg_warning.emit("Unable to make connection. "
-        #                                       "Try landing the connection onto a connector button.")
-        # super().mousePressEvent(e)
 
     def showEvent(self, event):
         """Make the scene at least as big as the viewport."""
