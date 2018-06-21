@@ -25,7 +25,7 @@ Classes for custom context menus.
 """
 
 from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Qt, SLOT
+from PySide2.QtCore import Qt
 import sys
 import logging
 
@@ -215,38 +215,55 @@ class ParameterContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-class AddToolTemplatePopupMenu(QMenu):
+class CustomPopupMenu(QMenu):
+    """Popup menu master class for several popup menus."""
+    def __init__(self):
+        super().__init__()
+
+    def add_action(self, text, slot, enabled=True):
+        """Adds an action to the context menu.
+
+        Args:
+            text (str): Text description of the action
+        """
+        action = self.addAction(text)
+        action.setEnabled(enabled)
+        action.triggered.connect(slot)
+
+class AddToolTemplatePopupMenu(CustomPopupMenu):
     """Popup menu class for add tool template button."""
 
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
         # Show the Tool Template Form (empty)
-        action = self.addAction("New", self._parent, SLOT("show_tool_template_form()"))
+        self.add_action("New", self._parent.show_tool_template_form)
         # Open a tool template file
-        action = self.addAction("Open...", self._parent, SLOT("open_tool_template()"))
+        self.add_action("Open...", self._parent.open_tool_template)
 
-
-
-class ToolTemplateOptionsPopupMenu(QMenu):
+class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
     """Popup menu class for tool template options button in Tool item."""
 
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
         # Open a tool template file
-        action = self.addAction("Edit Tool Template", self._parent, SLOT("edit_tool_template()"))
+        self.add_action("New tool template", self._parent.get_parent().show_tool_template_form)
+        self.add_action("Open tool template...", self._parent.get_parent().open_tool_template)
         self.addSeparator()
-        action = self.addAction("Open descriptor file", self._parent, SLOT("open_tool_template_file()"))
-        action = self.addAction("Open main program file", self._parent, SLOT("open_tool_main_program_file()"))
+        enabled = True if self._parent.tool_template() else False
+        self.add_action("Edit Tool Template", self._parent.edit_tool_template, enabled=enabled)
+        self.addSeparator()
+        self.add_action("Open descriptor file", self._parent.open_tool_template_file, enabled=enabled)
+        self.add_action("Open main program file", self._parent.open_tool_main_program_file, enabled=enabled)
 
-class AddDbReferencePopupMenu(QMenu):
+class AddDbReferencePopupMenu(CustomPopupMenu):
     """Popup menu class for add references button in Data Store item."""
 
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
         # Open a tool template file
-        action = self.addAction("New Spine SQLite database", self._parent, SLOT("add_new_spine_reference()"))
+        self.add_action("New Spine SQLite database", self._parent.add_new_spine_reference)
         self.addSeparator()
-        action = self.addAction("Other...", self._parent, SLOT("show_add_db_reference_form()"))
+        self.add_action("Other...", self._parent.show_add_db_reference_form)

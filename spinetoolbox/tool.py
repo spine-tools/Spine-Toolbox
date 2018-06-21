@@ -61,6 +61,7 @@ class Tool(MetaObject):
         self._widget.ui.comboBox_tool.setModel(self._parent.tool_template_model)
         self._tool_template = None
         self._tool_template_index = None
+        self.tool_template_options_popup_menu = None
         self.set_tool_template(tool_template)
         # Set correct row selected in the comboBox
         if not tool_template:
@@ -76,8 +77,6 @@ class Tool(MetaObject):
         # Directory where results are saved
         self.output_dir = os.path.join(self._project.project_dir, self.short_name, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._parent, x - 35, y - 35, w=70, h=70, name=self.name)
-        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
-        self._widget.ui.toolButton_tool_template_options.setMenu(self.tool_template_options_popup_menu)
         self._widget.ui.pushButton_stop.setEnabled(False)
         self.connect_signals()
 
@@ -101,6 +100,10 @@ class Tool(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    def get_parent(self):
+        """Returns the parent (ToolboxUI instance) of this object."""
+        return self._parent
 
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
@@ -142,11 +145,11 @@ class Tool(MetaObject):
         self._tool_template = tool_template
         if tool_template:
             self._tool_template_index = self._parent.tool_template_model.tool_template_index(tool_template.name)
-            self._widget.ui.toolButton_tool_template_options.setEnabled(True)
         else:
             self._tool_template_index = None
-            self._widget.ui.toolButton_tool_template_options.setEnabled(False)
         self.update_tool_ui()
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
+        self._widget.ui.toolButton_tool_template_options.setMenu(self.tool_template_options_popup_menu)
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
