@@ -267,7 +267,8 @@ class Tool(MetaObject):
 
     def find_file(self, fname):
         """Find required input file for this Tool Instance. Search file from Data
-        Connection or Data Store items that are input items for this Tool.
+        Connection or Data Store items that are input items for this Tool. These in turn
+        will search on their own input items and stop when an infinite recursion is detected.
 
         Args:
             fname (str): File name (no path)
@@ -275,9 +276,8 @@ class Tool(MetaObject):
         Returns:
             Path to file or None if it was not found.
         """
-        # TODO: Loop through all input items but beware of feedback loops and infinite loops
         path = None
-        # Find file only from immediate parent items
+        # Find file from immediate parent items
         for input_item in self._parent.connection_model.input_items(self.name):
             # self._parent.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
             # Find item from project model
@@ -288,7 +288,8 @@ class Tool(MetaObject):
             item_data = found_item.data(Qt.UserRole)
             # Find file from parent Data Stores and Data Connections
             if item_data.item_type in ["Data Store", "Data Connection"]:
-                path = item_data.find_file(fname, list())
+                visited_items = list()
+                path = item_data.find_file(fname, visited_items)
                 if path is not None:
                     break
             # # Find file from parent Data Stores

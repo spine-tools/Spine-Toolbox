@@ -147,10 +147,11 @@ class AddDbReferenceWidget(QWidget):
             elif dialect == 'mssql':
                 import pyodbc
                 dsns = pyodbc.dataSources()
+                # Collect dsns which use the msodbcsql driver
                 mssql_dsns = list()
-                for k,v in dsns.items():
-                    if 'msodbcsql' in v.lower():
-                        mssql_dsns.append(k)
+                for key,value in dsns.items():
+                    if 'msodbcsql' in value.lower():
+                        mssql_dsns.append(key)
                 if mssql_dsns:
                     self.ui.comboBox_dsn.clear()
                     self.ui.comboBox_dsn.addItem("Select ODBC DSN...")
