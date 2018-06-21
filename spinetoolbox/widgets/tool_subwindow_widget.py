@@ -105,7 +105,6 @@ class ToolSubWindowWidget(QWidget):
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 self.input_file_model.appendRow(qitem)
-        # self.ui.treeView_input_files.setModel(self.input_file_model)
 
     def populate_output_files_list(self, items):
         """Add Tool output files into a model.
@@ -117,7 +116,6 @@ class ToolSubWindowWidget(QWidget):
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 self.output_file_model.appendRow(qitem)
-        # self.ui.treeView_output_files.setModel(self.output_file_model)
 
     def closeEvent(self, event):
         """Hide widget and is proxy instead of closing them.

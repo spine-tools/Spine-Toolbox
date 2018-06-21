@@ -35,6 +35,7 @@ from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
 from graphics_items import ToolImage
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
+from helpers import create_dir
 
 
 class Tool(MetaObject):
@@ -154,12 +155,10 @@ class Tool(MetaObject):
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
         if not self.tool_template():
-            # self._widget.ui.comboBox_tool.setCurrentText("")
             self._widget.ui.lineEdit_tool_args.setText("")
             self._widget.populate_input_files_list(None)
             self._widget.populate_output_files_list(None)
         else:
-            # self._widget.ui.comboBox_tool.setCurrentText(self.tool_template().name)
             self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.update_input_files()
             self.update_output_files()
@@ -169,32 +168,12 @@ class Tool(MetaObject):
         if not self.tool_template():
             return
         self._widget.populate_input_files_list(self.tool_template().inputfiles)
-        # def_path = self.tool_template().get_def_path()
-        # definition = self.read_tool_def(def_path)
-        # if not definition:
-        #     return
-        # try:
-        #     input_files = definition["inputfiles"]
-        # except KeyError:
-        #     logging.error("Key 'inputfiles' not found in file {0}".format(def_path))
-        #     return
-        # self._widget.populate_input_files_list(input_files)
 
     def update_output_files(self):
         """Show output files in QListView."""
         if not self.tool_template():
             return
         self._widget.populate_output_files_list(self.tool_template().outputfiles)
-        # def_path = self.tool_template().get_def_path()
-        # definition = self.read_tool_def(def_path)
-        # if not definition:
-        #     return
-        # try:
-        #     output_files = definition["outputfiles"]
-        # except KeyError:
-        #     logging.error("Key 'outputfiles' not found in file {0}".format(def_path))
-        #     return
-        # self._widget.populate_output_files_list(output_files)
 
     def read_tool_def(self, tool_def_file):
         """Return tool template definition file contents or None if operation failed."""
@@ -226,27 +205,92 @@ class Tool(MetaObject):
             return
         # Find required input files for ToolInstance (if any)
         if self._widget.input_file_model.rowCount() > 0:
-            self._parent.msg.emit("*** Searching for required input files ***")
+            self._parent.msg.emit("*** Checking Tool requirements ***")
             # Abort if there are no input items connected to this Tool
             inputs = self._parent.connection_model.input_items(self.name)
             if not inputs:
-                self._parent.msg_error.emit("This Tool has no input connections. Required input files not found.")
+                self._parent.msg_error.emit("This Tool has no input connections. Cannot find required input files.")
                 return
-            file_copy_paths = self.find_input_files()
-            if not file_copy_paths:
-                self._parent.msg_error.emit("Tool execution aborted")
-                return
-            self._parent.msg.emit("*** Copying input files to work directory ***")
-            # Copy input files to ToolInstance work directory
-            if not self.copy_input_files(file_copy_paths):
-                self._parent.msg_error.emit("Tool execution aborted")
-                return
+            n_dirs, n_files = self.count_files_and_dirs()
+            # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
+            if n_dirs > 0:
+                self._parent.msg.emit("*** Creating directories to work directory ***")
+                if not self.create_dirs_to_work():
+                    # Creating directories failed -> abort
+                    self._parent.msg_error.emit("Creating directories to work failed. Tool execution aborted")
+                    return
+            else:  # just for testing
+                # logging.debug("No directories to create")
+                pass
+            if n_files > 0:
+                self._parent.msg.emit("*** Searching for required input files ***")
+                file_copy_paths = self.find_input_files()
+                if not file_copy_paths:
+                    self._parent.msg_error.emit("Tool execution aborted1")
+                    return
+                self._parent.msg.emit("*** Copying input files to work directory ***")
+                # Copy input files to ToolInstance work directory
+                if not self.copy_input_files(file_copy_paths):
+                    self._parent.msg_error.emit("Tool execution aborted2")
+                    return
+            else:  # just for testing
+                # logging.debug("No input files to copy")
+                pass
         self._widget.ui.pushButton_stop.setEnabled(True)
         self._widget.ui.pushButton_execute.setEnabled(False)
         self._graphics_item.start_wheel_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
+
+    def count_files_and_dirs(self):
+        """Count the number of files and directories in required input files model.
+        TODO: Change name of 'required input files' because it can contain dir names too.
+
+        Returns:
+            Tuple containing the number of required files and directories.
+        """
+        n_dir = 0
+        n_file = 0
+        for i in range(self._widget.input_file_model.rowCount()):
+            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Check if this a directory or a file
+            path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                n_dir += 1
+            else:
+                # It's a file
+                n_file += 1
+        return n_dir, n_file
+
+    def create_dirs_to_work(self):
+        """Iterate items in required input files and check
+        if there are any directories to create. Create found
+        directories directly to instance work folder.
+
+        Returns:
+            Boolean variable depending on success
+        """
+        for i in range(self._widget.input_file_model.rowCount()):
+            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Check if this a directory or a file
+            path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                logging.debug("path {0} should be created to work folder".format(path))
+                path_to_create = os.path.join(self.instance.basedir, path)
+                try:
+                    create_dir(path_to_create)
+                except OSError:
+                    self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+                                                " Check permissions.".format(path_to_create))
+                    return False
+                self._parent.msg.emit("\tDirectory <b>{0}</b> created".format(path_to_create))
+            else:
+                # It's a file -> skip
+                pass
+        return True
 
     def find_input_files(self):
         """Iterate files in required input files model and find them from connected items.
@@ -259,6 +303,9 @@ class Tool(MetaObject):
             req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Just get the filename if there is a path attached to the file
             path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                continue
             found_file = self.find_file(filename)
             if not found_file:
                 self._parent.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
