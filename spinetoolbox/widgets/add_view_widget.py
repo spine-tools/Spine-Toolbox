@@ -133,4 +133,6 @@ class AddViewWidget(QWidget):
         if event:
             event.accept()
             item_shadow = self._parent.ui.graphicsView.item_shadow
-            self._parent.ui.graphicsView.scene().removeItem(item_shadow)
+            if item_shadow:
+                self._parent.ui.graphicsView.scene().removeItem(item_shadow)
+                self._parent.ui.graphicsView.item_shadow = None
