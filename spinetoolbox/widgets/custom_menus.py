@@ -221,10 +221,11 @@ class CustomPopupMenu(QMenu):
         super().__init__()
 
     def add_action(self, text, slot, enabled=True):
-        """Adds an action to the context menu.
+        """Adds an action to the popup menu.
 
         Args:
             text (str): Text description of the action
+            slot (method): Method to connect to action's triggered signal
         """
         action = self.addAction(text)
         action.setEnabled(enabled)
