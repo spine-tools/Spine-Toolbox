@@ -59,10 +59,10 @@ class ToolTemplateWidget(QWidget):
         self._parent = parent
         self._project = project
         # init models
-        self.includes_model = QStandardItemModel()  # Source files
-        self.inputfiles_model = QStandardItemModel()  # Input files
-        self.inputfiles_opt_model = QStandardItemModel()  # Input files
-        self.outputfiles_model = QStandardItemModel()  # Input files
+        self.includes_model = QStandardItemModel()
+        self.inputfiles_model = QStandardItemModel()
+        self.inputfiles_opt_model = QStandardItemModel()
+        self.outputfiles_model = QStandardItemModel()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -161,7 +161,6 @@ class ToolTemplateWidget(QWidget):
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
-                qitem.setFlags(~Qt.ItemIsEditable)
                 self.inputfiles_model.appendRow(qitem)
 
     def populate_inputfiles_opt_list(self, items):
@@ -173,7 +172,6 @@ class ToolTemplateWidget(QWidget):
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
-                qitem.setFlags(~Qt.ItemIsEditable)
                 self.inputfiles_opt_model.appendRow(qitem)
 
     def populate_outputfiles_list(self, items):
@@ -185,7 +183,6 @@ class ToolTemplateWidget(QWidget):
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
-                qitem.setFlags(~Qt.ItemIsEditable)
                 self.outputfiles_model.appendRow(qitem)
 
     @Slot(name="add_includes")
@@ -219,11 +216,12 @@ class ToolTemplateWidget(QWidget):
                                            .format(file_pattern), 3000)
                 return False
             path_to_add = os.path.relpath(path, self.includes_main_path)
-        if path_to_add in self.includes:
+        if self.includes_model.findItems(path_to_add):
             self.statusbar.showMessage("Source file {0} already included".format(path_to_add), 3000)
             return False
-        self.includes.append(path_to_add)
-        self.populate_includes_list(self.includes)
+        qitem = QStandardItem(path_to_add)
+        qitem.setFlags(~Qt.ItemIsEditable)
+        self.includes_model.appendRow(qitem)
         return True
 
     @busy_effect
@@ -236,9 +234,8 @@ class ToolTemplateWidget(QWidget):
             logging.error("Index not valid")
             return
         else:
-            includes_file = self.includes[index.row()]
+            includes_file = self.includes_model.itemFromIndex(index).text()
             url = "file:///" + os.path.join(self.includes_main_path, includes_file)
-            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
                 self._parent.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
@@ -250,7 +247,8 @@ class ToolTemplateWidget(QWidget):
         """
         indexes = self.ui.treeView_includes.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.includes.clear()
+            self.includes_model.clear()
+            self.make_header_for_includes()
             self.includes_main_path = None
             self.ui.label_mainpath.clear()
             self.statusbar.showMessage("All includes removed", 3000)
@@ -258,35 +256,44 @@ class ToolTemplateWidget(QWidget):
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
-                self.includes.pop(row)
-            if not self.includes:
+                self.includes_model.removeRow(row)
+            if self.includes_model.rowCount() == 0:
                 self.includes_main_path = None
                 self.ui.label_mainpath.clear()
             elif 0 in rows:  # main program was removed
                 # new main is the first one still in the list
                 # TODO: isn't it better to pick the new main as the one with the smallest path?
-                dirname = os.path.dirname(self.includes[0])
+                dirname = os.path.dirname(self.includes_model.item(0).text())
                 new_main_path = os.path.join(self.includes_main_path, dirname)
                 old_main_path = self.includes_main_path
-                old_includes_abspath = [os.path.join(old_main_path, path) for path in self.includes]
-                self.includes = [os.path.relpath(path, new_main_path)
-                                 for path in old_includes_abspath
-                                 if os.path.commonprefix([new_main_path, path]) == new_main_path]
+                row = 0
+                while True:
+                    if row == self.includes_model.rowCount():
+                        break
+                    path = self.includes_model.item(row).text()
+                    old_path = os.path.join(old_main_path, path)
+                    if os.path.commonprefix([new_main_path, old_path]) == new_main_path:
+                        # path is still valid (update item and increase row counter)
+                        new_path = os.path.relpath(old_path, new_main_path)
+                        index = self.includes_model.index(row, 0)
+                        self.includes_model.setData(index, new_path)
+                        row = row + 1
+                        continue
+                    # path is no longer valid (remove item and don't increase row counter)
+                    self.includes_model.removeRow(row)
                 self.includes_main_path = new_main_path
                 self.ui.label_mainpath.setText(self.includes_main_path)
             self.statusbar.showMessage("Selected (and invalid) includes removed", 3000)
-        self.populate_includes_list(self.includes)
 
     @Slot(name="add_inputfiles")
     def add_inputfiles(self):
         """Let user select input files for this tool template."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add input file", "Input file name (eg data.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
-        self.inputfiles.append(file_name)
-        self.populate_inputfiles_list(self.inputfiles)
+        qitem = QStandardItem(file_name)
+        self.inputfiles_model.appendRow(qitem)
 
     @Slot(name="remove_inputfiles")
     def remove_inputfiles(self):
@@ -295,26 +302,25 @@ class ToolTemplateWidget(QWidget):
         """
         indexes = self.ui.treeView_inputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.inputfiles.clear()
+            self.inputfiles_model.clear()
+            self.make_header_for_inputfiles()
             self.statusbar.showMessage("All input files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
-                self.inputfiles.pop(row)
+                self.inputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected input files removed", 3000)
-        self.populate_inputfiles_list(self.inputfiles)
 
     @Slot(name="add_inputfiles_opt")
     def add_inputfiles_opt(self):
         """Let user select optional input files for this tool template."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add optional input file", "Optional input file name (eg other.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
-        self.inputfiles_opt.append(file_name)
-        self.populate_inputfiles_opt_list(self.inputfiles_opt)
+        qitem = QStandardItem(file_name)
+        self.inputfiles_opt_model.appendRow(qitem)
 
     @Slot(name="remove_inputfiles_opt")
     def remove_inputfiles_opt(self):
@@ -323,26 +329,25 @@ class ToolTemplateWidget(QWidget):
         """
         indexes = self.ui.treeView_inputfiles_opt.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.inputfiles_opt.clear()
+            self.inputfiles_opt_model.clear()
+            self.make_header_for_inputfiles_opt()
             self.statusbar.showMessage("All optional input files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
-                self.inputfiles_opt.pop(row)
+                self.inputfiles_opt_model.removeRow(row)
             self.statusbar.showMessage("Selected optional input files removed", 3000)
-        self.populate_inputfiles_opt_list(self.inputfiles_opt)
 
     @Slot(name="add_outputfiles")
     def add_outputfiles(self):
         """Let user select output files for this tool template."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add output file", "Output file name (eg results.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
-        self.outputfiles.append(file_name)
-        self.populate_outputfiles_list(self.outputfiles)
+        qitem = QStandardItem(file_name)
+        self.outputfiles_model.appendRow(qitem)
 
     @Slot(name="remove_outputfiles")
     def remove_outputfiles(self):
@@ -351,15 +356,15 @@ class ToolTemplateWidget(QWidget):
         """
         indexes = self.ui.treeView_outputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.outputfiles.clear()
+            self.outputfiles_model.clear()
+            self.make_header_for_outputfiles()
             self.statusbar.showMessage("All output files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
-                self.outputfiles.pop(row)
+                self.outputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected output files removed", 3000)
-        self.populate_outputfiles_list(self.outputfiles)
 
     @Slot(name="ok_clicked")
     def ok_clicked(self):
@@ -371,12 +376,12 @@ class ToolTemplateWidget(QWidget):
         self.definition['name'] = self.ui.lineEdit_name.text()
         self.definition['description'] = self.ui.textEdit_description.toPlainText()
         self.definition['tooltype'] = self.ui.comboBox_tooltype.currentText().lower()
-        self.definition['includes'] = self.includes
-        self.definition['inputfiles'] = self.inputfiles
-        self.definition['inputfiles_opt'] = self.inputfiles_opt
-        self.definition['outputfiles'] = self.outputfiles
+        flags = Qt.MatchContains
+        self.definition['includes'] = [i.text() for i in self.includes_model.findItems("", flags)]
+        self.definition['inputfiles'] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
+        self.definition['inputfiles_opt'] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
+        self.definition['outputfiles'] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
         self.definition['cmdline_args'] = self.ui.lineEdit_args.text()
-        # logging.debug(self.definition)
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k.capitalize()), 3000)
