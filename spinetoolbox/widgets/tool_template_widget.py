@@ -108,6 +108,7 @@ class ToolTemplateWidget(QWidget):
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
+        self.ui.treeView_includes.file_dropped.connect(self.add_single_include)
         self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
@@ -198,26 +199,32 @@ class ToolTemplateWidget(QWidget):
         if not file_paths:  # Cancel button clicked
             return
         for path in file_paths:
-            logging.debug(path)
-            dirname, file_pattern = os.path.split(path)
-            if not self.includes_main_path:
-                self.includes_main_path = dirname
-                self.ui.label_mainpath.setText(self.includes_main_path)
-                path_to_add = file_pattern
-            else:
-                # check if path is a descendant of main dir
-                common_prefix = os.path.commonprefix([self.includes_main_path, path])
-                if common_prefix != self.includes_main_path:
-                    self.statusbar.showMessage("Source file {0}'s location is invalid "
-                                               "(should be in main directory)"
-                                               .format(file_pattern), 3000)
-                    continue
-                path_to_add = os.path.relpath(path, self.includes_main_path)
-            if path_to_add in self.includes:
-                self.statusbar.showMessage("Source file {0} already included".format(path_to_add), 3000)
+            if not self.add_single_include(path):
                 continue
-            self.includes.append(path_to_add)
+
+    @Slot("QString", name="add_single_include")
+    def add_single_include(self, path):
+        """Add file path to Includes list."""
+        dirname, file_pattern = os.path.split(path)
+        if not self.includes_main_path:
+            self.includes_main_path = dirname
+            self.ui.label_mainpath.setText(self.includes_main_path)
+            path_to_add = file_pattern
+        else:
+            # check if path is a descendant of main dir
+            common_prefix = os.path.commonprefix([self.includes_main_path, path])
+            if common_prefix != self.includes_main_path:
+                self.statusbar.showMessage("Source file {0}'s location is invalid "
+                                           "(should be in main directory)"
+                                           .format(file_pattern), 3000)
+                return False
+            path_to_add = os.path.relpath(path, self.includes_main_path)
+        if path_to_add in self.includes:
+            self.statusbar.showMessage("Source file {0} already included".format(path_to_add), 3000)
+            return False
+        self.includes.append(path_to_add)
         self.populate_includes_list(self.includes)
+        return True
 
     @busy_effect
     @Slot("QModelIndex", name="open_includes_file")

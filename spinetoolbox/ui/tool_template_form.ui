@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -30,7 +30,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>600</height>
+    <height>734</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -190,7 +190,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QTreeView" name="treeView_includes">
+          <widget class="IncludesTreeView" name="treeView_includes">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -207,6 +207,9 @@
             <font>
              <pointsize>10</pointsize>
             </font>
+           </property>
+           <property name="acceptDrops">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -779,6 +782,13 @@
   <zorder></zorder>
   <zorder></zorder>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>IncludesTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>lineEdit_name</tabstop>
  </tabstops>

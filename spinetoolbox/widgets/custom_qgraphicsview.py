@@ -212,6 +212,7 @@ class CustomQGraphicsView(QGraphicsView):
         if not isinstance(source, DraggableWidget):
             event.ignore()
         else:
+            event.acceptProposedAction()
             event.accept()
 
     def dragMoveEvent(self, event):
@@ -220,6 +221,7 @@ class CustomQGraphicsView(QGraphicsView):
         if not isinstance(source, DraggableWidget):
             event.ignore()
         else:
+            event.acceptProposedAction()
             event.accept()
 
     def dropEvent(self, event):
@@ -228,6 +230,7 @@ class CustomQGraphicsView(QGraphicsView):
             self._ui.msg.emit("Create or open a project first")
             event.ignore()
             return
+        event.acceptProposedAction()
         text = event.mimeData().text()
         pos = self.mapToScene(event.pos())
         pen = QPen(QColor('white'))

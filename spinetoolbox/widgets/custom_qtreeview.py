@@ -124,3 +124,39 @@ class DataTreeView(QTreeView):
         """Emit signal for each url dropped."""
         for url in event.mimeData().urls():
             self.file_dropped.emit(url.toLocalFile())
+
+
+class IncludesTreeView(QTreeView):
+    """Custom QTreeView class for 'Includes' in Tool Template form.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    file_dropped = Signal("QString", name="file_dropped")
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+
+    def dragEnterEvent(self, event):
+        """Accept file and folder drops from the filesystem."""
+        urls = event.mimeData().urls()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.LinkAction)
+
+    def dragMoveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dropEvent(self, event):
+        """Create list of file paths and emit signal."""
+        for url in event.mimeData().urls():
+            self.file_dropped.emit(url.toLocalFile())

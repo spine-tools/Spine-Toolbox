@@ -30,7 +30,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(600, 600)
+        Form.resize(600, 734)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -90,7 +90,7 @@ class Ui_Form(object):
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.treeView_includes = QtWidgets.QTreeView(Form)
+        self.treeView_includes = IncludesTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -100,6 +100,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_includes.setFont(font)
+        self.treeView_includes.setAcceptDrops(True)
         self.treeView_includes.setObjectName("treeView_includes")
         self.verticalLayout.addWidget(self.treeView_includes)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
@@ -367,4 +368,5 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
+from widgets.custom_qtreeview import IncludesTreeView
 import resources_icons_rc
