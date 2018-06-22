@@ -82,7 +82,7 @@ class ToolboxUI(QMainWindow):
         # Widget and form references
         self.settings_form = None
         self.about_form = None
-        self.data_store_form = None
+        self.data_store_form = None  # OBSOLETE?
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
         self.item_image_context_menu = None

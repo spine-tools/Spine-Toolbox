@@ -876,9 +876,9 @@ class LinkDrawer(QGraphicsPathItem):
         self.inner_angle = None
         self.outer_angle = None
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
+        self.setPen(QPen(Qt.black, 0.5))
         self.setZValue(2)  # TODO: is this better than stackBefore?
         self.hide()
-        self.setPen(Qt.NoPen)
 
     def start_drawing_at(self, src_rect):
         """Start drawing from the center point of the clicked button.
