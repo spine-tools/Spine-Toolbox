@@ -43,7 +43,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().__init__(parent)
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
-        self._ui = parent.parent().parent()  # ToolboxUI (QMainWindow) instance
+        self._ui = None
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
@@ -56,6 +56,10 @@ class CustomQGraphicsView(QGraphicsView):
         self.dst_widget = None  # destination widget when drawing links
         self.init_scene()
         self.show()
+
+    def set_ui(self, ui):
+        """Set the main ToolboxUI instance."""
+        self._ui = ui
 
     @Slot("QList", name='scene_changed')
     def scene_changed(self, changed_qrects):
