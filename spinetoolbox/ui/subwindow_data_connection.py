@@ -129,7 +129,7 @@ class Ui_Form(object):
         self.toolButton_add.setMaximumSize(QtCore.QSize(20, 20))
         self.toolButton_add.setText("")
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/icons/dc_add.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap(":/icons/import.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_add.setIcon(icon2)
         self.toolButton_add.setObjectName("toolButton_add")
         self.horizontalLayout_2.addWidget(self.toolButton_add)
@@ -209,5 +209,5 @@ class Ui_Form(object):
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc

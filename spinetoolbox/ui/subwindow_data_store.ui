@@ -720,7 +720,7 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/icons/dc_add.png</normaloff>:/icons/dc_add.png</iconset>
+           <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
          </property>
         </widget>
        </item>

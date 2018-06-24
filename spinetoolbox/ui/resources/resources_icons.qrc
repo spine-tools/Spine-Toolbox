@@ -3,8 +3,8 @@
     <file>Spine_symbol.png</file>
   </qresource>
   <qresource prefix="icons">
-    <file>dc_add.png</file>
     <file>ds_ref_icon.png</file>
+    <file>import.png</file>
     <file>wheel.png</file>
     <file>datapkg.png</file>
     <file>tool_options.png</file>

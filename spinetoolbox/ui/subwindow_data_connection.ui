@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -270,7 +270,7 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/icons/dc_add.png</normaloff>:/icons/dc_add.png</iconset>
+           <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
          </property>
         </widget>
        </item>

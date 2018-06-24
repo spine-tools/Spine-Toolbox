@@ -277,7 +277,7 @@ class Ui_Form(object):
         self.toolButton_add.setMaximumSize(QtCore.QSize(20, 20))
         self.toolButton_add.setText("")
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/icons/dc_add.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap(":/icons/import.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_add.setIcon(icon2)
         self.toolButton_add.setObjectName("toolButton_add")
         self.horizontalLayout_2.addWidget(self.toolButton_add)
