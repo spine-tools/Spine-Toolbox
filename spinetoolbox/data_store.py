@@ -483,11 +483,11 @@ class DataStore(MetaObject):
             ('influx', 'Influx class', 1, 10, NULL, 0, NULL),
             ('time', 'Time class', 1, 11, NULL, 0, NULL),
             ('arc', 'Arc class', 1, 12, NULL, 0, NULL),
-            ('simulation_settings', 'SimulationSettings class', 2, 13, NULL, 0, NULL),
-            ('hidden_settings', 'HiddenSettings class', 3, 14, NULL, 1, NULL),
+            ('simulation_settings', 'Simulation settings class', 2, 13, NULL, 0, NULL),
+            ('hidden_settings', 'Hidden settings class', 3, 14, NULL, 1, NULL),
             ('constraint', 'Constraint class', 1, 15, NULL, 0, NULL),
             ('variable', 'Variable class', 1, 16, NULL, 0, NULL),
-            ('objectiveTerm', 'ObjectiveTerm class', 1, 17, NULL, 0, NULL),
+            ('objective_term', 'Objective term class', 1, 17, NULL, 0, NULL),
             ('group', 'Group class', 1, 18, NULL, 0, NULL),
             ('alternative', 'Alternative class', 1, 19, NULL, 0, NULL);
         """

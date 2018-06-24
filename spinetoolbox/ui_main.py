@@ -252,12 +252,13 @@ class ToolboxUI(QMainWindow):
     def init_project_item_model(self):
         """Initializes Project item model."""
         self.project_item_model = ProjectItemModel()
-        self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
+        # self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
         self.project_item_model.appendRow(QStandardItem("Data Stores"))
         self.project_item_model.appendRow(QStandardItem("Data Connections"))
         self.project_item_model.appendRow(QStandardItem("Tools"))
         self.project_item_model.appendRow(QStandardItem("Views"))
         self.ui.treeView_project.setModel(self.project_item_model)
+        self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
 
     def init_tool_template_model(self, tool_template_paths):
@@ -443,6 +444,7 @@ class ToolboxUI(QMainWindow):
         # Restore connections
         self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
+        self.ui.tableView_connections.resizeColumnsToContents()
         self.ui.graphicsView.restore_links()
         self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
@@ -561,7 +563,7 @@ class ToolboxUI(QMainWindow):
         # Clear QGroupBox layout
         self.clear_info_area()
         # Set QDockWidget title to selected item's type
-        self.ui.dockWidget_item.setWindowTitle(item_data.item_type)
+        self.ui.dockWidget_item.setWindowTitle("Item Controls: " + item_data.item_type)
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
@@ -577,7 +579,7 @@ class ToolboxUI(QMainWindow):
             layout.removeWidget(widget_to_remove)
             # Remove it from the gui
             widget_to_remove.setParent(None)
-        self.ui.dockWidget_item.setWindowTitle("Item Info")
+        self.ui.dockWidget_item.setWindowTitle("Item Controls")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -839,6 +841,7 @@ class ToolboxUI(QMainWindow):
             # keep the project item model and connection model synchronized.
             index = self.project_item_model.new_item_index(data.item_category)  # Get index according to item category
             self.connection_model.append_item(new_item, index)
+            self.ui.tableView_connections.resizeColumnsToContents()
             self.ui.treeView_project.expand(item_index)
         return True
 

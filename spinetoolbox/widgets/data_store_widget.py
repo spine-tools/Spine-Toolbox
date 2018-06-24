@@ -78,8 +78,9 @@ class DataStoreForm(QWidget):
         self.object_class = None
         self.Commit = None
         self.session = None
-        # Attempt to create sql session
+        # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        # Attempt to create sql session
         if not self.create_session():
             self.close()
             return
@@ -116,7 +117,6 @@ class DataStoreForm(QWidget):
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
-        # Ensure this window gets garbage-collected when closed
         toc = time.clock()
         logging.debug("Elapsed = {}".format(toc - tic))
 
