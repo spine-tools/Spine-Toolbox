@@ -47,7 +47,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SPLITTER_SS, SEPARATOR_SS, DOC_INDEX_PATH
+    SEPARATOR_SS, DOC_INDEX_PATH
 from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
@@ -105,7 +105,6 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
-        self.ui.splitter.setStyleSheet(SPLITTER_SS)
         self.setStyleSheet(SEPARATOR_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.ItemToolBar(self)
@@ -226,7 +225,6 @@ class ToolboxUI(QMainWindow):
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
         window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
-        splitter_state = self.qsettings.value("mainWindow/splitterState")
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -235,8 +233,6 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
-        if splitter_state:
-            self.ui.splitter.restoreState(splitter_state)
 
     # noinspection PyMethodMayBeStatic
     def init_models(self, tool_template_paths):
@@ -1301,7 +1297,6 @@ class ToolboxUI(QMainWindow):
         else:
             self._config.set("settings", "previous_project", self._project.path)
         self._config.save()
-        self.qsettings.setValue("mainWindow/splitterState", self.ui.splitter.saveState())
         self.qsettings.setValue("mainWindow/windowSize", self.size())
         self.qsettings.setValue("mainWindow/windowPosition", self.pos())
         self.qsettings.setValue("mainWindow/windowState", self.saveState(version=1))

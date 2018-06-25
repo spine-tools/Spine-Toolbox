@@ -36,7 +36,7 @@ class CustomQGraphicsView(QGraphicsView):
     """Custom QGraphicsView class.
 
     Attributes:
-        parent (QWidget): This is a QSplitter object
+        parent (QWidget): Application central widget (self.centralwidget)
     """
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
