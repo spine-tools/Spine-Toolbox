@@ -33,10 +33,11 @@ class Ui_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_10 = QtWidgets.QVBoxLayout(self.centralwidget)
-        self.verticalLayout_10.setSpacing(6)
+        self.verticalLayout_10.setSpacing(0)
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_10.setObjectName("verticalLayout_10")
         self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setMinimumSize(QtCore.QSize(0, 28))
         self.label.setMaximumSize(QtCore.QSize(16777215, 28))
         self.label.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.label.setFrameShadow(QtWidgets.QFrame.Raised)
@@ -59,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 765, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 765, 25))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -429,6 +430,6 @@ class Ui_MainWindow(object):
         self.actionUser_Guide.setText(QtWidgets.QApplication.translate("MainWindow", "User Guide", None, -1))
         self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

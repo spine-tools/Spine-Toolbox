@@ -130,6 +130,7 @@ class ToolboxUI(QMainWindow):
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu"""
         self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
