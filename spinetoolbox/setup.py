@@ -40,8 +40,8 @@ def main(argv):
     python_dir = os.path.dirname(sys.executable)
     os.environ['TCL_LIBRARY'] = os.path.join(python_dir, 'tcl', 'tcl8.6')
     os.environ['TK_LIBRARY'] = os.path.join(python_dir, 'tcl', 'tk8.6')
-    # qt.conf
-    qt_conf = os.path.join(python_dir, "qt.conf")
+    # qt.conf (the one that references PySide2 that is included with the installed application)
+    qt_conf = os.path.join(APPLICATION_PATH, "build", "qt.conf")
     # Path to built documentation (No need for sources)
     doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
     # Set Windows .msi installer default install path to C:\SpineToolbox-version

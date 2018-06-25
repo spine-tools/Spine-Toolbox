@@ -4,10 +4,12 @@
 spinetoolbox/__pycache__/
 spinetoolbox/ui/__pycache__/
 spinetoolbox/widgets/__pycache__/
+spinetoolbox/build/**
+!spinetoolbox/build/qt.conf
+spinetoolbox/dist/
+docs/build/
 tool_templates/Swedish_hydro/
 projects/
 work/
-build/
-dist/
 resources_icons_rc.py
 resources_logos_rc.py
