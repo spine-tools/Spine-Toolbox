@@ -74,7 +74,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Start a julia kernel, and connect to it."""
         if not self.kernel_manager:
             self.starting = True
-            self.ui.msg.emit("Starting Julia REPL...")
+            self.ui.msg.emit("*** Starting Julia REPL ***")
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:

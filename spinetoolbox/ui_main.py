@@ -1200,13 +1200,13 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.listView_tool_templates.viewport().mapToGlobal(pos)
         self.tool_template_context_menu = ToolTemplateContextMenu(self, global_pos, ind)
         option = self.tool_template_context_menu.get_action()
-        if option == "Edit Tool Template":
+        if option == "Edit Tool template":
             self.edit_tool_template(ind)
         elif option == "Open descriptor file":
             self.open_tool_template_file(ind)
         elif option == "Open main program file":
             self.open_tool_main_program_file(ind)
-        elif option == "Remove Tool Template":
+        elif option == "Remove Tool template":
             self.remove_tool_template(ind)
         else:  # No option selected
             pass

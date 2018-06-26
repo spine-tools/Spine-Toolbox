@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -41,6 +41,9 @@
   </property>
   <property name="windowTitle">
    <string>Tool Template</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true"/>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_6">
    <property name="spacing">
@@ -143,6 +146,12 @@
          <height>150</height>
         </size>
        </property>
+       <property name="focusPolicy">
+        <enum>Qt::StrongFocus</enum>
+       </property>
+       <property name="tabChangesFocus">
+        <bool>true</bool>
+       </property>
        <property name="placeholderText">
         <string>Type description here...</string>
        </property>
@@ -211,6 +220,12 @@
            <property name="acceptDrops">
             <bool>true</bool>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Supports Dragging &amp;amp; Dropping from File Explorer.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="lineWidth">
+            <number>1</number>
+           </property>
           </widget>
          </item>
          <item>
@@ -243,7 +258,7 @@
               </font>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source files and folders that your tool requires in order to run, &lt;b&gt;starting by the main program&lt;/b&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source code files and directories that your program requires in order to run. &lt;span style=&quot; font-weight:600;&quot;&gt;Start with the main program file&lt;/span&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
@@ -334,6 +349,12 @@
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="lineWidth">
+            <number>1</number>
+           </property>
           </widget>
          </item>
          <item>
@@ -366,7 +387,7 @@
               </font>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add input filenames as they appear in your program code&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add input filenames and/or directories required by the program. Examples:&lt;/p&gt;&lt;p&gt;'data.csv'&lt;/p&gt;&lt;p&gt;'input/data.csv'&lt;/p&gt;&lt;p&gt;'input/'&lt;/p&gt;&lt;p&gt;'output/'&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
@@ -451,6 +472,9 @@
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -483,7 +507,7 @@
               </font>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add output filenames as they appear in your program code&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add optional input filenames and/or directories.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
@@ -568,6 +592,9 @@
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
           </widget>
          </item>
          <item>
@@ -600,7 +627,7 @@
               </font>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add optional input filenames as they appear in your program code&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add output filenames produced by your program that are saved to results after execution.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
@@ -675,22 +702,28 @@
         <widget class="QLabel" name="label">
          <property name="maximumSize">
           <size>
-           <width>60</width>
+           <width>16777215</width>
            <height>16777215</height>
           </size>
          </property>
          <property name="font">
           <font>
-           <pointsize>10</pointsize>
+           <pointsize>8</pointsize>
           </font>
          </property>
          <property name="text">
-          <string>Main dir:</string>
+          <string>Main program directory</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QLabel" name="label_mainpath">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="font">
           <font>
            <pointsize>10</pointsize>

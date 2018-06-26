@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/add_view.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/add_view.ui',
+# licensing of '../spinetoolbox/ui/add_view.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

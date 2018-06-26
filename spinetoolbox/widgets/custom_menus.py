@@ -26,8 +26,6 @@ Classes for custom context menus.
 
 from PySide2.QtWidgets import QMenu
 from PySide2.QtCore import Qt
-import sys
-import logging
 
 
 class CustomContextMenu(QMenu):
@@ -57,6 +55,7 @@ class CustomContextMenu(QMenu):
         """Returns the clicked action, a string with a description."""
         return self.option
 
+
 class ProjectItemContextMenu(CustomContextMenu):
     """Context menu class for project items."""
 
@@ -73,6 +72,7 @@ class ProjectItemContextMenu(CustomContextMenu):
             return
         self.add_action("Remove Item")
         self.exec_(position)
+
 
 class ItemImageContextMenu(CustomContextMenu):
     """Context menu class for item images."""
@@ -103,6 +103,7 @@ class LinkContextMenu(CustomContextMenu):
             self.add_action("Send to bottom")
         self.exec_(position)
 
+
 class ToolTemplateContextMenu(CustomContextMenu):
     """Context menu class for tool templates."""
 
@@ -117,8 +118,8 @@ class ToolTemplateContextMenu(CustomContextMenu):
         if index.row() == 0:
             # Don't show menu when clicking on No tool
             return
-        self.add_action("Edit Tool Template")
-        self.add_action("Remove Tool Template")
+        self.add_action("Edit Tool template")
+        self.add_action("Remove Tool template")
         self.addSeparator()
         self.add_action("Open main program file")
         self.add_action("Open descriptor file")
@@ -231,6 +232,7 @@ class CustomPopupMenu(QMenu):
         action.setEnabled(enabled)
         action.triggered.connect(slot)
 
+
 class AddToolTemplatePopupMenu(CustomPopupMenu):
     """Popup menu class for add tool template button."""
 
@@ -242,6 +244,7 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
         # Open a tool template file
         self.add_action("Open...", self._parent.open_tool_template)
 
+
 class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
     """Popup menu class for tool template options button in Tool item."""
 
@@ -249,14 +252,15 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         super().__init__()
         self._parent = parent
         # Open a tool template file
-        self.add_action("New tool template", self._parent.get_parent().show_tool_template_form)
-        self.add_action("Open tool template...", self._parent.get_parent().open_tool_template)
+        self.add_action("New Tool template", self._parent.get_parent().show_tool_template_form)
+        self.add_action("Open Tool template...", self._parent.get_parent().open_tool_template)
         self.addSeparator()
         enabled = True if self._parent.tool_template() else False
-        self.add_action("Edit Tool Template", self._parent.edit_tool_template, enabled=enabled)
+        self.add_action("Edit Tool template", self._parent.edit_tool_template, enabled=enabled)
         self.addSeparator()
         self.add_action("Open descriptor file", self._parent.open_tool_template_file, enabled=enabled)
         self.add_action("Open main program file", self._parent.open_tool_main_program_file, enabled=enabled)
+
 
 class AddDbReferencePopupMenu(CustomPopupMenu):
     """Popup menu class for add references button in Data Store item."""

@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/edit_datapackage_keys.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/edit_datapackage_keys.ui',
+# licensing of '../spinetoolbox/ui/edit_datapackage_keys.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

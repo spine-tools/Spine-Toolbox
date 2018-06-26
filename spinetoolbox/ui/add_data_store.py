@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/add_data_store.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/add_data_store.ui',
+# licensing of '../spinetoolbox/ui/add_data_store.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

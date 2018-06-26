@@ -210,36 +210,32 @@ class ToolInstance(QObject):
             create_dir(result_path)
         except OSError:
             self.ui.msg_error.emit("\tError creating timestamped result directory. "
-                                   "Tool output files not copied. Check folder permissions")
+                                   "Tool output files not copied. Check folder permissions.")
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
             return
         self.output_dir = result_path
-        self.ui.msg.emit("\t*** Saving result files ***")
-        saved_files, failed_files = self.copy_output(result_path)
-        if len(saved_files) == 0:
-            # If no files were saved
-            logging.error("No files saved to result directory '{0}'".format(result_path))
-            self.ui.msg_error.emit("\tNo files saved to result directory")
-            if len(failed_files) == 0:
-                # If there were no failed files either
-                logging.error("No failed files")
-                self.ui.msg_warning.emit("\tWarning: Check 'outputfiles' in tool definition")
-        if len(saved_files) > 0:
-            # If there are saved files
-            self.ui.msg.emit("\tThe following result files were saved successfully")
-            for i in range(len(saved_files)):
-                fname = os.path.split(saved_files[i])[1]
-                self.ui.msg.emit("\t\t{0}".format(fname))
-        if len(failed_files) > 0:
-            # If some files failed
-            self.ui.msg_warning.emit("\tThe following result files were not found")
-            for i in range(len(failed_files)):
-                failed_fname = os.path.split(failed_files[i])[1]
-                self.ui.msg_warning.emit("\t\t{0}".format(failed_fname))
-        self.ui.msg.emit("\tDone")
+        self.ui.msg.emit("*** Saving result files ***")
+        if not self.outputfiles:
+            self.ui.msg_warning.emit("\tNo files to save. Add output files to Tool template.")
+        else:
+            saved_files, failed_files = self.copy_output(result_path)
+            if len(saved_files) == 0:
+                # If no files were saved
+                self.ui.msg_error.emit("\tNo files saved to result directory")
+            if len(saved_files) > 0:
+                # If there are saved files
+                self.ui.msg.emit("\tThe following result files were saved successfully")
+                for i in range(len(saved_files)):
+                    fname = os.path.split(saved_files[i])[1]
+                    self.ui.msg.emit("\t\t{0}".format(fname))
+            if len(failed_files) > 0:
+                # If saving some or all files failed
+                self.ui.msg_warning.emit("\tThe following result files were not found")
+                for i in range(len(failed_files)):
+                    failed_fname = os.path.split(failed_files[i])[1]
+                    self.ui.msg_warning.emit("\t\t{0}".format(failed_fname))
         # Show result folder
-        logging.debug("Result files saved to <{0}>".format(result_path))
         result_anchor = "<a href='file:///" + result_path + "'>" + result_path + "</a>"
         self.ui.msg.emit("\tResult Directory: {}".format(result_anchor))
         self.instance_finished_signal.emit(ret)

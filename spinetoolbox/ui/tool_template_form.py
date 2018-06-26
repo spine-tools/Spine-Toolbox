@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tool_template_form.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/tool_template_form.ui',
+# licensing of '../spinetoolbox/ui/tool_template_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -36,6 +37,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
         Form.setSizePolicy(sizePolicy)
+        Form.setStyleSheet("")
         self.verticalLayout_6 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_6.setSpacing(0)
         self.verticalLayout_6.setContentsMargins(0, 0, 0, 0)
@@ -71,6 +73,8 @@ class Ui_Form(object):
         self.verticalLayout_5.addLayout(self.horizontalLayout)
         self.textEdit_description = QtWidgets.QTextEdit(Form)
         self.textEdit_description.setMaximumSize(QtCore.QSize(16777215, 150))
+        self.textEdit_description.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.textEdit_description.setTabChangesFocus(True)
         self.textEdit_description.setObjectName("textEdit_description")
         self.verticalLayout_5.addWidget(self.textEdit_description)
         self.lineEdit_args = QtWidgets.QLineEdit(Form)
@@ -101,6 +105,7 @@ class Ui_Form(object):
         font.setPointSize(10)
         self.treeView_includes.setFont(font)
         self.treeView_includes.setAcceptDrops(True)
+        self.treeView_includes.setLineWidth(1)
         self.treeView_includes.setObjectName("treeView_includes")
         self.verticalLayout.addWidget(self.treeView_includes)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
@@ -160,6 +165,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_inputfiles.setFont(font)
+        self.treeView_inputfiles.setLineWidth(1)
         self.treeView_inputfiles.setObjectName("treeView_inputfiles")
         self.verticalLayout_3.addWidget(self.treeView_inputfiles)
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
@@ -306,13 +312,18 @@ class Ui_Form(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
         self.label = QtWidgets.QLabel(Form)
-        self.label.setMaximumSize(QtCore.QSize(60, 16777215))
+        self.label.setMaximumSize(QtCore.QSize(16777215, 16777215))
         font = QtGui.QFont()
-        font.setPointSize(10)
+        font.setPointSize(8)
         self.label.setFont(font)
         self.label.setObjectName("label")
         self.horizontalLayout_7.addWidget(self.label)
         self.label_mainpath = QtWidgets.QLabel(Form)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label_mainpath.sizePolicy().hasHeightForWidth())
+        self.label_mainpath.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.label_mainpath.setFont(font)
@@ -356,15 +367,19 @@ class Ui_Form(object):
         self.textEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type description here...", None, -1))
         self.lineEdit_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item description (optional)</p></body></html>", None, -1))
         self.lineEdit_args.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type command line arguments here...", None, -1))
-        self.toolButton_plus_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add source files and folders that your tool requires in order to run, <b>starting by the main program</b>.</p></body></html>", None, -1))
+        self.treeView_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Supports Dragging &amp; Dropping from File Explorer.</p></body></html>", None, -1))
+        self.toolButton_plus_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add source code files and directories that your program requires in order to run. <span style=\" font-weight:600;\">Start with the main program file</span>.</p></body></html>", None, -1))
         self.toolButton_minus_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected or all if nothing is selected</p></body></html>", None, -1))
-        self.toolButton_plus_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add input filenames as they appear in your program code</p></body></html>", None, -1))
+        self.treeView_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Double-click or press F2 to edit selected item</p></body></html>", None, -1))
+        self.toolButton_plus_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add input filenames and/or directories required by the program. Examples:</p><p>\'data.csv\'</p><p>\'input/data.csv\'</p><p>\'input/\'</p><p>\'output/\'</p><p><br/></p></body></html>", None, -1))
         self.toolButton_minus_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected names or all if nothing is selected</p></body></html>", None, -1))
-        self.toolButton_plus_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add output filenames as they appear in your program code</p></body></html>", None, -1))
+        self.treeView_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Double-click or press F2 to edit selected item</p></body></html>", None, -1))
+        self.toolButton_plus_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add optional input filenames and/or directories.</p></body></html>", None, -1))
         self.toolButton_minus_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected names or all if nothing is selected</p></body></html>", None, -1))
-        self.toolButton_plus_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add optional input filenames as they appear in your program code</p></body></html>", None, -1))
+        self.treeView_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Double-click or press F2 to edit selected item</p></body></html>", None, -1))
+        self.toolButton_plus_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add output filenames produced by your program that are saved to results after execution.</p></body></html>", None, -1))
         self.toolButton_minus_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected names or all if nothing is selected</p></body></html>", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("Form", "Main dir:", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("Form", "Main program directory", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 

@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/settings.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/settings.ui',
+# licensing of '../spinetoolbox/ui/settings.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

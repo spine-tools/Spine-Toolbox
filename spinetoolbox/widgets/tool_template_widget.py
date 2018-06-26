@@ -20,7 +20,7 @@
 """
 QWidget that is used to create or edit Tool Templates.
 In the former case it is presented empty, but in the latter it
-is filled with all the information from the Templated being edited
+is filled with all the information from the template being edited.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   12.4.2018
@@ -34,7 +34,7 @@ from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
-    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
+    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, TT_FOCUS_SS
 from helpers import blocking_updates, busy_effect
 import logging
 
@@ -70,6 +70,7 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
+        self.setStyleSheet(TT_FOCUS_SS)
         self.ui.treeView_includes.setModel(self.includes_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -122,7 +123,7 @@ class ToolTemplateWidget(QWidget):
 
     def make_header_for_includes(self):
         """Add header to includes model. I.e. tool source files and necessary folders."""
-        h = QStandardItem("Includes")
+        h = QStandardItem("Source files")
         self.includes_model.setHorizontalHeaderItem(0, h)
 
     def make_header_for_inputfiles(self):
@@ -213,11 +214,11 @@ class ToolTemplateWidget(QWidget):
             if common_prefix != self.includes_main_path:
                 self.statusbar.showMessage("Source file {0}'s location is invalid "
                                            "(should be in main directory)"
-                                           .format(file_pattern), 3000)
+                                           .format(file_pattern), 5000)
                 return False
             path_to_add = os.path.relpath(path, self.includes_main_path)
         if self.includes_model.findItems(path_to_add):
-            self.statusbar.showMessage("Source file {0} already included".format(path_to_add), 3000)
+            self.statusbar.showMessage("Source file {0} already included".format(path_to_add), 5000)
             return False
         qitem = QStandardItem(path_to_add)
         qitem.setFlags(~Qt.ItemIsEditable)
@@ -251,7 +252,7 @@ class ToolTemplateWidget(QWidget):
             self.make_header_for_includes()
             self.includes_main_path = None
             self.ui.label_mainpath.clear()
-            self.statusbar.showMessage("All includes removed", 3000)
+            self.statusbar.showMessage("All source files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -288,7 +289,12 @@ class ToolTemplateWidget(QWidget):
     @Slot(name="add_inputfiles")
     def add_inputfiles(self):
         """Let user select input files for this tool template."""
-        answer = QInputDialog.getText(self, "Add input file", "Input file name (eg data.csv):")
+        msg = "Add an input file or a directory required by your program.\n" \
+              "Examples:\n" \
+              "data.csv -> File is copied to the same work directory as the main program.\n" \
+              "input/data.csv -> Creates subdirectory input\ to the work directory and copies the file there.\n" \
+              "output/ -> Creates an empty directory into the work directory."
+        answer = QInputDialog.getText(self, "Add input item", msg)
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
@@ -315,7 +321,7 @@ class ToolTemplateWidget(QWidget):
     @Slot(name="add_inputfiles_opt")
     def add_inputfiles_opt(self):
         """Let user select optional input files for this tool template."""
-        answer = QInputDialog.getText(self, "Add optional input file", "Optional input file name (eg other.csv):")
+        answer = QInputDialog.getText(self, "Add optional input item", "Optional input file name (eg. other.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
@@ -342,7 +348,7 @@ class ToolTemplateWidget(QWidget):
     @Slot(name="add_outputfiles")
     def add_outputfiles(self):
         """Let user select output files for this tool template."""
-        answer = QInputDialog.getText(self, "Add output file", "Output file name (eg results.csv):")
+        answer = QInputDialog.getText(self, "Add output item", "Output file name (eg. results.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return

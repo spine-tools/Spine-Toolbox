@@ -79,7 +79,7 @@ class ToolSubWindowWidget(QWidget):
 
     def make_header_for_input_files(self):
         """Add header to input files model."""
-        h = QStandardItem("Required input files")
+        h = QStandardItem("Input files")
         # Decrease font size
         font = h.font()
         font.setPointSize(HEADER_POINTSIZE)

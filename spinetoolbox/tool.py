@@ -122,7 +122,7 @@ class Tool(MetaObject):
     def show_details(self):
         """Details button clicked."""
         if not self.tool_template():
-            self._parent.msg_warning.emit("No Tool Template")
+            self._parent.msg_warning.emit("No Tool template")
             return
         definition = self.read_tool_def(self.tool_template().get_def_path())
         if not definition:
@@ -214,7 +214,7 @@ class Tool(MetaObject):
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_dirs > 0:
-                self._parent.msg.emit("*** Creating directories to work directory ***")
+                self._parent.msg.emit("*** Creating subdirectories to work directory ***")
                 if not self.create_dirs_to_work():
                     # Creating directories failed -> abort
                     self._parent.msg_error.emit("Creating directories to work failed. Tool execution aborted")
@@ -278,7 +278,7 @@ class Tool(MetaObject):
             path, filename = os.path.split(req_file_path)
             if not filename:
                 # It's a directory
-                logging.debug("path {0} should be created to work folder".format(path))
+                # logging.debug("path {0} should be created to work folder".format(path))
                 path_to_create = os.path.join(self.instance.basedir, path)
                 try:
                     create_dir(path_to_create)
@@ -342,32 +342,6 @@ class Tool(MetaObject):
                 path = item_data.find_file(fname, visited_items)
                 if path is not None:
                     break
-            # # Find file from parent Data Stores
-            # if item_data.item_type == "Data Store":
-            #     # Search in Data Store data directory
-            #     ds_files = item_data.data_files()  # List of file names (no path)
-            #     if fname in ds_files:
-            #         self._parent.msg.emit("\t<b>{0}</b> found in DS <b>{1}</b>".format(fname, item_data.name))
-            #         path = os.path.join(item_data.data_dir, fname)
-            #         break
-            # # Find file from parent Data Connections
-            # elif item_data.item_type == "Data Connection":
-            #     # Search in Data Connection data directory
-            #     dc_files = item_data.data_files()  # List of file names (no path)
-            #     if fname in dc_files:
-            #         self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, item_data.name))
-            #         path = os.path.join(item_data.data_dir, fname)
-            #         break
-            #     # Search in Data Connection references
-            #     else:
-            #         refs = item_data.file_references()  # List of paths including file name
-            #         for ref in refs:
-            #             p, fn = os.path.split(ref)
-            #             if fn == fname:
-            #                 self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
-            #                                       .format(fname, item_data.name))
-            #                 path = ref
-            #                 break
             elif item_data.item_type == "Tool":
                 # TODO: Find file from output files of parent Tools
                 pass
@@ -377,20 +351,35 @@ class Tool(MetaObject):
         """Copy files from given paths to the directories in work directory, where the Tool requires them to be.
 
         Args:
-            paths (dict): Key is path to required file, value is the path to where the file is located.
+            paths (dict): Key is path to required file, value is path to source file.
 
         Returns:
             Boolean variable depending on operation success
         """
         n_copied_files = 0
-        for dst_folder, src_path in paths.items():
-            # Join work directory path to dst folder
-            dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst_folder))
-            fname = os.path.split(src_path)[1]
-            self._parent.msg.emit("\tCopying <b>{0}</b>".format(fname))
+        for dst, src_path in paths.items():
             if not os.path.exists(src_path):
                 self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
                 return False
+            # Join work directory path to dst (dst is the filename including possible subfolders, e.g. 'input/f.csv')
+            dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst))
+            # Create subdirectories to work if necessary
+            dst_subdir, fname = os.path.split(dst)
+            if not dst_subdir:
+                # No subdirectories to create
+                self._parent.msg.emit("\tCopying <b>{0}</b> -> work directory".format(fname))
+            else:
+                # Create subdirectory structure to work (Skip if already done in create_dirs_to_work() method)
+                work_subdir_path = os.path.abspath(os.path.join(self.instance.basedir, dst_subdir))
+                if not os.path.exists(work_subdir_path):
+                    try:
+                        create_dir(work_subdir_path)
+                    except OSError:
+                        self._parent.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
+                                                    .format(work_subdir_path))
+                        return False
+                    self._parent.msg.emit("\tCopying <b>{0}</b> -> work subdirectory <b>{1}</b>"
+                                          .format(fname, dst_subdir))
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
@@ -399,7 +388,7 @@ class Tool(MetaObject):
                 self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
                                             .format(src_path, dst_path))
                 return False
-        self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+        self._parent.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
         return True
 
     def find_output_folders(self):

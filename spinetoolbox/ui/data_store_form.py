@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/data_store_form.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/data_store_form.ui',
+# licensing of '../spinetoolbox/ui/data_store_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -289,6 +290,6 @@ class Ui_Form(object):
         self.pushButton_revert.setText(QtWidgets.QApplication.translate("Form", "Revert", None, -1))
         self.pushButton_close.setText(QtWidgets.QApplication.translate("Form", "Close", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

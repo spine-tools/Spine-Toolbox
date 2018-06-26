@@ -142,3 +142,5 @@ TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
+# Draw border on all QWidgets when in focus
+TT_FOCUS_SS = ":focus {border: 1px groove;}"
