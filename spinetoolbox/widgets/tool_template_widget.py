@@ -36,6 +36,7 @@ from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, TT_FOCUS_SS
 from helpers import blocking_updates, busy_effect
+from widgets.custom_menus import AddIncludesPopupMenu
 import logging
 
 
@@ -104,6 +105,10 @@ class ToolTemplateWidget(QWidget):
         self.populate_outputfiles_list(self.outputfiles)
         self.ui.lineEdit_name.setFocus()
         self.ui.label_mainpath.setText(self.includes_main_path)
+        # Add includes popup menu
+        self.add_includes_popup_menu = AddIncludesPopupMenu(self)
+        self.ui.toolButton_plus_includes.setMenu(self.add_includes_popup_menu)
+        self.ui.toolButton_plus_includes.setStyleSheet('QToolButton::menu-indicator { image: none; }')
         self.connect_signals()
 
     def connect_signals(self):
@@ -185,6 +190,19 @@ class ToolTemplateWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 self.outputfiles_model.appendRow(qitem)
+
+    @Slot(name="new_include")
+    def new_include(self):
+        """Let user create a new source file for this tool template."""
+        path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
+        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getSaveFileName)
+        dir_path = func(self, "Create source file", path, "*.*")
+        file_path = dir_path[0]
+        if file_path == '':  # Cancel button clicked
+            return
+        # create file. NOTE: getSaveFileName does the 'check for existance' for us
+        open(file_path, 'w').close()
+        self.add_single_include(file_path)
 
     @Slot(name="add_includes")
     def add_includes(self):

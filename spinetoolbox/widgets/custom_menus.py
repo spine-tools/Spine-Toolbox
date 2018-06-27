@@ -272,3 +272,14 @@ class AddDbReferencePopupMenu(CustomPopupMenu):
         self.add_action("New Spine SQLite database", self._parent.add_new_spine_reference)
         self.addSeparator()
         self.add_action("Other...", self._parent.show_add_db_reference_form)
+
+class AddIncludesPopupMenu(CustomPopupMenu):
+    """Popup menu class for add includes button in Tool Template widget."""
+
+    def __init__(self, parent):
+        super().__init__()
+        self._parent = parent
+        # Open a tool template file
+        self.add_action("New file", self._parent.new_include)
+        self.addSeparator()
+        self.add_action("Open file", self._parent.add_includes)
