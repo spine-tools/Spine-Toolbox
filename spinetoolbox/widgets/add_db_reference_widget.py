@@ -31,7 +31,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QMessageBox, QFileDialog
 from PySide2.QtCore import Slot, Qt
 from ui.add_db_reference import Ui_Form
 from config import STATUSBAR_SS
-from helpers import busy_effect, blocking_updates
+from helpers import busy_effect
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 from config import SQL_DIALECT_API, APPLICATION_PATH
@@ -86,8 +86,7 @@ class AddDbReferenceWidget(QWidget):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileName)
-        answer = func(self, 'Select SQlite file', APPLICATION_PATH, 'SQLite (*.*)')
+        answer = QFileDialog.getOpenFileName(self, 'Select SQlite file', APPLICATION_PATH, 'SQLite (*.*)')
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return

@@ -32,7 +32,7 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QMessageBox, QFileDialog
 from metaobject import MetaObject
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
-from helpers import create_dir, blocking_updates
+from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
 from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
@@ -136,8 +136,7 @@ class DataConnection(MetaObject):
     def add_references(self):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileNames)
-        answer = func(self._parent, "Add file references", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileNames(self._parent, "Add file references", APPLICATION_PATH, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return

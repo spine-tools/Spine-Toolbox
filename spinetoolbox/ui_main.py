@@ -48,7 +48,7 @@ from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
     SEPARATOR_SS, DOC_INDEX_PATH
-from helpers import project_dir, get_datetime, erase_dir, blocking_updates, busy_effect
+from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
 
@@ -379,8 +379,7 @@ class ToolboxUI(QMainWindow):
         connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            func = blocking_updates(self.ui.graphicsView, QFileDialog.getOpenFileName)
-            answer = func(self, 'Open project', project_dir(self._config), 'Projects (*.proj)')
+            answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config), 'Projects (*.proj)')
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False
@@ -465,8 +464,7 @@ class ToolboxUI(QMainWindow):
     def save_project_as(self):
         """Save current project on a new name and activate it."""
         # noinspection PyCallByClass
-        func = blocking_updates(self.ui.graphicsView, QFileDialog.getSaveFileName)
-        dir_path = func(self, 'Save project', project_dir(self._config), 'Project (*.proj)')
+        dir_path = QFileDialog.getSaveFileName(self, 'Save project', project_dir(self._config), 'Project (*.proj)')
         file_path = dir_path[0]
         if file_path == '':  # Cancel button clicked
             return
@@ -587,8 +585,7 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        func = blocking_updates(self.ui.graphicsView, QFileDialog.getOpenFileName)
-        answer = func(self, 'Select tool template file',
+        answer = QFileDialog.getOpenFileName(self, 'Select tool template file',
                       os.path.join(project_dir(self._config), os.path.pardir),
                       'JSON (*.json)')
         if answer[0] == '':  # Cancel button clicked

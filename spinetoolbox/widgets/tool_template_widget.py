@@ -35,7 +35,7 @@ from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, TT_FOCUS_SS
-from helpers import blocking_updates, busy_effect
+from helpers import busy_effect
 from widgets.custom_menus import AddIncludesPopupMenu
 import logging
 
@@ -195,8 +195,7 @@ class ToolTemplateWidget(QWidget):
     def new_include(self):
         """Let user create a new source file for this tool template."""
         path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
-        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getSaveFileName)
-        dir_path = func(self, "Create source file", path, "*.*")
+        dir_path = QFileDialog.getSaveFileName(self, "Create source file", path, "*.*")
         file_path = dir_path[0]
         if file_path == '':  # Cancel button clicked
             return
@@ -209,8 +208,7 @@ class ToolTemplateWidget(QWidget):
         """Let user select source files for this tool template."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
-        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getOpenFileNames)
-        answer = func(self, "Add source file", path, "*.*")
+        answer = QFileDialog.getOpenFileNames(self, "Add source file", path, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
@@ -442,8 +440,7 @@ class ToolTemplateWidget(QWidget):
             logging.debug("Updating definition for tool template '{}'".format(tool.name))
             self._parent.update_tool_template(row, tool)
         else:
-            func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getSaveFileName)
-            answer = func(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
+            answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
             if answer[0] == '':  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])  # TODO: maybe check that extension is .json?
