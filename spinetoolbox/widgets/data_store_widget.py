@@ -48,17 +48,19 @@ from sqlalchemy.orm import Session, aliased
 class DataStoreForm(QWidget):
     """A widget to show and edit Spine objects in a data store."""
 
-    def __init__(self, parent, engine, database, username):
+    def __init__(self, parent, data_store, engine, database, username):
         """ Initialize class.
 
         Args:
             parent (ToolBoxUI): QMainWindow instance
+            data_store (DataStore): the DataStore instance that owns this form
             engine (Engine): The sql alchemy engine to use with this Store
             database (str): The database name
             username (str): The user name
         """
         tic = time.clock()
         super().__init__()
+        self._data_store = data_store
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -122,6 +124,7 @@ class DataStoreForm(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
+        self._data_store.destroyed.connect(self.data_store_destroyed)
         self.ui.pushButton_commit.clicked.connect(self.commit_clicked)
         self.ui.pushButton_close.clicked.connect(self.close_clicked)
         self.ui.pushButton_revert.clicked.connect(self.revert_clicked)
@@ -138,6 +141,11 @@ class DataStoreForm(QWidget):
             connect(self.show_object_parameter_context_menu)
         self.ui.tableView_relationship_parameter.customContextMenuRequested.\
             connect(self.show_relationship_parameter_context_menu)
+
+    @Slot(name="data_store_destroyed")
+    def data_store_destroyed(self):
+        """Close this form without commiting any changes when data store item is destroyed."""
+        self.close()
 
     @Slot(name="commit_clicked")
     def commit_clicked(self):

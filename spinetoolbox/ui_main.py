@@ -881,6 +881,7 @@ class ToolboxUI(QMainWindow):
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
         item_data.set_icon(None)
+        item_data.deleteLater()
         # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
         if not self.connection_model.remove_item(item):
             self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))

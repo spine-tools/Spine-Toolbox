@@ -225,7 +225,7 @@ class DataStore(MetaObject):
                 return
             database = data_file
             username = getpass.getuser()
-            self.data_store_form = DataStoreForm(self._parent, engine, database, username)
+            self.data_store_form = DataStoreForm(self._parent, self, engine, database, username)
             self.data_store_form.show()
 
     @busy_effect
@@ -248,7 +248,7 @@ class DataStore(MetaObject):
             except DatabaseError as e:
                 self._parent.msg_error.emit("Could not connect to <b>{}</b>: {}".format(db_url, e.orig.args))
                 return
-            self.data_store_form = DataStoreForm(self._parent, engine, database, username)
+            self.data_store_form = DataStoreForm(self._parent, self, engine, database, username)
             self.data_store_form.show()
 
     def data_references(self):
