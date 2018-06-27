@@ -243,6 +243,9 @@ color: rgb(255, 255, 255);</string>
          <pointsize>8</pointsize>
         </font>
        </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Edit Tool template to modify these&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
        <property name="verticalScrollMode">
         <enum>QAbstractItemView::ScrollPerPixel</enum>
        </property>
@@ -266,6 +269,9 @@ color: rgb(255, 255, 255);</string>
         <font>
          <pointsize>8</pointsize>
         </font>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Edit Tool template to modify these&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="verticalScrollMode">
         <enum>QAbstractItemView::ScrollPerPixel</enum>

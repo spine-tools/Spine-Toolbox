@@ -182,6 +182,8 @@ class Ui_Form(object):
         self.toolButton_tool_template_options.setText(QtWidgets.QApplication.translate("Form", "...", None, -1))
         self.label_args.setText(QtWidgets.QApplication.translate("Form", "Args", None, -1))
         self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool command line arguments. Edit tool definition file to change these.</p></body></html>", None, -1))
+        self.treeView_input_files.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit Tool template to modify these</p></body></html>", None, -1))
+        self.treeView_output_files.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit Tool template to modify these</p></body></html>", None, -1))
         self.pushButton_stop.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Stop execution</p></body></html>", None, -1))
         self.pushButton_stop.setText(QtWidgets.QApplication.translate("Form", "Stop", None, -1))
         self.pushButton_execute.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Execute tool</p></body></html>", None, -1))

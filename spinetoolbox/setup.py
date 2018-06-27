@@ -53,7 +53,12 @@ def main(argv):
                         excludes=["tkinter"],
                         includes=["atexit", "idna.idnadata", "pygments.lexers.python", "pygments.lexers.shell",
                                   "pygments.lexers.julia", "qtconsole.client", "sqlalchemy.sql.default_comparator"],
-                        include_files=[qt_conf] + [(doc_path, "docs/")])
+                        include_files=[(doc_path, "docs/")])
+    # buildOptions = dict(packages=[],
+    #                     excludes=["tkinter"],
+    #                     includes=["atexit", "idna.idnadata", "pygments.lexers.python", "pygments.lexers.shell",
+    #                               "pygments.lexers.julia", "qtconsole.client", "sqlalchemy.sql.default_comparator"],
+    #                     include_files=[qt_conf] + [(doc_path, "docs/")])
 
     # This does not show logging messages
     # base = "Win32GUI" if sys.platform == "win32" else None
