@@ -4,8 +4,7 @@
 spinetoolbox/__pycache__/
 spinetoolbox/ui/__pycache__/
 spinetoolbox/widgets/__pycache__/
-spinetoolbox/build/**
-!spinetoolbox/build/qt.conf
+spinetoolbox/build/
 spinetoolbox/dist/
 docs/build/
 tool_templates/Swedish_hydro/
