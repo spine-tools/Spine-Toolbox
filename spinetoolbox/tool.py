@@ -447,13 +447,13 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_execute.setEnabled(True)
         self._graphics_item.stop_wheel_animation()
         if return_code == 0:
-            self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
+            self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
             # copy outputfiles to data directories of connected items
             folder_paths = self.find_output_folders()
             if folder_paths:
                 self.copy_output_files(folder_paths)
         else:
-            self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.tool_template().name))
+            self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool

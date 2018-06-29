@@ -29,7 +29,7 @@ import shutil
 import glob
 import logging
 import tempfile
-from PySide2.QtCore import QObject, Signal, Slot, SIGNAL
+from PySide2.QtCore import QObject, Signal, Slot
 import qsubprocess
 from helpers import create_output_dir_timestamp, create_dir
 
@@ -45,10 +45,10 @@ class ToolInstance(QObject):
     """
     instance_finished_signal = Signal(int, name="instance_finished_signal")
 
-    def __init__(self, tool, ui, tool_output_dir, project):
+    def __init__(self, tool_template, ui, tool_output_dir, project):
         """Tool instance constructor."""
         super().__init__()
-        self.tool = tool
+        self.tool = tool_template  # TODO: Change self.tool to something else (e.g. self.tool_template or self.program
         self.ui = ui
         self._project = project
         self.tool_process = None
@@ -59,9 +59,9 @@ class ToolInstance(QObject):
         self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool.short_name + '__', dir=wrk_dir)
         self.command = ''  # command is created after ToolInstance is initialized
         self.fallback_command = ''
-        self.inputfiles = [os.path.join(self.basedir, f) for f in tool.inputfiles]
-        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in tool.inputfiles_opt]
-        self.outputfiles = [os.path.join(self.basedir, f) for f in tool.outputfiles]
+        self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
+        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in tool_template.inputfiles_opt]
+        self.outputfiles = [os.path.join(self.basedir, f) for f in tool_template.outputfiles]
         # Check that required output directories are created
         self.make_work_output_dirs()
         # Checkout Tool
@@ -75,7 +75,7 @@ class ToolInstance(QObject):
         # Add anchor to work directory
         work_anchor = "<a style='color:#99CCFF;' href='file:///" + self.basedir + "'>" + self.basedir + "</a>"
         self.ui.msg.emit("Work Directory: {}".format(work_anchor))
-        self.ui.msg.emit("*** Copying Tool <b>{0}</b> to work directory ***".format(self.tool.name))
+        self.ui.msg.emit("*** Copying program <b>{0}</b> to work directory ***".format(self.tool.name))
         for filepath in self.tool.includes:
             dirname, file_pattern = os.path.split(filepath)
             src_dir = os.path.join(self.tool.path, dirname)
@@ -106,8 +106,8 @@ class ToolInstance(QObject):
         return True
 
     def execute(self):
-        """Start executing tool instance in QProcess."""
-        self.ui.msg.emit("*** Starting Tool <b>{0}</b> ***".format(self.tool.name))
+        """Start executing tool template instance in QProcess."""
+        self.ui.msg.emit("*** Starting program <b>{0}</b> ***".format(self.tool.name))
         self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
         if self.tool.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
@@ -123,7 +123,6 @@ class ToolInstance(QObject):
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
 
-
     def julia_repl_tool_finished(self, ret):
         """Run when Julia tool using REPL has finished processing.
 
@@ -133,7 +132,7 @@ class ToolInstance(QObject):
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 self.ui.msg_error.emit("\tUnable to start Julia REPL")
-                self.ui.msg.emit("*** Running Tool <b>{0}</b> without the REPL ***".format(self.tool.name))
+                self.ui.msg.emit("*** Running program <b>{0}</b> without REPL ***".format(self.tool.name))
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
@@ -144,10 +143,9 @@ class ToolInstance(QObject):
             except KeyError:
                 self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self.ui.msg.emit("\tJulia Tool finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tJulia program finished successfully. Return code:{0}".format(ret))
         self.tool_process = None
         self.save_output_files(ret)
-
 
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
@@ -167,7 +165,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self.ui.msg.emit("\tJulia tool finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tJulia program finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -192,7 +190,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self.ui.msg.emit("\tGAMS tool finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tGAMS program finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)

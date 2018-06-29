@@ -27,9 +27,7 @@ Glossary
 Contribution Guide
 ==================
 
-.. todo::
-
-    This should include the author list and guide on how to contribute.
+You can find the contribution guide in README.md.
 
 Indices and tables
 ==================
