@@ -24,6 +24,7 @@ Widget shown to user when pressing Edit Keys on Data Connection item.
 :date:   30.3.2018
 """
 
+import logging
 from copy import deepcopy
 from PySide2.QtWidgets import QWidget, QStatusBar, QHeaderView
 from PySide2.QtCore import Slot, Qt, QEvent
@@ -41,12 +42,9 @@ class PrimaryKeysHeader(Enum):
     TABLE = 1, 'Table'
     FIELD = 2, 'Field'
 
-    def __new__(cls, index, name):
-        member = object.__new__(cls)
-        member.index = index
-        member.fullname = name
-        return member
-
+    def __init__(self, index, fullname):
+        self.index = index
+        self.fullname = fullname
 
 class ForeignKeysHeader(Enum):
     """A Class for handling foreign key tableview headers."""
@@ -56,12 +54,9 @@ class ForeignKeysHeader(Enum):
     PARENT_TABLE = 3, 'Parent table'
     PARENT_FIELD = 4, 'Parent field'
 
-    def __new__(cls, index, name):
-        member = object.__new__(cls)
-        member.index = index
-        member.fullname = name
-        return member
-
+    def __init__(self, index, fullname):
+        self.index = index
+        self.fullname = fullname
 
 class EditDatapackageKeysWidget(QWidget):
     """A widget to request the user to define keys for a datapackage.
