@@ -648,7 +648,7 @@ class ToolboxUI(QMainWindow):
             return
         self.msg_success.emit("Tool template <b>{0}</b> successfully updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
-        logging.debug("Reattaching tool template {}".format(tool_template.name))
+        logging.debug("Reattaching Tool template {}".format(tool_template.name))
         # Find the updated tool template from ToolTemplateModel
         template = self.tool_template_model.find_tool_template(tool_template.name)
         if not template:
@@ -719,7 +719,7 @@ class ToolboxUI(QMainWindow):
                         tool.set_tool_template(None)
                         continue
                     tool.set_tool_template(new_template)
-                    self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
+                    self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>"
                                   .format(new_template.name, tool.name))
 
     @Slot(name="remove_selected_tool_template")
@@ -772,7 +772,7 @@ class ToolboxUI(QMainWindow):
         project_dict = dicts['project']
         object_dict = dicts['objects']
         if not self.tool_template_model.removeRow(index.row()):
-            self.msg_error.emit("Error in removing Tool <b>{0}</b>".format(sel_tool.name))
+            self.msg_error.emit("Error in removing Tool template <b>{0}</b>".format(sel_tool.name))
             return
         try:
             tools = project_dict['tool_templates']
@@ -784,7 +784,7 @@ class ToolboxUI(QMainWindow):
                                 .format(project_file))
             return
         except ValueError:
-            self.msg_error.emit("This is odd. Tool definition file path <b>{0}</b> not found "
+            self.msg_error.emit("This is odd. Tool template definition file path <b>{0}</b> not found "
                                 "in project file <b>{1}</b>".format(tool_def_path, project_file))
             return
         # Save dictionaries back to JSON file
@@ -794,7 +794,7 @@ class ToolboxUI(QMainWindow):
             json.dump(dicts, fp, indent=4)
         # Remove tool template also from Tools that use it
         # NOTE: We don't seem to need this below;
-        # NOTE: calling self.tool_template_model.removeRow(index.row()) did the work for us
+        # Apparently calling self.tool_template_model.removeRow(index.row()) does the job for us
         # tools_item = self.project_item_model.find_item("Tools")
         # if tools_item.hasChildren():
         #     n_tool_items = tools_item.rowCount()
@@ -955,7 +955,7 @@ class ToolboxUI(QMainWindow):
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for {0}".format(file_path))
-            self.msg_error.emit("Tool definition file <b>{0}</b> not found."
+            self.msg_error.emit("Tool template definition file <b>{0}</b> not found."
                                 .format(file_path))
             return
         tool_template_url = "file:///" + file_path
@@ -965,7 +965,7 @@ class ToolboxUI(QMainWindow):
         logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(tool_template_url))
-            self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
+            self.msg_error.emit("Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
                                 "files are associated with a text editor. For example on Windows "
                                 "10, go to Control Panel -> Default Programs to do this."
                                 .format(file_path))

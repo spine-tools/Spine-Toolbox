@@ -250,7 +250,7 @@ class SpineToolboxProject(MetaObject):
         """Create a Tool template according to a tool definition file.
 
         Args:
-            jsonfile (str): Path of the tool definition file
+            jsonfile (str): Path of the tool template definition file
 
         Returns:
             Instance of a subclass if Tool
@@ -260,11 +260,11 @@ class SpineToolboxProject(MetaObject):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._parent.msg_error.emit("Tool definition file not valid")
+                    self._parent.msg_error.emit("Tool template definition file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(jsonfile))
+            self._parent.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
             return None
         # Infer path to the main program
         try:

@@ -182,11 +182,11 @@ class Tool(MetaObject):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._parent.msg_error.emit("Tool definition file not valid")
+                    self._parent.msg_error.emit("Tool template definition file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(tool_def_file))
+            self._parent.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(tool_def_file))
             return None
         return definition
 
@@ -194,7 +194,7 @@ class Tool(MetaObject):
     def execute(self):
         """Execute button clicked."""
         if not self.tool_template():
-            self._parent.msg_warning.emit("No Tool to execute")
+            self._parent.msg_warning.emit("No Tool template attached to Tool <b>{0}</b>".format(self.name))
             return
         self._parent.msg.emit("")
         self._parent.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
@@ -226,12 +226,12 @@ class Tool(MetaObject):
                 self._parent.msg.emit("*** Searching for required input files ***")
                 file_copy_paths = self.find_input_files()
                 if not file_copy_paths:
-                    self._parent.msg_error.emit("Tool execution aborted1")
+                    self._parent.msg_error.emit("Input files not found. Tool execution aborted.")
                     return
                 self._parent.msg.emit("*** Copying input files to work directory ***")
                 # Copy input files to ToolInstance work directory
                 if not self.copy_input_files(file_copy_paths):
-                    self._parent.msg_error.emit("Tool execution aborted2")
+                    self._parent.msg_error.emit("Unable to copy input files to work directory. Tool execution aborted.")
                     return
             else:  # just for testing
                 # logging.debug("No input files to copy")

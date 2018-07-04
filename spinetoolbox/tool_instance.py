@@ -215,7 +215,7 @@ class ToolInstance(QObject):
         self.output_dir = result_path
         self.ui.msg.emit("*** Saving result files ***")
         if not self.outputfiles:
-            self.ui.msg_warning.emit("\tNo files to save. Add output files to Tool template.")
+            self.ui.msg_warning.emit("\tNo files to save. Add output files to Tool template definition.")
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if len(saved_files) == 0:

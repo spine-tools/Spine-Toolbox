@@ -122,7 +122,7 @@ class ToolTemplateContextMenu(CustomContextMenu):
         self.add_action("Remove Tool template")
         self.addSeparator()
         self.add_action("Open main program file")
-        self.add_action("Open descriptor file")
+        self.add_action("Open definition file")
         self.exec_(position)
 
 
@@ -258,7 +258,7 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         enabled = True if self._parent.tool_template() else False
         self.add_action("Edit Tool template", self._parent.edit_tool_template, enabled=enabled)
         self.addSeparator()
-        self.add_action("Open descriptor file", self._parent.open_tool_template_file, enabled=enabled)
+        self.add_action("Open definition file", self._parent.open_tool_template_file, enabled=enabled)
         self.add_action("Open main program file", self._parent.open_tool_main_program_file, enabled=enabled)
 
 
