@@ -205,6 +205,51 @@ class CustomQGraphicsView(QGraphicsView):
             elif self._connection_model.data(index, Qt.DisplayRole) == "True":
                 self._ui.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
                                   .format(self.src_widget, self.dst_widget))
+            self.emit_connection_information_message()
+
+
+    def emit_connection_information_message(self):
+        """Inform user about what connections are implemented and how they work."""
+        if self.src_widget == self.dst_widget:
+            self._ui.msg_warning.emit("\t<b>Not implemented</b>. The functionality for feedback links "
+                                      "is not implemented yet.")
+        else:
+            src_item = self._project_item_model.find_item(self.src_widget, Qt.MatchExactly | Qt.MatchRecursive)
+            if not src_item:
+                logging.error("Item {0} not found".format(self.dst_widget))
+                return
+            src_item_type = src_item.data(Qt.UserRole).item_type
+            dst_item = self._project_item_model.find_item(self.dst_widget, Qt.MatchExactly | Qt.MatchRecursive)
+            if not dst_item:
+                logging.error("Item {0} not found".format(self.dst_widget))
+                return
+            dst_item_type = dst_item.data(Qt.UserRole).item_type
+            if src_item_type == 'Data Connection' and dst_item_type == 'Tool':
+                self._ui.msg.emit("\t-> Input files for <b>{0}</b>'s execution "
+                                  "will be looked up in <b>{1}</b>'s references and data directory.".\
+                                  format(self.dst_widget, self.src_widget))
+            elif src_item_type == 'Data Store' and dst_item_type == 'Tool':
+                self._ui.msg.emit("\t-> Input files for <b>{0}</b>'s execution "
+                                  "will be looked up in <b>{1}</b>'s data directory.".\
+                                  format(self.dst_widget, self.src_widget))
+            elif src_item_type == 'Tool' and dst_item_type in ['Data Connection', 'Data Store']:
+                self._ui.msg.emit("\t-> Output files from <b>{0}</b>'s execution "
+                                  "will be copied to <b>{1}</b>'s data directory.".\
+                                  format(self.src_widget, self.dst_widget))
+            elif src_item_type in ['Data Connection', 'Data Store']\
+                    and dst_item_type in ['Data Connection', 'Data Store']:
+                self._ui.msg.emit("\t-> Input files for a tool's execution "
+                                  "will be looked up in <b>{0}</b> if not found in <b>{1}</b>.".\
+                                  format(self.src_widget, self.dst_widget))
+            elif src_item_type == 'Tool' and dst_item_type == 'Tool':
+                self._ui.msg_warning.emit("\t<b>Not implemented</b>. Interaction between two "
+                                          "Tool items is not implemented yet.")
+            elif src_item_type == 'View' or dst_item_type == 'View':
+                self._ui.msg_warning.emit("\t<b>Not implemented</b>. Interaction with View items "
+                                          "is not implemented yet.")
+            else:
+                self._ui.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
+                                          "is not implemented yet :)")
 
     def dragLeaveEvent(self, event):
         """Accept event."""
