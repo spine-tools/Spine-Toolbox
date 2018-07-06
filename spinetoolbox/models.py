@@ -810,10 +810,19 @@ class ObjectParameterProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize class."""
         super().__init__(parent)
+        self._parent = parent
         self.object_class_id_filter = None
 
     def clear_filter(self):
         self.object_class_id_filter = None
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.BackgroundRole:
+            if not index.flags() & Qt.ItemIsEditable:
+                if self._parent:
+                    return self._parent.palette().button()
+        return super().data(index, role)
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
@@ -843,12 +852,21 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize class."""
         super().__init__(parent)
+        self._parent = parent
         self.object_class_id_filter = None
         self.object_id_filter = None
 
     def clear_filter(self):
         self.object_class_id_filter = None
         self.object_id_filter = None
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.BackgroundRole:
+            if not index.flags() & Qt.ItemIsEditable:
+                if self._parent:
+                    return self._parent.palette().button()
+        return super().data(index, role)
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
@@ -882,6 +900,7 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize class."""
         super().__init__(parent)
+        self._parent = parent
         self.object_class_id_filter = None
         self.relationship_class_id_filter = None
         # self.hide_column = None
@@ -890,6 +909,14 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
         self.object_class_id_filter = None
         self.relationship_class_id_filter = None
         # self.hide_column = None
+        
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.BackgroundRole:
+            if not index.flags() & Qt.ItemIsEditable:
+                if self._parent:
+                    return self._parent.palette().button()
+        return super().data(index, role)
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
@@ -935,6 +962,7 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
     def __init__(self, parent=None):
         """Initialize class."""
         super().__init__(parent)
+        self._parent = parent
         self.relationship_class_id_filter = None
         self.relationship_id_filter = None
         self.object_id_filter = None
@@ -957,6 +985,10 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
         if role == Qt.FontRole:
             if index.data(Qt.DisplayRole) == self.bold_name:
                 return self.bold_font
+        if role == Qt.BackgroundRole:
+            if not index.flags() & Qt.ItemIsEditable:
+                if self._parent:
+                    return self._parent.palette().button()
         return super().data(index, role)
 
     def filterAcceptsRow(self, source_row, source_parent):

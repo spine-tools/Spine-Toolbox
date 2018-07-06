@@ -117,7 +117,9 @@ class Ui_MainWindow(object):
         self.tableView_object_parameter_value.setSortingEnabled(True)
         self.tableView_object_parameter_value.setWordWrap(False)
         self.tableView_object_parameter_value.setObjectName("tableView_object_parameter_value")
+        self.tableView_object_parameter_value.horizontalHeader().setHighlightSections(False)
         self.tableView_object_parameter_value.verticalHeader().setVisible(False)
+        self.tableView_object_parameter_value.verticalHeader().setHighlightSections(False)
         self.verticalLayout_2.addWidget(self.tableView_object_parameter_value)
         self.verticalLayout_4.addLayout(self.verticalLayout_2)
         self.tabWidget_object.addTab(self.tab_object_parameter_value, "")
@@ -152,7 +154,9 @@ class Ui_MainWindow(object):
         self.tableView_object_parameter.setSortingEnabled(True)
         self.tableView_object_parameter.setWordWrap(False)
         self.tableView_object_parameter.setObjectName("tableView_object_parameter")
+        self.tableView_object_parameter.horizontalHeader().setHighlightSections(False)
         self.tableView_object_parameter.verticalHeader().setVisible(False)
+        self.tableView_object_parameter.verticalHeader().setHighlightSections(False)
         self.verticalLayout_5.addWidget(self.tableView_object_parameter)
         self.verticalLayout_6.addLayout(self.verticalLayout_5)
         self.tabWidget_object.addTab(self.tab_object_parameter, "")
@@ -195,7 +199,9 @@ class Ui_MainWindow(object):
         self.tableView_relationship_parameter_value.setSortingEnabled(True)
         self.tableView_relationship_parameter_value.setWordWrap(False)
         self.tableView_relationship_parameter_value.setObjectName("tableView_relationship_parameter_value")
+        self.tableView_relationship_parameter_value.horizontalHeader().setHighlightSections(False)
         self.tableView_relationship_parameter_value.verticalHeader().setVisible(False)
+        self.tableView_relationship_parameter_value.verticalHeader().setHighlightSections(False)
         self.verticalLayout.addWidget(self.tableView_relationship_parameter_value)
         self.verticalLayout_8.addLayout(self.verticalLayout)
         self.tabWidget_relationship.addTab(self.tab_relationship_parameter_value, "")
@@ -229,7 +235,9 @@ class Ui_MainWindow(object):
         self.tableView_relationship_parameter.setSortingEnabled(True)
         self.tableView_relationship_parameter.setWordWrap(False)
         self.tableView_relationship_parameter.setObjectName("tableView_relationship_parameter")
+        self.tableView_relationship_parameter.horizontalHeader().setHighlightSections(False)
         self.tableView_relationship_parameter.verticalHeader().setVisible(False)
+        self.tableView_relationship_parameter.verticalHeader().setHighlightSections(False)
         self.verticalLayout_7.addWidget(self.tableView_relationship_parameter)
         self.verticalLayout_9.addLayout(self.verticalLayout_7)
         self.tabWidget_relationship.addTab(self.tab_relationship_parameter, "")
@@ -315,5 +323,5 @@ class Ui_MainWindow(object):
         self.actionAdd_parameter_value.setText(QtWidgets.QApplication.translate("MainWindow", "Add parameter value", None, -1))
         self.actionAdd_parameter_value.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+P", None, -1))
 
-from widgets.custom_qtableview import ParameterValueTableView, ParameterTableView
+from widgets.custom_qtableview import ParameterTableView, ParameterValueTableView
 from widgets.custom_qtreeview import ObjectTreeView

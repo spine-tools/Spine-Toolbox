@@ -196,7 +196,7 @@ class ParameterValueContextMenu(CustomContextMenu):
             return
         #self.add_action("New parameter value")
         self.add_action("Remove row")
-        self.add_action("Edit field")
+        # self.add_action("Edit field")
         self.exec_(position)
 
 
@@ -211,7 +211,7 @@ class ParameterContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Remove row")
-        self.add_action("Edit field")
+        # self.add_action("Edit field")
         self.exec_(position)
 
 

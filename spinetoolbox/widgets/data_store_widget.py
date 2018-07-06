@@ -1747,8 +1747,8 @@ class DataStoreForm(QMainWindow):
         option = self.object_parameter_value_context_menu.get_action()
         if option == "Remove row":
             self.remove_parameter_value(index)
-        elif option == "Edit field":
-            self.ui.tableView_object_parameter_value.edit(index)
+        # elif option == "Edit field":
+        #     self.ui.tableView_object_parameter_value.edit(index)
         # self.ui.tableView_object_parameter_value.selectionModel().clearSelection()
         self.object_parameter_value_context_menu.deleteLater()
         self.object_parameter_value_context_menu = None
@@ -1768,8 +1768,8 @@ class DataStoreForm(QMainWindow):
         option = self.relationship_parameter_value_context_menu.get_action()
         if option == "Remove row":
             self.remove_parameter_value(index)
-        elif option == "Edit field":
-            self.ui.tableView_relationship_parameter_value.edit(index)
+        # elif option == "Edit field":
+        #     self.ui.tableView_relationship_parameter_value.edit(index)
         # self.ui.tableView_relationship_parameter_value.selectionModel().clearSelection()
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
@@ -1867,8 +1867,8 @@ class DataStoreForm(QMainWindow):
         option = self.object_parameter_context_menu.get_action()
         if option == "Remove row":
             self.remove_parameter(index)
-        elif option == "Edit field":
-            self.ui.tableView_object_parameter.edit(index)
+        # elif option == "Edit field":
+        #     self.ui.tableView_object_parameter.edit(index)
         # self.ui.tableView_object_parameter.selectionModel().clearSelection()
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
@@ -1888,8 +1888,8 @@ class DataStoreForm(QMainWindow):
         option = self.relationship_parameter_context_menu.get_action()
         if option == "Remove row":
             self.remove_parameter(index)
-        elif option == "Edit field":
-            self.ui.tableView_relationship_parameter.edit(index)
+        # elif option == "Edit field":
+        #     self.ui.tableView_relationship_parameter.edit(index)
         # self.ui.tableView_relationship_parameter.selectionModel().clearSelection()
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
