@@ -80,6 +80,7 @@ class DataStoreForm(QMainWindow):
         self.object_class = None
         self.Commit = None
         self.session = None
+        self.transactions = None
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         # Attempt to create sql session
@@ -168,11 +169,16 @@ class DataStoreForm(QMainWindow):
         self.commit.comment = comment
         self.commit.date = datetime.now(timezone.utc)
         try:
-            self.session.commit()
+            for i in reversed(range(len(self.transactions))):
+                self.session.commit()
+                del self.transactions[i]
+            self.session.commit()  # also commit main transaction
         except DBAPIError as e:
             msg = "Error while trying to commit changes: {}".format(e.orig.args)
             self.ui.statusbar.showMessage(msg, 5000)
-            self.session.rollback()
+            self.commit.comment = None
+            self.commit.date = None
+            # self.session.rollback()
             return
         msg = "All changes commited successfully."
         self.ui.statusbar.showMessage(msg, 5000)
@@ -183,7 +189,10 @@ class DataStoreForm(QMainWindow):
         if not self.session:
             return
         try:
-            self.session.rollback()
+            for i in reversed(range(len(self.transactions))):
+                self.session.rollback()
+                del self.transactions[i]
+            self.session.rollback()  # also rollback main transaction
         except Exception:
             msg = "Error while trying to revert changes."
             self.ui.statusbar.showMessage(msg, 3000)
@@ -214,6 +223,7 @@ class DataStoreForm(QMainWindow):
             return False
         self.session = Session(self.engine)
         self.new_commit()
+        self.transactions = list()
         return True
 
     def new_commit(self):
@@ -889,6 +899,7 @@ class DataStoreForm(QMainWindow):
         Args:
             object_class (self.Object_class)
         """
+        self.transactions.append(self.session.begin_nested())
         self.session.add(object_class)
         try:
             self.session.flush()
@@ -967,6 +978,7 @@ class DataStoreForm(QMainWindow):
         Args:
             object_ (self.Object)
         """
+        self.transactions.append(self.session.begin_nested())
         self.session.add(object_)
         try:
             self.session.flush() # to get object id
@@ -1075,6 +1087,7 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship_class (self.RelationshipClass): the relationship class to add
         """
+        self.transactions.append(self.session.begin_nested())
         self.session.add(relationship_class)
         try:
             self.session.flush() # to get the relationship class id
@@ -1222,6 +1235,7 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship (self.Relationship): the relationship to add
         """
+        self.transactions.append(self.session.begin_nested())
         self.session.add(relationship)
         try:
             self.session.flush() # to get the relationship class id
@@ -1353,6 +1367,7 @@ class DataStoreForm(QMainWindow):
         instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
         if not instance:
             return
+        self.transactions.append(self.session.begin_nested())
         instance.name = new_name
         instance.commit_id = self.commit.id
         try:
@@ -1370,7 +1385,7 @@ class DataStoreForm(QMainWindow):
             if (ent_type in entity_type or entity_type in ent_type)\
                     and ent['id'] == entity['id']:
                 ent['name'] = new_name
-                # TODO: we need to rename also the name in the DATA!!!
+                it.setData(ent, Qt.UserRole+1)
                 it.setText(new_name)
         # refresh parameter models
         self.init_parameter_value_models()
@@ -1402,6 +1417,7 @@ class DataStoreForm(QMainWindow):
             msg = "Could not find {} named {}. This should not happen.".format(entity_type, entity['name'])
             self.ui.statusbar.showMessage(msg, 5000)
             return
+        self.transactions.append(self.session.begin_nested())
         self.session.delete(instance)
         try:
             self.session.flush()
@@ -1495,6 +1511,7 @@ class DataStoreForm(QMainWindow):
         Args:
             parameter (self.Parameter): the parameter to add
         """
+        self.transactions.append(self.session.begin_nested())
         self.session.add(parameter)
         try:
             self.session.flush() # to get the relationship class id
@@ -1670,6 +1687,7 @@ class DataStoreForm(QMainWindow):
         Args:
             parameter_value (self.ParameterValue): the parameter value to add
         """
+        self.transactions.append(self.session.begin_nested())
         self.session.add(parameter_value)
         try:
             self.session.flush() # to get the relationship class id
@@ -1807,6 +1825,7 @@ class DataStoreForm(QMainWindow):
         if value == new_value:
             self.ui.statusbar.showMessage("Parameter value not changed", 3000)
             return
+        self.transactions.append(self.session.begin_nested())
         setattr(parameter_value, field_name, new_value)
         parameter_value.commit_id = self.commit.id
         try:
@@ -1841,6 +1860,7 @@ class DataStoreForm(QMainWindow):
         if not parameter_value:
             logging.debug("entry not found in parameter_value table")
             return
+        self.transactions.append(self.session.begin_nested())
         self.session.delete(parameter_value)
         try:
             self.session.flush()
@@ -1927,6 +1947,7 @@ class DataStoreForm(QMainWindow):
         if value == new_value:
             logging.debug("parameter not changed")
             return
+        self.transactions.append(self.session.begin_nested())
         setattr(parameter, field_name, new_value)
         parameter.commit_id = self.commit.id
         try:
@@ -1956,6 +1977,7 @@ class DataStoreForm(QMainWindow):
         if not parameter:
             logging.debug("entry not found in parameter table")
             return
+        self.transactions.append(self.session.begin_nested())
         self.session.delete(parameter)
         try:
             self.session.flush()
