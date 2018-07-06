@@ -832,7 +832,7 @@ class ObjectParameterProxy(QSortFilterProxyModel):
     def flags(self, index):
         """Returns the item flags for the given index."""
         column_name = self.sourceModel().header[index.column()]
-        if column_name is 'object_class_name':
+        if column_name == 'object_class_name':
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
@@ -871,7 +871,7 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
         """Returns the item flags for the given index."""
         source_index = self.mapToSource(index)
         column_name = self.sourceModel().header[source_index.column()]
-        if column_name in ('object_class_name', 'object_name'):
+        if column_name in ('object_class_name', 'object_name', 'parameter_name'):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
@@ -908,6 +908,13 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
             relationship_class_id = source_data("relationship_class_id")
             return self.relationship_class_id_filter == relationship_class_id
         return False
+
+    def flags(self, index):
+        """Returns the item flags for the given index."""
+        column_name = self.sourceModel().header[index.column()]
+        if column_name == 'relationship_class_name':
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
     # def filterAcceptsColumn(self, source_column, source_parent):
     #     """Returns true if the item in the column indicated by the given source_column
@@ -1002,7 +1009,8 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
                     'relationship_class_name',
                     'parent_object_name',
                     'parent_relationship_name',
-                    'child_object_name'
+                    'child_object_name',
+                    'parameter_name'
                 ]:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable

@@ -130,6 +130,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_object.triggered.connect(self.add_object)
         self.ui.actionAdd_relationship_class.triggered.connect(self.add_relationship_class)
         self.ui.actionAdd_relationship.triggered.connect(self.add_relationship)
+        self.ui.actionAdd_parameter.triggered.connect(self.add_parameter)
+        self.ui.actionAdd_parameter_value.triggered.connect(self.add_parameter_value)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
@@ -767,27 +769,25 @@ class DataStoreForm(QMainWindow):
         elif option.startswith("Remove"):
             self.remove_item(index)
         elif option == "Add parameter":
-            self.add_parameter(index)
+            self.call_add_parameter(index)
         elif option == "Add parameter value":
-            self.add_parameter_value(index)
+            self.call_add_parameter_value(index)
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
 
     def call_add_object(self, index):
-        object_class_item = self.object_tree_model.itemFromIndex(index)
-        class_id = object_class_item.data(Qt.UserRole+1)['id']
+        class_id = index.data(Qt.UserRole+1)['id']
         self.add_object(class_id=class_id)
 
     def call_add_relationship_class(self, index):
-        parent_class_item = self.object_tree_model.itemFromIndex(index)
-        parent_type = parent_class_item.data(Qt.UserRole)
+        parent_type = index.data(Qt.UserRole)
         if parent_type == "object_class":
-            parent_object_class_id = parent_class_item.data(Qt.UserRole+1)['id']
+            parent_object_class_id = index.data(Qt.UserRole+1)['id']
             self.add_relationship_class(parent_object_class_id=parent_object_class_id)
         elif parent_type.endswith("relationship_class"):
-            parent_relationship_class_id = parent_class_item.data(Qt.UserRole+1)['id']
+            parent_relationship_class_id = index.data(Qt.UserRole+1)['id']
             self.add_relationship_class(parent_relationship_class_id=parent_relationship_class_id)
 
     def call_add_relationship(self, index):
@@ -824,6 +824,22 @@ class DataStoreForm(QMainWindow):
             self.ui.statusbar.showMessage(msg, 3000)
             return
 
+    def call_add_parameter(self, tree_index):
+        class_type = tree_index.data(Qt.UserRole)
+        class_id = tree_index.data(Qt.UserRole+1)['id']
+        if class_type == 'object_class':
+            self.add_parameter(object_class_id=class_id)
+        elif class_type.endswith('relationship_class'):
+            self.add_parameter(relationship_class_id=class_id)
+
+    def call_add_parameter_value(self, tree_index):
+        item_type = tree_index.data(Qt.UserRole)
+        item_data = tree_index.data(Qt.UserRole+1)
+        if item_type == 'object':
+            self.add_parameter_value(object_id=item_data['id'])
+        elif item_type == 'related_object':
+            self.add_parameter_value(relationship_id=item_data['relationship_id'])
+
     @Slot(name="add_object_class")
     def add_object_class(self, **kwargs):
         """Insert new object class."""
@@ -843,7 +859,7 @@ class DataStoreForm(QMainWindow):
         if 'display_order' not in kwargs:
             object_class_query = self.session.query(self.ObjectClass).\
                 order_by(self.ObjectClass.display_order)
-            insert_position_list = ['Insert first']
+            insert_position_list = ['Insert at the top']
             insert_position_list.extend(['Insert after ' + item.name for item in object_class_query])
             question.update({"insert_position_list": insert_position_list})
         dialog = CustomQDialog(self, "Add object class", **question)
@@ -893,7 +909,7 @@ class DataStoreForm(QMainWindow):
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class.__dict__, Qt.UserRole+1)
         root_item = self.object_tree_model.invisibleRootItem().child(0)
-        row = 0
+        row = root_item.rowCount()
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
@@ -929,16 +945,18 @@ class DataStoreForm(QMainWindow):
             question.update({'name': "Type name here..."})
         if 'description' not in kwargs:
             question.update({'description': "Type description here..."})
-        dialog = CustomQDialog(self, **question)
+        dialog = CustomQDialog(self, "Add object", **question)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
-            return
-        if 'class_id' not in kwargs:
+            return None
+        if 'object_class_name_list' in dialog.answer:
             ind = dialog.answer['object_class_name_list']['index'] - 1
+            if ind < 0:
+                return None
             kwargs.update({'class_id': object_class_query[ind].id})
-        if 'name' not in kwargs:
+        if 'name' in dialog.answer:
             kwargs.update({'name': dialog.answer["name"]})
-        if 'description' not in kwargs:
+        if 'description' in dialog.answer:
             kwargs.update({'description': dialog.answer["description"]})
         return self.Object(commit_id=self.commit.id, **kwargs)
 
@@ -1031,20 +1049,22 @@ class DataStoreForm(QMainWindow):
         dialog = CustomQDialog(self, "Add relationship class", **question)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
-            return
+            return None
         if 'name' in dialog.answer:
             kwargs.update({'name': dialog.answer['name']})
         if 'parent_class_name_list' in dialog.answer:
             ind = dialog.answer['parent_class_name_list']['index'] - 1
+            if ind < 0:
+                return None
             if ind < object_class_query.count():
                 kwargs.update({'parent_object_class_id': object_class_query[ind].id})
-                # relationship_class_type = 'relationship_class'
             else:
                 ind = ind - object_class_query.count()
                 kwargs.update({'parent_relationship_class_id': relationship_class_query[ind].id})
-                # relationship_class_type = 'meta_relationship_class'
         if 'child_object_class_name_list' in dialog.answer:
             ind = dialog.answer['child_object_class_name_list']['index'] - 1
+            if ind < 0:
+                return None
             kwargs.update({"child_object_class_id": object_class_query[ind].id})
         return self.RelationshipClass(commit_id=self.commit.id, **kwargs)
 
@@ -1133,7 +1153,7 @@ class DataStoreForm(QMainWindow):
                 return
             ind = dialog.answer['relationship_class_name_list']['index'] - 1
             kwargs.update({'class_id': relationship_class_query[ind].id})
-        # Query relationship_class table for later
+        # Get relationship class by id
         relationship_class = self.session.query(
             self.RelationshipClass.parent_relationship_class_id,
             self.RelationshipClass.parent_object_class_id,
@@ -1175,17 +1195,23 @@ class DataStoreForm(QMainWindow):
         dialog = CustomQDialog(self, "Add relationship", **question)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
-            return
+            return None
         if 'name' in dialog.answer:
             kwargs.update({'name': dialog.answer['name']})
         if 'parent_relationship_name_list' in dialog.answer:
             ind = dialog.answer['parent_relationship_name_list']['index'] - 1
+            if ind < 0:
+                return None
             kwargs.update({"parent_relationship_id": parent_relationship_query[ind].id})
         if 'parent_object_name_list' in dialog.answer:
             ind = dialog.answer['parent_object_name_list']['index'] - 1
+            if ind < 0:
+                return None
             kwargs.update({"parent_object_id": parent_object_query[ind].id})
         if 'child_object_name_list' in dialog.answer:
             ind = dialog.answer['child_object_name_list']['index'] - 1
+            if ind < 0:
+                return None
             kwargs.update({"child_object_id": child_object_query[ind].id})
         return self.Relationship(commit_id=self.commit.id, **kwargs)
 
@@ -1344,6 +1370,7 @@ class DataStoreForm(QMainWindow):
             if (ent_type in entity_type or entity_type in ent_type)\
                     and ent['id'] == entity['id']:
                 ent['name'] = new_name
+                # TODO: we need to rename also the name in the DATA!!!
                 it.setText(new_name)
         # refresh parameter models
         self.init_parameter_value_models()
@@ -1384,7 +1411,7 @@ class DataStoreForm(QMainWindow):
             self.session.rollback()
             return
         # manually remove all items in model
-        def visit_and_remove(it):
+        def visit_and_remove(item):
             """Visit item, remove it if necessary and visit children.
 
             Returns:
@@ -1393,17 +1420,17 @@ class DataStoreForm(QMainWindow):
             # visit children
             i = 0
             while True:
-                if i == it.rowCount(): # all children have been visited
+                if i == item.rowCount(): # all children have been visited
                     break
-                if not visit_and_remove(it.child(i)): # visit next children
+                if not visit_and_remove(item.child(i)): # visit next children
                     i += 1 # increment counter only if children wasn't removed
             # visit item
-            ent_type = it.data(Qt.UserRole)
-            ent = it.data(Qt.UserRole+1)
+            ent_type = item.data(Qt.UserRole)
+            ent = item.data(Qt.UserRole+1)
             if not ent_type: # root item
                 return False
             if entity_type in ent_type and ent['id'] == entity['id']:
-                ind = index.model().indexFromItem(it)
+                ind = index.model().indexFromItem(item)
                 index.model().removeRows(ind.row(), 1, ind.parent())
                 return True
             # Remove also all relationship classes having the removed object class as child
@@ -1421,6 +1448,289 @@ class DataStoreForm(QMainWindow):
         # refresh parameter models
         self.init_parameter_value_models()
         self.init_parameter_models()
+
+    @Slot(name="add_parameter")
+    def add_parameter(self, **kwargs):
+        """Insert new parameter."""
+        parameter = self.get_new_parameter(**kwargs)
+        if not parameter:
+            return
+        if self.add_parameter_to_db(parameter):
+            self.add_parameter_to_model(parameter)
+
+    def get_new_parameter(self, **kwargs):
+        """Query the user's preferences for creating a new parameter."""
+        question = {}
+        if 'name' not in kwargs:
+            question.update({"name": "Type name here..."})
+        if 'object_class_id' not in kwargs\
+                and 'relationship_class_id' not in kwargs:
+            class_name_list = ['Select class...']
+            object_class_query = self.session.query(self.ObjectClass).\
+                    order_by(self.ObjectClass.display_order)
+            relationship_class_query = self.session.query(self.RelationshipClass)
+            class_name_list.extend([item.name for item in object_class_query])
+            class_name_list.extend([item.name for item in relationship_class_query])
+            question.update({"class_name_list": class_name_list})
+        dialog = CustomQDialog(self, "Add parameter", **question)
+        answer = dialog.exec_()
+        if answer != QDialog.Accepted:
+            return
+        if 'name' in dialog.answer:
+            kwargs.update({'name': dialog.answer['name']})
+        if 'class_name_list' in dialog.answer:
+            ind = dialog.answer['class_name_list']['index'] - 1
+            if ind < object_class_query.count():
+                kwargs.update({'object_class_id': object_class_query[ind].id})
+                # relationship_class_type = 'relationship_class'
+            else:
+                ind = ind - object_class_query.count()
+                kwargs.update({'relationship_class_id': relationship_class_query[ind].id})
+        return self.Parameter(commit_id=self.commit.id, **kwargs)
+
+    def add_parameter_to_db(self, parameter):
+        """Add parameter to database. Return boolean value depending on the
+        result of the operation.
+
+        Args:
+            parameter (self.Parameter): the parameter to add
+        """
+        self.session.add(parameter)
+        try:
+            self.session.flush() # to get the relationship class id
+            return True
+        except DBAPIError as e:
+            msg = "Could not insert new parameter: {}".format(e.orig.args)
+            self.ui.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
+            return False
+
+    def add_parameter_to_model(self, parameter):
+        """Add parameter item to the object or relationship parameter model.
+
+        Args:
+            parameter (self.Parameter)
+        """
+        self.init_parameter_models()
+        if parameter.object_class_id:
+            # self.object_parameter_proxy.object_class_id_filter = parameter.object_class_id
+            # self.object_parameter_proxy.setFilterRegExp("")
+            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+                item_type = item.data(Qt.UserRole)
+                if not item_type: # root
+                    continue
+                item_id = item.data(Qt.UserRole+1)['id']
+                if item_type == 'object_class' and item_id == parameter.object_class_id:
+                    object_class_index = self.object_tree_model.indexFromItem(item)
+                    self.ui.treeView_object.setCurrentIndex(object_class_index)
+                    self.ui.treeView_object.scrollTo(object_class_index)
+                    break
+            self.ui.tableView_object_parameter.resizeColumnsToContents()
+            # find proxy index
+            source_row = self.object_parameter_model.rowCount()-1
+            source_column = self.object_parameter_model.header.index("parameter_name")
+            source_index = self.object_parameter_model.index(source_row, source_column)
+            proxy_index = self.object_parameter_proxy.mapFromSource(source_index)
+            # scroll
+            self.ui.tabWidget_object.setCurrentIndex(1)
+            self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
+            self.ui.tableView_object_parameter.scrollTo(proxy_index)
+        elif parameter.relationship_class_id:
+            # self.relationship_parameter_proxy.relationship_class_id_filter = parameter.relationship_class_id
+            # self.relationship_parameter_proxy.setFilterRegExp("")
+            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+                item_type = item.data(Qt.UserRole)
+                if not item_type: # root
+                    continue
+                item_id = item.data(Qt.UserRole+1)['id']
+                if item_type.endswith('relationship_class') and item_id == parameter.relationship_class_id:
+                    relationship_class_index = self.object_tree_model.indexFromItem(item)
+                    self.ui.treeView_object.setCurrentIndex(relationship_class_index)
+                    self.ui.treeView_object.scrollTo(relationship_class_index)
+                    break
+            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+            # find proxy index
+            source_row = self.relationship_parameter_model.rowCount()-1
+            source_column = self.relationship_parameter_model.header.index("parameter_name")
+            source_index = self.relationship_parameter_model.index(source_row, source_column)
+            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
+            # scroll
+            self.ui.tabWidget_relationship.setCurrentIndex(1)
+            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
+            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
+
+    def object_parameter_names(self, object_id):
+        """Return unassigned parameter names for object
+
+        Args:
+            object_id (int): object id
+        """
+        object_class_id = self.session.query(self.Object.class_id).\
+            filter_by(id=object_id).one().class_id
+        parameter_name_query = self.session.query(self.Parameter.name).\
+            filter_by(object_class_id=object_class_id).\
+            filter( # filter out parameters already assigned
+                ~self.Parameter.id.in_(
+                    self.session.query(self.ParameterValue.parameter_id).\
+                    filter_by(object_id=object_id)
+                )
+            )
+        return [row.name for row in parameter_name_query]
+
+    def relationship_parameter_names(self, relationship_id):
+        """Return unassigned parameter names for relationship
+
+        Args:
+            relationship_id (int): relationship id
+        """
+        relationship_class_id = self.session.query(self.Relationship.class_id).\
+            filter_by(id=relationship_id).one().class_id
+        parameter_name_query = self.session.query(self.Parameter.name).\
+            filter_by(relationship_class_id=relationship_class_id).\
+            filter( # filter out parameters already assigned
+                ~self.Parameter.id.in_(
+                    self.session.query(self.ParameterValue.parameter_id).\
+                    filter_by(relationship_id=relationship_id)
+                )
+            )
+        return [row.name for row in parameter_name_query]
+
+    @Slot(name="add_parameter_value")
+    def add_parameter_value(self, **kwargs):
+        """Insert new parameter."""
+        parameter_value = self.get_new_parameter_value(**kwargs)
+        if not parameter_value:
+            return
+        if self.add_parameter_value_to_db(parameter_value):
+            self.add_parameter_value_to_model(parameter_value)
+
+    def get_new_parameter_value(self, **kwargs):
+        """Query the user's preferences for creating a new parameter value."""
+        # We need to ask for the object or relationship first
+        question = {}
+        if 'object_id' not in kwargs and 'relationship_id' not in kwargs:
+            object_or_relationship_name_list = ['Select object or relationship...']
+            object_query = self.session.query(self.Object)
+            relationship_query = self.session.query(self.Relationship)
+            object_or_relationship_name_list.extend([item.name for item in object_query])
+            object_or_relationship_name_list.extend([item.name for item in relationship_query])
+            question.update({"object_or_relationship_name_list": object_or_relationship_name_list})
+            dialog = CustomQDialog(self, "Add parameter value", **question)
+            answer = dialog.exec_()
+            if answer != QDialog.Accepted:
+                return
+            ind = dialog.answer['object_or_relationship_name_list']['index'] - 1
+            if ind < object_query.count():
+                kwargs.update({'object_id': object_query[ind].id})
+            else:
+                ind = ind - object_query.count()
+                kwargs.update({'relationship_id': relationship_query[ind].id})
+        # Prepare second question
+        question = {}
+        if 'parameter_id' not in kwargs:
+            parameter_name_list = ['Select parameter...']
+            if 'object_id' in kwargs:
+                object_parameter_names = self.object_parameter_names(kwargs['object_id'])
+                if not object_parameter_names:
+                    self.ui.statusbar.showMessage("All parameters for this object are already created", 3000)
+                    return
+                parameter_name_list.extend(object_parameter_names)
+            elif 'relationship_id' in kwargs:
+                relationship_parameter_names = self.relationship_parameter_names(kwargs['relationship_id'])
+                if not relationship_parameter_names:
+                    self.ui.statusbar.showMessage("All parameters for this relationship are already created", 3000)
+                    return
+                parameter_name_list.extend(relationship_parameter_names)
+            question.update({"parameter_name_list": parameter_name_list})
+        if 'value' not in kwargs:
+            question.update({"value": "Enter value here..."})
+        if 'json' not in kwargs:
+            question.update({"json": "Enter json here..."})
+        dialog = CustomQDialog(self, "Add parameter value", **question)
+        answer = dialog.exec_()
+        if answer != QDialog.Accepted:
+            return None
+        if 'parameter_name_list' in dialog.answer:
+            if dialog.answer['parameter_name_list']['index'] == 0:
+                return None
+            parameter_name = dialog.answer['parameter_name_list']['text']
+            parameter_id = self.session.query(self.Parameter).\
+                filter_by(name=parameter_name).one().id
+            kwargs.update({"parameter_id": parameter_id})
+        if 'value' in dialog.answer:
+            kwargs.update({'value': dialog.answer['value']})
+        if 'json' in dialog.answer:
+            kwargs.update({'json': dialog.answer['json']})
+        return self.ParameterValue(commit_id=self.commit.id, **kwargs)
+
+    def add_parameter_value_to_db(self, parameter_value):
+        """Add parameter value to database. Return boolean value depending on the
+        result of the operation.
+
+        Args:
+            parameter_value (self.ParameterValue): the parameter value to add
+        """
+        self.session.add(parameter_value)
+        try:
+            self.session.flush() # to get the relationship class id
+            return True
+        except DBAPIError as e:
+            msg = "Could not insert new parameter value: {}".format(e.orig.args)
+            self.ui.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
+            return False
+
+    def add_parameter_value_to_model(self, parameter_value):
+        """Add parameter value item to the object or relationship parameter value model.
+
+        Args:
+            parameter_value (self.ParameterValue)
+        """
+        self.init_parameter_value_models()
+        if parameter_value.object_id:
+            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+                item_type = item.data(Qt.UserRole)
+                if not item_type: # root
+                    continue
+                item_id = item.data(Qt.UserRole+1)['id']
+                if item_type == 'object' and item_id == parameter_value.object_id:
+                    object_index = self.object_tree_model.indexFromItem(item)
+                    self.ui.treeView_object.setCurrentIndex(object_index)
+                    self.ui.treeView_object.scrollTo(object_index)
+                    break
+            self.ui.tableView_object_parameter_value.resizeColumnsToContents()
+            # find proxy index
+            source_row = self.object_parameter_value_model.rowCount()-1
+            source_column = self.object_parameter_value_model.header.index("parameter_name")
+            source_index = self.object_parameter_value_model.index(source_row, source_column)
+            proxy_index = self.object_parameter_value_proxy.mapFromSource(source_index)
+            # scroll
+            self.ui.tabWidget_object.setCurrentIndex(0)
+            self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
+            self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
+        elif parameter.relationship_class_id:
+            # self.relationship_parameter_proxy.relationship_class_id_filter = parameter.relationship_class_id
+            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
+                item_type = item.data(Qt.UserRole)
+                if not item_type: # root
+                    continue
+                item_id = item.data(Qt.UserRole+1)['id']
+                if item_type.endswith('relationship_class') and item_id == parameter.relationship_class_id:
+                    relationship_class_index = self.object_tree_model.indexFromItem(item)
+                    self.ui.treeView_object.setCurrentIndex(relationship_class_index)
+                    self.ui.treeView_object.scrollTo(relationship_class_index)
+                    break
+            self.relationship_parameter_proxy.setFilterRegExp("")
+            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+            # find proxy index
+            source_row = self.relationship_parameter_model.rowCount()-1
+            source_column = self.relationship_parameter_model.header.index("parameter_name")
+            source_index = self.relationship_parameter_model.index(source_row, source_column)
+            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
+            # scroll
+            self.ui.tabWidget_relationship.setCurrentIndex(0)
+            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
+            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
@@ -1463,241 +1773,6 @@ class DataStoreForm(QMainWindow):
         # self.ui.tableView_relationship_parameter_value.selectionModel().clearSelection()
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
-
-    def add_parameter_value(self, tree_index):
-        """Prepare to insert new parameter value. Insert known
-        fields, and open editor to request for parameter name.
-        """
-        item_type = tree_index.data(Qt.UserRole)
-        if item_type == 'object':
-            self.add_object_parameter_value(tree_index)
-        elif item_type == 'related_object':
-            self.add_relationship_parameter_value(tree_index)
-
-    def object_class_parameter_names(self, object_class_id, object_id):
-        """Return unassigned parameter names for object class
-
-        Args:
-            object_class_id (int): object class id
-            object_id (int): object id
-        """
-        parameter_name_query = self.session.query(self.Parameter.name).\
-            filter_by(object_class_id=object_class_id).\
-            filter( # filter out parameters already assigned
-                ~self.Parameter.id.in_(
-                    self.session.query(self.ParameterValue.parameter_id).\
-                    filter_by(object_id=object_id)
-                )
-            )
-        return [row.name for row in parameter_name_query]
-
-    def add_object_parameter_value(self, tree_index):
-        """Prepare to insert new object parameter value. Insert object and object class
-        fields, and open editor to request for parameter name.
-        """
-        source_model = self.object_parameter_value_model
-        # find out parameter names
-        object_ = tree_index.data(Qt.UserRole+1)
-        object_class = tree_index.parent().data(Qt.UserRole+1)
-        object_class_id = object_['class_id']
-        object_id = object_['id']
-        parameter_names = self.object_class_parameter_names(object_class_id, object_id)
-        if not parameter_names:
-            self.ui.statusbar.showMessage("All parameters for this object are already created", 3000)
-            return
-        # insert new row
-        last_row = source_model.rowCount()
-        if not source_model.insertRows(last_row, 1):
-            return
-        source_row = source_model.rowCount()-1
-        # add known fields
-        def add_field(name, value):
-            source_column = source_model.header.index(name)
-            source_index = source_model.index(source_row, source_column)
-            source_model.setData(source_index, value)
-        add_field("object_class_id", object_class_id)
-        add_field("object_class_name", object_class['name'])
-        add_field("object_id", object_id)
-        add_field("object_name", object_['name'])
-        # make new row visible (NOTE: this also resizes columns)
-        self.filter_parameter_value_models(tree_index, tree_index)
-        # store parameter names in proxy index's Qt.UserRole
-        source_column = source_model.header.index("parameter_name")
-        source_index = source_model.index(source_row, source_column)
-        proxy_index = self.object_parameter_value_proxy.mapFromSource(source_index)
-        self.object_parameter_value_proxy.setData(proxy_index, parameter_names, Qt.UserRole)
-        # edit
-        # create combobox delegate and connect signals
-        combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.add_object_parameter_value_)
-        self.ui.tableView_object_parameter_value.\
-            setItemDelegateForColumn(proxy_index.column(), combobox_delegate)
-        self.ui.tabWidget_object.setCurrentIndex(0)
-        self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
-        self.ui.tableView_object_parameter_value.adding_new_parameter_value = True
-        self.ui.tableView_object_parameter_value.edit(proxy_index)
-
-    @Slot("CustomComboEditor", "QAbstractItemDelegate.EndEditHint", name="add_object_parameter_value_")
-    def add_object_parameter_value_(self, combo, hint):
-        """Insert new parameter value.
-        If successful, also add parameter value to model.
-        """
-        # logging.debug("new parameter value")
-        parameter_name = combo.currentText()
-        proxy_index = self.object_parameter_value_proxy.index(combo.row, combo.column)
-        source_index = self.object_parameter_value_proxy.mapToSource(proxy_index)
-        if not parameter_name: # user didn't select a parameter name from combobox
-            self.object_parameter_value_model.removeRows(source_index.row(), 1)
-            return
-        # get object_id
-        column = self.object_parameter_value_model.header.index("object_id")
-        object_id = source_index.sibling(source_index.row(), column).data()
-        # get parameter_id
-        # get object_class_id first
-        column = self.object_parameter_value_model.header.index("object_class_id")
-        object_class_id = source_index.sibling(source_index.row(), column).data()
-        parameter = self.session.query(self.Parameter.id).\
-            filter_by(name=parameter_name).\
-            filter_by(object_class_id=object_class_id).one_or_none()
-        if not parameter:
-            return
-        parameter_value = self.ParameterValue(
-            object_id=object_id,
-            parameter_id=parameter.id,
-            commit_id=self.commit.id
-        )
-        self.session.add(parameter_value)
-        try:
-            self.session.flush()
-        except DBAPIError as e:
-            msg = "Could not insert parameter value: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
-            self.session.rollback()
-            return
-        # manually add item in model
-        self.init_parameter_value_models() # this is so that defaults are filled automatically
-        # edit next field in row
-        next_index = self.object_parameter_value_proxy.index(combo.row, combo.column+1)
-        self.ui.tableView_object_parameter_value.edit(next_index)
-
-
-    def relationship_class_parameter_names(self, relationship_class_id, relationship_id):
-        """Return unassigned parameter names for object class
-
-        Args:
-            relationship_class_id (int): relationship class id
-            relationship_id (int): relationship id
-        """
-        parameter_name_query = self.session.query(self.Parameter.name).\
-            filter_by(relationship_class_id=relationship_class_id).\
-            filter( # filter out parameters already assigned
-                ~self.Parameter.id.in_(
-                    self.session.query(self.ParameterValue.parameter_id).\
-                    filter_by(relationship_id=relationship_id)
-                )
-            )
-        return [row.name for row in parameter_name_query]
-
-    def add_relationship_parameter_value(self, tree_index):
-        """Prepare to insert new relationship parameter value. Insert known
-        fields, and open editor to request for parameter name.
-        """
-        source_model = self.relationship_parameter_value_model
-        # find out parameter names
-        child_object = tree_index.data(Qt.UserRole+1)
-        relationship_class = tree_index.parent().data(Qt.UserRole+1)
-        parent_object = tree_index.parent().parent().data(Qt.UserRole+1)
-        parent_object_type = tree_index.parent().parent().data(Qt.UserRole)
-        relationship_class_id = relationship_class['id']
-        relationship_id = child_object['relationship_id']
-        parameter_names = self.relationship_class_parameter_names(relationship_class_id, relationship_id)
-        if not parameter_names:
-            self.ui.statusbar.showMessage("All parameters for this relationship are already created", 3000)
-            return
-        # insert new row
-        last_row = source_model.rowCount()
-        if not source_model.insertRows(last_row, 1):
-            return
-        source_row = source_model.rowCount()-1
-        # add known fields
-        def add_field(name, value):
-            source_column = source_model.header.index(name)
-            source_index = source_model.index(source_row, source_column)
-            source_model.setData(source_index, value)
-        add_field("relationship_class_id", relationship_class_id)
-        add_field("relationship_class_name", relationship_class['name'])
-        add_field("relationship_id", relationship_id)
-        add_field("child_object_id", child_object['id'])
-        add_field("child_object_name", child_object['name'])
-        if parent_object_type == 'object':
-            add_field("parent_object_id", parent_object['id'])
-            add_field("parent_object_name", parent_object['name'])
-        elif parent_object_type == 'related_object':
-            parent_relationship_id = parent_object['relationship_id']
-            parent_relationship = self.session.query(self.Relationship.name).filter_by(id=parent_relationship_id).\
-                one_or_none()
-            add_field("parent_relationship_id", parent_relationship_id)
-            add_field("parent_relationship_name", parent_relationship.name)
-        # make new row visible (NOTE: this also resizes columns)
-        self.filter_parameter_value_models(tree_index, tree_index)
-        # store parameter names in proxy index's Qt.UserRole
-        source_column = source_model.header.index("parameter_name")
-        source_index = source_model.index(source_row, source_column)
-        proxy_index = self.relationship_parameter_value_proxy.mapFromSource(source_index)
-        self.relationship_parameter_value_proxy.setData(proxy_index, parameter_names, Qt.UserRole)
-        # edit
-        # create combobox delegate and connect signals
-        combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.add_relationship_parameter_value_)
-        self.ui.tableView_relationship_parameter_value.\
-            setItemDelegateForColumn(proxy_index.column(), combobox_delegate)
-        self.ui.tabWidget_relationship.setCurrentIndex(0)
-        self.ui.tableView_relationship_parameter_value.setCurrentIndex(proxy_index)
-        self.ui.tableView_relationship_parameter_value.adding_new_parameter_value = True
-        self.ui.tableView_relationship_parameter_value.edit(proxy_index)
-
-    @Slot("CustomComboEditor", name="add_relationship_parameter_value_")
-    def add_relationship_parameter_value_(self, combo):
-        """Insert new parameter value.
-        If successful, also add parameter value to model.
-        """
-        # logging.debug("new parameter value")
-        parameter_name = combo.currentText()
-        proxy_index = self.relationship_parameter_value_proxy.index(combo.row, combo.column)
-        source_index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
-        if not parameter_name: # user didn't select a parameter name from combobox
-            self.relationship_parameter_value_model.removeRows(source_index.row(), 1)
-            return
-        # get relationship_id
-        column = self.relationship_parameter_value_model.header.index("relationship_id")
-        relationship_id = source_index.sibling(source_index.row(), column).data()
-        # get parameter_id
-        # get relationship_class_id first
-        column = self.relationship_parameter_value_model.header.index("relationship_class_id")
-        relationship_class_id = source_index.sibling(source_index.row(), column).data()
-        parameter = self.session.query(self.Parameter.id).\
-            filter_by(name=parameter_name).\
-            filter_by(relationship_class_id=relationship_class_id).one_or_none()
-        if not parameter:
-            return
-        parameter_value = self.ParameterValue(
-            relationship_id=relationship_id,
-            parameter_id=parameter.id,
-            commit_id=self.commit.id
-        )
-        self.session.add(parameter_value)
-        try:
-            self.session.flush()
-        except DBAPIError as e:
-            msg = "Could not insert parameter value: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
-            self.session.rollback()
-            return
-        # manually add item in model
-        self.init_parameter_value_models() # this is so that defaults are filled automatically
-        # edit next field in row
-        next_index = self.object_parameter_value_proxy.index(combo.row, combo.column+1)
-        self.ui.tableView_object_parameter_value.edit(next_index)
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
     def update_parameter_value(self, editor, hint):
@@ -1743,6 +1818,14 @@ class DataStoreForm(QMainWindow):
             return
         # manually update item in model
         source_model.setData(source_index, new_value)
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value_name")
+    def update_parameter_value_name(self, editor, hint):
+        """Update (object or relationship) parameter_value table with newly edited data.
+        If successful, also update item in the model.
+        """
+        pass
+        # logging.debug("update parameter value")
 
     def remove_parameter_value(self, proxy_index):
         """Remove row from (object or relationship) parameter_value table.
@@ -1811,82 +1894,6 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
-    def add_parameter(self, tree_index):
-        """Prepare to insert new parameter value. Insert object and object class
-        fields, and open editor to request for parameter name.
-        """
-        item_type = tree_index.data(Qt.UserRole)
-        if item_type == 'object_class':
-            self.add_object_parameter(tree_index)
-        elif item_type.endswith('relationship_class'):
-            self.add_relationship_parameter(tree_index)
-
-    def add_object_parameter(self, tree_index):
-        """Prepare to insert new parameter. Insert object class fields,
-        and open editor to request for parameter name.
-        """
-        object_class = tree_index.data(Qt.UserRole+1)
-        object_class_id = object_class['id']
-        # insert new row
-        parameter = self.Parameter(
-            name="Type name here...",
-            object_class_id=object_class_id,
-            commit_id=self.commit.id
-        )
-        self.session.add(parameter)
-        try:
-            self.session.flush()
-        except DBAPIError as e:
-            msg = "Could not insert parameter: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
-            self.session.rollback()
-            return
-        self.init_parameter_models()
-        self.ui.tableView_object_parameter.resizeColumnsToContents()
-        # find proxy index
-        source_row = self.object_parameter_model.rowCount()-1
-        source_column = self.object_parameter_model.header.index("parameter_name")
-        source_index = self.object_parameter_model.index(source_row, source_column)
-        proxy_index = self.object_parameter_proxy.mapFromSource(source_index)
-        # edit
-        self.ui.tabWidget_object.setCurrentIndex(1)
-        self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
-        self.ui.tableView_object_parameter.edit(proxy_index)
-
-    def add_relationship_parameter(self, tree_index):
-        """Prepare to insert new parameter. Insert relationship class fields,
-        and open editor to request for parameter name.
-        """
-        # logging.debug("new parameter")
-        relationship_class = tree_index.data(Qt.UserRole+1)
-        relationship_class_id = relationship_class['id']
-        # insert new row
-        parameter = self.Parameter(
-            name="Type name here...",
-            relationship_class_id=relationship_class_id,
-            commit_id=self.commit.id
-        )
-        self.session.add(parameter)
-        try:
-            self.session.flush()
-        except DBAPIError as e:
-            msg = "Could not insert parameter: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
-            self.session.rollback()
-            return
-        self.init_parameter_models()
-        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
-        # find proxy index
-        # TODO: sort relationship_parameter_model by relationship_id
-        source_row = self.relationship_parameter_model.rowCount()-1
-        source_column = self.relationship_parameter_model.header.index("parameter_name")
-        source_index = self.relationship_parameter_model.index(source_row, source_column)
-        proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
-        # edit
-        self.ui.tabWidget_relationship.setCurrentIndex(1)
-        self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
-        self.ui.tableView_relationship_parameter.edit(proxy_index)
-
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter")
     def update_parameter(self, editor, hint):
         """Update parameter table with newly edited data.
@@ -1914,7 +1921,7 @@ class DataStoreForm(QMainWindow):
         try:
             new_value = data_type(editor.text())
         except ValueError:
-            # Note: try to avoid this by setting up a good validator in line edit delegate
+            # NOTE: try to avoid this by setting up a good validator in line edit delegate
             self.ui.statusbar.showMessage("The value entered doesn't fit the datatype.")
             return
         if value == new_value:

@@ -461,6 +461,8 @@
     <addaction name="actionAdd_object"/>
     <addaction name="actionAdd_relationship_class"/>
     <addaction name="actionAdd_relationship"/>
+    <addaction name="actionAdd_parameter"/>
+    <addaction name="actionAdd_parameter_value"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -479,7 +481,7 @@
     <string>Revert</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+R</string>
+    <string>Ctrl+Backspace</string>
    </property>
   </action>
   <action name="actionQuit">
@@ -494,20 +496,48 @@
    <property name="text">
     <string>Add object class</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+O</string>
+   </property>
   </action>
   <action name="actionAdd_object">
    <property name="text">
     <string>Add object</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionAdd_relationship_class">
    <property name="text">
     <string>Add relationship class</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+R</string>
+   </property>
   </action>
   <action name="actionAdd_relationship">
    <property name="text">
     <string>Add relationship</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionAdd_parameter">
+   <property name="text">
+    <string>Add parameter</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+P</string>
+   </property>
+  </action>
+  <action name="actionAdd_parameter_value">
+   <property name="text">
+    <string>Add parameter value</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
    </property>
   </action>
  </widget>

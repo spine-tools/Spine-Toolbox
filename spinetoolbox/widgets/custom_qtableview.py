@@ -41,23 +41,6 @@ class ParameterValueTableView(QTableView):
         super().__init__(parent)
         self.adding_new_parameter_value = False
 
-    def edit(self, proxy_index, trigger=QTableView.AllEditTriggers, event=None):
-        """Starts editing the item corresponding to the given index if it is editable.
-        To edit `parameter_name`, set the attribute `adding_new_parameter_value`
-        before calling this method.
-        """
-        if not proxy_index.isValid():
-            return False
-        source_index = proxy_index.model().mapToSource(proxy_index)
-        header = proxy_index.model().sourceModel().header
-        if header[source_index.column()] == "parameter_name":
-            if not self.adding_new_parameter_value:
-                return False
-            self.adding_new_parameter_value = False
-            super().edit(proxy_index, trigger, event)
-            return True
-        return super().edit(proxy_index, trigger, event)
-
     def keyPressEvent(self, event):
         """Copy selection to clipboard so that it can be pasted into Excel"""
         if not event.matches(QKeySequence.Copy):
