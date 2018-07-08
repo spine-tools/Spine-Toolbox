@@ -83,10 +83,11 @@ class DataStoreForm(QMainWindow):
         self.transactions = None
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        # Attempt to create sql session
-        if not self.create_session():
+        # Attempt to create base
+        if not self.create_base_and_reflect_tables():
             self.close()
             return
+        self.create_session()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
@@ -124,9 +125,9 @@ class DataStoreForm(QMainWindow):
     def connect_signals(self):
         """Connect signals to slots."""
         self._data_store.destroyed.connect(self.data_store_destroyed)
-        self.ui.actionCommit.triggered.connect(self.commit_changes)
-        self.ui.actionRevert.triggered.connect(self.revert_changes)
-        self.ui.actionQuit.triggered.connect(self.quit_form)
+        self.ui.actionCommit.triggered.connect(self.commit_session)
+        self.ui.actionRollback.triggered.connect(self.rollback_session)
+        self.ui.actionClose.triggered.connect(self.close_session)
         self.ui.actionAdd_object_class.triggered.connect(self.add_object_class)
         self.ui.actionAdd_object.triggered.connect(self.add_object)
         self.ui.actionAdd_relationship_class.triggered.connect(self.add_relationship_class)
@@ -152,8 +153,8 @@ class DataStoreForm(QMainWindow):
         """Close this form without commiting any changes when data store item is destroyed."""
         self.close()
 
-    @Slot(name="commit_changes")
-    def commit_changes(self):
+    @Slot(name="commit_session")
+    def commit_session(self):
         """Commit changes to source database."""
         # comment = self.ui.lineEdit_commit_msg.text()
         if not self.session:
@@ -184,8 +185,8 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.showMessage(msg, 5000)
         self.new_commit()
 
-    @Slot(name="revert_changes")
-    def revert_changes(self):
+    @Slot(name="rollback_session")
+    def rollback_session(self):
         if not self.session:
             return
         try:
@@ -199,14 +200,15 @@ class DataStoreForm(QMainWindow):
         self.new_commit()
         self.init_object_tree_model()
         self.init_parameter_value_models()
+        self.init_parameter_models()
         msg = "All changes (since last commit) reverted successfully."
         self.ui.statusbar.showMessage(msg, 3000)
         # clear filters
         self.object_parameter_value_proxy.clear_filter()
         self.relationship_parameter_value_proxy.clear_filter()
 
-    def create_session(self):
-        """Create base, engine, reflect tables and create session."""
+    def create_base_and_reflect_tables(self):
+        """Create base and reflect tables."""
         self.Base = automap_base()
         self.Base.prepare(self.engine, reflect=True)
         try:
@@ -217,18 +219,21 @@ class DataStoreForm(QMainWindow):
             self.Parameter = self.Base.classes.parameter
             self.ParameterValue = self.Base.classes.parameter_value
             self.Commit = self.Base.classes.commit
+            return True
         except AttributeError as e:
             self._parent.msg_error.emit("Unable to parse database in the Spine format. "
                                         " Table <b>{}</b> is missing.".format(e))
             return False
+
+    def create_session(self):
+        """Create session."""
         self.session = Session(self.engine)
         self.new_commit()
         self.transactions = list()
-        return True
 
     def new_commit(self):
         """Add row to commit table"""
-        comment = 'in progress'
+        comment = 'In progress...'
         user = self.username
         date = datetime.now(timezone.utc)
         self.commit = self.Commit(comment=comment, date=date, user=user)
@@ -2006,8 +2011,8 @@ class DataStoreForm(QMainWindow):
         if splitter_tree_parameter_state:
             self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
 
-    @Slot(name="quit_form")
-    def quit_form(self):
+    @Slot(name="close_session")
+    def close_session(self):
         """Close this form without commiting any changes."""
         self.close()
 

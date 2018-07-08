@@ -471,11 +471,11 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>Session</string>
     </property>
     <addaction name="actionCommit"/>
-    <addaction name="actionRevert"/>
-    <addaction name="actionQuit"/>
+    <addaction name="actionRollback"/>
+    <addaction name="actionClose"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -497,23 +497,23 @@
     <string>Commit</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+S</string>
+    <string>Ctrl+Return</string>
    </property>
   </action>
-  <action name="actionRevert">
+  <action name="actionRollback">
    <property name="text">
-    <string>Revert</string>
+    <string>Rollback</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Backspace</string>
    </property>
   </action>
-  <action name="actionQuit">
+  <action name="actionClose">
    <property name="text">
-    <string>Quit</string>
+    <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Q</string>
+    <string>Ctrl+Esc</string>
    </property>
   </action>
   <action name="actionAdd_object_class">

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -163,7 +163,7 @@ color: rgb(255, 255, 255);</string>
         </widget>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton_tool_template_options">
+        <widget class="QToolButton" name="toolButton_tool_template">
          <property name="toolTip">
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool template options.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>

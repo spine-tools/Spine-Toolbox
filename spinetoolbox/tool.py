@@ -150,7 +150,7 @@ class Tool(MetaObject):
             self._tool_template_index = None
         self.update_tool_ui()
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
-        self._widget.ui.toolButton_tool_template_options.setMenu(self.tool_template_options_popup_menu)
+        self._widget.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
