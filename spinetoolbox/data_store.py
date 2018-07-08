@@ -33,13 +33,13 @@ from PySide2.QtWidgets import QInputDialog
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
-from widgets.custom_menus import AddDbReferencePopupMenu
 from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
-from helpers import create_dir, busy_effect
+from helpers import create_dir, busy_effect, create_fresh_Spine_database
 from config import APPLICATION_PATH
-from sqlalchemy import create_engine, Table, MetaData, select, text
+from sqlalchemy import create_engine, Table, MetaData, select
 from sqlalchemy.exc import DatabaseError
+
 
 
 class DataStore(MetaObject):
@@ -80,14 +80,14 @@ class DataStore(MetaObject):
         self.data_store_form = None
         self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
-        self.add_db_reference_popup_menu = AddDbReferencePopupMenu(self)
-        self._widget.ui.toolButton_plus.setMenu(self.add_db_reference_popup_menu)
         self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
+        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
+        self._widget.ui.toolButton_Spine.clicked.connect(self.create_fresh_Spine_database)
         self._widget.ui.listView_data.doubleClicked.connect(self.open_data_file)
         self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
@@ -293,208 +293,18 @@ class DataStore(MetaObject):
                     return path
         return None
 
-    @Slot(name="add_new_spine_reference")
-    def add_new_spine_reference(self):
-        """Add reference to a new Spine empty database."""
-        answer = QInputDialog.getText(self._parent, "Add new Spine SQLite database", "Database name:")
+    @Slot(name="create_fresh_Spine_database")
+    def create_fresh_Spine_database(self):
+        """Create fresh (empty) Spine database file in data directory."""
+        answer = QInputDialog.getText(self._parent, "Create fresh Spine database", "Database name:")
         database = answer[0]
         if not database:
             return
-        filename = os.path.join(APPLICATION_PATH, "Spine.sqlite")
-        # Wipe out file. This is better for debug phase, but later we can reuse the same one
+        filename = os.path.join(self.data_dir, database + ".sqlite")
         try:
             os.remove(filename)
         except OSError:
             pass
         url = "sqlite:///" + filename
         engine = create_engine(url)
-        sql = """
-            CREATE TABLE IF NOT EXISTS "commit" (
-            	id INTEGER NOT NULL,
-            	comment VARCHAR(255) NOT NULL,
-            	date DATETIME NOT NULL,
-            	user VARCHAR(45),
-            	PRIMARY KEY (id),
-            	UNIQUE (id)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS object_class_category (
-            	id INTEGER NOT NULL,
-            	name VARCHAR(255) NOT NULL,
-            	description VARCHAR(255) DEFAULT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS object_class (
-            	id INTEGER NOT NULL,
-            	name VARCHAR(255) NOT NULL,
-            	description VARCHAR(255) DEFAULT NULL,
-            	category_id INTEGER DEFAULT NULL,
-            	display_order INTEGER DEFAULT '99',
-            	display_icon INTEGER DEFAULT NULL,
-            	hidden INTEGER DEFAULT '0',
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(category_id) REFERENCES object_class_category (id),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS object_category (
-            	id INTEGER NOT NULL,
-            	object_class_id INTEGER NOT NULL,
-            	name VARCHAR(255) NOT NULL,
-            	description VARCHAR(255) DEFAULT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(object_class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS object (
-            	id INTEGER NOT NULL,
-            	class_id INTEGER NOT NULL,
-            	name VARCHAR(255) NOT NULL,
-            	description VARCHAR(255) DEFAULT NULL,
-            	category_id INTEGER DEFAULT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(category_id) REFERENCES object_category (id),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS relationship_class (
-            	id INTEGER NOT NULL,
-            	name VARCHAR(155) NOT NULL,
-            	parent_relationship_class_id INTEGER DEFAULT NULL,
-            	parent_object_class_id INTEGER DEFAULT NULL,
-            	child_object_class_id INTEGER NOT NULL,
-            	inheritance VARCHAR(155) DEFAULT NULL,
-            	hidden INTEGER DEFAULT '0',
-            	type INTEGER DEFAULT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(child_object_class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(parent_object_class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(parent_relationship_class_id) REFERENCES relationship_class (id),
-            	CHECK (`parent_relationship_class_id` IS NOT NULL OR `parent_object_class_id` IS NOT NULL),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS relationship (
-            	id INTEGER NOT NULL,
-            	class_id INTEGER NOT NULL,
-            	name VARCHAR(155) NOT NULL,
-            	parent_relationship_id INTEGER DEFAULT NULL,
-            	parent_object_id INTEGER DEFAULT NULL,
-            	child_object_id INTEGER NOT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(class_id) REFERENCES relationship_class (id),
-            	FOREIGN KEY(child_object_id) REFERENCES object (id),
-            	FOREIGN KEY(parent_object_id) REFERENCES object (id),
-            	FOREIGN KEY(parent_relationship_id) REFERENCES relationship (id),
-            	CHECK (`parent_relationship_id` IS NOT NULL OR `parent_object_id` IS NOT NULL),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS parameter (
-            	id INTEGER NOT NULL,
-            	name VARCHAR(155) NOT NULL,
-            	description VARCHAR(155) DEFAULT NULL,
-            	data_type VARCHAR(155) DEFAULT 'NUMERIC',
-            	relationship_class_id INTEGER DEFAULT NULL,
-            	object_class_id INTEGER DEFAULT NULL,
-            	can_have_time_series INTEGER DEFAULT '0',
-            	can_have_time_pattern INTEGER DEFAULT '1',
-            	can_be_stochastic INTEGER DEFAULT '0',
-            	default_value VARCHAR(155) DEFAULT '0',
-            	is_mandatory INTEGER DEFAULT '0',
-            	precision INTEGER DEFAULT '2',
-            	unit VARCHAR(155) DEFAULT NULL,
-            	minimum_value FLOAT DEFAULT NULL,
-            	maximum_value FLOAT DEFAULT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(object_class_id) REFERENCES object_class (id),
-            	FOREIGN KEY(relationship_class_id) REFERENCES relationship_class (id),
-            	CHECK (`relationship_class_id` IS NOT NULL OR `object_class_id` IS NOT NULL),
-                UNIQUE(name)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            CREATE TABLE IF NOT EXISTS parameter_value (
-            	id INTEGER NOT NULL,
-            	parameter_id INTEGER NOT NULL,
-            	relationship_id INTEGER DEFAULT NULL,
-            	object_id INTEGER DEFAULT NULL,
-            	"index" INTEGER DEFAULT '1',
-            	value VARCHAR(155) DEFAULT NULL,
-            	json VARCHAR(255) DEFAULT NULL,
-            	expression VARCHAR(255) DEFAULT NULL,
-            	time_pattern VARCHAR(155) DEFAULT NULL,
-            	time_series_id VARCHAR(155) DEFAULT NULL,
-            	stochastic_model_id VARCHAR(155) DEFAULT NULL,
-            	commit_id INTEGER,
-            	PRIMARY KEY (id),
-            	FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            	FOREIGN KEY(object_id) REFERENCES object (id),
-            	FOREIGN KEY(relationship_id) REFERENCES relationship (id),
-            	FOREIGN KEY(parameter_id) REFERENCES parameter (id),
-            	CHECK (`relationship_id` IS NOT NULL OR `object_id` IS NOT NULL)
-            );
-        """
-        engine.execute(text(sql))
-        sql = """
-            INSERT OR IGNORE INTO `object_class` (`name`, `description`, `category_id`, `display_order`, `display_icon`, `hidden`, `commit_id`) VALUES
-            ('unittemplate', 'Template for a generic unit', 1, 1, NULL, 0, NULL),
-            ('unit', 'Unit class', 1, 2, NULL, 0, NULL),
-            ('commodity', 'Commodity class', 1, 3, NULL, 0, NULL),
-            ('archetype', 'Archetype class', 1, 4, NULL, 0, NULL),
-            ('node', 'Node class', 1, 5, NULL, 0, NULL),
-            ('grid', 'Grid class', 1, 6, NULL, 0, NULL),
-            ('normalized', 'Normalized class', 1, 7, NULL, 0, NULL),
-            ('absolute', 'Absolute class', 1, 8, NULL, 0, NULL),
-            ('flow', 'Flow class', 1, 9, NULL, 0, NULL),
-            ('influx', 'Influx class', 1, 10, NULL, 0, NULL),
-            ('time', 'Time class', 1, 11, NULL, 0, NULL),
-            ('arc', 'Arc class', 1, 12, NULL, 0, NULL),
-            ('simulation_settings', 'Simulation settings class', 2, 13, NULL, 0, NULL),
-            ('hidden_settings', 'Hidden settings class', 3, 14, NULL, 1, NULL),
-            ('constraint', 'Constraint class', 1, 15, NULL, 0, NULL),
-            ('variable', 'Variable class', 1, 16, NULL, 0, NULL),
-            ('objective_term', 'Objective term class', 1, 17, NULL, 0, NULL),
-            ('group', 'Group class', 1, 18, NULL, 0, NULL),
-            ('alternative', 'Alternative class', 1, 19, NULL, 0, NULL);
-        """
-        engine.execute(text(sql))
-        reference = {
-            'database': database,
-            'username': getpass.getuser(),
-            'url': url
-        }
-        self.add_reference(reference)
+        create_fresh_Spine_database(engine)

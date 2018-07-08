@@ -29,8 +29,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>220</width>
-    <height>306</height>
+    <width>200</width>
+    <height>275</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -692,19 +692,6 @@ color: rgb(255, 255, 255);</string>
         </widget>
        </item>
        <item>
-        <spacer name="horizontalSpacer">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>40</width>
-           <height>20</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
         <widget class="QToolButton" name="toolButton_add">
          <property name="maximumSize">
           <size>
@@ -721,6 +708,33 @@ color: rgb(255, 255, 255);</string>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
            <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QToolButton" name="toolButton_Spine">
+         <property name="toolTip">
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create fresh (empty) Spine database into an SQLite file in Data store's directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="icon">
+          <iconset resource="resources/resources_icons.qrc">
+           <normaloff>:/symbols/Spine_symbol.png</normaloff>:/symbols/Spine_symbol.png</iconset>
          </property>
         </widget>
        </item>
@@ -1252,7 +1266,6 @@ color: rgb(255, 255, 255);</string>
  <tabstops>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
-  <tabstop>toolButton_add</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
