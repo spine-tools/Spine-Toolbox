@@ -606,6 +606,18 @@ class SpineDatapackageWidget(QMainWindow):
             return
         msg = "Conversion finished. File 'Spine.sqlite' saved in {}".format(self._data_connection.data_dir)
         self.ui.statusbar.showMessage(msg, 5000)
+        # Clean up
+        try:
+            self.session.query(self.Object).delete()
+            self.session.query(self.RelationshipClass).delete()
+            self.session.query(self.Relationship).delete()
+            self.session.query(self.Parameter).delete()
+            self.session.query(self.ParameterValue).delete()
+            self.session.query(self.Commit).delete()
+            self.session.flush()
+        except Exception as e:
+            msg = "Could not clean up session: {}".format(e.orig.args)
+            self.ui.statusbar.showMessage(msg, 5000)
 
     @Slot("QPoint", name="show_datapackage_tree_context_menu")
     def show_datapackage_tree_context_menu(self, pos):
