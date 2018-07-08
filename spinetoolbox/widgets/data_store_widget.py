@@ -635,6 +635,8 @@ class DataStoreForm(QMainWindow):
         if not index.isValid():
             return # just to be safe
         clicked_type = index.data(Qt.UserRole)
+        if not clicked_type:  # root item
+            return
         if not clicked_type.endswith('object'):
             return
         clicked_item = index.model().itemFromIndex(index)

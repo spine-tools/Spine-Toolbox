@@ -142,8 +142,8 @@ class SpineDatapackageWidget(QMainWindow):
 
     def create_engine(self):
         """Create engine with a fresh Spine database."""
-        self.temporary_file = tempfile.NamedTemporaryFile()
-        url = "sqlite:///" + self.temporary_file.name
+        self.temp_filename = os.path.join(tempfile.gettempdir(), 'Spine.sqlite')
+        url = "sqlite:///" + self.temp_filename
         self.engine = create_engine(url)
         create_fresh_Spine_database(self.engine)
 
@@ -599,7 +599,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.session.commit()
         target_filename = os.path.join(self._data_connection.data_dir, 'Spine.sqlite')
         try:
-            shutil.copy(self.temporary_file.name, target_filename)
+            shutil.copy(self.temp_filename, target_filename)
         except OSError:
             msg = "Conversion failed. [OSError] Unable to copy file from temporary location."
             self.ui.statusbar.showMessage(msg, 5000)
@@ -654,6 +654,9 @@ class SpineDatapackageWidget(QMainWindow):
         if self.engine:
             self.engine.dispose()
         if self.temp_filename:
-            self.temp_filename.close()
+            try:
+                os.remove(self.temp_filename)
+            except OSError:
+                pass
         if event:
             event.accept()
