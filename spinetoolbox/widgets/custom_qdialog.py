@@ -27,6 +27,7 @@ Originally intended to be used within DataStoreForm
 
 from PySide2.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QComboBox
 from PySide2.QtCore import Slot, Qt
+from PySide2.QtGui import QFont, QFontMetrics
 
 class CustomQDialog(QDialog):
     """A class to create custom forms with several line edits and comboboxes."""
@@ -40,6 +41,8 @@ class CustomQDialog(QDialog):
                 Values are either placeholder texts or combobox lists.
         """
         super().__init__(parent)
+        self.font = QFont("", 0)
+        self.font_metric = QFontMetrics(self.font)
         self.input = dict()
         self.answer = dict()
         self.setWindowTitle(title)
@@ -48,8 +51,11 @@ class CustomQDialog(QDialog):
             if isinstance(value, str): # line edit
                 input_ = QLineEdit(self)
                 input_.setPlaceholderText(value)
+                input_.setMinimumWidth(self.font_metric.width(value))
             elif isinstance(value, list): # combo box
                 input_ = QComboBox(self)
+                max_width = max(self.font_metric.width(x) for x in value if isinstance(x, str))
+                input_.setMinimumWidth(max_width)
                 input_.addItems(value)
             self.input[key] = input_
             form.addRow(input_)
@@ -57,6 +63,8 @@ class CustomQDialog(QDialog):
         button_box.accepted.connect(self.save_and_accept)
         button_box.rejected.connect(self.reject)
         form.addRow(button_box)
+        # Ensure this window gets garbage-collected when closed
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
     @Slot(name="save_and_accept")
     def save_and_accept(self):

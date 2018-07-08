@@ -167,9 +167,9 @@ class DataStoreForm(QMainWindow):
             msg = "Commit message missing."
             self.ui.statusbar.showMessage(msg, 3000)
             return
-        self.commit.comment = comment
-        self.commit.date = datetime.now(timezone.utc)
         try:
+            self.commit.comment = comment
+            self.commit.date = datetime.now(timezone.utc)
             for i in reversed(range(len(self.transactions))):
                 self.session.commit()
                 del self.transactions[i]
@@ -179,7 +179,6 @@ class DataStoreForm(QMainWindow):
             self.ui.statusbar.showMessage(msg, 5000)
             self.commit.comment = None
             self.commit.date = None
-            # self.session.rollback()
             return
         msg = "All changes commited successfully."
         self.ui.statusbar.showMessage(msg, 5000)
@@ -194,14 +193,15 @@ class DataStoreForm(QMainWindow):
                 self.session.rollback()
                 del self.transactions[i]
             self.session.rollback()  # also rollback main transaction
-        except Exception:
-            msg = "Error while trying to revert changes."
+        except DBAPIError:
+            msg = "Error while trying to rollback changes."
             self.ui.statusbar.showMessage(msg, 3000)
+            return
         self.new_commit()
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_models()
-        msg = "All changes (since last commit) reverted successfully."
+        msg = "All changes (since last commit) rolled back successfully."
         self.ui.statusbar.showMessage(msg, 3000)
         # clear filters
         self.object_parameter_value_proxy.clear_filter()
@@ -237,8 +237,13 @@ class DataStoreForm(QMainWindow):
         user = self.username
         date = datetime.now(timezone.utc)
         self.commit = self.Commit(comment=comment, date=date, user=user)
-        self.session.add(self.commit)
-        self.session.flush()
+        try:
+            self.session.add(self.commit)
+            self.session.flush()
+        except DBAPIError as e:
+            msg = "Could not insert new commit item: {}".format(e.orig.args)
+            self.ui.statusbar.showMessage(msg, 5000)
+            self.session.rollback()
 
     def relationship_class_query(self, object_class_id):
         """Return relationship classes involving a given object class."""
@@ -906,9 +911,9 @@ class DataStoreForm(QMainWindow):
         Args:
             object_class (self.Object_class)
         """
-        self.transactions.append(self.session.begin_nested())
-        self.session.add(object_class)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.add(object_class)
             self.session.flush()
             return True
         except DBAPIError as e:
@@ -985,9 +990,9 @@ class DataStoreForm(QMainWindow):
         Args:
             object_ (self.Object)
         """
-        self.transactions.append(self.session.begin_nested())
-        self.session.add(object_)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.add(object_)
             self.session.flush() # to get object id
             return True
         except DBAPIError as e:
@@ -1094,9 +1099,9 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship_class (self.RelationshipClass): the relationship class to add
         """
-        self.transactions.append(self.session.begin_nested())
-        self.session.add(relationship_class)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.add(relationship_class)
             self.session.flush() # to get the relationship class id
             return True
         except DBAPIError as e:
@@ -1242,9 +1247,9 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship (self.Relationship): the relationship to add
         """
-        self.transactions.append(self.session.begin_nested())
-        self.session.add(relationship)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.add(relationship)
             self.session.flush() # to get the relationship class id
             return True
         except DBAPIError as e:
@@ -1374,10 +1379,10 @@ class DataStoreForm(QMainWindow):
         instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
         if not instance:
             return
-        self.transactions.append(self.session.begin_nested())
-        instance.name = new_name
-        instance.commit_id = self.commit.id
         try:
+            self.transactions.append(self.session.begin_nested())
+            instance.name = new_name
+            instance.commit_id = self.commit.id
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not rename item: {}".format(e.orig.args)
@@ -1424,9 +1429,9 @@ class DataStoreForm(QMainWindow):
             msg = "Could not find {} named {}. This should not happen.".format(entity_type, entity['name'])
             self.ui.statusbar.showMessage(msg, 5000)
             return
-        self.transactions.append(self.session.begin_nested())
-        self.session.delete(instance)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.delete(instance)
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not remove item: {}".format(e.orig.args)
@@ -1518,9 +1523,9 @@ class DataStoreForm(QMainWindow):
         Args:
             parameter (self.Parameter): the parameter to add
         """
-        self.transactions.append(self.session.begin_nested())
-        self.session.add(parameter)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.add(parameter)
             self.session.flush() # to get the relationship class id
             return True
         except DBAPIError as e:
@@ -1694,9 +1699,9 @@ class DataStoreForm(QMainWindow):
         Args:
             parameter_value (self.ParameterValue): the parameter value to add
         """
-        self.transactions.append(self.session.begin_nested())
-        self.session.add(parameter_value)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.add(parameter_value)
             self.session.flush() # to get the relationship class id
             return True
         except DBAPIError as e:
@@ -1832,10 +1837,10 @@ class DataStoreForm(QMainWindow):
         if value == new_value:
             self.ui.statusbar.showMessage("Parameter value not changed", 3000)
             return
-        self.transactions.append(self.session.begin_nested())
-        setattr(parameter_value, field_name, new_value)
-        parameter_value.commit_id = self.commit.id
         try:
+            self.transactions.append(self.session.begin_nested())
+            setattr(parameter_value, field_name, new_value)
+            parameter_value.commit_id = self.commit.id
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not update parameter value: {}".format(e.orig.args)
@@ -1867,9 +1872,9 @@ class DataStoreForm(QMainWindow):
         if not parameter_value:
             logging.debug("entry not found in parameter_value table")
             return
-        self.transactions.append(self.session.begin_nested())
-        self.session.delete(parameter_value)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.delete(parameter_value)
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not remove parameter value: {}".format(e.orig.args)
@@ -1954,10 +1959,10 @@ class DataStoreForm(QMainWindow):
         if value == new_value:
             logging.debug("parameter not changed")
             return
-        self.transactions.append(self.session.begin_nested())
-        setattr(parameter, field_name, new_value)
-        parameter.commit_id = self.commit.id
         try:
+            self.transactions.append(self.session.begin_nested())
+            setattr(parameter, field_name, new_value)
+            parameter.commit_id = self.commit.id
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not update parameter: {}".format(e.orig.args)
@@ -1984,9 +1989,9 @@ class DataStoreForm(QMainWindow):
         if not parameter:
             logging.debug("entry not found in parameter table")
             return
-        self.transactions.append(self.session.begin_nested())
-        self.session.delete(parameter)
         try:
+            self.transactions.append(self.session.begin_nested())
+            self.session.delete(parameter)
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not remove parameter: {}".format(e.orig.args)
