@@ -611,6 +611,19 @@ class MinimalTableModel(QAbstractTableModel):
         elif orientation == Qt.Vertical and role == Qt.DisplayRole:
             return section + 1
 
+    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
+        """Sets the data for the given role and section in the header
+        with the specified orientation to the value supplied.
+        """
+        if orientation == Qt.Horizontal and role == Qt.EditRole:
+            try:
+                self.header[section] = value
+                self.headerDataChanged.emit(orientation, section, section)
+                return True
+            except IndexError:
+                return False
+        return False
+
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index.
 
@@ -909,7 +922,7 @@ class RelationshipParameterProxy(QSortFilterProxyModel):
         self.object_class_id_filter = None
         self.relationship_class_id_filter = None
         # self.hide_column = None
-        
+
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
         if role == Qt.BackgroundRole:

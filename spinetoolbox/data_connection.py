@@ -29,13 +29,15 @@ import shutil
 import logging
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtWidgets import QMessageBox, QFileDialog
+from PySide2.QtWidgets import QFileDialog
 from metaobject import MetaObject
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
+from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
+from widgets.spine_datapackage_widget import SpineDatapackageWidget
+# from widgets.custom_menus import DatapackagePopupMenu
 from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
-from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
 from graphics_items import DataConnectionImage
 
 class DataConnection(MetaObject):
@@ -54,6 +56,7 @@ class DataConnection(MetaObject):
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
         self._project = project
+        self.package = None
         self._widget = DataConnectionWidget(name, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
@@ -74,6 +77,9 @@ class DataConnection(MetaObject):
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self._graphics_item = DataConnectionImage(self._parent, x - 35, y - 35, 70, 70, self.name)
+        self.spine_datapackage_form = None
+        # self.datapackage_popup_menu = DatapackagePopupMenu(self)
+        # self._widget.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)
         self.connect_signals()
 
     def connect_signals(self):
@@ -82,8 +88,7 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_plus.clicked.connect(self.add_references)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
-        self._widget.ui.toolButton_datapkg.clicked.connect(self.create_datapackage)
-        self._widget.ui.toolButton_datapkg_keys.clicked.connect(self.show_edit_keys_form)
+        self._widget.ui.toolButton_datapackage.clicked.connect(self.show_spine_datapackage_form)
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
         self._widget.ui.treeView_references.file_dropped.connect(self.add_file_to_references)
@@ -217,19 +222,6 @@ class DataConnection(MetaObject):
             if not res:
                 self._parent.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
-    @Slot(name="create_datapackage")
-    def create_datapackage(self):
-        data_files = self.data_files()
-        if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
-            self._parent.msg_error.emit("The folder <b>{}</b> does not have any CSV files."
-                                        " Add some and try again.".format(self.data_dir))
-            return
-        self.package = CustomPackage(base_path = self.data_dir)
-        self.package.infer(os.path.join(self.data_dir, '*.csv'))
-        self.save_datapackage()
-        data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
-
     @Slot(name="show_edit_keys_form")
     def show_edit_keys_form(self):
         """Show edit keys widget."""
@@ -240,20 +232,15 @@ class DataConnection(MetaObject):
         self.edit_datapackage_keys_form = EditDatapackageKeysWidget(self)
         self.edit_datapackage_keys_form.show()
 
-    def save_datapackage(self):  #TODO: handle zip as well?
-        """Save datapackage.json to datadir"""
-        if os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
-            msg = '<b>Replacing file "datapackage.json" in "{}"</b>.'\
-                  ' Are you sure?'.format(os.path.basename(self.data_dir))
-            # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(self._parent, 'Replace datapackage.json', msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                return
-            self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
-            self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
-        else:
-            self._parent.msg.emit("datapackage.json saved in <b>{}</b>".format(self.data_dir))
-            self.package.save(os.path.join(self.data_dir, 'datapackage.json'))
+    @Slot(name="show_spine_datapackage_form")
+    def show_spine_datapackage_form(self):
+        """Show spine_datapackage_form widget."""
+        #if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
+        #    self._parent.msg_error.emit("Create a datapackage first.")
+        #    return
+        #self.package = CustomPackage(os.path.join(self.data_dir, 'datapackage.json'))
+        self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self)
+        self.spine_datapackage_form.show()
 
     def file_references(self):
         """Return a list of paths to files that are in this item as references (self.references)."""

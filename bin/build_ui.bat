@@ -59,6 +59,11 @@ CALL pyside2-uic ../spinetoolbox/ui/edit_datapackage_keys.ui -o ../spinetoolbox/
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_datapackage_keys.py.o > ..\spinetoolbox\ui\edit_datapackage_keys.py
 del ..\spinetoolbox\ui\edit_datapackage_keys.py.o
 
+ECHO building spine_datapackage_form.py
+CALL pyside2-uic ../spinetoolbox/ui/spine_datapackage_form.ui -o ../spinetoolbox/ui/spine_datapackage_form.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\spine_datapackage_form.py.o > ..\spinetoolbox\ui\spine_datapackage_form.py
+del ..\spinetoolbox\ui\spine_datapackage_form.py.o
+
 ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py

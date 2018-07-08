@@ -288,7 +288,7 @@ color: rgb(255, 255, 255);</string>
         </spacer>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton_datapkg">
+        <widget class="QToolButton" name="toolButton_datapackage">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -299,7 +299,7 @@ color: rgb(255, 255, 255);</string>
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generate datapackage.json file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open form to convert from datapackage to Spine.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string/>
@@ -308,28 +308,8 @@ color: rgb(255, 255, 255);</string>
           <iconset resource="resources/resources_icons.qrc">
            <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QToolButton" name="toolButton_datapkg_keys">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>20</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Edit datapackage's keys.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/icons/keys.png</normaloff>:/icons/keys.png</iconset>
+         <property name="popupMode">
+          <enum>QToolButton::InstantPopup</enum>
          </property>
         </widget>
        </item>

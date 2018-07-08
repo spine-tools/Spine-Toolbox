@@ -214,6 +214,21 @@ class ParameterContextMenu(CustomContextMenu):
         # self.add_action("Edit field")
         self.exec_(position)
 
+class DatapackageTreeContextMenu(CustomContextMenu):
+    """Context menu class for datapackage treeview in Convert datapackage to Spine form."""
+
+    def __init__(self, parent, position, index):
+        super().__init__()
+        self._parent = parent
+        self.index = index
+        self.option = "None"
+        if not index.isValid():
+            return
+        self.add_action("Expand all children")
+        self.add_action("Collapse all children")
+        # self.add_action("Edit field")
+        self.exec_(position)
+
 
 class CustomPopupMenu(QMenu):
     """Popup menu master class for several popup menus."""
@@ -260,18 +275,6 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         self.add_action("Open definition file", self._parent.open_tool_template_file, enabled=enabled)
         self.add_action("Open main program file", self._parent.open_tool_main_program_file, enabled=enabled)
 
-
-class AddDbReferencePopupMenu(CustomPopupMenu):
-    """Popup menu class for add references button in Data Store item."""
-
-    def __init__(self, parent):
-        super().__init__()
-        self._parent = parent
-        # Open a tool template file
-        self.add_action("New Spine SQLite database", self._parent.add_new_spine_reference)
-        self.addSeparator()
-        self.add_action("Other...", self._parent.show_add_db_reference_form)
-
 class AddIncludesPopupMenu(CustomPopupMenu):
     """Popup menu class for add includes button in Tool Template widget."""
 
@@ -282,3 +285,13 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.add_action("New file", self._parent.new_include)
         self.addSeparator()
         self.add_action("Open file", self._parent.add_includes)
+
+#class DatapackagePopupMenu(CustomPopupMenu):
+#    """Popup menu class for datapackage button in Data Connection's subwindow widget."""
+#
+#    def __init__(self, parent):
+#        super().__init__()
+#        self._parent = parent
+#        # Open a tool template file
+#        self.add_action("Edit datapackage keys", self._parent.show_edit_keys_form)
+#        self.add_action("Convert datapackage to Spine", self._parent.show_datapackage2spine_form)
