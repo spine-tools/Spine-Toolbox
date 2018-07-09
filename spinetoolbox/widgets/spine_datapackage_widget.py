@@ -95,14 +95,14 @@ class SpineDatapackageWidget(QMainWindow):
         self.descriptor_model_header = ["Key", "Value"]
         self.descriptor_model.flags = self.descriptor_model_flags
         self.descriptor_model.headerData = self.descriptor_model_header_data
-        self.load_datapackage()
-        self.ui.treeView_descriptor.setModel(self.descriptor_model)
         self.resource_data_model = MinimalTableModel()
+        self.ui.treeView_descriptor.setModel(self.descriptor_model)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
         self.ui.tableView_resource_data.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_resource_data.verticalHeader().\
             setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.load_datapackage()
         self.connect_signals()
         self.restore_ui()
 
@@ -194,7 +194,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.datapackage = Package(file_path)
         msg = "Datapackage loaded from {}".format(file_path)
         self.ui.statusbar.showMessage(msg, 3000)
-        # self.spinify_datapackage()
         self.init_descriptor_model()
         if load_resource_data:
             self.load_resource_data()
@@ -215,7 +214,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
         msg = "Datapackage inferred from {}".format(self._data_connection.data_dir)
         self.ui.statusbar.showMessage(msg, 3000)
-        # self.spinify_datapackage()
         self.init_descriptor_model()
         if load_resource_data:
             self.load_resource_data()
@@ -241,6 +239,12 @@ class SpineDatapackageWidget(QMainWindow):
     def init_descriptor_model(self):
         """Init datpackage descriptor model"""
         self.descriptor_model.clear()
+        self.resource_data_model.reset_model([])
+        # Disconnect signal
+        n_recv = self.ui.comboBox_resource_name.receivers(SIGNAL("currentTextChanged(QString)"))
+        if n_recv > 0:
+            self.ui.comboBox_resource_name.currentTextChanged.disconnect(self.resource_name_changed)
+        self.ui.comboBox_resource_name.clear()
         def visit(parent_item, value):
             for key,new_value in value.items():
                 key_item = QStandardItem(str(key))
