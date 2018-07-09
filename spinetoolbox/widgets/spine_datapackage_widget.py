@@ -37,7 +37,7 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
 from PySide2.QtCore import Qt, Slot, QSettings, SIGNAL
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
 from helpers import create_fresh_Spine_database, busy_effect
-from models import MinimalTableModel
+from models import MinimalTableModel, DatapackageDescriptorModel
 from sqlalchemy import create_engine
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.exc import DBAPIError
@@ -70,12 +70,15 @@ class SpineDatapackageWidget(QMainWindow):
         self.Commit = None
         self.datapackage = None
         self.object_class_name_list = None
-        font = QFont("", 0)
-        self.font_metric = QFontMetrics(font)
+        self.block_resource_name_combobox = True
+        self.font_metric = QFontMetrics(QFont("", 0))
         self.max_resource_name_width = None
         self.descriptor_tree_context_menu = None
         self.current_resource_index = None
         self.resource_tables = list()
+        self.descriptor_model = DatapackageDescriptorModel(self)
+        self.descriptor_model.header.extend(["Key", "Value"])
+        self.resource_data_model = MinimalTableModel()
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -91,11 +94,6 @@ class SpineDatapackageWidget(QMainWindow):
             self.close()
             return
         self.create_session()
-        self.descriptor_model = QStandardItemModel(self)
-        self.descriptor_model_header = ["Key", "Value"]
-        self.descriptor_model.flags = self.descriptor_model_flags
-        self.descriptor_model.headerData = self.descriptor_model_header_data
-        self.resource_data_model = MinimalTableModel()
         self.ui.treeView_descriptor.setModel(self.descriptor_model)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
         self.ui.tableView_resource_data.horizontalHeader().\
@@ -108,19 +106,21 @@ class SpineDatapackageWidget(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.treeView_descriptor.expanded.connect(self.resize_treeview_descriptor)
-        self.ui.treeView_descriptor.collapsed.connect(self.resize_treeview_descriptor)
+        self.ui.treeView_descriptor.expanded.connect(self.resize_descriptor_treeview)
+        self.ui.treeView_descriptor.collapsed.connect(self.resize_descriptor_treeview)
         self.ui.actionQuit.triggered.connect(self.close)
-        self.ui.actionConvert.triggered.connect(self.convert_triggered)
+        self.ui.actionConvert.triggered.connect(self.call_convert)
         self.ui.actionInfer_datapackage.triggered.connect(self.infer_datapackage)
         self.ui.actionLoad_datapackage.triggered.connect(self.load_datapackage)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         resource_data_lineedit_delegate = LineEditDelegate(self)
-        resource_data_lineedit_delegate.closeEditor.connect(self.resource_data_editor_closed)
+        resource_data_lineedit_delegate.closeEditor.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(resource_data_lineedit_delegate)
-        self.ui.treeView_descriptor.selectionModel().currentChanged.connect(self.update_resource_table)
+        self.ui.treeView_descriptor.selectionModel().currentChanged.\
+            connect(self.update_current_resource_index)
         self.ui.treeView_descriptor.customContextMenuRequested.\
             connect(self.show_descriptor_tree_context_menu)
+        self.ui.comboBox_resource_name.currentTextChanged.connect(self.update_current_resource_name)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -203,7 +203,7 @@ class SpineDatapackageWidget(QMainWindow):
     def infer_datapackage(self, load_resource_data=True):
         """Infer datapackage from CSV files in data directory."""
         data_files = self._data_connection.data_files()
-        if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
+        if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:  # TODO: maybe just allow this?
             msg = ("The folder {} does not have any CSV files."
                    " Add some and try again.".format(self._data_connection.data_dir))
             self.ui.statusbar.showMessage(msg, 5000)
@@ -240,11 +240,10 @@ class SpineDatapackageWidget(QMainWindow):
         """Init datpackage descriptor model"""
         self.descriptor_model.clear()
         self.resource_data_model.reset_model([])
-        # Disconnect signal
-        n_recv = self.ui.comboBox_resource_name.receivers(SIGNAL("currentTextChanged(QString)"))
-        if n_recv > 0:
-            self.ui.comboBox_resource_name.currentTextChanged.disconnect(self.resource_name_changed)
+        self.current_resource_index = None
+        self.block_resource_name_combobox = True
         self.ui.comboBox_resource_name.clear()
+        self.block_resource_name_combobox = False
         def visit(parent_item, value):
             for key,new_value in value.items():
                 key_item = QStandardItem(str(key))
@@ -264,53 +263,14 @@ class SpineDatapackageWidget(QMainWindow):
         visit(self.descriptor_model, self.datapackage.descriptor)
         self.ui.treeView_descriptor.resizeColumnToContents(0)
 
-    def descriptor_model_flags(self, index):
-        """Returns enabled flags for the given index.
-
-        Args:
-            index (QModelIndex): Index of Tool
-        """
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-    def descriptor_model_header_data(self, section, orientation, role=Qt.DisplayRole):
-        """Set headers."""
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            try:
-                h = self.descriptor_model_header[section]
-            except IndexError:
-                return None
-            return h
-        else:
-            return None
-
-    def find_item_in_descriptor_model(self, key_chain):
-        """Find item under a chain a keys.
-
-        Returns:
-            key: the last key explored from key_chain
-            item: the last item visited
-        """
-        key_iterator = iter(key_chain)
-        item = self.descriptor_model.invisibleRootItem()
-        while item.hasChildren():
-            try:
-                key = next(key_iterator)
-            except StopIteration:
-                break
-            for i in range(item.rowCount()):
-                child = item.child(i)
-                if child.data(Qt.UserRole) == key:
-                    item = child
-                    break
-        return key, item
-
-    @Slot("QModelIndex", name="resize_treeview_descriptor")
-    def resize_treeview_descriptor(self, index):
+    @Slot("QModelIndex", name="resize_descriptor_treeview")
+    def resize_descriptor_treeview(self, index):
         self.ui.treeView_descriptor.resizeColumnToContents(0)
 
-    @Slot("QModelIndex", "QModelIndex", name="update_resource_table")
-    def update_resource_table(self, current, previous):
-        """Update resource tableView and comboBox whenever a resource item is selected in the treeView."""
+    @Slot("QModelIndex", "QModelIndex", name="update_current_resource_index")
+    def update_current_resource_index(self, current, previous):
+        """Update current resource index whenever a new resource item is selected
+        in the descriptor treeView."""
         index = current
         selected_resource_index = None
         while index.parent().isValid():
@@ -323,15 +283,19 @@ class SpineDatapackageWidget(QMainWindow):
         if self.current_resource_index == selected_resource_index:  # selected resource not changed
             return
         self.current_resource_index = selected_resource_index
+        self.reset_resource_data_model()
+        self.reset_resource_name_combo()
+
+    def reset_resource_data_model(self):
+        """"""
         table = self.resource_tables[self.current_resource_index]
         self.resource_data_model.header = table[0]  # TODO: find out why this is needed
         self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
-        # Update resource name combobox
-        # Disconnect signal
-        n_recv = self.ui.comboBox_resource_name.receivers(SIGNAL("currentTextChanged(QString)"))
-        if n_recv > 0:
-            self.ui.comboBox_resource_name.currentTextChanged.disconnect(self.resource_name_changed)
+
+    def reset_resource_name_combo(self):
+        """"""
+        self.block_resource_name_combobox = True
         self.ui.comboBox_resource_name.clear()
         resource_name = self.datapackage.resources[self.current_resource_index].name
         self.ui.comboBox_resource_name.addItems(self.object_class_name_list)
@@ -346,27 +310,29 @@ class SpineDatapackageWidget(QMainWindow):
             self.ui.comboBox_resource_name.setCurrentIndex(ind)
         # Set combobox width based on items
         self.ui.comboBox_resource_name.setMinimumWidth(max_width + 24)
-        # Reconnect signal
-        self.ui.comboBox_resource_name.currentTextChanged.connect(self.resource_name_changed)
+        self.block_resource_name_combobox = False
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="resource_data_editor_closed")
-    def resource_data_editor_closed(self, editor, hint):
-        """Update resource with newly edited data."""
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
+    def update_resource_data(self, editor, hint):
+        """Update resource data with newly edited data."""
         index = editor.index
         if not self.resource_data_model.setData(index, editor.text(), Qt.EditRole):
             return
         self.ui.tableView_resource_data.resizeColumnsToContents()
         # Update descriptor in datapackage in case a field name was modified
-        if not index.row() == 0:
-            return
-        new_name = editor.text()
-        field_index = index.column()
+        if index.row() == 0:
+            self.update_field_name(index.column(), editor.text())
+
+    def update_field_name(self, field_index, new_name):
+        """Update descriptor (datapackage and model) with new field name
+        from resource data table."""
+        # Update datapackage descriptor
         resource_dict = self.datapackage.descriptor['resources'][self.current_resource_index]
         resource_dict['schema']['fields'][field_index]['name'] = new_name
         self.datapackage.commit()
         # Update descriptor model
         key_chain = ['resources', self.current_resource_index, 'schema', 'fields', field_index, 'name']
-        key, item = self.find_item_in_descriptor_model(key_chain)
+        key, item = self.descriptor_model.find_item(key_chain)
         if key != key_chain[-1]:
             msg = "Couldn't find field in datapackage descriptor. Something is wrong."
             self.ui.statusbar.showMessage(msg, 5000)
@@ -375,15 +341,17 @@ class SpineDatapackageWidget(QMainWindow):
         sib = ind.sibling(ind.row(), 1)
         self.descriptor_model.setData(sib, new_name, Qt.EditRole)
 
-    @Slot("str", name="resource_name_changed")
-    def resource_name_changed(self, text):
-        """Update descriptor with new resource name from comboBox."""
-        # Update descriptor in datapackage
+    @Slot("str", name="update_current_resource_name")
+    def update_current_resource_name(self, text):
+        """Update descriptor (datapackage and model) with new resource name from comboBox."""
+        if self.block_resource_name_combobox:
+            return
+        # Update datapackage descriptor
         self.datapackage.descriptor['resources'][self.current_resource_index]['name'] = text
         self.datapackage.commit()
-        # Update descriptor in model
+        # Update descriptor model
         key_chain = ['resources', self.current_resource_index, 'name']
-        key, item = self.find_item_in_descriptor_model(key_chain)
+        key, item = self.descriptor_model.find_item(key_chain)
         if key != key_chain[-1]:
             msg = "Couldn't find resource in datapackage descriptor. Something is wrong."
             self.ui.statusbar.showMessage(msg, 5000)
@@ -391,16 +359,15 @@ class SpineDatapackageWidget(QMainWindow):
         ind = item.index()
         sib = ind.sibling(ind.row(), 1)
         self.descriptor_model.setData(sib, text, Qt.EditRole)
-        # Remove unsupported name
+        # Remove unsupported name from combobox
         ind = self.ui.comboBox_resource_name.findText("unsupported", Qt.MatchContains)
         if ind == -1:
             return
         self.ui.comboBox_resource_name.removeItem(ind)
 
-
-    @Slot(name="convert_triggered")
-    def convert_triggered(self):
-        """Check if there are unsupported resource names, prompt the user
+    @Slot(name="call_convert")
+    def call_convert(self):
+        """Check if there are unsupported resource names, prompt the user,
         and launch conversion."""
         unsupported_names = list()
         for resource in self.datapackage.resources:
@@ -437,7 +404,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @busy_effect
     def convert(self):
-        """Convert datapackge into Spine database and save it in data directory as Spine.sqlite."""
+        """Convert datapackge into Spine database and save it as Spine.sqlite in data directory."""
         for j, resource in enumerate(self.datapackage.resources):
             object_class_name = resource.name
             if object_class_name not in self.object_class_name_list:
@@ -591,7 +558,6 @@ class SpineDatapackageWidget(QMainWindow):
         msg = "Conversion finished. File 'Spine.sqlite' saved in {}".format(self._data_connection.data_dir)
         self.ui.statusbar.showMessage(msg, 5000)
 
-
     @Slot("QPoint", name="show_descriptor_tree_context_menu")
     def show_descriptor_tree_context_menu(self, pos):
         """Context menu for descriptor treeview.
@@ -619,7 +585,7 @@ class SpineDatapackageWidget(QMainWindow):
                 self.ui.treeView_descriptor.collapse(child_index)
 
     def closeEvent(self, event=None):
-        """Handle close window.
+        """Handle close event.
 
         Args:
             event (QEvent): Closing event if 'X' is clicked.

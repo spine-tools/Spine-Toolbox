@@ -1059,3 +1059,53 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
                 ]:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+
+class DatapackageDescriptorModel(QStandardItemModel):
+    """A class to hold a datapackage descriptor in a treeview."""
+
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.header = list()
+
+    def find_item(self, key_chain):
+        """Find item under a chain of keys.
+
+        Returns:
+            key: the last key explored from key_chain
+            item: the last item visited
+        """
+        key_iterator = iter(key_chain)
+        item = self.invisibleRootItem()
+        while item.hasChildren():
+            try:
+                key = next(key_iterator)
+            except StopIteration:
+                break
+            for i in range(item.rowCount()):
+                child = item.child(i)
+                if child.data(Qt.UserRole) == key:
+                    item = child
+                    break
+        return key, item
+
+    def flags(self, index):
+        """Returns enabled flags for the given index.
+
+        Args:
+            index (QModelIndex): Index of Tool
+        """
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """Returns the data for the given role and section in the header
+        with the specified orientation.
+        """
+        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+            try:
+                h = self.header[section]
+            except IndexError:
+                return None
+            return h
+        else:
+            return None
