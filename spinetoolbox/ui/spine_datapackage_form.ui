@@ -26,7 +26,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>662</width>
+    <width>921</width>
     <height>600</height>
    </rect>
   </property>
@@ -52,19 +52,13 @@
     </property>
     <item>
      <widget class="QSplitter" name="splitter">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
       <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout">
         <item>
-         <widget class="QLabel" name="label_datapackage">
+         <widget class="QLabel" name="label_descriptor">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
             <horstretch>1</horstretch>
@@ -78,12 +72,12 @@
            </font>
           </property>
           <property name="text">
-           <string>Datapackage</string>
+           <string>Descriptor</string>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QTreeView" name="treeView_datapackage">
+         <widget class="QTreeView" name="treeView_descriptor">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>1</horstretch>
@@ -103,26 +97,92 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="layoutWidget_2">
+      <widget class="QWidget" name="">
        <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QLabel" name="label_resource_data">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-            <horstretch>2</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <property name="spacing">
+           <number>0</number>
           </property>
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Resource data</string>
-          </property>
-         </widget>
+          <item>
+           <widget class="QLabel" name="label_resource_data">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="font">
+             <font>
+              <weight>75</weight>
+              <bold>true</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Resource data</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer_2">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Minimum</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_resource_name">
+            <property name="font">
+             <font>
+              <pointsize>11</pointsize>
+              <weight>50</weight>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>name:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QComboBox" name="comboBox_resource_name">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="horizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::MinimumExpanding</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="QTableView" name="tableView_resource_data">
@@ -132,6 +192,9 @@
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <attribute name="horizontalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
           <attribute name="horizontalHeaderHighlightSections">
            <bool>false</bool>
           </attribute>
@@ -154,13 +217,13 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>662</width>
+     <width>921</width>
      <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>File</string>
+     <string>Datapackage</string>
     </property>
     <addaction name="actionInfer_datapackage"/>
     <addaction name="actionLoad_datapackage"/>
@@ -173,7 +236,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSave_datapackage">
    <property name="text">
-    <string>Save datapackage</string>
+    <string>Save datapackage.json</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -181,7 +244,7 @@
   </action>
   <action name="actionConvert">
    <property name="text">
-    <string>Convert to Spine</string>
+    <string>Convert to Spine.sqlite</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F5</string>
@@ -207,7 +270,7 @@
   </action>
   <action name="actionInfer_datapackage">
    <property name="text">
-    <string>Infer new datapackage</string>
+    <string>Infer from csv</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
@@ -220,7 +283,7 @@
   </action>
   <action name="actionLoad_datapackage">
    <property name="text">
-    <string>Load existing datapackage</string>
+    <string>Load datapackage.json</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>

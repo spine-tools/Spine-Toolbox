@@ -225,7 +225,6 @@ def erase_dir(path, verbosity=False):
 
 def create_fresh_Spine_database(engine):
     """Create a fresh Spine database in the given engine."""
-    # Wipe out file. This is better for debug phase, but later we can reuse the same one
     sql = """
         CREATE TABLE IF NOT EXISTS "commit" (
             id INTEGER NOT NULL,

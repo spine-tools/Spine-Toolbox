@@ -32,12 +32,12 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog
 from metaobject import MetaObject
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
-from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
+# from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
 # from widgets.custom_menus import DatapackagePopupMenu
 from helpers import create_dir
 from config import APPLICATION_PATH
-from datapackage import Package
+# from datapackage import Package
 from graphics_items import DataConnectionImage
 
 class DataConnection(MetaObject):
@@ -56,7 +56,7 @@ class DataConnection(MetaObject):
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
         self._project = project
-        self.package = None
+        # self.package = None
         self._widget = DataConnectionWidget(name, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
@@ -78,9 +78,9 @@ class DataConnection(MetaObject):
         self._widget.populate_data_list(data_files)
         self._graphics_item = DataConnectionImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
+        self.connect_signals()
         # self.datapackage_popup_menu = DatapackagePopupMenu(self)
         # self._widget.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)
-        self.connect_signals()
 
     def connect_signals(self):
         """Connect this data connection's signals to slots."""
@@ -222,23 +222,19 @@ class DataConnection(MetaObject):
             if not res:
                 self._parent.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
-    @Slot(name="show_edit_keys_form")
-    def show_edit_keys_form(self):
-        """Show edit keys widget."""
-        if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
-            self._parent.msg_error.emit("Create a datapackage first.")
-            return
-        self.package = CustomPackage(os.path.join(self.data_dir, 'datapackage.json'))
-        self.edit_datapackage_keys_form = EditDatapackageKeysWidget(self)
-        self.edit_datapackage_keys_form.show()
+    # @Slot(name="show_edit_keys_form")
+    # def show_edit_keys_form(self):
+    #     """Show edit keys widget."""
+    #     if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
+    #         self._parent.msg_error.emit("Create a datapackage first.")
+    #         return
+    #     self.package = CustomPackage(os.path.join(self.data_dir, 'datapackage.json'))
+    #     self.edit_datapackage_keys_form = EditDatapackageKeysWidget(self)
+    #     self.edit_datapackage_keys_form.show()
 
     @Slot(name="show_spine_datapackage_form")
     def show_spine_datapackage_form(self):
         """Show spine_datapackage_form widget."""
-        #if not os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
-        #    self._parent.msg_error.emit("Create a datapackage first.")
-        #    return
-        #self.package = CustomPackage(os.path.join(self.data_dir, 'datapackage.json'))
         self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self)
         self.spine_datapackage_form.show()
 
@@ -292,72 +288,72 @@ class DataConnection(MetaObject):
         return None
 
 
-class CustomPackage(Package):
-    """Custom Package class to manage keys more directly."""
-    def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
-        super().__init__(descriptor, base_path, strict, storage)
-
-    def primary_keys_data(self):
-        """Return primary keys in a 2-column array"""
-        data = list()
-        for resource in self.resources:
-            for field in resource.schema.primary_key:
-                table = resource.name
-                data.append([table, field])
-        return data
-
-    def foreign_keys_data(self):
-        """Return foreign keys in a 4-column array"""
-        data = list()
-        for resource in self.resources:
-            for fk in resource.schema.foreign_keys:
-                child_table = resource.name
-                child_field = fk['fields'][0]
-                parent_table = fk['reference']['resource']
-                parent_field = fk['reference']['fields'][0]
-                data.append([child_table, child_field, parent_table, parent_field])
-        return data
-
-    def add_primary_key(self, table, field):
-        """Add primary key to the package"""
-        i = self.resource_names.index(table)
-        self.descriptor['resources'][i]['schema']['primaryKey'] = [field]
-        self.commit()
-
-    def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
-        """Add foreign key to the package"""
-        i = self.resource_names.index(child_table)
-        foreign_key = {
-            "fields": [child_field],
-            "reference": {
-                "resource": parent_table,
-                "fields": [parent_field]
-            }
-        }
-        self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
-        if foreign_key not in self.descriptor['resources'][i]['schema']['foreignKeys']:
-            self.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
-            self.commit()
-
-    def rm_primary_key(self, table, field):
-        """Remove primary key from the package"""
-        i = self.resource_names.index(table)
-        if 'primaryKey' in self.descriptor['resources'][i]['schema']:
-            if self.descriptor['resources'][i]['schema']['primaryKey'] == [field]:
-                del self.descriptor['resources'][i]['schema']['primaryKey']
-                self.commit()
-
-    def rm_foreign_key(self, child_table, child_field, parent_table, parent_field):
-        """Remove foreign key from the package"""
-        i = self.resource_names.index(child_table)
-        foreign_key = {
-            "fields": [child_field],
-            "reference": {
-                "resource": parent_table,
-                "fields": [parent_field]
-            }
-        }
-        if 'foreignKeys' in self.descriptor['resources'][i]['schema']:
-            if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
-                self.descriptor['resources'][i]['schema']['foreignKeys'].remove(foreign_key)
-                self.commit()
+# class CustomPackage(Package):
+#     """Custom Package class to manage keys more directly."""
+#     def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
+#         super().__init__(descriptor, base_path, strict, storage)
+#
+#     def primary_keys_data(self):
+#         """Return primary keys in a 2-column array"""
+#         data = list()
+#         for resource in self.resources:
+#             for field in resource.schema.primary_key:
+#                 table = resource.name
+#                 data.append([table, field])
+#         return data
+#
+#     def foreign_keys_data(self):
+#         """Return foreign keys in a 4-column array"""
+#         data = list()
+#         for resource in self.resources:
+#             for fk in resource.schema.foreign_keys:
+#                 child_table = resource.name
+#                 child_field = fk['fields'][0]
+#                 parent_table = fk['reference']['resource']
+#                 parent_field = fk['reference']['fields'][0]
+#                 data.append([child_table, child_field, parent_table, parent_field])
+#         return data
+#
+#     def add_primary_key(self, table, field):
+#         """Add primary key to the package"""
+#         i = self.resource_names.index(table)
+#         self.descriptor['resources'][i]['schema']['primaryKey'] = [field]
+#         self.commit()
+#
+#     def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
+#         """Add foreign key to the package"""
+#         i = self.resource_names.index(child_table)
+#         foreign_key = {
+#             "fields": [child_field],
+#             "reference": {
+#                 "resource": parent_table,
+#                 "fields": [parent_field]
+#             }
+#         }
+#         self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
+#         if foreign_key not in self.descriptor['resources'][i]['schema']['foreignKeys']:
+#             self.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
+#             self.commit()
+#
+#     def rm_primary_key(self, table, field):
+#         """Remove primary key from the package"""
+#         i = self.resource_names.index(table)
+#         if 'primaryKey' in self.descriptor['resources'][i]['schema']:
+#             if self.descriptor['resources'][i]['schema']['primaryKey'] == [field]:
+#                 del self.descriptor['resources'][i]['schema']['primaryKey']
+#                 self.commit()
+#
+#     def rm_foreign_key(self, child_table, child_field, parent_table, parent_field):
+#         """Remove foreign key from the package"""
+#         i = self.resource_names.index(child_table)
+#         foreign_key = {
+#             "fields": [child_field],
+#             "reference": {
+#                 "resource": parent_table,
+#                 "fields": [parent_field]
+#             }
+#         }
+#         if 'foreignKeys' in self.descriptor['resources'][i]['schema']:
+#             if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
+#                 self.descriptor['resources'][i]['schema']['foreignKeys'].remove(foreign_key)
+#                 self.commit()

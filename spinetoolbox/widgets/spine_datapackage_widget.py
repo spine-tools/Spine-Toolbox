@@ -32,11 +32,10 @@ import logging
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.lineedit_delegate import LineEditDelegate
-from widgets.custom_qdialog import CustomQDialog
-from widgets.custom_menus import DatapackageTreeContextMenu
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QDialog, QCheckBox
-from PySide2.QtCore import Qt, Slot, QSettings
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont
+from widgets.custom_menus import DescriptorTreeContextMenu
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
+from PySide2.QtCore import Qt, Slot, QSettings, SIGNAL
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
 from helpers import create_fresh_Spine_database, busy_effect
 from models import MinimalTableModel
 from sqlalchemy import create_engine
@@ -71,15 +70,16 @@ class SpineDatapackageWidget(QMainWindow):
         self.Commit = None
         self.datapackage = None
         self.object_class_name_list = None
-        self.selected_resource = None
-        self.datapackage_tree_context_menu = None
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
+        font = QFont("", 0)
+        self.font_metric = QFontMetrics(font)
+        self.max_resource_name_width = None
+        self.descriptor_tree_context_menu = None
+        self.current_resource_index = None
+        self.resource_tables = list()
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.qsettings = QSettings("SpineProject", "Convert datapackage to Spine")
-        # Add status bar to form
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox datapackage form")
         # Add status bar to form
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
@@ -91,13 +91,12 @@ class SpineDatapackageWidget(QMainWindow):
             self.close()
             return
         self.create_session()
-        self.datapackage_model = QStandardItemModel(self)
-        self.datapackage_model_header = ["Key", "Value"]
-        self.datapackage_model.data = self.datapackage_model_data
-        self.datapackage_model.flags = self.datapackage_model_flags
-        self.datapackage_model.headerData = self.datapackage_model_header_data
+        self.descriptor_model = QStandardItemModel(self)
+        self.descriptor_model_header = ["Key", "Value"]
+        self.descriptor_model.flags = self.descriptor_model_flags
+        self.descriptor_model.headerData = self.descriptor_model_header_data
         self.load_datapackage()
-        self.ui.treeView_datapackage.setModel(self.datapackage_model)
+        self.ui.treeView_descriptor.setModel(self.descriptor_model)
         self.resource_data_model = MinimalTableModel()
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
         self.ui.tableView_resource_data.horizontalHeader().\
@@ -109,21 +108,19 @@ class SpineDatapackageWidget(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.treeView_datapackage.expanded.connect(self.resize_treeview_datapackage)
-        self.ui.treeView_datapackage.collapsed.connect(self.resize_treeview_datapackage)
+        self.ui.treeView_descriptor.expanded.connect(self.resize_treeview_descriptor)
+        self.ui.treeView_descriptor.collapsed.connect(self.resize_treeview_descriptor)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionConvert.triggered.connect(self.convert_triggered)
         self.ui.actionInfer_datapackage.triggered.connect(self.infer_datapackage)
         self.ui.actionLoad_datapackage.triggered.connect(self.load_datapackage)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
-        # self.ui.actionResource_Spine_names.triggered.connect(self.call_edit_resource_Spine_names)
-        # self.ui.actionField_Spine_names.triggered.connect(self.call_edit_field_Spine_names)
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_datapackage)
-        self.ui.treeView_datapackage.setItemDelegateForColumn(1, lineedit_delegate)
-        self.ui.treeView_datapackage.selectionModel().currentChanged.connect(self.populate_resource_table)
-        self.ui.treeView_datapackage.customContextMenuRequested.\
-            connect(self.show_datapackage_tree_context_menu)
+        resource_data_lineedit_delegate = LineEditDelegate(self)
+        resource_data_lineedit_delegate.closeEditor.connect(self.resource_data_editor_closed)
+        self.ui.tableView_resource_data.setItemDelegate(resource_data_lineedit_delegate)
+        self.ui.treeView_descriptor.selectionModel().currentChanged.connect(self.update_resource_table)
+        self.ui.treeView_descriptor.customContextMenuRequested.\
+            connect(self.show_descriptor_tree_context_menu)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -170,9 +167,21 @@ class SpineDatapackageWidget(QMainWindow):
         self.session = Session(self.engine)
         object_class_name_query = self.session.query(self.ObjectClass.name)
         self.object_class_name_list = [item.name for item in object_class_name_query]
+        self.max_resource_name_width = max(self.font_metric.width(x) for x in self.object_class_name_list)
 
-    @Slot(name="load_datapackage")
-    def load_datapackage(self):
+    def load_resource_data(self):
+        """Load resource data into a local list of tables."""
+        if not self.datapackage:
+            return
+        for resource in self.datapackage.resources:
+            table = list()
+            table.append(resource.schema.field_names)
+            table.extend(resource.read(cast=False))
+            self.resource_tables.append(table)
+
+    @busy_effect
+    @Slot("Boolean", name="load_datapackage")
+    def load_datapackage(self, load_resource_data=True):
         """Attempt to load existing datapackage.json file in data directory."""
         file_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
         if not os.path.exists(file_path):
@@ -180,26 +189,36 @@ class SpineDatapackageWidget(QMainWindow):
                   " Try 'Infer new datapackage' instead.".format(self._data_connection.data_dir)
             self.ui.statusbar.showMessage(msg, 5000)
             return
+        msg = "Loading datapackage from {}".format(file_path)
+        self.ui.statusbar.showMessage(msg)
         self.datapackage = Package(file_path)
         msg = "Datapackage loaded from {}".format(file_path)
         self.ui.statusbar.showMessage(msg, 3000)
-        self.spinify_datapackage()
-        self.init_datapackage_model()
+        # self.spinify_datapackage()
+        self.init_descriptor_model()
+        if load_resource_data:
+            self.load_resource_data()
 
-    @Slot(name="infer_datapackage")
-    def infer_datapackage(self):
+    @busy_effect
+    @Slot("Boolean", name="infer_datapackage")
+    def infer_datapackage(self, load_resource_data=True):
+        """Infer datapackage from CSV files in data directory."""
         data_files = self._data_connection.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
             msg = ("The folder {} does not have any CSV files."
                    " Add some and try again.".format(self._data_connection.data_dir))
             self.ui.statusbar.showMessage(msg, 5000)
             return
+        msg = "Inferring datapackage from {}".format(self._data_connection.data_dir)
+        self.ui.statusbar.showMessage(msg)
         self.datapackage = Package(base_path = self._data_connection.data_dir)
         self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
         msg = "Datapackage inferred from {}".format(self._data_connection.data_dir)
         self.ui.statusbar.showMessage(msg, 3000)
-        self.spinify_datapackage()
-        self.init_datapackage_model()
+        # self.spinify_datapackage()
+        self.init_descriptor_model()
+        if load_resource_data:
+            self.load_resource_data()
 
     @Slot(name="save_datapackage")
     def save_datapackage(self):  #TODO: handle zip as well?
@@ -219,19 +238,9 @@ class SpineDatapackageWidget(QMainWindow):
             self.ui.statusbar.showMessage(msg, 5000)
         return False
 
-    def spinify_datapackage(self):
-        """Add spine related items to datapackage's descriptor."""
-        for resource in self.datapackage.descriptor['resources']:
-            if 'Spine_name' not in resource:
-                resource.update({'Spine_name': resource['name']})
-            for field in resource['schema']['fields']:
-                if 'Spine_name' not in field:
-                    field.update({'Spine_name': field['name']})
-        self.datapackage.commit()
-
-    def init_datapackage_model(self):
-        """"""
-        self.datapackage_model.clear()
+    def init_descriptor_model(self):
+        """Init datpackage descriptor model"""
+        self.descriptor_model.clear()
         def visit(parent_item, value):
             for key,new_value in value.items():
                 key_item = QStandardItem(str(key))
@@ -248,338 +257,270 @@ class SpineDatapackageWidget(QMainWindow):
                 if value_item:
                     row.append(value_item)
                 parent_item.appendRow(row)
-        visit(self.datapackage_model, self.datapackage.descriptor)
-        self.ui.treeView_datapackage.resizeColumnToContents(0)
+        visit(self.descriptor_model, self.datapackage.descriptor)
+        self.ui.treeView_descriptor.resizeColumnToContents(0)
 
-    def datapackage_model_data(self, index, role=Qt.DisplayRole):
+    def descriptor_model_flags(self, index):
         """Returns enabled flags for the given index.
 
         Args:
             index (QModelIndex): Index of Tool
         """
-        if role == Qt.FontRole:
-            if 'Spine' in index.sibling(index.row(), 0).data(Qt.DisplayRole):
-                return self.bold_font
-        return QStandardItemModel.data(self.datapackage_model, index, role)
-
-    def datapackage_model_flags(self, index):
-        """Returns enabled flags for the given index.
-
-        Args:
-            index (QModelIndex): Index of Tool
-        """
-        if index.column() == 1 and 'Spine' in index.sibling(index.row(), 0).data(Qt.UserRole):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def datapackage_model_header_data(self, section, orientation, role=Qt.DisplayRole):
+    def descriptor_model_header_data(self, section, orientation, role=Qt.DisplayRole):
         """Set headers."""
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             try:
-                h = self.datapackage_model_header[section]
+                h = self.descriptor_model_header[section]
             except IndexError:
                 return None
             return h
         else:
             return None
 
-    @Slot("QModelIndex", name="resize_treeview_datapackage")
-    def resize_treeview_datapackage(self, index):
-        self.ui.treeView_datapackage.resizeColumnToContents(0)
+    def find_item_in_descriptor_model(self, key_chain):
+        """Find item under a chain a keys.
 
-    @Slot("QModelIndex", "QModelIndex", name="populate_resource_table")
-    def populate_resource_table(self, current, previous):
-        """Populate resource tableView whenever a resource item is selected in the treeView"""
+        Returns:
+            key: the last key explored from key_chain
+            item: the last item visited
+        """
+        key_iterator = iter(key_chain)
+        item = self.descriptor_model.invisibleRootItem()
+        while item.hasChildren():
+            try:
+                key = next(key_iterator)
+            except StopIteration:
+                break
+            for i in range(item.rowCount()):
+                child = item.child(i)
+                if child.data(Qt.UserRole) == key:
+                    item = child
+                    break
+        return key, item
+
+    @Slot("QModelIndex", name="resize_treeview_descriptor")
+    def resize_treeview_descriptor(self, index):
+        self.ui.treeView_descriptor.resizeColumnToContents(0)
+
+    @Slot("QModelIndex", "QModelIndex", name="update_resource_table")
+    def update_resource_table(self, current, previous):
+        """Update resource tableView and comboBox whenever a resource item is selected in the treeView."""
         index = current
-        selected_resource = None
+        selected_resource_index = None
         while index.parent().isValid():
             if index.parent().data(Qt.UserRole) == 'resources':
-                selected_resource = index.data(Qt.UserRole)  # resource pos in json array
+                selected_resource_index = index.data(Qt.UserRole)  # resource pos in json array
                 break
             index = index.parent()
-        if selected_resource is None:
+        if selected_resource_index is None:
             return
-        if self.selected_resource == selected_resource:  # selected resource not changed
+        if self.current_resource_index == selected_resource_index:  # selected resource not changed
             return
-        self.selected_resource = selected_resource
-        resource = self.datapackage.resources[self.selected_resource]
-        table = resource.read(cast=False)
-        self.resource_data_model.header = resource.schema.field_names
+        self.current_resource_index = selected_resource_index
+        table = self.resource_tables[self.current_resource_index]
+        self.resource_data_model.header = table[0]  # TODO: find out why this is needed
         self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
+        # Update resource name combobox
+        # Disconnect signal
+        n_recv = self.ui.comboBox_resource_name.receivers(SIGNAL("currentTextChanged(QString)"))
+        if n_recv > 0:
+            self.ui.comboBox_resource_name.currentTextChanged.disconnect(self.resource_name_changed)
+        self.ui.comboBox_resource_name.clear()
+        resource_name = self.datapackage.resources[self.current_resource_index].name
+        self.ui.comboBox_resource_name.addItems(self.object_class_name_list)
+        max_width = self.max_resource_name_width
+        if resource_name not in self.object_class_name_list:
+            self.ui.comboBox_resource_name.insertItem(0, resource_name + ' (unsupported)')
+            self.ui.comboBox_resource_name.setCurrentIndex(0)
+            width = self.font_metric.width(resource_name + ' (unsupported)')
+            max_width = max(max_width, width)
+        else:
+            ind = self.object_class_name_list.index(resource_name)
+            self.ui.comboBox_resource_name.setCurrentIndex(ind)
+        # Set combobox width based on items
+        self.ui.comboBox_resource_name.setMinimumWidth(max_width + 24)
+        # Reconnect signal
+        self.ui.comboBox_resource_name.currentTextChanged.connect(self.resource_name_changed)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_datapackage")
-    def update_datapackage(self, editor, hint):
-        """Update datapackage with newly edited data.
-        """
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="resource_data_editor_closed")
+    def resource_data_editor_closed(self, editor, hint):
+        """Update resource with newly edited data."""
         index = editor.index
-        if not self.datapackage_model.setData(index, editor.text(), Qt.DisplayRole):
+        if not self.resource_data_model.setData(index, editor.text(), Qt.EditRole):
             return
-        keys = list()
-        final_key = index.sibling(index.row(), 0).data(Qt.DisplayRole)
-        index = index.parent()
-        while index.isValid():
-            keys.append(index.data(Qt.UserRole))
-            index = index.parent()
-        item = self.datapackage.descriptor
-        for key in reversed(keys):
-            item = item[key]
-        item[final_key] = editor.text()
-        # if field name has changed update resource data table header.
-        if 'fields' in keys and 'name' == final_key:
-            section = keys[keys.index('fields')-1]  # section is one position before 'fields'
-            self.resource_data_model.setHeaderData(section, Qt.Horizontal, editor.text())
+        self.ui.tableView_resource_data.resizeColumnsToContents()
+        # Update descriptor in datapackage in case a field name was modified
+        if not index.row() == 0:
+            return
+        new_name = editor.text()
+        field_index = index.column()
+        resource_dict = self.datapackage.descriptor['resources'][self.current_resource_index]
+        resource_dict['schema']['fields'][field_index]['name'] = new_name
         self.datapackage.commit()
-
-    @Slot(name="call_edit_resource_Spine_names")
-    def call_edit_resource_Spine_names(self):
-        config = self._parent.get_conf()
-        tip = config.getboolean("settings", "show_resource_Spine_names_tip")
-        if tip:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setWindowTitle("Resource Spine-names")
-            msg.setText("Resource Spine-names are used for mapping datapackage resources "
-                        "to Spine object classes. "
-                        "<b>By setting a resource's Spine-name, you can control how its data is processed "
-                        "when the datapackage is converted to Spine format</b>, "
-                        "as per the following rule:"
-                        "<ul><li>If a resource's Spine-name is one of Spine object class names, "
-                        "then its data is used "
-                        "to create objects, parameters, and relationships for that class.</li></ul>")
-            msg.setInformativeText("Click Ok to edit resource Spine-names.")
-            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            chkbox = QCheckBox()
-            chkbox.setText("Do not show this message again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()  # Show message box
-            if answer == QMessageBox.Cancel:
-                return
-            if answer == QMessageBox.Ok:
-                # Update conf file according to checkbox status
-                if not chkbox.checkState():
-                    show_tip = True
-                else:
-                    show_tip = False
-                config.setboolean("settings", "show_resource_Spine_names_tip", show_tip)
-        self.edit_resource_Spine_names()
-
-    @Slot(name="call_edit_field_Spine_names")
-    def call_edit_field_Spine_names(self):
-        config = self._parent.get_conf()
-        tip = config.getboolean("settings", "show_field_Spine_names_tip")
-        if tip:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setWindowTitle("Field Spine-names")
-            msg.setText("Field Spine-names are used for mapping datapackage fields "
-                        "to Spine relationship classes and parameters. "
-                        "<b>By setting a field's Spine-name, you can control how its data is processed "
-                        "when the datapackage is converted to Spine format</b>, "
-                        "as per the following rules:"
-                        "<ul><li>If a field's Spine-name is the same as the resource where it belongs, "
-                        "then it is considered a <b>primary key</b> "
-                        "and its value is used to name the objects of the class associated "
-                        "with the resource.</li></ul>"
-                        "<ul><li>If a field's Spine-name <i>contains</i> the Spine-name of a resource, "
-                        "then it is considered a <b>foreign key</b> "
-                        "and its value is looked up in the <b>primary key</b> "
-                        "of the referenced resource to create a relationship "
-                        " between the two associated classes.</li></ul>")
-            msg.setInformativeText("Click Ok to edit field Spine-names.")
-            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            chkbox = QCheckBox()
-            chkbox.setText("Do not show this message again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()  # Show message box
-            if answer == QMessageBox.Cancel:
-                return
-            if answer == QMessageBox.Ok:
-                # Update conf file according to checkbox status
-                if not chkbox.checkState():
-                    show_tip = True
-                else:
-                    show_tip = False
-                config.setboolean("settings", "show_field_Spine_names_tip", show_tip)
-        self.edit_field_Spine_names()
-
-    def edit_resource_Spine_names(self, resource_name_list=None):
-        if not resource_name_list:
-            resource_name_list = self.datapackage.resource_names
-        question = {}
-        for name in resource_name_list:
-            resource_Spine_name_list = list()
-            resource_Spine_name_list.append("Select Spine-name for " + name + "...")
-            resource_Spine_name_list.extend(self.object_class_name_list)
-            question.update({name: resource_Spine_name_list})
-        dialog = CustomQDialog(None, "Edit resource Spine-names", **question)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
+        # Update descriptor model
+        key_chain = ['resources', self.current_resource_index, 'schema', 'fields', field_index, 'name']
+        key, item = self.find_item_in_descriptor_model(key_chain)
+        if key != key_chain[-1]:
+            msg = "Couldn't find field in datapackage descriptor. Something is wrong."
+            self.ui.statusbar.showMessage(msg, 5000)
             return
-        for name in dialog.answer:
-            ind = dialog.answer[name]['index']
-            if ind == 0:
-                continue
-            new_name = dialog.answer[name]['text']
-            resource = self.datapackage.get_resource(name)
-            resource.descriptor['Spine_name'] = new_name
-            resource.commit()
-            resource_name_list.remove(name)
-            # TODO: update datapackage tree model
+        ind = item.index()
+        sib = ind.sibling(ind.row(), 1)
+        self.descriptor_model.setData(sib, new_name, Qt.EditRole)
 
-    def edit_field_Spine_names(self, field_name_list=None):
-        if not field_name_list:
-            question = {}
-            resource_name_list = list()
-            resource_name_list.append("Select resource...")
-            resource_name_list.extend(self.datapackage.resource_names)
-            question.update({'resource_name_list': resource_name_list})
-            dialog = CustomQDialog(None, "Edit field Spine-names", **question)
-            answer = dialog.exec_()
-            if answer != QDialog.Accepted:
-                return
-            ind = dialog.answer['resource_name_list']['index']
-            if ind == 0:
-                return
-            resource_name = resource_name_list[ind]
-            field_name_list = self.datapackage.get_resource(resource_name).schema.field_names
-        question = {}
-        for name in field_name_list:
-            question.update({name: "Type Spine-name for " + name + "..."})
-        dialog = CustomQDialog(None, "Edit field Spine-names", **question)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
+    @Slot("str", name="resource_name_changed")
+    def resource_name_changed(self, text):
+        """Update descriptor with new resource name from comboBox."""
+        # Update descriptor in datapackage
+        self.datapackage.descriptor['resources'][self.current_resource_index]['name'] = text
+        self.datapackage.commit()
+        # Update descriptor in model
+        key_chain = ['resources', self.current_resource_index, 'name']
+        key, item = self.find_item_in_descriptor_model(key_chain)
+        if key != key_chain[-1]:
+            msg = "Couldn't find resource in datapackage descriptor. Something is wrong."
+            self.ui.statusbar.showMessage(msg, 5000)
             return
-        for name in dialog.answer:
-            ind = dialog.answer[name]['index']
-            if ind == 0:
-                continue
-            new_name = dialog.answer[name]['text']
-        # TODO: eventually finish this
+        ind = item.index()
+        sib = ind.sibling(ind.row(), 1)
+        self.descriptor_model.setData(sib, text, Qt.EditRole)
+        # Remove unsupported name
+        ind = self.ui.comboBox_resource_name.findText("unsupported", Qt.MatchContains)
+        if ind == -1:
+            return
+        self.ui.comboBox_resource_name.removeItem(ind)
+
 
     @Slot(name="convert_triggered")
     def convert_triggered(self):
+        """Check if there are unsupported resource names, prompt the user
+        and launch conversion."""
         unsupported_names = list()
         for resource in self.datapackage.resources:
-            if resource.descriptor['Spine_name'] not in self.object_class_name_list:
-                unsupported_names.append(resource.descriptor['Spine_name'])
+            if resource.name not in self.object_class_name_list:
+                unsupported_names.append(resource.name)
         if unsupported_names:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Warning)
-            msg.setWindowTitle("Unsupported resource Spine-names")
-            msg.setText("Resource Spine-names are used for mapping datapackage resources "
-                        "to Spine object classes. "
-                        "<b>If a resource's Spine-name is one of Spine object class names, "
-                        "then its data will be used by the conversion process "
-                        "to create objects, parameters, and relationships for that class.</b>")
-            msg.setInformativeText("Some resources in the datapackage have unsupported Spine-names. "
-                                   "Do you want to edit them before continuing?")
-            msg.setStandardButtons(QMessageBox.Cancel | QMessageBox.No | QMessageBox.Yes)
+            msg.setWindowTitle("Unsupported resource names")
+            text = ("The following resources have unsupported names "
+                    "and will be ignored by the conversion process:<ul>")
+            for name in unsupported_names:
+                text += "<li>{}</li>".format(name)
+            text += "</ul>"
+            msg.setText(text)
+            msg.setInformativeText("Do you want to convert anyway?")
+            msg.setStandardButtons(QMessageBox.Cancel | QMessageBox.Yes)
             answer = msg.exec_()  # Show message box
             if answer == QMessageBox.Cancel:
                 return
-            if answer == QMessageBox.Yes:
-                self.edit_resource_Spine_names(unsupported_names)
         self.convert()
+        # Clean up session after converting
+        try:
+            self.session.query(self.Object).delete()
+            self.session.query(self.RelationshipClass).delete()
+            self.session.query(self.Relationship).delete()
+            self.session.query(self.Parameter).delete()
+            self.session.query(self.ParameterValue).delete()
+            self.session.query(self.Commit).delete()
+            self.session.flush()
+        except Exception as e:
+            msg = "Could not clean up session: {}".format(e.orig.args)
+            self.ui.statusbar.showMessage(msg, 5000)
 
     @busy_effect
     def convert(self):
-        for resource in self.datapackage.resources:
-            object_class_name = resource.descriptor['Spine_name']
+        """Convert datapackge into Spine database and save it in data directory as Spine.sqlite."""
+        for j, resource in enumerate(self.datapackage.resources):
+            object_class_name = resource.name
             if object_class_name not in self.object_class_name_list:
                 continue
             object_class_id = self.session.query(self.ObjectClass.id).\
                 filter_by(name=object_class_name).one().id
             relationship_class_id_dict = dict()
             parameter_id_dict = dict()
-            field_Spine_name_list = list()
             for field in resource.schema.fields:
-                field_Spine_name_list.append(field.descriptor['Spine_name'])
-                # Fields whose name contains an object_class name are taken as relationships
-                matched = list(filter(lambda x: x in field.descriptor['Spine_name'], self.object_class_name_list))
+                # A field named exactly as the object_class is a primary key
+                if field.name == object_class_name:
+                    continue
+                # Fields whose name contains a resource name are foreign keys
+                # and used to create relationships
+                matched = None
+                for x in self.object_class_name_list:
+                    if x == object_class_name:
+                        continue
+                    if x in field.name:
+                        matched = x
+                        break
                 if matched:
                     # Relationship class
                     child_object_class_id = self.session.query(self.ObjectClass.id).\
-                        filter_by(name=matched[0]).one().id
-                    name = resource.descriptor['Spine_name'] + "_" + field.descriptor['Spine_name']
+                        filter_by(name=matched).one().id
+                    relationship_class_name = resource.name + "_" + field.name
                     relationship_class = self.RelationshipClass(
                         commit_id=1,
                         parent_object_class_id=object_class_id,
                         child_object_class_id=child_object_class_id,
-                        name=name
+                        name=relationship_class_name
                     )
-                    self.session.add(relationship_class)
                     try:
+                        self.session.add(relationship_class)
                         self.session.flush()
-                        relationship_class_id_dict[field.descriptor['Spine_name']] = relationship_class.id
+                        relationship_class_id_dict[field.name] = relationship_class.id
                     except DBAPIError as e:
-                        msg = ("Failed to insert relationship class {0} "
-                              "for object class {1}: {2}".format(name, object_class_name, e.orig.args))
+                        msg = ("Failed to insert relationship class {0} for object class {1}: {2}".\
+                            format(relationship_class_name, object_class_name, e.orig.args))
                         self.ui.statusbar.showMessage(msg, 5000)
                         self.session.rollback()
                         return
                 else:
                     # Parameter
-                    name = field.descriptor['Spine_name']
+                    parameter_name = field.name
                     parameter = self.Parameter(
                         commit_id=1,
                         object_class_id=object_class_id,
-                        name=name
+                        name=parameter_name
                     )
-                    self.session.add(parameter)
                     try:
+                        self.session.add(parameter)
                         self.session.flush()
-                        parameter_id_dict[field.descriptor['Spine_name']] = parameter.id
+                        parameter_id_dict[field.name] = parameter.id
                     except DBAPIError as e:
-                        msg = ("Failed to insert parameter {0} "
-                               "for object class {1}: {2}".format(name, object_class_name, e.orig.args))
+                        msg = ("Failed to insert parameter {0} for object class {1}: {2}".\
+                            format(parameter_name, object_class_name, e.orig.args))
                         self.ui.statusbar.showMessage(msg, 5000)
                         self.session.rollback()
                         return
-            for i, row in enumerate(resource.iter(cast=False)):
-                row_dict = dict(zip(field_Spine_name_list, row))
-                # If a field is named after the object class, it contains the object name
-                if resource.descriptor['Spine_name'] in row_dict:
-                    object_name = row[resource.descriptor['Spine_name']]
+            # Iterate over resource data to create objects and parameter values
+            object_id_dict = dict()
+            for i, row in enumerate(self.resource_tables[j][1:]):
+                row_dict = dict(zip(resource.schema.field_names, row))
+                # Get object name from primery key
+                if object_class_name in row_dict:
+                    object_name = row_dict[object_class_name]
                 else:
-                    object_name = resource.descriptor['Spine_name'] + str(i)
+                    object_name = object_class_name + str(i)
                 object_ = self.Object(
                     commit_id=1,
                     class_id=object_class_id,
                     name=object_name
                 )
-                self.session.add(object_)
                 try:
+                    self.session.add(object_)
                     self.session.flush()
                     object_id = object_.id
                 except DBAPIError as e:
-                    msg = "Failed to insert object {}: {}".format(object_name, e.orig.args)
+                    msg = "Failed to insert object {0} to object class {1}: {2}".\
+                        format(object_name, object_class_name, e.orig.args)
                     self.ui.statusbar.showMessage(msg, 5000)
                     self.session.rollback()
                     return
+                object_id_dict[i] = object_.id
                 for key, value in row_dict.items():
-                    if key == resource.descriptor['Spine_name']:
-                        continue
-                    elif key in relationship_class_id_dict:
-                        relationship_class_id = relationship_class_id_dict[key]
-                        relationship_name = object_name + key
-                        relationship = self.Relationship(
-                            commit_id=1,
-                            class_id=relationship_class_id,
-                            parent_object_id=object_id,
-                            child_object_id=value,  # FIXME: get the right id from inspecting the target object
-                            name=relationship_name
-                        )
-                        self.session.add(relationship)
-                        try:
-                            self.session.flush()
-                            object_id = object_.id
-                        except DBAPIError as e:
-                            msg = "Failed to insert relationship {}: {}".format(key, e.orig.args)
-                            self.ui.statusbar.showMessage(msg, 5000)
-                            self.session.rollback()
-                            return
-                    elif key in parameter_id_dict:
+                    if key in parameter_id_dict:
                         parameter_id = parameter_id_dict[key]
                         parameter_value = self.ParameterValue(
                             commit_id=1,
@@ -587,12 +528,51 @@ class SpineDatapackageWidget(QMainWindow):
                             parameter_id=parameter_id,
                             value=value
                         )
-                        self.session.add(parameter_value)
                         try:
+                            self.session.add(parameter_value)
                             self.session.flush()
                             object_id = object_.id
                         except DBAPIError as e:
-                            msg = "Failed to insert parameter value {}: {}".format(key, e.orig.args)
+                            msg = "Failed to insert parameter value {0} for object {1} of class {2}: {3}".\
+                                format(key, object_name, object_class_name, e.orig.args)
+                            self.ui.statusbar.showMessage(msg, 5000)
+                            self.session.rollback()
+                            return
+            # Iterate over resource data (again) to create relationships
+            for i, row in enumerate(self.resource_tables[j][1:]):
+                row_dict = dict(zip(resource.schema.field_names, row))
+                if object_class_name in row_dict:
+                    parent_object_name = row_dict[object_class_name]
+                else:
+                    parent_object_name = object_class_name + str(i)
+                parent_object_id = object_id_dict[i]
+                for key, value in row_dict.items():
+                    if key in relationship_class_id_dict:
+                        relationship_class_id = relationship_class_id_dict[key]
+                        child_object_name = value
+                        child_object = self.session.query(self.Object.id).\
+                            filter_by(name=child_object_name).one_or_none()
+                        relationship_name = parent_object_name + key + child_object_name
+                        if child_object is None:
+                            msg = "Couldn't find object {} to create relationship {}".\
+                                format(child_object_name, relationship_name)
+                            self.ui.statusbar.showMessage(msg, 5000)
+                            self.session.rollback()
+                            return
+                        relationship = self.Relationship(
+                            commit_id=1,
+                            class_id=relationship_class_id,
+                            parent_object_id=parent_object_id,
+                            child_object_id=child_object.id,
+                            name=relationship_name
+                        )
+                        try:
+                            self.session.add(relationship)
+                            self.session.flush()
+                            object_id = object_.id
+                        except DBAPIError as e:
+                            msg = "Failed to insert relationship {0} for object {1} of class {2}: {3}".\
+                                format(key, parent_object_name, object_class_name, e.orig.args)
                             self.ui.statusbar.showMessage(msg, 5000)
                             self.session.rollback()
                             return
@@ -606,44 +586,33 @@ class SpineDatapackageWidget(QMainWindow):
             return
         msg = "Conversion finished. File 'Spine.sqlite' saved in {}".format(self._data_connection.data_dir)
         self.ui.statusbar.showMessage(msg, 5000)
-        # Clean up
-        try:
-            self.session.query(self.Object).delete()
-            self.session.query(self.RelationshipClass).delete()
-            self.session.query(self.Relationship).delete()
-            self.session.query(self.Parameter).delete()
-            self.session.query(self.ParameterValue).delete()
-            self.session.query(self.Commit).delete()
-            self.session.flush()
-        except Exception as e:
-            msg = "Could not clean up session: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
 
-    @Slot("QPoint", name="show_datapackage_tree_context_menu")
-    def show_datapackage_tree_context_menu(self, pos):
-        """Context menu for datapackage treeview.
+
+    @Slot("QPoint", name="show_descriptor_tree_context_menu")
+    def show_descriptor_tree_context_menu(self, pos):
+        """Context menu for descriptor treeview.
 
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.treeView_datapackage.indexAt(pos)
-        global_pos = self.ui.treeView_datapackage.viewport().mapToGlobal(pos)
-        self.datapackage_tree_context_menu = DatapackageTreeContextMenu(self, global_pos, index)
-        option = self.datapackage_tree_context_menu.get_action()
+        index = self.ui.treeView_descriptor.indexAt(pos)
+        global_pos = self.ui.treeView_descriptor.viewport().mapToGlobal(pos)
+        self.descriptor_tree_context_menu = DescriptorTreeContextMenu(self, global_pos, index)
+        option = self.descriptor_tree_context_menu.get_action()
         if option == "Expand all children":
-            self.ui.treeView_datapackage.expand(index)
-            if not self.datapackage_model.hasChildren(index):
+            self.ui.treeView_descriptor.expand(index)
+            if not self.descriptor_model.hasChildren(index):
                 return
-            for i in range(self.datapackage_model.rowCount(index)):
-                child_index = self.datapackage_model.index(i, 0, index)
-                self.ui.treeView_datapackage.expand(child_index)
+            for i in range(self.descriptor_model.rowCount(index)):
+                child_index = self.descriptor_model.index(i, 0, index)
+                self.ui.treeView_descriptor.expand(child_index)
         elif option == "Collapse all children":
-            self.ui.treeView_datapackage.collapse(index)
-            if not self.datapackage_model.hasChildren(index):
+            self.ui.treeView_descriptor.collapse(index)
+            if not self.descriptor_model.hasChildren(index):
                 return
-            for i in range(self.datapackage_model.rowCount(index)):
-                child_index = self.datapackage_model.index(i, 0, index)
-                self.ui.treeView_datapackage.collapse(child_index)
+            for i in range(self.descriptor_model.rowCount(index)):
+                child_index = self.descriptor_model.index(i, 0, index)
+                self.ui.treeView_descriptor.collapse(child_index)
 
     def closeEvent(self, event=None):
         """Handle close window.

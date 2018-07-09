@@ -214,8 +214,8 @@ class ParameterContextMenu(CustomContextMenu):
         # self.add_action("Edit field")
         self.exec_(position)
 
-class DatapackageTreeContextMenu(CustomContextMenu):
-    """Context menu class for datapackage treeview in Convert datapackage to Spine form."""
+class DescriptorTreeContextMenu(CustomContextMenu):
+    """Context menu class for descriptor treeview in Spine datapackage form."""
 
     def __init__(self, parent, position, index):
         super().__init__()
@@ -286,12 +286,12 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.addSeparator()
         self.add_action("Open file", self._parent.add_includes)
 
-#class DatapackagePopupMenu(CustomPopupMenu):
-#    """Popup menu class for datapackage button in Data Connection's subwindow widget."""
+# class DatapackagePopupMenu(CustomPopupMenu):
+#     """Popup menu class for datapackage button in Data Connection's subwindow widget."""
 #
-#    def __init__(self, parent):
-#        super().__init__()
-#        self._parent = parent
-#        # Open a tool template file
-#        self.add_action("Edit datapackage keys", self._parent.show_edit_keys_form)
-#        self.add_action("Convert datapackage to Spine", self._parent.show_datapackage2spine_form)
+#     def __init__(self, parent):
+#         super().__init__()
+#         self._parent = parent
+#         # Open a tool template file
+#         self.add_action("Edit datapackage keys", self._parent.show_edit_keys_form)
+#         self.add_action("Convert datapackage to Spine", self._parent.show_datapackage2spine_form)
