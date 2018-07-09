@@ -92,6 +92,14 @@ ui.settings module
     :undoc-members:
     :show-inheritance:
 
+ui.spine\_datapackage\_form module
+----------------------------------
+
+.. automodule:: ui.spine_datapackage_form
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ui.subwindow\_data\_connection module
 -------------------------------------
 

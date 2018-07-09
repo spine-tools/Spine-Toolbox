@@ -170,9 +170,13 @@ class DataStore(MetaObject):
         self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
         # Source
         source_url = reference['url']
+        logging.debug(source_url)
         source_engine = create_engine(source_url)
         # Destination
-        dest_filename = os.path.join(self.data_dir, database + ".sqlite")
+        if source_url.startswith('sqlite'):
+            dest_filename = os.path.join(self.data_dir, database)
+        else:
+            dest_filename = os.path.join(self.data_dir, database + ".sqlite")
         try:
             os.remove(dest_filename)
         except OSError:

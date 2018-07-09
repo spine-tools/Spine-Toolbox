@@ -10,6 +10,8 @@
            :width: 16
 .. |import| image:: ../../spinetoolbox/ui/resources/import.png
             :width: 16
+.. |Spine| image:: ../../spinetoolbox/ui/resources/Spine_symbol.png
+          :width: 16
 
 Tutorial
 ========
@@ -23,28 +25,26 @@ Welcome to the tutorial for Spine Toolbox. This tutorial covers the following to
 Knowing the Interface
 ---------------------
 
-The Spine Toolbox interface has two main components, *Main View* and *Contents*:
+The Spine Toolbox interface revolves around the **Main View**,
+where you can visualize and manipulate your project in a pictorial way.
+Alongside **Main view** there are a few *docked widgets*:
 
-- **Main View** lets you visualize and manipulate your project in a pictorial way. Here you can
-  place your items, and define the connections between items to build a
-  *data processing chain*.
-- **Contents** provides more concise views of your project into three tabs:
+- **Project** provides more concise views of your project into three tabs:
 
-   - The *Items* tab gives you access to your project items grouped by category:
+   - *Items* lists project items grouped by category:
      Data Stores, Data Connections, Tools and Views.
-   - The *Connections* tab lets you see and modify connections between items.
-   - *Templates* is for managing tools that Tool items can run.
+   - *Connections* shows connections between items.
+   - *Templates* lists Tool templates that Tool items can run.
 
-Besides these two main views, there are a few *docked widgets*:
-
-- **Item Controls** shows specific controls for the currently selected item.
-- **Event Log** is where Spine Toolbox informs you about everything that's going on.
+- **Item Controls** shows controls for the currently selected item.
+- **Event Log** outputs informative messages, and also errors and warnings.
 - **Subprocess Output** shows the output of command line tools.
 - **Julia REPL** is the console where Julia tools are executed.
 
 .. tip:: You can drag-and-drop the docked widgets around the screen,
    customizing the interface at your will.
-   Also, you can select which ones are shown/hidden using the **View** menu in the main menu bar.
+   Also, you can select which ones are shown/hidden using either the **View** menu,
+   or the *Add Item* toolbar's context menu.
    Spine Toolbox will remember your configuration between sessions.
 
 .. tip:: Most elements in the Spine Toolbox's interface are equipped with *tool tips*. Leave your mouse
@@ -54,8 +54,6 @@ Creating a Project
 ------------------
 
 In the main menu bar, click **File**, **New...** to open the *New Project* form.
-Here you can give the project a name and,
-optionally, a description.
 Type 'tutorial' in the name field ---we will leave the description empty this time--- and click **Ok**.
 
 Congratulations, you have created a new project.
@@ -65,14 +63,14 @@ Congratulations, you have created a new project.
 Working with Data Stores
 ------------------------
 
-Let's add a Data Store to the project. You can do this in either of two ways:
+Let's add a Data Store to the project. You can do this in two different ways:
 
 A) In the main menu bar, click **Edit**, **Add Data Store**.
 B) Drag-and-drop the *Data Store* icon (|ds_icon|) from the *Add Item* toolbar onto the *Main View*.
 
-The *Add Data Store* form will appear, allowing you to enter a name and description for the Data Store.
+The *Add Data Store* form will appear.
 Type 'simple test system' in the name field and click **Ok**.
-Now you should see the newly added item in the *Main View*, and also in the *Contents* pane, *Items* tab. It should
+Now you should see the newly added item in the *Main View*, and also in the *Project* widget, *Items* tab. It should
 look similar to this:
 
 .. image:: img/simple_test_system.png
@@ -83,11 +81,10 @@ look similar to this:
    between this and other items in your project. You don't have other items yet so we'll leave
    this button alone for now.
 
-Click anywhere in the Data Store item (outside of the connector button) to select it. This will also show
-its controls in the *Item Controls* area.
+Click anywhere in the Data Store item (outside of the connector button) to select it.
 
 .. tip:: You can also select a project item
-   by clicking on its name in the *Contents* pane, *Items* tab.
+   by clicking on its name in the *Project* widget, *Items* tab.
 
 With the Data Store item selected,
 the *Item Controls* area should show two lists ---both empty for now---, *References* and *Data*:
@@ -101,28 +98,24 @@ the *Item Controls* area should show two lists ---both empty for now---, *Refere
 Creating a new Spine database
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Let's add a new reference to this Data Store.
-Click on the *plus* button (|plus|) and select **New Spine SQLite database** in the popup menu.
-A dialog will show up to let you choose a name for the database. Type 'simple' and click **Ok**.
+Let's add data to this Data Store.
+Click on the *Spine* button (|Spine|) under *Item controls*.
+In the popup dialog, type 'simple' as the database name and click **Ok**.
 
-Now you should see the newly added reference in the list. It should look like this:
+Now you should see a new item in the *Data* list:
 
-.. image:: img/item_controls_data_store.png
+.. image:: img/data_store_simple_sqlite.png
    :align: center
-
-.. tip:: To remove a reference, select it by clicking on its name
-   and then press the *minus* button (|minus|).
-   You can also remove all references at once by pressing this button while nothing is selected.
 
 
 Using the Spine Data Store form
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Double click on the 'simple' reference we've just created to open the **Spine Data Store** form. This is
+Double click on the 'simple.sqlite' file we've just created to open the **Spine Data Store** form. This is
 a dedicated interface that you can use to manipulate databases in the Spine format. The interface is
 divided in three main areas:
 
-- **Object tree** displays the database contents in form of a tree,
+- **Object tree** displays the database contents into a tree,
   with object classes at the top level.
 - **Object parameter** displays parameters associated with the object that is
   currently selected in the *Object tree*.
@@ -135,15 +128,16 @@ Right now you should see a list of pre-defined object classes in the *Object tre
    correspond to the *generic data structure* that Spine uses to define energy models.
 
 Let's add a new object to the 'unit' object class. Right-click over the item tagged 'unit' in the *Object tree*
-and select **Add object** from the context menu. This will show a dialog where you can specify a name and
-description for the new object. Enter 'coal_import' in the name field and click **Ok**. Now you
+and select **Add object** from the context menu. In the popup dialog,
+enter 'coal_import' in the name field and click **Ok**. Now you
 should see the newly added object in the *Object tree*, under the 'unit' class.
 
 Repeat the operation to add an object called 'Leuven' to the 'node' class.
 
-Now let's add a relationship class between the 'node' and 'unit' object classes. Right-clik on 'node' to display
+Now let's add a relationship class between the 'node' and 'unit' object classes.
+Right-clik on 'node' to display
 the context menu, and this time select **Add relationship class**.
-A new dialog will show ---enter 'node_unit' in the name field,
+Enter 'node_unit' in the name field,
 and select 'unit' from the drop-down list. Click **Ok** when you are done.
 An item named 'node_unit' should appear now *both* under the 'coal_import' and 'Leuven' objects,
 as below:
@@ -154,8 +148,7 @@ as below:
 Let's add a relationship of class 'node_unit' between the two objects we've created.
 Right-click on the 'node_unit' relationship class
 below the 'coal_import' object and select **Add relationship** in the context menu.
-In the pop up dialog,
-enter 'Leuven_coal_unit' in the name field and select 'Leuven' from the drop-down list (it should be
+Enter 'Leuven_coal_unit' in the name field and select 'Leuven' from the drop-down list (it should be
 the only option available). Click **Ok**.
 
 After this you should see an item called 'Leuven' under the 'node_unit' relationship class
@@ -169,15 +162,15 @@ representing the same relationship but in the opposite sense:
   :align: center
 
 .. important:: Relationships in Spine are *omni-directional* (in simple terms, they work both ways).
-   For this reason, every time you
-   create a relationship, Spine Toolbox will create  the symmetric relationship
+   Therefore, for every relationship  you create, Spine Toolbox creates the symmetric relationship
    for you.
 
-Let's go one step ahead and add a couple of parameters to the 'unit' class. Right click on the 'unit'
-class and select **Add parameter** in the context menu. This will automatically activate
-the *Definition* tab in the *Object parameter* pane, add a new record to that table, and start
-editing the *parameter_name* field. You just need to type the parameter name now.
-Type 'conversion_cost' and press *Enter*.
+Let's go one step ahead and add a couple of parameters to the 'unit' class. Right click on 'unit'
+and select **Add parameter** in the context menu.
+Type 'conversion_cost' in the name field and press *Enter*.
+This will automatically activate
+the *Definition* tab in the *Object parameter* pane and highlight the newly inserted
+parameter.
 
 .. note:: Don't worry about the other fields in the *parameter* table for now. They are
    only there to support more sophisticated parameter definitions to be used, for instance,
@@ -191,61 +184,40 @@ should see something like this in the *Object parameter* pane, *Definition* tab:
 
 To finish our session with the *Spine Data Store* form, we will add a new parameter value. Right-click
 on the 'coal_import' object under the 'unit' class, and select **Add parameter value** in the
-context menu. This will automatically activate the *Value* tab in the *Object parameter* pane, add a new
-record to that table, and expand a list of available names over the *parameter_name* field. Here you should see
-the names of the two parameters we've just added. Click on 'conversion_cost'.
-
-Ater this, you will be automatically prompted to edit the *index* field.
-Accept the current value (1) by pressing *Enter*.
-Now let's edit the *value* field: just select this field (by clicking on it) and type '12' followed by *Enter*.
-After all this, the table should be looking like this:
+context menu. In the drop-down list you should see the two parameters we have just
+created. Select 'conversion_cost', type '12' in the value field and click **Ok** (don't worry
+about the json field just yet).
+This will automatically activate the *Value* tab in the *Object parameter* pane,
+and highlight the newly inserted parameter value:
 
 .. image:: img/parameter_value.png
   :align: center
 
-It's time to save our work. At the bottom of the form, you will find a text field where you can type a commit message.
-Type 'Add coal_import, Leuven, and conversion_cost.' (or any other meaningful message)
-and then click on the **Commit** button. That's it.
-Spine Toolbox has just updated the 'simple' reference with the newly inserted data.
+It's time to save our work. In the menu bar, click **Session**, **Commit**,
+type 'Add coal_import, Leuven, and conversion_cost.' (or any other meaningful message)
+and click **Ok**. All changes have now been committed to the 'simple.sqlite' database.
 
-Click **Close** to go back to the main interface.
+Select **Session**, **Close**, to close your session and go back to the main interface.
 
-Import references
-~~~~~~~~~~~~~~~~~
-
-Select the 'simple' reference in the *References* list and then click on the *import* button (|import|).
-This will copy the 'simple' database into a SQLite file called 'simple.sqlite',
-and put in the Data Store folder.
-After this, the *Item Controls* should look similar to this:
-
-.. image:: img/item_controls_data_store_import.png
-  :align: center
-
-You can open the 'simple.sqlite' file using the *Spine Data Store* form by double-clicking on it (much in
-the same way as you did with the 'simple' reference). Go ahead and do it. You will find the exact same
-content that you just inserted in the 'simple' database.
-
-Close the *Spine Data Store* form to go back to the main interface. Now click on **Open directory** in
-*Item Controls* to open the Data Store folder in your file explorer.
+Now click on **Open directory** under
+*Item Controls*. This will open your file explorer in the folder associated with
+this Data Store.
 You should see the 'simple.sqlite' file sitting there.
-Take note of the file's path for the next step in the tutorial.
-If you are running Spine Toolbox on Windows from the default location, the path should
-be something like ``C:\\SpineToolbox-0.0.13\projects\tutorial\simple_test_system\simple.sqlite``.
+Take note of the file's path for the next step.
+If you are running Spine Toolbox on Windows installed in the default location, the path should
+be something like this:
+``C:\\SpineToolbox-0.0.13\projects\tutorial\simple_test_system\simple.sqlite``.
 
-.. tip:: You can share the 'simple.sqlite' file with other Spine Toolbox users so they can see
-   (and possible continue) your work. All they need to do is add a reference to the 'simple.sqlite'
-   file in their project, using the procedure described in the next subsection.
 
-Add an SQLite reference
-~~~~~~~~~~~~~~~~~~~~~~~
+Adding an SQLite reference
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Just for illustration purposes, we will add a reference to the recently created 'simple.sqlite'
-file. Please note that this is not something you would typically do when working on a real project.
+file. Please note that this is not something you would typically do in a real project.
 
-Click on the plus button (|plus|) in the
-*Item Controls* area to add a new reference, and select **Other...** in the popup menu.
-This will open the *Add Database Reference* form.
-Here, select the 'sqlite' dialect in the drop-down list at the top.
+Add a new *Data Store* item to the project and call it 'simple_reference'. Select this new item
+to show its *Item Controls*, and
+click on the plus button (|plus|) to open the *Add Database Reference* form.
 
 .. note:: The *Add Database Reference* form allows you to access Spine databases in a number of
    SQL dialects. If you try to use a dialect that's currently not supported by your system,
@@ -254,13 +226,39 @@ Here, select the 'sqlite' dialect in the drop-down list at the top.
    about which package manager to choose, it's usually safe to try one and then the other and see
    what works.
 
-With the 'sqlite' dialect selected, click on the **Browse...** button. This will
+
+Select the 'sqlite' dialect in the drop-down list at the top,
+and click on the **Browse...** button. This will
 open a system dialog to let you
 select an SQLite file from your computer. Find the 'simple.sqlite' file (recall the path
 from the previous step) and click **Open**. Back in the *Add Database Reference* form, click
-**Ok**. Now you should see an item called 'simple.sqlite' just below 'simple' in your *References*
+**Ok**. Now you should see an item called 'simple.sqlite' in the *References*
 list.
 
+You can open the 'simple.sqlite' reference using the *Spine Data Store* form by double-clicking on it (much in
+the same way as you did with the 'simple.sqlite' file in the other Data Store).
+Go ahead and do it. You will find the exact same
+content that you just inserted in the 'simple.sqlite' database before.
+Close the *Spine Data Store* form to go back to the main interface.
+
+.. tip:: To remove a reference, select it by clicking on its name
+   and then press the *minus* button (|minus|).
+   You can also remove all references at once by pressing this button while nothing is selected.
+
+.. tip:: You can share the 'simple.sqlite' file with other Spine Toolbox users so they can see
+   (and possible continue) your work. All they need to do is add a reference to the 'simple.sqlite'
+   file in their project, using the procedure we have just described.
+
+
+Importing references
+~~~~~~~~~~~~~~~~~~~~
+
+Select the 'simple.sqlite' reference in the *References* list and then click on the *import* button (|import|).
+This will copy the 'simple.sqlite' database into a file called 'simple.sqlite' in the Data Store folder.
+After this, the *Item Controls* should look similar to this:
+
+.. image:: img/item_controls_data_store_import.png
+  :align: center
 
 
 .. TODO
