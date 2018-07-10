@@ -11,7 +11,17 @@
 .. |import| image:: ../../spinetoolbox/ui/resources/import.png
             :width: 16
 .. |Spine| image:: ../../spinetoolbox/ui/resources/Spine_symbol.png
-          :width: 16
+           :width: 16
+.. |tool_icon| image:: ../../spinetoolbox/ui/resources/tool_icon.png
+             :width: 24
+.. |add_tool| image:: ../../spinetoolbox/ui/resources/add_tool.png
+              :width: 24
+
+.. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
+.. _SpineModel.jl: https://gitlab.vtt.fi/spine/model/tree/manuelma
+.. _Jupyter: http://jupyter.org/
+.. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
+
 
 Tutorial
 ========
@@ -87,7 +97,7 @@ Click anywhere in the Data Store item (outside of the connector button) to selec
    by clicking on its name in the *Project* widget, *Items* tab.
 
 With the Data Store item selected,
-the *Item Controls* area should show two lists ---both empty for now---, *References* and *Data*:
+in the *Item Controls* area you should see two lists ---both empty for now---, *References* and *Data*:
 
 - **References** lists sources where this Data Store can import data from. (These typically live *outside*
   the current Spine Toolbox project.)
@@ -161,7 +171,7 @@ representing the same relationship but in the opposite sense:
 .. image:: img/Leuven_coal_import.png
   :align: center
 
-.. important:: Relationships in Spine are *omni-directional* (in simple terms, they work both ways).
+.. note:: Relationships in Spine are *omni-directional* (in simple terms, they work both ways).
    Therefore, for every relationship  you create, Spine Toolbox creates the symmetric relationship
    for you.
 
@@ -204,9 +214,9 @@ Now click on **Open directory** under
 this Data Store.
 You should see the 'simple.sqlite' file sitting there.
 Take note of the file's path for the next step.
-If you are running Spine Toolbox on Windows installed in the default location, the path should
+If you are using Windows with Spine Toolbox installed in the default location, it should
 be something like this:
-``C:\\SpineToolbox-0.0.13\projects\tutorial\simple_test_system\simple.sqlite``.
+``C:\\SpineToolbox-0.0.16\projects\tutorial\simple_test_system\simple.sqlite``.
 
 
 Adding an SQLite reference
@@ -261,13 +271,150 @@ After this, the *Item Controls* should look similar to this:
   :align: center
 
 
+Working with Tools
+------------------
+
+Next we will run a simple optimisation model
+in the system we've just created.
+The model we will run is implemented in a file called `simple.jl`
+supplied by `SpineModel.jl`.
+
+.. important:: For this part of the tutorial you will need the `SpineData.jl` and `SpineModel.jl`
+  Julia packages. Please follow the instructions at
+  SpineData.jl_ and SpineModel.jl_ to get the latest versions.
+  Note that `SpineData.jl` is a requirement
+  for `Spinemodel.jl`, so you'll need to install `SpineData.jl` first.
+
+
+Please locate the file `simple.jl` in your system in preparation for the next step.
+If you are using Windows with Julia version 0.6+, the path should be something like this:
+``C:\\Users\<your_username>\.julia\v0.6\SpineModel\examples\simple.jl``.
+
+
+Creating Tool templates
+~~~~~~~~~~~~~~~~~~~~~~~
+
+.. note:: Tool templates are self-contained program definitions that can be executed by *Tool* items.
+   A Tool template specifies the expected input and output files, as well as the program files
+   that the Tool needs to run.
+
+In the *Project* widget, select the *Templates* tab to see the list of
+available *Tool templates*. There you should see an item called 'No tool template'
+---don't worry about this, it's just an implementation detail.
+To add a new Tool template, click on the add tool button (|add_tool|) just below the list,
+and select **New** from the popup menu.
+The *Tool Template* form will appear with a few options. Let's go from top to bottom:
+
+- In the *name* field, type 'simple_tool_template'.
+- In the *tool type* dropdown list, select Julia.
+- Ignore the *description* and *command line arguments* fields this time.
+- Click on the plus button (|plus|) under the *Source files* list. This will open a system
+  dialog where you can select a Julia script from your computer. Select the
+  `simple.jl` file from the `SpineModel.jl` examples folder (recall the path from above)
+  and click **Open**.
+- Finally, click on the plus button (|plus|) under the *Input files* list. Type
+  `simple.sqlite` in the popup dialog and click **Ok**.
+
+After all this, the *Tool Template* form should be looking like this:
+
+.. image:: img/simple_tool_template_form.png
+  :align: center
+
+Click **Ok**. A system dialog will let you choose a location in your computer
+to save the *simple_tool_template*
+definition file. Click **Save** when you're done. Now you should see an item named
+'simple_tool_template' in the list.
+
+.. tip:: The Tool template definition file allows you to use the same Tool template in
+   different projects. All you need to do is click on the add tool button (|add_tool|)
+   and select **Open...** in the popup menu. A system dialog will appear to let you find
+   and open any Tool template definition file stored in your computer.
+
+From Tool Templates to Tool items
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Let's add a *Tool* item to the project so we can run the Tool template created above.
+Same as for Data Stores, you can add Tool items in two different ways:
+
+A) In the main menu bar, click **Edit**, **Add Tool**.
+B) Drag-and-drop the *Tool* icon (|tool_icon|) from the *Add Item* toolbar onto the *Main View*.
+
+The *Add Tool* form will appear.
+Type 'simple_model' in the name field, select 'simple_tool_template' from the dropdown list,
+and click **Ok**.
+Now you should see the newly added item in the *Main View*, next to the 'simple_test_system' Data Store,
+and also in the *Project* widget, *Items* tab, under the 'Tools' category. It should
+look similar to this:
+
+.. image:: img/simple_test_system_and_model.png
+   :align: center
+
+Select the 'simple_model' item to show it's *Item Controls*. (Remember that to select an
+item, you just need to click anywhere on it outside of the central connector button.)
+Here you will see that this Tool is set to execute the 'simple_tool_template'. Also, you
+can see the list of input and output files from the Tool template definition:
+
+.. image:: img/simple_model_item_controls.png
+   :align: center
+
+.. tip:: You can change which Tool template a Tool item will execute at any moment
+   by using the *Template* dropdown list in its *Item Controls*. This means that you
+   don't need to attach a Tool template when creating the Tool; you can always do it later
+   from here.
+
+Passing input data to Tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+In order for our 'simple_model' Tool to run, we need to provide it with the file 'simple.sqlite'
+listed under its *Input files* (and every other file in there if it was more).
+
+You may recall that our
+'simple_test_system' Data Store has a file called exactly like that,
+so we just need to pass it to 'simple_tool'. This is done by creating a *Connection* from
+the Data Store to the Tool.
+
+Click on the central connector button in the Data Store item to start 'drawing' the connection arrow.
+Now click on the central connector button in the Tool item. That's it:
+
+.. image:: img/simple_test_system_and_model_connected.png
+   :align: center
+
+Now whenever the 'simple_model' Tool is executed, it will look for input files
+in the 'simple_test_system' Data Store.
+
+.. tip:: A Tool item looks for input files in all the Data Stores and Data Connections
+   connected to its input. But not only that: if these Data Stores and Data Connections have
+   themselves other Data Stores or Data Connections connected to *their* inputs, the Tool
+   also looks in those and continues like this until the chain stops or goes into a loop.
+
+Executing Tools
+~~~~~~~~~~~~~~~
+
+All set. The 'simple_model' Tool is ready to run. Click on the **Execute** button
+under its *Item Controls*.
+
+.. important:: By default, Spine Toolbox is configured to run Julia Tools using
+   the Julia Jupyter_ kernel provided by the IJulia.jl_ package. In case you haven't
+   installed `IJulia.jl`, Spine Toolbox will offer to do it for you
+   the first time you execute a Julia Tool.
+
+   However, if this process fails, Spine Toolbox will 'fallback' to run the Tool
+   using the `julia` executable from the command prompt.
+
+
+After the Tool's execution finishes, you should see the output of the
+`simple.jl` script in the *Julia REPL*. For now it's just the definition of
+the ``flow`` variable. Check out the script to learn more.
+
+
+Collecting Tools output data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 .. TODO
 .. Working with Data Connections
 .. -----------------------------
 ..
-..
-.. Working with Tools
-.. ------------------
 ..
 ..
 .. Using the Julia REPL

@@ -121,7 +121,7 @@ class ToolTemplateModel(QAbstractListModel):
     def __init__(self, parent=None):
         super().__init__()
         self._tools = list()
-        self._tools.append('No tool')  # TODO: Try to get rid of this
+        self._tools.append('No tool template')  # TODO: Try to get rid of this
         self._parent = parent
 
     def rowCount(self, parent=None, *args, **kwargs):
