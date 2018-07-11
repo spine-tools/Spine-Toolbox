@@ -20,5 +20,7 @@
     <file>dc_icon.png</file>
     <file>tool_icon.png</file>
     <file>view_icon.png</file>
+    <file>object_icon.png</file>
+    <file>relationship_icon.png</file>
   </qresource>
 </RCC>

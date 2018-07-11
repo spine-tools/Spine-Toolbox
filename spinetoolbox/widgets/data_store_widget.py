@@ -28,7 +28,7 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from PySide2.QtWidgets import QMainWindow, QWidget, QStatusBar, QHeaderView, QDialog, QLineEdit, QInputDialog
 from PySide2.QtCore import Slot, Qt, QSettings
-from PySide2.QtGui import QStandardItem
+from PySide2.QtGui import QStandardItem, QIcon, QPixmap
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
@@ -81,6 +81,9 @@ class DataStoreForm(QMainWindow):
         self.Commit = None
         self.session = None
         self.transactions = None
+        # Icons
+        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
+        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         # Attempt to create base
@@ -276,6 +279,7 @@ class DataStoreForm(QMainWindow):
                 ).order_by(self.ObjectClass.display_order):
             # create object class item
             object_class_item = QStandardItem(object_class.name)
+            object_class_item.setData(self.object_icon, Qt.DecorationRole)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
             # get objects of this class
@@ -290,6 +294,7 @@ class DataStoreForm(QMainWindow):
             for object_ in object_query:
                 # create object item
                 object_item = QStandardItem(object_.name)
+                object_item.setData(self.object_icon, Qt.DecorationRole)
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole+1)
                 for relationship_class in relationship_class_query['as_parent']:
@@ -328,6 +333,7 @@ class DataStoreForm(QMainWindow):
         """
         # create relationship class item
         relationship_class_item = QStandardItem(relationship_class.name)
+        relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
         relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole+1)
         # get relationship classes having this relationship class as parent
         # (in our current convention, relationship classes are never child classes
@@ -377,6 +383,7 @@ class DataStoreForm(QMainWindow):
         for new_object in new_object_query:
             # create child object item
             new_object_item = QStandardItem(new_object.name)
+            new_object_item.setData(self.relationship_icon, Qt.DecorationRole)
             new_object_item.setData('related_object', Qt.UserRole)
             new_object_item.setData(new_object._asdict(), Qt.UserRole+1)
             for new_relationship_class in new_relationship_class_query:
@@ -929,6 +936,7 @@ class DataStoreForm(QMainWindow):
             object_class (self.Object_class)
         """
         object_class_item = QStandardItem(object_class.name)
+        object_class_item.setData(self.object_icon, Qt.DecorationRole)
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class.__dict__, Qt.UserRole+1)
         root_item = self.object_tree_model.invisibleRootItem().child(0)
@@ -1009,6 +1017,7 @@ class DataStoreForm(QMainWindow):
         """
         # manually add item to model as well
         object_item = QStandardItem(object_.name)
+        object_item.setData(self.object_icon, Qt.DecorationRole)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_.__dict__, Qt.UserRole+1)
         # get relationship classes involving the present object class
@@ -1020,6 +1029,7 @@ class DataStoreForm(QMainWindow):
             # no need to visit the relationship class here,
             # since this object does not have any relationships yet
             relationship_class_item = QStandardItem(relationship_class.name)
+            relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
             relationship_class_item.setData('relationship_class', Qt.UserRole)
             relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole+1)
             object_item.appendRow(relationship_class_item)
@@ -1140,6 +1150,7 @@ class DataStoreForm(QMainWindow):
             parent_class = item.parent().data(Qt.UserRole+1)
             if parent_class['id'] == parent_class_id:
                 relationship_class_item = QStandardItem(relationship_class.name)
+                relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
                 relationship_class_item.setData(relationship_class_type, Qt.UserRole)
                 relationship_class_item.setData(relationship_class.__dict__, Qt.UserRole+1)
                 item.appendRow(relationship_class_item)
@@ -1147,6 +1158,7 @@ class DataStoreForm(QMainWindow):
                 return  # meta_relationship_class, we are done
             if parent_class['id'] == relationship_class.child_object_class_id:
                 relationship_class_item = QStandardItem(relationship_class.name)
+                relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
                 relationship_class_item.setData('relationship_class', Qt.UserRole)
                 relationship_class_item.setData(relationship_class.__dict__, Qt.UserRole+1)
                 item.appendRow(relationship_class_item)
@@ -1301,6 +1313,7 @@ class DataStoreForm(QMainWindow):
                 # add parent relationship id
                 new_object['relationship_id'] = relationship.id
                 new_object_item = QStandardItem(new_object['name'])
+                new_object_item.setData(self.relationship_icon, Qt.DecorationRole)
                 new_object_item.setData('related_object', Qt.UserRole)
                 new_object_item.setData(new_object, Qt.UserRole+1)
                 # get relationship classes having the present relationship class as parent
@@ -1331,6 +1344,7 @@ class DataStoreForm(QMainWindow):
                 # add parent relationship id manually
                 new_object['relationship_id'] = relationship.id
                 new_object_item = QStandardItem(new_object['name'])
+                new_object_item.setData(self.relationship_icon, Qt.DecorationRole)
                 new_object_item.setData('related_object', Qt.UserRole)
                 new_object_item.setData(new_object, Qt.UserRole+1)
                 # get relationship classes having the present relationship class as parent
