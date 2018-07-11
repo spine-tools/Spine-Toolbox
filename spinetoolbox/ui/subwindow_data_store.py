@@ -284,7 +284,7 @@ class Ui_Form(object):
         self.horizontalLayout_2.addItem(spacerItem)
         self.toolButton_Spine = QtWidgets.QToolButton(Form)
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/symbols/Spine_symbol.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/Spine_db_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_Spine.setIcon(icon3)
         self.toolButton_Spine.setObjectName("toolButton_Spine")
         self.horizontalLayout_2.addWidget(self.toolButton_Spine)

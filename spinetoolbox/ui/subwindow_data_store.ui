@@ -734,7 +734,7 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/symbols/Spine_symbol.png</normaloff>:/symbols/Spine_symbol.png</iconset>
+           <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
          </property>
         </widget>
        </item>

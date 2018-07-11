@@ -47,8 +47,8 @@ class DataStoreWidget(QWidget):
         self._owner = owner  # Name of object that owns this object (e.g. 'DS 1')
         self.reference_model = QStandardItemModel()  # References to databases
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
-        self.icon = QIcon(QPixmap(":/icons/ds_icon.png"))
-        self.ref_icon = QIcon(QPixmap(":/icons/ds_ref_icon.png"))
+        self.icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
+        self.ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         self.ui.listView_references.setModel(self.reference_model)
         self.ui.listView_data.setModel(self.data_model)
         self.ui.label_name.setFocus()
