@@ -235,8 +235,17 @@ class DataConnection(MetaObject):
     @Slot(name="show_spine_datapackage_form")
     def show_spine_datapackage_form(self):
         """Show spine_datapackage_form widget."""
-        self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self)
-        self.spine_datapackage_form.show()
+        if self.spine_datapackage_form:
+            self.spine_datapackage_form.raise_()
+        else:
+            self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self)
+            self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
+            self.spine_datapackage_form.show()
+
+    @Slot(name="datapackage_form_destroyed")
+    def datapackage_form_destroyed(self):
+        self.spine_datapackage_form = None
+
 
     def file_references(self):
         """Return a list of paths to files that are in this item as references (self.references)."""
