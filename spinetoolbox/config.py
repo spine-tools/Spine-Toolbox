@@ -124,9 +124,12 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-right: 3px;" \
                     "padding-left: 3px;}"
 
+# NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
+# (known Qt issue)
 ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
-                    "background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
-                    "padding: 3px;}" \
+                    "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
+                    "padding: 3px;" \
+                    "border-style: solid;}" \
                   "QToolButton{background-color: white;" \
                     "border-width: 1px;" \
                     "border-style: inset;" \
