@@ -219,10 +219,13 @@
     <property name="title">
      <string>Datapackage</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionInfer_datapackage"/>
     <addaction name="actionLoad_datapackage"/>
     <addaction name="actionSave_datapackage"/>
-    <addaction name="actionConvert"/>
+    <addaction name="actionExport"/>
     <addaction name="actionQuit"/>
    </widget>
    <addaction name="menuFile"/>
@@ -230,18 +233,24 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSave_datapackage">
    <property name="text">
-    <string>Save datapackage.json</string>
+    <string>Save as 'datapackage.json'</string>
+   </property>
+   <property name="toolTip">
+    <string>Save as 'datapackage.json'</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionConvert">
+  <action name="actionExport">
    <property name="text">
-    <string>Convert to Spine.sqlite</string>
+    <string>Export to Spine.sqlite</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export datapackage as an '.sqlite' file in Spine EAV format, to every Data Store connected to the output of this Data Connection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+F5</string>
+    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionQuit">
@@ -266,6 +275,9 @@
    <property name="text">
     <string>Infer from csv</string>
    </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Infer datapackage from '.csv' files present in this Data Connection's directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
    </property>
@@ -277,7 +289,10 @@
   </action>
   <action name="actionLoad_datapackage">
    <property name="text">
-    <string>Load datapackage.json</string>
+    <string>Load from 'datapackage.json'</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load datapackage from a descriptor file called 'datapackage.json' in this Data Connection's directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+L</string>
