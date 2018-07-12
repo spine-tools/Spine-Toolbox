@@ -77,7 +77,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.max_resource_name_width = None
         self.descriptor_tree_context_menu = None
         self.current_resource_index = None
-        self.resource_tables = list()
+        self.resource_tables = dict()
         self.export_name = self._data_connection.name + '.sqlite'
         self.descriptor_model = DatapackageDescriptorModel(self)
         self.descriptor_model.header.extend(["Key", "Value"])
@@ -182,7 +182,7 @@ class SpineDatapackageWidget(QMainWindow):
             table = list()
             table.append(resource.schema.field_names)
             table.extend(resource.read(cast=False))
-            self.resource_tables.append(table)
+            self.resource_tables[resource.name] = table
 
     @Slot(name="call_load_datapackage")
     def call_load_datapackage(self):
@@ -229,11 +229,11 @@ class SpineDatapackageWidget(QMainWindow):
             msg.setIcon(QMessageBox.Warning)
             msg.setWindowTitle("Resources not found")
             text = ("The Data Connection folder <b>{0}</b> does not seem to have "
-                    "any '.csv' resource files.".\
+                    "any CSV resource files.".\
                     format(self._data_connection.data_dir))
             msg.setText(text)
             msg.setInformativeText("Unable to infer datapackage. "
-                                   "Please add some '.csv' files and try again.")
+                                   "Please add some CSV files and try again.")
             msg.setStandardButtons(QMessageBox.Ok)
             answer = msg.exec_()  # Show message box
             return
@@ -263,14 +263,14 @@ class SpineDatapackageWidget(QMainWindow):
             msg = '<b>Replacing file "datapackage.json" in "{}"</b>.'\
                   ' Are you sure?'.format(os.path.basename(self._data_connection.data_dir))
             # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(None, 'Replace datapackage.json', msg, QMessageBox.Yes, QMessageBox.No)
+            answer = QMessageBox.question(None, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return False
         if self.datapackage.save(os.path.join(self._data_connection.data_dir, 'datapackage.json')):
-            msg = "datapackage.json saved in {}".format(self._data_connection.data_dir)
+            msg = '"datapackage.json" saved in {}'.format(self._data_connection.data_dir)
             self.ui.statusbar.showMessage(msg, 5000)
             return True
-            msg = "Failed to save datapackage.json in {}".format(self._data_connection.data_dir)
+            msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
             self.ui.statusbar.showMessage(msg, 5000)
         return False
 
@@ -326,7 +326,8 @@ class SpineDatapackageWidget(QMainWindow):
 
     def reset_resource_data_model(self):
         """"""
-        table = self.resource_tables[self.current_resource_index]
+        current_resource_name = self.datapackage.resources[self.current_resource_index].name
+        table = self.resource_tables[current_resource_name]
         self.resource_data_model.header = table[0]  # TODO: find out why this is needed
         self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
@@ -406,12 +407,11 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(name="export")
     def export(self):
         """Check if everything is fine (destination, resource names), launch conversion,
-        and clean up afterwards."""
+        save output as .sqlite in destination Data Stores' directory, and clean up session
+        for future conversions."""
         if not self.datapackage:
             msg = "No datapackage to export. Load or infer one first."
             self.ui.statusbar.showMessage(msg, 5000)
-            self.ui.actionExport.setEnabled(False)
-
             return
         output_data_directories = list()
         for output_item in self._parent.connection_model.output_items(self._data_connection.name):
@@ -450,17 +450,17 @@ class SpineDatapackageWidget(QMainWindow):
             answer = msg.exec_()  # Show message box
             if answer != QMessageBox.Yes:
                 return
-        self.convert()
-        for dir in output_data_directories:
-            target_filename = os.path.join(dir, self.export_name)
-            try:
-                shutil.copy(self.temp_filename, target_filename)
-            except OSError:
-                msg = "Conversion failed. [OSError] Unable to copy file from temporary location."
-                self.ui.statusbar.showMessage(msg, 5000)
-                return
-        msg = "File '{0}' saved in {1}".format(self.export_name, output_data_directories)
-        self.ui.statusbar.showMessage(msg, 5000)
+        if self.convert():
+            for dir in output_data_directories:
+                target_filename = os.path.join(dir, self.export_name)
+                try:
+                    shutil.copy(self.temp_filename, target_filename)
+                except OSError:
+                    msg = "Conversion failed. [OSError] Unable to copy file from temporary location."
+                    self.ui.statusbar.showMessage(msg, 5000)
+                    return
+            msg = "File '{0}' saved in {1}".format(self.export_name, output_data_directories)
+            self.ui.statusbar.showMessage(msg, 5000)
         # Clean up session after converting
         try:
             self.session.query(self.Object).delete()
@@ -472,39 +472,38 @@ class SpineDatapackageWidget(QMainWindow):
             self.session.flush()
         except Exception as e:
             # TODO: handle this better, maybe open a new session
-            self.actionExport.setEnable(False)
+            self.actionExport.setEnabled(False)
             msg = self.ui.statusbar.message()
             msg = " Could not clean up session. Export has been disabled. {}".format(e.orig.args)
             self.ui.statusbar.showMessage(msg, 5000)
 
     @busy_effect
     def convert(self):
-        """Export datapackge to Spine database and save it as Spine.sqlite in data directory."""
-        for j, resource in enumerate(self.datapackage.resources):
+        """Convert datapackage to Spine database."""
+        for resource in self.datapackage.resources:
             object_class_name = resource.name
             if object_class_name not in self.object_class_name_list:
                 continue
             object_class_id = self.session.query(self.ObjectClass.id).\
                 filter_by(name=object_class_name).one().id
             relationship_class_id_dict = dict()
+            child_object_class_id_dict = dict()
             parameter_id_dict = dict()
             for field in resource.schema.fields:
-                # A field named exactly as the object_class is a primary key
-                if field.name == object_class_name:
+                # A field whose named starts with the object_class is an index and should be skipped
+                if field.name.startswith(object_class_name):
                     continue
-                # Fields whose name contains a resource name are foreign keys
+                # Fields whose name ends with an object class name are foreign keys
                 # and used to create relationships
-                matched = None
+                child_object_class_name = None
                 for x in self.object_class_name_list:
-                    if x == object_class_name:
-                        continue
-                    if x in field.name:
-                        matched = x
+                    if field.name.endswith(x):
+                        child_object_class_name = x
                         break
-                if matched:
+                if child_object_class_name:
                     # Relationship class
                     child_object_class_id = self.session.query(self.ObjectClass.id).\
-                        filter_by(name=matched).one().id
+                        filter_by(name=child_object_class_name).one().id
                     relationship_class_name = resource.name + "_" + field.name
                     relationship_class = self.RelationshipClass(
                         commit_id=1,
@@ -516,12 +515,13 @@ class SpineDatapackageWidget(QMainWindow):
                         self.session.add(relationship_class)
                         self.session.flush()
                         relationship_class_id_dict[field.name] = relationship_class.id
+                        child_object_class_id_dict[field.name] = child_object_class_id
                     except DBAPIError as e:
                         msg = ("Failed to insert relationship class {0} for object class {1}: {2}".\
                             format(relationship_class_name, object_class_name, e.orig.args))
                         self.ui.statusbar.showMessage(msg, 5000)
                         self.session.rollback()
-                        return
+                        return False
                 else:
                     # Parameter
                     parameter_name = field.name
@@ -539,10 +539,10 @@ class SpineDatapackageWidget(QMainWindow):
                             format(parameter_name, object_class_name, e.orig.args))
                         self.ui.statusbar.showMessage(msg, 5000)
                         self.session.rollback()
-                        return
+                        return False
             # Iterate over resource data to create objects and parameter values
             object_id_dict = dict()
-            for i, row in enumerate(self.resource_tables[j][1:]):
+            for i, row in enumerate(self.resource_tables[resource.name][1:]):
                 row_dict = dict(zip(resource.schema.field_names, row))
                 # Get object name from primery key
                 if object_class_name in row_dict:
@@ -563,11 +563,11 @@ class SpineDatapackageWidget(QMainWindow):
                         format(object_name, object_class_name, e.orig.args)
                     self.ui.statusbar.showMessage(msg, 5000)
                     self.session.rollback()
-                    return
+                    return False
                 object_id_dict[i] = object_.id
-                for key, value in row_dict.items():
-                    if key in parameter_id_dict:
-                        parameter_id = parameter_id_dict[key]
+                for field_name, value in row_dict.items():
+                    if field_name in parameter_id_dict:
+                        parameter_id = parameter_id_dict[field_name]
                         parameter_value = self.ParameterValue(
                             commit_id=1,
                             object_id=object_id,
@@ -580,36 +580,59 @@ class SpineDatapackageWidget(QMainWindow):
                             object_id = object_.id
                         except DBAPIError as e:
                             msg = "Failed to insert parameter value {0} for object {1} of class {2}: {3}".\
-                                format(key, object_name, object_class_name, e.orig.args)
+                                format(field_name, object_name, object_class_name, e.orig.args)
                             self.ui.statusbar.showMessage(msg, 5000)
                             self.session.rollback()
-                            return
+                            return False
             # Iterate over resource data (again) to create relationships
-            for i, row in enumerate(self.resource_tables[j][1:]):
+            for i, row in enumerate(self.resource_tables[resource.name][1:]):
                 row_dict = dict(zip(resource.schema.field_names, row))
                 if object_class_name in row_dict:
                     parent_object_name = row_dict[object_class_name]
                 else:
                     parent_object_name = object_class_name + str(i)
                 parent_object_id = object_id_dict[i]
-                for key, value in row_dict.items():
-                    if key in relationship_class_id_dict:
-                        relationship_class_id = relationship_class_id_dict[key]
-                        child_object_name = value
-                        child_object = self.session.query(self.Object.id).\
-                            filter_by(name=child_object_name).one_or_none()
-                        relationship_name = parent_object_name + key + child_object_name
-                        if child_object is None:
-                            msg = "Couldn't find object {} to create relationship {}".\
-                                format(child_object_name, relationship_name)
+                for field_name, value in row_dict.items():
+                    if field_name in relationship_class_id_dict:
+                        relationship_class_id = relationship_class_id_dict[field_name]
+                        child_object_name = None
+                        child_object_ref = value
+                        child_object_class_id = child_object_class_id_dict[field_name]
+                        child_object_class_name = self.session.query(self.ObjectClass.name).\
+                            filter_by(id=child_object_class_id).one().name
+                        child_resource = self.datapackage.get_resource(child_object_class_name)
+                        # Collect index and primary key columns in child resource
+                        indices = list()
+                        primary_key = None
+                        for j, field in enumerate(child_resource.schema.fields):
+                            # A field whose named starts with the object_class is an index
+                            if field.name.startswith(child_object_class_name):
+                                indices.append(j)
+                                # A field named exactly as the object_class is the primary key
+                                if field.name == child_object_class_name:
+                                    primary_key = j
+                        # Look up the child object ref. in the child resource table
+                        for k, row in enumerate(self.resource_tables[child_resource.name][1:]):
+                            if child_object_ref in [row[j] for j in indices]:
+                                # Found reference in index values
+                                if primary_key:
+                                    child_object_name = row[primary_key]
+                                else:
+                                    child_object_name = child_object_class_name + str(k)
+                                break
+                        if child_object_name is None:
+                            msg = "Couldn't find object ref {} to create relationship for field {}".\
+                                format(child_object_ref, field_name)
                             self.ui.statusbar.showMessage(msg, 5000)
-                            self.session.rollback()
-                            return
+                            continue
+                        child_object_id = self.session.query(self.Object.id).\
+                            filter_by(name=child_object_name, class_id=child_object_class_id).one().id
+                        relationship_name = parent_object_name + field_name + child_object_name
                         relationship = self.Relationship(
                             commit_id=1,
                             class_id=relationship_class_id,
                             parent_object_id=parent_object_id,
-                            child_object_id=child_object.id,
+                            child_object_id=child_object_id,
                             name=relationship_name
                         )
                         try:
@@ -618,11 +641,16 @@ class SpineDatapackageWidget(QMainWindow):
                             object_id = object_.id
                         except DBAPIError as e:
                             msg = "Failed to insert relationship {0} for object {1} of class {2}: {3}".\
-                                format(key, parent_object_name, object_class_name, e.orig.args)
+                                format(field_name, parent_object_name, object_class_name, e.orig.args)
                             self.ui.statusbar.showMessage(msg, 5000)
                             self.session.rollback()
-                            return
-        self.session.commit()
+                            return False
+        try:
+            self.session.commit()
+            return True
+        except Exception:
+            self.session.rollback()
+            return False
 
     @Slot("QPoint", name="show_descriptor_tree_context_menu")
     def show_descriptor_tree_context_menu(self, pos):
