@@ -1411,20 +1411,20 @@ class DataStoreForm(QMainWindow):
         entity = item.data(Qt.UserRole+1)
         if entity_type == 'object_class':
             table = self.ObjectClass
-            id_ = entity['id']
+            entity_id = entity['id']
         elif entity_type == 'object':
             table = self.Object
-            id_ = entity['id']
+            entity_id = entity['id']
         elif entity_type.endswith('relationship_class'):
             table = self.RelationshipClass
-            id_ = entity['id']
+            entity_id = entity['id']
         elif entity_type == 'related_object':
             table = self.Relationship
-            id_ = entity['relationship_id']
+            entity_id = entity['relationship_id']
         else:
             return # should never happen
         # get item from table
-        instance = self.session.query(table).filter_by(id=id_).one_or_none()
+        instance = self.session.query(table).filter_by(id=entity_id).one_or_none()
         if not instance:
             msg = "Could not find {} named {}. This should not happen.".format(entity_type, entity['name'])
             self.ui.statusbar.showMessage(msg, 5000)
@@ -1457,7 +1457,11 @@ class DataStoreForm(QMainWindow):
             ent = item.data(Qt.UserRole+1)
             if not ent_type: # root item
                 return False
-            if entity_type in ent_type and ent['id'] == entity['id']:
+            if ent_type == 'related_object':
+                ent_id = ent['relationship_id']
+            else:
+                ent_id = ent['id']
+            if entity_type in ent_type and ent_id == entity_id:
                 ind = index.model().indexFromItem(item)
                 index.model().removeRows(ind.row(), 1, ind.parent())
                 return True
