@@ -385,6 +385,9 @@ class SpineDatapackageWidget(QMainWindow):
         """Update descriptor (datapackage and model) with new resource name from comboBox."""
         if self.block_resource_name_combobox:
             return
+        # Update resource table
+        current_resource_name = self.datapackage.descriptor['resources'][self.current_resource_index]['name']
+        self.resource_tables[text] = self.resource_tables.pop(current_resource_name, None)
         # Update datapackage descriptor
         self.datapackage.descriptor['resources'][self.current_resource_index]['name'] = text
         self.datapackage.commit()
@@ -615,7 +618,7 @@ class SpineDatapackageWidget(QMainWindow):
                         for k, row in enumerate(self.resource_tables[child_resource.name][1:]):
                             if child_object_ref in [row[j] for j in indices]:
                                 # Found reference in index values
-                                if primary_key:
+                                if primary_key is not None:
                                     child_object_name = row[primary_key]
                                 else:
                                     child_object_name = child_object_class_name + str(k)
