@@ -29,7 +29,7 @@ from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QKeySequence
 
-class ParameterValueTableView(QTableView):
+class CopyPasteTableView(QTableView):
     """Custom QTableView class.
 
     Attributes:
@@ -40,43 +40,6 @@ class ParameterValueTableView(QTableView):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
         self.adding_new_parameter_value = False
-
-    def keyPressEvent(self, event):
-        """Copy selection to clipboard so that it can be pasted into Excel"""
-        if not event.matches(QKeySequence.Copy):
-            super().keyPressEvent(event)
-            return
-        selection = self.selectionModel().selection()
-        if not selection:
-            super().keyPressEvent(event)
-            return
-        first = selection.first()
-        content = ""
-        v_header = self.verticalHeader()
-        h_header = self.horizontalHeader()
-        for i in range(first.top(), first.bottom()+1):
-            if v_header.isSectionHidden(i):
-                continue
-            row = list()
-            for j in range(first.left(), first.right()+1):
-                if h_header.isSectionHidden(j):
-                    continue
-                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
-            content += "\t".join(row)
-            content += "\n"
-        QApplication.clipboard().setText(content)
-
-
-class ParameterTableView(QTableView):
-    """Custom QTableView class.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent):
-        """Initialize the QGraphicsView."""
-        super().__init__(parent)
 
     def keyPressEvent(self, event):
         """Copy selection to clipboard so that it can be pasted into Excel"""

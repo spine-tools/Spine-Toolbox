@@ -172,7 +172,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterValueTableView" name="tableView_object_parameter_value">
+                <widget class="CopyPasteTableView" name="tableView_object_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -249,7 +249,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_object_parameter">
+                <widget class="CopyPasteTableView" name="tableView_object_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -340,7 +340,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterValueTableView" name="tableView_relationship_parameter_value">
+                <widget class="CopyPasteTableView" name="tableView_relationship_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -414,7 +414,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_relationship_parameter">
+                <widget class="CopyPasteTableView" name="tableView_relationship_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -567,12 +567,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ParameterValueTableView</class>
-   <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>ParameterTableView</class>
+   <class>CopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>
