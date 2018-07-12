@@ -111,6 +111,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
+        self._data_connection.destroyed.connect(self.data_connection_destroyed)
         self.ui.treeView_descriptor.expanded.connect(self.resize_descriptor_treeview)
         self.ui.treeView_descriptor.collapsed.connect(self.resize_descriptor_treeview)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -141,6 +142,11 @@ class SpineDatapackageWidget(QMainWindow):
             self.setWindowState(Qt.WindowMaximized)
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
+
+    @Slot(name="data_connection_destroyed")
+    def data_connection_destroyed(self):
+        """Close this form whenever data connection item is destroyed."""
+        self.close()
 
     def create_engine(self):
         """Create engine with a fresh Spine database."""
