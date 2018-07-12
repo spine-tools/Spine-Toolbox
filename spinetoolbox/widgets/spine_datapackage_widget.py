@@ -489,8 +489,6 @@ class SpineDatapackageWidget(QMainWindow):
                 continue
             object_class_id = self.session.query(self.ObjectClass.id).\
                 filter_by(name=object_class_name).one().id
-            relationship_class_id_dict = dict()
-            child_object_class_id_dict = dict()
             parameter_id_dict = dict()
             for field in resource.schema.fields:
                 # A field whose named starts with the object_class is an index and should be skipped
@@ -517,8 +515,6 @@ class SpineDatapackageWidget(QMainWindow):
                     try:
                         self.session.add(relationship_class)
                         self.session.flush()
-                        relationship_class_id_dict[field.name] = relationship_class.id
-                        child_object_class_id_dict[field.name] = child_object_class_id
                     except DBAPIError as e:
                         msg = ("Failed to insert relationship class {0} for object class {1}: {2}".\
                             format(relationship_class_name, object_class_name, e.orig.args))
@@ -587,14 +583,38 @@ class SpineDatapackageWidget(QMainWindow):
                             self.ui.statusbar.showMessage(msg, 5000)
                             self.session.rollback()
                             return False
-            # Iterate over resource data (again) to create relationships
+        # Iterate over resources (again) to create relationships
+        for resource in self.datapackage.resources:
+            parent_object_class_name = resource.name
+            if parent_object_class_name not in self.object_class_name_list:
+                continue
+            relationship_class_id_dict = dict()
+            child_object_class_id_dict = dict()
+            for field in resource.schema.fields:
+                # A field whose named starts with the object_class is an index and should be skipped
+                if field.name.startswith(parent_object_class_name):
+                    continue
+                # Fields whose name ends with an object class name are foreign keys
+                # and used to create relationships
+                child_object_class_name = None
+                for x in self.object_class_name_list:
+                    if field.name.endswith(x):
+                        child_object_class_name = x
+                        break
+                if child_object_class_name:
+                    relationship_class_name = resource.name + "_" + field.name
+                    relationship_class_id_dict[field.name] = self.session.query(self.RelationshipClass.id).\
+                        filter_by(name=relationship_class_name).one().id
+                    child_object_class_id_dict[field.name] = self.session.query(self.ObjectClass.id).\
+                        filter_by(name=child_object_class_name).one().id
             for i, row in enumerate(self.resource_tables[resource.name][1:]):
                 row_dict = dict(zip(resource.schema.field_names, row))
-                if object_class_name in row_dict:
-                    parent_object_name = row_dict[object_class_name]
+                if parent_object_class_name in row_dict:
+                    parent_object_name = row_dict[parent_object_class_name]
                 else:
-                    parent_object_name = object_class_name + str(i)
-                parent_object_id = object_id_dict[i]
+                    parent_object_name = parent_object_class_name + str(i)
+                parent_object_id = self.session.query(self.Object.id).\
+                    filter_by(name=parent_object_name).one().id
                 for field_name, value in row_dict.items():
                     if field_name in relationship_class_id_dict:
                         relationship_class_id = relationship_class_id_dict[field_name]
@@ -644,7 +664,7 @@ class SpineDatapackageWidget(QMainWindow):
                             object_id = object_.id
                         except DBAPIError as e:
                             msg = "Failed to insert relationship {0} for object {1} of class {2}: {3}".\
-                                format(field_name, parent_object_name, object_class_name, e.orig.args)
+                                format(field_name, parent_object_name, parent_object_class_name, e.orig.args)
                             self.ui.statusbar.showMessage(msg, 5000)
                             self.session.rollback()
                             return False
