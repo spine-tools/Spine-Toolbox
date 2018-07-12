@@ -29,7 +29,7 @@ Note: These are Spine Toolbox internal data models.
 import logging
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel,\
     QSortFilterProxyModel
-from PySide2.QtGui import QStandardItemModel, QBrush, QFont
+from PySide2.QtGui import QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 
 
 class ProjectItemModel(QStandardItemModel):
@@ -799,6 +799,8 @@ class ObjectTreeModel(QStandardItemModel):
         super().__init__(parent)
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
+        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
@@ -814,6 +816,14 @@ class ObjectTreeModel(QStandardItemModel):
                 return super().data(index, role)
             if item_type.endswith('class'):
                 return self.bold_font
+        if role == Qt.DecorationRole:
+            item_type = index.data(Qt.UserRole)
+            if not item_type:
+                return super().data(index, role)
+            if item_type.startswith('object'):
+                return self.object_icon
+            else:
+                return self.relationship_icon
         return super().data(index, role)
 
 
