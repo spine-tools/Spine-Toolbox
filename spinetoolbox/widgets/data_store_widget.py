@@ -247,20 +247,23 @@ class DataStoreForm(QMainWindow):
 
     def relationship_class_query(self, object_class_id):
         """Return relationship classes involving a given object class."""
-        as_parent_query = self.session.query(
+        as_parent = self.session.query(
             self.RelationshipClass.id,
             self.RelationshipClass.name,
             self.RelationshipClass.child_object_class_id,
             self.RelationshipClass.parent_object_class_id
         ).filter_by(parent_object_class_id=object_class_id)
-        as_child_query = self.session.query(
+        as_child = self.session.query(
             self.RelationshipClass.id,
             self.RelationshipClass.name,
             self.RelationshipClass.parent_object_class_id,
             self.RelationshipClass.child_object_class_id
-        ).filter_by(parent_relationship_class_id=None).\
-        filter_by(child_object_class_id=object_class_id)
-        return {'as_parent': as_parent_query, 'as_child': as_child_query}
+        ).filter(self.RelationshipClass.parent_object_class_id != object_class_id).\
+        filter_by(
+            parent_relationship_class_id=None,
+            child_object_class_id=object_class_id
+        )
+        return {'as_parent': as_parent, 'as_child': as_child}
 
     def init_object_tree_model(self):
         """Initialize object tree model from source database."""
@@ -329,8 +332,8 @@ class DataStoreForm(QMainWindow):
         # create relationship class item
         relationship_class_item = QStandardItem(relationship_class.name)
         relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole+1)
-        # get relationship classes having this relationship class as parent
-        # (in our current convention, relationship classes are never child classes
+        # get relationship classes having this relationship class as 'parent'
+        # (in our current convention, relationship classes are never the 'child'
         # in other relationship classes --but this may change)
         new_relationship_class_query = self.session.query(
             self.RelationshipClass.id,
@@ -910,6 +913,9 @@ class DataStoreForm(QMainWindow):
 
         Args:
             object_class (self.Object_class)
+
+        Returns:
+            Boolean value depending on the result of the operation
         """
         try:
             self.transactions.append(self.session.begin_nested())
@@ -984,11 +990,13 @@ class DataStoreForm(QMainWindow):
         return self.Object(commit_id=self.commit.id, **kwargs)
 
     def add_object_to_db(self, object_):
-        """Add object to database. Return boolean value depending on the
-        result of the operation.
+        """Add object to database.
 
         Args:
             object_ (self.Object)
+
+        Returns:
+            Boolean value depending on the result of the operation
         """
         try:
             self.transactions.append(self.session.begin_nested())
@@ -1093,11 +1101,13 @@ class DataStoreForm(QMainWindow):
         return self.RelationshipClass(commit_id=self.commit.id, **kwargs)
 
     def add_relationship_class_to_db(self, relationship_class):
-        """Add relationship class to database. Return boolean value depending on the
-        result of the operation.
+        """Add relationship class to database.
 
         Args:
             relationship_class (self.RelationshipClass): the relationship class to add
+
+        Returns:
+            Boolean value depending on the result of the operation
         """
         try:
             self.transactions.append(self.session.begin_nested())
@@ -1145,6 +1155,8 @@ class DataStoreForm(QMainWindow):
                 item.appendRow(relationship_class_item)
             if relationship_class_type == 'meta_relationship_class':
                 return  # meta_relationship_class, we are done
+            if parent_class_id == relationship_class.child_object_class_id:
+                return # Don't add duplicate relationship class if parent and child are the same
             if parent_class['id'] == relationship_class.child_object_class_id:
                 relationship_class_item = QStandardItem(relationship_class.name)
                 relationship_class_item.setData('relationship_class', Qt.UserRole)
@@ -1241,11 +1253,13 @@ class DataStoreForm(QMainWindow):
         return self.Relationship(commit_id=self.commit.id, **kwargs)
 
     def add_relationship_to_db(self, relationship):
-        """Add relationship to database. Return boolean value depending on the
-        result of the operation.
+        """Add relationship to database.
 
         Args:
             relationship (self.Relationship): the relationship to add
+
+        Returns:
+            Boolean value depending on the result of the operation
         """
         try:
             self.transactions.append(self.session.begin_nested())
@@ -2046,6 +2060,6 @@ class DataStoreForm(QMainWindow):
             self.session.rollback()
             self.session.close()
         if self.engine:
-                self.engine.dispose()
+            self.engine.dispose()
         if event:
             event.accept()
