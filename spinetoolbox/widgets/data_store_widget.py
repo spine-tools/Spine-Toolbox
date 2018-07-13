@@ -151,6 +151,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="data_store_destroyed")
     def data_store_destroyed(self):
         """Close this form without commiting any changes when data store item is destroyed."""
+        self._data_store = None
         self.close()
 
     @Slot(name="commit_session")
@@ -2047,6 +2048,8 @@ class DataStoreForm(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        if self._data_store is not None:
+            self._data_store.destroyed.disconnect(self.data_store_destroyed)
         # save qsettings
         self.qsettings.setValue("mainWindow/splitterTreeParameterState", self.ui.splitter_tree_parameter.saveState())
         self.qsettings.setValue("mainWindow/windowSize", self.size())

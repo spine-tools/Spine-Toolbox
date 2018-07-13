@@ -146,6 +146,7 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(name="data_connection_destroyed")
     def data_connection_destroyed(self):
         """Close this form whenever data connection item is destroyed."""
+        self._data_connection = None
         self.close()
 
     def create_engine(self):
@@ -721,6 +722,8 @@ class SpineDatapackageWidget(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        if self._data_connection is not None:
+            self._data_connection.destroyed.disconnect(self.data_connection_destroyed)
         # save qsettings
         self.qsettings.setValue("mainWindow/splitterState", self.ui.splitter.saveState())
         self.qsettings.setValue("mainWindow/windowSize", self.size())
