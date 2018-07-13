@@ -276,8 +276,8 @@ class SpineDatapackageWidget(QMainWindow):
             msg = '"datapackage.json" saved in {}'.format(self._data_connection.data_dir)
             self.ui.statusbar.showMessage(msg, 5000)
             return True
-            msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
-            self.ui.statusbar.showMessage(msg, 5000)
+        msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
+        self.ui.statusbar.showMessage(msg, 5000)
         return False
 
     def init_descriptor_model(self):
@@ -393,7 +393,12 @@ class SpineDatapackageWidget(QMainWindow):
             return
         # Update resource table
         current_resource_name = self.datapackage.descriptor['resources'][self.current_resource_index]['name']
-        self.resource_tables[text] = self.resource_tables.pop(current_resource_name, None)
+        resource_data = self.resource_tables.pop(current_resource_name, None)
+        if resource_data is None:
+            msg = "Couldn't find key in resource data dict. Something is wrong."
+            self.ui.statusbar.showMessage(msg, 5000)
+            return
+        self.resource_tables[text] = resource_data
         # Update datapackage descriptor
         self.datapackage.descriptor['resources'][self.current_resource_index]['name'] = text
         self.datapackage.commit()
@@ -498,7 +503,10 @@ class SpineDatapackageWidget(QMainWindow):
             parameter_id_dict = dict()
             for field in resource.schema.fields:
                 # A field whose named starts with the object_class is an index and should be skipped
-                if field.name.startswith(object_class_name):
+                # if field.name.startswith(object_class_name):
+                    # continue
+                # A field named as the object_class is a primary key and should be skipped
+                if field.name == object_class_name:
                     continue
                 # Fields whose name ends with an object class name are foreign keys
                 # and used to create relationships
