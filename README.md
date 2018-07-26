@@ -32,7 +32,7 @@ All version numbers next to the package names are minimum version numbers.
 For building the documentation you need the following packages:
 
 - Sphinx 1.7.5
-- sphinx-rtd-theme 0.4.0
+- sphinx_rtd_theme 0.4.0
 - recommonmark 0.4.0
 
 In addition, for deploying Spine Toolbox you need:
