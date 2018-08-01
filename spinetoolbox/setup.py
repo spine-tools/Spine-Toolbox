@@ -55,7 +55,8 @@ def main(argv):
                              "excludes": ["tkinter"],
                              "includes": ["atexit", "idna.idnadata", "pygments.lexers.python",
                                           "pygments.lexers.shell", "pygments.lexers.julia",
-                                          "qtconsole.client", "sqlalchemy.sql.default_comparator"],
+                                          "qtconsole.client", "sqlalchemy.sql.default_comparator",
+                                          "sqlalchemy.ext.baked"],
                              "include_files": [(doc_path, "docs/"), msvcr120_dll],
                              "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}

@@ -180,6 +180,14 @@ widgets.settings\_widget module
     :undoc-members:
     :show-inheritance:
 
+widgets.spine\_datapackage\_widget module
+-----------------------------------------
+
+.. automodule:: widgets.spine_datapackage_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.tool\_subwindow\_widget module
 --------------------------------------
 

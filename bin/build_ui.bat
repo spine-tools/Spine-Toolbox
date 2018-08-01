@@ -59,11 +59,6 @@ CALL pyside2-uic ../spinetoolbox/ui/edit_datapackage_keys.ui -o ../spinetoolbox/
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_datapackage_keys.py.o > ..\spinetoolbox\ui\edit_datapackage_keys.py
 del ..\spinetoolbox\ui\edit_datapackage_keys.py.o
 
-ECHO building spine_datapackage_form.py
-CALL pyside2-uic ../spinetoolbox/ui/spine_datapackage_form.ui -o ../spinetoolbox/ui/spine_datapackage_form.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\spine_datapackage_form.py.o > ..\spinetoolbox\ui\spine_datapackage_form.py
-del ..\spinetoolbox\ui\spine_datapackage_form.py.o
-
 ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
@@ -78,6 +73,11 @@ ECHO building settings.py
 CALL pyside2-uic ../spinetoolbox/ui/settings.ui -o ../spinetoolbox/ui/settings.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\settings.py.o > ..\spinetoolbox\ui\settings.py
 del ..\spinetoolbox\ui\settings.py.o
+
+ECHO building spine_datapackage_form.py
+CALL pyside2-uic ../spinetoolbox/ui/spine_datapackage_form.ui -o ../spinetoolbox/ui/spine_datapackage_form.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\spine_datapackage_form.py.o > ..\spinetoolbox\ui\spine_datapackage_form.py
+del ..\spinetoolbox\ui\spine_datapackage_form.py.o
 
 ECHO building subwindow_data_connection.py
 CALL pyside2-uic ../spinetoolbox/ui/subwindow_data_connection.ui -o ../spinetoolbox/ui/subwindow_data_connection.py.o
@@ -124,6 +124,7 @@ CALL append_license_xml ..\spinetoolbox\ui\edit_datapackage_keys.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
+CALL append_license_xml ..\spinetoolbox\ui\spine_datapackage_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\subwindow_data_connection.ui
 CALL append_license_xml ..\spinetoolbox\ui\subwindow_data_store.ui
 CALL append_license_xml ..\spinetoolbox\ui\subwindow_tool.ui
@@ -142,6 +143,7 @@ CALL append_license_py ..\spinetoolbox\ui\edit_datapackage_keys.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
+CALL append_license_py ..\spinetoolbox\ui\spine_datapackage_form.py
 CALL append_license_py ..\spinetoolbox\ui\subwindow_data_connection.py
 CALL append_license_py ..\spinetoolbox\ui\subwindow_data_store.py
 CALL append_license_py ..\spinetoolbox\ui\subwindow_tool.py
