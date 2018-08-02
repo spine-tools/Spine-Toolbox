@@ -1476,7 +1476,7 @@ class DataStoreForm(QMainWindow):
                 ent_id = ent['relationship_id']
             else:
                 ent_id = ent['id']
-            if entity_type in ent_type and ent_id == entity_id:
+            if entity_type == ent_type and ent_id == entity_id:
                 ind = index.model().indexFromItem(item)
                 index.model().removeRows(ind.row(), 1, ind.parent())
                 return True
