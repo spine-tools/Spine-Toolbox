@@ -89,7 +89,12 @@ class Tool(MetaObject):
 
     @Slot(name="stop_process")
     def stop_process(self):
+        try:
+            self.instance.instance_finished_signal.disconnect(self.execution_finished)
+        except Exception as e:
+            logging.exception("Exception {0} caught in Tool stop_process()".format(e))
         self.instance.terminate_instance()
+        self._parent.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -197,7 +202,10 @@ class Tool(MetaObject):
             self._parent.msg_warning.emit("No Tool template attached to Tool <b>{0}</b>".format(self.name))
             return
         self._parent.msg.emit("")
+        self._parent.msg.emit("----------------------------")
         self._parent.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
+        self._parent.msg.emit("----------------------------")
+        self._parent.msg.emit("")
         try:
             self.instance = ToolInstance(self.tool_template(), self._parent, self.output_dir, self._project)
         except OSError as e:
@@ -205,7 +213,7 @@ class Tool(MetaObject):
             return
         # Find required input files for ToolInstance (if any)
         if self._widget.input_file_model.rowCount() > 0:
-            self._parent.msg.emit("*** Checking Tool requirements ***")
+            self._parent.msg.emit("*** Checking Tool template requirements ***")
             # Abort if there are no input items connected to this Tool
             inputs = self._parent.connection_model.input_items(self.name)
             if not inputs:
@@ -446,6 +454,8 @@ class Tool(MetaObject):
         self._widget.ui.pushButton_stop.setEnabled(False)
         self._widget.ui.pushButton_execute.setEnabled(True)
         self._graphics_item.stop_wheel_animation()
+        # Disconnect instance finished signal
+        self.instance.instance_finished_signal.disconnect(self.execution_finished)
         if return_code == 0:
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
             # copy outputfiles to data directories of connected items

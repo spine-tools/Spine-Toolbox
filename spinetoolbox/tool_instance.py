@@ -48,7 +48,7 @@ class ToolInstance(QObject):
     def __init__(self, tool_template, ui, tool_output_dir, project):
         """Tool instance constructor."""
         super().__init__()
-        self.tool = tool_template  # TODO: Change self.tool to something else (e.g. self.tool_template or self.program
+        self.tool_template = tool_template
         self.ui = ui
         self._project = project
         self.tool_process = None
@@ -56,7 +56,7 @@ class ToolInstance(QObject):
         # Directory where results were saved
         self.output_dir = None
         wrk_dir = self._project.work_dir
-        self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool.short_name + '__', dir=wrk_dir)
+        self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
         self.command = ''  # command is created after ToolInstance is initialized
         self.fallback_command = ''
         self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
@@ -75,10 +75,11 @@ class ToolInstance(QObject):
         # Add anchor to work directory
         work_anchor = "<a style='color:#99CCFF;' href='file:///" + self.basedir + "'>" + self.basedir + "</a>"
         self.ui.msg.emit("Work Directory: {}".format(work_anchor))
-        self.ui.msg.emit("*** Copying program <b>{0}</b> to work directory ***".format(self.tool.name))
-        for filepath in self.tool.includes:
+        self.ui.msg.emit("*** Copying Tool template <b>{0}</b> source files to work directory ***"
+                         .format(self.tool_template.name))
+        for filepath in self.tool_template.includes:
             dirname, file_pattern = os.path.split(filepath)
-            src_dir = os.path.join(self.tool.path, dirname)
+            src_dir = os.path.join(self.tool_template.path, dirname)
             dst_dir = os.path.join(self.basedir, dirname)
             # Create the destination directory
             try:
@@ -107,9 +108,9 @@ class ToolInstance(QObject):
 
     def execute(self):
         """Start executing tool template instance in QProcess."""
-        self.ui.msg.emit("*** Starting program <b>{0}</b> ***".format(self.tool.name))
+        self.ui.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
         self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
-        if self.tool.tooltype == "julia":
+        if self.tool_template.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self.ui.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
@@ -118,7 +119,7 @@ class ToolInstance(QObject):
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
-        elif self.tool.tooltype == "gams":
+        elif self.tool_template.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
@@ -129,21 +130,23 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
+        self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)  # Disconnect after exec.
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 self.ui.msg_error.emit("\tUnable to start Julia REPL")
-                self.ui.msg.emit("*** Running program <b>{0}</b> without REPL ***".format(self.tool.name))
+                self.ui.msg.emit("*** Running Tool template <b>{0}</b> without REPL ***"
+                                 .format(self.tool_template.name))
                 self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
                 return
             try:
-                return_msg = self.tool.return_codes[ret]
+                return_msg = self.tool_template.return_codes[ret]
                 self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
                 self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self.ui.msg.emit("\tJulia program finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
         self.tool_process = None
         self.save_output_files(ret)
 
@@ -154,18 +157,19 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
+        self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
                                        "Julia is installed properly on your computer.")
             else:
                 try:
-                    return_msg = self.tool.return_codes[ret]
+                    return_msg = self.tool_template.return_codes[ret]
                     self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self.ui.msg.emit("\tJulia program finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -178,6 +182,7 @@ class ToolInstance(QObject):
         Args:
             ret (int): Return code given by tool
         """
+        self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self.ui.msg_error.emit("Sub-process failed to start. Make sure that "
@@ -185,12 +190,12 @@ class ToolInstance(QObject):
                                        "and GAMS directory is given in Settings (F1).")
             else:
                 try:
-                    return_msg = self.tool.return_codes[ret]
+                    return_msg = self.tool_template.return_codes[ret]
                     self.ui.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self.ui.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self.ui.msg.emit("\tGAMS program finished successfully. Return code:{0}".format(ret))
+            self.ui.msg.emit("\tGAMS Tool template finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -242,6 +247,16 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
+        try:
+            self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)
+        except AttributeError:
+            pass
+        try:
+            self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)
+            self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)
+        except Exception as e:
+            logging.exception("Exception: {0}. Disconnection subprocess_finished_signal "
+                              "from julia and gams tool finished slots. TODO: Remove Exception as e".format(e))
         self.tool_process.terminate_process()
 
     def remove(self):
@@ -285,7 +300,7 @@ class ToolInstance(QObject):
             Boolean value depending on operation success.
         """
         # TODO: Remove duplicate directory names from the list of created directories.
-        for path in self.tool.outputfiles:
+        for path in self.tool_template.outputfiles:
             dirname, file_pattern = os.path.split(path)
             if dirname == '':
                 continue

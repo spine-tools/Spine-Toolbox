@@ -23,6 +23,7 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   22.5.2018
 """
+
 import os
 import logging
 import qsubprocess
@@ -35,8 +36,10 @@ from config import JULIA_EXECUTABLE
 from helpers import busy_effect
 from widgets.toolbars import DraggableWidget
 
+
 class JuliaREPLWidget(RichJupyterWidget):
-    """
+    """Class for a custom RichJupyterWidget.
+
     Attributes:
         ui (ToolboxUI): QMainWindow instance
     """
@@ -103,6 +106,8 @@ class JuliaREPLWidget(RichJupyterWidget):
             # connect client signals
             self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
             self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
+        else:
+            self.ui.msg.emit("*** Using previously started Julia REPL ***")
 
     @Slot("float", name="kernel_died")
     def kernel_died(self, since_last_heartbeat):
@@ -125,8 +130,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Prompt user to reconfigure IJulia via QSubProcess."""
         title = "Unable to start Julia kernel for Jupyter"
         message = "The Julia kernel for Jupyter failed to start. "\
-                "This may be due to a configuration problem in the <b>IJulia</b> package. "\
-                "<p>Do you want to reconfigure it automatically?</p>"
+                  "This may be due to a configuration problem in the <b>IJulia</b> package. "\
+                  "<p>Do you want to reconfigure it automatically?</p>"
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             self.execution_failed_to_start = True
@@ -140,7 +145,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             julia_exe = JULIA_EXECUTABLE
         # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
         command = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; '\
-                'Pkg.build("""IJulia""")"'.format(julia_exe)
+                  'Pkg.build("""IJulia""")"'.format(julia_exe)
         self.IJulia_process = qsubprocess.QSubProcess(self.ui, command)
         self.IJulia_process.subprocess_finished_signal.connect(self.IJulia_process_finished)
         self.IJulia_process.start_process()
@@ -149,8 +154,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Prompt user to install IJulia via QSubProcess."""
         title = "Unable to find Julia kernel for Jupyter"
         message = "There is no Julia kernel for Jupyter available. "\
-                "A Julia kernel is provided by the <b>IJulia</b> package. "\
-                "<p>Do you want to install it automatically?</p>"
+                  "A Julia kernel is provided by the <b>IJulia</b> package. "\
+                  "<p>Do you want to install it automatically?</p>"
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             self.execution_failed_to_start = True
@@ -164,11 +169,10 @@ class JuliaREPLWidget(RichJupyterWidget):
             julia_exe = JULIA_EXECUTABLE
         # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
         command = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; '\
-                'Pkg.add("""IJulia""")"'.format(julia_exe)
+                  'Pkg.add("""IJulia""")"'.format(julia_exe)
         self.IJulia_process = qsubprocess.QSubProcess(self.ui, command)
         self.IJulia_process.subprocess_finished_signal.connect(self.IJulia_process_finished)
         self.IJulia_process.start_process()
-
 
     @Slot(int, name="IJulia_process_finished")
     def IJulia_process_finished(self, ret):
@@ -277,7 +281,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
         self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
 
-
     def _custom_context_menu_requested(self, pos):
         """Reimplemented method to add a (re)start REPL action into the default context menu.
         """
@@ -295,12 +298,10 @@ class JuliaREPLWidget(RichJupyterWidget):
             menu.insertAction(first_action, restart_repl_action)
         menu.exec_(self._control.mapToGlobal(pos))
 
-
     def enterEvent(self, event):
         """Set busy cursor during REPL (re)starts"""
         if self.starting:
             self._control.viewport().setCursor(Qt.BusyCursor)
-
 
     def dragEnterEvent(self, event):
         """Don't accept drops from Add Item Toolbar."""

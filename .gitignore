@@ -1,5 +1,6 @@
 .idea
 *.pyc
+*.sqlite
 .spyderproject
 spinetoolbox/__pycache__/
 spinetoolbox/ui/__pycache__/

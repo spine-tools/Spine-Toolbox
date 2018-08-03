@@ -39,7 +39,7 @@ class ToolTemplate(MetaObject):
         name (str): Name of the tool
         description (str): Short description of the tool
         path (str): Path to tool
-        includes (str): List of files belonging to the tool template (relative to 'path')
+        includes (str): List of files belonging to the tool template (relative to 'path')  # TODO: Change to src_files
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
@@ -143,7 +143,7 @@ class GAMSTool(ToolTemplate):
         name (str): GAMS Tool name
         description (str): GAMS Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path').
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main GAMS program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
@@ -228,7 +228,7 @@ class JuliaTool(ToolTemplate):
         name (str): Julia Tool name
         description (str): Julia Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path').
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main Julia program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
