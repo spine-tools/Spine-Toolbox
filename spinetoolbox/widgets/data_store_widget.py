@@ -1368,10 +1368,10 @@ class DataStoreForm(QMainWindow):
         root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_add_relationship(root_item)
 
-    def rename_item(self, index):
+    def rename_item(self, renamed_index):
         """Rename item in the database and treeview"""
-        item = index.model().itemFromIndex(index)
-        name = item.text()
+        renamed_item = self.object_tree_model.itemFromIndex(renamed_index)
+        name = renamed_item.text()
         answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
             QLineEdit.Normal, name)
         new_name = answer[0]
@@ -1379,25 +1379,23 @@ class DataStoreForm(QMainWindow):
             return
         if new_name == name: # nothing to do here
             return
-        # find out which table
-        entity_type = item.data(Qt.UserRole)
-        if entity_type == 'object_class':
-            table = self.ObjectClass
-        elif entity_type.endswith('object'):
-            table = self.Object
-        elif entity_type.endswith('relationship_class'):
-            table = self.RelationshipClass
+        # Get renamed instance
+        renamed_type = renamed_item.data(Qt.UserRole)
+        renamed = renamed_item.data(Qt.UserRole+1)
+        if renamed_type == 'object_class':
+            renamed_instance = self.session.query(self.ObjectClass).filter_by(id=renamed['id']).one_or_none()
+        elif renamed_type.endswith('object'):
+            renamed_instance = self.session.query(self.Object).filter_by(id=renamed['id']).one_or_none()
+        elif renamed_type.endswith('relationship_class'):
+            renamed_instance = self.session.query(self.RelationshipClass).filter_by(id=renamed['id']).one_or_none()
         else:
             return # should never happen
-        # get item from table
-        entity = item.data(Qt.UserRole+1)
-        instance = self.session.query(table).filter_by(id=entity['id']).one_or_none()
-        if not instance:
+        if not renamed_instance:
             return
         try:
             self.transactions.append(self.session.begin_nested())
-            instance.name = new_name
-            instance.commit_id = self.commit.id
+            renamed_instance.name = new_name
+            renamed_instance.commit_id = self.commit.id
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not rename item: {}".format(e.orig.args)
@@ -1405,92 +1403,95 @@ class DataStoreForm(QMainWindow):
             self.session.rollback()
             return
         # manually rename all items in model
-        items = index.model().findItems(name, Qt.MatchRecursive)
-        for it in items:
-            ent_type = it.data(Qt.UserRole)
-            ent = it.data(Qt.UserRole+1)
-            if (ent_type in entity_type or entity_type in ent_type)\
-                    and ent['id'] == entity['id']:
-                ent['name'] = new_name
-                it.setData(ent, Qt.UserRole+1)
-                it.setText(new_name)
+        items = self.object_tree_model.findItems(name, Qt.MatchRecursive)
+        for found_item in items:
+            found_type = found_item.data(Qt.UserRole)
+            found = found_item.data(Qt.UserRole+1)
+            # NOTE: Using 'in' below ensures related objects are renamed when renaming objects and viceversa
+            # And same for relationship classes and 'meta-relationship' classes
+            if (found_type in renamed_type or renamed_type in found_type)\
+                    and found['id'] == renamed['id']:
+                found['name'] = new_name
+                found_item.setData(found, Qt.UserRole+1)
+                found_item.setText(new_name)
         # refresh parameter models
         self.init_parameter_value_models()
         self.init_parameter_models()
 
-    def remove_item(self, index):
+    def remove_item(self, removed_index):
         """Remove item from the treeview"""
-        item = index.model().itemFromIndex(index)
+        removed_item = self.object_tree_model.itemFromIndex(removed_index)
         # find out which table
-        entity_type = item.data(Qt.UserRole)
-        entity = item.data(Qt.UserRole+1)
-        if entity_type == 'object_class':
-            table = self.ObjectClass
-            entity_id = entity['id']
-        elif entity_type == 'object':
-            table = self.Object
-            entity_id = entity['id']
-        elif entity_type.endswith('relationship_class'):
-            table = self.RelationshipClass
-            entity_id = entity['id']
-        elif entity_type == 'related_object':
-            table = self.Relationship
-            entity_id = entity['relationship_id']
+        removed_type = removed_item.data(Qt.UserRole)
+        removed = removed_item.data(Qt.UserRole+1)
+        # Get removed id
+        if removed_type == 'related_object':
+            removed_id = removed['relationship_id']
+        else:
+            removed_id = removed['id']
+        # Get removed instance
+        if removed_type == 'object_class':
+            removed_instance = self.session.query(self.ObjectClass).filter_by(id=removed_id).one_or_none()
+        elif removed_type == 'object':
+            removed_instance = self.session.query(self.Object).filter_by(id=removed_id).one_or_none()
+        elif removed_type.endswith('relationship_class'):
+            removed_instance = self.session.query(self.RelationshipClass).filter_by(id=removed_id).one_or_none()
+        elif removed_type == 'related_object':
+            removed_instance = self.session.query(self.Relationship).filter_by(id=removed_id).one_or_none()
         else:
             return # should never happen
-        # get item from table
-        instance = self.session.query(table).filter_by(id=entity_id).one_or_none()
-        if not instance:
-            msg = "Could not find {} named {}. This should not happen.".format(entity_type, entity['name'])
+        if not removed_instance:
+            msg = "Could not find {} named {}. This should not happen.".format(removed_type, removed['name'])
             self.ui.statusbar.showMessage(msg, 5000)
             return
         try:
             self.transactions.append(self.session.begin_nested())
-            self.session.delete(instance)
+            self.session.delete(removed_instance)
             self.session.flush()
         except DBAPIError as e:
             msg = "Could not remove item: {}".format(e.orig.args)
             self.ui.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return
-        # manually remove all items in model
-        def visit_and_remove(item):
+        # Manually remove items in model corresponding to the removed item
+        def visit_and_remove(visited_item):
             """Visit item, remove it if necessary and visit children.
 
             Returns:
-                True if item was removed, False otherwise
+                True if visited item is removed, False otherwise
             """
             # visit children
             i = 0
             while True:
-                if i == item.rowCount(): # all children have been visited
+                if i == visited_item.rowCount():  # all children have been visited
                     break
-                if not visit_and_remove(item.child(i)): # visit next children
-                    i += 1 # increment counter only if children wasn't removed
-            # visit item
-            ent_type = item.data(Qt.UserRole)
-            ent = item.data(Qt.UserRole+1)
-            if not ent_type: # root item
+                if not visit_and_remove(visited_item.child(i)):
+                    i += 1  # increment counter only if child wasn't removed
+            # Visit item
+            visited_type = visited_item.data(Qt.UserRole)
+            visited = visited_item.data(Qt.UserRole+1)
+            # Skip root
+            if not visited_type:
                 return False
-            if ent_type == 'related_object':
-                ent_id = ent['relationship_id']
+            # Get visited id
+            if visited_type == 'related_object':
+                visited_id = visited['relationship_id']
             else:
-                ent_id = ent['id']
-            if entity_type == ent_type and ent_id == entity_id:
-                ind = index.model().indexFromItem(item)
-                index.model().removeRows(ind.row(), 1, ind.parent())
+                visited_id = visited['id']
+            if visited_type == removed_type and visited_id == removed_id:
+                visited_index = self.object_tree_model.indexFromItem(visited_item)
+                self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
                 return True
-            # Remove also all relationship classes having the removed object class as child
-            if not entity_type.endswith('object_class'):
-                return
-            if ent_type.endswith('relationship_class'):
-                child_object_class_id = ent['child_object_class_id']
-                if child_object_class_id == entity['id']:
-                    ind = index.model().indexFromItem(it)
-                    index.model().removeRows(ind.row(), 1, ind.parent())
+            # Remove also all relationship classes involving a removed object class
+            if removed_type == 'object_class' and visited_type.endswith('relationship_class'):
+                child_object_class_id = visited['child_object_class_id']
+                parent_object_class_id = visited['parent_object_class_id']
+                if removed_id in [child_object_class_id, parent_object_class_id]:
+                    visited_index = self.object_tree_model.indexFromItem(visited_item)
+                    self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
                     return True
             return False
-        root_item = index.model().invisibleRootItem().child(0)
+        root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_remove(root_item)
         # refresh parameter models
         self.init_parameter_value_models()
