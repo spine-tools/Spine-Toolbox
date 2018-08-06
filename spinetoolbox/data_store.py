@@ -36,10 +36,8 @@ from widgets.data_store_widget import DataStoreForm
 from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect, create_fresh_Spine_database
-from config import APPLICATION_PATH
 from sqlalchemy import create_engine, Table, MetaData, select
 from sqlalchemy.exc import DatabaseError
-
 
 
 class DataStore(MetaObject):

@@ -30,7 +30,8 @@ import json
 import shutil
 from metaobject import MetaObject
 from widgets.tool_subwindow_widget import ToolSubWindowWidget
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtGui import QDesktopServices
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
 from graphics_items import ToolImage
@@ -84,8 +85,22 @@ class Tool(MetaObject):
     def connect_signals(self):
         """Connect this tool's signals to slots."""
         self._widget.ui.pushButton_stop.clicked.connect(self.stop_process)
+        self._widget.ui.pushButton_open_results.clicked.connect(self.open_results)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
+
+    @Slot(name="open_results")
+    def open_results(self):
+        """Open output directory in file browser."""
+        if not os.path.exists(self.output_dir):
+            self._parent.msg_warning.emit("Tool <b>{0}</b> has no results. "
+                                          "Click Execute to generate them.".format(self.name))
+            return
+        url = "file:///" + self.output_dir
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
 
     @Slot(name="stop_process")
     def stop_process(self):

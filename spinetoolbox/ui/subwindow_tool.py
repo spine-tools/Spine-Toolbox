@@ -161,6 +161,12 @@ class Ui_Form(object):
         self.horizontalLayout.addWidget(self.pushButton_stop)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
+        self.pushButton_open_results = QtWidgets.QPushButton(Form)
+        self.pushButton_open_results.setMaximumSize(QtCore.QSize(65, 23))
+        self.pushButton_open_results.setObjectName("pushButton_open_results")
+        self.horizontalLayout.addWidget(self.pushButton_open_results)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem1)
         self.pushButton_execute = QtWidgets.QPushButton(Form)
         self.pushButton_execute.setMaximumSize(QtCore.QSize(65, 23))
         self.pushButton_execute.setObjectName("pushButton_execute")
@@ -170,9 +176,12 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
+        Form.setTabOrder(self.comboBox_tool, self.toolButton_tool_template)
+        Form.setTabOrder(self.toolButton_tool_template, self.treeView_input_files)
         Form.setTabOrder(self.treeView_input_files, self.treeView_output_files)
         Form.setTabOrder(self.treeView_output_files, self.pushButton_stop)
-        Form.setTabOrder(self.pushButton_stop, self.pushButton_execute)
+        Form.setTabOrder(self.pushButton_stop, self.pushButton_open_results)
+        Form.setTabOrder(self.pushButton_open_results, self.pushButton_execute)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Tool", None, -1))
@@ -186,6 +195,8 @@ class Ui_Form(object):
         self.treeView_output_files.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Edit Tool template to modify these</p></body></html>", None, -1))
         self.pushButton_stop.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Stop execution</p></body></html>", None, -1))
         self.pushButton_stop.setText(QtWidgets.QApplication.translate("Form", "Stop", None, -1))
+        self.pushButton_open_results.setToolTip(QtWidgets.QApplication.translate("Form", "Open results directory in file browser", None, -1))
+        self.pushButton_open_results.setText(QtWidgets.QApplication.translate("Form", "Results...", None, -1))
         self.pushButton_execute.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Execute tool</p></body></html>", None, -1))
         self.pushButton_execute.setText(QtWidgets.QApplication.translate("Form", "Execute", None, -1))
 

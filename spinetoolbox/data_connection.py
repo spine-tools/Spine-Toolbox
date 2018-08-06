@@ -40,6 +40,7 @@ from config import APPLICATION_PATH
 # from datapackage import Package
 from graphics_items import DataConnectionImage
 
+
 class DataConnection(MetaObject):
     """Data Connection class.
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -325,6 +325,35 @@ color: rgb(255, 255, 255);</string>
         </spacer>
        </item>
        <item>
+        <widget class="QPushButton" name="pushButton_open_results">
+         <property name="maximumSize">
+          <size>
+           <width>65</width>
+           <height>23</height>
+          </size>
+         </property>
+         <property name="toolTip">
+          <string>Open results directory in file browser</string>
+         </property>
+         <property name="text">
+          <string>Results...</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
         <widget class="QPushButton" name="pushButton_execute">
          <property name="maximumSize">
           <size>
@@ -347,9 +376,12 @@ color: rgb(255, 255, 255);</string>
   </layout>
  </widget>
  <tabstops>
+  <tabstop>comboBox_tool</tabstop>
+  <tabstop>toolButton_tool_template</tabstop>
   <tabstop>treeView_input_files</tabstop>
   <tabstop>treeView_output_files</tabstop>
   <tabstop>pushButton_stop</tabstop>
+  <tabstop>pushButton_open_results</tabstop>
   <tabstop>pushButton_execute</tabstop>
  </tabstops>
  <resources>
