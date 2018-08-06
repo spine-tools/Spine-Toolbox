@@ -1158,7 +1158,6 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_user_guide")
     def show_user_guide(self):
         """Open Spine Toolbox documentation index page in browser."""
-        # index_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.pardir, "docs", "build", "html", "index.html"))
         index_url = "file:///" + DOC_INDEX_PATH
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))

@@ -414,45 +414,52 @@ class Tool(MetaObject):
         self._parent.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
         return True
 
-    def find_output_folders(self):
-        """Find output data folders from Data Store and Data Connection items
-        that are output items for this Tool.
+    def find_output_items(self):
+        """Find output items of this Tool.
 
         Returns:
-            List of data folders.
+            List of Data Store and Data Connection items.
         """
-        folder_paths = list()
+        item_list = list()
         for output_item in self._parent.connection_model.output_items(self.name):
             found_item = self._parent.project_item_model.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
                 self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(output_item))
                 continue
             item_data = found_item.data(Qt.UserRole)
-            # Get data directory from child Data Store
-            if item_data.item_type == "Data Store":
-                if os.path.isdir(item_data.data_dir):
-                    folder_paths.append(item_data.data_dir)
-            # Get data directory from child Data Connection
-            elif item_data.item_type == "Data Connection":
-                if os.path.isdir(item_data.data_dir):
-                    folder_paths.append(item_data.data_dir)
-        return folder_paths
+            item_list.append(item_data)
+        return item_list
 
-    def copy_output_files(self, folder_paths):
-        """Copy files from work directory to the given paths.
+    def copy_output_files(self, output_items):
+        """Copy all Tool output files to all child Data Connections and Data Stores.
 
         Args:
-            folder_paths (list): Destination folders, where output files need to be copied.
+            output_items (list): Destination items for output files.
         """
-        n_copied_files = 0
-        for output_file in self._tool_template.outputfiles:
-            src_path = os.path.join(self.instance.output_dir, output_file)
-            if not os.path.exists(src_path):
-                self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+        for item in output_items:
+            dst_dir = ""
+            # Copy to child Data Store
+            if item.item_type == "Data Store":
+                if os.path.isdir(item.data_dir):
+                    dst_dir = item.data_dir
+            # Copy to child Data Connection
+            elif item.item_type == "Data Connection":
+                if os.path.isdir(item.data_dir):
+                    dst_dir = item.data_dir
+            else:
+                self._parent.msg_error.emit("Copying output files failed. No data directory found for {0} <b>{1}</b>"
+                                            .format(item.item_type, item.name))
                 continue
-            for dst_folder in folder_paths:
+            n_copied_files = 0
+            self._parent.msg.emit("*** Copying Tool <b>{0}</b> output files to {1} <b>{2}</b> ***"
+                                  .format(self.name, item.item_type, item.name))
+            for output_file in self._tool_template.outputfiles:
+                src_path = os.path.join(self.instance.output_dir, output_file)
+                if not os.path.exists(src_path):
+                    self._parent.msg_error.emit("\t Source file <b>{0}</b> does not exist".format(src_path))
+                    continue
                 # Join filename to dst folder
-                dst_path = os.path.join(dst_folder, output_file)
+                dst_path = os.path.join(dst_dir, output_file)
                 self._parent.msg.emit("\tCopying <b>{0}</b>".format(output_file))
                 try:
                     shutil.copyfile(src_path, dst_path)
@@ -461,7 +468,7 @@ class Tool(MetaObject):
                     logging.error(e)
                     self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
                                                 .format(src_path, dst_path))
-        self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+            self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
 
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
@@ -472,11 +479,12 @@ class Tool(MetaObject):
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execution_finished)
         if return_code == 0:
+            # copy output files to data directories of connected items
+            output_items = self.find_output_items()
+            if output_items:
+                # self._parent.msg.emit("Copying Tool output files to connected items")
+                self.copy_output_files(output_items)
             self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
-            # copy outputfiles to data directories of connected items
-            folder_paths = self.find_output_folders()
-            if folder_paths:
-                self.copy_output_files(folder_paths)
         else:
             self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 

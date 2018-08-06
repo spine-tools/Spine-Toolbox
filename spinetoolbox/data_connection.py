@@ -247,7 +247,6 @@ class DataConnection(MetaObject):
     def datapackage_form_destroyed(self):
         self.spine_datapackage_form = None
 
-
     def file_references(self):
         """Return a list of paths to files that are in this item as references (self.references)."""
         return self.references
@@ -267,21 +266,21 @@ class DataConnection(MetaObject):
 
     def find_file(self, fname, visited_items):
         """Search for filename in references and data and return the path if found."""
-        logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
+        # logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
         if self in visited_items:
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
         if fname in self.data_files():
-            logging.debug("{0} found in DC {1}".format(fname, self.name))
-            self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, self.name))
+            # logging.debug("{0} found in DC {1}".format(fname, self.name))
+            self._parent.msg.emit("\t<b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name))
             path = os.path.join(self.data_dir, fname)
             return path
         for path in self.file_references():  # List of paths including file name
             p, fn = os.path.split(path)
             if fn == fname:
-                logging.debug("{0} found in DC {1}".format(fname, self.name))
-                self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
-                                        .format(fname, self.name))
+                # logging.debug("{0} found in DC {1}".format(fname, self.name))
+                self._parent.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
+                                      .format(fname, self.name))
                 return path
         visited_items.append(self)
         for input_item in self._parent.connection_model.input_items(self.name):

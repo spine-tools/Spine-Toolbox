@@ -28,7 +28,7 @@ import os
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtWidgets import QInputDialog
 from metaobject import MetaObject
 from widgets.data_store_subwindow_widget import DataStoreWidget
@@ -272,13 +272,13 @@ class DataStore(MetaObject):
 
     def find_file(self, fname, visited_items):
         """Search for filename in data and return the path if found."""
-        logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
+        # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
         if self in visited_items:
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
         if fname in self.data_files():
-            logging.debug("{0} found in DS {1}".format(fname, self.name))
-            self._parent.msg.emit("\t<b>{0}</b> found in DS <b>{1}</b>".format(fname, self.name))
+            # logging.debug("{0} found in DS {1}".format(fname, self.name))
+            self._parent.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
             path = os.path.join(self.data_dir, fname)
             return path
         visited_items.append(self)

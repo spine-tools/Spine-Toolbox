@@ -38,7 +38,7 @@ class ToolInstance(QObject):
     """Class for Tool instances.
 
     Attributes:
-        tool (ToolTemplate): Tool for which this instance is created
+        tool_template (ToolTemplate): Tool for which this instance is created
         ui (ToolboxUI): QMainWindow instance
         tool_output_dir (str): Directory where results are saved
         project (SpineToolboxProject): Current project
@@ -72,11 +72,11 @@ class ToolInstance(QObject):
     def _checkout(self):
         """Copy Tool files to work directory."""
         n_copied_files = 0
-        # Add anchor to work directory
-        work_anchor = "<a style='color:#99CCFF;' href='file:///" + self.basedir + "'>" + self.basedir + "</a>"
-        self.ui.msg.emit("Work Directory: {}".format(work_anchor))
-        self.ui.msg.emit("*** Copying Tool template <b>{0}</b> source files to work directory ***"
-                         .format(self.tool_template.name))
+        # Make work directory anchor with path as tooltip
+        work_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" + self.basedir \
+                      + "'>work directory</a>"
+        self.ui.msg.emit("*** Copying Tool template <b>{0}</b> source files to {1} ***"
+                         .format(self.tool_template.name, work_anchor))
         for filepath in self.tool_template.includes:
             dirname, file_pattern = os.path.split(filepath)
             src_dir = os.path.join(self.tool_template.path, dirname)
@@ -201,9 +201,8 @@ class ToolInstance(QObject):
         self.save_output_files(ret)
 
     def save_output_files(self, ret):
-        """Copy output files from work directory to Tool ouput directory"""
-        # Get timestamp when tool finished
-        output_dir_timestamp = create_output_dir_timestamp()
+        """Copy output files from work directory to Tool output directory."""
+        output_dir_timestamp = create_output_dir_timestamp()  # Get timestamp when tool finished
         # Create an output folder with timestamp and copy output directly there
         if ret != 0:
             result_path = os.path.abspath(os.path.join(self.tool_output_dir, 'failed', output_dir_timestamp))
@@ -212,35 +211,35 @@ class ToolInstance(QObject):
         try:
             create_dir(result_path)
         except OSError:
-            self.ui.msg_error.emit("\tError creating timestamped result directory. "
+            self.ui.msg_error.emit("\tError creating timestamped output directory. "
                                    "Tool output files not copied. Check folder permissions.")
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
             return
         self.output_dir = result_path
-        self.ui.msg.emit("*** Saving result files ***")
+        # Make link to output folder
+        result_anchor = "<a style='color:#BB99FF;' title='" + result_path + "' href='file:///" + result_path \
+                        + "'>results directory</a>"
+        self.ui.msg.emit("*** Saving Tool output files to {0} ***".format(result_anchor))
         if not self.outputfiles:
-            self.ui.msg_warning.emit("\tNo files to save. Add output files to Tool template definition.")
+            self.ui.msg_warning.emit("\tNo files to save. You can add output files to Tool template to archive them.")
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if len(saved_files) == 0:
                 # If no files were saved
-                self.ui.msg_error.emit("\tNo files saved to result directory")
+                self.ui.msg_error.emit("\tNo files saved to output directory")
             if len(saved_files) > 0:
                 # If there are saved files
-                self.ui.msg.emit("\tThe following result files were saved successfully")
+                self.ui.msg.emit("\tThe following output files were saved successfully")
                 for i in range(len(saved_files)):
                     fname = os.path.split(saved_files[i])[1]
-                    self.ui.msg.emit("\t\t{0}".format(fname))
+                    self.ui.msg.emit("\t\t<b>{0}</b>".format(fname))
             if len(failed_files) > 0:
                 # If saving some or all files failed
-                self.ui.msg_warning.emit("\tThe following result files were not found")
+                self.ui.msg_warning.emit("\tThe following output files were not found")
                 for i in range(len(failed_files)):
                     failed_fname = os.path.split(failed_files[i])[1]
-                    self.ui.msg_warning.emit("\t\t{0}".format(failed_fname))
-        # Show result folder
-        result_anchor = "<a href='file:///" + result_path + "'>" + result_path + "</a>"
-        self.ui.msg.emit("\tResult Directory: {}".format(result_anchor))
+                    self.ui.msg_warning.emit("\t\t<b>{0}</b>".format(failed_fname))
         self.instance_finished_signal.emit(ret)
 
     def terminate_instance(self):
