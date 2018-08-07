@@ -300,7 +300,7 @@ class DataStoreForm(QMainWindow):
                     # create relationship class item
                     relationship_class_item = self.visit_relationship_class(
                         relationship_class,
-                        object_,
+                        object_._asdict(),
                         role='parent'
                     )
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
@@ -309,7 +309,7 @@ class DataStoreForm(QMainWindow):
                     # create relationship class item
                     relationship_class_item = self.visit_relationship_class(
                         relationship_class,
-                        object_,
+                        object_._asdict(),
                         role='child'
                     )
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
@@ -328,7 +328,7 @@ class DataStoreForm(QMainWindow):
 
         Args:
             relationship_class (KeyedTuple or dict): relationship class to explore
-            object_ (KeyedTuple): parent object
+            object_ (dict): parent object as dict
         """
         # create relationship class item
         relationship_class_item = QStandardItem(relationship_class.name)
@@ -342,7 +342,7 @@ class DataStoreForm(QMainWindow):
             self.RelationshipClass.child_object_class_id,
             self.RelationshipClass.parent_relationship_class_id
         ).filter_by(parent_relationship_class_id=relationship_class.id)
-        if 'relationship_id' not in object_.keys():
+        if 'relationship_id' not in object_:
             # the parent object is a 'first-class' object. In the tree, this
             # object is located directly beneath an object class
             if role == 'parent':
@@ -355,7 +355,7 @@ class DataStoreForm(QMainWindow):
                         self.Relationship.id.label('relationship_id')
                     ).filter(self.Object.id == self.Relationship.child_object_id).\
                     filter(self.Relationship.class_id == relationship_class.id).\
-                    filter(self.Relationship.parent_object_id == object_.id)
+                    filter(self.Relationship.parent_object_id == object_['id'])
             elif role == 'child':
                 # get new child objects in new relationship class
                 new_object_query = self.session.query(
@@ -365,7 +365,7 @@ class DataStoreForm(QMainWindow):
                         self.Relationship.id.label('relationship_id')
                     ).filter(self.Object.id == self.Relationship.parent_object_id).\
                     filter(self.Relationship.class_id == relationship_class.id).\
-                    filter(self.Relationship.child_object_id == object_.id)
+                    filter(self.Relationship.child_object_id == object_['id'])
         else:
             # the parent object is itself a 'related' object in other relationship
             # get new child objects in new relationship class
@@ -376,7 +376,7 @@ class DataStoreForm(QMainWindow):
                 self.Relationship.id.label('relationship_id')
             ).filter(self.Object.id == self.Relationship.child_object_id).\
             filter(self.Relationship.class_id == relationship_class.id).\
-            filter(self.Relationship.parent_relationship_id == object_.relationship_id)
+            filter(self.Relationship.parent_relationship_id == object_['relationship_id'])
         # recursively populate branches
         for new_object in new_object_query:
             # create child object item
@@ -387,7 +387,7 @@ class DataStoreForm(QMainWindow):
                 # create next relationship class item
                 new_relationship_class_item = self.visit_relationship_class(
                     new_relationship_class,
-                    new_object
+                    new_object._asdict()
                 )
                 new_relationship_class_item.setData('meta_relationship_class', Qt.UserRole)
                 new_object_item.appendRow(new_relationship_class_item)
@@ -1016,16 +1016,20 @@ class DataStoreForm(QMainWindow):
         Args:
             object_ (self.Object)
         """
-        # manually add item to model as well
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_.__dict__, Qt.UserRole+1)
         # get relationship classes involving the present object class
         relationship_class_query = self.relationship_class_query(object_.class_id)
-        relationship_class_query = relationship_class_query['as_parent'].\
-                                    union(relationship_class_query['as_child'])
         # create and append relationship class items
-        for relationship_class in relationship_class_query:
+        for relationship_class in relationship_class_query['as_parent']:
+            # no need to visit the relationship class here,
+            # since this object does not have any relationships yet
+            relationship_class_item = QStandardItem(relationship_class.name)
+            relationship_class_item.setData('relationship_class', Qt.UserRole)
+            relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole+1)
+            object_item.appendRow(relationship_class_item)
+        for relationship_class in relationship_class_query['as_child']:
             # no need to visit the relationship class here,
             # since this object does not have any relationships yet
             relationship_class_item = QStandardItem(relationship_class.name)
@@ -1127,12 +1131,6 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship_class (self.RelationshipClass): the relationship class to add
         """
-        if relationship_class.parent_object_class_id is not None:
-            relationship_class_type = 'relationship_class'
-            parent_class_id = relationship_class.parent_object_class_id
-        elif relationship_class.parent_relationship_class_id is not None:
-            relationship_class_type = 'meta_relationship_class'
-            parent_class_id = relationship_class.parent_relationship_class_id
 
         def visit_and_add_relationship_class(item):
             """Visit item, add relationship class if necessary and visit children."""
@@ -1144,7 +1142,8 @@ class DataStoreForm(QMainWindow):
                 i += 1 # increment counter
             # visit item
             ent_type = item.data(Qt.UserRole)
-            if not ent_type: # root item
+            # Skip root item
+            if not ent_type:
                 return
             if not ent_type.endswith('object'):
                 return
@@ -1164,6 +1163,12 @@ class DataStoreForm(QMainWindow):
                 relationship_class_item.setData(relationship_class.__dict__, Qt.UserRole+1)
                 item.appendRow(relationship_class_item)
 
+        if relationship_class.parent_object_class_id is not None:
+            relationship_class_type = 'relationship_class'
+            parent_class_id = relationship_class.parent_object_class_id
+        elif relationship_class.parent_relationship_class_id is not None:
+            relationship_class_type = 'meta_relationship_class'
+            parent_class_id = relationship_class.parent_relationship_class_id
         root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_add_relationship_class(root_item)
 
@@ -1279,10 +1284,6 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship (self.Relationship): the relationship to add
         """
-        if relationship.parent_object_id is not None:
-            relationship_class_type = 'relationship_class'
-        elif relationship.parent_relationship_id is not None:
-            relationship_class_type = 'meta_relationship_class'
 
         def visit_and_add_relationship(item):
             """Visit item, add relationship if necessary and visit children."""
@@ -1365,6 +1366,10 @@ class DataStoreForm(QMainWindow):
                     new_object_item.appendRow(new_relationship_class_item)
                 item.appendRow(new_object_item)
 
+        if relationship.parent_object_id is not None:
+            relationship_class_type = 'relationship_class'
+        elif relationship.parent_relationship_id is not None:
+            relationship_class_type = 'meta_relationship_class'
         root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_add_relationship(root_item)
 
