@@ -295,7 +295,7 @@ def create_fresh_Spine_database(engine):
             commit_id INTEGER,
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(class_id) REFERENCES object_class (id),
+            FOREIGN KEY(class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY(category_id) REFERENCES object_category (id),
             UNIQUE(name)
         );
