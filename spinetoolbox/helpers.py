@@ -37,7 +37,8 @@ from config import DEFAULT_PROJECT_DIR
 from sqlalchemy import text
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.mysql import TINYINT, DOUBLE
-
+from sqlalchemy.engine import Engine
+from sqlalchemy import event
 
 # TODO: check if this is the right place for this
 @compiles(TINYINT, 'sqlite')
@@ -51,6 +52,11 @@ def compile_DOUBLE_mysql_sqlite(element, compiler, **kw):
     """ Handles mysql DOUBLE datatype as REAL in sqlite """
     return compiler.visit_REAL(element, **kw)
 
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 def busy_effect(func):
     """ Decorator to change the mouse cursor to 'busy' while a function is processed.
@@ -308,9 +314,9 @@ def create_fresh_Spine_database(engine):
             commit_id INTEGER,
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(child_object_class_id) REFERENCES object_class (id),
-            FOREIGN KEY(parent_object_class_id) REFERENCES object_class (id),
-            FOREIGN KEY(parent_relationship_class_id) REFERENCES relationship_class (id),
+            FOREIGN KEY(child_object_class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(parent_object_class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(parent_relationship_class_id) REFERENCES relationship_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
             CHECK (`parent_relationship_class_id` IS NOT NULL OR `parent_object_class_id` IS NOT NULL),
             UNIQUE(name)
         );
@@ -327,10 +333,10 @@ def create_fresh_Spine_database(engine):
             commit_id INTEGER,
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(class_id) REFERENCES relationship_class (id),
-            FOREIGN KEY(child_object_id) REFERENCES object (id),
-            FOREIGN KEY(parent_object_id) REFERENCES object (id),
-            FOREIGN KEY(parent_relationship_id) REFERENCES relationship (id),
+            FOREIGN KEY(class_id) REFERENCES relationship_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(child_object_id) REFERENCES object (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(parent_object_id) REFERENCES object (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(parent_relationship_id) REFERENCES relationship (id) ON DELETE CASCADE ON UPDATE CASCADE,
             CHECK (`parent_relationship_id` IS NOT NULL OR `parent_object_id` IS NOT NULL),
             UNIQUE(name)
         );
@@ -356,8 +362,8 @@ def create_fresh_Spine_database(engine):
             commit_id INTEGER,
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(object_class_id) REFERENCES object_class (id),
-            FOREIGN KEY(relationship_class_id) REFERENCES relationship_class (id),
+            FOREIGN KEY(object_class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(relationship_class_id) REFERENCES relationship_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
             CHECK (`relationship_class_id` IS NOT NULL OR `object_class_id` IS NOT NULL),
             UNIQUE(name)
         );
@@ -379,34 +385,34 @@ def create_fresh_Spine_database(engine):
             commit_id INTEGER,
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(object_id) REFERENCES object (id),
-            FOREIGN KEY(relationship_id) REFERENCES relationship (id),
-            FOREIGN KEY(parameter_id) REFERENCES parameter (id),
+            FOREIGN KEY(object_id) REFERENCES object (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(relationship_id) REFERENCES relationship (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(parameter_id) REFERENCES parameter (id) ON DELETE CASCADE ON UPDATE CASCADE,
             CHECK (`relationship_id` IS NOT NULL OR `object_id` IS NOT NULL)
         );
     """
     engine.execute(text(sql))
     sql = """
         INSERT OR IGNORE INTO `object_class` (`name`, `description`, `category_id`, `display_order`, `display_icon`, `hidden`, `commit_id`) VALUES
-        ('unittemplate', 'Template for a generic unit', 1, 1, NULL, 0, NULL),
-        ('unit', 'Unit class', 1, 2, NULL, 0, NULL),
-        ('commodity', 'Commodity class', 1, 3, NULL, 0, NULL),
-        ('archetype', 'Archetype class', 1, 4, NULL, 0, NULL),
-        ('node', 'Node class', 1, 5, NULL, 0, NULL),
-        ('grid', 'Grid class', 1, 6, NULL, 0, NULL),
-        ('normalized', 'Normalized class', 1, 7, NULL, 0, NULL),
-        ('absolute', 'Absolute class', 1, 8, NULL, 0, NULL),
-        ('flow', 'Flow class', 1, 9, NULL, 0, NULL),
-        ('influx', 'Influx class', 1, 10, NULL, 0, NULL),
-        ('time', 'Time class', 1, 11, NULL, 0, NULL),
-        ('arc', 'Arc class', 1, 12, NULL, 0, NULL),
-        ('simulation_settings', 'Simulation settings class', 2, 13, NULL, 0, NULL),
-        ('hidden_settings', 'Hidden settings class', 3, 14, NULL, 1, NULL),
-        ('constraint', 'Constraint class', 1, 15, NULL, 0, NULL),
-        ('variable', 'Variable class', 1, 16, NULL, 0, NULL),
-        ('objective_term', 'Objective term class', 1, 17, NULL, 0, NULL),
-        ('group', 'Group class', 1, 18, NULL, 0, NULL),
-        ('alternative', 'Alternative class', 1, 19, NULL, 0, NULL);
+        ('unittemplate', 'Template for a generic unit', NULL, 1, NULL, 0, NULL),
+        ('unit', 'Unit class', NULL, 2, NULL, 0, NULL),
+        ('commodity', 'Commodity class', NULL, 3, NULL, 0, NULL),
+        ('archetype', 'Archetype class', NULL, 4, NULL, 0, NULL),
+        ('node', 'Node class', NULL, 5, NULL, 0, NULL),
+        ('grid', 'Grid class', NULL, 6, NULL, 0, NULL),
+        ('normalized', 'Normalized class', NULL, 7, NULL, 0, NULL),
+        ('absolute', 'Absolute class', NULL, 8, NULL, 0, NULL),
+        ('flow', 'Flow class', NULL, 9, NULL, 0, NULL),
+        ('influx', 'Influx class', NULL, 10, NULL, 0, NULL),
+        ('time', 'Time class', NULL, 11, NULL, 0, NULL),
+        ('arc', 'Arc class', NULL, 12, NULL, 0, NULL),
+        ('simulation_settings', 'Simulation settings class', NULL, 13, NULL, 0, NULL),
+        ('hidden_settings', 'Hidden settings class', NULL, 14, NULL, 1, NULL),
+        ('constraint', 'Constraint class', NULL, 15, NULL, 0, NULL),
+        ('variable', 'Variable class', NULL, 16, NULL, 0, NULL),
+        ('objective_term', 'Objective term class', NULL, 17, NULL, 0, NULL),
+        ('group', 'Group class', NULL, 18, NULL, 0, NULL),
+        ('alternative', 'Alternative class', NULL, 19, NULL, 0, NULL);
     """
     engine.execute(text(sql))
 

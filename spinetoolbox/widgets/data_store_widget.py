@@ -39,10 +39,9 @@ from helpers import busy_effect
 from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, RelationshipParameterValueProxy, \
     ObjectParameterProxy, RelationshipParameterProxy
 from datetime import datetime, timezone
-from sqlalchemy import or_
-from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.ext.automap import automap_base, generate_relationship
 from sqlalchemy.exc import DBAPIError
-from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm import Session, aliased, interfaces
 
 
 class DataStoreForm(QMainWindow):
@@ -211,8 +210,14 @@ class DataStoreForm(QMainWindow):
 
     def create_base_and_reflect_tables(self):
         """Create base and reflect tables."""
+        def _gen_relationship(base, direction, return_fn, attrname, local_cls, referred_cls, **kw):
+            if direction is interfaces.ONETOMANY:
+                kw['cascade'] = 'all, delete-orphan'
+                kw['passive_deletes'] = True
+            return generate_relationship(base, direction, return_fn, attrname, local_cls, referred_cls, **kw)
+
         self.Base = automap_base()
-        self.Base.prepare(self.engine, reflect=True)
+        self.Base.prepare(self.engine, reflect=True, generate_relationship=_gen_relationship)
         try:
             self.ObjectClass = self.Base.classes.object_class
             self.Object = self.Base.classes.object
@@ -471,14 +476,12 @@ class DataStoreForm(QMainWindow):
         header = relationship_parameter_value_list.column_descriptions
         self.relationship_parameter_value_model.header = [column['name'] for column in header]
 
-        if object_parameter_value_list.all():
-            object_parameter_value = [list(row._asdict().values()) for row in object_parameter_value_list]
-            self.object_parameter_value_model.reset_model(object_parameter_value)
+        object_parameter_value = [list(row._asdict().values()) for row in object_parameter_value_list]
+        self.object_parameter_value_model.reset_model(object_parameter_value)
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
 
-        if relationship_parameter_value_list.all():
-            relationship_parameter_value = [list(row._asdict().values()) for row in relationship_parameter_value_list]
-            self.relationship_parameter_value_model.reset_model(relationship_parameter_value)
+        relationship_parameter_value = [list(row._asdict().values()) for row in relationship_parameter_value_list]
+        self.relationship_parameter_value_model.reset_model(relationship_parameter_value)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
@@ -1484,11 +1487,17 @@ class DataStoreForm(QMainWindow):
                 visited_index = self.object_tree_model.indexFromItem(visited_item)
                 self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
                 return True
-            # Remove also all relationship classes involving a removed object class
+            # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type.endswith('relationship_class'):
                 child_object_class_id = visited['child_object_class_id']
                 parent_object_class_id = visited['parent_object_class_id']
                 if removed_id in [child_object_class_id, parent_object_class_id]:
+                    visited_index = self.object_tree_model.indexFromItem(visited_item)
+                    self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
+                    return True
+            # When removing an object, also remove relationships that involve it
+            if removed_type == 'object' and visited_type == 'related_object':
+                if removed_id == visited['id']:
                     visited_index = self.object_tree_model.indexFromItem(visited_item)
                     self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
                     return True

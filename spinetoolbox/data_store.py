@@ -223,8 +223,10 @@ class DataStore(MetaObject):
             try:
                 engine.execute('BEGIN IMMEDIATE')
             except DatabaseError as e:
-                self._parent.msg_error.emit("Could not open <b>{}</b>: {}".format(data_file, e.orig.args))
+                self._parent.msg_error.emit("Could not open <b>{}</b>, seems to be locked: {}".\
+                    format(data_file, e.orig.args))
                 return
+            # Get database and user name
             database = data_file
             username = getpass.getuser()
             self.data_store_form = DataStoreForm(self._parent, self, engine, database, username)
