@@ -39,7 +39,6 @@ class CopyPasteTableView(QTableView):
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
-        self.adding_new_parameter_value = False
 
     def keyPressEvent(self, event):
         """Copy selection to clipboard so that it can be pasted into Excel"""

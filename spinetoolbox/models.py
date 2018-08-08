@@ -878,6 +878,7 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
         self._parent = parent
         self.object_class_id_filter = None
         self.object_id_filter = None
+        self.gray_background = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
 
     def clear_filter(self):
         self.object_class_id_filter = None
@@ -886,9 +887,8 @@ class ObjectParameterValueProxy(QSortFilterProxyModel):
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
         if role == Qt.BackgroundRole:
-            if not index.flags() & Qt.ItemIsEditable:
-                if self._parent:
-                    return self._parent.palette().button()
+            if not index.flags() & Qt.ItemIsEditable: # Item is not editable
+                return self.gray_background
         return super().data(index, role)
 
     def filterAcceptsRow(self, source_row, source_parent):

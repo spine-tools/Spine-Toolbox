@@ -28,7 +28,7 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from PySide2.QtWidgets import QMainWindow, QWidget, QStatusBar, QHeaderView, QDialog, QLineEdit, QInputDialog
 from PySide2.QtCore import Slot, Qt, QSettings
-from PySide2.QtGui import QStandardItem
+from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
@@ -111,6 +111,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
         # init models and views
+        self.default_font_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_models()
@@ -547,7 +548,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setDefaultSectionSize(self.default_font_height)
         # set model
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         # hide id columns
@@ -570,7 +571,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setDefaultSectionSize(self.default_font_height)
         # set model
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         # hide id columns
@@ -600,7 +601,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setDefaultSectionSize(self.default_font_height)
         # set model
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         # hide id columns
@@ -622,7 +623,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+            setDefaultSectionSize(self.default_font_height)
         # set model
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         # hide id columns
@@ -734,12 +735,8 @@ class DataStoreForm(QMainWindow):
             elif clicked_type == 'meta_relationship_class':
                 self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
         # trick to trigger filtering
-        self.ui.tableView_relationship_parameter_value.reset()
         self.object_parameter_value_proxy.setFilterRegExp("")
         self.relationship_parameter_value_proxy.setFilterRegExp("")
-        # resize columns
-        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
