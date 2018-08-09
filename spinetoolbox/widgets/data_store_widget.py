@@ -1148,15 +1148,22 @@ class DataStoreForm(QMainWindow):
             if not ent_type.endswith('object'):
                 return
             parent_class = item.parent().data(Qt.UserRole+1)
-            if parent_class['id'] == parent_class_id:
+            if ent_type == 'object':
+                cond = relationship_class.parent_object_class_id == parent_class['id']
+            elif ent_type == 'related_object':
+                cond = relationship_class.parent_relationship_class_id == parent_class['id']
+            if cond:
                 relationship_class_item = QStandardItem(relationship_class.name)
                 relationship_class_item.setData(relationship_class_type, Qt.UserRole)
                 relationship_class_item.setData(relationship_class.__dict__, Qt.UserRole+1)
                 item.appendRow(relationship_class_item)
+            # Don't add the mirror of a meta relationship class
             if relationship_class_type == 'meta_relationship_class':
-                return  # meta_relationship_class, we are done
-            if parent_class_id == relationship_class.child_object_class_id:
-                return # Don't add duplicate relationship class if parent and child are the same
+                return
+            # Don't add duplicate relationship class if parent and child are the same
+            if relationship_class.parent_object_class_id == relationship_class.child_object_class_id:
+                return
+            # Add mirror relationship class
             if parent_class['id'] == relationship_class.child_object_class_id:
                 relationship_class_item = QStandardItem(relationship_class.name)
                 relationship_class_item.setData('relationship_class', Qt.UserRole)
@@ -1165,10 +1172,8 @@ class DataStoreForm(QMainWindow):
 
         if relationship_class.parent_object_class_id is not None:
             relationship_class_type = 'relationship_class'
-            parent_class_id = relationship_class.parent_object_class_id
         elif relationship_class.parent_relationship_class_id is not None:
             relationship_class_type = 'meta_relationship_class'
-            parent_class_id = relationship_class.parent_relationship_class_id
         root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_add_relationship_class(root_item)
 
@@ -1328,10 +1333,10 @@ class DataStoreForm(QMainWindow):
                 ).filter_by(parent_relationship_class_id=relationship_class['id'])
                 # create and append relationship class items
                 for new_relationship_class in new_relationship_class_query:
-                    new_relationship_class_item = self.visit_relationship_class(
-                        new_relationship_class,
-                        new_object
-                    )
+                    # no need to visit the relationship class here,
+                    # since this relationship does not have any relationships yet
+                    new_relationship_class_item = QStandardItem(new_relationship_class.name)
+                    new_relationship_class_item.setData(new_relationship_class._asdict(), Qt.UserRole+1)
                     new_relationship_class_item.setData('meta_relationship_class', Qt.UserRole)
                     new_object_item.appendRow(new_relationship_class_item)
                 item.appendRow(new_object_item)
@@ -1358,10 +1363,10 @@ class DataStoreForm(QMainWindow):
                 ).filter_by(parent_relationship_class_id=relationship_class['id'])
                 # create and append relationship class items
                 for new_relationship_class in new_relationship_class_query:
-                    new_relationship_class_item = self.visit_relationship_class(
-                        new_relationship_class,
-                        new_object
-                    )
+                    # no need to visit the relationship class here,
+                    # since this relationship does not have any relationships yet
+                    new_relationship_class_item = QStandardItem(new_relationship_class.name)
+                    new_relationship_class_item.setData(new_relationship_class._asdict(), Qt.UserRole+1)
                     new_relationship_class_item.setData('relationship_class', Qt.UserRole)
                     new_object_item.appendRow(new_relationship_class_item)
                 item.appendRow(new_object_item)
@@ -1490,7 +1495,10 @@ class DataStoreForm(QMainWindow):
             # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type.endswith('relationship_class'):
                 child_object_class_id = visited['child_object_class_id']
-                parent_object_class_id = visited['parent_object_class_id']
+                if 'parent_object_class_id' in visited:
+                    parent_object_class_id = visited['parent_object_class_id']
+                else:
+                    parent_object_class_id = None
                 if removed_id in [child_object_class_id, parent_object_class_id]:
                     visited_index = self.object_tree_model.indexFromItem(visited_item)
                     self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
@@ -1753,8 +1761,10 @@ class DataStoreForm(QMainWindow):
                 item_type = item.data(Qt.UserRole)
                 if not item_type: # root
                     continue
+                if item_type != 'object':
+                    continue
                 item_id = item.data(Qt.UserRole+1)['id']
-                if item_type == 'object' and item_id == parameter_value.object_id:
+                if item_id == parameter_value.object_id:
                     object_index = self.object_tree_model.indexFromItem(item)
                     self.ui.treeView_object.setCurrentIndex(object_index)
                     self.ui.treeView_object.scrollTo(object_index)
@@ -1769,17 +1779,18 @@ class DataStoreForm(QMainWindow):
             self.ui.tabWidget_object.setCurrentIndex(0)
             self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
             self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
-        elif parameter.relationship_class_id:
-            # self.relationship_parameter_proxy.relationship_class_id_filter = parameter.relationship_class_id
+        elif parameter_value.relationship_id:
             for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
                 item_type = item.data(Qt.UserRole)
                 if not item_type: # root
                     continue
-                item_id = item.data(Qt.UserRole+1)['id']
-                if item_type.endswith('relationship_class') and item_id == parameter.relationship_class_id:
-                    relationship_class_index = self.object_tree_model.indexFromItem(item)
-                    self.ui.treeView_object.setCurrentIndex(relationship_class_index)
-                    self.ui.treeView_object.scrollTo(relationship_class_index)
+                if item_type != 'related_object':
+                    continue
+                item_relationship_id = item.data(Qt.UserRole+1)['relationship_id']
+                if item_relationship_id == parameter_value.relationship_id:
+                    relationship_index = self.object_tree_model.indexFromItem(item)
+                    self.ui.treeView_object.setCurrentIndex(relationship_index)
+                    self.ui.treeView_object.scrollTo(relationship_index)
                     break
             self.relationship_parameter_proxy.setFilterRegExp("")
             self.ui.tableView_relationship_parameter.resizeColumnsToContents()
