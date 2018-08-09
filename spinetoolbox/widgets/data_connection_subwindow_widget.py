@@ -38,14 +38,13 @@ class DataConnectionWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
     """
-    def __init__(self, owner, item_type):
+    def __init__(self, item_type):
         """ Initialize class."""
         super().__init__()
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'DC 1')
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory.
         self.ui.treeView_references.setModel(self.reference_model)
@@ -53,18 +52,6 @@ class DataConnectionWidget(QWidget):
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
-
-    def set_owner(self, owner):
-        """Set owner of this SubWindowWidget.
-
-        Args:
-            owner (str): New owner
-        """
-        self._owner = owner
-
-    def owner(self):
-        """Return owner of this SubWindowWidget."""
-        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.

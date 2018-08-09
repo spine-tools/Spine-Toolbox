@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -52,10 +52,16 @@
     </property>
     <item>
      <widget class="QLabel" name="label">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>28</height>
+        <height>23</height>
        </size>
       </property>
       <property name="maximumSize">
@@ -114,7 +120,7 @@
      <x>0</x>
      <y>0</y>
      <width>765</width>
-     <height>25</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -456,7 +462,7 @@
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="editTriggers">
-            <set>QAbstractItemView::EditKeyPressed</set>
+            <set>QAbstractItemView::DoubleClicked</set>
            </property>
           </widget>
          </item>
@@ -512,7 +518,7 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add Tool Template to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new or add an existing Tool template to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
@@ -547,7 +553,7 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh Tool Templates. Press this button to refresh Tools that use this Template if the Template has changed.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh Tool templates&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
@@ -582,7 +588,7 @@
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove Tool Template from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove (selected) Tool template from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">

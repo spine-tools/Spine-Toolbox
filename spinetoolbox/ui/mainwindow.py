@@ -38,7 +38,12 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_10.setObjectName("verticalLayout_10")
         self.label = QtWidgets.QLabel(self.centralwidget)
-        self.label.setMinimumSize(QtCore.QSize(0, 28))
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        self.label.setSizePolicy(sizePolicy)
+        self.label.setMinimumSize(QtCore.QSize(0, 23))
         self.label.setMaximumSize(QtCore.QSize(16777215, 28))
         self.label.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.label.setFrameShadow(QtWidgets.QFrame.Raised)
@@ -61,7 +66,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 765, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 765, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -209,7 +214,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.treeView_project.sizePolicy().hasHeightForWidth())
         self.treeView_project.setSizePolicy(sizePolicy)
         self.treeView_project.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.treeView_project.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
+        self.treeView_project.setEditTriggers(QtWidgets.QAbstractItemView.DoubleClicked)
         self.treeView_project.setObjectName("treeView_project")
         self.verticalLayout_2.addWidget(self.treeView_project)
         self.tabWidget.addTab(self.tab_items, "")
@@ -392,9 +397,9 @@ class Ui_MainWindow(object):
         self.dockWidget_project.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Project", None, -1))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_items), QtWidgets.QApplication.translate("MainWindow", "Items", None, -1))
         self.listView_tool_templates.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool Templates available in this project</p></body></html>", None, -1))
-        self.pushButton_add_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Add Tool Template to project</p></body></html>", None, -1))
-        self.pushButton_refresh_tool_templates.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Refresh Tool Templates. Press this button to refresh Tools that use this Template if the Template has changed.</p></body></html>", None, -1))
-        self.pushButton_remove_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove Tool Template from project</p></body></html>", None, -1))
+        self.pushButton_add_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create new or add an existing Tool template to project</p></body></html>", None, -1))
+        self.pushButton_refresh_tool_templates.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Refresh Tool templates</p></body></html>", None, -1))
+        self.pushButton_remove_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove (selected) Tool template from project</p></body></html>", None, -1))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_tool_templates), QtWidgets.QApplication.translate("MainWindow", "Templates", None, -1))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_connections), QtWidgets.QApplication.translate("MainWindow", "Connections", None, -1))
         self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Quit", None, -1))
@@ -431,6 +436,6 @@ class Ui_MainWindow(object):
         self.actionUser_Guide.setText(QtWidgets.QApplication.translate("MainWindow", "User Guide", None, -1))
         self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

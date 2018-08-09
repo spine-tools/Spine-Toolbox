@@ -27,9 +27,12 @@ Note: These are Spine Toolbox internal data models.
 """
 
 import logging
+import os
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableModel,\
     QSortFilterProxyModel
 from PySide2.QtGui import QStandardItemModel, QBrush, QFont, QIcon, QPixmap
+from PySide2.QtWidgets import QMessageBox
+from config import INVALID_CHARS
 
 
 class ProjectItemModel(QStandardItemModel):
@@ -37,6 +40,111 @@ class ProjectItemModel(QStandardItemModel):
     def __init__(self, parent=None):
         super().__init__()
         self._parent = parent
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Change name of item in index to value.
+
+        Args:
+            index (QModelIndex): Item index
+            value (str): New name
+            role (int): Item data role to set
+
+        Returns:
+            Boolean value depending on whether the new name is accepted.
+        """
+        if not role == Qt.EditRole:
+            return super().setData(index, value, role)
+        item = self.data(index, Qt.UserRole)
+        old_name = item.name
+        if value.strip() == '' or value == old_name:
+            return False
+        # Check that new name is legal
+        if any(True for x in value if x in INVALID_CHARS):
+            msg = "<b>{0}</b> contains invalid characters.".format(value)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Invalid characters", msg)
+            return False
+        # Check if project item with the same name already exists
+        taken_names = self.return_item_names()
+        if value in taken_names:
+            msg = "Project item <b>{0}</b> already exists".format(value)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Invalid name", msg)
+            return False
+        # Check that no existing project item short name matches the new item's short name.
+        # This is to prevent two project items from using the same folder.
+        new_short_name = value.lower().replace(' ', '_')
+        for taken_name in taken_names:
+            taken_short_name = taken_name.lower().replace(' ', '_')
+            if new_short_name == taken_short_name:
+                msg = "Project item using directory <b>{0}</b> already exists".format(taken_short_name)
+                # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+                QMessageBox.information(self._parent, "Invalid name", msg)
+                return False
+        # Get old data dir which will be renamed
+        try:
+            old_data_dir = item.data_dir  # Full path
+        except AttributeError:
+            logging.error("Item does not have a data_dir. Make sure that class {0} creates one.".format(item.item_type))
+            return False
+        # Get project path from the old data dir path
+        project_path = os.path.split(old_data_dir)[0]
+        # Make path for new data dir
+        new_data_dir = os.path.join(project_path, new_short_name)
+        # Rename item project directory
+        try:
+            os.rename(old_data_dir, new_data_dir)
+        except FileExistsError:
+            msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_data_dir)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Renaming directory failed", msg)
+            return False
+        except PermissionError:
+            msg = "Access to directory <br/><b>{0}</b><br/>denied." \
+                  "<br/><br/>Possible reasons:" \
+                  "<br/>1. Windows Explorer is open in the directory" \
+                  "<br/>2. Permission error" \
+                  "<br/><br/>Check these and try again.".format(old_data_dir)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Renaming directory failed", msg)
+            return False
+        except OSError:
+            msg = "Renaming input directory failed. OSError in" \
+                  "<br/><b>{0}</b><br/>Possibly because Windows " \
+                  "Explorer is open in the directory".format(old_data_dir)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Renaming directory failed", msg)
+            return False
+        # Find item from project refs list
+        project_refs = self._parent.project_refs
+        item_ref = None
+        for ref in project_refs:
+            if ref.name == old_name:
+                ref_index = project_refs.index(ref)
+                item_ref = project_refs.pop(ref_index)
+                break
+        # Change name for item in project ref list
+        item_ref.set_name(value)
+        self._parent.project_refs.append(item_ref)
+        # Update DisplayRole of the QStardardItem in Project QTreeView
+        q_item = self.find_item(old_name, Qt.MatchExactly | Qt.MatchRecursive)
+        q_item.setData(value, Qt.DisplayRole)
+        # Rename project item contained in the QStandardItem
+        item.set_name(value)
+        # Update project item directory variable
+        item.data_dir = new_data_dir
+        # Update name in the subwindow widget
+        item.get_widget().set_name_label(value)
+        # Update name item of the QGraphicsItem
+        item.get_icon().update_name_item(value)
+        # Change old item names in connection model headers to the new name
+        header_index = self._parent.connection_model.find_index_in_header(old_name)
+        self._parent.connection_model.setHeaderData(header_index, Qt.Horizontal, value)
+        self._parent.connection_model.setHeaderData(header_index, Qt.Vertical, value)
+        # Force save project
+        self._parent.save_project()
+        self._parent.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
+        return True
 
     def n_items(self, typ):
         """Returns the number of items in the project according to type.
@@ -121,7 +229,7 @@ class ToolTemplateModel(QAbstractListModel):
     def __init__(self, parent=None):
         super().__init__()
         self._tools = list()
-        self._tools.append('No tool template')  # TODO: Try to get rid of this
+        self._tools.append('No Tool template')  # TODO: Try to get rid of this
         self._parent = parent
 
     def rowCount(self, parent=None, *args, **kwargs):
@@ -290,7 +398,7 @@ class ConnectionModel(QAbstractTableModel):
         return n
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
-        """Set headers."""
+        """Returns header data according to given role."""
         if role == Qt.DisplayRole:
             try:
                 h = self.header[section]
@@ -299,6 +407,21 @@ class ConnectionModel(QAbstractTableModel):
             return h
         else:
             return None
+
+    def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
+        """Sets the data for the given role and section in the header
+        with the specified orientation to the value supplied.
+        """
+        if not role == Qt.EditRole:
+            return super().setHeaderData(section, orientation, value, role)
+        if orientation == Qt.Horizontal or orientation == Qt.Vertical:
+            try:
+                self.header[section] = value
+                self.headerDataChanged.emit(orientation, section, section)
+                return True
+            except IndexError:
+                return False
+        return False
 
     def data(self, index, role):
         """Returns the data stored under the given role for the item referred to by the index.
@@ -566,6 +689,10 @@ class ConnectionModel(QAbstractTableModel):
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
+
+    def find_index_in_header(self, name):
+        """Returns the row or column (row==column) of the header item with the given text (item name)."""
+        return self.header.index(name)
 
     def link(self, row, column):
         # TODO: Modify or remove this

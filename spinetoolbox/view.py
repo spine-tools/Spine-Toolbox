@@ -25,10 +25,12 @@ Module for view class.
 """
 
 import logging
+import os
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
 from PySide2.QtCore import Slot
 from graphics_items import ViewImage
+from helpers import create_dir
 
 
 class View(MetaObject):
@@ -47,10 +49,17 @@ class View(MetaObject):
         self.item_category = "Views"
         self._project = project
         self._data = "data"
-        self._widget = ViewWidget(name, self.item_type)
+        self._widget = ViewWidget(self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label(self._data)
+        # Create View project directory
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+                                        " Check permissions.".format(self.data_dir))
         self._graphics_item = ViewImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 

@@ -37,14 +37,13 @@ class ToolSubWindowWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Tool')
     """
-    def __init__(self, owner, item_type):
+    def __init__(self, item_type):
         """ Initialize class."""
         super().__init__()
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'Tool 1')
         self.input_file_model = QStandardItemModel()
         self.output_file_model = QStandardItemModel()
         self.ui.treeView_input_files.setModel(self.input_file_model)
@@ -52,18 +51,6 @@ class ToolSubWindowWidget(QWidget):
         self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
         self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
-
-    def set_owner(self, owner):
-        """Set owner of this SubWindowWidget.
-
-        Args:
-            owner (str): New owner
-        """
-        self._owner = owner
-
-    def owner(self):
-        """Return owner of this SubWindowWidget."""
-        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.

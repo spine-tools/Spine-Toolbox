@@ -37,14 +37,13 @@ class DataStoreWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Store')
     """
-    def __init__(self, owner, item_type):
+    def __init__(self, item_type):
         """ Initialize class."""
         super().__init__()
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'DS 1')
         self.reference_model = QStandardItemModel()  # References to databases
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
         self.icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
@@ -52,18 +51,6 @@ class DataStoreWidget(QWidget):
         self.ui.listView_references.setModel(self.reference_model)
         self.ui.listView_data.setModel(self.data_model)
         self.ui.label_name.setFocus()
-
-    def set_owner(self, owner):
-        """Set owner of this SubWindowWidget.
-
-        Args:
-            owner (str): New owner
-        """
-        self._owner = owner
-
-    def owner(self):
-        """Return owner of this SubWindowWidget."""
-        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.

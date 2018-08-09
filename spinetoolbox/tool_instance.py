@@ -253,9 +253,8 @@ class ToolInstance(QObject):
         try:
             self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)
             self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)
-        except Exception as e:
-            logging.exception("Exception: {0}. Disconnection subprocess_finished_signal "
-                              "from julia and gams tool finished slots. TODO: Remove Exception as e".format(e))
+        except AttributeError:
+            pass
         self.tool_process.terminate_process()
 
     def remove(self):

@@ -34,7 +34,7 @@ from PySide2.QtGui import QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    ItemImageContextMenu, LinkContextMenu, AddToolTemplatePopupMenu
+    LinkContextMenu, AddToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -86,7 +86,6 @@ class ToolboxUI(QMainWindow):
         self.data_store_form = None  # OBSOLETE?
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
-        self.item_image_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
         self.project_form = None
@@ -128,7 +127,7 @@ class ToolboxUI(QMainWindow):
         self.restore_ui()
 
     def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu"""
+        """Add toggle view actions to View menu."""
         self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
@@ -247,13 +246,20 @@ class ToolboxUI(QMainWindow):
         self.init_connection_model()
 
     def init_project_item_model(self):
-        """Initializes Project item model."""
-        self.project_item_model = ProjectItemModel()
-        # self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
-        self.project_item_model.appendRow(QStandardItem("Data Stores"))
-        self.project_item_model.appendRow(QStandardItem("Data Connections"))
-        self.project_item_model.appendRow(QStandardItem("Tools"))
-        self.project_item_model.appendRow(QStandardItem("Views"))
+        """Initializes project item model."""
+        self.project_item_model = ProjectItemModel(self)
+        ds_cat_item = QStandardItem("Data Stores")
+        dc_cat_item = QStandardItem("Data Connections")
+        tool_cat_item = QStandardItem("Tools")
+        view_cat_item = QStandardItem("Views")
+        ds_cat_item.setEditable(False)
+        dc_cat_item.setEditable(False)
+        tool_cat_item.setEditable(False)
+        view_cat_item.setEditable(False)
+        self.project_item_model.appendRow(ds_cat_item)
+        self.project_item_model.appendRow(dc_cat_item)
+        self.project_item_model.appendRow(tool_cat_item)
+        self.project_item_model.appendRow(view_cat_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
@@ -324,7 +330,8 @@ class ToolboxUI(QMainWindow):
         #     self.ui.tableView_connections.clicked.connect(self.toggle_connection)
         # elif n_connected > 1:
         #     # Check that this never gets over 1
-        #     logging.error("Number of receivers for tableView_connections clicked signal is now:{0}".format(n_connected))
+        #     logging.error("Number of receivers for tableView_connections clicked signal is now:{0}"
+        #                   .format(n_connected))
         # else:
         #     pass  # signal already connected
 
@@ -586,8 +593,8 @@ class ToolboxUI(QMainWindow):
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(self, 'Select tool template file',
-                      os.path.join(project_dir(self._config), os.path.pardir),
-                      'JSON (*.json)')
+                                             os.path.join(project_dir(self._config), os.path.pardir),
+                                             'JSON (*.json)')
         if answer[0] == '':  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
@@ -738,7 +745,7 @@ class ToolboxUI(QMainWindow):
             return
         if index.row() == 0:
             # Do not remove No Tool option
-            self.msg.emit("<b>No Tool</b> cannot be removed")
+            self.msg.emit("<b>No Tool template</b> cannot be removed")
             return
         self.remove_tool_template(index)
 
@@ -859,7 +866,7 @@ class ToolboxUI(QMainWindow):
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
 
-    def remove_item(self, ind, delete_item=False):
+    def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.
         To remove all items in project, loop all indices through this method.
         This method is used in both opening and creating a new project as
@@ -870,9 +877,16 @@ class ToolboxUI(QMainWindow):
 
         Args:
             ind (QModelIndex): Index of removed item in project model
-            delete_item: If set to True, deletes the directories and data associated with the item
+            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            check_dialog (bool): If True, shows 'Are you sure?' message box
         """
-        name = ind.data(Qt.UserRole).get_widget().owner()
+        name = ind.data(Qt.UserRole).name
+        if check_dialog:
+            msg = "Are you sure? This will delete this item's data from your project.".format(name)
+            # noinspection PyCallByClass, PyTypeChecker
+            answer = QMessageBox.question(self, 'Remove item from project?', msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                return
         item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
         data_dir = None
@@ -1169,22 +1183,80 @@ class ToolboxUI(QMainWindow):
 
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):
-        """Context menu for project items.
+        """Context menu for project items listed in the project QTreeView.
 
         Args:
             pos (QPoint): Mouse position
         """
         ind = self.ui.treeView_project.indexAt(pos)
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
-        self.project_item_context_menu = ProjectItemContextMenu(self, global_pos, ind)
+        self.show_project_item_context_menu(global_pos, ind)
+
+    @Slot("QPoint", str, name="show_item_image_context_menu")
+    def show_item_image_context_menu(self, pos, name):
+        """Context menu for project item images on the QGraphicsView.
+
+        Args:
+            pos (QPoint): Mouse position
+            name (str): The name of the concerned item
+        """
+        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item
+        self.show_project_item_context_menu(pos, ind)
+
+    def show_project_item_context_menu(self, pos, ind):
+        """Create and show project item context menu.
+
+        Args:
+            pos (QPoint): Mouse position
+            ind (QModelIndex): Index of concerned item
+        """
+        self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
         option = self.project_item_context_menu.get_action()
-        if option == "Remove Item":
-            self.remove_item(ind, delete_item=True)
-            return
+        d = ind.data(Qt.UserRole)
+        if option == "Open directory...":
+            d.open_directory()  # Open data_dir of Data Connection or Data Store
+        elif option == "Execute":
+            d.execute()
+        elif option == "Results...":
+            d.open_results()
+        elif option == "Stop":
+            # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
+            if not d.get_icon().wheel.isVisible():
+                self.msg.emit("Tool <b>{0}</b> is not running".format(d.name))
+            else:
+                d.stop_process()  # Proceed with stopping
+        elif option == "Edit Tool template":
+            d.edit_tool_template()
+        elif option == "Open main program file":
+            d.open_tool_main_program_file()
+        elif option == "Rename":
+            self.ui.tabWidget.setCurrentIndex(0)  # Set Items tab selected
+            self.ui.treeView_project.edit(ind)
+        elif option == "Remove Item":
+            self.remove_item(ind, delete_item=True, check_dialog=True)
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
+
+    def show_link_context_menu(self, pos, link):
+        """Context menu for connection links.
+
+        Args:
+            pos (QPoint): Mouse position
+            link (Link(QGraphicsPathItem)): The concerned link
+        """
+        self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
+        option = self.link_context_menu.get_action()
+        if option == "Remove Connection":
+            self.ui.graphicsView.remove_link(link.model_index)
+            return
+        elif option == "Send to bottom":
+            link.send_to_bottom()
+        else:  # No option selected
+            pass
+        self.link_context_menu.deleteLater()
+        self.link_context_menu = None
 
     @Slot("QPoint", name="show_tool_template_context_menu")
     def show_tool_template_context_menu(self, pos):
@@ -1209,43 +1281,6 @@ class ToolboxUI(QMainWindow):
             pass
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
-
-    def show_item_image_context_menu(self, pos, name):
-        """Context menu for item images.
-
-        Args:
-            pos (QPoint): Mouse position
-            name (QGraphicsItem): The name of the concerned item
-        """
-        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item
-        self.item_image_context_menu = ItemImageContextMenu(self, pos, ind)
-        option = self.item_image_context_menu.get_action()
-        if option == "Remove Item":
-            self.remove_item(ind, delete_item=True)
-            return
-        else:  # No option selected
-            pass
-        self.item_image_context_menu.deleteLater()
-        self.item_image_context_menu = None
-
-    def show_link_context_menu(self, pos, link):
-        """Context menu for connection links.
-
-        Args:
-            pos (QPoint): Mouse position
-            link (Link(QGraphicsPathItem)): The concerned link
-        """
-        self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
-        option = self.link_context_menu.get_action()
-        if option == "Remove Connection":
-            self.ui.graphicsView.remove_link(link.model_index)
-            return
-        elif option == "Send to bottom":
-            link.send_to_bottom()
-        else:  # No option selected
-            pass
-        self.link_context_menu.deleteLater()
-        self.link_context_menu = None
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.

@@ -77,24 +77,16 @@ class ItemImage(QGraphicsItem):
         self.connector_pen.setStyle(Qt.DotLine)
         self.connector_brush = QBrush(QColor(255, 255, 255, 0))  # QBrush is used to fill the item
         self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))  # QBrush is used to fill the item
-        self._name = name
         self.font_size = 8  # point size
         self.q_rect = QRectF(self.x_coord, self.y_coord, self.w, self.h)  # Position and size of the drawn item
         # Make QGraphicsSimpleTextItem for item name.
-        self.name_item = QGraphicsSimpleTextItem(self._name)
-        self.name_item.setZValue(3)
-        # Set font size and style
-        font = self.name_item.font()
-        font.setPointSize(self.font_size)
-        font.setBold(True)
-        self.name_item.setFont(font)
-        # Set name item position (centered)
-        self.name_width = self.name_item.sceneBoundingRect().width()
-        self.name_item.setPos(self.x_coord + self.w/2 - self.name_width/2, self.y_coord)
+        self.name_item = QGraphicsSimpleTextItem(name)
+        self.name_width = 12  # Initial value (not used)
+        self.set_name_attributes()  # Set font, size, position, etc.
         self.connector_button = QGraphicsRectItem()
         self.connector_button.setPen(self.connector_pen)
         self.connector_button.setBrush(self.connector_brush)
-        self.connector_button.setRect(self.q_rect.adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))  # TODO: Check if position is correct now
+        self.connector_button.setRect(self.q_rect.adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
@@ -151,7 +143,24 @@ class ItemImage(QGraphicsItem):
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
-        return self._name
+        return self.name_item.text()
+
+    def update_name_item(self, new_name):
+        """Set a new text to name item. Used when a project item is renamed."""
+        self.name_item.setText(new_name)
+        self.set_name_attributes()
+
+    def set_name_attributes(self):
+        """Set name QGraphicsSimpleTextItem attributes (font, size, position, etc.)"""
+        self.name_item.setZValue(3)
+        # Set font size and style
+        font = self.name_item.font()
+        font.setPointSize(self.font_size)
+        font.setBold(True)
+        self.name_item.setFont(font)
+        # Set name item position (centered on top of the master icon)
+        self.name_width = self.name_item.sceneBoundingRect().width()
+        self.name_item.setPos(self.x_coord + self.w/2 - self.name_width/2, self.y_coord - 20)
 
     def conn_button(self):
         """Returns items connector button (QWidget)."""
@@ -199,11 +208,13 @@ class ItemImage(QGraphicsItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         QGraphicsItem.mouseMoveEvent(self._master, event)
-        links = self._main.connection_model.connected_links(self._name)
+        links = self._main.connection_model.connected_links(self.name())
         for link in links:
             link.update_geometry()
         master_rect = self._master.sceneBoundingRect()
-        self.name_item.setPos(master_rect.left() + self.w/2 - self.name_width/2, master_rect.top())
+        self.name_item.setPos(master_rect.left() + self.w/2 - self.name_width/2, master_rect.top() - 20)
+        self.x_coord = master_rect.x()
+        self.y_coord = master_rect.y()
 
     def mouse_release_event(self, event):
         """Mouse button is released.

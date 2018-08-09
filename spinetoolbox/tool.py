@@ -56,7 +56,7 @@ class Tool(MetaObject):
         self.item_type = "Tool"
         self.item_category = "Tools"
         self._project = project
-        self._widget = ToolSubWindowWidget(name, self.item_type)
+        self._widget = ToolSubWindowWidget(self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_input_files()
         self._widget.make_header_for_output_files()
@@ -76,8 +76,15 @@ class Tool(MetaObject):
         self._widget.ui.comboBox_tool.setCurrentIndex(r)
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        # Directory where results are saved
-        self.output_dir = os.path.join(self._project.project_dir, self.short_name, TOOL_OUTPUT_DIR)
+        # Create Tool project directory
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+                                        " Check permissions.".format(self.data_dir))
+        # Make directory for results
+        self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._parent, x - 35, y - 35, w=70, h=70, name=self.name)
         self._widget.ui.pushButton_stop.setEnabled(False)
         self.connect_signals()
@@ -138,18 +145,6 @@ class Tool(MetaObject):
     def open_tool_main_program_file(self):
         self._parent.open_tool_main_program_file(self._tool_template_index)
 
-    @Slot(name='show_details')
-    def show_details(self):
-        """Details button clicked."""
-        if not self.tool_template():
-            self._parent.msg_warning.emit("No Tool template")
-            return
-        definition = self.read_tool_def(self.tool_template().get_def_path())
-        if not definition:
-            return
-        self._parent.msg.emit("Tool template file contents:\n{0}"
-                              .format(json.dumps(definition, sort_keys=True, indent=4)))
-
     def tool_template(self):
         """Returns Tool template."""
         return self._tool_template
@@ -196,7 +191,7 @@ class Tool(MetaObject):
         self._widget.populate_output_files_list(self.tool_template().outputfiles)
 
     def read_tool_def(self, tool_def_file):
-        """Return tool template definition file contents or None if operation failed."""
+        """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
         try:
             with open(tool_def_file, 'r') as fp:
                 try:
@@ -555,3 +550,16 @@ class Tool(MetaObject):
             # Find ToolTemplate from model according to row
             new_tool = self._parent.tool_template_model.tool_template(row)
         self.set_tool_template(new_tool)
+
+    # @Slot(name='show_details')
+    # def show_details(self):
+    #     """[OBSOLETE] Details button clicked."""
+    #     if not self.tool_template():
+    #         self._parent.msg_warning.emit("No Tool template")
+    #         return
+    #     definition = self.read_tool_def(self.tool_template().get_def_path())
+    #     if not definition:
+    #         return
+    #     self._parent.msg.emit("Tool template file contents:\n{0}"
+    #                           .format(json.dumps(definition, sort_keys=True, indent=4)))
+

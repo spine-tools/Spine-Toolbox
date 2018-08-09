@@ -56,7 +56,7 @@ class DataStore(MetaObject):
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
         self._project = project
-        self._widget = DataStoreWidget(name, self.item_type)
+        self._widget = DataStoreWidget(self.item_type)
         self._widget.set_name_label(name)
         self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Store
@@ -223,8 +223,8 @@ class DataStore(MetaObject):
             try:
                 engine.execute('BEGIN IMMEDIATE')
             except DatabaseError as e:
-                self._parent.msg_error.emit("Could not open <b>{}</b>, seems to be locked: {}".\
-                    format(data_file, e.orig.args))
+                self._parent.msg_error.emit("Could not open <b>{}</b>, seems to be locked: {}"
+                                            .format(data_file, e.orig.args))
                 return
             # Get database and user name
             database = data_file
