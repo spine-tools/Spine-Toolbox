@@ -1186,7 +1186,8 @@ class RelationshipParameterValueProxy(QSortFilterProxyModel):
 
     def flags(self, index):
         """Returns the item flags for the given index."""
-        column_name = self.sourceModel().header[index.column()]
+        source_index = self.mapToSource(index)
+        column_name = self.sourceModel().header[source_index.column()]
         if column_name in [
                     'relationship_class_name',
                     'parent_object_name',

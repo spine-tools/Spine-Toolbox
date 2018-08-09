@@ -1459,11 +1459,7 @@ class DataStoreForm(QMainWindow):
             return
         # Manually remove items in model corresponding to the removed item
         def visit_and_remove(visited_item):
-            """Visit item, remove it if necessary and visit children.
-
-            Returns:
-                True if visited item is removed, False otherwise
-            """
+            """Visit item, remove it if necessary and visit children."""
             # Visit children in reverse order, so we don't mess up in case of removal
             for i in reversed(range(visited_item.rowCount())):
                 visit_and_remove(visited_item.child(i))
