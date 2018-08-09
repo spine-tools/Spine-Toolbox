@@ -1134,13 +1134,10 @@ class DataStoreForm(QMainWindow):
 
         def visit_and_add_relationship_class(item):
             """Visit item, add relationship class if necessary and visit children."""
-            i = 0
-            while True:
-                if i == item.rowCount(): # all children have been visited
-                    break
-                visit_and_add_relationship_class(item.child(i)) # visit next children
-                i += 1 # increment counter
-            # visit item
+            # Visit children
+            for i in range(item.rowCount()):
+                visit_and_add_relationship_class(item.child(i))
+            # Visit item
             ent_type = item.data(Qt.UserRole)
             # Skip root item
             if not ent_type:
@@ -1292,12 +1289,9 @@ class DataStoreForm(QMainWindow):
 
         def visit_and_add_relationship(item):
             """Visit item, add relationship if necessary and visit children."""
-            i = 0
-            while True:
-                if i == item.rowCount(): # all children have been visited
-                    break
-                visit_and_add_relationship(item.child(i)) # visit next children
-                i += 1 # increment counter
+            # Visit children
+            for i in range(item.rowCount()):
+                visit_and_add_relationship(item.child(i))
             # visit item
             entity_type = item.data(Qt.UserRole)
             if not entity_type: # root item
@@ -1470,19 +1464,15 @@ class DataStoreForm(QMainWindow):
             Returns:
                 True if visited item is removed, False otherwise
             """
-            # visit children
-            i = 0
-            while True:
-                if i == visited_item.rowCount():  # all children have been visited
-                    break
-                if not visit_and_remove(visited_item.child(i)):
-                    i += 1  # increment counter only if child wasn't removed
+            # Visit children in reverse order, so we don't mess up in case of removal
+            for i in reversed(range(visited_item.rowCount())):
+                visit_and_remove(visited_item.child(i))
             # Visit item
             visited_type = visited_item.data(Qt.UserRole)
             visited = visited_item.data(Qt.UserRole+1)
             # Skip root
             if not visited_type:
-                return False
+                return
             # Get visited id
             if visited_type == 'related_object':
                 visited_id = visited['relationship_id']
@@ -1491,7 +1481,7 @@ class DataStoreForm(QMainWindow):
             if visited_type == removed_type and visited_id == removed_id:
                 visited_index = self.object_tree_model.indexFromItem(visited_item)
                 self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
-                return True
+                return
             # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type.endswith('relationship_class'):
                 child_object_class_id = visited['child_object_class_id']
@@ -1502,14 +1492,13 @@ class DataStoreForm(QMainWindow):
                 if removed_id in [child_object_class_id, parent_object_class_id]:
                     visited_index = self.object_tree_model.indexFromItem(visited_item)
                     self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
-                    return True
+                    return
             # When removing an object, also remove relationships that involve it
             if removed_type == 'object' and visited_type == 'related_object':
                 if removed_id == visited['id']:
                     visited_index = self.object_tree_model.indexFromItem(visited_item)
                     self.object_tree_model.removeRows(visited_index.row(), 1, visited_index.parent())
-                    return True
-            return False
+                    return
         root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_remove(root_item)
         # refresh parameter models
