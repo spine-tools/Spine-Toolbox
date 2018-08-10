@@ -1565,9 +1565,35 @@ class DataStoreForm(QMainWindow):
             parameter (self.Parameter)
         """
         self.init_parameter_models()
+        # Scroll to concerned row in object parameter table
         if parameter.object_class_id:
-            # self.object_parameter_proxy.object_class_id_filter = parameter.object_class_id
-            # self.object_parameter_proxy.setFilterRegExp("")
+            self.ui.tableView_object_parameter.resizeColumnsToContents()
+            source_row = self.object_parameter_model.rowCount()-1
+            source_column = self.object_parameter_model.header.index("parameter_name")
+            source_index = self.object_parameter_model.index(source_row, source_column)
+            proxy_index = self.object_parameter_proxy.mapFromSource(source_index)
+            self.ui.tabWidget_object.setCurrentIndex(1)
+            self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
+            self.ui.tableView_object_parameter.scrollTo(proxy_index)
+        # Scroll to concerned row in relationship parameter table
+        elif parameter.relationship_class_id:
+            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+            source_row = self.relationship_parameter_model.rowCount()-1
+            source_column = self.relationship_parameter_model.header.index("parameter_name")
+            source_index = self.relationship_parameter_model.index(source_row, source_column)
+            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
+            self.ui.tabWidget_relationship.setCurrentIndex(1)
+            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
+            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
+        # Scroll to concerned object class in treeview if necessary
+        if parameter.object_class_id:
+            current_index = self.ui.treeView_object.currentIndex()
+            current_type = current_index.data(Qt.UserRole)
+            if current_type == 'object_class':
+                current_id = current_index.data(Qt.UserRole+1)['id']
+                if current_id == parameter.object_class_id:
+                    return  # We're already in the right one
+            # Search it and scroll to it
             for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
                 item_type = item.data(Qt.UserRole)
                 if not item_type: # root
@@ -1578,19 +1604,15 @@ class DataStoreForm(QMainWindow):
                     self.ui.treeView_object.setCurrentIndex(object_class_index)
                     self.ui.treeView_object.scrollTo(object_class_index)
                     break
-            self.ui.tableView_object_parameter.resizeColumnsToContents()
-            # find proxy index
-            source_row = self.object_parameter_model.rowCount()-1
-            source_column = self.object_parameter_model.header.index("parameter_name")
-            source_index = self.object_parameter_model.index(source_row, source_column)
-            proxy_index = self.object_parameter_proxy.mapFromSource(source_index)
-            # scroll
-            self.ui.tabWidget_object.setCurrentIndex(1)
-            self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
-            self.ui.tableView_object_parameter.scrollTo(proxy_index)
+        # Scroll to concerned relationship class in treeview if necessary
         elif parameter.relationship_class_id:
-            # self.relationship_parameter_proxy.relationship_class_id_filter = parameter.relationship_class_id
-            # self.relationship_parameter_proxy.setFilterRegExp("")
+            current_index = self.ui.treeView_object.currentIndex()
+            current_type = current_index.data(Qt.UserRole)
+            if current_type.endswith('relationship_class'):
+                current_id = current_index.data(Qt.UserRole+1)['id']
+                if current_id == parameter.relationship_class_id:
+                    return  # We're already in the right one
+            # Search the first one that matches and scroll to it
             for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
                 item_type = item.data(Qt.UserRole)
                 if not item_type: # root
@@ -1601,16 +1623,6 @@ class DataStoreForm(QMainWindow):
                     self.ui.treeView_object.setCurrentIndex(relationship_class_index)
                     self.ui.treeView_object.scrollTo(relationship_class_index)
                     break
-            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
-            # find proxy index
-            source_row = self.relationship_parameter_model.rowCount()-1
-            source_column = self.relationship_parameter_model.header.index("parameter_name")
-            source_index = self.relationship_parameter_model.index(source_row, source_column)
-            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
-            # scroll
-            self.ui.tabWidget_relationship.setCurrentIndex(1)
-            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
-            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
 
     def object_parameter_names(self, object_id):
         """Return unassigned parameter names for object
@@ -1711,9 +1723,13 @@ class DataStoreForm(QMainWindow):
                 filter_by(name=parameter_name).one().id
             kwargs.update({"parameter_id": parameter_id})
         if 'value' in dialog.answer:
-            kwargs.update({'value': dialog.answer['value']})
+            # Only retrieve value if not an empty string
+            if dialog.answer['value']:
+                kwargs.update({'value': dialog.answer['value']})
         if 'json' in dialog.answer:
-            kwargs.update({'json': dialog.answer['json']})
+            # Only retrieve json if not an empty string
+            if dialog.answer['json']:
+                kwargs.update({'json': dialog.answer['json']})
         return self.ParameterValue(commit_id=self.commit.id, **kwargs)
 
     def add_parameter_value_to_db(self, parameter_value):
@@ -1741,7 +1757,36 @@ class DataStoreForm(QMainWindow):
             parameter_value (self.ParameterValue)
         """
         self.init_parameter_value_models()
+        # Scroll to concerned row in object parameter value table
         if parameter_value.object_id:
+            self.ui.tableView_object_parameter_value.resizeColumnsToContents()
+            source_row = self.object_parameter_value_model.rowCount()-1
+            source_column = self.object_parameter_value_model.header.index("parameter_name")
+            source_index = self.object_parameter_value_model.index(source_row, source_column)
+            proxy_index = self.object_parameter_value_proxy.mapFromSource(source_index)
+            self.ui.tabWidget_object.setCurrentIndex(0)
+            self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
+            self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
+        # Scroll to concerned row in relationship parameter value table
+        elif parameter_value.relationship_id:
+            self.relationship_parameter_proxy.setFilterRegExp("")
+            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+            source_row = self.relationship_parameter_model.rowCount()-1
+            source_column = self.relationship_parameter_model.header.index("parameter_name")
+            source_index = self.relationship_parameter_model.index(source_row, source_column)
+            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
+            self.ui.tabWidget_relationship.setCurrentIndex(0)
+            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
+            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
+        # Scroll to concerned object in treeview if necessary
+        if parameter_value.object_id:
+            current_index = self.ui.treeView_object.currentIndex()
+            current_type = current_index.data(Qt.UserRole)
+            if current_type == 'object':
+                current_id = current_index.data(Qt.UserRole+1)['id']
+                if current_id == parameter_value.object_id:
+                    return  # We're already in the right one
+            # Search it and scroll to it
             for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
                 item_type = item.data(Qt.UserRole)
                 if not item_type: # root
@@ -1754,17 +1799,15 @@ class DataStoreForm(QMainWindow):
                     self.ui.treeView_object.setCurrentIndex(object_index)
                     self.ui.treeView_object.scrollTo(object_index)
                     break
-            self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-            # find proxy index
-            source_row = self.object_parameter_value_model.rowCount()-1
-            source_column = self.object_parameter_value_model.header.index("parameter_name")
-            source_index = self.object_parameter_value_model.index(source_row, source_column)
-            proxy_index = self.object_parameter_value_proxy.mapFromSource(source_index)
-            # scroll
-            self.ui.tabWidget_object.setCurrentIndex(0)
-            self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
-            self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
+        # Scroll to concerned related_object in treeview if necessary
         elif parameter_value.relationship_id:
+            current_index = self.ui.treeView_object.currentIndex()
+            current_type = current_index.data(Qt.UserRole)
+            if current_type == 'related_object':
+                current_relationship_id = current_index.data(Qt.UserRole+1)['relationship_id']
+                if current_relationship_id == parameter_value.relationship_id:
+                    return  # We're already in the right one
+            # Search the first one that matches and scroll to it
             for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
                 item_type = item.data(Qt.UserRole)
                 if not item_type: # root
@@ -1777,17 +1820,6 @@ class DataStoreForm(QMainWindow):
                     self.ui.treeView_object.setCurrentIndex(relationship_index)
                     self.ui.treeView_object.scrollTo(relationship_index)
                     break
-            self.relationship_parameter_proxy.setFilterRegExp("")
-            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
-            # find proxy index
-            source_row = self.relationship_parameter_model.rowCount()-1
-            source_column = self.relationship_parameter_model.header.index("parameter_name")
-            source_index = self.relationship_parameter_model.index(source_row, source_column)
-            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
-            # scroll
-            self.ui.tabWidget_relationship.setCurrentIndex(0)
-            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
-            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
