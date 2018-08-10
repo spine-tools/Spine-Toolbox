@@ -98,7 +98,6 @@ class EditDatapackageKeysWidget(QWidget):
         data = self.dc.package.primary_keys_data()
         self.original_pk_data = deepcopy(data)
         self.pks_model.reset_model(data)
-        self.pks_model.set_tool_tip("<p>Double click to start editing.")
         self.pks_model.insertColumns(PrimaryKeysHeader.RM.index, 1)
         # foreign keys
         self.fks_model = MinimalTableModel()
@@ -107,7 +106,6 @@ class EditDatapackageKeysWidget(QWidget):
         data = self.dc.package.foreign_keys_data()
         self.original_fk_data = deepcopy(data)
         self.fks_model.reset_model(data)
-        self.fks_model.set_tool_tip("<p>Double click to start editing.")
         self.fks_model.insertColumns(ForeignKeysHeader.RM.index, 1)
 
     def init_tableviews(self):

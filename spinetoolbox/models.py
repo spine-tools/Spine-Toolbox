@@ -712,7 +712,7 @@ class MinimalTableModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent  # QMainWindow
         self._data = list()
-        self._user_role_data = list()
+        self._user_data = list()
         self.header = list()
 
     def flags(self, index):
@@ -765,8 +765,8 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         if role == Qt.DisplayRole:
             return self._data[index.row()][index.column()]
-        elif role == Qt.UserRole:
-            return self._user_role_data[index.row()][index.column()]
+        if role == Qt.UserRole:
+            return self._user_data[index.row()][index.column()]
         else:
             return None
 
@@ -822,7 +822,7 @@ class MinimalTableModel(QAbstractTableModel):
             self._data[index.row()][index.column()] = value
             return True
         if role == Qt.UserRole:
-            self._user_role_data[index.row()][index.column()] = value
+            self._user_data[index.row()][index.column()] = value
             return True
         return False
 
@@ -847,12 +847,14 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginInsertRows(parent, row, row)
         if self.columnCount() == 0:
             new_row = [None]
+            new_user_row = [None]
         else:
             # noinspection PyUnusedLocal
             new_row = [None for i in range(self.columnCount())]
+            new_user_row = [None for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self._data.insert(row, new_row)
-        self._user_role_data.insert(row, new_row)
+        self._user_data.insert(row, new_user_row)
         self.endInsertRows()
         return True
 
@@ -878,7 +880,7 @@ class MinimalTableModel(QAbstractTableModel):
         for j in range(self.rowCount()):
             # Notice if insert index > rowCount(), new object is inserted to end
             self._data[j].insert(column, None)
-            self._user_role_data[j].insert(column, None)
+            self._user_data[j].insert(column, None)
         self.endInsertColumns()
         return True
 
@@ -909,13 +911,8 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginResetModel()
         self._data = new_data
         if new_data:
-            self._user_role_data = [[None for j in new_data[i]] for i in range(len(new_data))]
+            self._user_data = [[None for j in new_data[i]] for i in range(len(new_data))]
         self.endResetModel()
-
-    def set_tool_tip(self, tool_tip):
-        """Set tool tip."""
-        # TODO: This probably does not work. Tooltip should be returned by data() method when role == Qt.ToolTipRole.
-        self._tool_tip = tool_tip
 
 
 class ObjectTreeModel(QStandardItemModel):

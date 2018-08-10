@@ -152,13 +152,13 @@ class ObjectTreeContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         if not index.parent().isValid():  # root item
-            self.add_action("Add object class")
+            self.add_action("Add object classes")
         else:
             item = index.model().itemFromIndex(index)
             item_type = item.data(Qt.UserRole)
             if item_type == 'object_class':
                 self.add_action("Add relationship class")
-                self.add_action("Add object")
+                self.add_action("Add objects")
                 self.addSeparator()
                 self.add_action("Add parameter")
                 self.addSeparator()

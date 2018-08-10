@@ -43,7 +43,7 @@ class ComboBoxDelegate(QItemDelegate):
         combo.previous_data = index.model().data(index)
         items = index.data(Qt.UserRole)
         combo.addItems(items)
-        combo.setCurrentIndex(-1) # force index change
+        # combo.setCurrentIndex(-1) # force index change
         combo.currentIndexChanged.connect(self.current_index_changed)
         return combo
 

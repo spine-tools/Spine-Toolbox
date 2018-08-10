@@ -26,7 +26,8 @@ Widget to show Data Store Form.
 
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
-from PySide2.QtWidgets import QMainWindow, QWidget, QStatusBar, QHeaderView, QDialog, QLineEdit, QInputDialog
+from PySide2.QtWidgets import QMainWindow, QWidget, QStatusBar, QHeaderView, QDialog, QLineEdit, QInputDialog, \
+    QMessageBox
 from PySide2.QtCore import Slot, Qt, QSettings
 from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
 from ui.data_store_form import Ui_MainWindow
@@ -34,7 +35,7 @@ from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.combobox_delegate import ComboBoxDelegate
-from widgets.custom_qdialog import CustomQDialog
+from widgets.custom_qdialog import CustomQDialog, AddObjectClassesDialog, AddObjectsDialog
 from helpers import busy_effect
 from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, RelationshipParameterValueProxy, \
     ObjectParameterProxy, RelationshipParameterProxy
@@ -128,8 +129,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionClose.triggered.connect(self.close_session)
-        self.ui.actionAdd_object_class.triggered.connect(self.add_object_class)
-        self.ui.actionAdd_object.triggered.connect(self.add_object)
+        self.ui.actionAdd_object_classes.triggered.connect(self.add_object_classes)
+        self.ui.actionAdd_objects.triggered.connect(self.add_objects)
         self.ui.actionAdd_relationship_class.triggered.connect(self.add_relationship_class)
         self.ui.actionAdd_relationship.triggered.connect(self.add_relationship)
         self.ui.actionAdd_parameter.triggered.connect(self.add_parameter)
@@ -780,10 +781,10 @@ class DataStoreForm(QMainWindow):
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
         option = self.object_tree_context_menu.get_action()
-        if option == "Add object class":
-            self.add_object_class()
-        elif option == "Add object":
-            self.call_add_object(index)
+        if option == "Add object classes":
+            self.add_object_classes()
+        elif option == "Add objects":
+            self.call_add_objects(index)
         elif option == "Add relationship class":
             self.call_add_relationship_class(index)
         elif option == "Add relationship":
@@ -803,9 +804,9 @@ class DataStoreForm(QMainWindow):
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
 
-    def call_add_object(self, index):
+    def call_add_objects(self, index):
         class_id = index.data(Qt.UserRole+1)['id']
-        self.add_object(class_id=class_id)
+        self.add_objects(class_id=class_id)
 
     def call_add_relationship_class(self, index):
         parent_type = index.data(Qt.UserRole)
@@ -866,48 +867,32 @@ class DataStoreForm(QMainWindow):
         elif item_type == 'related_object':
             self.add_parameter_value(relationship_id=item_data['relationship_id'])
 
-    @Slot(name="add_object_class")
-    def add_object_class(self, **kwargs):
-        """Insert new object class."""
-        object_class = self.get_new_object_class(**kwargs)
-        if not object_class:
+    @Slot(name="add_object_classes")
+    def add_object_classes(self):
+        """Insert new object classes."""
+        object_class_list = self.get_new_object_class_list()
+        if not object_class_list:
             return
-        if self.add_object_class_to_db(object_class):
-            self.add_object_class_to_model(object_class)
+        for object_class in object_class_list:
+            if self.add_object_class_to_db(object_class):
+                self.add_object_class_to_model(object_class)
 
-    def get_new_object_class(self, **kwargs):
-        """Query the user's preferences for creating a new object class."""
-        question = {}
-        if 'name' not in kwargs:
-            question.update({"name": "Type name here..."})
-        if 'description' not in kwargs:
-            question.update({"description": "Type description here..."})
-        if 'display_order' not in kwargs:
-            object_class_query = self.session.query(self.ObjectClass).\
-                order_by(self.ObjectClass.display_order)
-            insert_position_list = ['Insert at the top']
-            insert_position_list.extend(['Insert after ' + item.name for item in object_class_query])
-            question.update({"insert_position_list": insert_position_list})
-        dialog = CustomQDialog(self, "Add object class", **question)
+    def get_new_object_class_list(self):
+        """Query the user's preferences for creating new object classes.
+
+        Returns:
+            object_class_list (list): List of instances to try and add
+        """
+        object_class_list = list()
+        object_class_query = self.session.query(self.ObjectClass).\
+            order_by(self.ObjectClass.display_order)
+        dialog = AddObjectClassesDialog(self, object_class_query)
         answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return None
-        if 'name' in dialog.answer:
-            kwargs.update({'name': dialog.answer["name"]})
-        if 'description' in dialog.answer:
-            kwargs.update({'description': dialog.answer["description"]})
-        if 'insert_position_list' in dialog.answer:
-            ind = dialog.answer['insert_position_list']['index']
-            root_item = self.object_tree_model.invisibleRootItem().child(0)
-            if ind == 0:
-                child_item = root_item.child(0)
-                display_order = child_item.data(Qt.UserRole+1)['display_order']-1
-            else:
-                child_item = root_item.child(ind-1)
-                display_order = child_item.data(Qt.UserRole+1)['display_order']
-            kwargs.update({'display_order': display_order})
-        object_class = self.ObjectClass(commit_id=self.commit.id, **kwargs)
-        return object_class
+        if answer == QDialog.Accepted:
+            for object_class_args in dialog.object_class_args_list:
+                object_class = self.ObjectClass(commit_id=self.commit.id, **object_class_args)
+                object_class_list.append(object_class)
+        return object_class_list
 
     def add_object_class_to_db(self, object_class):
         """Add object class to database.
@@ -924,8 +909,11 @@ class DataStoreForm(QMainWindow):
             self.session.flush()
             return True
         except DBAPIError as e:
-            msg = "Could not insert new object class: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
+            msg = "Could not insert new object class '{}': {}".format(object_class.name, e.orig.args)
+            msg_box = QMessageBox()
+            msg_box.setText(msg)
+            msg_box.exec_()
+            # self.ui.statusbar.showMessage(msg, 5000)
             self.session.rollback()
             return False
 
@@ -953,42 +941,32 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.setCurrentIndex(object_class_index)
         self.ui.treeView_object.scrollTo(object_class_index)
 
-    @Slot(name="add_object")
-    def add_object(self, **kwargs):
-        """Insert new object."""
-        object_ = self.get_new_object(**kwargs)
-        if not object_:
+    @Slot(name="add_objects")
+    def add_objects(self, class_id=None):
+        """Insert new objects."""
+        object_list = self.get_new_object_list(class_id)
+        if not object_list:
             return
-        if self.add_object_to_db(object_):
-            self.add_object_to_model(object_)
+        for object_ in object_list:
+            if self.add_object_to_db(object_):
+                self.add_object_to_model(object_)
 
-    def get_new_object(self, **kwargs):
-        """Query the user's preferences for creating a new object."""
-        question = {}
-        if 'class_id' not in kwargs:
-            object_class_query = self.session.query(self.ObjectClass).\
-                order_by(self.ObjectClass.display_order)
-            object_class_name_list = ['Select object class...']
-            object_class_name_list.extend([item.name for item in object_class_query])
-            question.update({"object_class_name_list": object_class_name_list})
-        if 'name' not in kwargs:
-            question.update({'name': "Type name here..."})
-        if 'description' not in kwargs:
-            question.update({'description': "Type description here..."})
-        dialog = CustomQDialog(self, "Add object", **question)
+    def get_new_object_list(self, class_id=None):
+        """Query the user's preferences for creating new objects.
+
+        Returns:
+            object_list (list): List of instances to try and add
+        """
+        object_list = list()
+        object_class_query = self.session.query(self.ObjectClass).\
+            order_by(self.ObjectClass.display_order)
+        dialog = AddObjectsDialog(self, object_class_query, class_id)
         answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return None
-        if 'object_class_name_list' in dialog.answer:
-            ind = dialog.answer['object_class_name_list']['index'] - 1
-            if ind < 0:
-                return None
-            kwargs.update({'class_id': object_class_query[ind].id})
-        if 'name' in dialog.answer:
-            kwargs.update({'name': dialog.answer["name"]})
-        if 'description' in dialog.answer:
-            kwargs.update({'description': dialog.answer["description"]})
-        return self.Object(commit_id=self.commit.id, **kwargs)
+        if answer == QDialog.Accepted:
+            for object_args in dialog.object_args_list:
+                object_ = self.Object(commit_id=self.commit.id, **object_args)
+                object_list.append(object_)
+        return object_list
 
     def add_object_to_db(self, object_):
         """Add object to database.
@@ -1005,8 +983,11 @@ class DataStoreForm(QMainWindow):
             self.session.flush() # to get object id
             return True
         except DBAPIError as e:
-            msg = "Could not insert new object: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
+            msg = "Could not insert new object '{}': {}".format(object_.name, e.orig.args)
+            # self.ui.statusbar.showMessage(msg, 5000)
+            msg_box = QMessageBox()
+            msg_box.setText(msg)
+            msg_box.exec_()
             self.session.rollback()
             return False
 
