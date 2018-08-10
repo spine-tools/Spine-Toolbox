@@ -56,8 +56,7 @@ else:
     DOC_INDEX_PATH = os.path.abspath(os.path.join(
             APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html"))
 
-# Tool input/output directory names
-TOOL_INPUT_DIR = "input"
+# Tool output directory name
 TOOL_OUTPUT_DIR = "output"
 
 # GAMS

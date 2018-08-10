@@ -214,7 +214,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.treeView_project.sizePolicy().hasHeightForWidth())
         self.treeView_project.setSizePolicy(sizePolicy)
         self.treeView_project.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
-        self.treeView_project.setEditTriggers(QtWidgets.QAbstractItemView.DoubleClicked)
+        self.treeView_project.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.treeView_project.setObjectName("treeView_project")
         self.verticalLayout_2.addWidget(self.treeView_project)
         self.tabWidget.addTab(self.tab_items, "")

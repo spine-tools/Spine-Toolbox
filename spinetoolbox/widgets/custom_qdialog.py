@@ -18,7 +18,7 @@
 #############################################################################
 
 """
-QDialog that can be programatically populated with many options.
+QDialog that can be programmatically populated with many options.
 Originally intended to be used within DataStoreForm
 
 :author: Manuel Marin <manuelma@kth.se>
@@ -28,6 +28,7 @@ Originally intended to be used within DataStoreForm
 from PySide2.QtWidgets import QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QComboBox
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QFont, QFontMetrics
+
 
 class CustomQDialog(QDialog):
     """A class to create custom forms with several line edits and comboboxes."""
