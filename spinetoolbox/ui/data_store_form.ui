@@ -481,8 +481,8 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="actionAdd_object_class"/>
-    <addaction name="actionAdd_object"/>
+    <addaction name="actionAdd_object_classes"/>
+    <addaction name="actionAdd_objects"/>
     <addaction name="actionAdd_relationship_class"/>
     <addaction name="actionAdd_relationship"/>
     <addaction name="actionAdd_parameter"/>
@@ -516,17 +516,23 @@
     <string>Ctrl+Esc</string>
    </property>
   </action>
-  <action name="actionAdd_object_class">
+  <action name="actionAdd_object_classes">
    <property name="text">
-    <string>Add object class</string>
+    <string>Add object classes</string>
+   </property>
+   <property name="toolTip">
+    <string>Add object classes</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+O</string>
    </property>
   </action>
-  <action name="actionAdd_object">
+  <action name="actionAdd_objects">
    <property name="text">
-    <string>Add object</string>
+    <string>Add objects</string>
+   </property>
+   <property name="toolTip">
+    <string>Add objects</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>

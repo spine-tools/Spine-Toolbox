@@ -39,6 +39,16 @@ CALL pyside2-uic ../spinetoolbox/ui/add_db_reference.ui -o ../spinetoolbox/ui/ad
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_db_reference.py.o > ..\spinetoolbox\ui\add_db_reference.py
 del ..\spinetoolbox\ui\add_db_reference.py.o
 
+ECHO building add_object_classes.py
+CALL pyside2-uic ../spinetoolbox/ui/add_object_classes.ui -o ../spinetoolbox/ui/add_object_classes.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_object_classes.py.o > ..\spinetoolbox\ui\add_object_classes.py
+del ..\spinetoolbox\ui\add_object_classes.py.o
+
+ECHO building add_objects.py
+CALL pyside2-uic ../spinetoolbox/ui/add_objects.ui -o ../spinetoolbox/ui/add_objects.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_objects.py.o > ..\spinetoolbox\ui\add_objects.py
+del ..\spinetoolbox\ui\add_objects.py.o
+
 ECHO building add_tool.py
 CALL pyside2-uic ../spinetoolbox/ui/add_tool.ui -o ../spinetoolbox/ui/add_tool.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_tool.py.o > ..\spinetoolbox\ui\add_tool.py
@@ -117,6 +127,8 @@ CALL append_license_xml ..\spinetoolbox\ui\about.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_data_connection.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_data_store.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_db_reference.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_objects.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_object_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
@@ -136,6 +148,8 @@ CALL append_license_py ..\spinetoolbox\ui\about.py
 CALL append_license_py ..\spinetoolbox\ui\add_data_connection.py
 CALL append_license_py ..\spinetoolbox\ui\add_data_store.py
 CALL append_license_py ..\spinetoolbox\ui\add_db_reference.py
+CALL append_license_py ..\spinetoolbox\ui\add_objects.py
+CALL append_license_py ..\spinetoolbox\ui\add_object_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
