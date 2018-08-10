@@ -462,7 +462,7 @@
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="editTriggers">
-            <set>QAbstractItemView::DoubleClicked</set>
+            <set>QAbstractItemView::NoEditTriggers</set>
            </property>
           </widget>
          </item>

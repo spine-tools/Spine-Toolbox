@@ -181,6 +181,7 @@ class AddObjectsDialog(QDialog):
         super().accept()
 
 
+
 class CustomQDialog(QDialog):
     """A class to create custom forms with several line edits and comboboxes."""
     def __init__(self, parent=None, title="", **kwargs):

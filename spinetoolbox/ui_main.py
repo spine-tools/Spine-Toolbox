@@ -29,7 +29,8 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
+    QCheckBox, QAction, QInputDialog
 from PySide2.QtGui import QStandardItem, QDesktopServices
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
@@ -1230,8 +1231,15 @@ class ToolboxUI(QMainWindow):
         elif option == "Open main program file":
             d.open_tool_main_program_file()
         elif option == "Rename":
-            self.ui.tabWidget.setCurrentIndex(0)  # Set Items tab selected
-            self.ui.treeView_project.edit(ind)
+            # noinspection PyCallByClass
+            answer = QInputDialog.getText(self, "Rename Item", "New name:", text=d.name,
+                                          flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+            # answer[str, bool]
+            if not answer[1]:
+                pass
+            else:
+                new_name = answer[0]
+                self.project_item_model.setData(ind, new_name)
         elif option == "Remove Item":
             self.remove_item(ind, delete_item=True, check_dialog=True)
         else:  # No option selected

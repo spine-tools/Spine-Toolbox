@@ -32,7 +32,7 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel, QAbstractTableMo
     QSortFilterProxyModel
 from PySide2.QtGui import QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
-from config import INVALID_CHARS
+from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 
 
 class ProjectItemModel(QStandardItemModel):
@@ -133,6 +133,9 @@ class ProjectItemModel(QStandardItemModel):
         item.set_name(value)
         # Update project item directory variable
         item.data_dir = new_data_dir
+        # If item is a Tool, also output_dir must be updated
+        if item.item_type == "Tool":
+            item.output_dir = os.path.join(item.data_dir, TOOL_OUTPUT_DIR)
         # Update name in the subwindow widget
         item.get_widget().set_name_label(value)
         # Update name item of the QGraphicsItem
