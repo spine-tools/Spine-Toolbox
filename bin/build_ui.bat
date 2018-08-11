@@ -59,6 +59,16 @@ CALL pyside2-uic ../spinetoolbox/ui/add_relationships.ui -o ../spinetoolbox/ui/a
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_relationships.py.o > ..\spinetoolbox\ui\add_relationships.py
 del ..\spinetoolbox\ui\add_relationships.py.o
 
+ECHO building add_parameters.py
+CALL pyside2-uic ../spinetoolbox/ui/add_parameters.ui -o ../spinetoolbox/ui/add_parameters.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameters.py.o > ..\spinetoolbox\ui\add_parameters.py
+del ..\spinetoolbox\ui\add_parameters.py.o
+
+ECHO building add_parameter_values.py
+CALL pyside2-uic ../spinetoolbox/ui/add_parameter_values.ui -o ../spinetoolbox/ui/add_parameter_values.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameter_values.py.o > ..\spinetoolbox\ui\add_parameter_values.py
+del ..\spinetoolbox\ui\add_parameter_values.py.o
+
 ECHO building add_tool.py
 CALL pyside2-uic ../spinetoolbox/ui/add_tool.ui -o ../spinetoolbox/ui/add_tool.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_tool.py.o > ..\spinetoolbox\ui\add_tool.py
@@ -141,6 +151,8 @@ CALL append_license_xml ..\spinetoolbox\ui\add_objects.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_object_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationship_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationships.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_parameters.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_parameter_values.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
@@ -164,6 +176,8 @@ CALL append_license_py ..\spinetoolbox\ui\add_objects.py
 CALL append_license_py ..\spinetoolbox\ui\add_object_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationship_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationships.py
+CALL append_license_py ..\spinetoolbox\ui\add_parameters.py
+CALL append_license_py ..\spinetoolbox\ui\add_parameter_values.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py

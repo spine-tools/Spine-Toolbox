@@ -42,6 +42,7 @@ class Ui_Dialog(object):
         self.tableView = QtWidgets.QTableView(Dialog)
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
         self.tableView.setObjectName("tableView")
+        self.tableView.horizontalHeader().setStretchLastSection(True)
         self.verticalLayout.addWidget(self.tableView)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")

@@ -485,8 +485,8 @@
     <addaction name="actionAdd_objects"/>
     <addaction name="actionAdd_relationship_classes"/>
     <addaction name="actionAdd_relationships"/>
-    <addaction name="actionAdd_parameter"/>
-    <addaction name="actionAdd_parameter_value"/>
+    <addaction name="actionAdd_parameters"/>
+    <addaction name="actionAdd_parameter_values"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -560,17 +560,23 @@
     <string>Ctrl+R</string>
    </property>
   </action>
-  <action name="actionAdd_parameter">
+  <action name="actionAdd_parameters">
    <property name="text">
-    <string>Add parameter</string>
+    <string>Add parameters</string>
+   </property>
+   <property name="toolTip">
+    <string>Add parameters</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+P</string>
    </property>
   </action>
-  <action name="actionAdd_parameter_value">
+  <action name="actionAdd_parameter_values">
    <property name="text">
-    <string>Add parameter value</string>
+    <string>Add parameter values</string>
+   </property>
+   <property name="toolTip">
+    <string>Add parameter values</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>

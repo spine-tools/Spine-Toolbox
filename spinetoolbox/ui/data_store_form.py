@@ -270,10 +270,10 @@ class Ui_MainWindow(object):
         self.actionAdd_relationship_classes.setObjectName("actionAdd_relationship_classes")
         self.actionAdd_relationships = QtWidgets.QAction(MainWindow)
         self.actionAdd_relationships.setObjectName("actionAdd_relationships")
-        self.actionAdd_parameter = QtWidgets.QAction(MainWindow)
-        self.actionAdd_parameter.setObjectName("actionAdd_parameter")
-        self.actionAdd_parameter_value = QtWidgets.QAction(MainWindow)
-        self.actionAdd_parameter_value.setObjectName("actionAdd_parameter_value")
+        self.actionAdd_parameters = QtWidgets.QAction(MainWindow)
+        self.actionAdd_parameters.setObjectName("actionAdd_parameters")
+        self.actionAdd_parameter_values = QtWidgets.QAction(MainWindow)
+        self.actionAdd_parameter_values.setObjectName("actionAdd_parameter_values")
         self.menuFile.addAction(self.actionCommit)
         self.menuFile.addAction(self.actionRollback)
         self.menuFile.addAction(self.actionClose)
@@ -281,8 +281,8 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionAdd_objects)
         self.menuEdit.addAction(self.actionAdd_relationship_classes)
         self.menuEdit.addAction(self.actionAdd_relationships)
-        self.menuEdit.addAction(self.actionAdd_parameter)
-        self.menuEdit.addAction(self.actionAdd_parameter_value)
+        self.menuEdit.addAction(self.actionAdd_parameters)
+        self.menuEdit.addAction(self.actionAdd_parameter_values)
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
 
@@ -322,10 +322,12 @@ class Ui_MainWindow(object):
         self.actionAdd_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Add relationships", None, -1))
         self.actionAdd_relationships.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add relationships", None, -1))
         self.actionAdd_relationships.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+R", None, -1))
-        self.actionAdd_parameter.setText(QtWidgets.QApplication.translate("MainWindow", "Add parameter", None, -1))
-        self.actionAdd_parameter.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+P", None, -1))
-        self.actionAdd_parameter_value.setText(QtWidgets.QApplication.translate("MainWindow", "Add parameter value", None, -1))
-        self.actionAdd_parameter_value.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+P", None, -1))
+        self.actionAdd_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Add parameters", None, -1))
+        self.actionAdd_parameters.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add parameters", None, -1))
+        self.actionAdd_parameters.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+P", None, -1))
+        self.actionAdd_parameter_values.setText(QtWidgets.QApplication.translate("MainWindow", "Add parameter values", None, -1))
+        self.actionAdd_parameter_values.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add parameter values", None, -1))
+        self.actionAdd_parameter_values.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+P", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import CopyPasteTableView
+from widgets.custom_qtreeview import ObjectTreeView

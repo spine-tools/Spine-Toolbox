@@ -19,8 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/add_relationship_classes.ui',
-# licensing of '../spinetoolbox/ui/add_relationship_classes.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/add_parameters.ui',
+# licensing of '../spinetoolbox/ui/add_parameters.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -71,7 +71,7 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add relationship classes", None, -1))
+        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add parameters", None, -1))
         self.toolButton_insert_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.toolButton_remove_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.actionInsert_row.setText(QtWidgets.QApplication.translate("Dialog", "Insert row", None, -1))

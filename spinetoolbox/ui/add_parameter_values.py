@@ -19,8 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/add_relationship_classes.ui',
-# licensing of '../spinetoolbox/ui/add_relationship_classes.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/add_parameter_values.ui',
+# licensing of '../spinetoolbox/ui/add_parameter_values.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -30,8 +30,14 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_Dialog(object):
     def setupUi(self, Dialog):
         Dialog.setObjectName("Dialog")
-        Dialog.resize(363, 312)
-        self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
+        Dialog.resize(363, 367)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout(Dialog)
+        self.verticalLayout_2.setSpacing(0)
+        self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.verticalLayout = QtWidgets.QVBoxLayout()
+        self.verticalLayout.setSpacing(6)
+        self.verticalLayout.setContentsMargins(6, 6, 6, 6)
         self.verticalLayout.setObjectName("verticalLayout")
         self.tableView = QtWidgets.QTableView(Dialog)
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
@@ -54,6 +60,13 @@ class Ui_Dialog(object):
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
         self.verticalLayout.addWidget(self.buttonBox)
+        self.verticalLayout_2.addLayout(self.verticalLayout)
+        self.horizontalLayout_statusbar_placeholder = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_statusbar_placeholder.setObjectName("horizontalLayout_statusbar_placeholder")
+        self.widget_invisible_dummy = QtWidgets.QWidget(Dialog)
+        self.widget_invisible_dummy.setObjectName("widget_invisible_dummy")
+        self.horizontalLayout_statusbar_placeholder.addWidget(self.widget_invisible_dummy)
+        self.verticalLayout_2.addLayout(self.horizontalLayout_statusbar_placeholder)
         self.actionInsert_row = QtWidgets.QAction(Dialog)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/plus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
@@ -71,7 +84,7 @@ class Ui_Dialog(object):
         QtCore.QMetaObject.connectSlotsByName(Dialog)
 
     def retranslateUi(self, Dialog):
-        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add relationship classes", None, -1))
+        Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add parameter values", None, -1))
         self.toolButton_insert_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.toolButton_remove_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.actionInsert_row.setText(QtWidgets.QApplication.translate("Dialog", "Insert row", None, -1))

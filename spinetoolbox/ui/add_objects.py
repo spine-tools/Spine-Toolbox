@@ -36,6 +36,7 @@ class Ui_Dialog(object):
         self.tableView = QtWidgets.QTableView(Dialog)
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
         self.tableView.setObjectName("tableView")
+        self.tableView.horizontalHeader().setStretchLastSection(True)
         self.verticalLayout.addWidget(self.tableView)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -74,9 +75,10 @@ class Ui_Dialog(object):
         self.toolButton_insert_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.toolButton_remove_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.actionInsert_row.setText(QtWidgets.QApplication.translate("Dialog", "Insert row", None, -1))
-        self.actionInsert_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Return", None, -1))
+        self.actionInsert_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Insert row below current one <span style=\" font-weight:600;\">(Ctrl+Ins)</span></p></body></html>", None, -1))
+        self.actionInsert_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Ins", None, -1))
         self.actionRemove_row.setText(QtWidgets.QApplication.translate("Dialog", "Remove row", None, -1))
-        self.actionRemove_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "Remove row", None, -1))
-        self.actionRemove_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Backspace", None, -1))
+        self.actionRemove_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Remove current row <span style=\" font-weight:600;\">(Ctrl+Del)</span></p></body></html>", None, -1))
+        self.actionRemove_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Del", None, -1))
 
 import resources_icons_rc

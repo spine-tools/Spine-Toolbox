@@ -35,11 +35,11 @@ from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.combobox_delegate import ComboBoxDelegate
-from widgets.custom_qdialog import CustomQDialog, AddObjectClassesDialog, AddObjectsDialog, \
-    AddRelationshipClassesDialog, AddRelationshipsDialog
+from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
+    AddRelationshipsDialog, AddParametersDialog, AddParameterValuesDialog
 from helpers import busy_effect
-from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, RelationshipParameterValueProxy, \
-    ObjectParameterProxy, RelationshipParameterProxy
+from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, \
+    RelationshipParameterValueProxy, ObjectParameterProxy, RelationshipParameterProxy
 from datetime import datetime, timezone
 from sqlalchemy.ext.automap import automap_base, generate_relationship
 from sqlalchemy.exc import DBAPIError
@@ -134,8 +134,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_objects.triggered.connect(self.add_objects)
         self.ui.actionAdd_relationship_classes.triggered.connect(self.add_relationship_classes)
         self.ui.actionAdd_relationships.triggered.connect(self.add_relationships)
-        self.ui.actionAdd_parameter.triggered.connect(self.add_parameter)
-        self.ui.actionAdd_parameter_value.triggered.connect(self.add_parameter_value)
+        self.ui.actionAdd_parameters.triggered.connect(self.add_parameters)
+        self.ui.actionAdd_parameter_values.triggered.connect(self.add_parameter_values)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
@@ -164,9 +164,16 @@ class DataStoreForm(QMainWindow):
             msg = "No session!"
             self.ui.statusbar.showMessage(msg, 3000)
             return
-        answer = QInputDialog.getMultiLineText(self, "Enter commit message", "Message:")
-        comment = answer[0]
-        if not comment:  # Cancel button clicked
+        dialog = QInputDialog(self)
+        dialog.setInputMode(QInputDialog.TextInput)
+        dialog.setOption(QInputDialog.UsePlainTextEditForTextInput, True)
+        dialog.setWindowTitle("Commit changes")
+        dialog.setLabelText("Enter commit message:")
+        answer = dialog.exec_()
+        if answer != QDialog.Accepted:
+            return
+        comment = dialog.textValue()
+        if not comment:
             msg = "Commit message missing."
             self.ui.statusbar.showMessage(msg, 3000)
             return
@@ -796,10 +803,10 @@ class DataStoreForm(QMainWindow):
             self.rename_item(index)
         elif option.startswith("Remove"):
             self.remove_item(index)
-        elif option == "Add parameter":
-            self.call_add_parameter(index)
-        elif option == "Add parameter value":
-            self.call_add_parameter_value(index)
+        elif option == "Add parameters":
+            self.call_add_parameters(index)
+        elif option == "Add parameter values":
+            self.call_add_parameter_values(index)
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
@@ -832,21 +839,14 @@ class DataStoreForm(QMainWindow):
                 filter_by(id=parent_relationship_id).one().name
         self.add_relationships(class_name=class_name, parent_name=parent_name, child_name=child_name)
 
-    def call_add_parameter(self, tree_index):
-        class_type = tree_index.data(Qt.UserRole)
-        class_id = tree_index.data(Qt.UserRole+1)['id']
-        if class_type == 'object_class':
-            self.add_parameter(object_class_id=class_id)
-        elif class_type.endswith('relationship_class'):
-            self.add_parameter(relationship_class_id=class_id)
+    def call_add_parameters(self, tree_index):
+        class_name = tree_index.data(Qt.UserRole+1)['name']
+        self.add_parameters(class_name=class_name)
 
-    def call_add_parameter_value(self, tree_index):
-        item_type = tree_index.data(Qt.UserRole)
-        item_data = tree_index.data(Qt.UserRole+1)
-        if item_type == 'object':
-            self.add_parameter_value(object_id=item_data['id'])
-        elif item_type == 'related_object':
-            self.add_parameter_value(relationship_id=item_data['relationship_id'])
+    def call_add_parameter_values(self, tree_index):
+        class_name = tree_index.parent().data(Qt.UserRole+1)['name']
+        entity_name = tree_index.data(Qt.UserRole+1)['name']
+        self.add_parameter_values(class_name=class_name, entity_name=entity_name)
 
     @Slot(name="add_object_classes")
     def add_object_classes(self):
@@ -1142,11 +1142,13 @@ class DataStoreForm(QMainWindow):
             relationship_list (list): List of instances to try and add.
         """
         relationship_list = list()
+        object_class_query = self.session.query(self.ObjectClass)
         relationship_class_query = self.session.query(self.RelationshipClass)
         object_query = self.session.query(self.Object)
         relationship_query = self.session.query(self.Relationship)
         dialog = AddRelationshipsDialog(
             self,
+            object_class_query,
             relationship_class_query,
             object_query,
             relationship_query,
@@ -1405,44 +1407,37 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_value_models()
         self.init_parameter_models()
 
-    @Slot(name="add_parameter")
-    def add_parameter(self, **kwargs):
-        """Insert new parameter."""
-        parameter = self.get_new_parameter(**kwargs)
-        if not parameter:
+    @Slot(name="add_parameters")
+    def add_parameters(self, class_name=None):
+        """Insert new parameters."""
+        parameter_list = self.get_new_parameter_list(class_name=class_name)
+        if not parameter_list:
             return
-        if self.add_parameter_to_db(parameter):
-            self.add_parameter_to_model(parameter)
+        for parameter in parameter_list:
+            if self.add_parameter_to_db(parameter):
+                self.add_parameter_to_model(parameter)
 
-    def get_new_parameter(self, **kwargs):
-        """Query the user's preferences for creating a new parameter."""
-        question = {}
-        if 'name' not in kwargs:
-            question.update({"name": "Type name here..."})
-        if 'object_class_id' not in kwargs\
-                and 'relationship_class_id' not in kwargs:
-            class_name_list = ['Select class...']
-            object_class_query = self.session.query(self.ObjectClass).\
-                    order_by(self.ObjectClass.display_order)
-            relationship_class_query = self.session.query(self.RelationshipClass)
-            class_name_list.extend([item.name for item in object_class_query])
-            class_name_list.extend([item.name for item in relationship_class_query])
-            question.update({"class_name_list": class_name_list})
-        dialog = CustomQDialog(self, "Add parameter", **question)
+    def get_new_parameter_list(self, class_name=None):
+        """Query the user's preferences for creating new parameters.
+
+        Returns:
+            parameter_list (list): List of instances to try and add.
+        """
+        parameter_list = list()
+        object_class_query = self.session.query(self.ObjectClass)
+        relationship_class_query = self.session.query(self.RelationshipClass)
+        dialog = AddParametersDialog(
+            self,
+            object_class_query,
+            relationship_class_query,
+            class_name=class_name
+        )
         answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return
-        if 'name' in dialog.answer:
-            kwargs.update({'name': dialog.answer['name']})
-        if 'class_name_list' in dialog.answer:
-            ind = dialog.answer['class_name_list']['index'] - 1
-            if ind < object_class_query.count():
-                kwargs.update({'object_class_id': object_class_query[ind].id})
-                # relationship_class_type = 'relationship_class'
-            else:
-                ind = ind - object_class_query.count()
-                kwargs.update({'relationship_class_id': relationship_class_query[ind].id})
-        return self.Parameter(commit_id=self.commit.id, **kwargs)
+        if answer == QDialog.Accepted:
+            for parameter_args in dialog.parameter_args_list:
+                parameter = self.Parameter(commit_id=self.commit.id, **parameter_args)
+                parameter_list.append(parameter)
+        return parameter_list
 
     def add_parameter_to_db(self, parameter):
         """Add parameter to database. Return boolean value depending on the
@@ -1458,7 +1453,10 @@ class DataStoreForm(QMainWindow):
             return True
         except DBAPIError as e:
             msg = "Could not insert new parameter: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
+            # self.ui.statusbar.showMessage(msg, 5000)
+            msg_box = QMessageBox()
+            msg_box.setText(msg)
+            msg_box.exec_()
             self.session.rollback()
             return False
 
@@ -1528,113 +1526,44 @@ class DataStoreForm(QMainWindow):
                     self.ui.treeView_object.scrollTo(relationship_class_index)
                     break
 
-    def object_parameter_names(self, object_id):
-        """Return unassigned parameter names for object
-
-        Args:
-            object_id (int): object id
-        """
-        object_class_id = self.session.query(self.Object.class_id).\
-            filter_by(id=object_id).one().class_id
-        parameter_name_query = self.session.query(self.Parameter.name).\
-            filter_by(object_class_id=object_class_id).\
-            filter( # filter out parameters already assigned
-                ~self.Parameter.id.in_(
-                    self.session.query(self.ParameterValue.parameter_id).\
-                    filter_by(object_id=object_id)
-                )
-            )
-        return [row.name for row in parameter_name_query]
-
-    def relationship_parameter_names(self, relationship_id):
-        """Return unassigned parameter names for relationship
-
-        Args:
-            relationship_id (int): relationship id
-        """
-        relationship_class_id = self.session.query(self.Relationship.class_id).\
-            filter_by(id=relationship_id).one().class_id
-        parameter_name_query = self.session.query(self.Parameter.name).\
-            filter_by(relationship_class_id=relationship_class_id).\
-            filter( # filter out parameters already assigned
-                ~self.Parameter.id.in_(
-                    self.session.query(self.ParameterValue.parameter_id).\
-                    filter_by(relationship_id=relationship_id)
-                )
-            )
-        return [row.name for row in parameter_name_query]
-
-    @Slot(name="add_parameter_value")
-    def add_parameter_value(self, **kwargs):
-        """Insert new parameter."""
-        parameter_value = self.get_new_parameter_value(**kwargs)
-        if not parameter_value:
+    @Slot(name="add_parameter_values")
+    def add_parameter_values(self, class_name=None, entity_name=None):
+        """Insert new parameter values."""
+        parameter_value_list = self.get_new_parameter_value_list(class_name=class_name, entity_name=entity_name)
+        if not parameter_value_list:
             return
-        if self.add_parameter_value_to_db(parameter_value):
-            self.add_parameter_value_to_model(parameter_value)
+        for parameter_value in parameter_value_list:
+            if self.add_parameter_value_to_db(parameter_value):
+                self.add_parameter_value_to_model(parameter_value)
 
-    def get_new_parameter_value(self, **kwargs):
-        """Query the user's preferences for creating a new parameter value."""
-        # We need to ask for the object or relationship first
-        question = {}
-        if 'object_id' not in kwargs and 'relationship_id' not in kwargs:
-            object_or_relationship_name_list = ['Select object or relationship...']
-            object_query = self.session.query(self.Object)
-            relationship_query = self.session.query(self.Relationship)
-            object_or_relationship_name_list.extend([item.name for item in object_query])
-            object_or_relationship_name_list.extend([item.name for item in relationship_query])
-            question.update({"object_or_relationship_name_list": object_or_relationship_name_list})
-            dialog = CustomQDialog(self, "Add parameter value", **question)
-            answer = dialog.exec_()
-            if answer != QDialog.Accepted:
-                return
-            ind = dialog.answer['object_or_relationship_name_list']['index'] - 1
-            if ind < object_query.count():
-                kwargs.update({'object_id': object_query[ind].id})
-            else:
-                ind = ind - object_query.count()
-                kwargs.update({'relationship_id': relationship_query[ind].id})
-        # Prepare second question
-        question = {}
-        if 'parameter_id' not in kwargs:
-            parameter_name_list = ['Select parameter...']
-            if 'object_id' in kwargs:
-                object_parameter_names = self.object_parameter_names(kwargs['object_id'])
-                if not object_parameter_names:
-                    self.ui.statusbar.showMessage("All parameters for this object are already created", 3000)
-                    return
-                parameter_name_list.extend(object_parameter_names)
-            elif 'relationship_id' in kwargs:
-                relationship_parameter_names = self.relationship_parameter_names(kwargs['relationship_id'])
-                if not relationship_parameter_names:
-                    self.ui.statusbar.showMessage("All parameters for this relationship are already created", 3000)
-                    return
-                parameter_name_list.extend(relationship_parameter_names)
-            question.update({"parameter_name_list": parameter_name_list})
-        if 'value' not in kwargs:
-            question.update({"value": "Enter value here..."})
-        if 'json' not in kwargs:
-            question.update({"json": "Enter json here..."})
-        dialog = CustomQDialog(self, "Add parameter value", **question)
+    def get_new_parameter_value_list(self, class_name=None, entity_name=None):
+        """Query the user's preferences for creating new parameter values.
+
+        Returns:
+            parameter_value_list (list): List of instances to try and add.
+        """
+        parameter_value_list = list()
+        object_class_query = self.session.query(self.ObjectClass)
+        relationship_class_query = self.session.query(self.RelationshipClass)
+        object_query = self.session.query(self.Object)
+        relationship_query = self.session.query(self.Relationship)
+        parameter_query = self.session.query(self.Parameter)
+        dialog = AddParameterValuesDialog(
+            self,
+            object_class_query,
+            relationship_class_query,
+            object_query,
+            relationship_query,
+            parameter_query,
+            class_name=class_name,
+            entity_name=entity_name
+        )
         answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return None
-        if 'parameter_name_list' in dialog.answer:
-            if dialog.answer['parameter_name_list']['index'] == 0:
-                return None
-            parameter_name = dialog.answer['parameter_name_list']['text']
-            parameter_id = self.session.query(self.Parameter).\
-                filter_by(name=parameter_name).one().id
-            kwargs.update({"parameter_id": parameter_id})
-        if 'value' in dialog.answer:
-            # Only retrieve value if not an empty string
-            if dialog.answer['value']:
-                kwargs.update({'value': dialog.answer['value']})
-        if 'json' in dialog.answer:
-            # Only retrieve json if not an empty string
-            if dialog.answer['json']:
-                kwargs.update({'json': dialog.answer['json']})
-        return self.ParameterValue(commit_id=self.commit.id, **kwargs)
+        if answer == QDialog.Accepted:
+            for parameter_value_args in dialog.parameter_value_args_list:
+                parameter_value = self.ParameterValue(commit_id=self.commit.id, **parameter_value_args)
+                parameter_value_list.append(parameter_value)
+        return parameter_value_list
 
     def add_parameter_value_to_db(self, parameter_value):
         """Add parameter value to database. Return boolean value depending on the
