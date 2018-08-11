@@ -35,7 +35,8 @@ from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.combobox_delegate import ComboBoxDelegate
-from widgets.custom_qdialog import CustomQDialog, AddObjectClassesDialog, AddObjectsDialog
+from widgets.custom_qdialog import CustomQDialog, AddObjectClassesDialog, AddObjectsDialog, \
+    AddRelationshipClassesDialog, AddRelationshipsDialog
 from helpers import busy_effect
 from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, RelationshipParameterValueProxy, \
     ObjectParameterProxy, RelationshipParameterProxy
@@ -131,8 +132,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close_session)
         self.ui.actionAdd_object_classes.triggered.connect(self.add_object_classes)
         self.ui.actionAdd_objects.triggered.connect(self.add_objects)
-        self.ui.actionAdd_relationship_class.triggered.connect(self.add_relationship_class)
-        self.ui.actionAdd_relationship.triggered.connect(self.add_relationship)
+        self.ui.actionAdd_relationship_classes.triggered.connect(self.add_relationship_classes)
+        self.ui.actionAdd_relationships.triggered.connect(self.add_relationships)
         self.ui.actionAdd_parameter.triggered.connect(self.add_parameter)
         self.ui.actionAdd_parameter_value.triggered.connect(self.add_parameter_value)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
@@ -785,10 +786,10 @@ class DataStoreForm(QMainWindow):
             self.add_object_classes()
         elif option == "Add objects":
             self.call_add_objects(index)
-        elif option == "Add relationship class":
-            self.call_add_relationship_class(index)
-        elif option == "Add relationship":
-            self.call_add_relationship(index)
+        elif option == "Add relationship classes":
+            self.call_add_relationship_classes(index)
+        elif option == "Add relationships":
+            self.call_add_relationships(index)
         elif option == "Expand at top level":
             self.expand_at_top_level_(index)
         elif option.startswith("Rename"):
@@ -805,51 +806,31 @@ class DataStoreForm(QMainWindow):
         self.object_tree_context_menu = None
 
     def call_add_objects(self, index):
-        class_id = index.data(Qt.UserRole+1)['id']
-        self.add_objects(class_id=class_id)
+        class_name = index.data(Qt.UserRole+1)['name']
+        self.add_objects(class_name=class_name)
 
-    def call_add_relationship_class(self, index):
-        parent_type = index.data(Qt.UserRole)
-        if parent_type == "object_class":
-            parent_object_class_id = index.data(Qt.UserRole+1)['id']
-            self.add_relationship_class(parent_object_class_id=parent_object_class_id)
-        elif parent_type.endswith("relationship_class"):
-            parent_relationship_class_id = index.data(Qt.UserRole+1)['id']
-            self.add_relationship_class(parent_relationship_class_id=parent_relationship_class_id)
+    def call_add_relationship_classes(self, index):
+        parent_class_name = index.data(Qt.UserRole+1)['name']
+        self.add_relationship_classes(parent_class_name=parent_class_name)
 
-    def call_add_relationship(self, index):
-        relationship_class_item = self.object_tree_model.itemFromIndex(index)
-        relationship_class = relationship_class_item.data(Qt.UserRole+1)
-        class_id = relationship_class['id']
-        top_object_item = relationship_class_item.parent()
-        top_object_type = top_object_item.data(Qt.UserRole)
-        top_object = top_object_item.data(Qt.UserRole+1)
-        if top_object_type == 'related_object':
+    def call_add_relationships(self, index):
+        relationship_class = index.data(Qt.UserRole+1)
+        class_name = relationship_class['name']
+        parent_name = None
+        child_name = None
+        top_object_type = index.parent().data(Qt.UserRole)
+        top_object = index.parent().data(Qt.UserRole+1)
+        if top_object_type == 'object':
+            top_object_class_id = top_object['class_id']
+            if top_object_class_id == relationship_class['parent_object_class_id']:
+                parent_name = top_object['name']
+            elif top_object_class_id == relationship_class['child_object_class_id']:
+                child_name = top_object['name']
+        elif top_object_type == 'related_object':
             parent_relationship_id = top_object['relationship_id']
-            self.add_relationship(
-                class_id=class_id,
-                parent_relationship_id=parent_relationship_id
-            )
-        elif top_object_type == 'object':
-            top_object_class_item = top_object_item.parent()
-            top_object_class = top_object_class_item.data(Qt.UserRole+1)
-            top_object_class_id = top_object_class['id']
-            if relationship_class['parent_object_class_id'] == top_object_class_id:
-                parent_object_id = top_object['id']
-                self.add_relationship(class_id=class_id, parent_object_id=parent_object_id)
-            elif relationship_class['child_object_class_id'] == top_object_class_id:
-                child_object_id = top_object['id']
-                self.add_relationship(class_id=class_id, child_object_id=child_object_id)
-            else:
-                msg = "Object class {} is neither parent nor child. This shouldn't happen."\
-                        .format(top_object_class['name'])
-                self.ui.statusbar.showMessage(msg, 3000)
-                return
-        else:
-            msg = "Object {}'s type cannot be determined. This shouldn't happen."\
-                    .format(top_object['name'])
-            self.ui.statusbar.showMessage(msg, 3000)
-            return
+            parent_name = self.session.query(self.Relationship.name).\
+                filter_by(id=parent_relationship_id).one().name
+        self.add_relationships(class_name=class_name, parent_name=parent_name, child_name=child_name)
 
     def call_add_parameter(self, tree_index):
         class_type = tree_index.data(Qt.UserRole)
@@ -942,16 +923,16 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.scrollTo(object_class_index)
 
     @Slot(name="add_objects")
-    def add_objects(self, class_id=None):
+    def add_objects(self, class_name=None):
         """Insert new objects."""
-        object_list = self.get_new_object_list(class_id)
+        object_list = self.get_new_object_list(class_name)
         if not object_list:
             return
         for object_ in object_list:
             if self.add_object_to_db(object_):
                 self.add_object_to_model(object_)
 
-    def get_new_object_list(self, class_id=None):
+    def get_new_object_list(self, class_name=None):
         """Query the user's preferences for creating new objects.
 
         Returns:
@@ -960,7 +941,7 @@ class DataStoreForm(QMainWindow):
         object_list = list()
         object_class_query = self.session.query(self.ObjectClass).\
             order_by(self.ObjectClass.display_order)
-        dialog = AddObjectsDialog(self, object_class_query, class_id)
+        dialog = AddObjectsDialog(self, object_class_query, class_name)
         answer = dialog.exec_()
         if answer == QDialog.Accepted:
             for object_args in dialog.object_args_list:
@@ -1035,56 +1016,38 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.setCurrentIndex(object_index)
         self.ui.treeView_object.scrollTo(object_index)
 
-    @Slot(name="add_relationship_class")
-    def add_relationship_class(self, **kwargs):
+    @Slot(name="add_relationship_classes")
+    def add_relationship_classes(self, parent_class_name=None):
         """Insert new relationship class."""
-        relationship_class = self.get_new_relationship_class(**kwargs)
-        if not relationship_class:
+        relationship_class_list = self.get_new_relationship_class_list(parent_class_name=parent_class_name)
+        if not relationship_class_list:
             return
-        if self.add_relationship_class_to_db(relationship_class):
-            self.add_relationship_class_to_model(relationship_class)
+        for relationship_class in relationship_class_list:
+            if self.add_relationship_class_to_db(relationship_class):
+                self.add_relationship_class_to_model(relationship_class)
 
-    def get_new_relationship_class(self, **kwargs):
-        """Query the user's preferences for creating a new relationship class."""
-        question = {}
-        if 'name' not in kwargs:
-            question.update({"name": "Type name here..."})
-        if 'parent_relationship_class_id' not in kwargs\
-                and 'parent_object_class_id' not in kwargs:
-            parent_class_name_list = ['Select parent class...']
-            object_class_query = self.session.query(self.ObjectClass).\
-                    order_by(self.ObjectClass.display_order)
-            relationship_class_query = self.session.query(self.RelationshipClass)
-            parent_class_name_list.extend([item.name for item in object_class_query])
-            parent_class_name_list.extend([item.name for item in relationship_class_query])
-            question.update({"parent_class_name_list": parent_class_name_list})
-        if 'child_object_class_id' not in kwargs:
-            child_object_class_name_list = ['Select child object class...']
-            object_class_query = self.session.query(self.ObjectClass).\
-                    order_by(self.ObjectClass.display_order)
-            child_object_class_name_list.extend([item.name for item in object_class_query])
-            question.update({"child_object_class_name_list": child_object_class_name_list})
-        dialog = CustomQDialog(self, "Add relationship class", **question)
+    def get_new_relationship_class_list(self, parent_class_name=None):
+        """Query the user's preferences for creating new relationship classes.
+
+        Returns:
+            relationship_class_list (list): List of instances to try and add.
+        """
+        relationship_class_list = list()
+        object_class_query = self.session.query(self.ObjectClass).\
+            order_by(self.ObjectClass.display_order)
+        relationship_class_query = self.session.query(self.RelationshipClass)
+        dialog = AddRelationshipClassesDialog(
+            self,
+            object_class_query,
+            relationship_class_query,
+            parent_class_name=parent_class_name
+        )
         answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return None
-        if 'name' in dialog.answer:
-            kwargs.update({'name': dialog.answer['name']})
-        if 'parent_class_name_list' in dialog.answer:
-            ind = dialog.answer['parent_class_name_list']['index'] - 1
-            if ind < 0:
-                return None
-            if ind < object_class_query.count():
-                kwargs.update({'parent_object_class_id': object_class_query[ind].id})
-            else:
-                ind = ind - object_class_query.count()
-                kwargs.update({'parent_relationship_class_id': relationship_class_query[ind].id})
-        if 'child_object_class_name_list' in dialog.answer:
-            ind = dialog.answer['child_object_class_name_list']['index'] - 1
-            if ind < 0:
-                return None
-            kwargs.update({"child_object_class_id": object_class_query[ind].id})
-        return self.RelationshipClass(commit_id=self.commit.id, **kwargs)
+        if answer == QDialog.Accepted:
+            for relationship_class_args in dialog.relationship_class_args_list:
+                relationship_class = self.RelationshipClass(commit_id=self.commit.id, **relationship_class_args)
+                relationship_class_list.append(relationship_class)
+        return relationship_class_list
 
     def add_relationship_class_to_db(self, relationship_class):
         """Add relationship class to database.
@@ -1101,8 +1064,11 @@ class DataStoreForm(QMainWindow):
             self.session.flush() # to get the relationship class id
             return True
         except DBAPIError as e:
-            msg = "Could not insert new relationship class: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
+            msg = "Could not insert new relationship class '{}': {}".format(relationship_class.name, e.orig.args)
+            # self.ui.statusbar.showMessage(msg, 5000)
+            msg_box = QMessageBox()
+            msg_box.setText(msg)
+            msg_box.exec_()
             self.session.rollback()
             return False
 
@@ -1155,91 +1121,45 @@ class DataStoreForm(QMainWindow):
         root_item = self.object_tree_model.invisibleRootItem().child(0)
         visit_and_add_relationship_class(root_item)
 
-    @Slot(name="add_relationship")
-    def add_relationship(self, **kwargs):
+    @Slot(name="add_relationships")
+    def add_relationships(self, class_name=None, parent_name=None, child_name=None):
         """Insert new relationship."""
-        relationship = self.get_new_relationship(**kwargs)
-        if not relationship:
+        relationship_list = self.get_new_relationship_list(
+            class_name=class_name,
+            parent_name=parent_name,
+            child_name=child_name
+        )
+        if not relationship_list:
             return
-        if self.add_relationship_to_db(relationship):
-            self.add_relationship_to_model(relationship)
+        for relationship in relationship_list:
+            if self.add_relationship_to_db(relationship):
+                self.add_relationship_to_model(relationship)
 
-    def get_new_relationship(self, **kwargs):
-        """Query the user's preferences for creating a new relationship."""
-        # We need to ask for the relationship class first
-        question = {}
-        if 'class_id' not in kwargs:
-            relationship_class_name_list = ['Select relationship class...']
-            relationship_class_query = self.session.query(self.RelationshipClass)
-            relationship_class_name_list.extend([item.name for item in relationship_class_query])
-            question.update({"relationship_class_name_list": relationship_class_name_list})
-            dialog = CustomQDialog(self, "Add relationship", **question)
-            answer = dialog.exec_()
-            if answer != QDialog.Accepted:
-                return
-            ind = dialog.answer['relationship_class_name_list']['index'] - 1
-            kwargs.update({'class_id': relationship_class_query[ind].id})
-        # Get relationship class by id
-        relationship_class = self.session.query(
-            self.RelationshipClass.parent_relationship_class_id,
-            self.RelationshipClass.parent_object_class_id,
-            self.RelationshipClass.child_object_class_id
-        ).filter_by(id=kwargs['class_id']).one_or_none()
-        # Prepare new question
-        question = {}
-        if 'name' not in kwargs:
-            question.update({"name": "Type name here..."})
-        if relationship_class.parent_relationship_class_id is not None:
-            if 'parent_relationship_id' not in kwargs:
-                parent_relationship_class = self.session.query(self.RelationshipClass.name).\
-                    filter_by(id=relationship_class.parent_relationship_class_id).one_or_none()
-                parent_relationship_name_list = ['Select {} relationship...'.\
-                    format(parent_relationship_class.name)]
-                parent_relationship_query = self.session.query(self.Relationship).\
-                    filter_by(class_id=relationship_class.parent_relationship_class_id)
-                parent_relationship_name_list.extend([item.name for item in parent_relationship_query])
-                question.update({"parent_relationship_name_list": parent_relationship_name_list})
-        elif relationship_class.parent_object_class_id is not None:
-            if 'parent_object_id' not in kwargs:
-                parent_object_class = self.session.query(self.ObjectClass.name).\
-                    filter_by(id=relationship_class.parent_object_class_id).one_or_none()
-                parent_object_name_list = ['Select {} object...'.\
-                    format(parent_object_class.name)]
-                parent_object_query = self.session.query(self.Object).\
-                    filter_by(class_id=relationship_class.parent_object_class_id)
-                parent_object_name_list.extend([item.name for item in parent_object_query])
-                question.update({"parent_object_name_list": parent_object_name_list})
-        if 'child_object_id' not in kwargs:
-            child_object_class = self.session.query(self.ObjectClass.name).\
-                filter_by(id=relationship_class.child_object_class_id).one_or_none()
-            child_object_name_list = ['Select {} object...'.\
-                format(child_object_class.name)]
-            child_object_query = self.session.query(self.Object).\
-                filter_by(class_id=relationship_class.child_object_class_id)
-            child_object_name_list.extend([item.name for item in child_object_query])
-            question.update({"child_object_name_list": child_object_name_list})
-        dialog = CustomQDialog(self, "Add relationship", **question)
+    def get_new_relationship_list(self, class_name=None, parent_name=None, child_name=None):
+        """Query the user's preferences for creating new relationships.
+
+        Returns:
+            relationship_list (list): List of instances to try and add.
+        """
+        relationship_list = list()
+        relationship_class_query = self.session.query(self.RelationshipClass)
+        object_query = self.session.query(self.Object)
+        relationship_query = self.session.query(self.Relationship)
+        dialog = AddRelationshipsDialog(
+            self,
+            relationship_class_query,
+            object_query,
+            relationship_query,
+            class_name=class_name,
+            parent_name=parent_name,
+            child_name=child_name
+        )
         answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return None
-        if 'name' in dialog.answer:
-            kwargs.update({'name': dialog.answer['name']})
-        if 'parent_relationship_name_list' in dialog.answer:
-            ind = dialog.answer['parent_relationship_name_list']['index'] - 1
-            if ind < 0:
-                return None
-            kwargs.update({"parent_relationship_id": parent_relationship_query[ind].id})
-        if 'parent_object_name_list' in dialog.answer:
-            ind = dialog.answer['parent_object_name_list']['index'] - 1
-            if ind < 0:
-                return None
-            kwargs.update({"parent_object_id": parent_object_query[ind].id})
-        if 'child_object_name_list' in dialog.answer:
-            ind = dialog.answer['child_object_name_list']['index'] - 1
-            if ind < 0:
-                return None
-            kwargs.update({"child_object_id": child_object_query[ind].id})
-        return self.Relationship(commit_id=self.commit.id, **kwargs)
+        if answer == QDialog.Accepted:
+            for relationship_args in dialog.relationship_args_list:
+                relationship = self.Relationship(commit_id=self.commit.id, **relationship_args)
+                relationship_list.append(relationship)
+        return relationship_list
 
     def add_relationship_to_db(self, relationship):
         """Add relationship to database.
@@ -1256,8 +1176,11 @@ class DataStoreForm(QMainWindow):
             self.session.flush() # to get the relationship class id
             return True
         except DBAPIError as e:
-            msg = "Could not insert new relationship: {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
+            msg = "Could not insert new relationship '{}': {}".format(relationship.name, e.orig.args)
+            # self.ui.statusbar.showMessage(msg, 5000)
+            msg_box = QMessageBox()
+            msg_box.setText(msg)
+            msg_box.exec_()
             self.session.rollback()
             return False
 
@@ -1889,14 +1812,6 @@ class DataStoreForm(QMainWindow):
             return
         # manually update item in model
         source_model.setData(source_index, new_value)
-
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value_name")
-    def update_parameter_value_name(self, editor, hint):
-        """Update (object or relationship) parameter_value table with newly edited data.
-        If successful, also update item in the model.
-        """
-        pass
-        # logging.debug("update parameter value")
 
     def remove_parameter_value(self, proxy_index):
         """Remove row from (object or relationship) parameter_value table.

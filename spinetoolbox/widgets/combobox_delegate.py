@@ -40,10 +40,10 @@ class ComboBoxDelegate(QItemDelegate):
         combo = CustomComboEditor(parent)
         combo.row = index.row()
         combo.column = index.column()
-        combo.previous_data = index.model().data(index)
+        combo.previous_data = index.data(Qt.EditRole)
         items = index.data(Qt.UserRole)
         combo.addItems(items)
-        # combo.setCurrentIndex(-1) # force index change
+        combo.setCurrentIndex(-1) # force index change
         combo.currentIndexChanged.connect(self.current_index_changed)
         return combo
 
@@ -65,7 +65,6 @@ class CustomComboEditor(QComboBox):
     """A custom QComboBox to handle data from the model."""
     def __init__(self, parent):
         super().__init__(parent)
-        self.original_data = None
         self.previous_data = None
         self.row = None
         self.column = None

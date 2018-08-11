@@ -157,7 +157,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
             item = index.model().itemFromIndex(index)
             item_type = item.data(Qt.UserRole)
             if item_type == 'object_class':
-                self.add_action("Add relationship class")
+                self.add_action("Add relationship classes")
                 self.add_action("Add objects")
                 self.addSeparator()
                 self.add_action("Add parameter")
@@ -172,8 +172,8 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.addSeparator()
                 self.add_action("Remove object")
             elif item_type == 'relationship_class':
-                self.add_action("Add relationship class")
-                self.add_action("Add relationship")
+                self.add_action("Add relationship classes")
+                self.add_action("Add relationships")
                 self.addSeparator()
                 self.add_action("Add parameter")
                 self.addSeparator()
@@ -181,7 +181,8 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.addSeparator()
                 self.add_action("Remove relationship class")
             elif item_type == 'meta_relationship_class':
-                self.add_action("Add relationship")
+                self.add_action("Add relationship classes")
+                self.add_action("Add relationships")
                 self.addSeparator()
                 self.add_action("Add parameter")
                 self.addSeparator()

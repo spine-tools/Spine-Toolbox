@@ -41,7 +41,7 @@ class LineEditDelegate(QItemDelegate):
         """Return CustomLineEditor. Set up a validator depending on datatype."""
         editor = CustomLineEditor(parent)
         data = index.data(Qt.DisplayRole)
-        editor.original_data = data
+        # editor.original_data = data
         editor.index = index
         if type(data) is int:
             editor.setValidator(QIntValidator(editor))
@@ -50,7 +50,8 @@ class LineEditDelegate(QItemDelegate):
     def setEditorData(self, editor, index):
         """Init the line editor with previous data from the index."""
         data = index.data(Qt.DisplayRole)
-        editor.setText(str(data))
+        if data:
+            editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `closeEditor` signal."""
@@ -61,5 +62,5 @@ class CustomLineEditor(QLineEdit):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.original_data = None
+        # self.original_data = None
         self.index = None

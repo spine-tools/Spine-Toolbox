@@ -716,6 +716,7 @@ class MinimalTableModel(QAbstractTableModel):
         self._parent = parent  # QMainWindow
         self._data = list()
         self._user_data = list()
+        self._decoration_data = list()
         self.header = list()
 
     def flags(self, index):
@@ -766,10 +767,12 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not index.isValid():
             return None
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             return self._data[index.row()][index.column()]
         if role == Qt.UserRole:
             return self._user_data[index.row()][index.column()]
+        if role == Qt.DecorationRole:
+            return self._decoration_data[index.row()][index.column()]
         else:
             return None
 
@@ -823,9 +826,15 @@ class MinimalTableModel(QAbstractTableModel):
             return False
         if role == Qt.EditRole:
             self._data[index.row()][index.column()] = value
+            self.dataChanged.emit(index, index)
             return True
         if role == Qt.UserRole:
             self._user_data[index.row()][index.column()] = value
+            self.dataChanged.emit(index, index)
+            return True
+        if role == Qt.DecorationRole:
+            self._decoration_data[index.row()][index.column()] = value
+            self.dataChanged.emit(index, index)
             return True
         return False
 
@@ -855,9 +864,11 @@ class MinimalTableModel(QAbstractTableModel):
             # noinspection PyUnusedLocal
             new_row = [None for i in range(self.columnCount())]
             new_user_row = [None for i in range(self.columnCount())]
+            new_decoration_row = [None for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self._data.insert(row, new_row)
         self._user_data.insert(row, new_user_row)
+        self._decoration_data.insert(row, new_decoration_row)
         self.endInsertRows()
         return True
 
@@ -884,6 +895,7 @@ class MinimalTableModel(QAbstractTableModel):
             # Notice if insert index > rowCount(), new object is inserted to end
             self._data[j].insert(column, None)
             self._user_data[j].insert(column, None)
+            self._decoration_data[j].insert(column, None)
         self.endInsertColumns()
         return True
 
@@ -904,7 +916,9 @@ class MinimalTableModel(QAbstractTableModel):
             logging.error("Remove 1 row at a time")
             return False
         self.beginRemoveRows(parent, row, row)
-        removed_row = self._data.pop(row)
+        removed_data_row = self._data.pop(row)
+        removed_user_row = self._user_data.pop(row)
+        removed_decoration_row = self._decoration_data.pop(row)
         # logging.debug("{0} removed from row:{1}".format(removed_row, row))
         self.endRemoveRows()
         return True
@@ -915,6 +929,10 @@ class MinimalTableModel(QAbstractTableModel):
         self._data = new_data
         if new_data:
             self._user_data = [[None for j in new_data[i]] for i in range(len(new_data))]
+            self._decoration_data = [[None for j in new_data[i]] for i in range(len(new_data))]
+        top_left = self.index(0, 0)
+        bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
+        self.dataChanged.emit(top_left, bottom_right)
         self.endResetModel()
 
 

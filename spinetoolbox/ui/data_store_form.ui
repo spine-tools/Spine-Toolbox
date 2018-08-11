@@ -483,8 +483,8 @@
     </property>
     <addaction name="actionAdd_object_classes"/>
     <addaction name="actionAdd_objects"/>
-    <addaction name="actionAdd_relationship_class"/>
-    <addaction name="actionAdd_relationship"/>
+    <addaction name="actionAdd_relationship_classes"/>
+    <addaction name="actionAdd_relationships"/>
     <addaction name="actionAdd_parameter"/>
     <addaction name="actionAdd_parameter_value"/>
    </widget>
@@ -538,17 +538,23 @@
     <string>Ctrl+O</string>
    </property>
   </action>
-  <action name="actionAdd_relationship_class">
+  <action name="actionAdd_relationship_classes">
    <property name="text">
-    <string>Add relationship class</string>
+    <string>Add relationship classes</string>
+   </property>
+   <property name="toolTip">
+    <string>Add relationship classes</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+R</string>
    </property>
   </action>
-  <action name="actionAdd_relationship">
+  <action name="actionAdd_relationships">
    <property name="text">
-    <string>Add relationship</string>
+    <string>Add relationships</string>
+   </property>
+   <property name="toolTip">
+    <string>Add relationships</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
