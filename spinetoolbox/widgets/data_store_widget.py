@@ -545,25 +545,14 @@ class DataStoreForm(QMainWindow):
     @Slot(name="add_object_classes")
     def add_object_classes(self):
         """Insert new object classes."""
-        object_class_args_list = self.object_class_args_list()
-        if not object_class_args_list:
+        dialog = AddObjectClassesDialog(self, self.mapping)
+        answer = dialog.exec_()
+        if answer != QDialog.Accepted:
             return
-        for object_class_args in object_class_args_list:
+        for object_class_args in dialog.object_class_args_list:
             object_class = self.mapping.add_object_class(**object_class_args)
             if object_class:
                 self.add_object_class_to_model(object_class.__dict__)
-
-    def object_class_args_list(self):
-        """Query the user's preferences for creating new object classes.
-
-        Returns:
-            object_class_args_list (list): List of object class dictionaries
-        """
-        dialog = AddObjectClassesDialog(self, self.mapping)
-        answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.object_class_args_list
-        return None
 
     def add_object_class_to_model(self, object_class):
         """Add object class item to the object tree model.
@@ -591,25 +580,14 @@ class DataStoreForm(QMainWindow):
     @Slot(name="add_objects")
     def add_objects(self, class_id=None):
         """Insert new objects."""
-        object_args_list = self.object_args_list(class_id)
-        if not object_args_list:
+        dialog = AddObjectsDialog(self, self.mapping, class_id=class_id)
+        answer = dialog.exec_()
+        if answer != QDialog.Accepted:
             return
-        for object_args in object_args_list:
+        for object_args in dialog.object_args_list:
             object_ = self.mapping.add_object(**object_args)
             if object_:
                 self.add_object_to_model(object_.__dict__)
-
-    def object_args_list(self, class_id=None):
-        """Query the user's preferences for creating new objects.
-
-        Returns:
-            object_args_list (list): List of object dictionaries
-        """
-        dialog = AddObjectsDialog(self, self.mapping, class_id=class_id)
-        answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.object_args_list
-        return None
 
     def add_object_to_model(self, object_):
         """Add object item to the object tree model.
@@ -645,29 +623,16 @@ class DataStoreForm(QMainWindow):
     @Slot(name="add_relationship_classes")
     def add_relationship_classes(self, parent_relationship_class_id=None, parent_object_class_id=None):
         """Insert new relationship class."""
-        relationship_class_args_list = self.relationship_class_args_list(
-            parent_relationship_class_id=parent_relationship_class_id,
-            parent_object_class_id=parent_object_class_id)
-        if not relationship_class_args_list:
-            return
-        for relationship_class_args in relationship_class_args_list:
-            relationship_class = self.mapping.add_relationship_class(**relationship_class_args)
-            if relationship_class:
-                self.add_relationship_class_to_model(relationship_class.__dict__)
-
-    def relationship_class_args_list(self, parent_relationship_class_id=None, parent_object_class_id=None):
-        """Query the user's preferences for creating new relationship classes.
-
-        Returns:
-            relationship_class_args_list (list): List of relationship class dictionaries.
-        """
         dialog = AddRelationshipClassesDialog(self, self.mapping,
             parent_relationship_class_id=parent_relationship_class_id,
             parent_object_class_id=parent_object_class_id)
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.relationship_class_args_list
-        return None
+        if answer != QDialog.Accepted:
+            return
+        for relationship_class_args in dialog.relationship_class_args_list:
+            relationship_class = self.mapping.add_relationship_class(**relationship_class_args)
+            if relationship_class:
+                self.add_relationship_class_to_model(relationship_class.__dict__)
 
     def add_relationship_class_to_model(self, relationship_class):
         """Add relationship class item to object tree model.
@@ -675,36 +640,15 @@ class DataStoreForm(QMainWindow):
         Args:
             relationship_class (dict): the relationship class to add
         """
-        root_item = self.object_tree_model.invisibleRootItem().child(0)
         if 'parent_object_class_id' in relationship_class:
-            self.object_tree_model.visit_and_add_relationship_class(root_item, relationship_class)
+            self.object_tree_model.visit_and_add_relationship_class(relationship_class)
         elif 'parent_relationship_class_id' in relationship_class:
-            self.object_tree_model.visit_and_add_meta_relationship_class(root_item, relationship_class)
+            self.object_tree_model.visit_and_add_meta_relationship_class(relationship_class)
 
     @Slot(name="add_relationships")
     def add_relationships(self, class_id=None, parent_relationship_id=None, parent_object_id=None,
             child_object_id=None):
         """Insert new relationship."""
-        relationship_args_list = self.relationship_args_list(
-            class_id=class_id,
-            parent_relationship_id=parent_relationship_id,
-            parent_object_id=parent_object_id,
-            child_object_id=child_object_id
-        )
-        if not relationship_args_list:
-            return
-        for relationship_args in relationship_args_list:
-            relationship = self.mapping.add_relationship(**relationship_args)
-            if relationship:
-                self.add_relationship_to_model(relationship.__dict__)
-
-    def relationship_args_list(self, class_id=None, parent_relationship_id=None, parent_object_id=None,
-            child_object_id=None):
-        """Query the user's preferences for creating new relationships.
-
-        Returns:
-            relationship_list (list): List of relationships dictionaries.
-        """
         dialog = AddRelationshipsDialog(
             self,
             self.mapping,
@@ -714,9 +658,12 @@ class DataStoreForm(QMainWindow):
             child_object_id=child_object_id
         )
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.relationship_args_list
-        return None
+        if answer != QDialog.Accepted:
+            return
+        for relationship_args in dialog.relationship_args_list:
+            relationship = self.mapping.add_relationship(**relationship_args)
+            if relationship:
+                self.add_relationship_to_model(relationship.__dict__)
 
     def add_relationship_to_model(self, relationship):
         """Add relationship item to object tree model.
@@ -726,32 +673,16 @@ class DataStoreForm(QMainWindow):
         """
         meta_relationship_class_list = self.mapping.meta_relationship_class_list(
             parent_relationship_class_id=relationship['class_id'])
-        root_item = self.object_tree_model.invisibleRootItem().child(0)
         if 'parent_object_id' in relationship:
-            self.object_tree_model.visit_and_add_relationship(root_item, relationship,
+            self.object_tree_model.visit_and_add_relationship(relationship,
                 meta_relationship_class_list)
         elif 'parent_relationship_id' in relationship:
-            self.object_tree_model.visit_and_add_meta_relationship(root_item, relationship,
+            self.object_tree_model.visit_and_add_meta_relationship(relationship,
                 meta_relationship_class_list)
 
     @Slot(name="add_parameters")
     def add_parameters(self, object_class_id=None, relationship_class_id=None):
         """Insert new parameters."""
-        parameter_args_list = self.parameter_args_list(object_class_id=object_class_id,
-            relationship_class_id=relationship_class_id)
-        if not parameter_args_list:
-            return
-        for parameter_args in parameter_args_list:
-            parameter = self.mapping.add_parameter(**parameter_args)
-            if parameter:
-                self.add_parameter_to_model(parameter.__dict__)
-
-    def parameter_args_list(self, object_class_id=None, relationship_class_id=None):
-        """Query the user's preferences for creating new parameters.
-
-        Returns:
-            parameter_list (list): List of instances to try and add.
-        """
         dialog = AddParametersDialog(
             self,
             self.mapping,
@@ -759,9 +690,12 @@ class DataStoreForm(QMainWindow):
             relationship_class_id=relationship_class_id
         )
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.parameter_args_list
-        return None
+        if answer != QDialog.Accepted:
+            return
+        for parameter_args in dialog.parameter_args_list:
+            parameter = self.mapping.add_parameter(**parameter_args)
+            if parameter:
+                self.add_parameter_to_model(parameter.__dict__)
 
     def add_parameter_to_model(self, parameter):
         """Add parameter item to the object or relationship parameter model.
@@ -833,23 +767,6 @@ class DataStoreForm(QMainWindow):
     def add_parameter_values(self, object_class_id=None, relationship_class_id=None,
             object_id=None, relationship_id=None):
         """Insert new parameter values."""
-        parameter_value_args_list = self.parameter_value_args_list(
-            object_class_id=object_class_id, relationship_class_id=relationship_class_id,
-            object_id=object_id, relationship_id=relationship_id)
-        if not parameter_value_args_list:
-            return
-        for parameter_value_args in parameter_value_args_list:
-            parameter_value = self.mapping.add_parameter_value(**parameter_value_args)
-            if parameter_value:
-                self.add_parameter_value_to_model(parameter_value.__dict__)
-
-    def parameter_value_args_list(self, object_class_id=None, relationship_class_id=None,
-            object_id=None, relationship_id=None):
-        """Query the user's preferences for creating new parameter values.
-
-        Returns:
-            parameter_value_args_list (list): List of parameter value dictionaries.
-        """
         dialog = AddParameterValuesDialog(
             self,
             self.mapping,
@@ -859,9 +776,12 @@ class DataStoreForm(QMainWindow):
             relationship_id=relationship_id
         )
         answer = dialog.exec_()
-        if answer == QDialog.Accepted:
-            return dialog.parameter_value_args_list
-        return None
+        if answer != QDialog.Accepted:
+            return
+        for parameter_value_args in dialog.parameter_value_args_list:
+            parameter_value = self.mapping.add_parameter_value(**parameter_value_args)
+            if parameter_value:
+                self.add_parameter_value_to_model(parameter_value.__dict__)
 
     def add_parameter_value_to_model(self, parameter_value):
         """Add parameter value item to the object or relationship parameter value model.
@@ -937,13 +857,13 @@ class DataStoreForm(QMainWindow):
     def rename_item(self, renamed_index):
         """Rename item in the database and treeview"""
         renamed_item = self.object_tree_model.itemFromIndex(renamed_index)
-        name = renamed_item.text()
+        curr_name = renamed_item.text()
         answer = QInputDialog.getText(self, "Rename item", "Enter new name:",\
-            QLineEdit.Normal, name)
+            QLineEdit.Normal, curr_name)
         new_name = answer[0]
         if not new_name: # cancel clicked
             return
-        if new_name == name: # nothing to do here
+        if new_name == curr_name: # nothing to do here
             return
         # Get renamed instance
         renamed_type = renamed_item.data(Qt.UserRole)
@@ -958,21 +878,7 @@ class DataStoreForm(QMainWindow):
             return # should never happen
         if not renamed_instance:
             return
-        root_item = self.object_tree_model.invisibleRootItem().child(0)
-        self.object_tree_model.visit_and_rename(root_item, renamed_type, renamed['id'], new_name)
-        #items = self.object_tree_model.findItems(name, Qt.MatchRecursive)
-        #for found_item in items:
-        #    found_type = found_item.data(Qt.UserRole)
-        #    found = found_item.data(Qt.UserRole+1)
-        #    # NOTE: Using 'in' below ensures related objects are renamed when renaming objects and viceversa
-        #    # And same for relationship classes and 'meta-relationship' classes
-        #    # FIXME: this will fail if an object has the same name as an object_class, for instance.
-        #    if (found_type in renamed_type or renamed_type in found_type)\
-        #            and found['id'] == renamed['id']:
-        #        found['name'] = new_name
-        #        found_item.setData(found, Qt.UserRole+1)
-        #        found_item.setText(new_name)
-        # refresh parameter models
+        self.object_tree_model.visit_and_rename(new_name, curr_name, renamed_type, renamed['id'])
         self.init_parameter_value_models()
         self.init_parameter_models()
 
@@ -999,8 +905,7 @@ class DataStoreForm(QMainWindow):
             return # should never happen
         if not removed_instance:
             return
-        root_item = self.object_tree_model.invisibleRootItem().child(0)
-        self.object_tree_model.visit_and_remove(root_item, removed_type, removed_id)
+        self.object_tree_model.visit_and_remove(removed_type, removed_id)
         # refresh parameter models
         self.init_parameter_value_models()
         self.init_parameter_models()

@@ -30,9 +30,9 @@ from sqlalchemy.orm import interfaces, Session, aliased
 from sqlalchemy.exc import NoSuchTableError, DBAPIError
 from datetime import datetime, timezone
 
-
+# TODO: SELECT queries should also be checked for errors
 class DatabaseMapping(object):
-    """A class to hold the Spine database object relational mapping.
+    """A class to manipulate the Spine database object relational mapping.
 
     Attributes:
         parent (ToolboxUI): QMainWindow instance
