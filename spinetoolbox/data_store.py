@@ -31,6 +31,7 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtWidgets import QInputDialog
 from metaobject import MetaObject
+from database_mapping import DatabaseMapping
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from widgets.add_db_reference_widget import AddDbReferenceWidget
@@ -226,10 +227,12 @@ class DataStore(MetaObject):
                 self._parent.msg_error.emit("Could not open <b>{}</b>, seems to be locked: {}"
                                             .format(data_file, e.orig.args))
                 return
-            # Get database and user name
-            database = data_file
             username = getpass.getuser()
-            self.data_store_form = DataStoreForm(self._parent, self, engine, database, username)
+            mapping = DatabaseMapping(self._parent, engine, username)
+            if not mapping.init_base():
+                return
+            database = data_file
+            self.data_store_form = DataStoreForm(self, engine, mapping, database)
             self.data_store_form.show()
 
     @busy_effect
@@ -252,7 +255,10 @@ class DataStore(MetaObject):
             except DatabaseError as e:
                 self._parent.msg_error.emit("Could not connect to <b>{}</b>: {}".format(db_url, e.orig.args))
                 return
-            self.data_store_form = DataStoreForm(self._parent, self, engine, database, username)
+            mapping = DatabaseMapping(self._parent, engine, username)
+            if not mapping.init_base():
+                return
+            self.data_store_form = DataStoreForm(self, engine, mapping, database)
             self.data_store_form.show()
 
     def data_references(self):

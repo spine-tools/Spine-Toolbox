@@ -194,7 +194,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.addSeparator()
                 self.add_action("Add parameter values")
                 self.addSeparator()
-                self.add_action("Rename relationship")
+                self.add_action("Rename object")
                 self.addSeparator()
                 self.add_action("Remove relationship")
         self.exec_(position)
@@ -208,7 +208,7 @@ class ParameterValueContextMenu(CustomContextMenu):
         super().__init__(parent, index)
         if not index.isValid():
             return
-        self.add_action("Remove row")
+        self.add_action("Remove parameter value")
         self.exec_(position)
 
 
@@ -220,7 +220,7 @@ class ParameterContextMenu(CustomContextMenu):
         super().__init__(parent, index)
         if not index.isValid():
             return
-        self.add_action("Remove row")
+        self.add_action("Remove parameter")
         self.exec_(position)
 
 
