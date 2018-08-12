@@ -728,11 +728,11 @@ class AddParametersDialog(QDialog):
 
 class AddParameterValuesDialog(QDialog):
     """A dialog to query user's preferences for new parameter values."""
-    # TODO: Filter out parameters that already have a value.
     def __init__(self, parent, mapping, object_class_id=None, relationship_class_id=None,
             object_id=None, relationship_id=None
         ):
         super().__init__(parent)
+        self.mapping = mapping
         self.parameter_value_args_list = list()
         self.object_class_list = mapping.object_class_list()
         self.relationship_class_list = mapping.relationship_class_list()
@@ -850,10 +850,10 @@ class AddParameterValuesDialog(QDialog):
             self.model.setData(self.model.index(row, 0), self.default_class_name)
             self.model.setData(self.model.index(row, 0), self.default_class_icon, Qt.DecorationRole)
             self.update_entity_combo(self.default_class_name, row)
-            self.update_parameter_combo(self.default_class_name, row)
         if self.default_entity_name:
             self.model.setData(self.model.index(row, 1), self.default_entity_name)
             self.model.setData(self.model.index(row, 1), self.default_entity_icon, Qt.DecorationRole)
+            self.update_parameter_combo(self.default_entity_name, row)
         self.model.setData(self.model.index(row, 0), self.class_name_list, Qt.UserRole)
 
     @Slot(name="remove_row")
@@ -884,7 +884,6 @@ class AddParameterValuesDialog(QDialog):
         self.model.setData(index.sibling(row, 1), None, Qt.DecorationRole)
         self.model.setData(index.sibling(row, 2), None, Qt.EditRole)
         self.update_entity_combo(class_name, row)
-        self.update_parameter_combo(class_name, row)
 
     def update_entity_combo(self, name, row):
         """Update options available in combobox for entity.
@@ -905,33 +904,9 @@ class AddParameterValuesDialog(QDialog):
             if not entity_name_list:
                 msg += "Class '{}' does not have any relationships. ".format(name)
         else:
-            logging.debug("Couldn't find class '{}'. This is odd.".format(name))
+            logging.debug("Couldn't find class '{}'. This is probably a bug.".format(name))
             return
         self.model.setData(self.model.index(row, 1), entity_name_list, Qt.UserRole)
-        self.statusbar.showMessage(msg, 5000)
-
-    def update_parameter_combo(self, name, row):
-        """Update options available in combobox for entity.
-
-        Args:
-            name (str): The name of a class.
-            row (int): The row in the model.
-        """
-        msg = self.statusbar.currentMessage()
-        object_class = self.object_class_list.filter_by(name=name).one_or_none()
-        relationship_class = self.relationship_class_list.filter_by(name=name).one_or_none()
-        if object_class:
-            class_id = object_class.id
-            parameter_name_list = [i.name for i in self.parameter_list.filter_by(object_class_id=class_id)]
-        elif relationship_class:
-            class_id = relationship_class.id
-            parameter_name_list = [i.name for i in self.parameter_list.filter_by(relationship_class_id=class_id)]
-        else:
-            logging.debug("Couldn't find class '{}'. This is odd.".format(name))
-            return
-        if not parameter_name_list:
-            msg += "Class '{}' does not have any parameters. ".format(name)
-        self.model.setData(self.model.index(row, 2), parameter_name_list, Qt.UserRole)
         self.statusbar.showMessage(msg, 5000)
 
     @Slot("QWidget", name='entity_data_commited')
@@ -950,6 +925,31 @@ class AddParameterValuesDialog(QDialog):
         else:
             entity_icon = self.relationship_icon
         self.model.setData(index, entity_icon, Qt.DecorationRole)
+        self.update_parameter_combo(entity_name, row)
+
+    def update_parameter_combo(self, entity_name, row):
+        """Update options available in combobox for entity.
+
+        Args:
+            entity_name (str): The name of an entity.
+            row (int): The row in the model.
+        """
+        msg = self.statusbar.currentMessage()
+        object_ = self.object_list.filter_by(name=entity_name).one_or_none()
+        relationship = self.relationship_list.filter_by(name=entity_name).one_or_none()
+        if object_:
+            parameter_list = self.mapping.unvalued_object_parameter_list(object_.id)
+            parameter_name_list = [i.name for i in parameter_list]
+        elif relationship:
+            parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
+            parameter_name_list = [i.name for i in parameter_list]
+        else:
+            logging.debug("Couldn't find entity '{}'. This is probably a bug.".format(entity_name))
+            return
+        if not parameter_name_list:
+            msg += "All parameters for '{}' already have a value. ".format(entity_name)
+        self.model.setData(self.model.index(row, 2), parameter_name_list, Qt.UserRole)
+        self.statusbar.showMessage(msg, 5000)
 
     @Slot("QWidget", name='parameter_data_commited')
     def parameter_data_commited(self, editor):

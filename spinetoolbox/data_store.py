@@ -232,7 +232,7 @@ class DataStore(MetaObject):
             if not mapping.init_base():
                 return
             database = data_file
-            self.data_store_form = DataStoreForm(self, engine, mapping, database)
+            self.data_store_form = DataStoreForm(self, mapping, database)
             self.data_store_form.show()
 
     @busy_effect
@@ -258,7 +258,7 @@ class DataStore(MetaObject):
             mapping = DatabaseMapping(self._parent, engine, username)
             if not mapping.init_base():
                 return
-            self.data_store_form = DataStoreForm(self, engine, mapping, database)
+            self.data_store_form = DataStoreForm(self, mapping, database)
             self.data_store_form.show()
 
     def data_references(self):

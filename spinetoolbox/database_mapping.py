@@ -187,6 +187,7 @@ class DatabaseMapping(object):
         ).order_by(self.ObjectClass.display_order)
 
     def object_list(self, class_id=None):
+        """Return objects, optionally filtered by class id."""
         qry = self.session.query(
             self.Object.id,
             self.Object.class_id,
@@ -203,7 +204,7 @@ class DatabaseMapping(object):
         ):
         """Return relationship classes that do not involve other relationship classes."""
         # NOTE: in our current convention, relationship classes are never the 'child'
-        # in other relationship classes --but this may change
+        # in other relationship classes --I hope this doesn't change
         qry = self.session.query(
             self.RelationshipClass.id,
             self.RelationshipClass.name,
@@ -256,6 +257,7 @@ class DatabaseMapping(object):
         return qry
 
     def relationship_list(self, class_id=None):
+        """Return relationships, optionally filtered by class id."""
         qry = self.session.query(
             self.Relationship.id,
             self.Relationship.class_id,
@@ -301,7 +303,7 @@ class DatabaseMapping(object):
         return qry.filter(self.Object.id == self.Relationship.child_object_id).\
             filter(self.Relationship.parent_relationship_id == parent_relationship_id)
 
-    def parameter_list(self, class_id=None):
+    def parameter_list(self):
         """Return parameters."""
         return self.session.query(
             self.Parameter.id,
@@ -316,6 +318,26 @@ class DatabaseMapping(object):
             self.Parameter.precision,
             self.Parameter.minimum_value,
             self.Parameter.maximum_value)
+
+    def unvalued_object_parameter_list(self, object_id):
+        """Return parameters that do not have a value for given object."""
+        object_ = self.single_object(object_id)
+        if not object_:
+            return self.empty_list()
+        valued_parameter_ids = self.session.query(self.ParameterValue.parameter_id).\
+            filter_by(object_id=object_id)
+        return self.parameter_list().filter_by(object_class_id=object_.class_id).\
+            filter(~self.Parameter.id.in_(valued_parameter_ids))
+
+    def unvalued_relationship_parameter_list(self, relationship_id):
+        """Return parameters that do not have a value for given relationship."""
+        relationship = self.single_relationship(relationship_id)
+        if not relationship:
+            return self.empty_list()
+        valued_parameter_ids = self.session.query(self.ParameterValue.parameter_id).\
+            filter_by(relationship_id=relationship_id)
+        return self.parameter_list().filter_by(relationship_class_id=relationship.class_id).\
+            filter(~self.Parameter.id.in_(valued_parameter_ids))
 
     def object_parameter_list(self):
         """Return object classes and their parameters."""
@@ -374,7 +396,7 @@ class DatabaseMapping(object):
         filter(self.Object.class_id == self.ObjectClass.id)
 
     def relationship_parameter_value_list(self):
-        """Return relationship and their parameter values."""
+        """Return relationships and their parameter values."""
         parent_relationship = aliased(self.Relationship)
         parent_object = aliased(self.Object)
         child_object = aliased(self.Object)
@@ -803,3 +825,10 @@ class DatabaseMapping(object):
 
     def empty_list(self):
         return self.session.query(false()).filter(false())
+
+    def close(self):
+        if self.session:
+            self.session.rollback()
+            self.session.close()
+        if self.engine:
+            self.engine.dispose()

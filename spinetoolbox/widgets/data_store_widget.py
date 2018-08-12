@@ -26,7 +26,7 @@ Widget to show Data Store Form.
 
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
-from PySide2.QtWidgets import QMainWindow, QWidget, QStatusBar, QHeaderView, QDialog, QLineEdit, QInputDialog, \
+from PySide2.QtWidgets import QMainWindow, QWidget, QHeaderView, QDialog, QLineEdit, QInputDialog, \
     QMessageBox
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
@@ -34,13 +34,10 @@ from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
-from widgets.combobox_delegate import ComboBoxDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, AddParametersDialog, AddParameterValuesDialog, CommitDialog
-from helpers import busy_effect
 from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, \
     RelationshipParameterValueProxy, ObjectParameterProxy, RelationshipParameterProxy
-from datetime import datetime, timezone
 
 
 class DataStoreForm(QMainWindow):
@@ -49,14 +46,13 @@ class DataStoreForm(QMainWindow):
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
 
-    def __init__(self, data_store, engine, mapping, database):
+    def __init__(self, data_store, mapping, database):
         """ Initialize class.
 
         Args:
             data_store (DataStore): the DataStore instance that owns this form
-            engine (Engine): The sql alchemy engine to use with this Store
+            mapping (DatabaseMapping): The object that holds the object relation mapping
             database (str): The database name
-            username (str): The user name
         """
         tic = time.clock()
         super().__init__(flags=Qt.Window)
@@ -66,10 +62,8 @@ class DataStoreForm(QMainWindow):
         self.ui.setupUi(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox Data Store")
         # Class attributes
-        self.engine = engine
         self.mapping = mapping
         self.database = database
-        self.session = mapping.session
         self.mapping.set_parent(self)
         self.mapping.new_commit()
         # Object tree model
@@ -84,7 +78,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_proxy = ObjectParameterProxy(self)
         self.relationship_parameter_model = MinimalTableModel(self)
         self.relationship_parameter_proxy = RelationshipParameterProxy(self)
-        # Add status bar to form
+        # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
@@ -190,7 +184,7 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_value_proxy.clear_filter()
 
     def init_object_tree_model(self):
-        """Initialize object tree model from source database."""
+        """Initialize object tree model."""
         root_item = self.object_tree_model.init_model(self.database)
         # setup object tree view
         self.ui.treeView_object.setModel(self.object_tree_model)
@@ -633,7 +627,7 @@ class DataStoreForm(QMainWindow):
                 object_class_item = visited_object_class_item
                 break
         if not object_class_item:
-            self.ui.statusbar.showMessage("Object class item not found in model. This is odd.")
+            self.msg.emit("Object class item not found in model. This is probably a bug.")
             return
         # get relationship classes involving the present class
         relationship_class_as_parent_list = self.mapping.relationship_class_list(
@@ -1182,11 +1176,6 @@ class DataStoreForm(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
-        # close sql session
-        if self.session:
-            self.session.rollback()
-            self.session.close()
-        if self.engine:
-            self.engine.dispose()
+        self.mapping.close()
         if event:
             event.accept()
