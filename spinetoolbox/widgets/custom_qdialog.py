@@ -84,8 +84,8 @@ class AddObjectClassesDialog(QDialog):
 
     @Slot(name="insert_row")
     def insert_row(self):
-        current_row = self.ui.tableView.currentIndex().row()
-        self.model.insertRows(current_row+1, 1)
+        row = self.ui.tableView.currentIndex().row()+1
+        self.model.insertRows(row, 1)
 
     @Slot(name="remove_row")
     def remove_row(self):
@@ -179,10 +179,10 @@ class AddObjectsDialog(QDialog):
     def insert_row(self):
         row = self.ui.tableView.currentIndex().row()+1
         self.model.insertRows(row, 1)
+        self.model.setData(self.model.index(row, 0), self.object_class_name_list, Qt.UserRole)
         if self.default_class_name:
             self.model.setData(self.model.index(row, 0), self.default_class_name)
             self.model.setData(self.model.index(row, 0), self.object_icon, Qt.DecorationRole)
-        self.model.setData(self.model.index(row, 0), self.object_class_name_list, Qt.UserRole)
 
     @Slot(name="remove_row")
     def remove_row(self):
@@ -223,7 +223,7 @@ class AddRelationshipClassesDialog(QDialog):
         super().__init__(parent)
         self.relationship_class_args_list = list()
         self.object_class_list = mapping.object_class_list()
-        self.relationship_class_list = mapping.any_relationship_class_list()
+        self.relationship_class_list = mapping.relationship_class_list()
         self.parent_class_name_list = [item.name for item in self.object_class_list]
         self.parent_class_name_list.extend([item.name for item in self.relationship_class_list])
         self.child_object_class_name_list = [item.name for item in self.object_class_list]
@@ -370,7 +370,7 @@ class AddRelationshipsDialog(QDialog):
         super().__init__(parent)
         self.relationship_args_list = list()
         self.object_class_list = mapping.object_class_list()
-        self.relationship_class_list = mapping.any_relationship_class_list()
+        self.relationship_class_list = mapping.relationship_class_list()
         self.object_list = mapping.object_list()
         self.relationship_list = mapping.relationship_list()
         self.class_name_list = [item.name for item in self.relationship_class_list]

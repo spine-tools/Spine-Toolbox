@@ -171,7 +171,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.add_action("Rename object")
                 self.addSeparator()
                 self.add_action("Remove object")
-            elif item_type == 'relationship_class':
+            elif item_type == 'proto_relationship_class':
                 self.add_action("Add relationship classes")
                 self.add_action("Add relationships")
                 self.addSeparator()

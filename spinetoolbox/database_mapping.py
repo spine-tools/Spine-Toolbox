@@ -197,12 +197,12 @@ class DatabaseMapping(object):
             return qry.filter_by(class_id=class_id)
         return qry
 
-    def relationship_class_list(
+    def proto_relationship_class_list(
             self,
             parent_object_class_id=None,
             child_object_class_id=None
         ):
-        """Return relationship classes that do not involve other relationship classes."""
+        """Return proto-relationship classes, i.e., those that do not involve other relationship classes."""
         # NOTE: in our current convention, relationship classes are never the 'child'
         # in other relationship classes --I hope this doesn't change
         qry = self.session.query(
@@ -234,7 +234,7 @@ class DatabaseMapping(object):
             return qry.filter_by(parent_relationship_class_id=parent_relationship_class_id)
         return qry
 
-    def any_relationship_class_list(
+    def relationship_class_list(
             self,
             parent_relationship_class_id=None,
             parent_object_class_id=None,
@@ -276,7 +276,8 @@ class DatabaseMapping(object):
             self.Object.id,
             self.Object.class_id,
             self.Object.name,
-            self.Relationship.id.label('relationship_id')
+            self.Relationship.id.label('relationship_id'),
+            self.Relationship.name.label('relationship_name')
         ).filter(self.Relationship.class_id == relationship_class_id)
         return qry.filter(self.Object.id == self.Relationship.parent_object_id).\
             filter(self.Relationship.child_object_id == child_object_id)
@@ -287,7 +288,8 @@ class DatabaseMapping(object):
             self.Object.id,
             self.Object.class_id,
             self.Object.name,
-            self.Relationship.id.label('relationship_id')
+            self.Relationship.id.label('relationship_id'),
+            self.Relationship.name.label('relationship_name')
         ).filter(self.Relationship.class_id == relationship_class_id)
         return qry.filter(self.Object.id == self.Relationship.child_object_id).\
             filter(self.Relationship.parent_object_id == parent_object_id)
@@ -298,7 +300,8 @@ class DatabaseMapping(object):
             self.Object.id,
             self.Object.class_id,
             self.Object.name,
-            self.Relationship.id.label('relationship_id')
+            self.Relationship.id.label('relationship_id'),
+            self.Relationship.name.label('relationship_name')
         ).filter(self.Relationship.class_id == relationship_class_id)
         return qry.filter(self.Object.id == self.Relationship.child_object_id).\
             filter(self.Relationship.parent_relationship_id == parent_relationship_id)
@@ -338,6 +341,22 @@ class DatabaseMapping(object):
             filter_by(relationship_id=relationship_id)
         return self.parameter_list().filter_by(relationship_class_id=relationship.class_id).\
             filter(~self.Parameter.id.in_(valued_parameter_ids))
+
+    def single_object_parameter(self, id):
+        """Return object class and the parameter corresponding to id."""
+        return self.object_parameter_list().filter(self.Parameter.id == id).one_or_none()
+
+    def single_relationship_parameter(self, id):
+        """Return relationship class and the parameter corresponding to id."""
+        return self.relationship_parameter_list().filter(self.Parameter.id == id).one_or_none()
+
+    def single_object_parameter_value(self, id):
+        """Return object and the parameter value corresponding to id."""
+        return self.object_parameter_value_list().filter(self.ParameterValue.id == id).one_or_none()
+
+    def single_relationship_parameter_value(self, id):
+        """Return relationship and the parameter value corresponding to id."""
+        return self.relationship_parameter_value_list().filter(self.ParameterValue.id == id).one_or_none()
 
     def object_parameter_list(self):
         """Return object classes and their parameters."""
@@ -403,6 +422,9 @@ class DatabaseMapping(object):
         return self.session.query(
             self.Relationship.class_id.label('relationship_class_id'),
             self.RelationshipClass.name.label('relationship_class_name'),
+            # self.RelationshipClass.parent_relationship_class_id,
+            # self.RelationshipClass.parent_object_class_id,
+            # self.RelationshipClass.child_object_class_id,
             self.ParameterValue.relationship_id,
             self.Relationship.parent_relationship_id,
             self.Relationship.parent_object_id,
