@@ -29,8 +29,8 @@ import os
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 import ui.settings
-from config import DEFAULT_PROJECT_DIR, STATUSBAR_SS, SETTINGS_SS, \
-    GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
+from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, STATUSBAR_SS, \
+    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class SettingsWidget(QWidget):
@@ -46,6 +46,7 @@ class SettingsWidget(QWidget):
         self._parent = parent  # QWidget parent
         self._configs = configs
         self._project = project
+        self.orig_work_dir = ""  # Work dir when this widget was created
         # Set up the user interface from Designer.
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
@@ -72,6 +73,7 @@ class SettingsWidget(QWidget):
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.pushButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.pushButton_browse_julia.clicked.connect(self.browse_julia_path)
+        self.ui.pushButton_browse_work.clicked.connect(self.browse_work_path)
 
     @Slot(name="browse_gams_path")
     def browse_gams_path(self):
@@ -111,6 +113,16 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_julia_path.setText(selected_path)
         return
 
+    @Slot(name="browse_work_path")
+    def browse_work_path(self):
+        """Open file browser where user can select the path to wanted work directory."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, 'Select work directory', os.path.abspath('C:\\'))
+        if answer == '':  # Cancel button clicked
+            return
+        selected_path = os.path.abspath(answer)
+        self.ui.lineEdit_work_dir.setText(selected_path)
+
     def read_settings(self):
         """Read current settings from config object and update UI to show them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
@@ -141,9 +153,13 @@ class SettingsWidget(QWidget):
 
     def read_project_settings(self):
         """Read project settings from config object and update settings widgets accordingly."""
+        work_dir = DEFAULT_WORK_DIR
         if self._project:
             self.ui.lineEdit_project_name.setText(self._project.name)
             self.ui.textEdit_project_description.setText(self._project.description)
+            work_dir = self._project.work_dir
+        self.ui.lineEdit_work_dir.setText(work_dir)
+        self.orig_work_dir = work_dir
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
@@ -188,12 +204,23 @@ class SettingsWidget(QWidget):
         if not self._project:
             return
         save = False
+        if not self.ui.lineEdit_work_dir.text():
+            work_dir = DEFAULT_WORK_DIR
+        else:
+            work_dir = self.ui.lineEdit_work_dir.text()
+        # Check if work directory was changed
+        if not self.orig_work_dir == work_dir:
+            if not self._project.change_work_dir(work_dir):
+                self._parent.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
+                                            .format(work_dir))
+            else:
+                save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():
             # Set new project description
             self._project.set_description(self.ui.textEdit_project_description.toPlainText())
             save = True
         if save:
-            logging.debug("Project settings changed. Saving project.")
+            self._parent.msg.emit("Project settings changed. Saving project...")
             self._parent.save_project()
 
     def keyPressEvent(self, e):

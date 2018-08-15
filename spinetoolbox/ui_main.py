@@ -416,6 +416,10 @@ class ToolboxUI(QMainWindow):
         proj_name = project_dict['name']
         proj_desc = project_dict['description']
         try:
+            work_dir = project_dict['work_dir']
+        except KeyError:
+            work_dir = ""
+        try:
             tool_template_paths = project_dict['tool_templates']
         except KeyError:
             self.msg_warning.emit("Tool templates not found in project file")
@@ -433,7 +437,7 @@ class ToolboxUI(QMainWindow):
         # self.ui.graphicsView.reset_scene()
         # self.ui.graphicsView.setSceneRect(QRectF())  # TODO: This should setSceneRect to 0 but does nothing
         # Create project
-        self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
+        self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config, work_dir)
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear QTextBrowsers

@@ -36,6 +36,7 @@ from PySide2.QtGui import QCursor
 from config import DEFAULT_PROJECT_DIR
 
 
+
 def busy_effect(func):
     """ Decorator to change the mouse cursor to 'busy' while a function is processed.
 
