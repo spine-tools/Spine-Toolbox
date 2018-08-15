@@ -910,7 +910,6 @@ class ObjectTreeModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(parent)
         self.mapping = parent.mapping
-        self.session = self.mapping.session
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
