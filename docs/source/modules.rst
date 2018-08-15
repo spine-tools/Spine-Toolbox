@@ -8,6 +8,7 @@ spinetoolbox
    configuration
    data_connection
    data_store
+   database_mapping
    graphics_items
    helpers
    metaobject

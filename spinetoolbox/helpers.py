@@ -40,6 +40,7 @@ from sqlalchemy.dialects.mysql import TINYINT, DOUBLE
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
 
+
 # TODO: check if this is the right place for this
 @compiles(TINYINT, 'sqlite')
 def compile_TINYINT_mysql_sqlite(element, compiler, **kw):
@@ -52,11 +53,13 @@ def compile_DOUBLE_mysql_sqlite(element, compiler, **kw):
     """ Handles mysql DOUBLE datatype as REAL in sqlite """
     return compiler.visit_REAL(element, **kw)
 
+
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
+
 
 def busy_effect(func):
     """ Decorator to change the mouse cursor to 'busy' while a function is processed.

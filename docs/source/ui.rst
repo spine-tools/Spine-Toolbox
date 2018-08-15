@@ -36,6 +36,54 @@ ui.add\_db\_reference module
     :undoc-members:
     :show-inheritance:
 
+ui.add\_object\_classes module
+------------------------------
+
+.. automodule:: ui.add_object_classes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.add\_objects module
+----------------------
+
+.. automodule:: ui.add_objects
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.add\_parameter\_values module
+--------------------------------
+
+.. automodule:: ui.add_parameter_values
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.add\_parameters module
+-------------------------
+
+.. automodule:: ui.add_parameters
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.add\_relationship\_classes module
+------------------------------------
+
+.. automodule:: ui.add_relationship_classes
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.add\_relationships module
+----------------------------
+
+.. automodule:: ui.add_relationships
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ui.add\_tool module
 -------------------
 

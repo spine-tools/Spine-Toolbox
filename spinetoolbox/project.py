@@ -45,15 +45,19 @@ class SpineToolboxProject(MetaObject):
         parent(ToolboxUI): Parent of this project
         name(str): Project name
         description(str): Project description
+        work_dir (str): Project work directory
         ext(str): Project save file extension(.proj)
     """
-    def __init__(self, parent, name, description, configs, ext='.proj'):
+    def __init__(self, parent, name, description, configs, work_dir, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
         self._configs = configs
         self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
-        self.work_dir = DEFAULT_WORK_DIR
+        if not work_dir:
+            self.work_dir = DEFAULT_WORK_DIR
+        else:
+            self.work_dir = work_dir
         self.filename = self.short_name + ext
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
@@ -97,6 +101,20 @@ class SpineToolboxProject(MetaObject):
         self.filename = new_filename
         self.path = os.path.join(project_dir(self._configs), self.filename)
 
+    def change_work_dir(self, new_work_path):
+        """Change project work directory.
+
+        Args:
+            new_work_path (str): Absolute path to new work directory
+        """
+        if not new_work_path:
+            self.work_dir = DEFAULT_WORK_DIR
+            return False
+        if not create_dir(new_work_path):
+            return False
+        self.work_dir = new_work_path
+        return True
+
     def save(self, tool_def_paths):
         """Collect project information and objects
         into a dictionary and write to a JSON file.
@@ -109,6 +127,7 @@ class SpineToolboxProject(MetaObject):
         project_dict = dict()  # Dictionary for storing project info
         project_dict['name'] = self.name
         project_dict['description'] = self.description
+        project_dict['work_dir'] = self.work_dir
         project_dict['tool_templates'] = tool_def_paths
         connection_table = self._parent.connection_model.get_connections()
         bool_con_table = [[False if not j else True for j in connection_table[i]] for i in range(len(connection_table))]
