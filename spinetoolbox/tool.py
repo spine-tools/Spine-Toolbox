@@ -492,11 +492,12 @@ class Tool(MetaObject):
                 gams_exe = os.path.join(gams_path, GAMS_EXECUTABLE)
             else:
                 gams_exe = GAMS_EXECUTABLE
-            main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-            command = '{} "{}" Curdir="{}" logoption=3'\
-                .format(gams_exe, self.tool_template().main_prgm, main_dir)
-            # Append Tool specific command line arguments to command (if present and implemented)
-            self.instance.command = self.append_cmdline_args(command)
+            self.instance.program = gams_exe
+            self.instance.args.append(self.tool_template().main_prgm)
+            self.instance.args.append("curDir=")
+            self.instance.args.append("{0}".format(self.instance.basedir))
+            self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
+            self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
             # Prepare prompt command "julia script.jl"
             julia_dir = self._parent._config.get("settings", "julia_path")
@@ -506,36 +507,23 @@ class Tool(MetaObject):
                 julia_exe = JULIA_EXECUTABLE
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            command = '{0} {1}'.format(julia_exe, script_path)
-            # Append Tool specific command line arguments to command
-            command = self.append_cmdline_args(command)
+            self.instance.program = julia_exe
+            self.instance.args.append(script_path)
+            self.append_instance_args()
             use_repl = self._parent._config.getboolean("settings", "use_repl")
             if use_repl:
                 # Prepare Julia REPL command
-                main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-                mod_main_dir = main_dir.__repr__().strip("'")
-                self.instance.command = r'cd("{}");'\
-                    r'include("{}")'.format(mod_main_dir, self.tool_template().main_prgm)
-                # Attach fallback command (in case REPL doesn't work)
-                self.instance.fallback_command = command
-            else:
-                self.instance.command = command
+                # TODO: See if this can be simplified
+                mod_work_dir = work_dir.__repr__().strip("'")
+                self.instance.julia_repl_command = r'cd("{}");'\
+                    r'include("{}")'.format(mod_work_dir, self.tool_template().main_prgm)
 
-    def append_cmdline_args(self, command):
-        """Append command line arguments to a command.
-
-        Args:
-            command (str): Command that starts processing the Tool in a subprocess
-        """
-        if (self.extra_cmdline_args is not None) and (not self.extra_cmdline_args == ''):
-            if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
-                command += ' ' + self.tool_template().cmdline_args + ' ' + self.extra_cmdline_args
-            else:
-                command += ' ' + self.extra_cmdline_args
-        else:
-            if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
-                command += ' ' + self.tool_template().cmdline_args
-        return command
+    def append_instance_args(self):
+        """Append Tool template command line args into instance args list."""
+        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
+        if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
+            # Tool template cmdline args is a space delimited string. Add them to a list.
+            self.instance.args += self.tool_template().cmdline_args.split(" ")
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
@@ -550,16 +538,3 @@ class Tool(MetaObject):
             # Find ToolTemplate from model according to row
             new_tool = self._parent.tool_template_model.tool_template(row)
         self.set_tool_template(new_tool)
-
-    # @Slot(name='show_details')
-    # def show_details(self):
-    #     """[OBSOLETE] Details button clicked."""
-    #     if not self.tool_template():
-    #         self._parent.msg_warning.emit("No Tool template")
-    #         return
-    #     definition = self.read_tool_def(self.tool_template().get_def_path())
-    #     if not definition:
-    #         return
-    #     self._parent.msg.emit("Tool template file contents:\n{0}"
-    #                           .format(json.dumps(definition, sort_keys=True, indent=4)))
-

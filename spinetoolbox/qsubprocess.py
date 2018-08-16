@@ -33,16 +33,18 @@ class QSubProcess(QObject):
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
 
-    def __init__(self, ui, command):
+    def __init__(self, ui, program=None, args=None):
         """Class constructor.
 
         Args:
             ui (ToolboxUI): Instance of Main UI class.
-            command: Run command
+            program (str): Path to program to run in the subprocess (e.g. julia.exe)
+            args (list): List of argument for the program (e.g. path to script file)
         """
         super().__init__()
         self._ui = ui
-        self._command = command
+        self._program = program
+        self._args = args
         self.process_failed = False
         self.process_failed_to_start = False
         self._user_stopped = False
@@ -53,7 +55,7 @@ class QSubProcess(QObject):
         """Start the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Path to work directory
+            workdir (str): Directory for the script (at least with Julia this is a must)
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
@@ -63,7 +65,9 @@ class QSubProcess(QObject):
         self._process.finished.connect(self.process_finished)
         self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
         self._process.stateChanged.connect(self.on_state_changed)
-        self._process.start(self._command)
+        self._ui.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
+        self._ui.msg.emit("\tArguments: <b>{0}</b>".format(self._args))
+        self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
             self._process.deleteLater()

@@ -57,8 +57,9 @@ class ToolInstance(QObject):
         self.output_dir = None
         wrk_dir = self._project.work_dir
         self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
-        self.command = ''  # command is created after ToolInstance is initialized
-        self.fallback_command = ''
+        self.julia_repl_command = None
+        self.program = None  # Program to start in the subprocess
+        self.args = list()  # List of command line arguments for the program
         self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
         self.inputfiles_opt = [os.path.join(self.basedir, f) for f in tool_template.inputfiles_opt]
         self.outputfiles = [os.path.join(self.basedir, f) for f in tool_template.outputfiles]
@@ -109,19 +110,23 @@ class ToolInstance(QObject):
     def execute(self):
         """Start executing tool template instance in QProcess."""
         self.ui.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
-        self.ui.msg.emit("\t<i>{0}</i>".format(self.command))
         if self.tool_template.tooltype == "julia":
             if self.ui._config.getboolean("settings", "use_repl"):
                 self.tool_process = self.ui.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
-                self.tool_process.execute_instance(self.command)
+                self.ui.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
+                self.tool_process.execute_instance(self.julia_repl_command)
             else:
-                self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
+                self.tool_process = qsubprocess.QSubProcess(self.ui, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
+                # On Julia the Qprocess workdir must be set to the path where the main script is
+                # Otherwise it doesn't find input files in subdirectories
                 self.tool_process.start_process(workdir=self.basedir)
         elif self.tool_template.tooltype == "gams":
-            self.tool_process = qsubprocess.QSubProcess(self.ui, self.command)
+            self.tool_process = qsubprocess.QSubProcess(self.ui, self.program, self.args)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
+            # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
+            # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
             self.tool_process.start_process(workdir=self.basedir)
 
     def julia_repl_tool_finished(self, ret):
@@ -136,7 +141,7 @@ class ToolInstance(QObject):
                 self.ui.msg_error.emit("\tUnable to start Julia REPL")
                 self.ui.msg.emit("*** Running Tool template <b>{0}</b> without REPL ***"
                                  .format(self.tool_template.name))
-                self.tool_process = qsubprocess.QSubProcess(self.ui, self.fallback_command)
+                self.tool_process = qsubprocess.QSubProcess(self.ui, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
                 return

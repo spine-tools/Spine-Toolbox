@@ -85,23 +85,6 @@ class ToolTemplate(MetaObject):
         """Returns tool definition file path."""
         return self.def_file_path
 
-    def append_cmdline_args(self, command, extra_cmdline_args):
-        """Append command line arguments to a command.
-
-        Args:
-            command (str): Tool command
-            extra_cmdline_args (str): Extra command line arguments
-        """
-        if (extra_cmdline_args is not None) and (not extra_cmdline_args == ''):
-            if (self.cmdline_args is not None) and (not self.cmdline_args == ''):
-                command += ' ' + self.cmdline_args + ' ' + extra_cmdline_args
-            else:
-                command += ' ' + extra_cmdline_args
-        else:
-            if (self.cmdline_args is not None) and (not self.cmdline_args == ''):
-                command += ' ' + self.cmdline_args
-        return command
-
     @staticmethod
     def check_definition(ui, data):
         """Check that a tool template definition contains
