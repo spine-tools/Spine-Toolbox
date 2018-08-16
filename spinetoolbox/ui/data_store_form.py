@@ -329,5 +329,5 @@ class Ui_MainWindow(object):
         self.actionAdd_parameter_values.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add parameter values", None, -1))
         self.actionAdd_parameter_values.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+P", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import CopyPasteTableView
+from widgets.custom_qtreeview import ObjectTreeView

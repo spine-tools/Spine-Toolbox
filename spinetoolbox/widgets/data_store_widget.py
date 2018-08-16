@@ -32,6 +32,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
+from spinedatabase_api import SpineDBAPIError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
@@ -90,10 +91,10 @@ class DataStoreForm(QMainWindow):
         # init models and views
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_object_tree_model()
-        self.init_parameter_value_models()
-        self.init_parameter_models()
-        self.init_parameter_value_views()
-        self.init_parameter_views()
+        #self.init_parameter_value_models()
+        #self.init_parameter_models()
+        #self.init_parameter_value_views()
+        #self.init_parameter_views()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
@@ -118,8 +119,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_parameters.triggered.connect(self.add_parameters)
         self.ui.actionAdd_parameter_values.triggered.connect(self.add_parameter_values)
         # Object tree
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
+        #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
+        #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_leaf_object_at_top_level)
@@ -214,6 +215,7 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
+        return
         # Object
         object_parameter_value_list = self.mapping.object_parameter_value_list()
         header = object_parameter_value_list.column_descriptions
@@ -231,6 +233,7 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
+        return
         # Object
         object_parameter_list = self.mapping.object_parameter_list()
         header = object_parameter_list.column_descriptions
@@ -247,6 +250,7 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
 
     def init_parameter_value_views(self):
+        return
         self.init_object_parameter_value_view()
         self.init_relationship_parameter_value_view()
 
@@ -298,6 +302,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_views(self):
+        return
         self.init_object_parameter_view()
         self.init_relationship_parameter_view()
 
@@ -538,34 +543,17 @@ class DataStoreForm(QMainWindow):
         self.add_objects(class_id=class_id)
 
     def call_add_relationship_classes(self, index):
-        parent_class_type = index.data(Qt.UserRole)
-        parent_class_id = index.data(Qt.UserRole+1)['id']
-        if parent_class_type == 'object_class':
-            self.add_relationship_classes(parent_object_class_id=parent_class_id)
-        elif parent_class_type.endswith('relationship_class'):
-            self.add_relationship_classes(parent_relationship_class_id=parent_class_id)
+        object_class_id = index.data(Qt.UserRole+1)['id']
+        self.add_relationship_classes(object_class_id=object_class_id)
 
     def call_add_relationships(self, index):
         relationship_class = index.data(Qt.UserRole+1)
-        class_id = relationship_class['id']
-        parent_relationship_id = None
-        parent_object_id = None
-        child_object_id = None
-        top_object_type = index.parent().data(Qt.UserRole)
-        top_object = index.parent().data(Qt.UserRole+1)
-        if top_object_type == 'object':
-            top_object_class_id = top_object['class_id']
-            if top_object_class_id == relationship_class['parent_object_class_id']:
-                parent_object_id = top_object['id']
-            elif top_object_class_id == relationship_class['child_object_class_id']:
-                child_object_id = top_object['id']
-        elif top_object_type == 'related_object':
-            parent_relationship_id = top_object['relationship_id']
+        object_ = index.parent().data(Qt.UserRole+1)
+        object_class = index.parent().parent().data(Qt.UserRole+1)
         self.add_relationships(
-            class_id=class_id,
-            parent_relationship_id=parent_relationship_id,
-            parent_object_id=parent_object_id,
-            child_object_id=child_object_id
+            relationship_class_id=relationship_class['id'],
+            object_id=object_['id'],
+            object_class_id=object_class['id']
         )
 
     def call_add_parameters(self, tree_index):
@@ -573,7 +561,7 @@ class DataStoreForm(QMainWindow):
         class_id = tree_index.data(Qt.UserRole+1)['id']
         if class_type == 'object_class':
             self.add_parameters(object_class_id=class_id)
-        elif class_type.endswith('relationship_class'):
+        elif class_type == 'relationship_class':
             self.add_parameters(relationship_class_id=class_id)
 
     def call_add_parameter_values(self, tree_index):
@@ -582,8 +570,8 @@ class DataStoreForm(QMainWindow):
         if entity_type == 'object':
             object_id = tree_index.data(Qt.UserRole+1)['id']
             self.add_parameter_values(object_class_id=class_id, object_id=object_id)
-        elif entity_type == 'related_object':
-            relationship_id = tree_index.data(Qt.UserRole+1)['relationship_id']
+        elif entity_type == 'relationship':
+            relationship_id = tree_index.data(Qt.UserRole+1)['id']
             self.add_parameter_values(relationship_class_id=class_id, relationship_id=relationship_id)
 
     @Slot(name="add_object_classes")
@@ -621,47 +609,44 @@ class DataStoreForm(QMainWindow):
             self.msg.emit(msg)
 
     @Slot(name="add_relationship_classes")
-    def add_relationship_classes(self, parent_relationship_class_id=None, parent_object_class_id=None):
+    def add_relationship_classes(self, object_class_id=None):
         """Insert new relationship class."""
         dialog = AddRelationshipClassesDialog(self, self.mapping,
-            parent_relationship_class_id=parent_relationship_class_id,
-            parent_object_class_id=parent_object_class_id)
+            object_class_one_id=object_class_id)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        for relationship_class_args in dialog.relationship_class_args_list:
+        for wide_relationship_class in dialog.wide_relationship_class_list:
             try:
-                relationship_class = self.mapping.add_relationship_class(**relationship_class_args)
+                new_wide_relationship_class = self.mapping.add_wide_relationship_class(wide_relationship_class)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_relationship_class(relationship_class.__dict__)
-            msg = "Successfully added new relationship class '{}'.".format(relationship_class.name)
+            self.object_tree_model.add_relationship_class(new_wide_relationship_class)
+            msg = "Successfully added new relationship class '{}'.".format(new_wide_relationship_class['name'])
             self.msg.emit(msg)
 
     @Slot(name="add_relationships")
-    def add_relationships(self, class_id=None, parent_relationship_id=None, parent_object_id=None,
-            child_object_id=None):
+    def add_relationships(self, relationship_class_id=None, object_id=None, object_class_id=None):
         """Insert new relationship."""
         dialog = AddRelationshipsDialog(
             self,
             self.mapping,
-            class_id=class_id,
-            parent_relationship_id=parent_relationship_id,
-            parent_object_id=parent_object_id,
-            child_object_id=child_object_id
+            relationship_class_id=relationship_class_id,
+            object_id=object_id,
+            object_class_id=object_class_id
         )
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        for relationship_args in dialog.relationship_args_list:
+        for wide_relationship in dialog.wide_relationship_list:
             try:
-                relationship = self.mapping.add_relationship(**relationship_args)
+                new_wide_relationship = self.mapping.add_wide_relationship(wide_relationship)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_relationship(relationship.__dict__)
-            msg = "Successfully added new relationship '{}'.".format(relationship.name)
+            self.object_tree_model.add_relationship(new_wide_relationship)
+            msg = "Successfully added new relationship '{}'.".format(new_wide_relationship['name'])
             self.msg.emit(msg)
 
     @Slot(name="add_parameters")
@@ -801,11 +786,7 @@ class DataStoreForm(QMainWindow):
         removed_item = self.object_tree_model.itemFromIndex(removed_index)
         removed_type = removed_item.data(Qt.UserRole)
         removed = removed_item.data(Qt.UserRole+1)
-        # Get removed id
-        if removed_type == 'related_object':
-            removed_id = removed['relationship_id']
-        else:
-            removed_id = removed['id']
+        removed_id = removed['id']
         try:
             if removed_type == 'object_class':
                 self.mapping.remove_object_class(id=removed_id)
@@ -816,7 +797,7 @@ class DataStoreForm(QMainWindow):
             elif removed_type.endswith('relationship_class'):
                 self.mapping.remove_relationship_class(id=removed_id)
                 msg = "Successfully removed relationship class."
-            elif removed_type == 'related_object':
+            elif removed_type == 'relationship':
                 self.mapping.remove_relationship(id=removed_id)
                 msg = "Successfully removed relationship."
             else:
@@ -827,8 +808,8 @@ class DataStoreForm(QMainWindow):
             return
         self.object_tree_model.remove_item(removed_type, removed_id)
         # refresh parameter models
-        self.init_parameter_value_models()
-        self.init_parameter_models()
+        # self.init_parameter_value_models()
+        # self.init_parameter_models()
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
