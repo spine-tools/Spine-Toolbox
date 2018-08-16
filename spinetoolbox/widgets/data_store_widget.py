@@ -50,8 +50,8 @@ class DataStoreForm(QMainWindow):
         """ Initialize class.
 
         Args:
-            data_store (DataStore): the DataStore instance that owns this form
-            mapping (DatabaseMapping): The object that holds the object relation mapping
+            data_store (DataStore): The DataStore instance that owns this form
+            mapping (DatabaseMapping): The object relational mapping
             database (str): The database name
         """
         tic = time.clock()
@@ -64,7 +64,6 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.mapping = mapping
         self.database = database
-        self.mapping.set_parent(self)
         self.mapping.new_commit()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
@@ -82,14 +81,14 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
-        # context menus
+        # Context menus
         self.object_tree_context_menu = None
         self.object_parameter_value_context_menu = None
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
         # init models and views
-        self.default_font_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_models()
@@ -123,7 +122,8 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
-        self.ui.treeView_object.doubleClicked.connect(self.tree_index_double_click)
+        self.ui.treeView_object.doubleClicked.connect(self.expand_leaf_object_at_top_level)
+        self.object_tree_model.rowsInserted.connect(self.scroll_to_new_item)
         # Parameter tables
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -133,6 +133,14 @@ class DataStoreForm(QMainWindow):
             connect(self.show_object_parameter_context_menu)
         self.ui.tableView_relationship_parameter.customContextMenuRequested.\
             connect(self.show_relationship_parameter_context_menu)
+        self.object_parameter_model.row_with_data_inserted.\
+            connect(self.scroll_to_new_object_parameter)
+        self.relationship_parameter_model.row_with_data_inserted.\
+            connect(self.scroll_to_new_relationship_parameter)
+        self.object_parameter_value_model.row_with_data_inserted.\
+            connect(self.scroll_to_new_object_parameter_value)
+        self.relationship_parameter_value_model.row_with_data_inserted.\
+            connect(self.scroll_to_new_relationship_parameter_value)
         # DS destroyed
         self._data_store.destroyed.connect(self.data_store_destroyed)
 
@@ -171,21 +179,33 @@ class DataStoreForm(QMainWindow):
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        self.mapping.commit_session(dialog.commit_msg)
+        try:
+            self.mapping.commit_session(dialog.commit_msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        msg = "All changes commited successfully."
+        self.msg.emit(msg)
 
     @Slot(name="rollback_session")
     def rollback_session(self):
-        self.mapping.rollback_session()
+        try:
+            self.mapping.rollback_session()
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        msg = "All changes since last commit rolled back successfully."
+        self.msg.emit(msg)
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_models()
         # clear filters
-        self.object_parameter_value_proxy.clear_filter()
-        self.relationship_parameter_value_proxy.clear_filter()
+        self.object_parameter_value_proxy.reset()
+        self.relationship_parameter_value_proxy.reset()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        root_item = self.object_tree_model.init_model(self.database)
+        root_item = self.object_tree_model.build_tree(self.database)
         # setup object tree view
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_object.header().hide()
@@ -197,16 +217,16 @@ class DataStoreForm(QMainWindow):
         # Object
         object_parameter_value_list = self.mapping.object_parameter_value_list()
         header = object_parameter_value_list.column_descriptions
-        object_parameter_value = [list(row._asdict().values()) for row in object_parameter_value_list]
+        object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
         self.object_parameter_value_model.header = [column['name'] for column in header]
-        self.object_parameter_value_model.reset_model(object_parameter_value)
+        self.object_parameter_value_model.reset_model(object_parameter_value_data)
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         # Relationship
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         header = relationship_parameter_value_list.column_descriptions
         self.relationship_parameter_value_model.header = [column['name'] for column in header]
-        relationship_parameter_value = [list(row._asdict().values()) for row in relationship_parameter_value_list]
-        self.relationship_parameter_value_model.reset_model(relationship_parameter_value)
+        relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
+        self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
@@ -215,17 +235,15 @@ class DataStoreForm(QMainWindow):
         object_parameter_list = self.mapping.object_parameter_list()
         header = object_parameter_list.column_descriptions
         self.object_parameter_model.header = [column['name'] for column in header]
-        if object_parameter_list.all():
-            object_parameter = [list(row._asdict().values()) for row in object_parameter_list]
-            self.object_parameter_model.reset_model(object_parameter)
-            self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
+        object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
+        self.object_parameter_model.reset_model(object_parameter_data)
+        self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
         # Relationship
         relationship_parameter_list = self.mapping.relationship_parameter_list()
         header = relationship_parameter_list.column_descriptions
         self.relationship_parameter_model.header = [column['name'] for column in header]
-        if relationship_parameter_list.all():
-            relationship_parameter = [list(row._asdict().values()) for row in relationship_parameter_list]
-            self.relationship_parameter_model.reset_model(relationship_parameter)
+        relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
+        self.relationship_parameter_model.reset_model(relationship_parameter_data)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
 
     def init_parameter_value_views(self):
@@ -233,8 +251,7 @@ class DataStoreForm(QMainWindow):
         self.init_relationship_parameter_value_view()
 
     def init_object_parameter_value_view(self):
-        """Init the object parameter table view.
-        """
+        """Init the object parameter table view."""
         header = self.object_parameter_value_model.header
         if not header:
             return
@@ -242,7 +259,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().\
-            setDefaultSectionSize(self.default_font_height)
+            setDefaultSectionSize(self.default_row_height)
         # set model
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         # hide id columns
@@ -256,8 +273,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
-        """Init the relationship parameter table view.
-        """
+        """Init the relationship parameter table view."""
         header = self.relationship_parameter_value_model.header
         if not header:
             return
@@ -265,7 +281,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().\
-            setDefaultSectionSize(self.default_font_height)
+            setDefaultSectionSize(self.default_row_height)
         # set model
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         # hide id columns
@@ -286,8 +302,7 @@ class DataStoreForm(QMainWindow):
         self.init_relationship_parameter_view()
 
     def init_object_parameter_view(self):
-        """Init the object parameter table view.
-        """
+        """Init the object parameter table view."""
         header = self.object_parameter_model.header
         if not header:
             return
@@ -295,7 +310,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().\
-            setDefaultSectionSize(self.default_font_height)
+            setDefaultSectionSize(self.default_row_height)
         # set model
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         # hide id columns
@@ -308,8 +323,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter.resizeColumnsToContents()
 
     def init_relationship_parameter_view(self):
-        """Init the object parameter table view.
-        """
+        """Init the object parameter table view."""
         header = self.relationship_parameter_model.header
         if not header:
             return
@@ -317,7 +331,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().\
-            setDefaultSectionSize(self.default_font_height)
+            setDefaultSectionSize(self.default_row_height)
         # set model
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         # hide id columns
@@ -329,9 +343,57 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.setItemDelegate(lineedit_delegate)
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
-    @Slot("QModelIndex", name="tree_index_double_click")
-    def tree_index_double_click(self, index):
-        """Handle double clicking on the object treeView."""
+    @Slot("QModelIndex", "int", "int", name="scroll_to_new_item")
+    def scroll_to_new_item(self, parent, first, last):
+        """Scroll to newly inserted item in the object treeView."""
+        last_index = self.object_tree_model.index(last, 0, parent)
+        self.ui.treeView_object.setCurrentIndex(last_index)
+        self.ui.treeView_object.scrollTo(last_index)
+
+    @Slot("QModelIndex", "int", name="scroll_to_new_object_parameter")
+    def scroll_to_new_object_parameter(self, parent, row):
+        """Scroll to newly inserted parameter in the object parameter tableview."""
+        self.ui.tabWidget_object.setCurrentIndex(1)
+        self.object_parameter_proxy.apply()
+        self.ui.tableView_object_parameter.resizeColumnsToContents()
+        index = self.object_parameter_model.index(row, 0, parent)
+        proxy_index = self.object_parameter_proxy.mapFromSource(index)
+        self.ui.tableView_object_parameter.scrollTo(proxy_index)
+
+    @Slot("QModelIndex", "int", name="scroll_to_new_relationship_parameter")
+    def scroll_to_new_relationship_parameter(self, parent, row):
+        """Scroll to newly inserted parameter in the relationship parameter tableview."""
+        self.ui.tabWidget_relationship.setCurrentIndex(1)
+        self.relationship_parameter_proxy.apply()
+        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+        index = self.relationship_parameter_model.index(row, 0, parent)
+        proxy_index = self.relationship_parameter_proxy.mapFromSource(index)
+        self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
+
+    @Slot("QModelIndex", "int", name="scroll_to_new_object_parameter_value")
+    def scroll_to_new_object_parameter_value(self, parent, row):
+        """Scroll to newly inserted parameter in the object parameter value tableview."""
+        self.ui.tabWidget_object.setCurrentIndex(0)
+        self.object_parameter_value_proxy.apply()
+        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
+        index = self.object_parameter_value_model.index(row, 0, parent)
+        proxy_index = self.object_parameter_value_proxy.mapFromSource(index)
+        self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
+
+    @Slot("QModelIndex", "int", name="scroll_to_new_relationship_parameter_value")
+    def scroll_to_new_relationship_parameter_value(self, parent, row):
+        """Scroll to newly inserted parameter in the relationship parameter value tableview."""
+        self.ui.tabWidget_relationship.setCurrentIndex(0)
+        self.relationship_parameter_value_proxy.apply()
+        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
+        index = self.relationship_parameter_value_model.index(row, 0, parent)
+        proxy_index = self.relationship_parameter_value_proxy.mapFromSource(index)
+        self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
+
+    @Slot("QModelIndex", name="expand_leaf_object_at_top_level")
+    def expand_leaf_object_at_top_level(self, index):
+        """Check if index corresponds to a related object with no children,
+        and expand it at top level."""
         if not index.isValid():
             return # just to be safe
         clicked_type = index.data(Qt.UserRole)
@@ -370,88 +432,70 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
         """Populate tableViews whenever an object item is selected in the treeView"""
-        # TODO: try to make it more sparse
-        # logging.debug("filter_parameter_value_models")
-        self.object_parameter_value_proxy.clear_filter()
-        self.relationship_parameter_value_proxy.clear_filter()
-        clicked_type = current.data(Qt.UserRole)
-        # filter rows and bold name
-        if clicked_type == 'object_class': # show all objects of this class
-            object_class_id = current.data(Qt.UserRole+1)['id']
-            self.object_parameter_value_proxy.object_class_id_filter = object_class_id
-        elif clicked_type == 'object': # show only this object
-            object_id = current.data(Qt.UserRole+1)['id']
-            object_name = current.data(Qt.UserRole+1)['name']
-            self.object_parameter_value_proxy.object_id_filter = object_id
-            self.relationship_parameter_value_proxy.object_id_filter = object_id
-            self.relationship_parameter_value_proxy.bold_name = object_name
-        elif clicked_type == 'relationship_class':
-            # show all related objects to this parent object, through this relationship class
-            parent_object_id = current.parent().data(Qt.UserRole+1)['id']
-            relationship_class_id = current.data(Qt.UserRole+1)['id']
-            relationship_class_name = current.data(Qt.UserRole+1)['name']
-            self.relationship_parameter_value_proxy.object_id_filter = parent_object_id
-            self.relationship_parameter_value_proxy.relationship_class_id_filter = relationship_class_id
-            self.relationship_parameter_value_proxy.bold_name = relationship_class_name
-        elif clicked_type == 'related_object':
-            # show only this object and this relationship
-            object_id = current.data(Qt.UserRole+1)['id']
-            object_name = current.data(Qt.UserRole+1)['name']
-            relationship_id = current.data(Qt.UserRole+1)['relationship_id']
-            self.object_parameter_value_proxy.object_id_filter = object_id
-            self.relationship_parameter_value_proxy.relationship_id_filter = relationship_id
-            self.relationship_parameter_value_proxy.bold_name = object_name
-        elif clicked_type == 'meta_relationship_class':
-            # show all related objects to this parent relationship, through this meta-relationship class
-            parent_relationship_id = current.parent().data(Qt.UserRole+1)['relationship_id']
-            relationship_class_id = current.data(Qt.UserRole+1)['id']
-            relationship_class_name = current.data(Qt.UserRole+1)['name']
-            self.relationship_parameter_value_proxy.parent_relationship_id_filter = parent_relationship_id
-            self.relationship_parameter_value_proxy.relationship_class_id_filter = relationship_class_id
-            self.relationship_parameter_value_proxy.bold_name = relationship_class_name
-        # filter columns in relationship parameter value model
-        header = self.relationship_parameter_value_model.header
-        if header:
-            if clicked_type == 'object':
-                self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
-            elif clicked_type == 'relationship_class':
-                self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
-            elif clicked_type == 'related_object':
-                relationship_class_type = current.parent().data(Qt.UserRole)
-                if relationship_class_type == 'meta_relationship_class': # hide parent_object_name
-                    self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
-                elif relationship_class_type == 'relationship_class': # hide parent_relationship_name
-                    self.relationship_parameter_value_proxy.hide_column = header.index("parent_relationship_name")
-            elif clicked_type == 'meta_relationship_class':
-                self.relationship_parameter_value_proxy.hide_column = header.index("parent_object_name")
-        # trick to trigger filtering
-        self.object_parameter_value_proxy.setFilterRegExp("")
-        self.relationship_parameter_value_proxy.setFilterRegExp("")
+        self.object_parameter_value_proxy.reset()
+        self.relationship_parameter_value_proxy.reset()
+        selected_type = current.data(Qt.UserRole)
+        if not selected_type:
+            return
+        selected = current.data(Qt.UserRole+1)
+        parent = current.parent().data(Qt.UserRole+1)
+        if selected_type == 'object_class':
+            object_class_name = selected['name']
+            self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
+        elif selected_type == 'object':
+            object_name = selected['name']
+            self.object_parameter_value_proxy.add_condition(object_name=object_name)
+            self.relationship_parameter_value_proxy.add_condition(parent_object_name=object_name,
+                child_object_name=object_name)
+            self.relationship_parameter_value_proxy.hide_column("parent_relationship_name")
+        elif selected_type == 'proto_relationship_class':
+            relationship_class_name = selected['name']
+            object_name = parent['name']
+            self.relationship_parameter_value_proxy.add_condition(parent_object_name=object_name,
+                child_object_name=object_name)
+            self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
+            self.relationship_parameter_value_proxy.hide_column("parent_relationship_name")
+        elif selected_type == 'related_object':
+            object_name = selected['name']
+            self.object_parameter_value_proxy.add_condition(object_name=object_name)
+            relationship_name = selected['relationship_name']
+            self.relationship_parameter_value_proxy.add_condition(parent_object_name=object_name,
+                child_object_name=object_name, parent_relationship_name=relationship_name)
+        elif selected_type == 'meta_relationship_class':
+            relationship_class_name = selected['name']
+            relationship_name = parent['relationship_name']
+            self.relationship_parameter_value_proxy.add_condition(parent_relationship_name=relationship_name)
+            self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
+            self.relationship_parameter_value_proxy.hide_column("parent_object_name")
+        self.object_parameter_value_proxy.apply()
+        self.relationship_parameter_value_proxy.apply()
+        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
+        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
         """Populate tableViews whenever an object item is selected in the treeView"""
-        # logging.debug("filter_parameter_models")
-        self.object_parameter_proxy.clear_filter()
-        self.relationship_parameter_proxy.clear_filter()
-        clicked_type = current.data(Qt.UserRole)
-        # filter rows
-        if clicked_type == 'object_class': # show only this class
-            object_class_id = current.data(Qt.UserRole+1)['id']
-            self.object_parameter_proxy.object_class_id_filter = object_class_id
-        elif clicked_type == 'object': # show only this object's class
-            object_class_id = current.data(Qt.UserRole+1)['class_id']
-            self.object_parameter_proxy.object_class_id_filter = object_class_id
-        elif clicked_type and clicked_type.endswith('relationship_class'):
-            relationship_class_id = current.data(Qt.UserRole+1)['id']
-            self.relationship_parameter_proxy.relationship_class_id_filter = relationship_class_id
-        elif clicked_type == 'related_object':
-            relationship_class_id = current.parent().data(Qt.UserRole+1)['id']
-            self.relationship_parameter_proxy.relationship_class_id_filter = relationship_class_id
-        # trick to trigger filtering
-        self.object_parameter_proxy.setFilterRegExp("")
-        self.relationship_parameter_proxy.setFilterRegExp("")
-        # resize columns
+        self.object_parameter_proxy.reset()
+        self.relationship_parameter_proxy.reset()
+        selected_type = current.data(Qt.UserRole)
+        if not selected_type:
+            return
+        selected = current.data(Qt.UserRole+1)
+        parent = current.parent().data(Qt.UserRole+1)
+        if selected_type == 'object_class': # show only this class
+            object_class_name = selected['name']
+            self.object_parameter_proxy.add_condition(object_class_name=object_class_name)
+        elif selected_type == 'object': # show only this object's class
+            object_class_name = parent['name']
+            self.object_parameter_proxy.add_condition(object_class_name=object_class_name)
+        elif selected_type.endswith('relationship_class'):
+            relationship_class_name = selected['name']
+            self.relationship_parameter_proxy.add_condition(relationship_class_name=relationship_class_name)
+        elif selected_type == 'related_object':
+            relationship_class_name = parent['name']
+            self.relationship_parameter_proxy.add_condition(relationship_class_name=relationship_class_name)
+        self.object_parameter_proxy.apply()
+        self.relationship_parameter_proxy.apply()
         self.ui.tableView_object_parameter.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
@@ -550,32 +594,14 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         for object_class_args in dialog.object_class_args_list:
-            object_class = self.mapping.add_object_class(**object_class_args)
-            if object_class:
-                self.add_object_class_to_model(object_class.__dict__)
-
-    def add_object_class_to_model(self, object_class):
-        """Add object class item to the object tree model.
-
-        Args:
-            object_class (dict)
-        """
-        object_class_item = self.object_tree_model.add_object_class(object_class)
-        # Add new item to root item at convenient position
-        root_item = self.object_tree_model.invisibleRootItem().child(0)
-        row = root_item.rowCount()
-        for i in range(root_item.rowCount()):
-            visited_object_class_item = root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['display_order'] > object_class['display_order']:
-                row = i
-                break
-        root_item.insertRow(row, QStandardItem())
-        root_item.setChild(row, 0, object_class_item)
-        # scroll to newly inserted item in treeview
-        object_class_index = self.object_tree_model.indexFromItem(object_class_item)
-        self.ui.treeView_object.setCurrentIndex(object_class_index)
-        self.ui.treeView_object.scrollTo(object_class_index)
+            try:
+                object_class = self.mapping.add_object_class(**object_class_args)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.object_tree_model.add_object_class(object_class.__dict__)
+            msg = "Successfully added new object class '{}'.".format(object_class.name)
+            self.msg.emit(msg)
 
     @Slot(name="add_objects")
     def add_objects(self, class_id=None):
@@ -585,40 +611,14 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         for object_args in dialog.object_args_list:
-            object_ = self.mapping.add_object(**object_args)
-            if object_:
-                self.add_object_to_model(object_.__dict__)
-
-    def add_object_to_model(self, object_):
-        """Add object item to the object tree model.
-
-        Args:
-            object_ (dict)
-        """
-        # find object class item among the children of the root
-        root_item = self.object_tree_model.invisibleRootItem().child(0)
-        object_class_item = None
-        for i in range(root_item.rowCount()):
-            visited_object_class_item = root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['id'] == object_['class_id']:
-                object_class_item = visited_object_class_item
-                break
-        if not object_class_item:
-            self.msg.emit("Object class item not found in model. This is probably a bug.")
-            return
-        # get relationship classes involving the present class
-        relationship_class_as_parent_list = self.mapping.relationship_class_list(
-            parent_object_class_id=object_['class_id'])
-        relationship_class_as_child_list = self.mapping.relationship_class_list(
-            child_object_class_id=object_['class_id'])
-        object_item = self.object_tree_model.add_object(object_, relationship_class_as_parent_list,
-            relationship_class_as_child_list)
-        object_class_item.appendRow(object_item)
-        # scroll to newly inserted item in treeview
-        object_index = self.object_tree_model.indexFromItem(object_item)
-        self.ui.treeView_object.setCurrentIndex(object_index)
-        self.ui.treeView_object.scrollTo(object_index)
+            try:
+                object_ = self.mapping.add_object(**object_args)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.object_tree_model.add_object(object_.__dict__)
+            msg = "Successfully added new object '{}'.".format(object_.name)
+            self.msg.emit(msg)
 
     @Slot(name="add_relationship_classes")
     def add_relationship_classes(self, parent_relationship_class_id=None, parent_object_class_id=None):
@@ -630,20 +630,14 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         for relationship_class_args in dialog.relationship_class_args_list:
-            relationship_class = self.mapping.add_relationship_class(**relationship_class_args)
-            if relationship_class:
-                self.add_relationship_class_to_model(relationship_class.__dict__)
-
-    def add_relationship_class_to_model(self, relationship_class):
-        """Add relationship class item to object tree model.
-
-        Args:
-            relationship_class (dict): the relationship class to add
-        """
-        if 'parent_object_class_id' in relationship_class:
-            self.object_tree_model.visit_and_add_relationship_class(relationship_class)
-        elif 'parent_relationship_class_id' in relationship_class:
-            self.object_tree_model.visit_and_add_meta_relationship_class(relationship_class)
+            try:
+                relationship_class = self.mapping.add_relationship_class(**relationship_class_args)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.object_tree_model.add_relationship_class(relationship_class.__dict__)
+            msg = "Successfully added new relationship class '{}'.".format(relationship_class.name)
+            self.msg.emit(msg)
 
     @Slot(name="add_relationships")
     def add_relationships(self, class_id=None, parent_relationship_id=None, parent_object_id=None,
@@ -661,24 +655,14 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         for relationship_args in dialog.relationship_args_list:
-            relationship = self.mapping.add_relationship(**relationship_args)
-            if relationship:
-                self.add_relationship_to_model(relationship.__dict__)
-
-    def add_relationship_to_model(self, relationship):
-        """Add relationship item to object tree model.
-
-        Args:
-            relationship (dict): the relationship to add
-        """
-        meta_relationship_class_list = self.mapping.meta_relationship_class_list(
-            parent_relationship_class_id=relationship['class_id'])
-        if 'parent_object_id' in relationship:
-            self.object_tree_model.visit_and_add_relationship(relationship,
-                meta_relationship_class_list)
-        elif 'parent_relationship_id' in relationship:
-            self.object_tree_model.visit_and_add_meta_relationship(relationship,
-                meta_relationship_class_list)
+            try:
+                relationship = self.mapping.add_relationship(**relationship_args)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.object_tree_model.add_relationship(relationship.__dict__)
+            msg = "Successfully added new relationship '{}'.".format(relationship.name)
+            self.msg.emit(msg)
 
     @Slot(name="add_parameters")
     def add_parameters(self, object_class_id=None, relationship_class_id=None):
@@ -693,9 +677,14 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         for parameter_args in dialog.parameter_args_list:
-            parameter = self.mapping.add_parameter(**parameter_args)
-            if parameter:
-                self.add_parameter_to_model(parameter.__dict__)
+            try:
+                parameter = self.mapping.add_parameter(**parameter_args)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.add_parameter_to_model(parameter.__dict__)
+            msg = "Successfully added new parameter '{}'.".format(parameter.name)
+            self.msg.emit(msg)
 
     def add_parameter_to_model(self, parameter):
         """Add parameter item to the object or relationship parameter model.
@@ -703,65 +692,24 @@ class DataStoreForm(QMainWindow):
         Args:
             parameter (dict)
         """
-        self.init_parameter_models()
-        # Scroll to concerned row in object parameter table
         if 'object_class_id' in parameter:
-            self.ui.tableView_object_parameter.resizeColumnsToContents()
-            source_row = self.object_parameter_model.rowCount()-1
-            source_column = self.object_parameter_model.header.index("parameter_name")
-            source_index = self.object_parameter_model.index(source_row, source_column)
-            proxy_index = self.object_parameter_proxy.mapFromSource(source_index)
-            self.ui.tabWidget_object.setCurrentIndex(1)
-            self.ui.tableView_object_parameter.setCurrentIndex(proxy_index)
-            self.ui.tableView_object_parameter.scrollTo(proxy_index)
-        # Scroll to concerned row in relationship parameter table
+            object_parameter = self.mapping.single_object_parameter(parameter['id'])
+            if not object_parameter:
+                return
+            self.object_parameter_proxy.reset()
+            self.object_parameter_proxy.add_condition(parameter_name=parameter['name'])
+            object_parameter_row_data = object_parameter._asdict().values()
+            row = self.object_parameter_model.rowCount()
+            self.object_parameter_model.insert_row_with_data(row, object_parameter_row_data)
         elif 'relationship_class_id' in parameter:
-            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
-            source_row = self.relationship_parameter_model.rowCount()-1
-            source_column = self.relationship_parameter_model.header.index("parameter_name")
-            source_index = self.relationship_parameter_model.index(source_row, source_column)
-            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
-            self.ui.tabWidget_relationship.setCurrentIndex(1)
-            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
-            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
-        # Scroll to concerned object class in treeview if necessary
-        if 'object_class_id' in parameter:
-            current_index = self.ui.treeView_object.currentIndex()
-            current_type = current_index.data(Qt.UserRole)
-            if current_type == 'object_class':
-                current_id = current_index.data(Qt.UserRole+1)['id']
-                if current_id == parameter['object_class_id']:
-                    return  # We're already in the right one
-            # Search it and scroll to it
-            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-                item_type = item.data(Qt.UserRole)
-                if not item_type: # root
-                    continue
-                item_id = item.data(Qt.UserRole+1)['id']
-                if item_type == 'object_class' and item_id == parameter['object_class_id']:
-                    object_class_index = self.object_tree_model.indexFromItem(item)
-                    self.ui.treeView_object.setCurrentIndex(object_class_index)
-                    self.ui.treeView_object.scrollTo(object_class_index)
-                    break
-        # Scroll to concerned relationship class in treeview if necessary
-        elif 'relationship_class_id' in parameter:
-            current_index = self.ui.treeView_object.currentIndex()
-            current_type = current_index.data(Qt.UserRole)
-            if current_type.endswith('relationship_class'):
-                current_id = current_index.data(Qt.UserRole+1)['id']
-                if current_id == parameter['relationship_class_id']:
-                    return  # We're already in the right one
-            # Search the first one that matches and scroll to it
-            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-                item_type = item.data(Qt.UserRole)
-                if not item_type: # root
-                    continue
-                item_id = item.data(Qt.UserRole+1)['id']
-                if item_type.endswith('relationship_class') and item_id == parameter['relationship_class_id']:
-                    relationship_class_index = self.object_tree_model.indexFromItem(item)
-                    self.ui.treeView_object.setCurrentIndex(relationship_class_index)
-                    self.ui.treeView_object.scrollTo(relationship_class_index)
-                    break
+            relationship_parameter = self.mapping.single_relationship_parameter(parameter['id'])
+            if not relationship_parameter:
+                return
+            self.relationship_parameter_proxy.reset()
+            self.relationship_parameter_proxy.add_condition(parameter_name=parameter['name'])
+            relationship_parameter_row_data = relationship_parameter._asdict().values()
+            row = self.relationship_parameter_model.rowCount()
+            self.relationship_parameter_model.insert_row_with_data(row, relationship_parameter_row_data)
 
     @Slot(name="add_parameter_values")
     def add_parameter_values(self, object_class_id=None, relationship_class_id=None,
@@ -779,9 +727,14 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         for parameter_value_args in dialog.parameter_value_args_list:
-            parameter_value = self.mapping.add_parameter_value(**parameter_value_args)
-            if parameter_value:
-                self.add_parameter_value_to_model(parameter_value.__dict__)
+            try:
+                parameter_value = self.mapping.add_parameter_value(**parameter_value_args)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.add_parameter_value_to_model(parameter_value.__dict__)
+            msg = "Successfully added new parameter value."
+            self.msg.emit(msg)
 
     def add_parameter_value_to_model(self, parameter_value):
         """Add parameter value item to the object or relationship parameter value model.
@@ -789,70 +742,26 @@ class DataStoreForm(QMainWindow):
         Args:
             parameter_value (dict)
         """
-        self.init_parameter_value_models()
-        # Scroll to concerned row in object parameter value table
         if 'object_id' in parameter_value:
-            self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-            source_row = self.object_parameter_value_model.rowCount()-1
-            source_column = self.object_parameter_value_model.header.index("parameter_name")
-            source_index = self.object_parameter_value_model.index(source_row, source_column)
-            proxy_index = self.object_parameter_value_proxy.mapFromSource(source_index)
-            self.ui.tabWidget_object.setCurrentIndex(0)
-            self.ui.tableView_object_parameter_value.setCurrentIndex(proxy_index)
-            self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
-        # Scroll to concerned row in relationship parameter value table
+            object_parameter_value = self.mapping.single_object_parameter_value(parameter_value['id'])
+            if not object_parameter_value:
+                return
+            self.object_parameter_value_proxy.reset()
+            parameter_name = object_parameter_value.parameter_name
+            self.object_parameter_value_proxy.add_condition(parameter_name=parameter_name)
+            object_parameter_value_row_data = object_parameter_value._asdict().values()
+            row = self.object_parameter_value_model.rowCount()
+            self.object_parameter_value_model.insert_row_with_data(row, object_parameter_value_row_data)
         elif 'relationship_id' in parameter_value:
-            self.relationship_parameter_proxy.setFilterRegExp("")
-            self.ui.tableView_relationship_parameter.resizeColumnsToContents()
-            source_row = self.relationship_parameter_model.rowCount()-1
-            source_column = self.relationship_parameter_model.header.index("parameter_name")
-            source_index = self.relationship_parameter_model.index(source_row, source_column)
-            proxy_index = self.relationship_parameter_proxy.mapFromSource(source_index)
-            self.ui.tabWidget_relationship.setCurrentIndex(0)
-            self.ui.tableView_relationship_parameter.setCurrentIndex(proxy_index)
-            self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
-        # Scroll to concerned object in treeview if necessary
-        if 'object_id' in parameter_value:
-            current_index = self.ui.treeView_object.currentIndex()
-            current_type = current_index.data(Qt.UserRole)
-            if current_type == 'object':
-                current_id = current_index.data(Qt.UserRole+1)['id']
-                if current_id == parameter_value['object_id']:
-                    return  # We're already in the right one
-            # Search it and scroll to it
-            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-                item_type = item.data(Qt.UserRole)
-                if not item_type: # root
-                    continue
-                if item_type != 'object':
-                    continue
-                item_id = item.data(Qt.UserRole+1)['id']
-                if item_id == parameter_value['object_id']:
-                    object_index = self.object_tree_model.indexFromItem(item)
-                    self.ui.treeView_object.setCurrentIndex(object_index)
-                    self.ui.treeView_object.scrollTo(object_index)
-                    break
-        # Scroll to concerned related_object in treeview if necessary
-        elif 'relationship_id' in parameter_value:
-            current_index = self.ui.treeView_object.currentIndex()
-            current_type = current_index.data(Qt.UserRole)
-            if current_type == 'related_object':
-                current_relationship_id = current_index.data(Qt.UserRole+1)['relationship_id']
-                if current_relationship_id == parameter_value['relationship_id']:
-                    return  # We're already in the right one
-            # Search the first one that matches and scroll to it
-            for item in self.object_tree_model.findItems("", Qt.MatchContains | Qt.MatchRecursive):
-                item_type = item.data(Qt.UserRole)
-                if not item_type: # root
-                    continue
-                if item_type != 'related_object':
-                    continue
-                item_relationship_id = item.data(Qt.UserRole+1)['relationship_id']
-                if item_relationship_id == parameter_value['relationship_id']:
-                    relationship_index = self.object_tree_model.indexFromItem(item)
-                    self.ui.treeView_object.setCurrentIndex(relationship_index)
-                    self.ui.treeView_object.scrollTo(relationship_index)
-                    break
+            relationship_parameter_value = self.mapping.single_relationship_parameter_value(parameter_value['id'])
+            if not relationship_parameter_value:
+                return
+            self.relationship_parameter_value_proxy.reset()
+            parameter_name = relationship_parameter_value.parameter_name
+            self.relationship_parameter_value_proxy.add_condition(parameter_name=parameter_name)
+            relationship_parameter_value_row_data = relationship_parameter_value._asdict().values()
+            row = self.relationship_parameter_value_model.rowCount()
+            self.relationship_parameter_value_model.insert_row_with_data(row, relationship_parameter_value_row_data)
 
     def rename_item(self, renamed_index):
         """Rename item in the database and treeview"""
@@ -865,20 +774,25 @@ class DataStoreForm(QMainWindow):
             return
         if new_name == curr_name: # nothing to do here
             return
-        # Get renamed instance
         renamed_type = renamed_item.data(Qt.UserRole)
         renamed = renamed_item.data(Qt.UserRole+1)
-        if renamed_type == 'object_class':
-            renamed_instance = self.mapping.rename_object_class(renamed['id'], new_name)
-        elif renamed_type.endswith('object'):
-            renamed_instance = self.mapping.rename_object(renamed['id'], new_name)
-        elif renamed_type.endswith('relationship_class'):
-            renamed_instance = self.mapping.rename_relationship_class(renamed['id'], new_name)
-        else:
-            return # should never happen
-        if not renamed_instance:
+        try:
+            if renamed_type == 'object_class':
+                object_class = self.mapping.rename_object_class(renamed['id'], new_name)
+                msg = "Successfully renamed object class to '{}'.".format(object_class.name)
+            elif renamed_type.endswith('object'):
+                object_ = self.mapping.rename_object(renamed['id'], new_name)
+                msg = "Successfully renamed object to '{}'.".format(object_.name)
+            elif renamed_type.endswith('relationship_class'):
+                relationship_class = self.mapping.rename_relationship_class(renamed['id'], new_name)
+                msg = "Successfully renamed relationship class to '{}'.".format(relationship_class.name)
+            else:
+                return # should never happen
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
             return
-        self.object_tree_model.visit_and_rename(new_name, curr_name, renamed_type, renamed['id'])
+        self.object_tree_model.rename_item(new_name, curr_name, renamed_type, renamed['id'])
         self.init_parameter_value_models()
         self.init_parameter_models()
 
@@ -892,20 +806,26 @@ class DataStoreForm(QMainWindow):
             removed_id = removed['relationship_id']
         else:
             removed_id = removed['id']
-        # Get removed instance
-        if removed_type == 'object_class':
-            removed_instance = self.mapping.remove_object_class(id=removed_id)
-        elif removed_type == 'object':
-            removed_instance = self.mapping.remove_object(id=removed_id)
-        elif removed_type.endswith('relationship_class'):
-            removed_instance = self.mapping.remove_relationship_class(id=removed_id)
-        elif removed_type == 'related_object':
-            removed_instance = self.mapping.remove_relationship(id=removed_id)
-        else:
-            return # should never happen
-        if not removed_instance:
+        try:
+            if removed_type == 'object_class':
+                self.mapping.remove_object_class(id=removed_id)
+                msg = "Successfully removed object class."
+            elif removed_type == 'object':
+                self.mapping.remove_object(id=removed_id)
+                msg = "Successfully removed object."
+            elif removed_type.endswith('relationship_class'):
+                self.mapping.remove_relationship_class(id=removed_id)
+                msg = "Successfully removed relationship class."
+            elif removed_type == 'related_object':
+                self.mapping.remove_relationship(id=removed_id)
+                msg = "Successfully removed relationship."
+            else:
+                return # should never happen
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
             return
-        self.object_tree_model.visit_and_remove(removed_type, removed_id)
+        self.object_tree_model.remove_item(removed_type, removed_id)
         # refresh parameter models
         self.init_parameter_value_models()
         self.init_parameter_models()
@@ -959,8 +879,14 @@ class DataStoreForm(QMainWindow):
         parameter_value_id = sibling.data()
         field_name = header[source_index.column()]
         new_value = editor.text()
-        if self.mapping.update_parameter_value(parameter_value_id, field_name, new_value):
-            source_model.setData(source_index, new_value)
+        try:
+            self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        source_model.setData(source_index, new_value)
+        msg = "Parameter value succesfully updated."
+        self.msg.emit(msg)
 
     def remove_parameter_value(self, proxy_index):
         """Remove row from (object or relationship) parameter_value table.
@@ -971,8 +897,12 @@ class DataStoreForm(QMainWindow):
         id_column = source_model.header.index('parameter_value_id')
         sibling = source_index.sibling(source_index.row(), id_column)
         parameter_value_id = sibling.data()
-        if self.mapping.remove_parameter_value(parameter_value_id):
-            source_model.removeRows(source_index.row(), 1)
+        try:
+            self.mapping.remove_parameter_value(parameter_value_id)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        source_model.removeRows(source_index.row(), 1)
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):
@@ -1025,12 +955,18 @@ class DataStoreForm(QMainWindow):
         if field_name == 'parameter_name':
             field_name = 'name'
         new_value = editor.text()
-        if self.mapping.update_parameter(parameter_id, field_name, new_value):
-            source_model.setData(source_index, new_value)
-            self.init_parameter_models()
-            # refresh parameter value models to reflect name change
-            if field_name == 'name':
-                self.init_parameter_value_models()
+        try:
+            self.mapping.update_parameter(parameter_id, field_name, new_value)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        source_model.setData(source_index, new_value)
+        msg = "Parameter succesfully updated."
+        self.msg.emit(msg)
+        self.init_parameter_models()
+        # refresh parameter value models to reflect name change
+        if field_name == 'name':
+            self.init_parameter_value_models()
 
     def remove_parameter(self, proxy_index):
         """Remove row from (object or relationship) parameter table.
@@ -1041,9 +977,13 @@ class DataStoreForm(QMainWindow):
         id_column = source_model.header.index('parameter_id')
         sibling = source_index.sibling(source_index.row(), id_column)
         parameter_id = sibling.data()
-        if self.mapping.remove_parameter(parameter_id):
-            source_model.removeRows(source_index.row(), 1)
-            self.init_parameter_value_models()
+        try:
+            self.mapping.remove_parameter(parameter_id)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        source_model.removeRows(source_index.row(), 1)
+        self.init_parameter_value_models()
 
     def restore_ui(self):
         """Restore UI state from previous session."""

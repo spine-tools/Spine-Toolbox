@@ -31,14 +31,12 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtWidgets import QInputDialog
 from metaobject import MetaObject
-from database_mapping import DatabaseMapping
+from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database, copy_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
-from helpers import create_dir, busy_effect, create_fresh_Spine_database
-from sqlalchemy import create_engine, Table, MetaData, select
-from sqlalchemy.exc import DatabaseError
+from helpers import create_dir, busy_effect
 
 
 class DataStore(MetaObject):
@@ -86,7 +84,7 @@ class DataStore(MetaObject):
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.toolButton_Spine.clicked.connect(self.create_fresh_Spine_database)
+        self._widget.ui.toolButton_Spine.clicked.connect(self.create_new_spine_database)
         self._widget.ui.listView_data.doubleClicked.connect(self.open_data_file)
         self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
@@ -169,8 +167,6 @@ class DataStore(MetaObject):
         self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
         # Source
         source_url = reference['url']
-        logging.debug(source_url)
-        source_engine = create_engine(source_url)
         # Destination
         if source_url.startswith('sqlite'):
             dest_filename = os.path.join(self.data_dir, database)
@@ -181,23 +177,7 @@ class DataStore(MetaObject):
         except OSError:
             pass
         dest_url = "sqlite:///" + dest_filename
-        dest_engine = create_engine(dest_url)  # , echo=True)
-        # Meta reflection
-        meta = MetaData()
-        meta.reflect(source_engine)
-        meta.create_all(dest_engine)
-        # Copy tables
-        source_meta = MetaData(bind=source_engine)
-        dest_meta = MetaData(bind=dest_engine)
-        for t in meta.sorted_tables:
-            source_table = Table(t, source_meta, autoload=True)
-            dest_table = Table(t, dest_meta, autoload=True)
-            sel = select([source_table])
-            result = source_engine.execute(sel)
-            values = [row for row in result]
-            if values:
-                ins = dest_table.insert()
-                dest_engine.execute(ins, values)
+        copy_database(dest_url, source_url)
         self.databases.append(database)
 
     @busy_effect
@@ -212,24 +192,12 @@ class DataStore(MetaObject):
         else:
             data_file = self.data_files()[index.row()]
             data_file_path = os.path.join(self.data_dir, data_file)
-            engine = create_engine("sqlite:///" + data_file_path)
-            # check if SQLite database
-            try:
-                engine.execute('pragma quick_check;')
-            except DatabaseError as e:
-                self._parent.msg_error.emit("Could not open <b>{}</b> as SQLite database: {}"
-                                            .format(data_file, e.orig.args))
-                return
-            # check if locked
-            try:
-                engine.execute('BEGIN IMMEDIATE')
-            except DatabaseError as e:
-                self._parent.msg_error.emit("Could not open <b>{}</b>, seems to be locked: {}"
-                                            .format(data_file, e.orig.args))
-                return
+            db_url = "sqlite:///" + data_file_path
             username = getpass.getuser()
-            mapping = DatabaseMapping(self._parent, engine, username)
-            if not mapping.init_base():
+            try:
+                mapping = DatabaseMapping(db_url, username)
+            except SpineDBAPIError as e:
+                self._parent.msg_error.emit(e.msg)
                 return
             database = data_file
             self.data_store_form = DataStoreForm(self, mapping, database)
@@ -249,14 +217,10 @@ class DataStore(MetaObject):
             db_url = reference['url']
             database = reference['database']
             username = reference['username']
-            engine = create_engine(db_url)
             try:
-                engine.connect()
-            except DatabaseError as e:
-                self._parent.msg_error.emit("Could not connect to <b>{}</b>: {}".format(db_url, e.orig.args))
-                return
-            mapping = DatabaseMapping(self._parent, engine, username)
-            if not mapping.init_base():
+                mapping = DatabaseMapping(db_url, username)
+            except SpineDBAPIError as e:
+                self._parent.msg_error.emit(e.msg)
                 return
             self.data_store_form = DataStoreForm(self, mapping, database)
             self.data_store_form.show()
@@ -303,9 +267,9 @@ class DataStore(MetaObject):
                     return path
         return None
 
-    @Slot(name="create_fresh_Spine_database")
-    def create_fresh_Spine_database(self):
-        """Create fresh (empty) Spine database file in data directory."""
+    @Slot(name="create_new_spine_database")
+    def create_new_spine_database(self):
+        """Create new (empty) Spine database file in data directory."""
         answer = QInputDialog.getText(self._parent, "Create fresh Spine database", "Database name:")
         database = answer[0]
         if not database:
@@ -316,5 +280,4 @@ class DataStore(MetaObject):
         except OSError:
             pass
         url = "sqlite:///" + filename
-        engine = create_engine(url)
-        create_fresh_Spine_database(engine)
+        create_new_spine_database(url)

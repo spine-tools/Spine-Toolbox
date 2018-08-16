@@ -36,7 +36,8 @@ from widgets.custom_menus import DescriptorTreeContextMenu
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
 from PySide2.QtCore import Qt, Slot, QSettings, SIGNAL
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
-from helpers import create_fresh_Spine_database, busy_effect
+from helpers import busy_effect
+from spinedatabase_api import create_new_spine_database
 from models import MinimalTableModel, DatapackageDescriptorModel
 from sqlalchemy import create_engine
 from sqlalchemy.ext.automap import automap_base
@@ -153,8 +154,7 @@ class SpineDatapackageWidget(QMainWindow):
         """Create engine with a fresh Spine database."""
         self.temp_filename = os.path.join(tempfile.gettempdir(), 'Spine.sqlite')
         url = "sqlite:///" + self.temp_filename
-        self.engine = create_engine(url)
-        create_fresh_Spine_database(self.engine)
+        create_new_spine_database(url)
 
     def create_base_and_reflect_tables(self):
         """Create base and reflect tables."""
