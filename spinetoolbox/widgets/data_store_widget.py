@@ -288,7 +288,7 @@ class DataStoreForm(QMainWindow):
         # hide id columns
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_class_id"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("object_id"))
+        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("object_id_list"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parameter_value_id"))
         # create line edit delegate and connect signals
         lineedit_delegate = LineEditDelegate(self)
@@ -335,6 +335,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         # hide id columns
         self.ui.tableView_relationship_parameter.hideColumn(header.index("relationship_class_id"))
+        self.ui.tableView_relationship_parameter.hideColumn(header.index("object_class_id_list"))
         self.ui.tableView_relationship_parameter.hideColumn(header.index("parameter_id"))
         # create line edit delegate and connect signals
         lineedit_delegate = LineEditDelegate(self)
@@ -595,14 +596,14 @@ class DataStoreForm(QMainWindow):
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        for wide_relationship_class in dialog.wide_relationship_class_list:
+        for wide_relationship_class_args in dialog.wide_relationship_class_args_list:
             try:
-                new_wide_relationship_class = self.mapping.add_wide_relationship_class(wide_relationship_class)
+                wide_relationship_class = self.mapping.add_wide_relationship_class(wide_relationship_class_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_relationship_class(new_wide_relationship_class)
-            msg = "Successfully added new relationship class '{}'.".format(new_wide_relationship_class['name'])
+            self.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
+            msg = "Successfully added new relationship class '{}'.".format(wide_relationship_class.name)
             self.msg.emit(msg)
 
     @Slot(name="add_relationships")
@@ -618,14 +619,14 @@ class DataStoreForm(QMainWindow):
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        for wide_relationship in dialog.wide_relationship_list:
+        for wide_relationship_args in dialog.wide_relationship_args_list:
             try:
-                new_wide_relationship = self.mapping.add_wide_relationship(wide_relationship)
+                wide_relationship = self.mapping.add_wide_relationship(wide_relationship_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_relationship(new_wide_relationship)
-            msg = "Successfully added new relationship '{}'.".format(new_wide_relationship['name'])
+            self.object_tree_model.add_relationship(wide_relationship._asdict())
+            msg = "Successfully added new relationship '{}'.".format(wide_relationship_args['name'])
             self.msg.emit(msg)
 
     @Slot(name="add_parameters")
@@ -657,7 +658,7 @@ class DataStoreForm(QMainWindow):
             parameter (dict)
         """
         if 'object_class_id' in parameter:
-            object_parameter = self.mapping.single_object_parameter(parameter['id'])
+            object_parameter = self.mapping.single_object_parameter(parameter['id']).one_or_none()
             if not object_parameter:
                 return
             self.object_parameter_proxy.reset()
@@ -666,7 +667,7 @@ class DataStoreForm(QMainWindow):
             row = self.object_parameter_model.rowCount()
             self.object_parameter_model.insert_row_with_data(row, object_parameter_row_data)
         elif 'relationship_class_id' in parameter:
-            relationship_parameter = self.mapping.single_relationship_parameter(parameter['id'])
+            relationship_parameter = self.mapping.single_relationship_parameter(parameter['id']).one_or_none()
             if not relationship_parameter:
                 return
             self.relationship_parameter_proxy.reset()
@@ -707,7 +708,7 @@ class DataStoreForm(QMainWindow):
             parameter_value (dict)
         """
         if 'object_id' in parameter_value:
-            object_parameter_value = self.mapping.single_object_parameter_value(parameter_value['id'])
+            object_parameter_value = self.mapping.single_object_parameter_value(parameter_value['id']).one_or_none()
             if not object_parameter_value:
                 return
             self.object_parameter_value_proxy.reset()
@@ -717,7 +718,8 @@ class DataStoreForm(QMainWindow):
             row = self.object_parameter_value_model.rowCount()
             self.object_parameter_value_model.insert_row_with_data(row, object_parameter_value_row_data)
         elif 'relationship_id' in parameter_value:
-            relationship_parameter_value = self.mapping.single_relationship_parameter_value(parameter_value['id'])
+            relationship_parameter_value = self.mapping.single_relationship_parameter_value(parameter_value['id']).\
+                one_or_none()
             if not relationship_parameter_value:
                 return
             self.relationship_parameter_value_proxy.reset()

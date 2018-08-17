@@ -123,7 +123,7 @@ class AddObjectsDialog(QDialog):
         self.object_args_list = list()
         self.object_class_list = mapping.object_class_list()
         self.object_class_name_list = [item.name for item in self.object_class_list]
-        default_class = mapping.single_object_class(class_id)
+        default_class = mapping.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         # Init ui
@@ -221,7 +221,7 @@ class AddRelationshipClassesDialog(QDialog):
     """A dialog to query user's preferences for new relationship classes."""
     def __init__(self, parent, mapping, object_class_one_id=None):
         super().__init__(parent)
-        self.wide_relationship_class_list = list()
+        self.wide_relationship_class_args_list = list()
         self.mapping = mapping
         self.number_of_dimensions = 2
         self.object_class_name_list = [item.name for item in mapping.object_class_list()]
@@ -230,7 +230,7 @@ class AddRelationshipClassesDialog(QDialog):
         # Default parent name
         self.object_class_one_name = None
         if object_class_one_id:
-            object_class_one = mapping.single_object_class(id=object_class_one_id)
+            object_class_one = mapping.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
         # Init ui
@@ -309,13 +309,12 @@ class AddRelationshipClassesDialog(QDialog):
         self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.object_class_data_commited)
 
     def remove_column(self):
-        line_delegate = self.ui.tableView.itemDelegate()
-        print(line_delegate)
         self.number_of_dimensions -= 1
         column = self.number_of_dimensions
         self.ui.tableView.itemDelegateForColumn(column).closeEditor.disconnect(self.object_class_data_commited)
         self.model.header.pop(column)
         self.model.removeColumns(column, 1)
+        line_delegate = self.ui.tableView.itemDelegate()
         self.ui.tableView.setItemDelegateForColumn(column, line_delegate)
 
     @Slot(name="insert_row")
@@ -372,17 +371,17 @@ class AddRelationshipClassesDialog(QDialog):
                 object_class_name = row[column]
                 if not object_class_name:
                     continue
-                object_class = self.mapping.single_object_class(name=object_class_name)
+                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
                 if not object_class:
                     continue
                 object_class_id_list.append(object_class.id)
             if len(object_class_id_list) < 2:
                 continue
-            wide_relationship_class = {
+            wide_relationship_class_args = {
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
             }
-            self.wide_relationship_class_list.append(wide_relationship_class)
+            self.wide_relationship_class_args_list.append(wide_relationship_class_args)
         super().accept()
 
 
@@ -390,7 +389,7 @@ class AddRelationshipsDialog(QDialog):
     """A dialog to query user's preferences for new relationships."""
     def __init__(self, parent, mapping, relationship_class_id=None, object_id=None, object_class_id=None):
         super().__init__(parent)
-        self.wide_relationship_list = list()
+        self.wide_relationship_args_list = list()
         self.mapping = mapping
         self.relationship_class_id = relationship_class_id
         self.default_object_column = None
@@ -417,8 +416,8 @@ class AddRelationshipsDialog(QDialog):
         self.ui.tableView.setModel(self.model)
         # Init combobox
         wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
-        self.relationship_class_name_list = [x['name'] for x in wide_relationship_class_list]
-        self.relationship_class_id_list = [x['id'] for x in wide_relationship_class_list]
+        self.relationship_class_name_list = [x.name for x in wide_relationship_class_list]
+        self.relationship_class_id_list = [x.id for x in wide_relationship_class_list]
         self.ui.comboBox_relationship_class.addItems(self.relationship_class_name_list)
         self.ui.comboBox_relationship_class.setCurrentIndex(-1)
         self.set_defaults(object_id, object_class_id)
@@ -454,20 +453,21 @@ class AddRelationshipsDialog(QDialog):
         """
         if not self.relationship_class_id:
             return
-        relationship_class = self.mapping.single_wide_relationship_class(id=self.relationship_class_id)
+        relationship_class = self.mapping.single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
         if not relationship_class:
             logging.debug("Couldn't find relationship class, probably a bug.")
             return
-        relationship_class_name = relationship_class['name']
+        relationship_class_name = relationship_class.name
         index = self.relationship_class_name_list.index(relationship_class_name)
         self.ui.comboBox_relationship_class.setCurrentIndex(index)
         if object_id is None or object_class_id is None:
             return
-        object_ = self.mapping.single_object(id=object_id)
+        object_ = self.mapping.single_object(id=object_id).one_or_none()
         if not object_:
             return
         try:
-            self.default_object_column = relationship_class['object_class_id_list'].index(object_class_id)
+            object_class_id_list = relationship_class.object_class_id_list
+            self.default_object_column = [int(x) for x in object_class_id_list.split(',')].index(object_class_id)
         except ValueError:
             return
         self.default_object_name = object_.name
@@ -497,14 +497,15 @@ class AddRelationshipsDialog(QDialog):
         """
         if not self.relationship_class_id:
             return
-        wide_relationship_class = self.mapping.single_wide_relationship_class(self.relationship_class_id)
+        wide_relationship_class = self.mapping.single_wide_relationship_class(self.relationship_class_id).one_or_none()
         if not wide_relationship_class:
             logging.debug("Couldn't find relationship class, probably a bug.")
             return
         header = list()
-        self.object_class_id_list = wide_relationship_class['object_class_id_list']
+        object_class_id_list = wide_relationship_class.object_class_id_list
+        self.object_class_id_list = [int(x) for x in object_class_id_list.split(',')]
         for object_class_id in self.object_class_id_list:
-            object_class = self.mapping.single_object_class(id=object_class_id)
+            object_class = self.mapping.single_object_class(id=object_class_id).one_or_none()
             if not object_class:
                 logging.debug("Couldn't find object class, probably a bug.")
                 return
@@ -524,7 +525,7 @@ class AddRelationshipsDialog(QDialog):
             object_list = self.mapping.object_list(class_id=object_class_id)
             object_names = [x.name for x in object_list]
             if not object_names:
-                object_class = self.mapping.single_object_class(id=object_class_id)
+                object_class = self.mapping.single_object_class(id=object_class_id).one_or_none()
                 if not object_class:
                     logging.debug("Couldn't find object class, probably a bug.")
                     return
@@ -587,18 +588,18 @@ class AddRelationshipsDialog(QDialog):
                 object_name = row[column]
                 if not object_name:
                     continue
-                object_ = self.mapping.single_object(name=object_name)
+                object_ = self.mapping.single_object(name=object_name).one_or_none()
                 if not object_:
                     continue
                 object_id_list.append(object_.id)
             if len(object_id_list) < 2:
                 continue
-            wide_relationship = {
+            wide_relationship_args = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
                 'class_id': self.relationship_class_id
             }
-            self.wide_relationship_list.append(wide_relationship)
+            self.wide_relationship_args_list.append(wide_relationship_args)
         super().accept()
 
 
@@ -607,23 +608,22 @@ class AddParametersDialog(QDialog):
     def __init__(self, parent, mapping, object_class_id=None, relationship_class_id=None):
         super().__init__(parent)
         self.parameter_args_list = list()
-        self.object_class_list = mapping.object_class_list()
-        self.relationship_class_list = mapping.relationship_class_list()
-        self.class_name_list = [item.name for item in self.object_class_list]
-        self.class_name_list.extend([item.name for item in self.relationship_class_list])
+        self.mapping = mapping
+        self.class_name_list = [item.name for item in self.mapping.object_class_list()]
+        self.class_name_list.extend([item.name for item in self.mapping.wide_relationship_class_list()])
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
-        # Default parent name
+        # Default class name
         self.default_class_name = None
         if object_class_id:
-            object_class = mapping.single_object_class(id=object_class_id)
+            object_class = mapping.single_object_class(id=object_class_id).one_or_none()
             if object_class:
                 self.default_class_name = object_class.name
                 self.default_class_icon = self.object_icon
         elif relationship_class_id:
-            relationship_class = mapping.single_relationship_class(id=relationship_class_id)
-            if relationship_class:
-                self.default_class_name = relationship_class.name
+            wide_relationship_class = mapping.single_wide_relationship_class(id=relationship_class_id).one_or_none()
+            if wide_relationship_class:
+                self.default_class_name = wide_relationship_class.name
                 self.default_class_icon = self.relationship_icon
         # Init ui
         self.ui = ui.add_parameters.Ui_Dialog()
@@ -663,8 +663,9 @@ class AddParametersDialog(QDialog):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
         font_metric = QFontMetrics(QFont("", 0))
-        object_class_width = max([font_metric.width(x.name) for x in self.object_class_list], default=0)
-        relationship_class_width = max([font_metric.width(x.name) for x in self.relationship_class_list], default=0)
+        object_class_width = max([font_metric.width(x.name) for x in self.mapping.object_class_list()], default=0)
+        relationship_class_width = max(
+            [font_metric.width(x.name) for x in self.mapping.wide_relationship_class_list()], default=0)
         class_width = max(object_class_width, relationship_class_width, header.sectionSize(0))
         icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
         header.resizeSection(0, icon_width + class_width)
@@ -699,7 +700,7 @@ class AddParametersDialog(QDialog):
         column = editor.column
         index = self.model.index(row, column)
         self.model.setData(index, class_name, Qt.EditRole)
-        object_class = self.object_class_list.filter_by(name=class_name).one_or_none()
+        object_class = self.mapping.single_object_class(name=class_name).one_or_none()
         if object_class:
             class_icon = self.object_icon
         else:
@@ -712,8 +713,8 @@ class AddParametersDialog(QDialog):
             if any([True for i in row if not i]):
                 continue
             class_name, name = row
-            object_class = self.object_class_list.filter_by(name=class_name).one_or_none()
-            relationship_class = self.relationship_class_list.filter_by(name=class_name).one_or_none()
+            object_class = self.mapping.single_object_class(name=class_name).one_or_none()
+            relationship_class = self.mapping.single_wide_relationship_class(name=class_name).one_or_none()
             if object_class is None and relationship_class is None:
                 continue
             object_class_id = object_class.id if object_class else None
@@ -735,13 +736,8 @@ class AddParameterValuesDialog(QDialog):
         super().__init__(parent)
         self.mapping = mapping
         self.parameter_value_args_list = list()
-        self.object_class_list = mapping.object_class_list()
-        self.relationship_class_list = mapping.relationship_class_list()
-        self.object_list = mapping.object_list()
-        self.relationship_list = mapping.relationship_list()
-        self.parameter_list = mapping.parameter_list()
-        self.class_name_list = [item.name for item in self.object_class_list]
-        self.class_name_list.extend([item.name for item in self.relationship_class_list])
+        self.class_name_list = [item.name for item in self.mapping.object_class_list()]
+        self.class_name_list.extend([item.name for item in self.mapping.wide_relationship_class_list()])
         # Icon initialization
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
@@ -749,22 +745,22 @@ class AddParameterValuesDialog(QDialog):
         self.default_class_name = None
         self.default_entity_name = None
         if object_class_id:
-            object_class = mapping.single_object_class(id=object_class_id)
+            object_class = self.mapping.single_object_class(id=object_class_id).one_or_none()
             if object_class:
                 self.default_class_name = object_class.name
                 self.default_class_icon = self.object_icon
         elif relationship_class_id:
-            relationship_class = mapping.single_relationship_class(id=relationship_class_id)
+            relationship_class = self.mapping.single_wide_relationship_class(id=relationship_class_id).one_or_none()
             if relationship_class:
                 self.default_class_name = relationship_class.name
                 self.default_class_icon = self.relationship_icon
         if object_id:
-            object_ = mapping.single_object(id=object_id)
+            object_ = self.mapping.single_object(id=object_id).one_or_none()
             if object_:
                 self.default_entity_name = object_.name
                 self.default_entity_icon = self.object_icon
         elif relationship_id:
-            relationship = mapping.single_relationship(id=relationship_id)
+            relationship = self.mapping.single_wide_relationship(id=relationship_id).one_or_none()
             if relationship:
                 self.default_entity_name = relationship.name
                 self.default_entity_icon = self.relationship_icon
@@ -824,11 +820,13 @@ class AddParameterValuesDialog(QDialog):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
         font_metric = QFontMetrics(QFont("", 0))
-        object_class_width = max([font_metric.width(x.name) for x in self.object_class_list], default=0)
-        relationship_class_width = max([font_metric.width(x.name) for x in self.relationship_class_list], default=0)
-        object_width = max([font_metric.width(x.name) for x in self.object_list], default=0)
-        relationship_width = max([font_metric.width(x.name) for x in self.relationship_list], default=0)
-        parameter_width = max([font_metric.width(x.name) for x in self.parameter_list], default=0)
+        object_class_width = max([font_metric.width(x.name) for x in self.mapping.object_class_list()], default=0)
+        relationship_class_width = max(
+            [font_metric.width(x.name) for x in self.mapping.wide_relationship_class_list()], default=0)
+        object_width = max([font_metric.width(x.name) for x in self.mapping.object_list()], default=0)
+        relationship_width = max(
+            [font_metric.width(x.name) for x in self.mapping.wide_relationship_list()], default=0)
+        parameter_width = max([font_metric.width(x.name) for x in self.mapping.parameter_list()], default=0)
         class_width = max(object_class_width, relationship_class_width, header.sectionSize(0))
         entity_width = max(object_width, relationship_width, header.sectionSize(1))
         parameter_width = max(parameter_width, header.sectionSize(2))
@@ -875,7 +873,7 @@ class AddParameterValuesDialog(QDialog):
         column = editor.column
         index = self.model.index(row, column)
         self.model.setData(index, class_name, Qt.EditRole)
-        object_class = self.object_class_list.filter_by(name=class_name).one_or_none()
+        object_class = self.mapping.single_object_class(name=class_name).one_or_none()
         if object_class:
             class_icon = self.object_icon
         else:
@@ -894,14 +892,14 @@ class AddParameterValuesDialog(QDialog):
             row (int): The row in the model.
         """
         msg = self.statusbar.currentMessage()
-        object_class = self.object_class_list.filter_by(name=name).one_or_none()
-        relationship_class = self.relationship_class_list.filter_by(name=name).one_or_none()
+        object_class = self.mapping.single_object_class(name=name).one_or_none()
+        relationship_class = self.mapping.single_wide_relationship_class(name=name).one_or_none()
         if object_class:
-            entity_name_list = [i.name for i in self.object_list.filter_by(class_id=object_class.id)]
+            entity_name_list = [i.name for i in self.mapping.object_list(class_id=object_class.id)]
             if not entity_name_list:
                 msg += "Class '{}' does not have any objects. ".format(name)
         elif relationship_class:
-            entity_name_list = [i.name for i in self.relationship_list.filter_by(class_id=relationship_class.id)]
+            entity_name_list = [i.name for i in self.mapping.wide_relationship_list(class_id=relationship_class.id)]
             if not entity_name_list:
                 msg += "Class '{}' does not have any relationships. ".format(name)
         else:
@@ -920,7 +918,7 @@ class AddParameterValuesDialog(QDialog):
         column = editor.column
         index = self.model.index(row, column)
         self.model.setData(index, entity_name, Qt.EditRole)
-        object_ = self.object_list.filter_by(name=entity_name).one_or_none()
+        object_ = self.mapping.single_object(name=entity_name).one_or_none()
         if object_:
             entity_icon = self.object_icon
         else:
@@ -936,8 +934,8 @@ class AddParameterValuesDialog(QDialog):
             row (int): The row in the model.
         """
         msg = self.statusbar.currentMessage()
-        object_ = self.object_list.filter_by(name=entity_name).one_or_none()
-        relationship = self.relationship_list.filter_by(name=entity_name).one_or_none()
+        object_ = self.mapping.single_object(name=entity_name).one_or_none()
+        relationship = self.mapping.single_wide_relationship(name=entity_name).one_or_none()
         if object_:
             parameter_list = self.mapping.unvalued_object_parameter_list(object_.id)
             parameter_name_list = [i.name for i in parameter_list]
@@ -970,13 +968,16 @@ class AddParameterValuesDialog(QDialog):
                 continue
             if not value and not json:
                 continue
-            object_ = self.object_list.filter_by(name=entity_name).one_or_none()
-            relationship = self.relationship_list.filter_by(name=entity_name).one_or_none()
+            object_ = self.mapping.single_object(name=entity_name).one_or_none()
+            relationship = self.mapping.single_wide_relationship(name=entity_name).one_or_none()
             if object_ is None and relationship is None:
+                continue
+            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            if not parameter:
                 continue
             object_id = object_.id if object_ else None
             relationship_id = relationship.id if relationship else None
-            parameter_id = self.parameter_list.filter_by(name=parameter_name).one().id
+            parameter_id = parameter.id
             parameter_value_args = {
                 'object_id': object_id,
                 'relationship_id': relationship_id,

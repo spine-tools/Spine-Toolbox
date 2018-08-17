@@ -1011,14 +1011,14 @@ class ObjectTreeModel(QStandardItemModel):
 
         Args:
             object_ (dict)
-            relationship_class_list (query)
+            wide_relationship_class_list (query)
         """
         object_item = QStandardItem(object_['name'])
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_, Qt.UserRole+1)
         # create and append relationship class items
         for wide_relationship_class in wide_relationship_class_list:
-            relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
+            relationship_class_item = self.new_relationship_class_item(wide_relationship_class._asdict(), object_)
             object_item.appendRow(relationship_class_item)
         return object_item
 
@@ -1032,12 +1032,13 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item = QStandardItem(wide_relationship_class['name'])
         relationship_class_item.setData(wide_relationship_class, Qt.UserRole+1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
+        relationship_class_item.setData(wide_relationship_class['object_class_name_list'], Qt.ToolTipRole)
         # get relationship involving the present object and class in wide format
         wide_relationship_list = self.mapping.wide_relationship_list(
             class_id=wide_relationship_class['id'],
             object_id=object_['id'])
         for wide_relationship in wide_relationship_list:
-            relationship_item = self.new_relationship_item(wide_relationship)
+            relationship_item = self.new_relationship_item(wide_relationship._asdict())
             relationship_class_item.appendRow(relationship_item)
         return relationship_class_item
 
@@ -1050,6 +1051,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_item = QStandardItem(wide_relationship['name'])
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData(wide_relationship, Qt.UserRole+1)
+        relationship_item.setData(wide_relationship['object_name_list'], Qt.ToolTipRole)
         return relationship_item
 
     def add_object_class(self, object_class):
@@ -1102,7 +1104,8 @@ class ObjectTreeModel(QStandardItemModel):
             if not visited_type == 'object':
                 continue
             visited_object = visited_item.data(Qt.UserRole+1)
-            if visited_object['class_id'] not in wide_relationship_class['object_class_id_list']:
+            object_class_id_list = wide_relationship_class['object_class_id_list']
+            if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
             visited_item.appendRow(relationship_class_item)
@@ -1126,7 +1129,8 @@ class ObjectTreeModel(QStandardItemModel):
             if not visited_relationship_class['id'] == wide_relationship['class_id']:
                 continue
             visited_object = visited_item.parent().data(Qt.UserRole+1)
-            if visited_object['id'] not in wide_relationship['object_id_list']:
+            object_id_list = wide_relationship['object_id_list']
+            if visited_object['id'] not in [int(x) for x in object_id_list.split(',')]:
                 continue
             relationship_item = self.new_relationship_item(wide_relationship)
             visited_item.appendRow(relationship_item)
@@ -1162,11 +1166,13 @@ class ObjectTreeModel(QStandardItemModel):
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
             # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type == 'relationship_class':
-                if removed_id in visited['object_class_id_list']:
+                object_class_id_list = visited['object_class_id_list']
+                if removed_id in [int(x) for x in object_class_id_list.split(',')]:
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
             # When removing an object, also remove relationships that involve it
             if removed_type == 'object' and visited_type == 'relationship':
-                if removed_id in visited['object_id_list']:
+                object_id_list = visited['object_id_list']
+                if removed_id in [int(x) for x in object_id_list.split(',')]:
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
 
     def next_relationship_index(self, index):
@@ -1235,6 +1241,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         is satisfied as soon as ANY of its statements is satisfied.
         Also set bold font for matched items in each row.
         """
+        return True
         for column in range(self.sourceModel().columnCount()):
             source_index = self.sourceModel().index(source_row, column, source_parent)
             self.sourceModel().setData(source_index, None, Qt.FontRole)
