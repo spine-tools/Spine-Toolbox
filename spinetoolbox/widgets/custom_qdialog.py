@@ -939,6 +939,7 @@ class AddParameterValuesDialog(QDialog):
         if object_:
             parameter_list = self.mapping.unvalued_object_parameter_list(object_.id)
             parameter_name_list = [i.name for i in parameter_list]
+            # TODO: remove from the list the ones already picked in this form.
         elif relationship:
             parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
             parameter_name_list = [i.name for i in parameter_list]

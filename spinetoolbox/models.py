@@ -1199,7 +1199,8 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         super().__init__(parent)
         self._parent = parent
         self.condition_list = list()
-        self.hidden_column = None
+        self.hidden_column_list = list()
+        self.fixed_column_list = list()  # Non-editable columns
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.setDynamicSortFilter(False)
@@ -1214,14 +1215,20 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
 
     def reset(self):
         self.condition_list = list()
-        self.hidden_column = None
+        self.hidden_column_list = list()
 
     def apply(self):
         self.setFilterRegExp("")
 
-    def hide_column(self, name):
+    def add_fixed_column(self, *names):
         h = self.sourceModel().header
-        self.hidden_column = h.index(name)
+        for name in names:
+            self.fixed_column_list.append(h.index(name))
+
+    def add_hidden_column(self, *names):
+        h = self.sourceModel().header
+        for name in names:
+            self.hidden_column_list.append(h.index(name))
 
     def add_condition(self, **kwargs):
         """Add a condition to the list by taking the kwargs as statements.
@@ -1241,7 +1248,6 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         is satisfied as soon as ANY of its statements is satisfied.
         Also set bold font for matched items in each row.
         """
-        return True
         for column in range(self.sourceModel().columnCount()):
             source_index = self.sourceModel().index(source_row, column, source_parent)
             self.sourceModel().setData(source_index, None, Qt.FontRole)
@@ -1252,8 +1258,8 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             partial_result = False
             for column, value in condition.items():
                 source_index = self.sourceModel().index(source_row, column, source_parent)
-                #index = self.mapFromSource(source_index)
-                if self.sourceModel().data(source_index, self.filterRole()) == value:
+                data = self.sourceModel().data(source_index, self.filterRole()).split(',')
+                if value in data:
                     partial_result = True
                     self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
             result = result and partial_result
@@ -1263,77 +1269,14 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         """Returns true if the item in the column indicated by the given source_column
         and source_parent should be included in the model; otherwise returns false.
         """
-        if self.hidden_column is None:
+        if not self.hidden_column_list:
             return True
-        return source_column != self.hidden_column
-
-
-class ObjectParameterProxy(CustomSortFilterProxyModel):
-    """A class to filter the object parameter table in Data Store."""
-
-    def __init__(self, parent=None):
-        """Initialize class."""
-        super().__init__(parent)
+        return source_column not in self.hidden_column_list
 
     def flags(self, index):
         """Returns the item flags for the given index."""
-        source_index = self.mapToSource(index)
-        column_name = self.sourceModel().header[source_index.column()]
-        if column_name == 'object_class_name':
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
-
-
-class ObjectParameterValueProxy(CustomSortFilterProxyModel):
-    """A class to filter the object parameter value table in Data Store."""
-
-    def __init__(self, parent=None):
-        """Initialize class."""
-        super().__init__(parent)
-
-    def flags(self, index):
-        """Returns the item flags for the given index."""
-        source_index = self.mapToSource(index)
-        column_name = self.sourceModel().header[source_index.column()]
-        if column_name in ('object_class_name', 'object_name', 'parameter_name'):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
-
-
-class RelationshipParameterProxy(CustomSortFilterProxyModel):
-    """A class to filter the relationship parameter table in Data Store."""
-
-    def __init__(self, parent=None):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-
-    def flags(self, index):
-        """Returns the item flags for the given index."""
-        column_name = self.sourceModel().header[index.column()]
-        if column_name == 'relationship_class_name':
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
-
-
-class RelationshipParameterValueProxy(CustomSortFilterProxyModel):
-    """A class to filter the relationship parameter value table in Data Store."""
-
-    def __init__(self, parent=None):
-        """Initialize class."""
-        super().__init__(parent)
-
-    def flags(self, index):
-        """Returns the item flags for the given index."""
-        source_index = self.mapToSource(index)
-        column_name = self.sourceModel().header[source_index.column()]
-        if column_name in [
-                    'relationship_class_name',
-                    'parent_object_name',
-                    'parent_relationship_name',
-                    'child_object_name',
-                    'parameter_name'
-                ]:
+        source_column = self.mapToSource(index).column()
+        if source_column in self.fixed_column_list:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 

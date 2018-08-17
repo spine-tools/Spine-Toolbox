@@ -37,8 +37,7 @@ from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMen
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, AddParametersDialog, AddParameterValuesDialog, CommitDialog
-from models import ObjectTreeModel, MinimalTableModel, ObjectParameterValueProxy, \
-    RelationshipParameterValueProxy, ObjectParameterProxy, RelationshipParameterProxy
+from models import ObjectTreeModel, MinimalTableModel, CustomSortFilterProxyModel
 
 
 class DataStoreForm(QMainWindow):
@@ -70,14 +69,14 @@ class DataStoreForm(QMainWindow):
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
         self.object_parameter_value_model = MinimalTableModel(self)
-        self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
+        self.object_parameter_value_proxy = CustomSortFilterProxyModel(self)
         self.relationship_parameter_value_model = MinimalTableModel(self)
-        self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
+        self.relationship_parameter_value_proxy = CustomSortFilterProxyModel(self)
         # Parameter (definition) models
         self.object_parameter_model = MinimalTableModel(self)
-        self.object_parameter_proxy = ObjectParameterProxy(self)
+        self.object_parameter_proxy = CustomSortFilterProxyModel(self)
         self.relationship_parameter_model = MinimalTableModel(self)
-        self.relationship_parameter_proxy = RelationshipParameterProxy(self)
+        self.relationship_parameter_proxy = CustomSortFilterProxyModel(self)
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
@@ -119,13 +118,27 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_parameters.triggered.connect(self.add_parameters)
         self.ui.actionAdd_parameter_values.triggered.connect(self.add_parameter_values)
         # Object tree
-        #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
-        #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
         self.object_tree_model.rowsInserted.connect(self.scroll_to_new_item)
         # Parameter tables
+        # Editor closed
+        lineedit_delegate = LineEditDelegate(self)
+        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
+        self.ui.tableView_object_parameter_value.setItemDelegate(lineedit_delegate)
+        lineedit_delegate = LineEditDelegate(self)
+        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
+        self.ui.tableView_relationship_parameter_value.setItemDelegate(lineedit_delegate)
+        lineedit_delegate = LineEditDelegate(self)
+        lineedit_delegate.closeEditor.connect(self.update_parameter)
+        self.ui.tableView_object_parameter.setItemDelegate(lineedit_delegate)
+        lineedit_delegate = LineEditDelegate(self)
+        lineedit_delegate.closeEditor.connect(self.update_parameter)
+        self.ui.tableView_relationship_parameter.setItemDelegate(lineedit_delegate)
+        # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
         self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
@@ -134,6 +147,7 @@ class DataStoreForm(QMainWindow):
             connect(self.show_object_parameter_context_menu)
         self.ui.tableView_relationship_parameter.customContextMenuRequested.\
             connect(self.show_relationship_parameter_context_menu)
+        # Rows inserted
         self.object_parameter_model.row_with_data_inserted.\
             connect(self.scroll_to_new_object_parameter)
         self.relationship_parameter_model.row_with_data_inserted.\
@@ -222,6 +236,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_value_model.header = [column['name'] for column in header]
         self.object_parameter_value_model.reset_model(object_parameter_value_data)
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
+        self.object_parameter_value_proxy.add_fixed_column('object_class_name', 'object_name', 'parameter_name')
         # Relationship
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         header = relationship_parameter_value_list.column_descriptions
@@ -229,6 +244,12 @@ class DataStoreForm(QMainWindow):
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
         self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
+        self.relationship_parameter_value_proxy.add_fixed_column(
+            'relationship_class_name',
+            'object_class_name_list',
+            'relationship_name',
+            'object_name_list',
+            'parameter_name')
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
@@ -239,6 +260,7 @@ class DataStoreForm(QMainWindow):
         object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
         self.object_parameter_model.reset_model(object_parameter_data)
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
+        self.object_parameter_proxy.add_fixed_column('object_class_name')
         # Relationship
         relationship_parameter_list = self.mapping.relationship_parameter_list()
         header = relationship_parameter_list.column_descriptions
@@ -246,6 +268,7 @@ class DataStoreForm(QMainWindow):
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
         self.relationship_parameter_model.reset_model(relationship_parameter_data)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
+        self.relationship_parameter_proxy.add_fixed_column('relationship_class_name')
 
     def init_parameter_value_views(self):
         self.init_object_parameter_value_view()
@@ -256,21 +279,9 @@ class DataStoreForm(QMainWindow):
         header = self.object_parameter_value_model.header
         if not header:
             return
-        # set column resize mode
-        self.ui.tableView_object_parameter_value.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_object_parameter_value.verticalHeader().\
-            setDefaultSectionSize(self.default_row_height)
-        # set model
+        self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
-        # hide id columns
-        self.ui.tableView_object_parameter_value.hideColumn(header.index("object_class_id"))
-        self.ui.tableView_object_parameter_value.hideColumn(header.index("object_id"))
-        self.ui.tableView_object_parameter_value.hideColumn(header.index("parameter_value_id"))
-        # create line edit delegate and connect signals
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
-        self.ui.tableView_object_parameter_value.setItemDelegate(lineedit_delegate)
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
@@ -278,22 +289,9 @@ class DataStoreForm(QMainWindow):
         header = self.relationship_parameter_value_model.header
         if not header:
             return
-        # set column resize mode
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_relationship_parameter_value.verticalHeader().\
-            setDefaultSectionSize(self.default_row_height)
-        # set model
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
-        # hide id columns
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_class_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("object_id_list"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parameter_value_id"))
-        # create line edit delegate and connect signals
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
-        self.ui.tableView_relationship_parameter_value.setItemDelegate(lineedit_delegate)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_views(self):
@@ -305,20 +303,9 @@ class DataStoreForm(QMainWindow):
         header = self.object_parameter_model.header
         if not header:
             return
-        # set column resize mode
-        self.ui.tableView_object_parameter.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_object_parameter.verticalHeader().\
-            setDefaultSectionSize(self.default_row_height)
-        # set model
+        self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_object_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
-        # hide id columns
-        self.ui.tableView_object_parameter.hideColumn(header.index("object_class_id"))
-        self.ui.tableView_object_parameter.hideColumn(header.index("parameter_id"))
-        # create line edit delegate and connect signals
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter)
-        self.ui.tableView_object_parameter.setItemDelegate(lineedit_delegate)
         self.ui.tableView_object_parameter.resizeColumnsToContents()
 
     def init_relationship_parameter_view(self):
@@ -326,21 +313,9 @@ class DataStoreForm(QMainWindow):
         header = self.relationship_parameter_model.header
         if not header:
             return
-        # set column resize mode
-        self.ui.tableView_relationship_parameter.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_relationship_parameter.verticalHeader().\
-            setDefaultSectionSize(self.default_row_height)
-        # set model
+        self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_relationship_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
-        # hide id columns
-        self.ui.tableView_relationship_parameter.hideColumn(header.index("relationship_class_id"))
-        self.ui.tableView_relationship_parameter.hideColumn(header.index("object_class_id_list"))
-        self.ui.tableView_relationship_parameter.hideColumn(header.index("parameter_id"))
-        # create line edit delegate and connect signals
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter)
-        self.ui.tableView_relationship_parameter.setItemDelegate(lineedit_delegate)
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
     @Slot("QModelIndex", "int", "int", name="scroll_to_new_item")
@@ -427,31 +402,21 @@ class DataStoreForm(QMainWindow):
         if selected_type == 'object_class':
             object_class_name = selected['name']
             self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
+            self.relationship_parameter_value_proxy.add_condition(object_class_name_list=object_class_name)
+            self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
         elif selected_type == 'object':
             object_name = selected['name']
             self.object_parameter_value_proxy.add_condition(object_name=object_name)
-            self.relationship_parameter_value_proxy.add_condition(parent_object_name=object_name,
-                child_object_name=object_name)
-            self.relationship_parameter_value_proxy.hide_column("parent_relationship_name")
-        elif selected_type == 'proto_relationship_class':
+            self.relationship_parameter_value_proxy.add_condition(object_name_list=object_name)
+            self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
+        elif selected_type == 'relationship_class':
             relationship_class_name = selected['name']
-            object_name = parent['name']
-            self.relationship_parameter_value_proxy.add_condition(parent_object_name=object_name,
-                child_object_name=object_name)
             self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
-            self.relationship_parameter_value_proxy.hide_column("parent_relationship_name")
-        elif selected_type == 'related_object':
-            object_name = selected['name']
-            self.object_parameter_value_proxy.add_condition(object_name=object_name)
-            relationship_name = selected['relationship_name']
-            self.relationship_parameter_value_proxy.add_condition(parent_object_name=object_name,
-                child_object_name=object_name, parent_relationship_name=relationship_name)
-        elif selected_type == 'meta_relationship_class':
-            relationship_class_name = selected['name']
-            relationship_name = parent['relationship_name']
-            self.relationship_parameter_value_proxy.add_condition(parent_relationship_name=relationship_name)
-            self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
-            self.relationship_parameter_value_proxy.hide_column("parent_object_name")
+            self.relationship_parameter_value_proxy.add_hidden_column("object_class_name_list", "object_name_list")
+        elif selected_type == 'relationship':
+            relationship_name = selected['name']
+            self.relationship_parameter_value_proxy.add_condition(relationship_name=relationship_name)
+            self.relationship_parameter_value_proxy.add_hidden_column("object_class_name_list", "object_name_list")
         self.object_parameter_value_proxy.apply()
         self.relationship_parameter_value_proxy.apply()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
@@ -473,10 +438,10 @@ class DataStoreForm(QMainWindow):
         elif selected_type == 'object': # show only this object's class
             object_class_name = parent['name']
             self.object_parameter_proxy.add_condition(object_class_name=object_class_name)
-        elif selected_type.endswith('relationship_class'):
+        elif selected_type == 'relationship_class':
             relationship_class_name = selected['name']
             self.relationship_parameter_proxy.add_condition(relationship_class_name=relationship_class_name)
-        elif selected_type == 'related_object':
+        elif selected_type == 'relationship':
             relationship_class_name = parent['name']
             self.relationship_parameter_proxy.add_condition(relationship_class_name=relationship_class_name)
         self.object_parameter_proxy.apply()

@@ -378,9 +378,9 @@ class DatabaseMapping(object):
     def object_parameter_list(self):
         """Return object classes and their parameters."""
         return self.session.query(
-            self.Parameter.object_class_id,
+            #self.Parameter.object_class_id,
             self.ObjectClass.name.label('object_class_name'),
-            self.Parameter.id.label('parameter_id'),
+            #self.Parameter.id.label('parameter_id'),
             self.Parameter.name.label('parameter_name'),
             self.Parameter.can_have_time_series,
             self.Parameter.can_have_time_pattern,
@@ -397,11 +397,11 @@ class DatabaseMapping(object):
         """Return relationship classes and their parameters."""
         wide_relationship_class_subqry = self.wide_relationship_class_list().subquery()
         return self.session.query(
-            self.Parameter.relationship_class_id,
+            #self.Parameter.relationship_class_id,
             wide_relationship_class_subqry.c.name.label('relationship_class_name'),
-            wide_relationship_class_subqry.c.object_class_id_list,
+            #wide_relationship_class_subqry.c.object_class_id_list,
             wide_relationship_class_subqry.c.object_class_name_list,
-            self.Parameter.id.label('parameter_id'),
+            #self.Parameter.id.label('parameter_id'),
             self.Parameter.name.label('parameter_name'),
             self.Parameter.can_have_time_series,
             self.Parameter.can_have_time_pattern,
@@ -417,11 +417,11 @@ class DatabaseMapping(object):
     def object_parameter_value_list(self):
         """Return objects and their parameter values."""
         return self.session.query(
-            self.Parameter.object_class_id,
+            #self.Parameter.object_class_id,
             self.ObjectClass.name.label('object_class_name'),
-            self.ParameterValue.object_id,
+            #self.ParameterValue.object_id,
             self.Object.name.label('object_name'),
-            self.ParameterValue.id.label('parameter_value_id'),
+            #self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
             self.ParameterValue.index,
             self.ParameterValue.value,
@@ -439,13 +439,14 @@ class DatabaseMapping(object):
         wide_relationship_class_subqry = self.wide_relationship_class_list().subquery()
         wide_relationship_subqry = self.wide_relationship_list().subquery()
         return self.session.query(
-            self.Parameter.relationship_class_id,
+            #self.Parameter.relationship_class_id,
             wide_relationship_class_subqry.c.name.label('relationship_class_name'),
-            self.ParameterValue.relationship_id,
+            #self.ParameterValue.relationship_id,
+            wide_relationship_class_subqry.c.object_class_name_list,
             wide_relationship_subqry.c.name.label('relationship_name'),
-            wide_relationship_subqry.c.object_id_list,
+            #wide_relationship_subqry.c.object_id_list,
             wide_relationship_subqry.c.object_name_list,
-            self.ParameterValue.id.label('parameter_value_id'),
+            #self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
             self.ParameterValue.index,
             self.ParameterValue.value,
