@@ -27,6 +27,7 @@ on Data Connection item.
 
 import os
 import shutil
+import getpass
 import tempfile
 import logging
 from config import STATUSBAR_SS
@@ -34,10 +35,10 @@ from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.custom_menus import DescriptorTreeContextMenu
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
-from PySide2.QtCore import Qt, Slot, QSettings, SIGNAL
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, SIGNAL
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
 from helpers import busy_effect
-from spinedatabase_api import create_new_spine_database
+from spinedatabase_api import create_new_spine_database, DatabaseMapping
 from models import MinimalTableModel, DatapackageDescriptorModel
 from sqlalchemy import create_engine
 from sqlalchemy.ext.automap import automap_base
@@ -54,23 +55,18 @@ class SpineDatapackageWidget(QMainWindow):
         parent (ToolboxUI): QMainWindow instance
         data_connection (DataConnection): Data Connection associated to this widget
     """
+
+    msg = Signal(str, name="msg")
+    msg_error = Signal(str, str, str, name="msg_error")
+
     def __init__(self, parent, data_connection):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._parent = parent
         self._data_connection = data_connection
         self.output_data_stores = None
-        self.engine = None
+        self.mapping = None
         self.temp_filename = None
-        self.Base = None
-        self.session = None
-        self.ObjectClass = None
-        self.Object = None
-        self.RelationshipClass = None
-        self.Relationship = None
-        self.Parameter = None
-        self.ParameterValue = None
-        self.Commit = None
         self.datapackage = None
         self.object_class_name_list = None
         self.block_resource_name_combobox = True
@@ -95,23 +91,19 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionExport.setText("Export as '{0}'".format(self.export_name))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.create_engine()
-        if not self.create_base_and_reflect_tables():
-            self.close()
-            return
-        self.create_session()
         self.ui.treeView_descriptor.setModel(self.descriptor_model)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
-        self.ui.tableView_resource_data.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_resource_data.verticalHeader().\
-            setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.tableView_resource_data.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_resource_data.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.load_datapackage()
+        self.create_mapping()
         self.connect_signals()
         self.restore_ui()
 
     def connect_signals(self):
         """Connect signals to slots."""
+        self.msg.connect(self.add_message)
+        self.msg_error.connect(self.add_error_message)
         self._data_connection.destroyed.connect(self.data_connection_destroyed)
         self.ui.treeView_descriptor.expanded.connect(self.resize_descriptor_treeview)
         self.ui.treeView_descriptor.collapsed.connect(self.resize_descriptor_treeview)
@@ -123,10 +115,8 @@ class SpineDatapackageWidget(QMainWindow):
         resource_data_lineedit_delegate = LineEditDelegate(self)
         resource_data_lineedit_delegate.closeEditor.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(resource_data_lineedit_delegate)
-        self.ui.treeView_descriptor.selectionModel().currentChanged.\
-            connect(self.update_current_resource_index)
-        self.ui.treeView_descriptor.customContextMenuRequested.\
-            connect(self.show_descriptor_tree_context_menu)
+        self.ui.treeView_descriptor.selectionModel().currentChanged.connect(self.update_current_resource_index)
+        self.ui.treeView_descriptor.customContextMenuRequested.connect(self.show_descriptor_tree_context_menu)
         self.ui.comboBox_resource_name.currentTextChanged.connect(self.update_current_resource_name)
 
     def restore_ui(self):
@@ -134,7 +124,7 @@ class SpineDatapackageWidget(QMainWindow):
         window_size = self.qsettings.value("mainWindow/windowSize")
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         splitter_state = self.qsettings.value("mainWindow/splitterState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -144,41 +134,53 @@ class SpineDatapackageWidget(QMainWindow):
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
 
+    @Slot(str, name="add_message")
+    def add_message(self, msg):
+        """Append regular message to status bar.
+
+        Args:
+            msg (str): String to show in QStatusBar
+        """
+        print('hey')
+        current_msg = self.ui.statusbar.currentMessage()
+        self.ui.statusbar.showMessage(current_msg + " " + msg, 5000)
+
+    @Slot(str, name="add_error_message")
+    def add_error_message(self, title, text, info=None):
+        """Show error message in message box.
+
+        Args:
+            msg (str): String to show in QMessageBox
+        """
+        msg_box = QMessageBox()
+        msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(text)
+        if info:
+            msg_box.setInformativeText(info)
+        msg_box.exec_()
+
     @Slot(name="data_connection_destroyed")
     def data_connection_destroyed(self):
         """Close this form whenever data connection item is destroyed."""
         self._data_connection = None
         self.close()
 
-    def create_engine(self):
+    def create_mapping(self):
         """Create engine with a fresh Spine database."""
         self.temp_filename = os.path.join(tempfile.gettempdir(), 'Spine.sqlite')
+        if self.temp_filename:
+            try:
+                os.remove(self.temp_filename)
+            except OSError:
+                self.msg.emit("Unable to remove temporary database file. Conversion will not work.")
+                return
         url = "sqlite:///" + self.temp_filename
         create_new_spine_database(url)
-
-    def create_base_and_reflect_tables(self):
-        """Create base and reflect tables."""
-        self.Base = automap_base()
-        self.Base.prepare(self.engine, reflect=True)
-        try:
-            self.ObjectClass = self.Base.classes.object_class
-            self.Object = self.Base.classes.object
-            self.RelationshipClass = self.Base.classes.relationship_class
-            self.Relationship = self.Base.classes.relationship
-            self.Parameter = self.Base.classes.parameter
-            self.ParameterValue = self.Base.classes.parameter_value
-            self.Commit = self.Base.classes.commit
-            return True
-        except AttributeError as e:
-            self._parent.msg_error.emit("Unable to parse database in the Spine format. "
-                                        " Table <b>{}</b> is missing.".format(e))
-            return False
-
-    def create_session(self):
-        """Create session."""
-        self.session = Session(self.engine)
-        object_class_name_query = self.session.query(self.ObjectClass.name)
-        self.object_class_name_list = [item.name for item in object_class_name_query]
+        username = getpass.getuser()
+        self.mapping = DatabaseMapping(url, username)
+        object_class_list = self.mapping.object_class_list()
+        self.object_class_name_list = [item.name for item in object_class_list]
         self.max_resource_name_width = max(self.font_metric.width(x) for x in self.object_class_name_list)
 
     def load_resource_data(self):
@@ -196,19 +198,12 @@ class SpineDatapackageWidget(QMainWindow):
         """Attempt to load existing datapackage.json file in data directory."""
         file_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
         if not os.path.exists(file_path):
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setWindowTitle("Datapackage descriptor not found")
+            title = "Datapackage descriptor not found"
             text = ("A file called 'datapackage.json' could not be found "
-                    "in the Data Connection folder <b>{0}</b>. ".\
-                    format(self._data_connection.data_dir))
-            msg.setText(text)
-            msg.setInformativeText("Unable to load datapackage. "
-                                   "Do you want to try and <i>infer</i> one instead?")
-            msg.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
-            answer = msg.exec_()  # Show message box
-            if answer == QMessageBox.Yes:
-                self.call_infer_datapackage()
+                    "in the Data Connection folder <b>{0}</b>.").format(self._data_connection.data_dir)
+            info = ("Tip: if you already have some CSV files in your Data Connection folder, "
+                    "you may <i>infer</i> a datapackage from them.")
+            self.msg_error.emit(title, text, info)
             return
         self.load_datapackage()
 
@@ -219,10 +214,10 @@ class SpineDatapackageWidget(QMainWindow):
         if not os.path.exists(file_path):
             return
         msg = "Loading datapackage from {}".format(file_path)
-        self.ui.statusbar.showMessage(msg)
+        self.msg.emit(msg)
         self.datapackage = Package(file_path)
         msg = "Datapackage loaded from {}".format(file_path)
-        self.ui.statusbar.showMessage(msg, 5000)
+        self.msg.emit(msg)
         self.init_descriptor_model()
         if load_resource_data:
             self.load_resource_data()
@@ -232,17 +227,11 @@ class SpineDatapackageWidget(QMainWindow):
         """Infer datapackage from CSV files in data directory."""
         data_files = self._data_connection.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setWindowTitle("Resources not found")
+            title = "Resources not found"
             text = ("The Data Connection folder <b>{0}</b> does not seem to have "
-                    "any CSV resource files.".\
-                    format(self._data_connection.data_dir))
-            msg.setText(text)
-            msg.setInformativeText("Unable to infer datapackage. "
-                                   "Please add some CSV files and try again.")
-            msg.setStandardButtons(QMessageBox.Ok)
-            answer = msg.exec_()  # Show message box
+                    "any CSV resource files.").format(self._data_connection.data_dir)
+            info = "Tip: add some CSV files to your Data Connection folder and try again."
+            self.msg_error.emit(title, text, info)
             return
         self.infer_datapackage()
 
@@ -250,11 +239,11 @@ class SpineDatapackageWidget(QMainWindow):
     def infer_datapackage(self, load_resource_data=True):
         """"""
         msg = "Inferring datapackage from {}".format(self._data_connection.data_dir)
-        self.ui.statusbar.showMessage(msg)
+        self.msg.emit(msg)
         self.datapackage = Package(base_path = self._data_connection.data_dir)
         self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
         msg = "Datapackage inferred from {}".format(self._data_connection.data_dir)
-        self.ui.statusbar.showMessage(msg, 5000)
+        self.msg.emit(msg)
         self.init_descriptor_model()
         if load_resource_data:
             self.load_resource_data()
@@ -264,7 +253,7 @@ class SpineDatapackageWidget(QMainWindow):
         """Save datapackage.json to datadir"""
         if not self.datapackage:
             msg = "Load or infer a datapackage first."
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
             return
         if os.path.exists(os.path.join(self._data_connection.data_dir, "datapackage.json")):
             msg = '<b>Replacing file "datapackage.json" in "{}"</b>.'\
@@ -275,16 +264,16 @@ class SpineDatapackageWidget(QMainWindow):
                 return False
         if self.datapackage.save(os.path.join(self._data_connection.data_dir, 'datapackage.json')):
             msg = '"datapackage.json" saved in {}'.format(self._data_connection.data_dir)
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
             return True
         msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
-        self.ui.statusbar.showMessage(msg, 5000)
+        self.msg.emit(msg)
         return False
 
     def init_descriptor_model(self):
         """Init datapackage descriptor model"""
         self.descriptor_model.clear()
-        self.resource_data_model.reset_model([])
+        self.resource_data_model.clear()
         self.current_resource_index = None
         self.block_resource_name_combobox = True
         self.ui.comboBox_resource_name.clear()
@@ -381,7 +370,7 @@ class SpineDatapackageWidget(QMainWindow):
         key, item = self.descriptor_model.find_item(key_chain)
         if key != key_chain[-1]:
             msg = "Couldn't find field in datapackage descriptor. Something is wrong."
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
             return
         ind = item.index()
         sib = ind.sibling(ind.row(), 1)
@@ -397,7 +386,7 @@ class SpineDatapackageWidget(QMainWindow):
         resource_data = self.resource_tables.pop(current_resource_name, None)
         if resource_data is None:
             msg = "Couldn't find key in resource data dict. Something is wrong."
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
             return
         self.resource_tables[text] = resource_data
         # Update datapackage descriptor
@@ -408,7 +397,7 @@ class SpineDatapackageWidget(QMainWindow):
         key, item = self.descriptor_model.find_item(key_chain)
         if key != key_chain[-1]:
             msg = "Couldn't find resource in datapackage descriptor. Something is wrong."
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
             return
         ind = item.index()
         sib = ind.sibling(ind.row(), 1)
@@ -426,7 +415,7 @@ class SpineDatapackageWidget(QMainWindow):
         for future conversions."""
         if not self.datapackage:
             msg = "No datapackage to export. Load or infer one first."
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
             return
         output_data_directories = list()
         for output_item in self._parent.connection_model.output_items(self._data_connection.name):
@@ -435,34 +424,24 @@ class SpineDatapackageWidget(QMainWindow):
                 if found_item.data(Qt.UserRole).item_type == 'Data Store':
                     output_data_directories.append(found_item.data(Qt.UserRole).data_dir)
         if not output_data_directories:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setWindowTitle("Destination not found")
+            title = "Destination not found"
             text = ("The datapackage cannot be exported because the Data Connection <b>{}</b> "
                     "is not connected to any destination Data Stores.").format(self._data_connection.name)
-            msg.setText(text)
-            msg.setInformativeText("Connect <b>{}</b> to a Data Store and try again.".\
-                format(self._data_connection.name))
-            msg.setStandardButtons(QMessageBox.Ok)
-            answer = msg.exec_()  # Show message box
+            info = "Tip: Connect <b>{}</b> to a Data Store and try again.".format(self._data_connection.name)
+            self.msg_error.emit(title, text, info)
             return
         unsupported_names = list()
         for resource in self.datapackage.resources:
             if resource.name not in self.object_class_name_list:
                 unsupported_names.append(resource.name)
         if unsupported_names:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Warning)
-            msg.setWindowTitle("Unsupported resource names")
             text = ("The following resources have unsupported names "
                     "and will be ignored by the conversion process:<ul>")
             for name in unsupported_names:
                 text += "<li>{}</li>".format(name)
             text += "</ul>"
-            msg.setText(text)
-            msg.setInformativeText("Do you want to proceed anyway?")
-            msg.setStandardButtons(QMessageBox.Cancel | QMessageBox.Yes)
-            answer = msg.exec_()  # Show message box
+            text += ("Do you want to proceed anyway?")
+            answer = QMessageBox.question(None, 'Unsupported resource names"', text, QMessageBox.Yes, QMessageBox.Cancel)
             if answer != QMessageBox.Yes:
                 return
         if self.convert():
@@ -472,10 +451,10 @@ class SpineDatapackageWidget(QMainWindow):
                     shutil.copy(self.temp_filename, target_filename)
                 except OSError:
                     msg = "Conversion failed. [OSError] Unable to copy file from temporary location."
-                    self.ui.statusbar.showMessage(msg, 5000)
+                    self.msg_error.emit(msg)
                     return
             msg = "File '{0}' saved in {1}".format(self.export_name, output_data_directories)
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
         # Clean up session after converting
         try:
             self.session.query(self.Object).delete()
@@ -490,7 +469,7 @@ class SpineDatapackageWidget(QMainWindow):
             self.actionExport.setEnabled(False)
             msg = self.ui.statusbar.message()
             msg = " Could not clean up session. Export has been disabled. {}".format(e.orig.args)
-            self.ui.statusbar.showMessage(msg, 5000)
+            self.msg.emit(msg)
 
     @busy_effect
     def convert(self):
@@ -733,15 +712,6 @@ class SpineDatapackageWidget(QMainWindow):
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
         # close sql session
-        if self.session:
-            self.session.rollback()
-            self.session.close()
-        if self.engine:
-            self.engine.dispose()
-        if self.temp_filename:
-            try:
-                os.remove(self.temp_filename)
-            except OSError:
-                pass
+        self.mapping.close()
         if event:
             event.accept()

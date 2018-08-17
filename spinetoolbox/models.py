@@ -774,6 +774,9 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         try:
             return self._data[index.row()][index.column()][role]
+        except IndexError:
+            logging.debug(index)
+            return None
         except KeyError:
             return None
 
@@ -926,9 +929,10 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, new_data):
+    def reset_model(self, new_data=None):
         """Reset model."""
         self.beginResetModel()
+        self._data = list()
         if new_data:
             for row, row_data in enumerate(new_data):
                 self.insert_row_with_data(row, row_data)
