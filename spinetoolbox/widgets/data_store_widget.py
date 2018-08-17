@@ -91,10 +91,10 @@ class DataStoreForm(QMainWindow):
         # init models and views
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_object_tree_model()
-        #self.init_parameter_value_models()
-        #self.init_parameter_models()
-        #self.init_parameter_value_views()
-        #self.init_parameter_views()
+        self.init_parameter_value_models()
+        self.init_parameter_models()
+        self.init_parameter_value_views()
+        self.init_parameter_views()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
@@ -123,7 +123,7 @@ class DataStoreForm(QMainWindow):
         #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
-        self.ui.treeView_object.doubleClicked.connect(self.expand_leaf_object_at_top_level)
+        self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
         self.object_tree_model.rowsInserted.connect(self.scroll_to_new_item)
         # Parameter tables
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
@@ -215,7 +215,6 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
-        return
         # Object
         object_parameter_value_list = self.mapping.object_parameter_value_list()
         header = object_parameter_value_list.column_descriptions
@@ -233,7 +232,6 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
-        return
         # Object
         object_parameter_list = self.mapping.object_parameter_list()
         header = object_parameter_list.column_descriptions
@@ -250,7 +248,6 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
 
     def init_parameter_value_views(self):
-        return
         self.init_object_parameter_value_view()
         self.init_relationship_parameter_value_view()
 
@@ -290,10 +287,8 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         # hide id columns
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_class_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parent_relationship_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parent_object_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("child_object_id"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_id"))
+        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("object_id"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parameter_value_id"))
         # create line edit delegate and connect signals
         lineedit_delegate = LineEditDelegate(self)
@@ -302,7 +297,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_views(self):
-        return
         self.init_object_parameter_view()
         self.init_relationship_parameter_view()
 
@@ -395,44 +389,29 @@ class DataStoreForm(QMainWindow):
         proxy_index = self.relationship_parameter_value_proxy.mapFromSource(index)
         self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
 
-    @Slot("QModelIndex", name="expand_leaf_object_at_top_level")
-    def expand_leaf_object_at_top_level(self, index):
-        """Check if index corresponds to a related object with no children,
-        and expand it at top level."""
+    @Slot("QModelIndex", name="expand_next_leaf")
+    def expand_next_leaf(self, index):
+        """Check if index corresponds to a relationship and expand next."""
         if not index.isValid():
             return # just to be safe
         clicked_type = index.data(Qt.UserRole)
         if not clicked_type:  # root item
             return
-        if not clicked_type.endswith('object'):
+        if not clicked_type == 'relationship':
             return
         clicked_item = index.model().itemFromIndex(index)
         if clicked_item.hasChildren():
             return
-        self.expand_at_top_level(index)
+        self.expand_next(index)
 
-    def expand_at_top_level(self, index):
-        """Expand object at the top level."""
-        clicked_object = index.data(Qt.UserRole+1)
-        root_item = index.model().invisibleRootItem().child(0)
-        found_object_class_item = None
-        for i in range(root_item.rowCount()):
-            object_class_item = root_item.child(i)
-            object_class = object_class_item.data(Qt.UserRole+1)
-            if object_class['id'] == clicked_object['class_id']:
-                found_object_class_item = object_class_item
-                break
-        if not found_object_class_item:
+    def expand_next(self, index):
+        """Expand next ocurrence of a relationship."""
+        next_index = self.object_tree_model.next_relationship_index(index)
+        if not next_index:
             return
-        for j in range(found_object_class_item.rowCount()):
-            object_item = found_object_class_item.child(j)
-            object_ = object_item.data(Qt.UserRole+1)
-            if object_['id'] == clicked_object['id']:
-                object_index = index.model().indexFromItem(object_item)
-                self.ui.treeView_object.setCurrentIndex(object_index)
-                self.ui.treeView_object.scrollTo(object_index)
-                self.ui.treeView_object.expand(object_index)
-                return
+        self.ui.treeView_object.setCurrentIndex(next_index)
+        self.ui.treeView_object.scrollTo(next_index)
+        self.ui.treeView_object.expand(next_index)
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
@@ -523,8 +502,8 @@ class DataStoreForm(QMainWindow):
             self.call_add_relationship_classes(index)
         elif option == "Add relationships":
             self.call_add_relationships(index)
-        elif option == "Expand at top level":
-            self.expand_at_top_level(index)
+        elif option == "Expand next":
+            self.expand_next(index)
         elif option.startswith("Rename"):
             self.rename_item(index)
         elif option.startswith("Remove"):
@@ -808,8 +787,8 @@ class DataStoreForm(QMainWindow):
             return
         self.object_tree_model.remove_item(removed_type, removed_id)
         # refresh parameter models
-        # self.init_parameter_value_models()
-        # self.init_parameter_models()
+        self.init_parameter_value_models()
+        self.init_parameter_models()
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):

@@ -1165,6 +1165,22 @@ class ObjectTreeModel(QStandardItemModel):
                 if removed_id in visited['object_id_list']:
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
 
+    def next_relationship_index(self, index):
+        """Find and return next ocurrence of relationship item."""
+        if index.data(Qt.UserRole) != 'relationship':
+            return None
+        relationship = index.data(Qt.UserRole+1)
+        items = self.findItems(relationship['name'], Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        position = None
+        for i, item in enumerate(items):
+            if index == self.indexFromItem(item):
+                position = i
+                break
+        if position is None:
+            return None
+        position = (position+1) % len(items)
+        return self.indexFromItem(items[position])
+
 
 class CustomSortFilterProxyModel(QSortFilterProxyModel):
     """A custom sort filter proxy model."""

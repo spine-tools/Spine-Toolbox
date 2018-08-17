@@ -405,22 +405,14 @@ class DatabaseMapping(object):
 
     def relationship_parameter_value_list(self):
         """Return relationships and their parameter values."""
-        parent_relationship = aliased(self.Relationship)
-        parent_object = aliased(self.Object)
-        child_object = aliased(self.Object)
+        object = aliased(self.Object)
         return self.session.query(
             self.Relationship.class_id.label('relationship_class_id'),
             self.RelationshipClass.name.label('relationship_class_name'),
-            # self.RelationshipClass.parent_relationship_class_id,
-            # self.RelationshipClass.parent_object_class_id,
-            # self.RelationshipClass.child_object_class_id,
             self.ParameterValue.relationship_id,
-            self.Relationship.parent_relationship_id,
-            self.Relationship.parent_object_id,
-            self.Relationship.child_object_id,
-            parent_relationship.name.label('parent_relationship_name'),
-            parent_object.name.label('parent_object_name'),
-            child_object.name.label('child_object_name'),
+            self.Relationship.name.label('relationship_name'),
+            self.Relationship.object_id,
+            self.Object.name.label('object_name'),
             self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
             self.ParameterValue.index,
@@ -432,10 +424,8 @@ class DatabaseMapping(object):
             self.ParameterValue.stochastic_model_id
         ).filter(self.Parameter.id == self.ParameterValue.parameter_id).\
         filter(self.Relationship.id == self.ParameterValue.relationship_id).\
-        filter(self.Relationship.class_id == self.RelationshipClass.id).\
-        outerjoin(parent_relationship, parent_relationship.id == self.Relationship.parent_relationship_id).\
-        outerjoin(parent_object, parent_object.id == self.Relationship.parent_object_id).\
-        filter(child_object.id == self.Relationship.child_object_id)
+        filter(self.Object.id == self.Relationship.object_id).\
+        filter(self.Relationship.class_id == self.RelationshipClass.id)
 
     def add_object_class(self, **kwargs):
         """Add object class to database.
