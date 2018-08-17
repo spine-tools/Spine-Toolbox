@@ -48,7 +48,7 @@ class SpineToolboxProject(MetaObject):
         work_dir (str): Project work directory
         ext(str): Project save file extension(.proj)
     """
-    def __init__(self, parent, name, description, configs, work_dir, ext='.proj'):
+    def __init__(self, parent, name, description, configs, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent

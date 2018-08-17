@@ -368,7 +368,7 @@ class ToolboxUI(QMainWindow):
         """
         self.clear_ui()
         self._project = None
-        self._project = SpineToolboxProject(self, name, description, self._config, ext='.proj')
+        self._project = SpineToolboxProject(self, name, description, self._config)
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.textBrowser_eventlog.clear()
