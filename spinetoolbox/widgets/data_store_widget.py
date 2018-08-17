@@ -32,6 +32,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
+from spinedatabase_api import SpineDBAPIError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
@@ -118,11 +119,11 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_parameters.triggered.connect(self.add_parameters)
         self.ui.actionAdd_parameter_values.triggered.connect(self.add_parameter_values)
         # Object tree
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
-        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
+        #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
+        #self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
-        self.ui.treeView_object.doubleClicked.connect(self.expand_leaf_object_at_top_level)
+        self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
         self.object_tree_model.rowsInserted.connect(self.scroll_to_new_item)
         # Parameter tables
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
@@ -286,10 +287,8 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         # hide id columns
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_class_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parent_relationship_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parent_object_id"))
-        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("child_object_id"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("relationship_id"))
+        self.ui.tableView_relationship_parameter_value.hideColumn(header.index("object_id"))
         self.ui.tableView_relationship_parameter_value.hideColumn(header.index("parameter_value_id"))
         # create line edit delegate and connect signals
         lineedit_delegate = LineEditDelegate(self)
@@ -390,44 +389,29 @@ class DataStoreForm(QMainWindow):
         proxy_index = self.relationship_parameter_value_proxy.mapFromSource(index)
         self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
 
-    @Slot("QModelIndex", name="expand_leaf_object_at_top_level")
-    def expand_leaf_object_at_top_level(self, index):
-        """Check if index corresponds to a related object with no children,
-        and expand it at top level."""
+    @Slot("QModelIndex", name="expand_next_leaf")
+    def expand_next_leaf(self, index):
+        """Check if index corresponds to a relationship and expand next."""
         if not index.isValid():
             return # just to be safe
         clicked_type = index.data(Qt.UserRole)
         if not clicked_type:  # root item
             return
-        if not clicked_type.endswith('object'):
+        if not clicked_type == 'relationship':
             return
         clicked_item = index.model().itemFromIndex(index)
         if clicked_item.hasChildren():
             return
-        self.expand_at_top_level(index)
+        self.expand_next(index)
 
-    def expand_at_top_level(self, index):
-        """Expand object at the top level."""
-        clicked_object = index.data(Qt.UserRole+1)
-        root_item = index.model().invisibleRootItem().child(0)
-        found_object_class_item = None
-        for i in range(root_item.rowCount()):
-            object_class_item = root_item.child(i)
-            object_class = object_class_item.data(Qt.UserRole+1)
-            if object_class['id'] == clicked_object['class_id']:
-                found_object_class_item = object_class_item
-                break
-        if not found_object_class_item:
+    def expand_next(self, index):
+        """Expand next ocurrence of a relationship."""
+        next_index = self.object_tree_model.next_relationship_index(index)
+        if not next_index:
             return
-        for j in range(found_object_class_item.rowCount()):
-            object_item = found_object_class_item.child(j)
-            object_ = object_item.data(Qt.UserRole+1)
-            if object_['id'] == clicked_object['id']:
-                object_index = index.model().indexFromItem(object_item)
-                self.ui.treeView_object.setCurrentIndex(object_index)
-                self.ui.treeView_object.scrollTo(object_index)
-                self.ui.treeView_object.expand(object_index)
-                return
+        self.ui.treeView_object.setCurrentIndex(next_index)
+        self.ui.treeView_object.scrollTo(next_index)
+        self.ui.treeView_object.expand(next_index)
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
@@ -518,8 +502,8 @@ class DataStoreForm(QMainWindow):
             self.call_add_relationship_classes(index)
         elif option == "Add relationships":
             self.call_add_relationships(index)
-        elif option == "Expand at top level":
-            self.expand_at_top_level(index)
+        elif option == "Expand next":
+            self.expand_next(index)
         elif option.startswith("Rename"):
             self.rename_item(index)
         elif option.startswith("Remove"):
@@ -538,34 +522,17 @@ class DataStoreForm(QMainWindow):
         self.add_objects(class_id=class_id)
 
     def call_add_relationship_classes(self, index):
-        parent_class_type = index.data(Qt.UserRole)
-        parent_class_id = index.data(Qt.UserRole+1)['id']
-        if parent_class_type == 'object_class':
-            self.add_relationship_classes(parent_object_class_id=parent_class_id)
-        elif parent_class_type.endswith('relationship_class'):
-            self.add_relationship_classes(parent_relationship_class_id=parent_class_id)
+        object_class_id = index.data(Qt.UserRole+1)['id']
+        self.add_relationship_classes(object_class_id=object_class_id)
 
     def call_add_relationships(self, index):
         relationship_class = index.data(Qt.UserRole+1)
-        class_id = relationship_class['id']
-        parent_relationship_id = None
-        parent_object_id = None
-        child_object_id = None
-        top_object_type = index.parent().data(Qt.UserRole)
-        top_object = index.parent().data(Qt.UserRole+1)
-        if top_object_type == 'object':
-            top_object_class_id = top_object['class_id']
-            if top_object_class_id == relationship_class['parent_object_class_id']:
-                parent_object_id = top_object['id']
-            elif top_object_class_id == relationship_class['child_object_class_id']:
-                child_object_id = top_object['id']
-        elif top_object_type == 'related_object':
-            parent_relationship_id = top_object['relationship_id']
+        object_ = index.parent().data(Qt.UserRole+1)
+        object_class = index.parent().parent().data(Qt.UserRole+1)
         self.add_relationships(
-            class_id=class_id,
-            parent_relationship_id=parent_relationship_id,
-            parent_object_id=parent_object_id,
-            child_object_id=child_object_id
+            relationship_class_id=relationship_class['id'],
+            object_id=object_['id'],
+            object_class_id=object_class['id']
         )
 
     def call_add_parameters(self, tree_index):
@@ -573,7 +540,7 @@ class DataStoreForm(QMainWindow):
         class_id = tree_index.data(Qt.UserRole+1)['id']
         if class_type == 'object_class':
             self.add_parameters(object_class_id=class_id)
-        elif class_type.endswith('relationship_class'):
+        elif class_type == 'relationship_class':
             self.add_parameters(relationship_class_id=class_id)
 
     def call_add_parameter_values(self, tree_index):
@@ -582,8 +549,8 @@ class DataStoreForm(QMainWindow):
         if entity_type == 'object':
             object_id = tree_index.data(Qt.UserRole+1)['id']
             self.add_parameter_values(object_class_id=class_id, object_id=object_id)
-        elif entity_type == 'related_object':
-            relationship_id = tree_index.data(Qt.UserRole+1)['relationship_id']
+        elif entity_type == 'relationship':
+            relationship_id = tree_index.data(Qt.UserRole+1)['id']
             self.add_parameter_values(relationship_class_id=class_id, relationship_id=relationship_id)
 
     @Slot(name="add_object_classes")
@@ -621,47 +588,44 @@ class DataStoreForm(QMainWindow):
             self.msg.emit(msg)
 
     @Slot(name="add_relationship_classes")
-    def add_relationship_classes(self, parent_relationship_class_id=None, parent_object_class_id=None):
+    def add_relationship_classes(self, object_class_id=None):
         """Insert new relationship class."""
         dialog = AddRelationshipClassesDialog(self, self.mapping,
-            parent_relationship_class_id=parent_relationship_class_id,
-            parent_object_class_id=parent_object_class_id)
+            object_class_one_id=object_class_id)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        for relationship_class_args in dialog.relationship_class_args_list:
+        for wide_relationship_class in dialog.wide_relationship_class_list:
             try:
-                relationship_class = self.mapping.add_relationship_class(**relationship_class_args)
+                new_wide_relationship_class = self.mapping.add_wide_relationship_class(wide_relationship_class)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_relationship_class(relationship_class.__dict__)
-            msg = "Successfully added new relationship class '{}'.".format(relationship_class.name)
+            self.object_tree_model.add_relationship_class(new_wide_relationship_class)
+            msg = "Successfully added new relationship class '{}'.".format(new_wide_relationship_class['name'])
             self.msg.emit(msg)
 
     @Slot(name="add_relationships")
-    def add_relationships(self, class_id=None, parent_relationship_id=None, parent_object_id=None,
-            child_object_id=None):
+    def add_relationships(self, relationship_class_id=None, object_id=None, object_class_id=None):
         """Insert new relationship."""
         dialog = AddRelationshipsDialog(
             self,
             self.mapping,
-            class_id=class_id,
-            parent_relationship_id=parent_relationship_id,
-            parent_object_id=parent_object_id,
-            child_object_id=child_object_id
+            relationship_class_id=relationship_class_id,
+            object_id=object_id,
+            object_class_id=object_class_id
         )
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
-        for relationship_args in dialog.relationship_args_list:
+        for wide_relationship in dialog.wide_relationship_list:
             try:
-                relationship = self.mapping.add_relationship(**relationship_args)
+                new_wide_relationship = self.mapping.add_wide_relationship(wide_relationship)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_relationship(relationship.__dict__)
-            msg = "Successfully added new relationship '{}'.".format(relationship.name)
+            self.object_tree_model.add_relationship(new_wide_relationship)
+            msg = "Successfully added new relationship '{}'.".format(new_wide_relationship['name'])
             self.msg.emit(msg)
 
     @Slot(name="add_parameters")
@@ -801,11 +765,7 @@ class DataStoreForm(QMainWindow):
         removed_item = self.object_tree_model.itemFromIndex(removed_index)
         removed_type = removed_item.data(Qt.UserRole)
         removed = removed_item.data(Qt.UserRole+1)
-        # Get removed id
-        if removed_type == 'related_object':
-            removed_id = removed['relationship_id']
-        else:
-            removed_id = removed['id']
+        removed_id = removed['id']
         try:
             if removed_type == 'object_class':
                 self.mapping.remove_object_class(id=removed_id)
@@ -816,7 +776,7 @@ class DataStoreForm(QMainWindow):
             elif removed_type.endswith('relationship_class'):
                 self.mapping.remove_relationship_class(id=removed_id)
                 msg = "Successfully removed relationship class."
-            elif removed_type == 'related_object':
+            elif removed_type == 'relationship':
                 self.mapping.remove_relationship(id=removed_id)
                 msg = "Successfully removed relationship."
             else:

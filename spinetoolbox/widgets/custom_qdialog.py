@@ -219,29 +219,20 @@ class AddObjectsDialog(QDialog):
 
 class AddRelationshipClassesDialog(QDialog):
     """A dialog to query user's preferences for new relationship classes."""
-    def __init__(self, parent, mapping, parent_relationship_class_id=None, parent_object_class_id=None):
+    def __init__(self, parent, mapping, object_class_one_id=None):
         super().__init__(parent)
-        self.relationship_class_args_list = list()
-        self.object_class_list = mapping.object_class_list()
-        self.relationship_class_list = mapping.relationship_class_list()
-        self.parent_class_name_list = [item.name for item in self.object_class_list]
-        self.parent_class_name_list.extend([item.name for item in self.relationship_class_list])
-        self.child_object_class_name_list = [item.name for item in self.object_class_list]
+        self.wide_relationship_class_list = list()
+        self.mapping = mapping
+        self.number_of_dimensions = 2
+        self.object_class_name_list = [item.name for item in mapping.object_class_list()]
         # Icon initialization
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         # Default parent name
-        self.default_parent_class_name = None
-        if parent_object_class_id:
-            parent_object_class = mapping.single_object_class(id=parent_object_class_id)
-            if parent_object_class:
-                self.default_parent_class_name = parent_object_class.name
-                self.default_parent_class_icon = self.object_icon
-        elif parent_relationship_class_id:
-            parent_relationship_class = mapping.single_relationship_class(id=parent_relationship_class_id)
-            if parent_relationship_class:
-                self.default_parent_class_name = parent_relationship_class.name
-                self.default_parent_class_icon = self.relationship_icon
+        self.object_class_one_name = None
+        if object_class_one_id:
+            object_class_one = mapping.single_object_class(id=object_class_one_id)
+            if object_class_one:
+                self.object_class_one_name = object_class_one.name
         # Init ui
         self.ui = ui.add_relationship_classes.Ui_Dialog()
         self.ui.setupUi(self)
@@ -252,7 +243,7 @@ class AddRelationshipClassesDialog(QDialog):
         self.ui.tableView.currentChanged = self.current_changed
         # Init model
         self.model = MinimalTableModel(self)
-        self.model.header = ['parent class', 'child class', 'name']
+        self.model.header = ['object class 1', 'object class 2', 'name']
         self.insert_row()
         self.ui.tableView.setModel(self.model)
         self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
@@ -275,36 +266,68 @@ class AddRelationshipClassesDialog(QDialog):
         """Connect signals to slots."""
         self.ui.actionInsert_row.triggered.connect(self.insert_row)
         self.ui.actionRemove_row.triggered.connect(self.remove_row)
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_commited)
-        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.object_class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.object_class_data_commited)
+        self.ui.spinBox.valueChanged.connect(self.insert_or_remove_column)
 
     def resize_tableview(self):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
         font_metric = QFontMetrics(QFont("", 0))
-        relationship_class_width = max([font_metric.width(x.name) for x in self.relationship_class_list], default=0)
-        object_class_width = max([font_metric.width(x.name) for x in self.object_class_list], default=0)
-        parent_class_width = max(relationship_class_width, object_class_width, header.sectionSize(0))
-        child_class_width = max(object_class_width, header.sectionSize(1))
-        name_width = max(parent_class_width + child_class_width, header.sectionSize(2))
+        object_class_width = max([font_metric.width(x) for x in self.object_class_name_list], default=0)
+        name_width = max(self.number_of_dimensions * object_class_width, header.sectionSize(2))
         icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
-        header.resizeSection(0, icon_width + parent_class_width)
-        header.resizeSection(1, icon_width + child_class_width)
-        header.resizeSection(2, name_width)
+        for column in range(self.number_of_dimensions):
+            header.resizeSection(column, icon_width + object_class_width)
+            header.resizeSection(column, icon_width + object_class_width)
+        header.resizeSection(self.number_of_dimensions, name_width)
         table_width = font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
         for j in range(header.count()):
             table_width += self.ui.tableView.columnWidth(j)
         self.ui.tableView.setMinimumWidth(table_width)
 
+    @Slot("int", name="insert_or_remove_column")
+    def insert_or_remove_column(self, i):
+        self.ui.spinBox.setEnabled(False)
+        if i > self.number_of_dimensions:
+            self.insert_column()
+        elif i < self.number_of_dimensions:
+            self.remove_column()
+        self.ui.spinBox.setEnabled(True)
+        # TODO: resizing
+        for row in range(self.model.rowCount()):
+            self.compose_relationship_class_name(row)
+
+    def insert_column(self):
+        column = self.number_of_dimensions
+        self.number_of_dimensions += 1
+        self.model.header.insert(column, "object class {}".format(self.number_of_dimensions))
+        self.model.insertColumns(column, 1)
+        for row in range(self.model.rowCount()):
+            self.model.setData(self.model.index(row, column), self.object_class_name_list, Qt.UserRole)
+        self.ui.tableView.setItemDelegateForColumn(column, ComboBoxDelegate(self))
+        self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.object_class_data_commited)
+
+    def remove_column(self):
+        line_delegate = self.ui.tableView.itemDelegate()
+        print(line_delegate)
+        self.number_of_dimensions -= 1
+        column = self.number_of_dimensions
+        self.ui.tableView.itemDelegateForColumn(column).closeEditor.disconnect(self.object_class_data_commited)
+        self.model.header.pop(column)
+        self.model.removeColumns(column, 1)
+        self.ui.tableView.setItemDelegateForColumn(column, line_delegate)
+
     @Slot(name="insert_row")
     def insert_row(self):
         row = self.ui.tableView.currentIndex().row()+1
         self.model.insertRows(row, 1)
-        if self.default_parent_class_name:
-            self.model.setData(self.model.index(row, 0), self.default_parent_class_name)
-            self.model.setData(self.model.index(row, 0), self.default_parent_class_icon, Qt.DecorationRole)
-        self.model.setData(self.model.index(row, 0), self.parent_class_name_list, Qt.UserRole)
-        self.model.setData(self.model.index(row, 1), self.child_object_class_name_list, Qt.UserRole)
+        if self.object_class_one_name:
+            self.model.setData(self.model.index(row, 0), self.object_class_one_name)
+            self.model.setData(self.model.index(row, 0), self.object_icon, Qt.DecorationRole)
+        for column in range(self.model.columnCount()-1):  # Leave 'name' column out
+            self.model.setData(self.model.index(row, column), self.object_class_name_list, Qt.UserRole)
+            self.model.setData(self.model.index(row, column), self.object_class_name_list, Qt.UserRole)
 
     @Slot(name="remove_row")
     def remove_row(self):
@@ -312,95 +335,69 @@ class AddRelationshipClassesDialog(QDialog):
         self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
         self.model.removeRows(current_row, 1)
 
-    @Slot("QWidget", name='class_data_commited')
-    def class_data_commited(self, editor):
-        """Update 'parent class' or 'child_class' field with data from combobox editor."""
-        class_name = editor.currentText()
-        if not class_name:
+    @Slot("QWidget", name='object_class_data_commited')
+    def object_class_data_commited(self, editor):
+        """Update 'object_classx' field with data from combobox editor."""
+        object_class_name = editor.currentText()
+        if not object_class_name:
             return
         row = editor.row
         column = editor.column
         index = self.model.index(row, column)
-        self.model.setData(index, class_name, Qt.EditRole)
-        object_class = self.object_class_list.filter_by(name=class_name).one_or_none()
-        if object_class:
-            class_icon = self.object_icon
-        else:
-            class_icon = self.relationship_icon
-        self.model.setData(index, class_icon, Qt.DecorationRole)
-        # Compose relationship class name automatically
-        parent_class_name = self.model.data(index.sibling(row, 0), Qt.DisplayRole)
-        child_class_name = self.model.data(index.sibling(row, 1), Qt.DisplayRole)
-        try:
-            relationship_class_name = parent_class_name + '_' + child_class_name
-            self.model.setData(index.sibling(row, 2), relationship_class_name, Qt.EditRole)
-        except TypeError:
-            pass
+        self.model.setData(index, object_class_name, Qt.EditRole)
+        self.model.setData(index, self.object_icon, Qt.DecorationRole)
+        self.compose_relationship_class_name(row)
+
+    def compose_relationship_class_name(self, row):
+        """Compose relationship class name automatically."""
+        object_class_name_list = list()
+        name_column = self.model.columnCount() - 1
+        for column in range(name_column):  # Leave 'name' column outside
+            index = self.model.index(row, column)
+            object_class_name = self.model.data(index, Qt.DisplayRole)
+            if object_class_name:
+                object_class_name_list.append(object_class_name)
+        relationship_class_name = "_".join(object_class_name_list)
+        self.model.setData(index.sibling(row, name_column), relationship_class_name, Qt.EditRole)
 
     def accept(self):
+        name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
             row = self.model.rowData(i)
-            if any([True for i in row if not i]):
+            relationship_class_name = row[name_column]
+            if not relationship_class_name:
                 continue
-            parent_class_name, child_class_name, name = row
-            parent_object_class = self.object_class_list.\
-                filter_by(name=parent_class_name).one_or_none()
-            parent_relationship_class = self.relationship_class_list.\
-                filter_by(name=parent_class_name).one_or_none()
-            if parent_object_class is None and parent_relationship_class is None:
+            object_class_id_list = list()
+            for column in range(name_column):  # Leave 'name' column outside
+                object_class_name = row[column]
+                if not object_class_name:
+                    continue
+                object_class = self.mapping.single_object_class(name=object_class_name)
+                if not object_class:
+                    continue
+                object_class_id_list.append(object_class.id)
+            if len(object_class_id_list) < 2:
                 continue
-            parent_object_class_id = parent_object_class.id if parent_object_class else None
-            parent_relationship_class_id = parent_relationship_class.id if parent_relationship_class else None
-            child_object_class_id = self.object_class_list.filter_by(name=child_class_name).one().id
-            relationship_class_args = {
-                'parent_object_class_id': parent_object_class_id,
-                'parent_relationship_class_id': parent_relationship_class_id,
-                'child_object_class_id': child_object_class_id,
-                'name': name
+            wide_relationship_class = {
+                'name': relationship_class_name,
+                'object_class_id_list': object_class_id_list
             }
-            self.relationship_class_args_list.append(relationship_class_args)
+            self.wide_relationship_class_list.append(wide_relationship_class)
         super().accept()
 
 
 class AddRelationshipsDialog(QDialog):
     """A dialog to query user's preferences for new relationships."""
-    def __init__(self, parent, mapping, class_id=None, parent_relationship_id=None,
-            parent_object_id=None, child_object_id=None
-        ):
+    def __init__(self, parent, mapping, relationship_class_id=None, object_id=None, object_class_id=None):
         super().__init__(parent)
-        self.relationship_args_list = list()
-        self.object_class_list = mapping.object_class_list()
-        self.relationship_class_list = mapping.relationship_class_list()
-        self.object_list = mapping.object_list()
-        self.relationship_list = mapping.relationship_list()
-        self.class_name_list = [item.name for item in self.relationship_class_list]
+        self.wide_relationship_list = list()
+        self.mapping = mapping
+        self.relationship_class_id = relationship_class_id
+        self.default_object_column = None
+        self.default_object_name = None
+        self.object_class_id_list = None
         # Icon initialization
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
-        # Default parent names
-        self.default_class_name = None
-        self.default_parent_name = None
-        self.default_child_name = None
-        if class_id:
-            relationship_class = mapping.single_relationship_class(id=class_id)
-            if relationship_class:
-                self.default_class_name = relationship_class.name
-                self.default_class_icon = self.relationship_icon
-        if parent_object_id:
-            parent_object = mapping.single_object(id=parent_object_id)
-            if parent_object:
-                self.default_parent_name = parent_object.name
-                self.default_parent_icon = self.object_icon
-        elif parent_relationship_id:
-            parent_relationship = mapping.single_relationship(id=parent_relationship_id)
-            if parent_relationship:
-                self.default_parent_name = parent_relationship.name
-                self.default_parent_icon = self.relationship_icon
-        elif child_object_id:
-            child_object = mapping.single_object(id=child_object_id)
-            if child_object:
-                self.default_child_name = child_object.name
-                self.default_child_icon = self.object_icon
         # Init ui
         self.ui = ui.add_relationships.Ui_Dialog()
         self.ui.setupUi(self)
@@ -415,21 +412,65 @@ class AddRelationshipsDialog(QDialog):
         # Override slot
         self.std_current_changed = self.ui.tableView.currentChanged
         self.ui.tableView.currentChanged = self.current_changed
-        self.std_edit = self.ui.tableView.edit
-        self.ui.tableView.edit = self.edit
         # Init model
         self.model = MinimalTableModel(self)
-        self.model.header = ['class', 'parent', 'child', 'name']
-        self.insert_row()
         self.ui.tableView.setModel(self.model)
-        self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
-        self.ui.tableView.setItemDelegateForColumn(1, ComboBoxDelegate(self))
-        self.ui.tableView.setItemDelegateForColumn(2, ComboBoxDelegate(self))
-        self.resize_tableview()
+        # Init combobox
+        wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+        self.relationship_class_name_list = [x['name'] for x in wide_relationship_class_list]
+        self.relationship_class_id_list = [x['id'] for x in wide_relationship_class_list]
+        self.ui.comboBox_relationship_class.addItems(self.relationship_class_name_list)
+        self.ui.comboBox_relationship_class.setCurrentIndex(-1)
+        self.set_defaults(object_id, object_class_id)
+        self.reset_model()
         # Add actions to tool buttons
         self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
         self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
         self.connect_signals()
+
+    def resize_tableview(self):
+        self.ui.tableView.resizeColumnsToContents()
+        header = self.ui.tableView.horizontalHeader()
+        font_metric = QFontMetrics(QFont("", 0))
+        icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
+        name_width = 0
+        for section, object_class_id in enumerate(self.object_class_id_list):
+            object_list = self.mapping.object_list(class_id=object_class_id)
+            object_width = max([font_metric.width(x.name) for x in object_list], default=0)
+            section_width = max(icon_width + object_width, header.sectionSize(section))
+            header.resizeSection(section, section_width)
+            name_width += object_width
+        section = header.count()-1
+        section_width = max(name_width, header.sectionSize(section))
+        header.resizeSection(section, section_width)
+        table_width = font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        for j in range(header.count()):
+            table_width += self.ui.tableView.columnWidth(j)
+        self.ui.tableView.setMinimumWidth(table_width)
+
+    def set_defaults(self, object_id, object_class_id):
+        """Set input relationship class in combobox, and store
+        default object name and column for when adding rows.
+        """
+        if not self.relationship_class_id:
+            return
+        relationship_class = self.mapping.single_wide_relationship_class(id=self.relationship_class_id)
+        if not relationship_class:
+            logging.debug("Couldn't find relationship class, probably a bug.")
+            return
+        relationship_class_name = relationship_class['name']
+        index = self.relationship_class_name_list.index(relationship_class_name)
+        self.ui.comboBox_relationship_class.setCurrentIndex(index)
+        if object_id is None or object_class_id is None:
+            return
+        object_ = self.mapping.single_object(id=object_id)
+        if not object_:
+            return
+        try:
+            self.default_object_column = relationship_class['object_class_id_list'].index(object_class_id)
+        except ValueError:
+            return
+        self.default_object_name = object_.name
 
     def current_changed(self, current, previous):
         """Restore slot after view is initialized.
@@ -439,114 +480,76 @@ class AddRelationshipsDialog(QDialog):
             self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
             self.ui.tableView.currentChanged = self.std_current_changed
 
-    def edit(self, index, trigger, event):
-        if index.column() in [1, 2] and index.data(Qt.UserRole) is None:
-            self.statusbar.showMessage("Please select relationship class first.", 5000)
-            return False
-        return self.std_edit(index, trigger, event)
-
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.actionInsert_row.triggered.connect(self.insert_row)
         self.ui.actionRemove_row.triggered.connect(self.remove_row)
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_commited)
-        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.data_commited)
-        self.ui.tableView.itemDelegateForColumn(2).closeEditor.connect(self.data_commited)
+        self.ui.comboBox_relationship_class.currentIndexChanged.connect(self.call_reset_model)
 
-    def resize_tableview(self):
-        self.ui.tableView.resizeColumnsToContents()
-        header = self.ui.tableView.horizontalHeader()
-        font_metric = QFontMetrics(QFont("", 0))
-        relationship_class_width = max([font_metric.width(x.name) for x in self.relationship_class_list], default=0)
-        object_width = max([font_metric.width(x.name) for x in self.object_list], default=0)
-        relationship_width = max([font_metric.width(x.name) for x in self.relationship_list], default=0)
-        class_width = max(relationship_class_width, header.sectionSize(0))
-        parent_width = max(object_width, relationship_width, header.sectionSize(1))
-        child_width = max(object_width, header.sectionSize(2))
-        name_width = max(parent_width + child_width, header.sectionSize(3))
-        icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
-        header.resizeSection(0, icon_width + class_width)
-        header.resizeSection(1, icon_width + parent_width)
-        header.resizeSection(2, icon_width + child_width)
-        header.resizeSection(3, name_width)
-        table_width = font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        for j in range(header.count()):
-            table_width += self.ui.tableView.columnWidth(j)
-        self.ui.tableView.setMinimumWidth(table_width)
+    @Slot("int", name='call_reset_model')
+    def call_reset_model(self, index):
+        self.relationship_class_id = self.relationship_class_id_list[index]
+        self.reset_model()
+
+    def reset_model(self):
+        """Setup model according to current relationship class selected in combobox
+        (or given as input).
+        """
+        if not self.relationship_class_id:
+            return
+        wide_relationship_class = self.mapping.single_wide_relationship_class(self.relationship_class_id)
+        if not wide_relationship_class:
+            logging.debug("Couldn't find relationship class, probably a bug.")
+            return
+        header = list()
+        self.object_class_id_list = wide_relationship_class['object_class_id_list']
+        for object_class_id in self.object_class_id_list:
+            object_class = self.mapping.single_object_class(id=object_class_id)
+            if not object_class:
+                logging.debug("Couldn't find object class, probably a bug.")
+                return
+            header.append(object_class.name)
+        header.append('name')
+        self.model.header = header
+        self.model.clear()
+        self.insert_row()
 
     @Slot(name="insert_row")
     def insert_row(self):
+        """Find out object names for each column, insert row,
+        and set model data.
+        """
+        object_names_list = list()
+        for column, object_class_id in enumerate(self.object_class_id_list):
+            object_list = self.mapping.object_list(class_id=object_class_id)
+            object_names = [x.name for x in object_list]
+            if not object_names:
+                object_class = self.mapping.single_object_class(id=object_class_id)
+                if not object_class:
+                    logging.debug("Couldn't find object class, probably a bug.")
+                    return
+                msg = "There are no objects of class '{}'.".format(object_class.name)
+                self.statusbar.showMessage(msg, 5000)
+                return
+            object_names_list.append(object_names)
         row = self.ui.tableView.currentIndex().row()+1
         self.model.insertRows(row, 1)
-        if self.default_class_name:
-            self.model.setData(self.model.index(row, 0), self.default_class_name)
-            self.model.setData(self.model.index(row, 0), self.default_class_icon, Qt.DecorationRole)
-            self.update_parent_and_child_combos(self.default_class_name, row)
-        if self.default_parent_name:
-            self.model.setData(self.model.index(row, 1), self.default_parent_name)
-            self.model.setData(self.model.index(row, 1), self.default_parent_icon, Qt.DecorationRole)
-        if self.default_child_name:
-            self.model.setData(self.model.index(row, 2), self.default_child_name)
-            self.model.setData(self.model.index(row, 2), self.default_child_icon, Qt.DecorationRole)
-        self.model.setData(self.model.index(row, 0), self.class_name_list, Qt.UserRole)
+        for column, object_names in enumerate(object_names_list):
+            index = self.model.index(row, column)
+            self.model.setData(index, object_names, Qt.UserRole)
+            self.model.setData(index, self.object_icon, Qt.DecorationRole)
+            self.ui.tableView.setItemDelegateForColumn(column, ComboBoxDelegate(self))
+            self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.data_commited)
+        self.resize_tableview()
+        if self.default_object_name and self.default_object_column is not None:
+            index = self.model.index(row, self.default_object_column)
+            self.model.setData(index, self.default_object_name, Qt.EditRole)
 
     @Slot(name="remove_row")
     def remove_row(self):
         current_row = self.ui.tableView.currentIndex().row()
         self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
         self.model.removeRows(current_row, 1)
-
-    @Slot("QWidget", name='class_data_commited')
-    def class_data_commited(self, editor):
-        """Update 'class' field with data from combobox editor
-        and update comboboxes for 'parent' and 'child' fields accordingly.
-        """
-        class_name = editor.currentText()
-        if not class_name:
-            return
-        row = editor.row
-        column = editor.column
-        index = self.model.index(row, column)
-        self.model.setData(index, class_name, Qt.EditRole)
-        self.model.setData(index, self.relationship_icon, Qt.DecorationRole)
-        self.model.setData(index.sibling(row, 1), None, Qt.EditRole)
-        self.model.setData(index.sibling(row, 1), None, Qt.DecorationRole)
-        self.model.setData(index.sibling(row, 2), None, Qt.EditRole)
-        self.model.setData(index.sibling(row, 2), None, Qt.DecorationRole)
-        self.update_parent_and_child_combos(class_name, row)
-
-    def update_parent_and_child_combos(self, name, row):
-        """Update options available in comboboxes for parent and child.
-
-        Args:
-            name (str): The name of a relationship class.
-            row (int): The row in the model.
-        """
-        relationship_class = self.relationship_class_list.filter_by(name=name).one_or_none()
-        msg = ""
-        if not relationship_class:
-            logging.debug("Couldn't find relationship class '{}'. This is odd.".format(name))
-            return
-        if relationship_class.parent_object_class_id is not None:
-            class_id = relationship_class.parent_object_class_id
-            parent_name_list = [item.name for item in self.object_list.filter_by(class_id=class_id)]
-            if not parent_name_list:
-                class_name = self.object_class_list.filter_by(id=class_id).one().name
-                msg += "Class '{}' does not have any objects. ".format(class_name)
-        elif relationship_class.parent_relationship_class_id is not None:
-            class_id = relationship_class.parent_relationship_class_id
-            parent_name_list = [item.name for item in self.relationship_list.filter_by(class_id=class_id)]
-            if not parent_name_list:
-                class_name = self.relationship_class_list.filter_by(id=class_id).one().name
-                msg += "Class '{}' does not have any relationships. ".format(class_name)
-        class_id = relationship_class.child_object_class_id
-        child_name_list = [item.name for item in self.object_list.filter_by(class_id=class_id)]
-        if not child_name_list:
-            class_name = self.object_class_list.filter_by(id=class_id).one().name
-            msg += "Class '{}' does not have any objects. ".format(class_name)
-        self.model.setData(self.model.index(row, 1), parent_name_list, Qt.UserRole)
-        self.model.setData(self.model.index(row, 2), child_name_list, Qt.UserRole)
-        self.statusbar.showMessage(msg, 5000)
 
     @Slot("QWidget", name='data_commited')
     def data_commited(self, editor):
@@ -558,46 +561,44 @@ class AddRelationshipsDialog(QDialog):
         column = editor.column
         index = self.model.index(row, column)
         self.model.setData(index, name, Qt.EditRole)
-        if column == 1:
-            parent_object = self.object_list.filter_by(name=name).one_or_none()
-            if parent_object:
-                parent_icon = self.object_icon
-            else:
-                parent_icon = self.relationship_icon
-            self.model.setData(index, parent_icon, Qt.DecorationRole)
-        elif column == 2:
-            self.model.setData(index, self.object_icon, Qt.DecorationRole)
-        # Compose relationship name automatically
-        parent_name = self.model.data(index.sibling(row, 1), Qt.DisplayRole)
-        child_name = self.model.data(index.sibling(row, 2), Qt.DisplayRole)
-        try:
-            relationship_name = parent_name + '_' + child_name
-            self.model.setData(index.sibling(row, 3), relationship_name, Qt.EditRole)
-        except TypeError:
-            pass
+        self.compose_relationship_name(row)
+
+    def compose_relationship_name(self, row):
+        """Compose relationship name automatically."""
+        object_name_list = list()
+        name_column = self.model.columnCount() - 1
+        for column in range(name_column):  # Leave 'name' column outside
+            index = self.model.index(row, column)
+            object_name = self.model.data(index, Qt.DisplayRole)
+            if object_name:
+                object_name_list.append(object_name)
+        relationship_name = "_".join(object_name_list)
+        self.model.setData(index.sibling(row, name_column), relationship_name, Qt.EditRole)
 
     def accept(self):
+        name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
             row = self.model.rowData(i)
-            if any([True for i in row if not i]):
+            relationship_name = row[name_column]
+            if not relationship_name:
                 continue
-            class_name, parent_name, child_name, name = row
-            class_id = self.relationship_class_list.filter_by(name=class_name).one().id
-            parent_object = self.object_list.filter_by(name=parent_name).one_or_none()
-            parent_relationship = self.relationship_list.filter_by(name=parent_name).one_or_none()
-            if parent_object is None and parent_relationship is None:
+            object_id_list = list()
+            for column in range(name_column):  # Leave 'name' column outside
+                object_name = row[column]
+                if not object_name:
+                    continue
+                object_ = self.mapping.single_object(name=object_name)
+                if not object_:
+                    continue
+                object_id_list.append(object_.id)
+            if len(object_id_list) < 2:
                 continue
-            parent_object_id = parent_object.id if parent_object else None
-            parent_relationship_id = parent_relationship.id if parent_relationship else None
-            child_object_id = self.object_list.filter_by(name=child_name).one().id
-            relationship_args = {
-                'class_id': class_id,
-                'parent_object_id': parent_object_id,
-                'parent_relationship_id': parent_relationship_id,
-                'child_object_id': child_object_id,
-                'name': name
+            wide_relationship = {
+                'name': relationship_name,
+                'object_id_list': object_id_list,
+                'class_id': self.relationship_class_id
             }
-            self.relationship_args_list.append(relationship_args)
+            self.wide_relationship_list.append(wide_relationship)
         super().accept()
 
 

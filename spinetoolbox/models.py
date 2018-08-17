@@ -719,6 +719,11 @@ class MinimalTableModel(QAbstractTableModel):
         self._data = list()
         self.header = list()
 
+    def clear(self):
+        self.beginResetModel()
+        self._data = list()
+        self.endResetModel()
+
     def flags(self, index):
         """Returns flags for table items."""
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -891,6 +896,36 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveRows()
         return True
 
+    def removeColumns(self, column, count, parent=QModelIndex()):
+        """Removes count columns starting with the given column under parent parent from the model.
+
+        Args:
+            column (int): Column number where to start removing columns
+            count (int): Number of removed columns
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if columns were removed successfully, False otherwise
+        """
+        if column < 0 or column > self.columnCount():
+            return False
+        if not count == 1:
+            logging.error("Remove 1 column at a time")
+            return False
+        self.beginRemoveColumns(parent, column, column)
+        # for loop all rows and remove the column from each
+        removed_column = list()  # for testing and debugging
+        removing_last_column = False
+        if self.columnCount() == 1:
+            removing_last_column = True
+        for r in self._data:
+            removed_column.append(r.pop(column))
+        if removing_last_column:
+            self._data = []
+        # logging.debug("{0} removed from column:{1}".format(removed_column, column))
+        self.endRemoveColumns()
+        return True
+
     def reset_model(self, new_data):
         """Reset model."""
         self.beginResetModel()
@@ -961,120 +996,57 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class, Qt.UserRole+1)
         object_list = self.mapping.object_list(class_id=object_class['id'])
-        # get relationship classes involving the present class
-        proto_relationship_class_as_parent_list = self.mapping.proto_relationship_class_list(
-            parent_object_class_id=object_class['id'])
-        proto_relationship_class_as_child_list = self.mapping.proto_relationship_class_list(
-            child_object_class_id=object_class['id'])
+        wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class['id'])
         for object_ in object_list:
-            object_item = self.new_object_item(object_._asdict(), proto_relationship_class_as_parent_list,
-                proto_relationship_class_as_child_list)
+            object_item = self.new_object_item(object_._asdict(), wide_relationship_class_list)
             object_class_item.appendRow(object_item)
         return object_class_item
 
-    def new_object_item(self, object_, proto_relationship_class_as_parent_list,
-            proto_relationship_class_as_child_list):
+    def new_object_item(self, object_, wide_relationship_class_list=None):
         """Returns new object item.
 
         Args:
             object_ (dict)
-            relationship_class_as_parent_list (result)
-            relationship_class_as_child_list (result)
+            relationship_class_list (query)
         """
         object_item = QStandardItem(object_['name'])
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_, Qt.UserRole+1)
-        # create and append proto relationship class items
-        for proto_relationship_class in proto_relationship_class_as_parent_list:
-            proto_relationship_class_item = self.new_proto_relationship_class_item(
-                proto_relationship_class._asdict(),
-                parent_object=object_)
-            object_item.appendRow(proto_relationship_class_item)
-        for proto_relationship_class in proto_relationship_class_as_child_list:
-            if proto_relationship_class in proto_relationship_class_as_parent_list:
-                continue
-            proto_relationship_class_item = self.new_proto_relationship_class_item(
-                proto_relationship_class._asdict(),
-                child_object=object_)
-            object_item.appendRow(proto_relationship_class_item)
+        # create and append relationship class items
+        for wide_relationship_class in wide_relationship_class_list:
+            relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
+            object_item.appendRow(relationship_class_item)
         return object_item
 
-    def new_proto_relationship_class_item(self, proto_relationship_class, parent_object=None, child_object=None):
-        """Returns new proto relationship class item. Proto means that the relationship class
-        only involves object classes, and not another relationship class.
+    def new_relationship_class_item(self, wide_relationship_class, object_):
+        """Returns new relationship class item.
 
         Args:
-            proto_relationship_class (dict): proto relationship class
-            parent_object (dict): object of the parent class which is the parent item in the tree
-            child_object (dict): object of the child class which is the parent item in the tree
+            wide_relationship_class (dict): relationship class in wide format
+            object_ (dict): object which is the parent item in the tree
         """
-        proto_relationship_class_item = QStandardItem(proto_relationship_class['name'])
-        proto_relationship_class_item.setData(proto_relationship_class, Qt.UserRole+1)
-        proto_relationship_class_item.setData('proto_relationship_class', Qt.UserRole)
-        meta_relationship_class_list = self.mapping.meta_relationship_class_list(
-            parent_relationship_class_id=proto_relationship_class['id'])
-        if parent_object:
-            related_object_list = self.mapping.child_related_object_list(
-                relationship_class_id=proto_relationship_class['id'],
-                parent_object_id=parent_object['id'])
-        elif child_object:
-            related_object_list = self.mapping.parent_related_object_list(
-                relationship_class_id=proto_relationship_class['id'],
-                child_object_id=child_object['id'])
-        else:
-            related_object_list = self.mapping.empty_list()
-        for related_object in related_object_list:
-            related_object_item = self.new_related_object_item(
-                related_object._asdict(),
-                meta_relationship_class_list)
-            proto_relationship_class_item.appendRow(related_object_item)
-        return proto_relationship_class_item
+        relationship_class_item = QStandardItem(wide_relationship_class['name'])
+        relationship_class_item.setData(wide_relationship_class, Qt.UserRole+1)
+        relationship_class_item.setData('relationship_class', Qt.UserRole)
+        # get relationship involving the present object and class in wide format
+        wide_relationship_list = self.mapping.wide_relationship_list(
+            class_id=wide_relationship_class['id'],
+            object_id=object_['id'])
+        for wide_relationship in wide_relationship_list:
+            relationship_item = self.new_relationship_item(wide_relationship)
+            relationship_class_item.appendRow(relationship_item)
+        return relationship_class_item
 
-    def new_related_object_item(self, related_object, meta_relationship_class_list):
-        """Returns new related object item.
+    def new_relationship_item(self, wide_relationship):
+        """Returns new relationship item.
 
         Args:
-            related_object (dict)
-            meta_relationship_class_list (result)
+            wide_relationship (dict)
         """
-        related_object_item = QStandardItem(related_object['name'])
-        related_object_item.setData('related_object', Qt.UserRole)
-        related_object_item.setData(related_object, Qt.UserRole+1)
-        for meta_relationship_class in meta_relationship_class_list:
-            meta_relationship_class_item = self.new_meta_relationship_class_item(
-                meta_relationship_class._asdict(),
-                related_object
-            )
-            related_object_item.appendRow(meta_relationship_class_item)
-        return related_object_item
-
-    def new_meta_relationship_class_item(self, meta_relationship_class, related_object=None):
-        """Returns new meta-relationship class item. Meta means that the relationship class
-        only involves another relationship class as parent.
-
-        Args:
-            meta_relationship_class (dict): relationship class
-            related_object (dict): parent object
-        """
-        meta_relationship_class_item = QStandardItem(meta_relationship_class['name'])
-        meta_relationship_class_item.setData(meta_relationship_class, Qt.UserRole+1)
-        meta_relationship_class_item.setData('meta_relationship_class', Qt.UserRole)
-        new_meta_relationship_class_list = self.mapping.meta_relationship_class_list(
-            parent_relationship_class_id=meta_relationship_class['id'])
-        # get new related objects in new relationship class
-        if related_object:
-            meta_related_object_list = self.mapping.meta_related_object_list(
-                relationship_class_id=meta_relationship_class['id'],
-                parent_relationship_id=related_object['relationship_id'])
-        else:
-            meta_related_object_list = self.mapping.empty_list()
-        # recursively populate branches
-        for meta_related_object in meta_related_object_list:
-            # create related object item
-            meta_related_object_item = self.new_related_object_item(meta_related_object._asdict(),
-                new_meta_relationship_class_list)
-            meta_relationship_class_item.appendRow(meta_related_object_item)
-        return meta_relationship_class_item
+        relationship_item = QStandardItem(wide_relationship['name'])
+        relationship_item.setData('relationship', Qt.UserRole)
+        relationship_item.setData(wide_relationship, Qt.UserRole+1)
+        return relationship_item
 
     def add_object_class(self, object_class):
         """Add object class item to the model.
@@ -1111,27 +1083,11 @@ class ObjectTreeModel(QStandardItemModel):
         if not object_class_item:
             logging.debug("Object class item not found in model. This is probably a bug.")
             return
-        # get proto relationship classes involving the present class
-        proto_relationship_class_as_parent_list = self.mapping.proto_relationship_class_list(
-            parent_object_class_id=object_['class_id'])
-        proto_relationship_class_as_child_list = self.mapping.proto_relationship_class_list(
-            child_object_class_id=object_['class_id'])
-        object_item = self.new_object_item(object_, proto_relationship_class_as_parent_list,
-            proto_relationship_class_as_child_list)
+        wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_['class_id'])
+        object_item = self.new_object_item(object_, wide_relationship_class_list)
         object_class_item.appendRow(object_item)
 
-    def add_relationship_class(self, relationship_class):
-        """Add relationship class item to model.
-
-        Args:
-            relationship_class (dict): the relationship class to add
-        """
-        if 'parent_object_class_id' in relationship_class:
-            self.add_proto_relationship_class(relationship_class)
-        elif 'parent_relationship_class_id' in relationship_class:
-            self.add_meta_relationship_class(relationship_class)
-
-    def add_proto_relationship_class(self, proto_relationship_class):
+    def add_relationship_class(self, wide_relationship_class): # TODO
         """Add proto relationship class."""
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
@@ -1141,98 +1097,35 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             if not visited_type == 'object':
                 continue
-            visited_object_class = visited_item.parent().data(Qt.UserRole+1)
-            if proto_relationship_class['parent_object_class_id'] == visited_object_class['id']:
-                relationship_class_item = self.new_proto_relationship_class_item(proto_relationship_class)
-                visited_item.appendRow(relationship_class_item)
-            # Don't add duplicate relationship class if parent and child are the same
-            if proto_relationship_class['parent_object_class_id'] == proto_relationship_class['child_object_class_id']:
+            visited_object = visited_item.data(Qt.UserRole+1)
+            if visited_object['class_id'] not in wide_relationship_class['object_class_id_list']:
                 continue
-            # Add mirror proto relationship class
-            if proto_relationship_class['child_object_class_id'] == visited_object_class['id']:
-                relationship_class_item = self.new_proto_relationship_class_item(proto_relationship_class)
-                visited_item.appendRow(relationship_class_item)
+            relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
+            visited_item.appendRow(relationship_class_item)
+            # TODO: Don't add duplicate relationship class if parent and child are the same?
+            # TODO: Add mirror proto relationship class?
 
-    def add_meta_relationship_class(self, meta_relationship_class):
-        """Add meta relationship class."""
-        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            # Skip root item
-            if not visited_type:
-                continue
-            # FIXME: this test below seems too soft. The visited item being a related object does not
-            # guarantee that the parent is a meta_relationship_class. Could be a proto relationship class too.
-            if not visited_type == 'related_object':
-                continue
-            visited_relationship_class = visited_item.parent().data(Qt.UserRole+1)
-            if meta_relationship_class['parent_relationship_class_id'] == visited_relationship_class['id']:
-                relationship_class_item = self.new_meta_relationship_class_item(meta_relationship_class)
-                visited_item.appendRow(relationship_class_item)
-
-    def add_relationship(self, relationship):
+    def add_relationship(self, wide_relationship):
         """Add relationship item to model.
 
         Args:
-            relationship (dict): the relationship to add
+            wide_relationship (dict): the relationship to add
         """
-        meta_relationship_class_list = self.mapping.meta_relationship_class_list(
-            parent_relationship_class_id=relationship['class_id'])
-        if 'parent_object_id' in relationship:
-            self.add_proto_relationship(relationship, meta_relationship_class_list)
-        elif 'parent_relationship_id' in relationship:
-            self.add_meta_relationship(relationship, meta_relationship_class_list)
-
-    def add_proto_relationship(self, proto_relationship, meta_relationship_class_list):
-        """Add proto relationship."""
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if not visited_type: # root item
                 continue
-            if not visited_type == 'proto_relationship_class':
+            if not visited_type == 'relationship_class':
                 continue
-            visited_proto_relationship_class = visited_item.data(Qt.UserRole+1)
-            if not visited_proto_relationship_class['id'] == proto_relationship['class_id']:
+            visited_relationship_class = visited_item.data(Qt.UserRole+1)
+            if not visited_relationship_class['id'] == wide_relationship['class_id']:
                 continue
             visited_object = visited_item.parent().data(Qt.UserRole+1)
-            if visited_object['id'] == proto_relationship['parent_object_id']:
-                child_object = self.mapping.single_object(id=proto_relationship['child_object_id'])
-                if child_object:
-                    child_object_dict = child_object._asdict()
-                    child_object_dict['relationship_id'] = proto_relationship['id']
-                    child_object_item = self.new_related_object_item(child_object_dict,
-                        meta_relationship_class_list)
-                    visited_item.appendRow(child_object_item)
-            if visited_object['id'] == proto_relationship['child_object_id']:
-                parent_object = self.mapping.single_object(id=proto_relationship['parent_object_id'])
-                if parent_object:
-                    parent_object_dict = parent_object._asdict()
-                    parent_object_dict['relationship_id'] = proto_relationship['id']
-                    parent_object_item = self.new_related_object_item(parent_object_dict,
-                        meta_relationship_class_list)
-                    visited_item.appendRow(parent_object_item)
-
-    def add_meta_relationship(self, meta_relationship, meta_relationship_class_list):
-        """Add meta relationship."""
-        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if not visited_type: # root item
+            if visited_object['id'] not in wide_relationship['object_id_list']:
                 continue
-            if not visited_type == 'meta_relationship_class':
-                continue
-            visited_meta_relationship_class = visited_item.data(Qt.UserRole+1)
-            if not visited_meta_relationship_class['id'] == meta_relationship['class_id']:
-                continue
-            visited_related_object = visited_item.parent().data(Qt.UserRole+1)
-            if visited_related_object['relationship_id'] == meta_relationship['parent_relationship_id']:
-                child_object = self.mapping.single_object(id=meta_relationship['child_object_id'])
-                if child_object:
-                    child_object_dict = child_object._asdict()
-                    child_object_dict['relationship_id'] = meta_relationship['id']
-                    child_object_item = self.new_related_object_item(child_object_dict, meta_relationship_class_list)
-                    visited_item.appendRow(child_object_item)
+            relationship_item = self.new_relationship_item(wide_relationship)
+            visited_item.appendRow(relationship_item)
 
     def rename_item(self, new_name, curr_name, renamed_type, renamed_id):
         """Rename all matched items."""
@@ -1248,16 +1141,6 @@ class ObjectTreeModel(QStandardItemModel):
                 visited['name'] = new_name
                 visited_item.setData(visited, Qt.UserRole+1)
                 visited_item.setText(new_name)
-            if renamed_type == 'object' and visited_type == 'related_object':
-                if visited_id == renamed_id:
-                    visited['name'] = new_name
-                    visited_item.setData(visited, Qt.UserRole+1)
-                    visited_item.setText(new_name)
-            if renamed_type == 'related_object' and visited_type == 'object':
-                if visited_id == renamed_id:
-                    visited['name'] = new_name
-                    visited_item.setData(visited, Qt.UserRole+1)
-                    visited_item.setText(new_name)
 
     def remove_item(self, removed_type, removed_id):
         """Remove all matched items and their orphans."""
@@ -1269,28 +1152,34 @@ class ObjectTreeModel(QStandardItemModel):
             if not visited_type:
                 continue
             # Get visited id
-            if visited_type == 'related_object':
-                visited_id = visited['relationship_id']
-            else:
-                visited_id = visited['id']
+            visited_id = visited['id']
+            visited_index = self.indexFromItem(visited_item)
             if visited_type == removed_type and visited_id == removed_id:
-                visited_index = self.indexFromItem(visited_item)
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
             # When removing an object class, also remove relationship classes that involve it
-            if removed_type == 'object_class' and visited_type.endswith('relationship_class'):
-                child_object_class_id = visited['child_object_class_id']
-                if 'parent_object_class_id' in visited:
-                    parent_object_class_id = visited['parent_object_class_id']
-                else:
-                    parent_object_class_id = None
-                if removed_id in [child_object_class_id, parent_object_class_id]:
-                    visited_index = self.indexFromItem(visited_item)
+            if removed_type == 'object_class' and visited_type == 'relationship_class':
+                if removed_id in visited['object_class_id_list']:
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
             # When removing an object, also remove relationships that involve it
-            if removed_type == 'object' and visited_type == 'related_object':
-                if removed_id == visited['id']:
-                    visited_index = self.indexFromItem(visited_item)
+            if removed_type == 'object' and visited_type == 'relationship':
+                if removed_id in visited['object_id_list']:
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
+
+    def next_relationship_index(self, index):
+        """Find and return next ocurrence of relationship item."""
+        if index.data(Qt.UserRole) != 'relationship':
+            return None
+        relationship = index.data(Qt.UserRole+1)
+        items = self.findItems(relationship['name'], Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        position = None
+        for i, item in enumerate(items):
+            if index == self.indexFromItem(item):
+                position = i
+                break
+        if position is None:
+            return None
+        position = (position+1) % len(items)
+        return self.indexFromItem(items[position])
 
 
 class CustomSortFilterProxyModel(QSortFilterProxyModel):

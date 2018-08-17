@@ -152,41 +152,29 @@ def create_new_spine_database(db_url):
     sql = """
         CREATE TABLE IF NOT EXISTS relationship_class (
             id INTEGER NOT NULL,
+            dimension INTEGER NOT NULL,
+            object_class_id INTEGER NOT NULL,
             name VARCHAR(155) NOT NULL,
-            parent_relationship_class_id INTEGER DEFAULT NULL,
-            parent_object_class_id INTEGER DEFAULT NULL,
-            child_object_class_id INTEGER NOT NULL,
-            inheritance VARCHAR(155) DEFAULT NULL,
             hidden INTEGER DEFAULT '0',
-            type INTEGER DEFAULT NULL,
             commit_id INTEGER,
-            PRIMARY KEY (id),
+            PRIMARY KEY (id, dimension),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(child_object_class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(parent_object_class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(parent_relationship_class_id) REFERENCES relationship_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            CHECK (`parent_relationship_class_id` IS NOT NULL OR `parent_object_class_id` IS NOT NULL),
-            UNIQUE(name)
+            FOREIGN KEY(object_class_id) REFERENCES object_class (id) ON UPDATE CASCADE
         );
     """
     sql_list.append(sql)
     sql = """
         CREATE TABLE IF NOT EXISTS relationship (
             id INTEGER NOT NULL,
+            dimension INTEGER NOT NULL,
+            object_id INTEGER NOT NULL,
             class_id INTEGER NOT NULL,
             name VARCHAR(155) NOT NULL,
-            parent_relationship_id INTEGER DEFAULT NULL,
-            parent_object_id INTEGER DEFAULT NULL,
-            child_object_id INTEGER NOT NULL,
             commit_id INTEGER,
-            PRIMARY KEY (id),
+            PRIMARY KEY (id, dimension),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
-            FOREIGN KEY(class_id) REFERENCES relationship_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(child_object_id) REFERENCES object (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(parent_object_id) REFERENCES object (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(parent_relationship_id) REFERENCES relationship (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            CHECK (`parent_relationship_id` IS NOT NULL OR `parent_object_id` IS NOT NULL),
-            UNIQUE(name)
+            FOREIGN KEY(class_id, dimension) REFERENCES relationship_class (id, dimension) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(object_id) REFERENCES object (id) ON UPDATE CASCADE
         );
     """
     sql_list.append(sql)
@@ -197,6 +185,7 @@ def create_new_spine_database(db_url):
             description VARCHAR(155) DEFAULT NULL,
             data_type VARCHAR(155) DEFAULT 'NUMERIC',
             relationship_class_id INTEGER DEFAULT NULL,
+            dummy_relationship_class_dimmension INTEGER DEFAULT '1',
             object_class_id INTEGER DEFAULT NULL,
             can_have_time_series INTEGER DEFAULT '0',
             can_have_time_pattern INTEGER DEFAULT '1',
@@ -211,7 +200,8 @@ def create_new_spine_database(db_url):
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
             FOREIGN KEY(object_class_id) REFERENCES object_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(relationship_class_id) REFERENCES relationship_class (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(relationship_class_id, dummy_relationship_class_dimmension)
+                REFERENCES relationship_class (id, dimension) ON DELETE CASCADE ON UPDATE CASCADE,
             CHECK (`relationship_class_id` IS NOT NULL OR `object_class_id` IS NOT NULL),
             UNIQUE(name)
         );
@@ -222,6 +212,7 @@ def create_new_spine_database(db_url):
             id INTEGER NOT NULL,
             parameter_id INTEGER NOT NULL,
             relationship_id INTEGER DEFAULT NULL,
+            dummy_relationship_dimmension INTEGER DEFAULT '1',
             object_id INTEGER DEFAULT NULL,
             "index" INTEGER DEFAULT '1',
             value VARCHAR(155) DEFAULT NULL,
@@ -234,7 +225,8 @@ def create_new_spine_database(db_url):
             PRIMARY KEY (id),
             FOREIGN KEY(commit_id) REFERENCES "commit" (id),
             FOREIGN KEY(object_id) REFERENCES object (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            FOREIGN KEY(relationship_id) REFERENCES relationship (id) ON DELETE CASCADE ON UPDATE CASCADE,
+            FOREIGN KEY(relationship_id, dummy_relationship_dimmension)
+                REFERENCES relationship (id, dimension) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY(parameter_id) REFERENCES parameter (id) ON DELETE CASCADE ON UPDATE CASCADE,
             CHECK (`relationship_id` IS NOT NULL OR `object_id` IS NOT NULL)
         );
@@ -261,6 +253,32 @@ def create_new_spine_database(db_url):
         ('objective_term', 'Objective term class', NULL, 17, NULL, 0, NULL),
         ('group', 'Group class', NULL, 18, NULL, 0, NULL),
         ('alternative', 'Alternative class', NULL, 19, NULL, 0, NULL);
+    """
+    sql_list.append(sql)
+    sql = """
+        CREATE TRIGGER after_object_class_delete
+            AFTER DELETE ON object_class
+            FOR EACH ROW
+        BEGIN
+            DELETE FROM relationship_class
+            WHERE id IN (
+                SELECT id FROM relationship_class
+                WHERE object_class_id = OLD.id
+            );
+        END
+    """
+    sql_list.append(sql)
+    sql = """
+        CREATE TRIGGER after_object_delete
+            AFTER DELETE ON object
+            FOR EACH ROW
+        BEGIN
+            DELETE FROM relationship
+            WHERE id IN (
+                SELECT id FROM relationship
+                WHERE object_id = OLD.id
+            );
+        END
     """
     sql_list.append(sql)
     try:

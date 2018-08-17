@@ -26,8 +26,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>363</width>
-    <height>312</height>
+    <width>756</width>
+    <height>532</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,33 +35,23 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTableView" name="tableView">
-     <property name="editTriggers">
-      <set>QAbstractItemView::AllEditTriggers</set>
-     </property>
-     <attribute name="horizontalHeaderStretchLastSection">
-      <bool>true</bool>
-     </attribute>
-    </widget>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
      <item>
-      <widget class="QToolButton" name="toolButton_insert_row">
+      <widget class="QLabel" name="label">
        <property name="text">
-        <string>...</string>
+        <string>Number of dimensions</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QToolButton" name="toolButton_remove_row">
-       <property name="text">
-        <string>...</string>
+      <widget class="QSpinBox" name="spinBox">
+       <property name="minimum">
+        <number>2</number>
        </property>
       </widget>
      </item>
      <item>
-      <spacer name="horizontalSpacer">
+      <spacer name="horizontalSpacer_2">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
@@ -73,7 +63,34 @@
        </property>
       </spacer>
      </item>
+     <item>
+      <widget class="QToolButton" name="toolButton_remove_row">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QToolButton" name="toolButton_insert_row">
+       <property name="text">
+        <string>...</string>
+       </property>
+      </widget>
+     </item>
     </layout>
+   </item>
+   <item>
+    <widget class="QTableView" name="tableView">
+     <property name="editTriggers">
+      <set>QAbstractItemView::AllEditTriggers</set>
+     </property>
+     <attribute name="horizontalHeaderStretchLastSection">
+      <bool>true</bool>
+     </attribute>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout"/>
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">

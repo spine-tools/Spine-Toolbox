@@ -171,8 +171,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.add_action("Rename object")
                 self.addSeparator()
                 self.add_action("Remove object")
-            elif item_type == 'proto_relationship_class':
-                self.add_action("Add relationship classes")
+            elif item_type == 'relationship_class':
                 self.add_action("Add relationships")
                 self.addSeparator()
                 self.add_action("Add parameters")
@@ -180,21 +179,12 @@ class ObjectTreeContextMenu(CustomContextMenu):
                 self.add_action("Rename relationship class")
                 self.addSeparator()
                 self.add_action("Remove relationship class")
-            elif item_type == 'meta_relationship_class':
-                self.add_action("Add relationship classes")
-                self.add_action("Add relationships")
-                self.addSeparator()
-                self.add_action("Add parameters")
-                self.addSeparator()
-                self.add_action("Rename relationship class")
-                self.addSeparator()
-                self.add_action("Remove relationship class")
-            elif item_type == 'related_object':
-                self.add_action("Expand at top level")
+            elif item_type == 'relationship':
+                self.add_action("Expand next")
                 self.addSeparator()
                 self.add_action("Add parameter values")
                 self.addSeparator()
-                self.add_action("Rename object")
+                self.add_action("Rename relationship")
                 self.addSeparator()
                 self.add_action("Remove relationship")
         self.exec_(position)
