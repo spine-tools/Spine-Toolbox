@@ -34,7 +34,7 @@ from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from PySide2.QtGui import QCursor
 from config import DEFAULT_PROJECT_DIR
-from PySide2.QtWidgets import QFileDialog
+
 
 
 def busy_effect(func):
@@ -207,19 +207,3 @@ def erase_dir(path, verbosity=False):
     except OSError:
         raise
     return True
-
-def blocking_updates(view, func):
-    """Wrapper to block updates to a view while calling a function.
-    Fix bug on Linux which causes QFileDialogs to become unresponsive
-    when there is visible items on QGraphicsView.
-    """
-    def new_function(*args, **kwargs):
-        view.setUpdatesEnabled(False)
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            logging.exception("Error {}".format(e.args[0]))
-            raise e
-        finally:
-            view.setUpdatesEnabled(True)
-    return new_function

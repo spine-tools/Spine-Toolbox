@@ -39,11 +39,13 @@ class AddToolWidget(QWidget):
         parent (ToolboxUI): Parent widget
         project(SpineToolboxProject): Project where to add the new Tool
     """
-    def __init__(self, parent, project):
+    def __init__(self, parent, project, x, y):
         """Initialize class."""
         super().__init__(f=Qt.Window)
         self._parent = parent
         self._project = project
+        self._x = x
+        self._y = y
         #  Set up the user interface from Designer.
         self.ui = ui.add_tool.Ui_Form()
         self.ui.setupUi(self)
@@ -114,7 +116,7 @@ class AddToolWidget(QWidget):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._parent.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
             return
@@ -135,7 +137,7 @@ class AddToolWidget(QWidget):
             selected_tool = None
         else:
             selected_tool = self._parent.tool_template_model.tool_template(selected_row)
-        self._project.add_tool(self.name, self.description, selected_tool)
+        self._project.add_tool(self.name, self.description, selected_tool, self._x, self._y)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
@@ -145,6 +147,8 @@ class AddToolWidget(QWidget):
         """
         if e.key() == Qt.Key_Escape:
             self.close()
+        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
+            self.ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -154,3 +158,7 @@ class AddToolWidget(QWidget):
         """
         if event:
             event.accept()
+            item_shadow = self._parent.ui.graphicsView.item_shadow
+            if item_shadow:
+                self._parent.ui.graphicsView.scene().removeItem(item_shadow)
+                self._parent.ui.graphicsView.item_shadow = None

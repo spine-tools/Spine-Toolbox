@@ -23,82 +23,79 @@ A delegate to edit table cells with checkboxes.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
-from PySide2.QtCore import Slot, Qt, QEvent, QPoint, QRect
+
+import logging
+from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication
 
+
 class CheckBoxDelegate(QItemDelegate):
-    """
-    A delegate that places a fully functioning QCheckBox in every
-    cell of the column to which it's applied
-    """
+    """A delegate that places a fully functioning QCheckBox in every
+    cell of the column to which it's applied."""
+
+    commit_data = Signal("QModelIndex", name="commit_data")
+
     def __init__(self, parent):
         super().__init__(parent)
+        self.checkbox_pressed = False
 
     def createEditor(self, parent, option, index):
-        '''
-        Important, otherwise an editor is created if the user clicks in this cell.
-        ** Need to hook up a signal to the model
-        '''
+        """Important, otherwise an editor is created if the user clicks in this cell.
+        ** Need to hook up a signal to the model."""
         return None
 
     def paint(self, painter, option, index):
-        '''
-        Paint a checkbox without the label.
-        '''
-
-        checked = index.data()
-        check_box_style_option = QStyleOptionButton()
-
+        """Paint a checkbox without the label."""
+        checked = True
+        if index.data() == "False" or not index.data():
+            checked = False
+        checkbox_style_option = QStyleOptionButton()
         if (index.flags() & Qt.ItemIsEditable) > 0:
-            check_box_style_option.state |= QStyle.State_Enabled
+            checkbox_style_option.state |= QStyle.State_Enabled
         else:
-            check_box_style_option.state |= QStyle.State_ReadOnly
-
+            checkbox_style_option.state |= QStyle.State_ReadOnly
         if checked:
-            check_box_style_option.state |= QStyle.State_On
+            checkbox_style_option.state |= QStyle.State_On
         else:
-            check_box_style_option.state |= QStyle.State_Off
-
-        check_box_style_option.rect = self.getCheckBoxRect(option)
-
-        QApplication.style().drawControl(QStyle.CE_CheckBox, check_box_style_option, painter)
+            checkbox_style_option.state |= QStyle.State_Off
+        checkbox_style_option.rect = self.get_checkbox_rect(option)
+        # noinspection PyArgumentList
+        QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
 
     def editorEvent(self, event, model, option, index):
-        '''
-        Change the data in the model and the state of the checkbox
-        if the user presses the left mousebutton and this cell is editable.
-        Otherwise do nothing.
-        '''
+        """Change the data in the model and the state of the checkbox
+        when user presses left mouse button and this cell is editable.
+        Otherwise do nothing."""
         if not (index.flags() & Qt.ItemIsEditable) > 0:
             return False
-
-        # Do not change the checkbox-state
+        # Do nothing on double-click
+        if event.type() == QEvent.MouseButtonDblClick:
+            return True
         if event.type() == QEvent.MouseButtonPress:
-            return False
-        if event.type() == QEvent.MouseButtonRelease or event.type() == QEvent.MouseButtonDblClick:
-            if event.button() != Qt.LeftButton or not self.getCheckBoxRect(option).contains(event.pos()):
-                return False
-            if event.type() == QEvent.MouseButtonDblClick:
+            if event.button() == Qt.LeftButton and self.get_checkbox_rect(option).contains(event.pos()):
+                self.checkbox_pressed = True
                 return True
-
-        # Change the checkbox-state
-        self.setModelData(None, model, index)
-        return True
+        if event.type() == QEvent.MouseButtonRelease:
+            if self.checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+                # Change the checkbox-state
+                # self.setModelData(None, model, index)
+                self.commit_data.emit(index)
+                self.checkbox_pressed = False
+                return True
+            self.checkbox_pressed = False
+        return False
 
     def setModelData (self, editor, model, index):
-        '''
-        The user wanted to change the old state in the opposite.
-        '''
-        newValue = not index.data()
-        model.setData(index, newValue, Qt.EditRole)
+        """Do nothing. Model data is updated by handling the `commit_data` signal."""
+        pass
 
-    def getCheckBoxRect(self, option):
-        check_box_style_option = QStyleOptionButton()
-        check_box_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, check_box_style_option, None)
-        check_box_point = QPoint (option.rect.x() +
+    def get_checkbox_rect(self, option):
+        checkbox_style_option = QStyleOptionButton()
+        checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
+        checkbox_point = QPoint (option.rect.x() +
                             option.rect.width() / 2 -
-                            check_box_rect.width() / 2,
+                            checkbox_rect.width() / 2,
                             option.rect.y() +
                             option.rect.height() / 2 -
-                            check_box_rect.height() / 2)
-        return QRect(check_box_point, check_box_rect.size())
+                            checkbox_rect.height() / 2)
+        return QRect(checkbox_point, checkbox_rect.size())

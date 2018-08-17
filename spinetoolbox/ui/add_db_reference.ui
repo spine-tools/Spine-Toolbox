@@ -29,8 +29,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>337</width>
-    <height>263</height>
+    <width>300</width>
+    <height>349</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -40,7 +40,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Add Connection String</string>
+   <string>Add Database Reference</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <property name="spacing">
@@ -76,58 +76,50 @@
       <number>4</number>
      </property>
      <item>
-      <widget class="QComboBox" name="comboBox_dsn"/>
+      <widget class="QComboBox" name="comboBox_dialect"/>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox_dsn">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+      </widget>
      </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QLineEdit" name="lineEdit_driver">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <widget class="QLineEdit" name="lineEdit_SQLite_file">
+         <property name="enabled">
+          <bool>false</bool>
          </property>
          <property name="minimumSize">
           <size>
-           <width>220</width>
-           <height>20</height>
+           <width>0</width>
+           <height>24</height>
           </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>5000</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;ODBC driver (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="placeholderText">
-          <string>Type ODBC driver name here...</string>
-         </property>
-         <property name="clearButtonEnabled">
-          <bool>true</bool>
+          <string>Type SQLite filename here...</string>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QPushButton" name="pushButton_browse">
-         <property name="maximumSize">
-          <size>
-           <width>60</width>
-           <height>16777215</height>
-          </size>
+         <property name="enabled">
+          <bool>false</bool>
          </property>
          <property name="text">
-          <string>Browse</string>
+          <string>Browse...</string>
          </property>
         </widget>
        </item>
       </layout>
      </item>
      <item>
-      <widget class="QLineEdit" name="lineEdit_server">
+      <widget class="QLineEdit" name="lineEdit_host">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -137,20 +129,20 @@
        <property name="minimumSize">
         <size>
          <width>220</width>
-         <height>20</height>
+         <height>0</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>5000</width>
-         <height>20</height>
+         <height>5000</height>
         </size>
        </property>
        <property name="toolTip">
-        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Server (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Host (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="placeholderText">
-        <string>Type server name here...</string>
+        <string>Type host name here...</string>
        </property>
        <property name="clearButtonEnabled">
         <bool>true</bool>
@@ -158,7 +150,29 @@
       </widget>
      </item>
      <item>
+      <widget class="QLineEdit" name="lineEdit_port">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>5000</height>
+        </size>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Port (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="placeholderText">
+        <string>Type port number here...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QLineEdit" name="lineEdit_database">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -168,13 +182,13 @@
        <property name="minimumSize">
         <size>
          <width>220</width>
-         <height>20</height>
+         <height>24</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>5000</width>
-         <height>20</height>
+         <height>5000</height>
         </size>
        </property>
        <property name="toolTip">
@@ -190,6 +204,9 @@
      </item>
      <item>
       <widget class="QLineEdit" name="lineEdit_username">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -199,13 +216,13 @@
        <property name="minimumSize">
         <size>
          <width>220</width>
-         <height>20</height>
+         <height>24</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
          <width>5000</width>
-         <height>20</height>
+         <height>5000</height>
         </size>
        </property>
        <property name="toolTip">
@@ -221,6 +238,9 @@
      </item>
      <item>
       <widget class="QLineEdit" name="lineEdit_password">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -236,11 +256,14 @@
        <property name="maximumSize">
         <size>
          <width>5000</width>
-         <height>20</height>
+         <height>5000</height>
         </size>
        </property>
        <property name="toolTip">
         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Password (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::Password</enum>
        </property>
        <property name="placeholderText">
         <string>Type password here...</string>
@@ -375,8 +398,12 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>lineEdit_driver</tabstop>
-  <tabstop>lineEdit_server</tabstop>
+  <tabstop>comboBox_dialect</tabstop>
+  <tabstop>lineEdit_host</tabstop>
+  <tabstop>lineEdit_port</tabstop>
+  <tabstop>lineEdit_database</tabstop>
+  <tabstop>lineEdit_username</tabstop>
+  <tabstop>lineEdit_password</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>

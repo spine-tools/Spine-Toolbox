@@ -35,8 +35,7 @@ from data_connection import DataConnection
 from tool import Tool
 from view import View
 from tool_templates import GAMSTool, JuliaTool
-from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
-import qsubprocess
+from config import DEFAULT_WORK_DIR
 
 
 class SpineToolboxProject(MetaObject):
@@ -46,20 +45,23 @@ class SpineToolboxProject(MetaObject):
         parent(ToolboxUI): Parent of this project
         name(str): Project name
         description(str): Project description
+        work_dir (str): Project work directory
         ext(str): Project save file extension(.proj)
     """
-    def __init__(self, parent, name, description, configs, ext='.proj'):
+    def __init__(self, parent, name, description, configs, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
         self._configs = configs
         self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
-        self.work_dir = DEFAULT_WORK_DIR
+        if not work_dir:
+            self.work_dir = DEFAULT_WORK_DIR
+        else:
+            self.work_dir = work_dir
         self.filename = self.short_name + ext
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
         self.project_contents = dict()
-        self.julia_subprocess = None  # Contains Julia REPL instance
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -99,6 +101,20 @@ class SpineToolboxProject(MetaObject):
         self.filename = new_filename
         self.path = os.path.join(project_dir(self._configs), self.filename)
 
+    def change_work_dir(self, new_work_path):
+        """Change project work directory.
+
+        Args:
+            new_work_path (str): Absolute path to new work directory
+        """
+        if not new_work_path:
+            self.work_dir = DEFAULT_WORK_DIR
+            return False
+        if not create_dir(new_work_path):
+            return False
+        self.work_dir = new_work_path
+        return True
+
     def save(self, tool_def_paths):
         """Collect project information and objects
         into a dictionary and write to a JSON file.
@@ -111,8 +127,11 @@ class SpineToolboxProject(MetaObject):
         project_dict = dict()  # Dictionary for storing project info
         project_dict['name'] = self.name
         project_dict['description'] = self.description
+        project_dict['work_dir'] = self.work_dir
         project_dict['tool_templates'] = tool_def_paths
-        project_dict['connections'] = self._parent.connection_model.get_connections()
+        connection_table = self._parent.connection_model.get_connections()
+        bool_con_table = [[False if not j else True for j in connection_table[i]] for i in range(len(connection_table))]
+        project_dict['connections'] = bool_con_table
         project_dict["scene_x"] = self._parent.ui.graphicsView.scene().sceneRect().x()
         project_dict["scene_y"] = self._parent.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._parent.ui.graphicsView.scene().sceneRect().width()
@@ -136,8 +155,10 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name] = dict()
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
-                    item_dict[top_level_item_txt][name]["x"] = child_data.get_icon().master().sceneBoundingRect().x()
-                    item_dict[top_level_item_txt][name]["y"] = child_data.get_icon().master().sceneBoundingRect().y()
+                    x = child_data.get_icon().master().sceneBoundingRect().center().x()
+                    y = child_data.get_icon().master().sceneBoundingRect().center().y()
+                    item_dict[top_level_item_txt][name]["x"] = x
+                    item_dict[top_level_item_txt][name]["y"] = y
                     if child_data.item_type == "Tool":
                         if not child_data.tool_template():
                             item_dict[top_level_item_txt][name]["tool"] = ""
@@ -241,14 +262,14 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, data, x, y)
+            self.add_view(name, desc, x, y, data)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
         """Create a Tool template according to a tool definition file.
 
         Args:
-            jsonfile (str): Path of the tool definition file
+            jsonfile (str): Path of the tool template definition file
 
         Returns:
             Instance of a subclass if Tool
@@ -258,11 +279,11 @@ class SpineToolboxProject(MetaObject):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._parent.msg_error.emit("Tool definition file not valid")
+                    self._parent.msg_error.emit("Tool template definition file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(jsonfile))
+            self._parent.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
             return None
         # Infer path to the main program
         try:
@@ -291,14 +312,6 @@ class SpineToolboxProject(MetaObject):
         if _tooltype == "gams":
             return GAMSTool.load(self._parent, path, definition)
         elif _tooltype == "julia":
-            if not self.julia_subprocess:
-                # TODO: This is so that Julia REPL stays open between executions. Check for a better place for this.
-                julia_path = self._parent._config.get("settings", "julia_path")
-                if not julia_path == '':
-                    julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
-                else:
-                    julia_exe_path = JULIA_EXECUTABLE
-                self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
             return JuliaTool.load(self._parent, path, definition)
         elif _tooltype == 'executable':
             self._parent.msg_warning.emit("Executable tools not supported yet")
@@ -312,22 +325,28 @@ class SpineToolboxProject(MetaObject):
         data_store = DataStore(self._parent, name, description, self, references, x, y)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
+        self._parent.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
 
     def add_data_connection(self, name, description, references, x=0, y=0):
         """Add Data Connection to project item model."""
         data_connection = DataConnection(self._parent, name, description, self, references, x, y)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
+        self._parent.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
 
     def add_tool(self, name, description, tool_template, x=0, y=0):
         """Add Tool to project item model."""
         tool = Tool(self._parent, name, description, self, tool_template, x, y)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
+        self._parent.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
-    def add_view(self, name, description, data="View data", x=0, y=0):
+    def add_view(self, name, description, x=0, y=0, data="View data"):
         """Add View to project item model."""
         view = View(self._parent, name, description, self, x, y)
         view.set_data(data)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)
+        self._parent.msg.emit("View <b>{0}</b> added to project.".format(name))
+        self._parent.msg_warning.emit("<b>Not implemented</b>. The functionality for View items is not "
+                                      "implemented yet.")

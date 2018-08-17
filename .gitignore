@@ -1,11 +1,14 @@
 .idea
 *.pyc
+*.sqlite
 .spyderproject
 spinetoolbox/__pycache__/
 spinetoolbox/ui/__pycache__/
 spinetoolbox/widgets/__pycache__/
+spinetoolbox/build/
+spinetoolbox/dist/
+docs/build/
 tool_templates/Swedish_hydro/
-tool_templates/magic/input/data.gdx
 projects/
 work/
 resources_icons_rc.py

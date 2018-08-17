@@ -32,41 +32,30 @@ class QSubProcess(QObject):
     """Class to handle starting, running, and finishing PySide2 QProcesses."""
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
-    repl_finished_signal = Signal(int, name="repl_finished_signal")
 
-    def __init__(self, ui, command):
+    def __init__(self, ui, program=None, args=None):
         """Class constructor.
 
         Args:
             ui (ToolboxUI): Instance of Main UI class.
-            command: Run command
+            program (str): Path to program to run in the subprocess (e.g. julia.exe)
+            args (list): List of argument for the program (e.g. path to script file)
         """
         super().__init__()
         self._ui = ui
-        self._command = command
+        self._program = program
+        self._args = args
         self.process_failed = False
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
-
-    def start_if_not_running(self, workdir=None):
-        """Start a QProcess if is not running.
-
-        Args:
-            workdir (str): Path to work directory
-        """
-        if self._process is None:
-            self._process = QProcess(self)
-            self.start_process(workdir=workdir)
-        elif self._process.state() != QProcess.Running:
-            self.start_process(workdir=workdir)
 
     # noinspection PyUnresolvedReferences
     def start_process(self, workdir=None):
         """Start the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Path to work directory
+            workdir (str): Directory for the script (at least with Julia this is a must)
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
@@ -76,26 +65,26 @@ class QSubProcess(QObject):
         self._process.finished.connect(self.process_finished)
         self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
         self._process.stateChanged.connect(self.on_state_changed)
-        self._process.start(self._command)
+        self._ui.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
+        self._ui.msg.emit("\tArguments: <b>{0}</b>".format(self._args))
+        self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
             self._process.deleteLater()
             self._process = None
             self.subprocess_finished_signal.emit(0)
 
-    def write_on_process(self, command):
-        """Writes a command on a running process
+    def wait_for_finished(self, msecs=30000):
+        """Wait for subprocess to finish.
 
-        Args:
-            command (str): command to write
-
-        Returns:
-            False if QProcess is None (failed to start), else True
+        Return:
+            True if process finished successfully, False otherwise
         """
         if not self._process:
             return False
-        self._process.write(command)
-        return True
+        if self.process_failed or self.process_failed_to_start:
+            return False
+        return self._process.waitForFinished(msecs)
 
     @Slot(name="process_started")
     def process_started(self):
@@ -163,7 +152,7 @@ class QSubProcess(QObject):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             logging.error("QProcess CrashExit")
-            self._ui.msg_error("\tSubprocess crashed")
+            self._ui.msg_error.emit("\tSubprocess crashed")
             self.process_failed = True
         elif exit_status == QProcess.NormalExit:
             self._ui.msg.emit("\tSubprocess finished")
@@ -195,7 +184,3 @@ class QSubProcess(QObject):
         """Emit data from stderr."""
         out = str(self._process.readAllStandardError().data(), "utf-8")
         self._ui.msg_proc_error.emit(out.strip())
-        if out.strip().endswith("repl_succ"):
-            self.repl_finished_signal.emit(0)
-        elif out.strip().endswith("repl_err"):
-            self.repl_finished_signal.emit(-9999)

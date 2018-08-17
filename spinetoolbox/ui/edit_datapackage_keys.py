@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/edit_datapackage_keys.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/edit_datapackage_keys.ui',
+# licensing of '../spinetoolbox/ui/edit_datapackage_keys.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -30,7 +31,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(569, 330)
+        Form.resize(571, 330)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -56,7 +57,7 @@ class Ui_Form(object):
         self.label_2 = QtWidgets.QLabel(self.frame_pks)
         self.label_2.setObjectName("label_2")
         self.verticalLayout_3.addWidget(self.label_2)
-        self.tableView_pks = QtWidgets.QTableView(self.frame_pks)
+        self.tableView_pks = DataPackageKeyTableView(self.frame_pks)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -105,7 +106,7 @@ class Ui_Form(object):
         self.label = QtWidgets.QLabel(self.frame_fks)
         self.label.setObjectName("label")
         self.verticalLayout.addWidget(self.label)
-        self.tableView_fks = QtWidgets.QTableView(self.frame_fks)
+        self.tableView_fks = DataPackageKeyTableView(self.frame_fks)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -122,7 +123,7 @@ class Ui_Form(object):
         self.tableView_fks.verticalHeader().setVisible(False)
         self.verticalLayout.addWidget(self.tableView_fks)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setSpacing(0)
+        self.horizontalLayout_2.setSpacing(6)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.toolButton_add_fk = QtWidgets.QToolButton(self.frame_fks)
         self.toolButton_add_fk.setIcon(icon)
@@ -189,4 +190,5 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
+from widgets.custom_qtableview import DataPackageKeyTableView
 import resources_icons_rc

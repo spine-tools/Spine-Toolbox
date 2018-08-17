@@ -33,30 +33,16 @@ class ViewWidget(QWidget):
     """Class constructor.
 
     Attributes:
-        owner (str): Name of the item that owns this widget
         item_type (str): Internal widget object type (should always be 'View')
     """
-    def __init__(self, owner, item_type):
+    def __init__(self, item_type):
         """ Initialize class."""
         super().__init__()
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'View 1')
         self.ui.label_name.setFocus()
-
-    def set_owner(self, owner):
-        """Set owner of this widget.
-
-        Args:
-            owner (str): New owner
-        """
-        self._owner = owner
-
-    def owner(self):
-        """Returns owner of this widget."""
-        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.

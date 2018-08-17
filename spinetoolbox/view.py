@@ -25,10 +25,12 @@ Module for view class.
 """
 
 import logging
+import os
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
 from PySide2.QtCore import Slot
 from graphics_items import ViewImage
+from helpers import create_dir
 
 
 class View(MetaObject):
@@ -47,17 +49,23 @@ class View(MetaObject):
         self.item_category = "Views"
         self._project = project
         self._data = "data"
-        self._widget = ViewWidget(name, self.item_type)
+        self._widget = ViewWidget(self.item_type)
         self._widget.set_type_label(self.item_type)
         self._widget.set_name_label(name)
         self._widget.set_data_label(self._data)
-        self._graphics_item = ViewImage(self._parent, x, y, 70, 70, self.name)
+        # Create View project directory
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+                                        " Check permissions.".format(self.data_dir))
+        self._graphics_item = ViewImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this view's signals to slots."""
         self._widget.ui.pushButton_info.clicked.connect(self.info_clicked)
-        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
 
     def set_icon(self, icon):
         """Set icon."""
@@ -75,25 +83,6 @@ class View(MetaObject):
     def info_clicked(self):
         """Info button clicked."""
         logging.debug(self.name + " - " + str(self._data))
-
-    @Slot(name="show_connections")
-    def show_connections(self):
-        """Show connections of this item."""
-        inputs = self._parent.connection_model.input_items(self.name)
-        outputs = self._parent.connection_model.output_items(self.name)
-        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
-        self._parent.msg.emit("Input items")
-        if not inputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in inputs:
-                self._parent.msg_warning.emit("{0}".format(item))
-        self._parent.msg.emit("Output items")
-        if not outputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in outputs:
-                self._parent.msg_warning.emit("{0}".format(item))
 
     def set_data(self, d):
         """Set data and update widgets representation of data."""

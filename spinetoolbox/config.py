@@ -28,8 +28,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-# General
-SPINE_TOOLBOX_VERSION = "0.0.9"
+SPINE_TOOLBOX_VERSION = "0.1"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -41,23 +40,22 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # "." is actually valid in a folder name but this is
 # to prevent the user from creating folders like /..../
 
-# QGraphicsItem arbitrary properties
-ITEM_TYPE = 0
-
-# Application path, configuration file path and default project path
+# Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
+    DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html", "index.html"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
+    DOC_INDEX_PATH = os.path.abspath(os.path.join(
+            APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html"))
 
-# Tool input/output directory names
-TOOL_INPUT_DIR = "input"
+# Tool output directory name
 TOOL_OUTPUT_DIR = "output"
 
 # GAMS
@@ -78,12 +76,17 @@ else:
 TOOL_TYPES = ['GAMS', 'Julia']
 
 # Required and optional keywords for Tool template definition files
-REQUIRED_KEYS = ['name', 'description', 'tooltype', 'includes']
-OPTIONAL_KEYS = ['short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
+REQUIRED_KEYS = ['name', 'tooltype', 'includes']
+OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
-# Required fields for Connection Strings
-CS_REQUIRED_KEYS = ['DRIVER', 'SERVER', 'DATABASE']
+SQL_DIALECT_API = {
+    'mysql': 'mysqlclient',
+    'sqlite': 'sqlite3',
+    'mssql': 'pyodbc',
+    'postgresql': 'psycopg2',
+    'oracle': 'cx_oracle'
+}
 
 # Default settings
 SETTINGS = {"project_directory": "",
@@ -119,24 +122,26 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-right: 3px;" \
                     "padding-left: 3px;}"
 
+# NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
+# (known Qt issue)
 ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
-                    "background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
-                    "padding: 3px;}" \
+                    "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
+                    "padding: 3px;" \
+                    "border-style: solid;}" \
                   "QToolButton{background-color: white;" \
                     "border-width: 1px;" \
                     "border-style: inset;" \
                     "border-color: darkslategray;" \
                     "border-radius: 2px;}" \
-                  "QLabel{color:black;}"
+                  "QLabel{color:black;" \
+                    "padding: 3px;}"
 
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
-SPLITTER_SS = "QSplitter::handle:horizontal{background-color: lightgray; border: 1px solid white;}"
-SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"  # QDockWidget handle
+# QDockWidget handle
+SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
-DS_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
-
-# QGraphicsView framerate
-FPS = 50
+# Draw border on all QWidgets when in focus
+TT_FOCUS_SS = ":focus {border: 1px groove;}"

@@ -38,12 +38,15 @@ class AddDataStoreWidget(QWidget):
     Attributes:
         parent (ToolboxUI): Parent widget
         project (SpineToolboxProject): Project for the new item
+        pos (QPointF): Position where to place the new Data Store Item
     """
-    def __init__(self, parent, project):
+    def __init__(self, parent, project, x, y):
         """Initialize class."""
         super().__init__(f=Qt.Window)
         self._parent = parent
         self._project = project
+        self._x = x
+        self._y = y
         #  Set up the user interface from Designer.
         self.ui = ui.add_data_store.Ui_Form()
         self.ui.setupUi(self)
@@ -84,12 +87,15 @@ class AddDataStoreWidget(QWidget):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
+        if not self.name:  # No name given
+            self.statusbar.showMessage("Name missing", 3000)
+            return
         # Check for invalid characters for a folder name
         if any((True for x in self.name if x in INVALID_CHARS)):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._parent.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
             logging.error("Item with same name already in project")
@@ -106,7 +112,7 @@ class AddDataStoreWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_data_store(self.name, self.description, list())
+        self._project.add_data_store(self.name, self.description, list(), self._x, self._y)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
@@ -116,6 +122,8 @@ class AddDataStoreWidget(QWidget):
         """
         if e.key() == Qt.Key_Escape:
             self.close()
+        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
+            self.ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -125,3 +133,7 @@ class AddDataStoreWidget(QWidget):
         """
         if event:
             event.accept()
+            item_shadow = self._parent.ui.graphicsView.item_shadow
+            if item_shadow:
+                self._parent.ui.graphicsView.scene().removeItem(item_shadow)
+                self._parent.ui.graphicsView.item_shadow = None

@@ -25,16 +25,19 @@ Module for data store class.
 """
 
 import os
-import pyodbc, sqlite3
+import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
+from PySide2.QtWidgets import QInputDialog
 from metaobject import MetaObject
+from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database, copy_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
-from PySide2.QtCore import Qt, Slot, QUrl
-from widgets.add_connection_string_widget import AddConnectionStringWidget
+from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
-from helpers import create_dir
+from helpers import create_dir, busy_effect
+
 
 class DataStore(MetaObject):
     """Data Store class.
@@ -52,43 +55,46 @@ class DataStore(MetaObject):
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
         self._project = project
-        self._widget = DataStoreWidget(name, self.item_type)
+        self._widget = DataStoreWidget(self.item_type)
         self._widget.set_name_label(name)
-        self._widget.make_header_for_references()
-        self._widget.make_header_for_data()
-        self.references = references
+        self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.references = references
         try:
             create_dir(self.data_dir)
+            self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
             self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
-        self.databases = list() # name of imported databases
+        self.databases = list()  # name of imported databases NOTE: Not in use at the moment
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Populate data (files) model
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
-        self.add_connection_string_form = None
+        self.add_db_reference_form = None
         self.data_store_form = None
-        self._graphics_item = DataStoreImage(self._parent, x, y, 70, 70, self.name)
+        self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
+        self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
         self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_connection_string_form)
+        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
-        self._widget.ui.treeView_data.doubleClicked.connect(self.open_file)
+        self._widget.ui.toolButton_Spine.clicked.connect(self.create_new_spine_database)
+        self._widget.ui.listView_data.doubleClicked.connect(self.open_data_file)
+        self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
+        self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def set_icon(self, icon):
         self._graphics_item = icon
 
     def get_icon(self):
-        """Returns the item representing this data connection in the scene."""
+        """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
     def get_widget(self):
@@ -97,21 +103,21 @@ class DataStore(MetaObject):
 
     @Slot(name="open_directory")
     def open_directory(self):
-        """Open file explorer in Data Connection data directory."""
+        """Open file explorer in this Data Store's data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    @Slot(name="show_add_connection_string_form")
-    def show_add_connection_string_form(self):
-        """Show the form for specifying connection strings."""
-        self.add_connection_string_form = AddConnectionStringWidget(self._parent, self)
-        self.add_connection_string_form.show()
+    @Slot(name="show_add_db_reference_form")
+    def show_add_db_reference_form(self):
+        """Show the form for querying database connection options."""
+        self.add_db_reference_form = AddDbReferenceWidget(self._parent, self)
+        self.add_db_reference_form.show()
 
     def add_reference(self, reference):
-        """Add reference to reference list and populate widget's reference list"""
+        """Add reference to reference list and populate widget's reference list."""
         self.references.append(reference)
         self._widget.populate_reference_list(self.references)
 
@@ -120,7 +126,7 @@ class DataStore(MetaObject):
         """Remove selected references from reference list.
         Removes all references if nothing is selected.
         """
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
             self._parent.msg.emit("All references removed")
@@ -140,7 +146,7 @@ class DataStore(MetaObject):
         if not self.references:
             self._parent.msg_warning.emit("No data to import")
             return
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected, import all
             references_to_import = self.references
         else:
@@ -148,41 +154,58 @@ class DataStore(MetaObject):
         for reference in references_to_import:
             try:
                 self.import_reference(reference)
-            except pyodbc.Error as e:
-                self._parent.msg_error.emit("[pyodbc.Error] Import failed ({0})".format(e))
+            except Exception as e:
+                self._parent.msg_error.emit("Import failed: {}".format(e))
                 continue
-        data_files = os.listdir(self.data_dir)
+        data_files = self.data_files()
         self._widget.populate_data_list(data_files)
 
+    @busy_effect
     def import_reference(self, reference):
         """Import reference database into local SQLite file"""
+        database = reference['database']
+        self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
+        # Source
+        source_url = reference['url']
+        # Destination
+        if source_url.startswith('sqlite'):
+            dest_filename = os.path.join(self.data_dir, database)
+        else:
+            dest_filename = os.path.join(self.data_dir, database + ".sqlite")
+        try:
+            os.remove(dest_filename)
+        except OSError:
+            pass
+        dest_url = "sqlite:///" + dest_filename
+        copy_database(dest_url, source_url)
+        self.databases.append(database)
 
-        database_name = reference["DATABASE"]
-        self._parent.msg.emit("Importing database <b>{0}</b>".format(database_name))
-        odbc_cnxn_string = '; '.join("{!s}={!s}".format(k,v) for (k,v) in reference.items() if v)
-        obdc_cnxn = pyodbc.connect(odbc_cnxn_string, autocommit=True, timeout=3)
-        sqlite_cnxn = sqlite3.connect(os.path.join(self.data_dir, database_name + ".sqlite"))
-        table_names = [
-            'object_class', 'object',
-            'relationship_class', 'relationship',
-            'parameter_definition', 'parameter'
-        ]
-        for table in table_names:
-            sqlite_cnxn.cursor().execute("DROP TABLE IF EXISTS {}".format(table))
-            header = list()
-            for row in obdc_cnxn.cursor().columns(table=table):
-                header.append(row.column_name)
-            sql = "CREATE TABLE {0} (`{1}`)".format(table, '`, `'.join(header))
-            sqlite_cnxn.cursor().execute(sql)
-            for row in obdc_cnxn.cursor().execute("SELECT * FROM {0}".format(table)):
-                sql = "INSERT INTO {0} VALUES (".format(table)\
-                    + ', '.join(["?" for i in range(len(row))]) + ")"
-                sqlite_cnxn.cursor().execute(sql, row)
-        sqlite_cnxn.commit()
-        self.databases.append(database_name)
+    @busy_effect
+    @Slot("QModelIndex", name="open_data_file")
+    def open_data_file(self, index):
+        """Open file in spine data explorer."""
+        if not index:
+            return
+        if not index.isValid():
+            logging.error("Index not valid")
+            return
+        else:
+            data_file = self.data_files()[index.row()]
+            data_file_path = os.path.join(self.data_dir, data_file)
+            db_url = "sqlite:///" + data_file_path
+            username = getpass.getuser()
+            try:
+                mapping = DatabaseMapping(db_url, username)
+            except SpineDBAPIError as e:
+                self._parent.msg_error.emit(e.msg)
+                return
+            database = data_file
+            self.data_store_form = DataStoreForm(self, mapping, database)
+            self.data_store_form.show()
 
-    @Slot("QModelIndex", name="open_file")
-    def open_file(self, index):
+    @busy_effect
+    @Slot("QModelIndex", name="open_reference")
+    def open_reference(self, index):
         """Open reference in spine data explorer."""
         if not index:
             return
@@ -190,30 +213,71 @@ class DataStore(MetaObject):
             logging.error("Index not valid")
             return
         else:
-            data_file = os.listdir(self.data_dir)[index.row()]
-            data_file_path = os.path.join(self.data_dir, data_file)
-            self.data_store_form = DataStoreForm(self._parent, data_file_path)
+            reference = self.references[index.row()]
+            db_url = reference['url']
+            database = reference['database']
+            username = reference['username']
+            try:
+                mapping = DatabaseMapping(db_url, username)
+            except SpineDBAPIError as e:
+                self._parent.msg_error.emit(e.msg)
+                return
+            self.data_store_form = DataStoreForm(self, mapping, database)
             self.data_store_form.show()
 
-    @Slot(name="show_connections")
-    def show_connections(self):
-        """Show connections of this item."""
-        inputs = self._parent.connection_model.input_items(self.name)
-        outputs = self._parent.connection_model.output_items(self.name)
-        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
-        self._parent.msg.emit("Input items")
-        if not inputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in inputs:
-                self._parent.msg_warning.emit("{0}".format(item))
-        self._parent.msg.emit("Output items")
-        if not outputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in outputs:
-                self._parent.msg_warning.emit("{0}".format(item))
-
     def data_references(self):
-        """Return a list connections strings that are in this item as references (self.references)."""
+        """Returns a list of connection strings that are in this item as references (self.references)."""
         return self.references
+
+    def data_files(self):
+        """Return a list of files in the data directory."""
+        if not os.path.isdir(self.data_dir):
+            return None
+        return os.listdir(self.data_dir)
+
+    @Slot(name="refresh")
+    def refresh(self):
+        """Refresh data files QTreeView.
+        NOTE: Might lead to performance issues."""
+        d = self.data_files()
+        self._widget.populate_data_list(d)
+
+    def find_file(self, fname, visited_items):
+        """Search for filename in data and return the path if found."""
+        # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
+        if self in visited_items:
+            logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
+            return None
+        if fname in self.data_files():
+            # logging.debug("{0} found in DS {1}".format(fname, self.name))
+            self._parent.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
+            path = os.path.join(self.data_dir, fname)
+            return path
+        visited_items.append(self)
+        for input_item in self._parent.connection_model.input_items(self.name):
+            # Find item from project model
+            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item_data = found_item.data(Qt.UserRole)
+            if item_data.item_type in ["Data Store", "Data Connection"]:
+                path = item_data.find_file(fname, visited_items)
+                if path is not None:
+                    return path
+        return None
+
+    @Slot(name="create_new_spine_database")
+    def create_new_spine_database(self):
+        """Create new (empty) Spine database file in data directory."""
+        answer = QInputDialog.getText(self._parent, "Create fresh Spine database", "Database name:")
+        database = answer[0]
+        if not database:
+            return
+        filename = os.path.join(self.data_dir, database + ".sqlite")
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+        url = "sqlite:///" + filename
+        create_new_spine_database(url)

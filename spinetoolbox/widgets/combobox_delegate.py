@@ -23,39 +23,48 @@ A delegate to edit table cells with comboboxes.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
-from PySide2.QtCore import Slot, Signal
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QItemDelegate, QComboBox
 import logging
 
+
 class ComboBoxDelegate(QItemDelegate):
-    """
-    A delegate that places a fully functioning QComboBox in every
-    cell of the column to which it's applied
-    """
-    commit_data = Signal(QComboBox, name="commit_data")
+    """A delegate that places a fully functioning QComboBox in every
+    cell of the column to which it's applied."""
 
     def __init__(self, parent):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
-        combo = QComboBox(parent)
+        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
+        combo = CustomComboEditor(parent)
         combo.row = index.row()
         combo.column = index.column()
-        combo.previous_data = index.model().data(index)
-        combo_items = index.model().combo_items_method
-        items = combo_items(index)
-        if items:
-            combo.addItems(items)
-            combo.setCurrentIndex(-1)   #force index change
-            combo.currentIndexChanged.connect(self.current_index_changed)
+        combo.previous_data = index.data(Qt.EditRole)
+        items = index.data(Qt.UserRole)
+        combo.addItems(items)
+        combo.setCurrentIndex(-1) # force index change
+        combo.currentIndexChanged.connect(self.current_index_changed)
         return combo
 
     def setEditorData(self, editor, index):
+        """Show pop up as soon as editing starts."""
         editor.showPopup()
 
     def setModelData(self, editor, model, index):
+        """Do nothing. Model data is updated by handling the `closeEditor` signal."""
         pass
 
     @Slot(int, name='current_index_changed')
     def current_index_changed(self):
-        self.commit_data.emit(self.sender())
+        """Close combo editor, which causes `closeEditor` signal to be emitted."""
+        self.sender().close()
+
+
+class CustomComboEditor(QComboBox):
+    """A custom QComboBox to handle data from the model."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.previous_data = None
+        self.row = None
+        self.column = None

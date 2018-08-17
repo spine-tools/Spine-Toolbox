@@ -39,14 +39,14 @@ class ToolTemplate(MetaObject):
         name (str): Name of the tool
         description (str): Short description of the tool
         path (str): Path to tool
-        includes (str): List of files belonging to the tool template (relative to 'path')
+        includes (str): List of files belonging to the tool template (relative to 'path')  # TODO: Change to src_files
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, parent, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(name, description)
@@ -84,23 +84,6 @@ class ToolTemplate(MetaObject):
     def get_def_path(self):
         """Returns tool definition file path."""
         return self.def_file_path
-
-    def append_cmdline_args(self, command, extra_cmdline_args):
-        """Append command line arguments to a command.
-
-        Args:
-            command (str): Tool command
-            extra_cmdline_args (str): Extra command line arguments
-        """
-        if (extra_cmdline_args is not None) and (not extra_cmdline_args == ''):
-            if (self.cmdline_args is not None) and (not self.cmdline_args == ''):
-                command += ' ' + self.cmdline_args + ' ' + extra_cmdline_args
-            else:
-                command += ' ' + extra_cmdline_args
-        else:
-            if (self.cmdline_args is not None) and (not self.cmdline_args == ''):
-                command += ' ' + self.cmdline_args
-        return command
 
     @staticmethod
     def check_definition(ui, data):
@@ -143,20 +126,19 @@ class GAMSTool(ToolTemplate):
         name (str): GAMS Tool name
         description (str): GAMS Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path')
-                     First file in the list is the main GAMS program.
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main GAMS program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
-
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, parent, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, tooltype, path, includes,
-                         inputfiles, inputfiles_opt, outputfiles,
+        super().__init__(parent, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         # Add .lst file to list of output files
@@ -229,20 +211,19 @@ class JuliaTool(ToolTemplate):
         name (str): Julia Tool name
         description (str): Julia Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path')
-                     First file in the list is the main Julia program.
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main Julia program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
     """
-
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, parent, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, tooltype, path, includes,
-                         inputfiles, inputfiles_opt, outputfiles,
+        super().__init__(parent, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)

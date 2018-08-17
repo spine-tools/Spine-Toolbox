@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/subwindow_view.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/subwindow_view.ui',
+# licensing of '../spinetoolbox/ui/subwindow_view.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -40,8 +41,8 @@ class Ui_Form(object):
         Form.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         Form.setToolTip("")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(Form)
-        self.verticalLayout_2.setSpacing(2)
-        self.verticalLayout_2.setContentsMargins(4, 4, 4, 4)
+        self.verticalLayout_2.setSpacing(4)
+        self.verticalLayout_2.setContentsMargins(4, 0, 4, 4)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.label_name = QtWidgets.QLabel(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
@@ -56,7 +57,7 @@ class Ui_Form(object):
         font.setWeight(75)
         font.setBold(True)
         self.label_name.setFont(font)
-        self.label_name.setStyleSheet("background-color: rgb(255, 0, 255);\n"
+        self.label_name.setStyleSheet("background-color: rgb(0, 255, 0);\n"
 "color: rgb(255, 255, 255);")
         self.label_name.setAlignment(QtCore.Qt.AlignCenter)
         self.label_name.setWordWrap(True)
@@ -78,6 +79,8 @@ class Ui_Form(object):
         self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setContentsMargins(0, -1, -1, -1)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem3)
         self.pushButton_info = QtWidgets.QPushButton(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -87,17 +90,6 @@ class Ui_Form(object):
         self.pushButton_info.setMaximumSize(QtCore.QSize(75, 23))
         self.pushButton_info.setObjectName("pushButton_info")
         self.horizontalLayout.addWidget(self.pushButton_info)
-        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem3)
-        self.pushButton_connections = QtWidgets.QPushButton(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_connections.sizePolicy().hasHeightForWidth())
-        self.pushButton_connections.setSizePolicy(sizePolicy)
-        self.pushButton_connections.setMaximumSize(QtCore.QSize(75, 23))
-        self.pushButton_connections.setObjectName("pushButton_connections")
-        self.horizontalLayout.addWidget(self.pushButton_connections)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
 
         self.retranslateUi(Form)
@@ -109,7 +101,5 @@ class Ui_Form(object):
         self.label_type.setText(QtWidgets.QApplication.translate("Form", "Type", None, -1))
         self.label_data.setText(QtWidgets.QApplication.translate("Form", "Data", None, -1))
         self.pushButton_info.setText(QtWidgets.QApplication.translate("Form", "Info", None, -1))
-        self.pushButton_connections.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Show connections</p></body></html>", None, -1))
-        self.pushButton_connections.setText(QtWidgets.QApplication.translate("Form", "Conn.", None, -1))
 
 import resources_icons_rc

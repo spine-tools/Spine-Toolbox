@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -29,7 +29,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>569</width>
+    <width>571</width>
     <height>330</height>
    </rect>
   </property>
@@ -83,7 +83,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTableView" name="tableView_pks">
+         <widget class="DataPackageKeyTableView" name="tableView_pks">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -193,7 +193,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTableView" name="tableView_fks">
+         <widget class="DataPackageKeyTableView" name="tableView_fks">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>0</horstretch>
@@ -229,7 +229,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <property name="spacing">
-           <number>0</number>
+           <number>6</number>
           </property>
           <item>
            <widget class="QToolButton" name="toolButton_add_fk">
@@ -364,6 +364,13 @@
   <zorder></zorder>
   <zorder></zorder>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>DataPackageKeyTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resources/resources_icons.qrc"/>
  </resources>

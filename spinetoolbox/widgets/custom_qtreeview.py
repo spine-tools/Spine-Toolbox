@@ -18,30 +18,145 @@
 #############################################################################
 
 """
-Class for a custom QTreeView for the spine data explorer.
+Classes for custom QTreeView.
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   25.4.2018
 """
 
+import os
 import logging
-from PySide2.QtWidgets import QTreeView
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtWidgets import QTreeView, QAbstractItemView
+from PySide2.QtCore import Signal, Slot, Qt
 
 
-class CustomQTreeView(QTreeView):
-    """Custom QTreeView class.
+class ObjectTreeView(QTreeView):
+    """Custom QTreeView class for object tree in Data Store form.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
 
-    currentIndexChanged = Signal("QModelIndex", name="currentIndexChanged")
+    editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
 
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
 
-    @Slot("QModelIndex", "QModelIndex", name="currentChanged")
-    def currentChanged(self, current, previous):
-        self.currentIndexChanged.emit(current)
+    @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
+    def edit(self, index, trigger, event):
+        """Send signal instead of editing item.
+        The DataStoreWidget will catch this signal and open a custom QDialog
+        for edition.
+        """
+        if trigger == QTreeView.EditKeyPressed:
+            self.editKeyPressed.emit(index)
+        return False
+
+
+class ReferencesTreeView(QTreeView):
+    """Custom QTreeView class for 'references' in Data Connection subwindow.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    file_dropped = Signal("QString", name="file_dropped")
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+
+    def dragEnterEvent(self, event):
+        """Accept file drops from the filesystem."""
+        urls = event.mimeData().urls()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.LinkAction)
+
+    def dragMoveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dropEvent(self, event):
+        """Emit signal for each url dropped."""
+        for url in event.mimeData().urls():
+            self.file_dropped.emit(url.toLocalFile())
+
+
+class DataTreeView(QTreeView):
+    """Custom QTreeView class for 'data' in Data Connection subwindow.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    file_dropped = Signal("QString", name="file_dropped")
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+
+    def dragEnterEvent(self, event):
+        """Accept file drops from the filesystem."""
+        urls = event.mimeData().urls()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.CopyAction)
+
+    def dragMoveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dropEvent(self, event):
+        """Emit signal for each url dropped."""
+        for url in event.mimeData().urls():
+            self.file_dropped.emit(url.toLocalFile())
+
+
+class IncludesTreeView(QTreeView):
+    """Custom QTreeView class for 'Includes' in Tool Template form.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    file_dropped = Signal("QString", name="file_dropped")
+
+    def __init__(self, parent):
+        """Initialize the QGraphicsView."""
+        super().__init__(parent)
+
+    def dragEnterEvent(self, event):
+        """Accept file and folder drops from the filesystem."""
+        urls = event.mimeData().urls()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.LinkAction)
+
+    def dragMoveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dropEvent(self, event):
+        """Create list of file paths and emit signal."""
+        for url in event.mimeData().urls():
+            self.file_dropped.emit(url.toLocalFile())

@@ -3,8 +3,12 @@
     <file>Spine_symbol.png</file>
   </qresource>
   <qresource prefix="icons">
-    <file>dc_add.png</file>
+    <file>Spine_db_ref_icon.png</file>
+    <file>Spine_db_icon.png</file>
+    <file>import.png</file>
+    <file>wheel.png</file>
     <file>datapkg.png</file>
+    <file>tool_options.png</file>
     <file>keys.png</file>
     <file>plus.png</file>
     <file>minus.png</file>
@@ -16,5 +20,7 @@
     <file>dc_icon.png</file>
     <file>tool_icon.png</file>
     <file>view_icon.png</file>
+    <file>object_icon.png</file>
+    <file>relationship_icon.png</file>
   </qresource>
 </RCC>
