@@ -27,6 +27,7 @@ Originally intended to be used within DataStoreForm
 """
 
 import logging
+from copy import deepcopy
 from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
     QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QStyle
 from PySide2.QtCore import Slot, Qt
@@ -40,6 +41,7 @@ import ui.add_relationship_classes
 import ui.add_relationships
 import ui.add_parameters
 import ui.add_parameter_values
+import ui.edit_datapackage_primary_keys
 
 
 class AddObjectClassesDialog(QDialog):
@@ -131,9 +133,6 @@ class AddObjectsDialog(QDialog):
         self.ui.setupUi(self)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        # Override slot
-        self.std_current_changed = self.ui.tableView.currentChanged
-        self.ui.tableView.currentChanged = self.current_changed
         # Init model
         self.model = MinimalTableModel(self)
         self.model.header = ['class', 'name', 'description']
@@ -145,14 +144,6 @@ class AddObjectsDialog(QDialog):
         self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
         self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
         self.connect_signals()
-
-    def current_changed(self, current, previous):
-        """Restore slot after view is initialized.
-        This prevents automatically edit triggering as soon as dialog shows.
-        """
-        if current.model() == self.model:
-            self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
-            self.ui.tableView.currentChanged = self.std_current_changed
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -238,9 +229,6 @@ class AddRelationshipClassesDialog(QDialog):
         self.ui.setupUi(self)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        # Override slot
-        self.std_current_changed = self.ui.tableView.currentChanged
-        self.ui.tableView.currentChanged = self.current_changed
         # Init model
         self.model = MinimalTableModel(self)
         self.model.header = ['object class 1', 'object class 2', 'name']
@@ -253,14 +241,6 @@ class AddRelationshipClassesDialog(QDialog):
         self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
         self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
         self.connect_signals()
-
-    def current_changed(self, current, previous):
-        """Restore slot after view is initialized.
-        This prevents automatically edit triggering as soon as dialog shows.
-        """
-        if current.model() == self.model:
-            self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
-            self.ui.tableView.currentChanged = self.std_current_changed
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -408,9 +388,6 @@ class AddRelationshipsDialog(QDialog):
         self.statusbar.setSizeGripEnabled(False)
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
-        # Override slot
-        self.std_current_changed = self.ui.tableView.currentChanged
-        self.ui.tableView.currentChanged = self.current_changed
         # Init model
         self.model = MinimalTableModel(self)
         self.ui.tableView.setModel(self.model)
@@ -426,26 +403,6 @@ class AddRelationshipsDialog(QDialog):
         self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
         self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
         self.connect_signals()
-
-    def resize_tableview(self):
-        self.ui.tableView.resizeColumnsToContents()
-        header = self.ui.tableView.horizontalHeader()
-        font_metric = QFontMetrics(QFont("", 0))
-        icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
-        name_width = 0
-        for section, object_class_id in enumerate(self.object_class_id_list):
-            object_list = self.mapping.object_list(class_id=object_class_id)
-            object_width = max([font_metric.width(x.name) for x in object_list], default=0)
-            section_width = max(icon_width + object_width, header.sectionSize(section))
-            header.resizeSection(section, section_width)
-            name_width += object_width
-        section = header.count()-1
-        section_width = max(name_width, header.sectionSize(section))
-        header.resizeSection(section, section_width)
-        table_width = font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        for j in range(header.count()):
-            table_width += self.ui.tableView.columnWidth(j)
-        self.ui.tableView.setMinimumWidth(table_width)
 
     def set_defaults(self, object_id, object_class_id):
         """Set input relationship class in combobox, and store
@@ -472,19 +429,31 @@ class AddRelationshipsDialog(QDialog):
             return
         self.default_object_name = object_.name
 
-    def current_changed(self, current, previous):
-        """Restore slot after view is initialized.
-        This prevents automatically edit triggering as soon as dialog shows.
-        """
-        if current.model() == self.model:
-            self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
-            self.ui.tableView.currentChanged = self.std_current_changed
-
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.actionInsert_row.triggered.connect(self.insert_row)
         self.ui.actionRemove_row.triggered.connect(self.remove_row)
         self.ui.comboBox_relationship_class.currentIndexChanged.connect(self.call_reset_model)
+
+    def resize_tableview(self):
+        self.ui.tableView.resizeColumnsToContents()
+        header = self.ui.tableView.horizontalHeader()
+        font_metric = QFontMetrics(QFont("", 0))
+        icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
+        name_width = 0
+        for section, object_class_id in enumerate(self.object_class_id_list):
+            object_list = self.mapping.object_list(class_id=object_class_id)
+            object_width = max([font_metric.width(x.name) for x in object_list], default=0)
+            section_width = max(icon_width + object_width, header.sectionSize(section))
+            header.resizeSection(section, section_width)
+            name_width += object_width
+        section = header.count()-1
+        section_width = max(name_width, header.sectionSize(section))
+        header.resizeSection(section, section_width)
+        table_width = font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        for j in range(header.count()):
+            table_width += self.ui.tableView.columnWidth(j)
+        self.ui.tableView.setMinimumWidth(table_width)
 
     @Slot("int", name='call_reset_model')
     def call_reset_model(self, index):
@@ -554,7 +523,7 @@ class AddRelationshipsDialog(QDialog):
 
     @Slot("QWidget", name='data_commited')
     def data_commited(self, editor):
-        """Update 'parent' or 'child' field with data from combobox editor."""
+        """Update 'object x' field with data from combobox editor."""
         name = editor.currentText()
         if not name:
             return
@@ -615,24 +584,13 @@ class AddParametersDialog(QDialog):
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         # Default class name
         self.default_class_name = None
-        if object_class_id:
-            object_class = mapping.single_object_class(id=object_class_id).one_or_none()
-            if object_class:
-                self.default_class_name = object_class.name
-                self.default_class_icon = self.object_icon
-        elif relationship_class_id:
-            wide_relationship_class = mapping.single_wide_relationship_class(id=relationship_class_id).one_or_none()
-            if wide_relationship_class:
-                self.default_class_name = wide_relationship_class.name
-                self.default_class_icon = self.relationship_icon
+        self.default_class_icon = None
+        self.set_defaults(object_class_id, relationship_class_id)
         # Init ui
         self.ui = ui.add_parameters.Ui_Dialog()
         self.ui.setupUi(self)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        # Override slot
-        self.std_current_changed = self.ui.tableView.currentChanged
-        self.ui.tableView.currentChanged = self.current_changed
         # Init model
         self.model = MinimalTableModel(self)
         self.model.header = ['class', 'name']
@@ -645,13 +603,18 @@ class AddParametersDialog(QDialog):
         self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
         self.connect_signals()
 
-    def current_changed(self, current, previous):
-        """Restore slot after view is initialized.
-        This prevents automatically edit triggering as soon as dialog shows.
-        """
-        if current.model() == self.model:
-            self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
-            self.ui.tableView.currentChanged = self.std_current_changed
+    def set_defaults(self, object_class_id, relationship_class_id):
+        """Set defaults names to put in every new row."""
+        if object_class_id:
+            object_class = mapping.single_object_class(id=object_class_id).one_or_none()
+            if object_class:
+                self.default_class_name = object_class.name
+                self.default_class_icon = self.object_icon
+        elif relationship_class_id:
+            wide_relationship_class = mapping.single_wide_relationship_class(id=relationship_class_id).one_or_none()
+            if wide_relationship_class:
+                self.default_class_name = wide_relationship_class.name
+                self.default_class_icon = self.relationship_icon
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -744,6 +707,37 @@ class AddParameterValuesDialog(QDialog):
         # Default names
         self.default_class_name = None
         self.default_entity_name = None
+        self.set_defaults(object_class_id, relationship_class_id, object_id, relationship_id)
+        # Init ui
+        self.ui = ui.add_parameter_values.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        # Add status bar to form
+        self.statusbar = QStatusBar(self)
+        self.statusbar.setFixedHeight(20)
+        self.statusbar.setSizeGripEnabled(False)
+        self.statusbar.setStyleSheet(STATUSBAR_SS)
+        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
+        # Override tableView edit slot
+        self.std_edit = self.ui.tableView.edit
+        self.ui.tableView.edit = self.edit
+        # Init model
+        self.model = MinimalTableModel(self)
+        self.model.header = ['class', 'entity', 'parameter', 'value', 'json']
+        self.insert_row()
+        self.ui.tableView.setModel(self.model)
+        self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
+        self.ui.tableView.setItemDelegateForColumn(1, ComboBoxDelegate(self))
+        self.ui.tableView.setItemDelegateForColumn(2, ComboBoxDelegate(self))
+        self.resize_tableview()
+        # Add actions to tool buttons
+        self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
+        self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
+        self.connect_signals()
+
+    def set_defaults(self, object_class_id, relationship_class_id, object_id, relationship_id):
+        """Set default names to put in a new row."""
         if object_class_id:
             object_class = self.mapping.single_object_class(id=object_class_id).one_or_none()
             if object_class:
@@ -764,47 +758,17 @@ class AddParameterValuesDialog(QDialog):
             if relationship:
                 self.default_entity_name = relationship.name
                 self.default_entity_icon = self.relationship_icon
-        # Init ui
-        self.ui = ui.add_parameter_values.Ui_Dialog()
-        self.ui.setupUi(self)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
-        # Override slot
-        self.std_current_changed = self.ui.tableView.currentChanged
-        self.ui.tableView.currentChanged = self.current_changed
-        self.std_edit = self.ui.tableView.edit
-        self.ui.tableView.edit = self.edit
-        # Init model
-        self.model = MinimalTableModel(self)
-        self.model.header = ['class', 'entity', 'parameter', 'value', 'json']
-        self.insert_row()
-        self.ui.tableView.setModel(self.model)
-        self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
-        self.ui.tableView.setItemDelegateForColumn(1, ComboBoxDelegate(self))
-        self.ui.tableView.setItemDelegateForColumn(2, ComboBoxDelegate(self))
-        self.resize_tableview()
-        # Add actions to tool buttons
-        self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
-        self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
-        self.connect_signals()
-
-    def current_changed(self, current, previous):
-        """Restore slot after view is initialized.
-        This prevents automatically edit triggering as soon as dialog shows.
-        """
-        if current.model() == self.model:
-            self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
-            self.ui.tableView.currentChanged = self.std_current_changed
 
     def edit(self, index, trigger, event):
-        if index.column() in (1, 2) and index.data(Qt.UserRole) is None:
+        if not index.isValid():
+            return False
+        column = index.column()
+        header = self.model.header
+        if header[column] == 'entity' and index.data(Qt.UserRole) is None:
             self.statusbar.showMessage("Please select class first.", 5000)
+            return False
+        if header[column] == 'parameter' and index.data(Qt.UserRole) is None:
+            self.statusbar.showMessage("Please select class and entity first.", 5000)
             return False
         return self.std_edit(index, trigger, event)
 
@@ -898,10 +862,12 @@ class AddParameterValuesDialog(QDialog):
             entity_name_list = [i.name for i in self.mapping.object_list(class_id=object_class.id)]
             if not entity_name_list:
                 msg += "Class '{}' does not have any objects. ".format(name)
+                self.model.setData(self.model.index(row, 1), None, Qt.EditRole)
         elif relationship_class:
             entity_name_list = [i.name for i in self.mapping.wide_relationship_list(class_id=relationship_class.id)]
             if not entity_name_list:
                 msg += "Class '{}' does not have any relationships. ".format(name)
+                self.model.setData(self.model.index(row, 1), None, Qt.EditRole)
         else:
             logging.debug("Couldn't find class '{}'. This is probably a bug.".format(name))
             return
@@ -948,6 +914,7 @@ class AddParameterValuesDialog(QDialog):
             return
         if not parameter_name_list:
             msg += "All parameters for '{}' already have a value. ".format(entity_name)
+            self.model.setData(self.model.index(row, 2), None, Qt.EditRole)
         self.model.setData(self.model.index(row, 2), parameter_name_list, Qt.UserRole)
         self.statusbar.showMessage(msg, 5000)
 
@@ -1033,6 +1000,143 @@ class CommitDialog(QDialog):
             self.statusbar.showMessage("Please enter a commit message.", 3000)
             return
         self.accept()
+
+
+class EditDatapackagePrimaryKeysDialog(QDialog):
+    """A dialog to query user's preferences for new objects."""
+    def __init__(self, parent, datapackage):
+        super().__init__(parent)
+        self.datapackage = datapackage
+        self.resource_name_list = self.datapackage.resource_names
+        self.keys_to_set = list()
+        self.keys_to_remove = list()
+        # Init ui
+        self.ui = ui.edit_datapackage_primary_keys.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        # Add status bar to form
+        self.statusbar = QStatusBar(self)
+        self.statusbar.setFixedHeight(20)
+        self.statusbar.setSizeGripEnabled(False)
+        self.statusbar.setStyleSheet(STATUSBAR_SS)
+        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
+        # Init model
+        self.model = MinimalTableModel(self)
+        data = self.datapackage.primary_keys_data()
+        self.original_data = deepcopy(data)
+        self.init_model(data)
+        self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
+        self.ui.tableView.setItemDelegateForColumn(1, ComboBoxDelegate(self))
+        # Override tableView edit slot
+        self.std_edit = self.ui.tableView.edit
+        self.ui.tableView.edit = self.edit
+        self.resize_tableview()
+        # Add actions to tool buttons
+        self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
+        self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
+        self.connect_signals()
+
+    def edit(self, index, trigger, event):
+        if not index.isValid():
+            return False
+        column = index.column()
+        header = self.model.header
+        if header[column] == 'field' and index.data(Qt.UserRole) is None:
+            self.statusbar.showMessage("Please select resource first.", 5000)
+            return False
+        return self.std_edit(index, trigger, event)
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.ui.actionInsert_row.triggered.connect(self.insert_row)
+        self.ui.actionRemove_row.triggered.connect(self.remove_row)
+        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.resource_data_commited)
+        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.field_data_commited)
+
+    def init_model(self, data):
+        """Init model with primary keys data."""
+        self.model.header = ['resource', 'field']
+        self.model.reset_model(data)
+        for i, row in enumerate(data):
+            resource = row[0]
+            field_name_list = self.datapackage.get_resource(resource).schema.field_names
+            self.model.setData(self.model.index(i, 0), self.resource_name_list, Qt.UserRole)
+            self.model.setData(self.model.index(i, 1), field_name_list, Qt.UserRole)
+        self.insert_row(row=self.model.rowCount())
+        self.ui.tableView.setModel(self.model)
+
+    def resize_tableview(self):
+        self.ui.tableView.resizeColumnsToContents()
+        header = self.ui.tableView.horizontalHeader()
+        font_metric = QFontMetrics(QFont("", 0))
+        resource_width = max([font_metric.width(x) for x in self.resource_name_list], default=0)
+        resource_width = max(resource_width, header.sectionSize(0))
+        header.resizeSection(0, resource_width)
+        # Field with is whatever needs to be (last column stretched)
+        table_width = font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        for j in range(header.count()):
+            table_width += self.ui.tableView.columnWidth(j)
+        self.ui.tableView.setMinimumWidth(table_width)
+
+    @Slot(name="insert_row")
+    def insert_row(self, row=None):
+        if row is False:
+            row = self.ui.tableView.currentIndex().row()+1
+        self.model.insertRows(row, 1)
+        self.model.setData(self.model.index(row, 0), self.resource_name_list, Qt.UserRole)
+        self.model.setData(self.model.index(row, 1), None, Qt.UserRole)
+
+    @Slot(name="remove_row")
+    def remove_row(self):
+        current_row = self.ui.tableView.currentIndex().row()
+        self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
+        self.model.removeRows(current_row, 1)
+
+    @Slot("QWidget", name='resource_data_commited')
+    def resource_data_commited(self, editor):
+        """Update 'resource' field with data from combobox editor"""
+        current_resource = editor.currentText()
+        if not current_resource:
+            return
+        row = editor.row
+        index = self.model.index(row, 0)
+        previous_resource = self.model.data(index, Qt.DisplayRole)
+        if current_resource == previous_resource:
+            return
+        self.model.setData(index, current_resource, Qt.EditRole)
+        field_index = index.sibling(row, 1)
+        field_name_list = self.datapackage.get_resource(current_resource).schema.field_names
+        self.model.setData(field_index, field_name_list[0], Qt.EditRole)
+        self.model.setData(field_index, field_name_list, Qt.UserRole)
+        self.ui.tableView.update(field_index)
+
+    @Slot("QWidget", name='field_data_commited')
+    def field_data_commited(self, editor):
+        """Update 'field' field with data from combobox editor"""
+        current_field = editor.currentText()
+        if not current_field:
+            return
+        row = editor.row
+        index = self.model.index(row, 1)
+        previous_field = self.model.data(index, Qt.DisplayRole)
+        if current_field == previous_field:
+            return
+        self.model.setData(index, current_field)
+
+    def accept(self):
+        new_data = self.model.modelData()
+        for row in new_data:
+            if None in row:
+                continue
+            if row not in self.original_data:
+                self.keys_to_set.append(row)
+        for row in self.original_data:
+            if None in row:
+                continue
+            if row not in new_data:
+                self.keys_to_remove.append(row)
+        super().accept()
 
 
 class CustomQDialog(QDialog):

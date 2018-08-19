@@ -157,7 +157,7 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_value_model.row_with_data_inserted.\
             connect(self.scroll_to_new_relationship_parameter_value)
         # DS destroyed
-        self._data_store.destroyed.connect(self.data_store_destroyed)
+        self._data_store.destroyed.connect(self.close)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -180,12 +180,6 @@ class DataStoreForm(QMainWindow):
         msg_box.setIcon(QMessageBox.Critical)
         msg_box.setText(msg)
         msg_box.exec_()
-
-    @Slot(name="data_store_destroyed")
-    def data_store_destroyed(self):
-        """Close this form without commiting any changes when data store item is destroyed."""
-        self._data_store = None
-        self.close()
 
     @Slot(name="commit_session")
     def commit_session(self):
@@ -268,7 +262,7 @@ class DataStoreForm(QMainWindow):
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
         self.relationship_parameter_model.reset_model(relationship_parameter_data)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
-        self.relationship_parameter_proxy.add_fixed_column('relationship_class_name')
+        self.relationship_parameter_proxy.add_fixed_column('relationship_class_name', 'object_class_name_list')
 
     def init_parameter_value_views(self):
         self.init_object_parameter_value_view()
@@ -276,22 +270,24 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_value_view(self):
         """Init the object parameter table view."""
+        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         header = self.object_parameter_value_model.header
         if not header:
             return
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(header.index('parameter_value_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
         """Init the relationship parameter table view."""
+        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         header = self.relationship_parameter_value_model.header
         if not header:
             return
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(header.index('parameter_value_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_views(self):
@@ -300,22 +296,24 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_view(self):
         """Init the object parameter table view."""
+        self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         header = self.object_parameter_model.header
         if not header:
             return
+        self.ui.tableView_object_parameter.horizontalHeader().hideSection(header.index('parameter_id'))
         self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         self.ui.tableView_object_parameter.resizeColumnsToContents()
 
     def init_relationship_parameter_view(self):
         """Init the object parameter table view."""
+        self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         header = self.relationship_parameter_model.header
         if not header:
             return
+        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(header.index('parameter_id'))
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
     @Slot("QModelIndex", "int", "int", name="scroll_to_new_item")
@@ -563,7 +561,7 @@ class DataStoreForm(QMainWindow):
             return
         for wide_relationship_class_args in dialog.wide_relationship_class_args_list:
             try:
-                wide_relationship_class = self.mapping.add_wide_relationship_class(wide_relationship_class_args)
+                wide_relationship_class = self.mapping.add_wide_relationship_class(**wide_relationship_class_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
@@ -586,7 +584,7 @@ class DataStoreForm(QMainWindow):
             return
         for wide_relationship_args in dialog.wide_relationship_args_list:
             try:
-                wide_relationship = self.mapping.add_wide_relationship(wide_relationship_args)
+                wide_relationship = self.mapping.add_wide_relationship(**wide_relationship_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
@@ -711,12 +709,15 @@ class DataStoreForm(QMainWindow):
             if renamed_type == 'object_class':
                 object_class = self.mapping.rename_object_class(renamed['id'], new_name)
                 msg = "Successfully renamed object class to '{}'.".format(object_class.name)
-            elif renamed_type.endswith('object'):
+            elif renamed_type == 'object':
                 object_ = self.mapping.rename_object(renamed['id'], new_name)
                 msg = "Successfully renamed object to '{}'.".format(object_.name)
-            elif renamed_type.endswith('relationship_class'):
+            elif renamed_type == 'relationship_class':
                 relationship_class = self.mapping.rename_relationship_class(renamed['id'], new_name)
                 msg = "Successfully renamed relationship class to '{}'.".format(relationship_class.name)
+            elif renamed_type == 'relationship':
+                relationship = self.mapping.rename_relationship(renamed['id'], new_name)
+                msg = "Successfully renamed relationship to '{}'.".format(relationship.name)
             else:
                 return # should never happen
             self.msg.emit(msg)
@@ -807,9 +808,13 @@ class DataStoreForm(QMainWindow):
         field_name = header[source_index.column()]
         new_value = editor.text()
         try:
-            self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
+            parameter_value = self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
         except SpineDBAPIError as e:
+            self.sender().blockSignals(True)
             self.msg_error.emit(e.msg)
+            self.sender().blockSignals(False)
+            return
+        if not parameter_value:
             return
         source_model.setData(source_index, new_value)
         msg = "Parameter value succesfully updated."
@@ -870,6 +875,7 @@ class DataStoreForm(QMainWindow):
         """Update parameter table with newly edited data.
         If successful, also update item in the model.
         """
+        print("hey")
         index = editor.index
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
@@ -883,9 +889,13 @@ class DataStoreForm(QMainWindow):
             field_name = 'name'
         new_value = editor.text()
         try:
-            self.mapping.update_parameter(parameter_id, field_name, new_value)
+            parameter = self.mapping.update_parameter(parameter_id, field_name, new_value)
         except SpineDBAPIError as e:
+            self.sender().blockSignals(True)
             self.msg_error.emit(e.msg)
+            self.sender().blockSignals(False)
+            return
+        if not parameter:
             return
         source_model.setData(source_index, new_value)
         msg = "Parameter succesfully updated."
@@ -938,8 +948,6 @@ class DataStoreForm(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-        if self._data_store is not None:
-            self._data_store.destroyed.disconnect(self.data_store_destroyed)
         # save qsettings
         self.qsettings.setValue("mainWindow/splitterTreeParameterState", self.ui.splitter_tree_parameter.saveState())
         self.qsettings.setValue("mainWindow/windowSize", self.size())

@@ -23,7 +23,7 @@ A delegate to edit table cells with comboboxes.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   30.3.2018
 """
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, QEvent
 from PySide2.QtWidgets import QItemDelegate, QComboBox
 import logging
 
@@ -34,6 +34,7 @@ class ComboBoxDelegate(QItemDelegate):
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.show_popup = False
 
     def createEditor(self, parent, option, index):
         """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
@@ -49,7 +50,9 @@ class ComboBoxDelegate(QItemDelegate):
 
     def setEditorData(self, editor, index):
         """Show pop up as soon as editing starts."""
-        editor.showPopup()
+        if self.show_popup:
+            editor.showPopup()
+            self.show_popup = False
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `closeEditor` signal."""
@@ -59,6 +62,13 @@ class ComboBoxDelegate(QItemDelegate):
     def current_index_changed(self):
         """Close combo editor, which causes `closeEditor` signal to be emitted."""
         self.sender().close()
+
+    def editorEvent(self, event, model, option, index):
+        """Set show_popup if editting comes from mouse press."""
+        if event.type() == QEvent.MouseButtonPress:
+            if event.button() == Qt.LeftButton:
+                self.show_popup = True
+        return super().editorEvent(event, model, option, index)
 
 
 class CustomComboEditor(QComboBox):

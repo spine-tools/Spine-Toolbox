@@ -49,14 +49,14 @@ class Ui_Dialog(object):
         self.horizontalLayout_2.addWidget(self.comboBox_relationship_class)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
-        self.toolButton_insert_row = QtWidgets.QToolButton(Dialog)
-        self.toolButton_insert_row.setObjectName("toolButton_insert_row")
-        self.horizontalLayout_2.addWidget(self.toolButton_insert_row)
         self.toolButton_remove_row = QtWidgets.QToolButton(Dialog)
         self.toolButton_remove_row.setObjectName("toolButton_remove_row")
         self.horizontalLayout_2.addWidget(self.toolButton_remove_row)
+        self.toolButton_insert_row = QtWidgets.QToolButton(Dialog)
+        self.toolButton_insert_row.setObjectName("toolButton_insert_row")
+        self.horizontalLayout_2.addWidget(self.toolButton_insert_row)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
-        self.tableView = QtWidgets.QTableView(Dialog)
+        self.tableView = CustomQTableView(Dialog)
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
         self.tableView.setObjectName("tableView")
         self.tableView.horizontalHeader().setStretchLastSection(True)
@@ -91,12 +91,15 @@ class Ui_Dialog(object):
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), Dialog.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+        Dialog.setTabOrder(self.comboBox_relationship_class, self.tableView)
+        Dialog.setTabOrder(self.tableView, self.toolButton_insert_row)
+        Dialog.setTabOrder(self.toolButton_insert_row, self.toolButton_remove_row)
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add relationships", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Dialog", "Relationship class", None, -1))
-        self.toolButton_insert_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.toolButton_remove_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
+        self.toolButton_insert_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.actionInsert_row.setText(QtWidgets.QApplication.translate("Dialog", "Insert row", None, -1))
         self.actionInsert_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Insert row below current one <span style=\" font-weight:600;\">(Ctrl+Ins)</span></p></body></html>", None, -1))
         self.actionInsert_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Ins", None, -1))
@@ -104,4 +107,5 @@ class Ui_Dialog(object):
         self.actionRemove_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Remove current row <span style=\" font-weight:600;\">(Ctrl+Del)</span></p></body></html>", None, -1))
         self.actionRemove_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Del", None, -1))
 
+from widgets.custom_qtableview import CustomQTableView
 import resources_icons_rc

@@ -84,10 +84,15 @@ CALL pyside2-uic ../spinetoolbox/ui/data_store_form.ui -o ../spinetoolbox/ui/dat
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\data_store_form.py.o > ..\spinetoolbox\ui\data_store_form.py
 del ..\spinetoolbox\ui\data_store_form.py.o
 
-ECHO building edit_datapackage_keys.py
-CALL pyside2-uic ../spinetoolbox/ui/edit_datapackage_keys.ui -o ../spinetoolbox/ui/edit_datapackage_keys.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_datapackage_keys.py.o > ..\spinetoolbox\ui\edit_datapackage_keys.py
-del ..\spinetoolbox\ui\edit_datapackage_keys.py.o
+ECHO building edit_datapackage_primary_keys.py
+CALL pyside2-uic ../spinetoolbox/ui/edit_datapackage_primary_keys.ui -o ../spinetoolbox/ui/edit_datapackage_primary_keys.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_datapackage_primary_keys.py.o > ..\spinetoolbox\ui\edit_datapackage_primary_keys.py
+del ..\spinetoolbox\ui\edit_datapackage_primary_keys.py.o
+
+ECHO building edit_datapackage_foreign_keys.py
+CALL pyside2-uic ../spinetoolbox/ui/edit_datapackage_foreign_keys.ui -o ../spinetoolbox/ui/edit_datapackage_foreign_keys.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_datapackage_foreign_keys.py.o > ..\spinetoolbox\ui\edit_datapackage_foreign_keys.py
+del ..\spinetoolbox\ui\edit_datapackage_foreign_keys.py.o
 
 ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
@@ -156,7 +161,8 @@ CALL append_license_xml ..\spinetoolbox\ui\add_parameter_values.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
-CALL append_license_xml ..\spinetoolbox\ui\edit_datapackage_keys.ui
+CALL append_license_xml ..\spinetoolbox\ui\edit_datapackage_primary_keys.ui
+CALL append_license_xml ..\spinetoolbox\ui\edit_datapackage_foreign_keys.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
@@ -181,7 +187,8 @@ CALL append_license_py ..\spinetoolbox\ui\add_parameter_values.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
-CALL append_license_py ..\spinetoolbox\ui\edit_datapackage_keys.py
+CALL append_license_py ..\spinetoolbox\ui\edit_datapackage_primary_keys.py
+CALL append_license_py ..\spinetoolbox\ui\edit_datapackage_foreign_keys.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py

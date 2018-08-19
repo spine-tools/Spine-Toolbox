@@ -26,10 +26,10 @@ Class for a custom QTableView for the Data store form.
 
 import logging
 from PySide2.QtWidgets import QTableView, QApplication
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt, Signal, QModelIndex
 from PySide2.QtGui import QKeySequence
 
-class CopyPasteTableView(QTableView):
+class CustomQTableView(QTableView):
     """Custom QTableView class.
 
     Attributes:
@@ -39,6 +39,20 @@ class CopyPasteTableView(QTableView):
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
+        self.editing = False
+
+    def moveCursor(self, cursor_action, modifiers):
+        """Don't move to next index if the self.editing flag is set.
+        """
+        if self.editing and cursor_action == self.CursorAction.MoveNext:
+            self.editing = False
+            return self.currentIndex()
+        return super().moveCursor(cursor_action, modifiers)
+
+    def edit(self, index, trigger, event):
+        self.editing = True
+        return super().edit(index, trigger, event)
+
 
     def keyPressEvent(self, event):
         """Copy selection to clipboard so that it can be pasted into Excel"""

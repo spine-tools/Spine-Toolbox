@@ -51,7 +51,7 @@ class Ui_Dialog(object):
         self.toolButton_insert_row.setObjectName("toolButton_insert_row")
         self.horizontalLayout_2.addWidget(self.toolButton_insert_row)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
-        self.tableView = QtWidgets.QTableView(Dialog)
+        self.tableView = CustomQTableView(Dialog)
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
         self.tableView.setObjectName("tableView")
         self.tableView.horizontalHeader().setStretchLastSection(True)
@@ -79,6 +79,9 @@ class Ui_Dialog(object):
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), Dialog.accept)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("rejected()"), Dialog.reject)
         QtCore.QMetaObject.connectSlotsByName(Dialog)
+        Dialog.setTabOrder(self.tableView, self.spinBox)
+        Dialog.setTabOrder(self.spinBox, self.toolButton_insert_row)
+        Dialog.setTabOrder(self.toolButton_insert_row, self.toolButton_remove_row)
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add relationship classes", None, -1))
@@ -92,4 +95,5 @@ class Ui_Dialog(object):
         self.actionRemove_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Remove current row <span style=\" font-weight:600;\">(Ctrl+Del)</span></p></body></html>", None, -1))
         self.actionRemove_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Del", None, -1))
 
+from widgets.custom_qtableview import CustomQTableView
 import resources_icons_rc

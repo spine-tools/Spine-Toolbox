@@ -179,7 +179,7 @@
          </layout>
         </item>
         <item>
-         <widget class="CopyPasteTableView" name="tableView_resource_data">
+         <widget class="CustomQTableView" name="tableView_resource_data">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>2</horstretch>
@@ -222,13 +222,19 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <addaction name="actionInfer_datapackage"/>
-    <addaction name="actionLoad_datapackage"/>
     <addaction name="actionSave_datapackage"/>
     <addaction name="actionExport"/>
     <addaction name="actionQuit"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionPrimary_keys"/>
+    <addaction name="actionForeign_keys"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSave_datapackage">
@@ -261,16 +267,6 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
-  <action name="actionResource_Spine_names">
-   <property name="text">
-    <string>Resource Spine-names</string>
-   </property>
-  </action>
-  <action name="actionField_Spine_names">
-   <property name="text">
-    <string>Field Spine-names</string>
-   </property>
-  </action>
   <action name="actionInfer_datapackage">
    <property name="text">
     <string>Infer from CSV</string>
@@ -280,11 +276,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
-   </property>
-  </action>
-  <action name="actionNew_datapackage">
-   <property name="text">
-    <string>New</string>
    </property>
   </action>
   <action name="actionLoad_datapackage">
@@ -298,10 +289,26 @@
     <string>Ctrl+L</string>
    </property>
   </action>
+  <action name="actionPrimary_keys">
+   <property name="text">
+    <string>Primary keys...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionForeign_keys">
+   <property name="text">
+    <string>Foreign keys...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CopyPasteTableView</class>
+   <class>CustomQTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

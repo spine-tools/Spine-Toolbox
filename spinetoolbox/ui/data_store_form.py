@@ -106,7 +106,7 @@ class Ui_MainWindow(object):
         self.label_object_parameter_value.setObjectName("label_object_parameter_value")
         self.horizontalLayout.addWidget(self.label_object_parameter_value)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
-        self.tableView_object_parameter_value = CopyPasteTableView(self.tab_object_parameter_value)
+        self.tableView_object_parameter_value = CustomQTableView(self.tab_object_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -143,7 +143,7 @@ class Ui_MainWindow(object):
         self.label_object_parameter.setObjectName("label_object_parameter")
         self.horizontalLayout_4.addWidget(self.label_object_parameter)
         self.verticalLayout_5.addLayout(self.horizontalLayout_4)
-        self.tableView_object_parameter = CopyPasteTableView(self.tab_object_parameter)
+        self.tableView_object_parameter = CustomQTableView(self.tab_object_parameter)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -188,7 +188,7 @@ class Ui_MainWindow(object):
         self.label_relationship_parameter_value.setObjectName("label_relationship_parameter_value")
         self.horizontalLayout_3.addWidget(self.label_relationship_parameter_value)
         self.verticalLayout.addLayout(self.horizontalLayout_3)
-        self.tableView_relationship_parameter_value = CopyPasteTableView(self.tab_relationship_parameter_value)
+        self.tableView_relationship_parameter_value = CustomQTableView(self.tab_relationship_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -224,7 +224,7 @@ class Ui_MainWindow(object):
         self.label_relationship_parameter.setObjectName("label_relationship_parameter")
         self.horizontalLayout_5.addWidget(self.label_relationship_parameter)
         self.verticalLayout_7.addLayout(self.horizontalLayout_5)
-        self.tableView_relationship_parameter = CopyPasteTableView(self.tab_relationship_parameter)
+        self.tableView_relationship_parameter = CustomQTableView(self.tab_relationship_parameter)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -288,7 +288,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.tabWidget_object.setCurrentIndex(0)
-        self.tabWidget_relationship.setCurrentIndex(0)
+        self.tabWidget_relationship.setCurrentIndex(1)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -329,5 +329,5 @@ class Ui_MainWindow(object):
         self.actionAdd_parameter_values.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add parameter values", None, -1))
         self.actionAdd_parameter_values.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+P", None, -1))
 
-from widgets.custom_qtableview import CopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import CustomQTableView

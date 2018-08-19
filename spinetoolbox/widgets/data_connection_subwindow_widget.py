@@ -25,7 +25,7 @@ QWidget that is used to display information contained in a Data Connection.
 """
 
 import logging
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_connection import Ui_Form
@@ -47,6 +47,7 @@ class DataConnectionWidget(QWidget):
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory.
+        self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
         self.ui.treeView_references.setModel(self.reference_model)
         self.ui.treeView_data.setModel(self.data_model)
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
@@ -106,6 +107,8 @@ class DataConnectionWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                if item == 'datapackage.json':
+                    qitem.setData(self.datapackage_icon, Qt.DecorationRole)
                 self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):
