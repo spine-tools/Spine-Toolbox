@@ -74,7 +74,6 @@ class DataStore(MetaObject):
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self.add_db_reference_form = None
-        self.data_store_form = None
         self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
         self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
@@ -183,7 +182,7 @@ class DataStore(MetaObject):
     @busy_effect
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):
-        """Open file in spine data explorer."""
+        """Open file in Data Store form."""
         if not index:
             return
         if not index.isValid():
@@ -200,8 +199,8 @@ class DataStore(MetaObject):
                 self._parent.msg_error.emit(e.msg)
                 return
             database = data_file
-            self.data_store_form = DataStoreForm(self, mapping, database)
-            self.data_store_form.show()
+            data_store_form = DataStoreForm(self, mapping, database)
+            data_store_form.show()
 
     @busy_effect
     @Slot("QModelIndex", name="open_reference")
@@ -222,8 +221,8 @@ class DataStore(MetaObject):
             except SpineDBAPIError as e:
                 self._parent.msg_error.emit(e.msg)
                 return
-            self.data_store_form = DataStoreForm(self, mapping, database)
-            self.data_store_form.show()
+            data_store_form = DataStoreForm(self, mapping, database)
+            data_store_form.show()
 
     def data_references(self):
         """Returns a list of connection strings that are in this item as references (self.references)."""

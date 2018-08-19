@@ -28,6 +28,7 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 import os
+from collections import Counter
 from PySide2.QtCore import Qt, Signal, QModelIndex, QAbstractListModel, QAbstractTableModel,\
     QSortFilterProxyModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
@@ -788,7 +789,7 @@ class MinimalTableModel(QAbstractTableModel):
             role (int): Data role
 
         Returns:
-            Item data for given role.
+            Row data for given role.
         """
         if not 0 <= row < self.rowCount():
             return None
@@ -802,11 +803,22 @@ class MinimalTableModel(QAbstractTableModel):
             role (int): Data role
 
         Returns:
-            Item data for given role.
+            Column data for given role.
         """
         if not 0 <= column < self.columnCount():
             return None
         return [self.data(self.index(row, column), role) for row in range(self.rowCount())]
+
+    def modelData(self, role=Qt.DisplayRole):
+        """Returns the data stored under the given role in the entire model.
+
+        Args:
+            role (int): Data role
+
+        Returns:
+            Model data for given role.
+        """
+        return [self.rowData(row, role) for row in range(self.rowCount())]
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
@@ -845,7 +857,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def insert_row_with_data(self, row, row_data, parent=QModelIndex(), role=Qt.EditRole):
+    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
         if not self.insertRows(row, 1, parent):
             return False
         for column, value in enumerate(row_data):
@@ -935,7 +947,7 @@ class MinimalTableModel(QAbstractTableModel):
         self._data = list()
         if new_data:
             for row, row_data in enumerate(new_data):
-                self.insert_row_with_data(row, row_data)
+                self.insert_row_with_data(row, row_data, Qt.EditRole)
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
@@ -1203,7 +1215,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.fixed_column_list = list()  # Non-editable columns
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.setDynamicSortFilter(False)
+        self.setDynamicSortFilter(False)  # Important so we can setData within filterAcceptRows
         self.gray_background = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
 
     def data(self, index, role=Qt.DisplayRole):
@@ -1258,7 +1270,10 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             partial_result = False
             for column, value in condition.items():
                 source_index = self.sourceModel().index(source_row, column, source_parent)
-                data = self.sourceModel().data(source_index, self.filterRole()).split(',')
+                data = self.sourceModel().data(source_index, self.filterRole())
+                if data is None:
+                    continue
+                data = data.split(',')  # Split in case of name list
                 if value in data:
                     partial_result = True
                     self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
@@ -1289,26 +1304,192 @@ class DatapackageDescriptorModel(QStandardItemModel):
         super().__init__(parent)
         self.header = list()
 
-    def find_item(self, key_chain):
-        """Find item under a chain of keys.
+    def visit(self, parent_row, value):
+        """Visit value and build tree from parent item.
 
-        Returns:
-            key: the last key explored from key_chain
-            item: the last item visited
+        Args:
+            parent_row (list of QStandardItem)
+            value
         """
-        key_iterator = iter(key_chain)
-        item = self.invisibleRootItem()
-        while item.hasChildren():
-            try:
-                key = next(key_iterator)
-            except StopIteration:
-                break
-            for i in range(item.rowCount()):
-                child = item.child(i)
-                if child.data(Qt.UserRole) == key:
-                    item = child
-                    break
-        return key, item
+        if isinstance(value, dict):
+            self.visit_dict(parent_row, value)
+        elif isinstance(value, list):
+            self.visit_list(parent_row, value)
+        else:
+            self.visit_scalar(parent_row, value)
+
+    def visit_dict(self, parent_row, value):
+        """Visit value and build tree from parent item.
+
+        Args:
+            parent_row (list of QStandardItem)
+            value (dict)
+        """
+        for key, new_value in value.items():
+            key_item = QStandardItem(key)
+            row = [key_item]
+            self.visit(row, new_value)
+            parent_row[0].appendRow(row)
+            parent_row[0].setData('dict', Qt.UserRole)
+
+    def visit_list(self, parent_row, value):
+        """Visit value and build tree from parent item.
+
+        Args:
+            parent_row (list of QStandardItem)
+            value (list)
+        """
+        for i, new_value in enumerate(value):
+            if isinstance(new_value, dict):
+                try:
+                    key_item = QStandardItem(new_value['name'])
+                except KeyError:
+                    key_item = QStandardItem("[{}]".format(i))
+                    key_item.setData(QBrush(Qt.gray), Qt.ForegroundRole)
+            else:
+                key_item = QStandardItem("[{}]".format(i))
+                key_item.setData(QBrush(Qt.gray), Qt.ForegroundRole)
+            row = [key_item]
+            self.visit(row, new_value)
+            parent_row[0].appendRow(row)
+
+    def visit_scalar(self, parent_row, value):
+        """Visit value and build tree from parent item.
+
+        Args:
+            parent_row (list of QStandardItem)
+            value (dict)
+        """
+        if not value:
+            value = "None"
+        value_item = QStandardItem(str(value))
+        parent_row.append(value_item)
+
+    def build_tree(self, descriptor):
+        """Build the tree by exploring a dictionary recursively.
+
+        Args:
+            descriptor (dict): the dictionary to explore
+        """
+        self.clear()
+        root = self.invisibleRootItem()
+        self.visit([root], descriptor)
+
+    def rename_resource(self, old, new):
+        """Rename resource."""
+        self.rename_resource_in_resources(old, new)
+        # TODO: self.rename_resource_in_foreign_keys(old, new)
+
+    def rename_resource_in_resources(self, old, new):
+        resources_index = self.resources_index()
+        if not resources_index:
+            return
+        for i in range(self.rowCount(resources_index)):
+            child_index = self.index(i, 0, resources_index)
+            for k in range(self.rowCount(child_index)):
+                key_index = self.index(k, 0, child_index)
+                value_index = self.index(k, 1, child_index)
+                if key_index.data(Qt.DisplayRole) == "name" and value_index.data(Qt.DisplayRole) == old:
+                    self.setData(value_index, new, Qt.EditRole)
+                    self.setData(child_index, new, Qt.EditRole)
+
+    def rename_field(self, resource, old, new):
+        """Rename field from resource."""
+        self.rename_field_in_fields(resource, old, new)
+        self.rename_field_in_primary_key(resource, old, new)
+        # TODO: self.rename_field_in_foreign_keys(resource, old, new)
+
+    def rename_field_in_fields(self, resource, old, new):
+        fields_index = self.fields_index(resource)
+        if not fields_index:
+            return
+        for i in range(self.rowCount(fields_index)):
+            child_index = self.index(i, 0, fields_index)
+            for k in range(self.rowCount(child_index)):
+                key_index = self.index(k, 0, child_index)
+                value_index = self.index(k, 1, child_index)
+                if key_index.data(Qt.DisplayRole) == "name" and value_index.data(Qt.DisplayRole) == old:
+                    self.setData(value_index, new, Qt.EditRole)
+                    self.setData(child_index, new, Qt.EditRole)
+
+    def rename_field_in_primary_key(self, resource, old, new):
+        primary_key_index = self.primary_key_index(resource)
+        if not primary_key_index:
+            return
+        for i in range(self.rowCount(primary_key_index)):
+            value_index = self.index(i, 1, primary_key_index)
+            if value_index.data(Qt.DisplayRole) == old:
+                self.setData(value_index, new, Qt.EditRole)
+
+    def set_primary_key(self, resource, *primary_key):
+        primary_key_index = self.primary_key_index(resource)
+        if primary_key_index:
+            if not self.remove_primary_key_index(primary_key_index, *primary_key):
+                return False
+        schema_index = self.schema_index(resource)
+        if not schema_index:
+            return None
+        primary_key_dict = {
+            'primaryKey': list(primary_key)
+        }
+        schema_item = self.itemFromIndex(schema_index)
+        self.visit([schema_item], primary_key_dict)
+        return True
+
+    def remove_primary_key(self, resource, *primary_key):
+        primary_key_index = self.primary_key_index(resource)
+        if not primary_key_index:
+            return False
+        return self.remove_primary_key_index(primary_key_index, *primary_key)
+
+    def remove_primary_key_index(self, primary_key_index, *primary_key):
+        """Remove primary key index from model if the key matches the one given."""
+        model_primary_key = list()
+        for i in range(self.rowCount(primary_key_index)):
+            child_index = self.index(i, 0, primary_key_index)
+            model_primary_key.append(child_index.data(Qt.DisplayRole))
+        if Counter(model_primary_key) == Counter(primary_key):
+            return self.removeRows(primary_key_index.row(), 1, primary_key_index.parent())
+
+    def resources_index(self):
+        """Return index that holds the resources for this datpackage."""
+        items = self.findItems('resources', Qt.MatchExactly, column=0)
+        if items:
+            return self.indexFromItem(items[0])
+        return None
+
+    def schema_index(self, resource):
+        """Return index that holds the schema for this resource."""
+        items = self.findItems('schema', Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        for item in items:
+            index = self.indexFromItem(item)
+            parent = index.parent()
+            if parent.isValid():
+                if parent.data(Qt.DisplayRole) == resource:
+                    return index
+        return None
+
+    def fields_index(self, resource):
+        """Return index that holds the fields for this resource's schema."""
+        items = self.findItems('fields', Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        for item in items:
+            index = self.indexFromItem(item)
+            g_parent = index.parent().parent()
+            if g_parent.isValid():
+                if g_parent.data(Qt.DisplayRole) == resource:
+                    return index
+        return None
+
+    def primary_key_index(self, resource):
+        """Return index that holds the primary key for this resource's schema."""
+        items = self.findItems('primaryKey', Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        for item in items:
+            index = self.indexFromItem(item)
+            g_parent = index.parent().parent()
+            if g_parent.isValid():
+                if g_parent.data(Qt.DisplayRole) == resource:
+                    return index
+        return None
 
     def flags(self, index):
         """Returns enabled flags for the given index.

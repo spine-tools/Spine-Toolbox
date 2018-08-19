@@ -24,7 +24,7 @@ Classes to handle the Spine database object relational mapping.
 :date:   11.8.2018
 """
 
-from sqlalchemy import create_engine, false, distinct, func
+from sqlalchemy import create_engine, false, distinct, func, MetaData
 from sqlalchemy.ext.automap import automap_base, generate_relationship
 from sqlalchemy.orm import interfaces, Session, aliased
 from sqlalchemy.util import KeyedTuple
@@ -104,6 +104,8 @@ class DatabaseMapping(object):
             self.Commit = self.Base.classes.commit
         except NoSuchTableError as table:
             raise TableNotFoundError(table)
+        except AttributeError as table:
+            raise TableNotFoundError(table)
 
     def new_commit(self):
         """Add row to commit table"""
@@ -153,7 +155,7 @@ class DatabaseMapping(object):
         self.new_commit()
 
     def single_object_class(self, id=None, name=None):
-        """Return a single object class given the id or name or None if not found."""
+        """Return a single object class given the id or name."""
         if not id and not name:
             return self.empty_list()
         qry = self.session.query(
@@ -167,7 +169,7 @@ class DatabaseMapping(object):
             return qry.filter_by(name=name)
 
     def single_object(self, id=None, name=None):
-        """Return a single object given the id or None if not found."""
+        """Return a single object given the id or name."""
         if not id and not name:
             return self.empty_list()
         qry = self.session.query(
@@ -181,7 +183,7 @@ class DatabaseMapping(object):
             return qry.filter_by(name=name)
 
     def single_wide_relationship_class(self, id=None, name=None):
-        """Return a single relationship class in wide format given the id or None if not found."""
+        """Return a single relationship class in wide format given the id or name."""
         if not id and not name:
             return self.empty_list()
         qry = self.session.query(
@@ -197,7 +199,7 @@ class DatabaseMapping(object):
             return qry.filter_by(name=name)
 
     def single_wide_relationship(self, id=None, name=None):
-        """Return a single relationship in wide format given the id or None if not found."""
+        """Return a single relationship in wide format given the id or name."""
         if not id and not name:
             return self.empty_list()
         qry = self.session.query(
@@ -212,17 +214,6 @@ class DatabaseMapping(object):
             return qry.filter_by(id=id)
         if name:
             return qry.filter_by(name=name)
-
-    def single_relationship(self, id):
-        """Return a single relationship given the id or None if not found."""
-        return self.session.query(
-            self.Relationship.id,
-            self.Relationship.name,
-            self.Relationship.class_id,
-            self.Relationship.parent_relationship_id,
-            self.Relationship.parent_object_id,
-            self.Relationship.child_object_id
-        ).filter_by(id=id).one_or_none()
 
     def object_class_list(self):
         """Return object classes ordered by display order."""
@@ -380,7 +371,7 @@ class DatabaseMapping(object):
         return self.session.query(
             #self.Parameter.object_class_id,
             self.ObjectClass.name.label('object_class_name'),
-            #self.Parameter.id.label('parameter_id'),
+            self.Parameter.id.label('parameter_id'),
             self.Parameter.name.label('parameter_name'),
             self.Parameter.can_have_time_series,
             self.Parameter.can_have_time_pattern,
@@ -401,7 +392,7 @@ class DatabaseMapping(object):
             wide_relationship_class_subqry.c.name.label('relationship_class_name'),
             #wide_relationship_class_subqry.c.object_class_id_list,
             wide_relationship_class_subqry.c.object_class_name_list,
-            #self.Parameter.id.label('parameter_id'),
+            self.Parameter.id.label('parameter_id'),
             self.Parameter.name.label('parameter_name'),
             self.Parameter.can_have_time_series,
             self.Parameter.can_have_time_pattern,
@@ -421,7 +412,7 @@ class DatabaseMapping(object):
             self.ObjectClass.name.label('object_class_name'),
             #self.ParameterValue.object_id,
             self.Object.name.label('object_name'),
-            #self.ParameterValue.id.label('parameter_value_id'),
+            self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
             self.ParameterValue.index,
             self.ParameterValue.value,
@@ -446,7 +437,7 @@ class DatabaseMapping(object):
             wide_relationship_subqry.c.name.label('relationship_name'),
             #wide_relationship_subqry.c.object_id_list,
             wide_relationship_subqry.c.object_name_list,
-            #self.ParameterValue.id.label('parameter_value_id'),
+            self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
             self.ParameterValue.index,
             self.ParameterValue.value,
@@ -493,7 +484,7 @@ class DatabaseMapping(object):
             msg = "DBAPIError while inserting object '{}': {}".format(object_.name, e.orig.args)
             raise SpineDBAPIError(msg)
 
-    def add_wide_relationship_class(self, wide_relationship_class_args):
+    def add_wide_relationship_class(self, **wide_relationship_class_args):
         """Add relationship class to database.
 
         Args:
@@ -529,14 +520,14 @@ class DatabaseMapping(object):
                 format(wide_relationship_class_args['name'], e.orig.args)
             raise SpineDBAPIError(msg)
 
-    def add_wide_relationship(self, wide_relationship_args):
+    def add_wide_relationship(self, **wide_relationship_args):
         """Add relationship to database.
 
         Args:
-            wide_relationship (dict): the relationship in wide format
+            wide_relationship_args (dict): the relationship in wide format
 
         Returns:
-            wide_relationship (dict): the relationship now with the id
+            wide_relationship (KeyedTuple): the relationship now with the id
         """
         id = self.session.query(func.max(self.Relationship.id)).scalar()
         if not id:
@@ -659,7 +650,7 @@ class DatabaseMapping(object):
                 relationship.name = new_name
                 relationship.commit_id = self.commit.id
             self.session.flush()
-            return relationship.first()
+            return relationship_list.first()
         except DBAPIError as e:
             self.session.rollback()
             msg = "DBAPIError while renaming relationship '{}': {}".format(relationship.name, e.orig.args)
@@ -738,8 +729,7 @@ class DatabaseMapping(object):
         except ValueError:
             raise ParameterValueError(new_value)
         if value == new_casted_value:
-            msg = "Parameter not changed."
-            raise SpineDBAPIError(msg)
+            return None
         try:
             self.transactions.append(self.session.begin_nested())
             setattr(parameter, field_name, new_value)
@@ -748,7 +738,7 @@ class DatabaseMapping(object):
             return parameter
         except DBAPIError as e:
             self.session.rollback()
-            msg = "DBAPIError while updating parameter: {}".format(e.orig.args)
+            msg = "DBAPIError while updating parameter '{}': {}".format(parameter.name, e.orig.args)
             raise SpineDBAPIError(msg)
 
     def update_parameter_value(self, id, field_name, new_value):
@@ -766,8 +756,7 @@ class DatabaseMapping(object):
         except ValueError:
             raise ParameterValueError(new_value)
         if value == new_casted_value:
-            msg = "Parameter value not changed."
-            raise SpineDBAPIError(msg)
+            return None
         try:
             self.transactions.append(self.session.begin_nested())
             setattr(parameter_value, field_name, new_casted_value)
@@ -811,6 +800,16 @@ class DatabaseMapping(object):
 
     def empty_list(self):
         return self.session.query(false()).filter(false())
+
+    def reset(self):
+        """Delete all records from all tables (but don't drop the tables)."""
+        self.session.query(self.Object).delete(synchronize_session=False)
+        self.session.query(self.RelationshipClass).delete(synchronize_session=False)
+        self.session.query(self.Relationship).delete(synchronize_session=False)
+        self.session.query(self.Parameter).delete(synchronize_session=False)
+        self.session.query(self.ParameterValue).delete(synchronize_session=False)
+        self.session.query(self.Commit).delete(synchronize_session=False)
+        self.session.commit()
 
     def close(self):
         if self.session:
