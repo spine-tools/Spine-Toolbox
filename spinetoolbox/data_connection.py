@@ -354,9 +354,8 @@ class DataConnection(MetaObject):
         return None
 
 
-
 class CustomPackage(Package):
-    """Custom Package class to manage keys more directly."""
+    """Custom Package class to manage datapackages."""
     def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
         super().__init__(descriptor, base_path, strict, storage)
 

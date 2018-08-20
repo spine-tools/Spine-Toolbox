@@ -51,7 +51,7 @@ class Ui_Dialog(object):
         self.horizontalLayout.addWidget(self.toolButton_insert_row)
         self.verticalLayout.addLayout(self.horizontalLayout)
         self.tableView = CustomQTableView(Dialog)
-        self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AllEditTriggers)
+        self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.DoubleClicked|QtWidgets.QAbstractItemView.EditKeyPressed)
         self.tableView.setObjectName("tableView")
         self.tableView.horizontalHeader().setStretchLastSection(True)
         self.verticalLayout.addWidget(self.tableView)

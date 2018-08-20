@@ -719,6 +719,7 @@ class MinimalTableModel(QAbstractTableModel):
         self._parent = parent  # QMainWindow
         self._data = list()
         self.header = list()
+        self.can_grow = False
 
     def clear(self):
         self.beginResetModel()
@@ -760,6 +761,18 @@ class MinimalTableModel(QAbstractTableModel):
             except IndexError:
                 return False
         return False
+
+    def index(self, row, column, parent=QModelIndex()):
+        if self.can_grow:
+            last_row = self.rowCount(parent) - 1
+            last_column = self.columnCount(parent) - 1
+            if row > last_row:
+                for i in range(row - last_row):
+                    self.insertRows(self.rowCount(parent), 1, parent)
+            if column > last_column:
+                for j in range(column - last_column):
+                    self.insertColumns(self.columnCount(parent), 1, parent)
+        return super().index(row, column, parent)
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index.
