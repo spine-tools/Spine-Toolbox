@@ -82,7 +82,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton_remove_row">
+        <widget class="QToolButton" name="toolButton_remove_rows">
          <property name="text">
           <string>...</string>
          </property>

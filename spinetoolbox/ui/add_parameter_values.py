@@ -43,9 +43,9 @@ class Ui_Dialog(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
-        self.toolButton_remove_row = QtWidgets.QToolButton(Dialog)
-        self.toolButton_remove_row.setObjectName("toolButton_remove_row")
-        self.horizontalLayout.addWidget(self.toolButton_remove_row)
+        self.toolButton_remove_rows = QtWidgets.QToolButton(Dialog)
+        self.toolButton_remove_rows.setObjectName("toolButton_remove_rows")
+        self.horizontalLayout.addWidget(self.toolButton_remove_rows)
         self.toolButton_insert_row = QtWidgets.QToolButton(Dialog)
         self.toolButton_insert_row.setObjectName("toolButton_insert_row")
         self.horizontalLayout.addWidget(self.toolButton_insert_row)
@@ -85,7 +85,7 @@ class Ui_Dialog(object):
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QtWidgets.QApplication.translate("Dialog", "Add parameter values", None, -1))
-        self.toolButton_remove_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
+        self.toolButton_remove_rows.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.toolButton_insert_row.setText(QtWidgets.QApplication.translate("Dialog", "...", None, -1))
         self.actionInsert_row.setText(QtWidgets.QApplication.translate("Dialog", "Insert row", None, -1))
         self.actionInsert_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Insert row below current one <span style=\" font-weight:600;\">(Ctrl+Ins)</span></p></body></html>", None, -1))
