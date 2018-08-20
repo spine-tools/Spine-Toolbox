@@ -72,11 +72,11 @@ class Ui_Dialog(object):
         icon.addPixmap(QtGui.QPixmap(":/icons/plus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionInsert_row.setIcon(icon)
         self.actionInsert_row.setObjectName("actionInsert_row")
-        self.actionRemove_row = QtWidgets.QAction(Dialog)
+        self.actionRemove_rows = QtWidgets.QAction(Dialog)
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap(":/icons/minus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionRemove_row.setIcon(icon1)
-        self.actionRemove_row.setObjectName("actionRemove_row")
+        self.actionRemove_rows.setIcon(icon1)
+        self.actionRemove_rows.setObjectName("actionRemove_rows")
 
         self.retranslateUi(Dialog)
         QtCore.QObject.connect(self.buttonBox, QtCore.SIGNAL("accepted()"), Dialog.accept)
@@ -90,9 +90,9 @@ class Ui_Dialog(object):
         self.actionInsert_row.setText(QtWidgets.QApplication.translate("Dialog", "Insert row", None, -1))
         self.actionInsert_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Insert row below current one <span style=\" font-weight:600;\">(Ctrl+Ins)</span></p></body></html>", None, -1))
         self.actionInsert_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Ins", None, -1))
-        self.actionRemove_row.setText(QtWidgets.QApplication.translate("Dialog", "Remove row", None, -1))
-        self.actionRemove_row.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Remove current row <span style=\" font-weight:600;\">(Ctrl+Del)</span></p></body></html>", None, -1))
-        self.actionRemove_row.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Del", None, -1))
+        self.actionRemove_rows.setText(QtWidgets.QApplication.translate("Dialog", "Remove rows", None, -1))
+        self.actionRemove_rows.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Remove selected rows <span style=\" font-weight:600;\">(Ctrl+Del)</span></p></body></html>", None, -1))
+        self.actionRemove_rows.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Del", None, -1))
 
 from widgets.custom_qtableview import CustomQTableView
 import resources_icons_rc

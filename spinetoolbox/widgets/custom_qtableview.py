@@ -27,7 +27,7 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 import logging
 from PySide2.QtWidgets import QTableView, QApplication
 from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel
-from PySide2.QtGui import QKeySequence, QClipboard
+from PySide2.QtGui import QKeySequence
 
 class CustomQTableView(QTableView):
     """Custom QTableView class.
@@ -41,14 +41,12 @@ class CustomQTableView(QTableView):
         super().__init__(parent)
         # self.editing = False
         self.clipboard = QApplication.clipboard()
-        self.clipboard_mode = QClipboard.Selection if self.clipboard.supportsSelection() else QClipboard.Clipboard
-        self.clipboard_text = None
+        self.clipboard_text = self.clipboard.text()
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
-        self.clipboard_text = self.clipboard.text(self.clipboard_mode)
-        print(self.clipboard_text)
+        self.clipboard_text = self.clipboard.text()
 
     # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
     # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
@@ -85,7 +83,7 @@ class CustomQTableView(QTableView):
                     row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
                 content += "\t".join(row)
                 content += "\n"
-            QApplication.clipboard().setText(content)
+            self.clipboard.setText(content)
         elif event.matches(QKeySequence.Paste):
             if not self.clipboard_text:
                 super().keyPressEvent(event)

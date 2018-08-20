@@ -142,16 +142,16 @@
     <string>Ctrl+Ins</string>
    </property>
   </action>
-  <action name="actionRemove_row">
+  <action name="actionRemove_rows">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
    </property>
    <property name="text">
-    <string>Remove row</string>
+    <string>Remove rows</string>
    </property>
    <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove current row &lt;span style=&quot; font-weight:600;&quot;&gt;(Ctrl+Del)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove selected rows &lt;span style=&quot; font-weight:600;&quot;&gt;(Ctrl+Del)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>

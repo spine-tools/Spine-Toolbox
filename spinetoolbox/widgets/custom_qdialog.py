@@ -61,14 +61,14 @@ class CustomQDialog(QDialog):
         self.ui = ui_dialog
         self.ui.setupUi(self)
         self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
-        self.ui.toolButton_remove_row.setDefaultAction(self.ui.actionRemove_row)
+        self.ui.toolButton_remove_rows.setDefaultAction(self.ui.actionRemove_rows)
         self.ui.tableView.setModel(self.model)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.actionInsert_row.triggered.connect(self.insert_row)
-        self.ui.actionRemove_row.triggered.connect(self.remove_row)
+        self.ui.actionRemove_rows.triggered.connect(self.remove_rows)
 
     def resize_tableview(self):
         table_width = self.font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
@@ -82,11 +82,17 @@ class CustomQDialog(QDialog):
             row = self.ui.tableView.currentIndex().row()+1
         self.model.insertRows(row, 1)
 
-    @Slot(name="remove_row")
-    def remove_row(self):
-        current_row = self.ui.tableView.currentIndex().row()
-        self.ui.tableView.setCurrentIndex(self.model.index(-1, -1))
-        self.model.removeRows(current_row, 1)
+    @Slot(name="remove_rows")
+    def remove_rows(self):
+        selection = self.ui.tableView.selectionModel().selection()
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom+1))
+        for row in reversed(list(row_set)):
+            self.model.removeRows(row, 1)
 
 
 class AddObjectClassesDialog(CustomQDialog):
@@ -96,7 +102,7 @@ class AddObjectClassesDialog(CustomQDialog):
         self.object_class_list = mapping.object_class_list()
         self.object_class_args_list = list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
-        self.model.header = ['name', 'description']
+        self.model.header = ['object class name', 'description']
         self.model.clear()
         # Add items to combobox
         insert_position_list = ['Insert new classes at the top']
@@ -144,7 +150,7 @@ class AddObjectsDialog(CustomQDialog):
         default_class = mapping.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.model.header = ['class', 'name', 'description']
+        self.model.header = ['object class name', 'object name', 'description']
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
         self.connect_signals()
@@ -169,6 +175,7 @@ class AddObjectsDialog(CustomQDialog):
 
     @Slot(name="setup_new_row")
     def setup_new_row(self, parent, first, last):
+        self.model.setData(self.model.index(first, 0, parent), self.object_class_name_list, Qt.UserRole)
         if self.default_class_name:
             self.model.setData(self.model.index(first, 0, parent), self.default_class_name)
             self.model.setData(self.model.index(first, 0, parent), self.object_icon, Qt.DecorationRole)
@@ -213,7 +220,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
             object_class_one = mapping.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
-        self.model.header = ['object class 1', 'object class 2', 'name']
+        self.model.header = ['object class 1 name', 'object class 2 name', 'name']
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
         self.ui.tableView.setItemDelegateForColumn(1, ComboBoxDelegate(self))
@@ -247,19 +254,19 @@ class AddRelationshipClassesDialog(CustomQDialog):
         elif i < self.number_of_dimensions:
             self.remove_column()
         self.ui.spinBox.setEnabled(True)
-        # TODO: resizing
         for row in range(self.model.rowCount()):
             self.compose_relationship_class_name(row)
 
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        self.model.header.insert(column, "object class {}".format(self.number_of_dimensions))
+        self.model.header.insert(column, "object class {} name".format(self.number_of_dimensions))
         self.model.insertColumns(column, 1)
         for row in range(self.model.rowCount()):
             self.model.setData(self.model.index(row, column), self.object_class_name_list, Qt.UserRole)
         self.ui.tableView.setItemDelegateForColumn(column, ComboBoxDelegate(self))
         self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.object_class_data_commited)
+        self.ui.tableView.resizeColumnToContents(column)
 
     def remove_column(self):
         self.number_of_dimensions -= 1
@@ -336,21 +343,20 @@ class AddRelationshipsDialog(CustomQDialog):
         super().__init__(parent)
         self.wide_relationship_args_list = list()
         self.mapping = mapping
+        self.relationship_class_list = mapping.wide_relationship_class_list(object_class_id=object_class_id).all()
+        self.relationship_class = None
         self.relationship_class_id = relationship_class_id
+        self.object_id = object_id
+        self.object_class_id = object_class_id
         self.default_object_column = None
         self.default_object_name = None
-        self.default_combo_index = -1
         self.object_class_id_list = None
         self.object_names_list = None
-        wide_relationship_class_list = mapping.wide_relationship_class_list(object_class_id=object_class_id)
-        self.relationship_class_name_list = [x.name for x in wide_relationship_class_list]
-        self.relationship_class_id_list = [x.id for x in wide_relationship_class_list]
-        self.set_defaults(object_id, object_class_id)
+        self.set_default_object_name()
         self.setup_ui(ui.add_relationships.Ui_Dialog())
         self.ui.toolButton_insert_row.setEnabled(False)
-        self.ui.toolButton_remove_row.setEnabled(False)
-        self.ui.comboBox_relationship_class.addItems(self.relationship_class_name_list)
-        self.ui.comboBox_relationship_class.setCurrentIndex(self.default_combo_index)
+        self.ui.toolButton_remove_rows.setEnabled(False)
+        self.init_relationship_class()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -360,30 +366,20 @@ class AddRelationshipsDialog(CustomQDialog):
         self.connect_signals()
         self.reset_model()
 
-    def set_defaults(self, object_id, object_class_id):
-        """Set input relationship class in combobox, and store
-        default object name and column for when adding rows.
-        """
-        if not self.relationship_class_id:
-            return
-        relationship_class = self.mapping.single_wide_relationship_class(id=self.relationship_class_id).\
-            one_or_none()
-        if not relationship_class:
-            logging.debug("Couldn't find relationship class, probably a bug.")
-            return
-        relationship_class_name = relationship_class.name
-        self.default_combo_index = self.relationship_class_name_list.index(relationship_class_name)
-        if object_id is None or object_class_id is None:
-            return
-        object_ = self.mapping.single_object(id=object_id).one_or_none()
-        if not object_:
+    def init_relationship_class(self):
+        """Populate combobox and initialize relationship class if needed."""
+        relationship_class_name_list = [x.name for x in self.relationship_class_list]
+        self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
+        self.ui.comboBox_relationship_class.setCurrentIndex(-1)
+        self.relationship_class = self.mapping.\
+            single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
+        if not self.relationship_class:
             return
         try:
-            object_class_id_list = relationship_class.object_class_id_list
-            self.default_object_column = [int(x) for x in object_class_id_list.split(',')].index(object_class_id)
+            combo_index = relationship_class_name_list.index(self.relationship_class.name)
+            self.ui.comboBox_relationship_class.setCurrentIndex(combo_index)
         except ValueError:
-            return
-        self.default_object_name = object_.name
+            pass
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -410,20 +406,16 @@ class AddRelationshipsDialog(CustomQDialog):
 
     @Slot("int", name='call_reset_model')
     def call_reset_model(self, index):
-        self.relationship_class_id = self.relationship_class_id_list[index]
+        self.relationship_class = self.relationship_class_list[index]
         self.reset_model()
 
     def reset_model(self):
         """Setup model according to current relationship class selected in combobox
         (or given as input).
         """
-        if not self.relationship_class_id:
+        if not self.relationship_class:
             return
-        wide_relationship_class = self.mapping.single_wide_relationship_class(self.relationship_class_id).one_or_none()
-        if not wide_relationship_class:
-            logging.debug("Couldn't find relationship class, probably a bug.")
-            return
-        object_class_id_list = wide_relationship_class.object_class_id_list
+        object_class_id_list = self.relationship_class.object_class_id_list
         self.object_class_id_list = [int(x) for x in object_class_id_list.split(',')]
         header = list()
         self.object_names_list = list()
@@ -432,7 +424,7 @@ class AddRelationshipsDialog(CustomQDialog):
             if not object_class:
                 logging.debug("Couldn't find object class, probably a bug.")
                 return
-            header.append(object_class.name)
+            header.append("{} name".format(object_class.name))
             object_list = self.mapping.object_list(class_id=object_class_id)
             object_names = [x.name for x in object_list]
             if not object_names:
@@ -446,10 +438,30 @@ class AddRelationshipsDialog(CustomQDialog):
         header.append('name')
         self.model.header = header
         self.model.clear()
+        self.reset_default_object_column()
         self.insert_row()
         self.resize_tableview()
         self.ui.toolButton_insert_row.setEnabled(True)
-        self.ui.toolButton_remove_row.setEnabled(True)
+        self.ui.toolButton_remove_rows.setEnabled(True)
+
+    def set_default_object_name(self):
+        if not self.object_id:
+            return
+        object_ = self.mapping.single_object(id=self.object_id).one_or_none()
+        if not object_:
+            return
+        self.default_object_name = object_.name
+
+    def reset_default_object_column(self):
+        if not self.default_object_name:
+            return
+        if not self.relationship_class or not self.object_class_id:
+            return
+        try:
+            object_class_id_list = self.relationship_class.object_class_id_list
+            self.default_object_column = [int(x) for x in object_class_id_list.split(',')].index(self.object_class_id)
+        except ValueError:
+            pass
 
     @Slot(name="setup_new_row")
     def setup_new_row(self, parent, first, last):
@@ -506,7 +518,7 @@ class AddRelationshipsDialog(CustomQDialog):
             wide_relationship_args = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
-                'class_id': self.relationship_class_id
+                'class_id': self.relationship_class.id
             }
             self.wide_relationship_args_list.append(wide_relationship_args)
         super().accept()
@@ -523,7 +535,7 @@ class AddParametersDialog(CustomQDialog):
         self.default_class_name = None
         self.default_class_icon = None
         self.set_defaults(object_class_id, relationship_class_id)
-        self.model.header = ['class', 'name']
+        self.model.header = ['class name', 'parameter name']
         self.setup_ui(ui.add_parameters.Ui_Dialog())
         self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
         self.connect_signals()
@@ -620,7 +632,7 @@ class AddParameterValuesDialog(CustomQDialog):
         self.default_class_name = None
         self.default_entity_name = None
         self.set_defaults(object_class_id, relationship_class_id, object_id, relationship_id)
-        self.model.header = ['class', 'entity', 'parameter', 'value', 'json']
+        self.model.header = ['class name', 'entity name', 'parameter name', 'value', 'json']
         self.setup_ui(ui.add_parameter_values.Ui_Dialog())
         # Add status bar to form
         self.statusbar = QStatusBar(self)
