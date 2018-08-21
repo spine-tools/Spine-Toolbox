@@ -28,8 +28,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-# General
-SPINE_TOOLBOX_VERSION = "0.0.17"
+SPINE_TOOLBOX_VERSION = "0.1"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')

@@ -415,6 +415,7 @@ class Ui_MainWindow(object):
         self.actionSave.setText(QtWidgets.QApplication.translate("MainWindow", "Save", None, -1))
         self.actionSave.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+S", None, -1))
         self.actionSave_As.setText(QtWidgets.QApplication.translate("MainWindow", "Save As...", None, -1))
+        self.actionSave_As.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate project under a new name", None, -1))
         self.actionSave_As.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+S", None, -1))
         self.actionOpen.setText(QtWidgets.QApplication.translate("MainWindow", "Open...", None, -1))
         self.actionOpen.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+O", None, -1))
@@ -436,6 +437,6 @@ class Ui_MainWindow(object):
         self.actionUser_Guide.setText(QtWidgets.QApplication.translate("MainWindow", "User Guide", None, -1))
         self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

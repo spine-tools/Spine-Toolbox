@@ -37,11 +37,9 @@ class MetaObject(QObject):
     def __init__(self, name, description):
         """Class constructor."""
         super().__init__()
-        self.name = ''
-        self.short_name = ''
-        self.description = ''
-        self.set_name(name)
-        self.set_description(description)
+        self.name = name
+        self.short_name = name.lower().replace(' ', '_')
+        self.description = description
 
     def set_name(self, new_name):
         """Set object name and short name.

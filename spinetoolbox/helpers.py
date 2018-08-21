@@ -31,10 +31,9 @@ import time
 import shutil
 import glob
 from PySide2.QtCore import Qt
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QCursor
 from config import DEFAULT_PROJECT_DIR
-
 
 
 def busy_effect(func):
@@ -206,4 +205,77 @@ def erase_dir(path, verbosity=False):
         shutil.rmtree(path)
     except OSError:
         raise
+    return True
+
+
+@busy_effect
+def copy_dir(widget, src_dir, dst_dir):
+    """Make a copy of a directory. All files and folders are copied.
+
+    Args:
+        widget (QWidget): Parent widget for QMessageBoxes
+        src_dir (str): Absolute path to directory that will be copied
+        dst_dir (str): Absolute path to new directory
+    """
+    title_msg = "Copying directory failed"
+    try:
+        shutil.copytree(src_dir, dst_dir)
+    except FileExistsError:
+        msg = "Directory<br/><b>{0}</b><br/>already exists".format(dst_dir)
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QMessageBox.information(widget, title_msg, msg)
+        return False
+    except PermissionError as e:
+        logging.exception(e)
+        msg = "Access to directory <br/><b>{0}</b><br/>denied." \
+              "<br/><br/>Possible reasons:" \
+              "<br/>1. Windows Explorer is open in the directory" \
+              "<br/>2. Permission error" \
+              "<br/><br/>Check these and try again.".format(dst_dir)
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QMessageBox.information(widget, title_msg, msg)
+        return False
+    except OSError:
+        msg = "Copying directory failed. OSError in" \
+              "<br/><b>{0}</b><br/>Possibly because Windows " \
+              "Explorer is open in the directory".format(dst_dir)
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QMessageBox.information(widget, title_msg, msg)
+        return False
+    return True
+
+
+def rename_dir(widget, old_dir, new_dir):
+    """Rename directory. Note: This is not used in renaming projects due to unreliability.
+    Looks like it works fine in renaming project items though.
+
+    Args:
+        widget (QWidget): Parent widget for QMessageBoxes
+        old_dir (str): Absolute path to directory that will be renamed
+        new_dir (str): Absolute path to new directory
+    """
+    try:
+        shutil.move(old_dir, new_dir)
+    except FileExistsError:
+        msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_dir)
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QMessageBox.information(widget, "Renaming directory failed", msg)
+        return False
+    except PermissionError as e:
+        logging.exception(e)
+        msg = "Access to directory <br/><b>{0}</b><br/>denied." \
+              "<br/><br/>Possible reasons:" \
+              "<br/>1. Windows Explorer is open in the directory" \
+              "<br/>2. Permission error" \
+              "<br/><br/>Check these and try again.".format(old_dir)
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QMessageBox.information(widget, "Renaming directory failed", msg)
+        return False
+    except OSError:
+        msg = "Renaming input directory failed. OSError in" \
+              "<br/><b>{0}</b><br/>Possibly because Windows " \
+              "Explorer is open in the directory".format(old_dir)
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        QMessageBox.information(widget, "Renaming directory failed", msg)
+        return False
     return True

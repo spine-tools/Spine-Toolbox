@@ -474,24 +474,24 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="save_project_as")
     def save_project_as(self):
-        """Save current project on a new name and activate it."""
-        # noinspection PyCallByClass
-        dir_path = QFileDialog.getSaveFileName(self, 'Save project', project_dir(self._config), 'Project (*.proj)')
-        file_path = dir_path[0]
-        if file_path == '':  # Cancel button clicked
-            return
-        file_name = os.path.split(file_path)[-1]
-        if not file_name.lower().endswith('.proj'):
-            self.msg_warning.emit("Only *.proj files supported")
-            return
+        """Ask user for a new project name and save. Creates a duplicate of the open project."""
         if not self._project:
-            self.new_project()
+            self.msg.emit("No project open")
+        msg = "This creates a copy of the current project. <br/><br/>New name:"
+        # noinspection PyCallByClass
+        answer = QInputDialog.getText(self, "New project name", msg, text=self._project.name,
+                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        if not answer[1]:  # answer[str, bool]
+            return
         else:
-            # Update project file name
-            self._project.change_filename(file_name)
-            # TODO: Make a new project with the given name and switch references of all items for the new project.
-            # Save open project into new file
-            self.save_project()
+            name = answer[0]
+        # Check if name is valid and copy project tree under a new name
+        if not self._project.rename_project(name):
+            return
+        # Save project into new file
+        self.save_project()
+        # Load project
+        self.open_project(self._project.path)
         return
 
     @Slot("QModelIndex", name="select_item_and_show_info")
