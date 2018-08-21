@@ -718,6 +718,8 @@ class MinimalTableModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent  # QMainWindow
         self._data = list()
+        self._flags = list()
+        self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = False
 
@@ -728,7 +730,19 @@ class MinimalTableModel(QAbstractTableModel):
 
     def flags(self, index):
         """Returns flags for table items."""
-        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+        if not index.isValid():
+            return Qt.NoItemFlags
+        return self._flags[index.row()][index.column()]
+
+    def set_flags(self, index, flags):
+        """set flags for given index."""
+        if not index.isValid():
+            return False
+        try:
+            self._flags[index.row()][index.column()] = flags
+            return True
+        except IndexError:
+            return False
 
     def rowCount(self, *args, **kwargs):
         """Number of rows in the model."""
@@ -863,10 +877,13 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginInsertRows(parent, row, row)
         if self.columnCount() == 0:
             new_row = [{}]
+            new_flags_row = [flags]
         else:
             new_row = [{} for i in range(self.columnCount())]
+            new_flags_row = [self.default_flags for i in range(self.columnCount())]
         # Notice if insert index > rowCount(), new object is inserted to end
         self._data.insert(row, new_row)
+        self._flags.insert(row, new_flags_row)
         self.endInsertRows()
         return True
 
@@ -900,6 +917,7 @@ class MinimalTableModel(QAbstractTableModel):
         for j in range(self.rowCount()):
             # Notice if insert index > rowCount(), new object is inserted to end
             self._data[j].insert(column, {})
+            self._flags[j].insert(column, self.default_flags)
         self.endInsertColumns()
         return True
 
@@ -1307,6 +1325,66 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         if source_column in self.fixed_column_list:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+
+
+class DatapackageResourcesModel(QStandardItemModel):
+    """A class to hold datapackage resources and show them in a treeview."""
+    def __init__(self, resource_list, object_class_name_list, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.setHorizontalHeaderLabels(["name", "valid?", "path"])
+        self.resource_list = resource_list
+        self.object_class_name_list = object_class_name_list
+        self.ok_icon = QIcon(QPixmap(":/icons/ok.png"))
+        self.nok_icon = QIcon(QPixmap(":/icons/nok.png"))
+        for resource in self.resource_list:
+            name = resource.name
+            path = os.path.basename(resource.source)
+            if name in self.object_class_name_list:
+                valid = "yes"
+                valid_icon = self.ok_icon
+            else:
+                valid = "no"
+                valid_icon = self.nok_icon
+            name_item = QStandardItem(name)
+            name_item.setData(self.object_class_name_list, Qt.UserRole)
+            path_item = QStandardItem(path)
+            path_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
+            valid_item = QStandardItem(valid)
+            valid_item.setData(valid_icon, Qt.DecorationRole)
+            valid_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
+            self.appendRow([name_item, valid_item, path_item])
+
+    def check_name_validity(self, row):
+        index = self.index(row, 0)
+        name = index.data(Qt.DisplayRole)
+        if name in self.object_class_name_list:
+            self.setData(index.siblingAtColumn(1), 'yes', Qt.EditRole)
+            self.setData(index.siblingAtColumn(1), self.ok_icon, Qt.DecorationRole)
+
+
+class DatapackageFieldsModel(QStandardItemModel):
+    """A class to hold datapackage resources and show them in a treeview."""
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.schema = None
+
+    def reset_model(self, schema):
+        self.clear()
+        self.setHorizontalHeaderLabels(["name", "type", "primary key?", ""]) # NOTE: dummy section so primary key field
+                                                                             # is not stretched
+        self.schema = schema
+        for field in schema.fields:
+            name = field.name
+            type_ = field.type
+            primary_key = True if name in schema.primary_key else False
+            name_item = QStandardItem(name)
+            type_item = QStandardItem(type_)
+            type_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
+            primary_key_item = QStandardItem(primary_key)
+            primary_key_item.setData(primary_key, Qt.EditRole)
+            self.appendRow([name_item, type_item, primary_key_item])
 
 
 class DatapackageDescriptorModel(QStandardItemModel):

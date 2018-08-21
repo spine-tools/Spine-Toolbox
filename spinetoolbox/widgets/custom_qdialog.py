@@ -41,7 +41,6 @@ import ui.add_relationship_classes
 import ui.add_relationships
 import ui.add_parameters
 import ui.add_parameter_values
-import ui.edit_datapackage_primary_keys
 
 
 class CustomQDialog(QDialog):
@@ -117,8 +116,8 @@ class AddObjectClassesDialog(CustomQDialog):
         self.ui.tableView.horizontalHeader().resizeSection(1, 300)  # description
         super().resize_tableview()
 
-    @Slot("QWidget", name="data_commited")
-    def data_commited(self, editor):
+    @Slot("QWidget", name="data_committed")
+    def data_committed(self, editor):
         self.model.setData(editor.index, editor.text(), Qt.EditRole)
 
     def accept(self):
@@ -159,7 +158,7 @@ class AddObjectsDialog(CustomQDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_committed)
         self.model.rowsInserted.connect(self.setup_new_row)
         super().connect_signals()
 
@@ -180,8 +179,8 @@ class AddObjectsDialog(CustomQDialog):
             self.model.setData(self.model.index(first, 0, parent), self.default_class_name)
             self.model.setData(self.model.index(first, 0, parent), self.object_icon, Qt.DecorationRole)
 
-    @Slot("QWidget", name='class_data_commited')
-    def class_data_commited(self, editor):
+    @Slot("QWidget", name='class_data_committed')
+    def class_data_committed(self, editor):
         """Update 'class' field with data from combobox editor."""
         class_name = editor.currentText()
         if not class_name:
@@ -230,8 +229,8 @@ class AddRelationshipClassesDialog(CustomQDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.object_class_data_commited)
-        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.object_class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.object_class_data_committed)
+        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.object_class_data_committed)
         self.ui.spinBox.valueChanged.connect(self.insert_or_remove_column)
         self.model.rowsInserted.connect(self.setup_new_row)
         super().connect_signals()
@@ -265,13 +264,13 @@ class AddRelationshipClassesDialog(CustomQDialog):
         for row in range(self.model.rowCount()):
             self.model.setData(self.model.index(row, column), self.object_class_name_list, Qt.UserRole)
         self.ui.tableView.setItemDelegateForColumn(column, ComboBoxDelegate(self))
-        self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.object_class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.object_class_data_committed)
         self.ui.tableView.resizeColumnToContents(column)
 
     def remove_column(self):
         self.number_of_dimensions -= 1
         column = self.number_of_dimensions
-        self.ui.tableView.itemDelegateForColumn(column).closeEditor.disconnect(self.object_class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(column).closeEditor.disconnect(self.object_class_data_committed)
         self.model.header.pop(column)
         self.model.removeColumns(column, 1)
         line_delegate = self.ui.tableView.itemDelegate()
@@ -286,8 +285,8 @@ class AddRelationshipClassesDialog(CustomQDialog):
             self.model.setData(self.model.index(first, column), self.object_class_name_list, Qt.UserRole)
             self.model.setData(self.model.index(first, column), self.object_class_name_list, Qt.UserRole)
 
-    @Slot("QWidget", name='object_class_data_commited')
-    def object_class_data_commited(self, editor):
+    @Slot("QWidget", name='object_class_data_committed')
+    def object_class_data_committed(self, editor):
         """Update 'object_classx' field with data from combobox editor."""
         object_class_name = editor.currentText()
         if not object_class_name:
@@ -434,7 +433,7 @@ class AddRelationshipsDialog(CustomQDialog):
             self.object_names_list.append(object_names)
         for column in range(len(header)):
             self.ui.tableView.setItemDelegateForColumn(column, ComboBoxDelegate(self))
-            self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.data_commited)
+            self.ui.tableView.itemDelegateForColumn(column).closeEditor.connect(self.data_committed)
         header.append('name')
         self.model.header = header
         self.model.clear()
@@ -473,8 +472,8 @@ class AddRelationshipsDialog(CustomQDialog):
             index = self.model.index(first, self.default_object_column)
             self.model.setData(index, self.default_object_name, Qt.EditRole)
 
-    @Slot("QWidget", name='data_commited')
-    def data_commited(self, editor):
+    @Slot("QWidget", name='data_committed')
+    def data_committed(self, editor):
         """Update 'object x' field with data from combobox editor."""
         name = editor.currentText()
         if not name:
@@ -558,7 +557,7 @@ class AddParametersDialog(CustomQDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_commited)
+        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_committed)
         self.model.rowsInserted.connect(self.setup_new_row)
         super().connect_signals()
 
@@ -581,8 +580,8 @@ class AddParametersDialog(CustomQDialog):
             self.model.setData(self.model.index(first, 0), self.default_class_icon, Qt.DecorationRole)
         self.model.setData(self.model.index(first, 0), self.class_name_list, Qt.UserRole)
 
-    @Slot("QWidget", name='class_data_commited')
-    def class_data_commited(self, editor):
+    @Slot("QWidget", name='class_data_committed')
+    def class_data_committed(self, editor):
         """Update 'class' field with data from combobox editor."""
         class_name = editor.currentText()
         if not class_name:
@@ -690,9 +689,9 @@ class AddParameterValuesDialog(CustomQDialog):
     def connect_signals(self):
         """Connect signals to slots."""
         self.model.rowsInserted.connect(self.setup_new_row)
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_commited)
-        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.entity_data_commited)
-        self.ui.tableView.itemDelegateForColumn(2).closeEditor.connect(self.parameter_data_commited)
+        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.class_data_committed)
+        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.entity_data_committed)
+        self.ui.tableView.itemDelegateForColumn(2).closeEditor.connect(self.parameter_data_committed)
         super().connect_signals()
 
     def resize_tableview(self):
@@ -730,8 +729,8 @@ class AddParameterValuesDialog(CustomQDialog):
             self.update_parameter_combo(self.default_entity_name, first)
         self.model.setData(self.model.index(first, 0), self.class_name_list, Qt.UserRole)
 
-    @Slot("QWidget", name='class_data_commited')
-    def class_data_commited(self, editor):
+    @Slot("QWidget", name='class_data_committed')
+    def class_data_committed(self, editor):
         """Update 'class' field with data from combobox editor
         and update comboboxes for 'entity' field accordingly.
         """
@@ -779,8 +778,8 @@ class AddParameterValuesDialog(CustomQDialog):
         self.model.setData(self.model.index(row, 1), entity_name_list, Qt.UserRole)
         self.statusbar.showMessage(msg, 5000)
 
-    @Slot("QWidget", name='entity_data_commited')
-    def entity_data_commited(self, editor):
+    @Slot("QWidget", name='entity_data_committed')
+    def entity_data_committed(self, editor):
         """Update 'entity' field with data from combobox editor."""
         entity_name = editor.currentText()
         if not entity_name:
@@ -823,8 +822,8 @@ class AddParameterValuesDialog(CustomQDialog):
         self.model.setData(self.model.index(row, 2), parameter_name_list, Qt.UserRole)
         self.statusbar.showMessage(msg, 5000)
 
-    @Slot("QWidget", name='parameter_data_commited')
-    def parameter_data_commited(self, editor):
+    @Slot("QWidget", name='parameter_data_committed')
+    def parameter_data_committed(self, editor):
         """Update 'parameter' field with data from combobox editor."""
         parameter_name = editor.currentText()
         if not parameter_name:
@@ -906,119 +905,6 @@ class CommitDialog(QDialog):
             return
         self.accept()
 
-
-class EditDatapackagePrimaryKeysDialog(CustomQDialog):
-    """A dialog to query user's preferences for new objects."""
-    def __init__(self, parent, datapackage):
-        super().__init__(parent)
-        self.datapackage = datapackage
-        self.resource_name_list = self.datapackage.resource_names
-        self.keys_to_set = list()
-        self.keys_to_remove = list()
-        data = self.datapackage.primary_keys_data()
-        self.original_data = deepcopy(data)
-        self.setup_ui(ui.edit_datapackage_primary_keys.Ui_Dialog())
-        self.ui.tableView.setItemDelegateForColumn(0, ComboBoxDelegate(self))
-        self.ui.tableView.setItemDelegateForColumn(1, ComboBoxDelegate(self))
-        # Override tableView edit slot
-        self.std_edit = self.ui.tableView.edit
-        self.ui.tableView.edit = self.edit
-        # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
-        self.resize_tableview()
-        self.connect_signals()
-        self.init_model(data)
-
-    def edit(self, index, trigger, event):
-        if not index.isValid():
-            return False
-        column = index.column()
-        header = self.model.header
-        if header[column] == 'field' and index.data(Qt.UserRole) is None:
-            self.statusbar.showMessage("Please select resource first.", 5000)
-            return False
-        return self.std_edit(index, trigger, event)
-
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.model.rowsInserted.connect(self.setup_new_row)
-        self.ui.tableView.itemDelegateForColumn(0).closeEditor.connect(self.resource_data_commited)
-        self.ui.tableView.itemDelegateForColumn(1).closeEditor.connect(self.field_data_commited)
-        super().connect_signals()
-
-    def init_model(self, data):
-        """Init model with primary keys data."""
-        self.model.header = ['resource', 'field']
-        self.model.reset_model(data)
-        for i, row in enumerate(data):
-            resource = row[0]
-            field_name_list = self.datapackage.get_resource(resource).schema.field_names
-            self.model.setData(self.model.index(i, 0), self.resource_name_list, Qt.UserRole)
-            self.model.setData(self.model.index(i, 1), field_name_list, Qt.UserRole)
-        self.insert_row(row=self.model.rowCount())
-
-    def resize_tableview(self):
-        self.ui.tableView.resizeColumnsToContents()
-        header = self.ui.tableView.horizontalHeader()
-        resource_width = max([self.font_metric.width(x) for x in self.resource_name_list], default=0)
-        resource_width = max(resource_width, header.sectionSize(0))
-        header.resizeSection(0, resource_width)
-        # Field with is whatever needs to be (last column stretched)
-        super().resize_tableview()
-
-    @Slot(name="setup_new_row")
-    def setup_new_row(self, parent, first, last):
-        self.model.setData(self.model.index(first, 0), self.resource_name_list, Qt.UserRole)
-        self.model.setData(self.model.index(first, 1), None, Qt.UserRole)
-
-    @Slot("QWidget", name='resource_data_commited')
-    def resource_data_commited(self, editor):
-        """Update 'resource' field with data from combobox editor"""
-        current_resource = editor.currentText()
-        if not current_resource:
-            return
-        row = editor.row
-        index = self.model.index(row, 0)
-        previous_resource = self.model.data(index, Qt.DisplayRole)
-        if current_resource == previous_resource:
-            return
-        self.model.setData(index, current_resource, Qt.EditRole)
-        field_index = index.sibling(row, 1)
-        field_name_list = self.datapackage.get_resource(current_resource).schema.field_names
-        self.model.setData(field_index, field_name_list[0], Qt.EditRole)
-        self.model.setData(field_index, field_name_list, Qt.UserRole)
-        self.ui.tableView.update(field_index)
-
-    @Slot("QWidget", name='field_data_commited')
-    def field_data_commited(self, editor):
-        """Update 'field' field with data from combobox editor"""
-        current_field = editor.currentText()
-        if not current_field:
-            return
-        row = editor.row
-        index = self.model.index(row, 1)
-        previous_field = self.model.data(index, Qt.DisplayRole)
-        if current_field == previous_field:
-            return
-        self.model.setData(index, current_field)
-
-    def accept(self):
-        new_data = self.model.modelData()
-        for row in new_data:
-            if None in row:
-                continue
-            if row not in self.original_data:
-                self.keys_to_set.append(row)
-        for row in self.original_data:
-            if None in row:
-                continue
-            if row not in new_data:
-                self.keys_to_remove.append(row)
-        super().accept()
 
 # NOTE: Not in use anymore, too general
 # class CustomQDialog(QDialog):

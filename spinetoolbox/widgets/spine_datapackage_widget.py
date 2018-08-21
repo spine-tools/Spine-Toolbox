@@ -30,14 +30,15 @@ import shutil
 import logging
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
+from widgets.combobox_delegate import ComboBoxDelegate
 from widgets.lineedit_delegate import LineEditDelegate
+from widgets.checkbox_delegate import CheckBoxDelegate
 from widgets.custom_menus import DescriptorTreeContextMenu
-from widgets.custom_qdialog import EditDatapackagePrimaryKeysDialog
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QDialog
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, SIGNAL
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
 from helpers import busy_effect
-from models import MinimalTableModel, DatapackageDescriptorModel
+from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel
 from spinedatabase_api import SpineDBAPIError
 
 
@@ -66,32 +67,34 @@ class SpineDatapackageWidget(QMainWindow):
         self.temp_filename = temp_filename
         self.object_class_name_list = [item.name for item in self.mapping.object_class_list()]
         self.datapackage = datapackage
-        self.block_resource_name_combobox = True
         self.descriptor_tree_context_menu = None
-        self.current_resource_name = None
+        self.selected_resource_name = None
         self.resource_tables = dict()
         self.export_name = self._data_connection.name + '.sqlite'
-        self.descriptor_model = DatapackageDescriptorModel(self)
-        self.descriptor_model.header.extend(["Key", "Value"])
+        self.resources_model = DatapackageResourcesModel(self.datapackage.resources, self.object_class_name_list, self)
+        self.fields_model = DatapackageFieldsModel(self)
         self.resource_data_model = MinimalTableModel()
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox datapackage form")
         self.restore_ui()
+        # Hack: remove unusable tab
+        self.ui.tabWidget_resources.removeTab(1)
+        self.load_resource_data()
         # Add status bar to form
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         # Set name of export action
         self.ui.actionExport.setText("Export as '{0}'".format(self.export_name))
-        self.ui.treeView_descriptor.setModel(self.descriptor_model)
+        self.ui.treeView_resources.setModel(self.resources_model)
+        self.ui.treeView_fields.setModel(self.fields_model)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
+        self.ui.treeView_resources.header().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.ui.tableView_resource_data.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_resource_data.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        self.load_resource_data()
-        self.descriptor_model.build_tree(self.datapackage.descriptor)
-        self.resize_descriptor_treeview()
+        # self.descriptor_model.build_tree(self.datapackage.descriptor)
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -101,18 +104,22 @@ class SpineDatapackageWidget(QMainWindow):
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
         self._data_connection.destroyed.connect(self.close)
-        self.ui.treeView_descriptor.expanded.connect(self.resize_descriptor_treeview)
-        self.ui.treeView_descriptor.collapsed.connect(self.resize_descriptor_treeview)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionExport.triggered.connect(self.export)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
-        self.ui.actionPrimary_keys.triggered.connect(self.edit_primary_keys)
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
-        self.ui.treeView_descriptor.selectionModel().currentChanged.connect(self.update_current_resource_name)
-        self.ui.treeView_descriptor.customContextMenuRequested.connect(self.show_descriptor_tree_context_menu)
-        self.ui.comboBox_resource_name.currentTextChanged.connect(self.update_resource_name)
+        combobox_delegate = ComboBoxDelegate(self)
+        combobox_delegate.closeEditor.connect(self.update_resource_name)
+        self.ui.treeView_resources.setItemDelegateForColumn(0, combobox_delegate)
+        lineedit_delegate = LineEditDelegate(self)
+        lineedit_delegate.closeEditor.connect(self.update_field_name)
+        self.ui.treeView_fields.setItemDelegateForColumn(0, lineedit_delegate)
+        checkbox_delegate = CheckBoxDelegate(self)
+        checkbox_delegate.commit_data.connect(self.update_primary_key)
+        self.ui.treeView_fields.setItemDelegateForColumn(2, checkbox_delegate)
+        self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.filter_resource_data)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -167,118 +174,86 @@ class SpineDatapackageWidget(QMainWindow):
         """Save datapackage.json to datadir."""
         self._data_connection.save_datapackage(self.datapackage)
 
-    def edit_primary_keys(self):
-        """Show dialog to edit primary keys."""
-        dialog = EditDatapackagePrimaryKeysDialog(self, self.datapackage)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
+    @Slot("QModelIndex", "QModelIndex", name="filter_resource_data")
+    def filter_resource_data(self, selected, deselected):
+        """Filter resource data whenever a new resource is selected."""
+        try:
+            new_selected_resource_name = selected.indexes()[0].data(Qt.DisplayRole)
+        except IndexError:
             return
-        print("to remove {}".format(dialog.keys_to_remove))
-        print("to set {}".format(dialog.keys_to_set))
-        # First remove, then set
-        for row in dialog.keys_to_remove:
-            self.datapackage.remove_primary_key(*row)
-            self.descriptor_model.remove_primary_key(*row)
-        for row in dialog.keys_to_set:
-            self.datapackage.set_primary_key(*row)
-            self.descriptor_model.set_primary_key(*row)
-
-    @Slot("QModelIndex", name="resize_descriptor_treeview")
-    def resize_descriptor_treeview(self, index=None):
-        self.ui.treeView_descriptor.resizeColumnToContents(0)
-
-    @Slot("QModelIndex", "QModelIndex", name="update_current_resource_name")
-    def update_current_resource_name(self, current, previous):
-        """Update current resource name whenever a new resource item is selected
-        in the descriptor treeView."""
-        index = current
-        selected_resource_name = None
-        while index.parent().isValid():
-            if index.parent().data(Qt.DisplayRole) == 'resources':
-                selected_resource_name = index.data(Qt.DisplayRole)  # resource name
-                break
-            index = index.parent()
-        if selected_resource_name is None:
+        if self.selected_resource_name == new_selected_resource_name:  # selected resource not changed
             return
-        if self.current_resource_name == selected_resource_name:  # selected resource not changed
-            return
-        self.current_resource_name = selected_resource_name
+        self.selected_resource_name = new_selected_resource_name
         self.reset_resource_data_model()
-        self.reset_resource_name_combo()
+        self.fields_model.reset_model(self.datapackage.get_resource(self.selected_resource_name).schema)
 
     def reset_resource_data_model(self):
-        """Reset resource data model with data from currently selected resource."""
-        table = self.resource_tables[self.current_resource_name]
-        self.resource_data_model.header = table[0]  # We need a header for columnCount in MinimalTableModel
-        self.resource_data_model.reset_model(table)
-        gray_background = self._parent.palette().button()
-        for column in range(self.resource_data_model.columnCount()):
-            index = self.resource_data_model.index(0, column)
-            self.resource_data_model.setData(index, gray_background, Qt.BackgroundRole)
+        """Reset resource data model with data from newly selected resource."""
+        table = self.resource_tables[self.selected_resource_name]
+        self.resource_data_model.header = table[0]  # We need a header for columnCount() to work in MinimalTableModel
+        self.resource_data_model.reset_model(table[1:-1])
         self.ui.tableView_resource_data.resizeColumnsToContents()
-
-    def reset_resource_name_combo(self):
-        """Reset resource name combo according to currently selected resource."""
-        self.block_resource_name_combobox = True
-        self.ui.comboBox_resource_name.clear()
-        self.ui.comboBox_resource_name.addItems(self.object_class_name_list)
-        font_metric = QFontMetrics(QFont("", 0))
-        max_resource_name_width = max(font_metric.width(x) for x in self.object_class_name_list)
-        max_width = max_resource_name_width
-        if self.current_resource_name not in self.object_class_name_list:
-            self.ui.comboBox_resource_name.insertItem(0, self.current_resource_name + ' (unsupported)')
-            self.ui.comboBox_resource_name.setCurrentIndex(0)
-            width = font_metric.width(self.current_resource_name + ' (unsupported)')
-            max_width = max(max_width, width)
-        else:
-            ind = self.object_class_name_list.index(self.current_resource_name)
-            self.ui.comboBox_resource_name.setCurrentIndex(ind)
-        # Set combobox width based on items
-        self.ui.comboBox_resource_name.setMinimumWidth(max_width + 24)
-        self.block_resource_name_combobox = False
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
     def update_resource_data(self, editor, hint):
         """Update resource data with newly edited data."""
         index = editor.index
-        # Save old name to look up field in datapackage and descriptor model
-        old_name = index.data(Qt.DisplayRole)
-        if not self.resource_data_model.setData(index, editor.text(), Qt.EditRole):
+        new_value = editor.text()
+        if not self.resource_data_model.setData(index, new_value, Qt.EditRole):
             return
         self.ui.tableView_resource_data.resizeColumnsToContents()
-        self.resource_tables[self.current_resource_name][index.row()][index.column()] = editor.text()
-        # Update descriptor in datapackage in case a field name was modified
-        if index.row() == 0:
-            self.update_field_name(old_name, editor.text())
+        self.resource_tables[self.selected_resource_name][index.row()][index.column()] = new_value
 
-    def update_field_name(self, old_name, new_name):
-        """Update descriptor (datapackage and model) with new field name
-        from resource data table."""
-        self.datapackage.rename_field(self.current_resource_name, old_name, new_name)
-        self.descriptor_model.rename_field(self.current_resource_name, old_name, new_name)
-
-    @Slot("str", name="update_resource_name")
-    def update_resource_name(self, new_name):
-        """Update descriptor (datapackage and model) with new resource name from comboBox."""
-        if self.block_resource_name_combobox:
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_name")
+    def update_resource_name(self, editor, hint):
+        """Update resources model and descriptor with new resource name."""
+        new_name = editor.currentText()
+        if not new_name:
             return
-        # Update resource table
-        resource_data = self.resource_tables.pop(self.current_resource_name, None)
+        index = editor.index
+        old_name = index.data(Qt.DisplayRole)
+        if not self.resources_model.setData(index, new_name, Qt.EditRole):
+            return
+        self.resources_model.check_name_validity(index.row())
+        resource_data = self.resource_tables.pop(self.selected_resource_name, None)
         if resource_data is None:
             msg = "Couldn't find key in resource data dict. Something is wrong."
             self.msg.emit(msg)
             return
         self.resource_tables[new_name] = resource_data
-        self.datapackage.rename_resource(self.current_resource_name, new_name)
-        self.descriptor_model.rename_resource(self.current_resource_name, new_name)
-        self.current_resource_name = new_name
-        # Remove unsupported name from combobox
-        ind = self.ui.comboBox_resource_name.findText("unsupported", Qt.MatchContains)
-        if ind == -1:
+        self.selected_resource_name = new_name
+        self.datapackage.rename_resource(old_name, new_name)
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
+    def update_field_name(self, editor, hint):
+        """Called when line edit delegate wants to edit field name data.
+        Update name in fields_model, resource_data_model's header and datapackage descriptor.
+        """
+        index = editor.index
+        new_name = editor.text()
+        # Save old name to look up field
+        old_name = index.data(Qt.DisplayRole)
+        if not self.fields_model.setData(index, new_name, Qt.EditRole):
             return
-        self.block_resource_name_combobox = True
-        self.ui.comboBox_resource_name.removeItem(ind)
-        self.block_resource_name_combobox = False
+        header = self.resource_data_model.header
+        section = header.index(old_name)
+        header[section] = new_name
+        self.ui.tableView_resource_data.resizeColumnsToContents()
+        self.datapackage.rename_field(self.selected_resource_name, old_name, new_name)
+
+    @Slot("QModelIndex", name="update_primary_key")
+    def update_primary_key(self, index):
+        """Called when checkbox delegate wants to edit primary key data.
+        Add or remove primary key field accordingly.
+        """
+        status = index.data(Qt.EditRole)
+        field_name = index.siblingAtColumn(0).data(Qt.DisplayRole)
+        if status is False:  # Add to primary key
+            self.fields_model.setData(index, True, Qt.EditRole)
+            self.datapackage.append_to_primary_key(self.selected_resource_name, field_name)
+        else:  # Remove from primary key
+            self.fields_model.setData(index, False, Qt.EditRole)
+            self.datapackage.remove_from_primary_key(self.selected_resource_name, field_name)
 
     @Slot(name="export")
     def export(self):

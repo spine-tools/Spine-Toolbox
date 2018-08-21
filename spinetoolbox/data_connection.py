@@ -404,6 +404,24 @@ class CustomPackage(Package):
         self.descriptor['resources'][i]['schema']['primaryKey'] = primary_key
         self.commit()
 
+    def append_to_primary_key(self, resource, field):
+        """Append field to resources's primary key."""
+        i = self.resource_names.index(resource)
+        primary_key = self.descriptor['resources'][i]['schema'].setdefault('primaryKey', [])
+        if field not in primary_key:
+            primary_key.append(field)
+        self.commit()
+
+    def remove_from_primary_key(self, resource, field):
+        """Remove field from resources's primary key."""
+        i = self.resource_names.index(resource)
+        primary_key = self.descriptor['resources'][i]['schema'].get('primaryKey')
+        if not primary_key:
+            return
+        if field in primary_key:
+            primary_key.remove(field)
+        self.commit()
+
     def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
         """Add foreign key to a given resource in the package"""
         foreign_key = {
