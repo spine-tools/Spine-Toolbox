@@ -33,6 +33,7 @@ from PySide2.QtCore import Qt, Signal, QModelIndex, QAbstractListModel, QAbstrac
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
+from helpers import rename_dir
 
 
 class ProjectItemModel(QStandardItemModel):
@@ -92,28 +93,7 @@ class ProjectItemModel(QStandardItemModel):
         # Make path for new data dir
         new_data_dir = os.path.join(project_path, new_short_name)
         # Rename item project directory
-        try:
-            os.rename(old_data_dir, new_data_dir)
-        except FileExistsError:
-            msg = "Directory<br/><b>{0}</b><br/>already exists".format(new_data_dir)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._parent, "Renaming directory failed", msg)
-            return False
-        except PermissionError:
-            msg = "Access to directory <br/><b>{0}</b><br/>denied." \
-                  "<br/><br/>Possible reasons:" \
-                  "<br/>1. Windows Explorer is open in the directory" \
-                  "<br/>2. Permission error" \
-                  "<br/><br/>Check these and try again.".format(old_data_dir)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._parent, "Renaming directory failed", msg)
-            return False
-        except OSError:
-            msg = "Renaming input directory failed. OSError in" \
-                  "<br/><b>{0}</b><br/>Possibly because Windows " \
-                  "Explorer is open in the directory".format(old_data_dir)
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._parent, "Renaming directory failed", msg)
+        if not rename_dir(self._parent, old_data_dir, new_data_dir):
             return False
         # Find item from project refs list
         project_refs = self._parent.project_refs

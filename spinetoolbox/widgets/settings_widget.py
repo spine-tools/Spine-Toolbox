@@ -132,7 +132,7 @@ class SettingsWidget(QWidget):
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
         use_repl = self._configs.getboolean("settings", "use_repl")
-        julia_path =self._configs.get("settings", "julia_path")
+        julia_path = self._configs.get("settings", "julia_path")
         if open_previous_project:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:

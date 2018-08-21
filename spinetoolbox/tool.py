@@ -432,6 +432,8 @@ class Tool(MetaObject):
             output_items (list): Destination items for output files.
         """
         for item in output_items:
+            self._parent.msg.emit("*** Copying Tool <b>{0}</b> output files to {1} <b>{2}</b> ***"
+                                  .format(self.name, item.item_type, item.name))
             dst_dir = ""
             # Copy to child Data Store
             if item.item_type == "Data Store":
@@ -442,12 +444,9 @@ class Tool(MetaObject):
                 if os.path.isdir(item.data_dir):
                     dst_dir = item.data_dir
             else:
-                self._parent.msg_error.emit("Copying output files failed. No data directory found for {0} <b>{1}</b>"
-                                            .format(item.item_type, item.name))
+                self._parent.msg_warning.emit("\t<b>Not implemented</b>")
                 continue
             n_copied_files = 0
-            self._parent.msg.emit("*** Copying Tool <b>{0}</b> output files to {1} <b>{2}</b> ***"
-                                  .format(self.name, item.item_type, item.name))
             for output_file in self._tool_template.outputfiles:
                 src_path = os.path.join(self.instance.output_dir, output_file)
                 if not os.path.exists(src_path):

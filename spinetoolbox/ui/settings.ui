@@ -185,6 +185,9 @@
           </item>
           <item>
            <widget class="QLineEdit" name="lineEdit_project_dir">
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
             <property name="readOnly">
              <bool>true</bool>
             </property>
@@ -349,14 +352,17 @@
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
-            <property name="styleSheet">
-             <string notr="true">color: 'black'</string>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can rename project from main window menu &lt;span style=&quot; font-weight:600;&quot;&gt;File -&amp;gt; Save As...&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="readOnly">
              <bool>true</bool>
             </property>
             <property name="placeholderText">
              <string>No project open</string>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -583,6 +589,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_use_repl</tabstop>
   <tabstop>lineEdit_julia_path</tabstop>
   <tabstop>pushButton_browse_julia</tabstop>
+  <tabstop>lineEdit_project_name</tabstop>
   <tabstop>textEdit_project_description</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>pushButton_browse_work</tabstop>

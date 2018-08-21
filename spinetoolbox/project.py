@@ -28,14 +28,15 @@ import os
 import logging
 import json
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir
+from helpers import project_dir, create_dir, copy_dir
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
 from tool_templates import GAMSTool, JuliaTool
-from config import DEFAULT_WORK_DIR
+from config import DEFAULT_WORK_DIR, INVALID_CHARS
 
 
 class SpineToolboxProject(MetaObject):
@@ -61,7 +62,6 @@ class SpineToolboxProject(MetaObject):
         self.filename = self.short_name + ext
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
-        self.project_contents = dict()
         # Make project directory
         try:
             create_dir(self.project_dir)
@@ -75,13 +75,17 @@ class SpineToolboxProject(MetaObject):
             self._parent.msg_error.emit("[OSError] Creating work directory {0} failed."
                                         " Check permissions.".format(self.work_dir))
 
-    def set_name(self, name):
-        """Change project name. Calls superclass method.
+    def change_name(self, name):
+        """Changes project name and updates project dir and save file name.
 
         Args:
-            name (str): Project name
+            name (str): Project (long) name
         """
         super().set_name(name)
+        # Update project dir instance variable
+        self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
+        # Update file name and path
+        self.change_filename(self.short_name + ".proj")
 
     def set_description(self, desc):
         """Change project description. Calls superclass method.
@@ -97,7 +101,6 @@ class SpineToolboxProject(MetaObject):
         Args:
             new_filename (str): Filename used in saving the project. No full path. Example 'project.proj'
         """
-        # TODO: Add check that file extension is supported (.proj)
         self.filename = new_filename
         self.path = os.path.join(project_dir(self._configs), self.filename)
 
@@ -113,6 +116,51 @@ class SpineToolboxProject(MetaObject):
         if not create_dir(new_work_path):
             return False
         self.work_dir = new_work_path
+        return True
+
+    def rename_project(self, name):
+        """Save project under a new name. Used with File->Save As... menu command.
+        Checks if given project name is valid.
+
+        Args:
+            name (str): New (long) name for project
+        """
+        # Check for illegal characters
+        if name.strip() == '' or name.lower() == self.name.lower():
+            logging.error("Given name is empty or same as the current name")
+            return False
+        # Check if new short name is the same as the current one
+        new_short_name = name.lower().replace(" ", "_")
+        if new_short_name == self.short_name:
+            msg = "<b>{0}</b> project directory already taken.".format(new_short_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Try again", msg)
+            return False
+        # Check that new name is legal
+        if any(True for x in name if x in INVALID_CHARS):
+            msg = "<b>{0}</b> contains invalid characters.".format(name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Invalid characters", msg)
+            return False
+        # Check that the new project name directory is not taken
+        projects_path = project_dir(self._configs)  # Path to directory where project files (.proj) are
+        new_project_dir = os.path.join(projects_path, new_short_name)  # New project directory
+        taken_dirs = list()
+        dir_contents = [os.path.join(projects_path, x) for x in os.listdir(projects_path)]
+        for path in dir_contents:
+            if os.path.isdir(path):
+                taken_dirs.append(os.path.split(path)[1])
+        if new_short_name in taken_dirs:
+            msg = "Project directory <b>{0}</b> already exists.".format(new_project_dir)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._parent, "Try again", msg)
+            return False
+        # Copy project directory to new project directory
+        if not copy_dir(self._parent, self.project_dir, new_project_dir):
+            self._parent.msg_error.emit("Copying project directory failed")
+            return False
+        # Change name
+        self.change_name(name)
         return True
 
     def save(self, tool_def_paths):
