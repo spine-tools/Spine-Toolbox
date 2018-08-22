@@ -469,18 +469,21 @@
    <property name="nativeMenuBar">
     <bool>false</bool>
    </property>
-   <widget class="QMenu" name="menuFile">
+   <widget class="QMenu" name="menuSession">
     <property name="title">
      <string>Session</string>
     </property>
+    <addaction name="separator"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
-    <addaction name="actionClose"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
      <string>Edit</string>
     </property>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="separator"/>
     <addaction name="actionAdd_object_classes"/>
     <addaction name="actionAdd_objects"/>
     <addaction name="actionAdd_relationship_classes"/>
@@ -488,8 +491,18 @@
     <addaction name="actionAdd_parameters"/>
     <addaction name="actionAdd_parameter_values"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionImport"/>
+    <addaction name="actionExport"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuSession"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCommit">
@@ -508,12 +521,12 @@
     <string>Ctrl+Backspace</string>
    </property>
   </action>
-  <action name="actionClose">
+  <action name="actionQuit">
    <property name="text">
-    <string>Close</string>
+    <string>Quit</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Esc</string>
+    <string>Ctrl+Q</string>
    </property>
   </action>
   <action name="actionAdd_object_classes">
@@ -580,6 +593,43 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>Import</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionExport">
+   <property name="text">
+    <string>Export</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionConnect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="actionCopy">
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
    </property>
   </action>
  </widget>

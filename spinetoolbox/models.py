@@ -1309,42 +1309,37 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
 
 class DatapackageResourcesModel(QStandardItemModel):
     """A class to hold datapackage resources and show them in a treeview."""
-    def __init__(self, resource_list, object_class_name_list, parent=None):
+    def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
-        self.setHorizontalHeaderLabels(["name", "valid?", "path"])
-        self.resource_list = resource_list
-        self.object_class_name_list = object_class_name_list
+        self.datapackage = None
+        self.setHorizontalHeaderLabels(["name", "source"])
         self.ok_icon = QIcon(QPixmap(":/icons/ok.png"))
         self.nok_icon = QIcon(QPixmap(":/icons/nok.png"))
-        for resource in self.resource_list:
-            name = resource.name
-            path = os.path.basename(resource.source)
-            if name in self.object_class_name_list:
-                valid = "yes"
-                valid_icon = self.ok_icon
-            else:
-                valid = "no"
-                valid_icon = self.nok_icon
-            name_item = QStandardItem(name)
-            name_item.setData(self.object_class_name_list, Qt.UserRole)
-            path_item = QStandardItem(path)
-            path_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
-            valid_item = QStandardItem(valid)
-            valid_item.setData(valid_icon, Qt.DecorationRole)
-            valid_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
-            self.appendRow([name_item, valid_item, path_item])
 
-    def check_name_validity(self, row):
-        index = self.index(row, 0)
-        name = index.data(Qt.DisplayRole)
-        if name in self.object_class_name_list:
-            self.setData(index.siblingAtColumn(1), 'yes', Qt.EditRole)
-            self.setData(index.siblingAtColumn(1), self.ok_icon, Qt.DecorationRole)
+    def reset_model(self, datapackage):
+        self.datapackage = datapackage
+        for row, resource in enumerate(self.datapackage.resources):
+            name = resource.name
+            source = os.path.basename(resource.source)
+            name_item = QStandardItem(name)
+            source_item = QStandardItem(source)
+            source_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
+            self.appendRow([name_item, source_item])
+
+    def set_name_valid(self, index, on):
+        if on:
+            self.setData(index, self.ok_icon, Qt.DecorationRole)
+            self.setData(index, None, Qt.ToolTipRole)
+        else:
+            tool_tip = ("<html>Set this resource's name to one of Spine object classes "
+                       "to include it in the export.</html>")
+            self.setData(index, self.nok_icon, Qt.DecorationRole)
+            self.setData(index, tool_tip, Qt.ToolTipRole)
 
 
 class DatapackageFieldsModel(QStandardItemModel):
-    """A class to hold datapackage resources and show them in a treeview."""
+    """A class to hold schema fields and show them in a treeview."""
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
@@ -1365,6 +1360,34 @@ class DatapackageFieldsModel(QStandardItemModel):
             primary_key_item = QStandardItem(primary_key)
             primary_key_item.setData(primary_key, Qt.EditRole)
             self.appendRow([name_item, type_item, primary_key_item])
+
+class DatapackageForeignKeysModel(QStandardItemModel):
+    """A class to hold schema foreign keys and show them in a treeview."""
+    def __init__(self, parent=None):
+        """Initialize class"""
+        super().__init__(parent)
+        self.schema = None
+
+    def reset_model(self, schema):
+        print('reset fks')
+        self.clear()
+        self.setHorizontalHeaderLabels(["fields", "reference resource", "reference fields"])
+        self.schema = schema
+        for foreign_key in schema.foreign_keys:
+            fields = foreign_key['fields']
+            ref_resource = foreign_key['reference']['resource']
+            ref_fields = foreign_key['reference']['fields']
+            fields_item = QStandardItem(fields)
+            ref_resource_item = QStandardItem(ref_resource)
+            ref_fields_item = QStandardItem(ref_fields)
+            self.appendRow([fields_item, ref_resource_item, ref_fields_item])
+
+    def insert_empty_row(self, row):
+        self.insertRow(row)
+        for column in range(self.columnCount()):
+            self.setData(self.index(row, column), "0", Qt.EditRole)
+
+
 
 
 class DatapackageDescriptorModel(QStandardItemModel):

@@ -89,6 +89,10 @@ class DataStore(MetaObject):
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
+    def project(self):
+        """Returns current project or None if no project open."""
+        return self._project
+
     def set_icon(self, icon):
         self._graphics_item = icon
 

@@ -25,16 +25,15 @@ A delegate to edit table cells with comboboxes.
 """
 from PySide2.QtCore import Qt, Slot, QEvent
 from PySide2.QtWidgets import QItemDelegate, QComboBox
+from PySide2.QtGui import QStandardItemModel, QStandardItem
 import logging
 
 
 class ComboBoxDelegate(QItemDelegate):
-    """A delegate that places a fully functioning QComboBox in every
-    cell of the column to which it's applied."""
+    """A QComboBox delegate."""
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.show_popup = False
 
     def createEditor(self, parent, option, index):
         """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
@@ -51,9 +50,7 @@ class ComboBoxDelegate(QItemDelegate):
 
     def setEditorData(self, editor, index):
         """Show pop up as soon as editing starts."""
-        if self.show_popup:
-            editor.showPopup()
-            self.show_popup = False
+        editor.showPopup()
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `closeEditor` signal."""
@@ -64,12 +61,31 @@ class ComboBoxDelegate(QItemDelegate):
         """Close combo editor, which causes `closeEditor` signal to be emitted."""
         self.sender().close()
 
-    def editorEvent(self, event, model, option, index):
-        """Set show_popup if editting comes from mouse press."""
-        if event.type() == QEvent.MouseButtonPress:
-            if event.button() == Qt.LeftButton:
-                self.show_popup = True
-        return super().editorEvent(event, model, option, index)
+class CheckableComboBoxDelegate(ComboBoxDelegate):
+    """A QComboBox delegate with checkboxes."""
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
+        print('combo check')
+        combo = CustomComboEditor(parent)
+        combo.index = index
+        items = index.data(Qt.UserRole)
+        model = QStandardItemModel()
+        for item in items:
+            q_item = QStandardItem(item)
+            q_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+            q_item.setData(Qt.Unchecked, Qt.CheckStateRole)
+            model.appendRow(q_item)
+        combo.setModel(model)
+        # combo.setCurrentIndex(-1) # force index change
+        # combo.currentIndexChanged.connect(self.current_index_changed)
+        return combo
+
+    def setEditorData(self, editor, index):
+        """Show pop up as soon as editing starts."""
+        pass
 
 
 class CustomComboEditor(QComboBox):

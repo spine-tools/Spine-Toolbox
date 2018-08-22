@@ -172,7 +172,7 @@ class AddObjectsDialog(CustomQDialog):
         header.resizeSection(2, 300)
         super().resize_tableview()
 
-    @Slot(name="setup_new_row")
+    @Slot("QModelIndex", "int", "int", name="setup_new_row")
     def setup_new_row(self, parent, first, last):
         self.model.setData(self.model.index(first, 0, parent), self.object_class_name_list, Qt.UserRole)
         if self.default_class_name:
@@ -276,7 +276,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
         line_delegate = self.ui.tableView.itemDelegate()
         self.ui.tableView.setItemDelegateForColumn(column, line_delegate)
 
-    @Slot(name="setup_new_row")
+    @Slot("QModelIndex", "int", "int", name="setup_new_row")
     def setup_new_row(self, parent, first, last):
         if self.object_class_one_name:
             self.model.setData(self.model.index(first, 0), self.object_class_one_name)
@@ -462,7 +462,7 @@ class AddRelationshipsDialog(CustomQDialog):
         except ValueError:
             pass
 
-    @Slot(name="setup_new_row")
+    @Slot("QModelIndex", "int", "int", name="setup_new_row")
     def setup_new_row(self, parent, first, last):
         for column, object_names in enumerate(self.object_names_list):
             index = self.model.index(first, column)
@@ -573,7 +573,7 @@ class AddParametersDialog(CustomQDialog):
         header.resizeSection(1, 200)  # name
         super().resize_tableview()
 
-    @Slot(name="setup_new_row")
+    @Slot("QModelIndex", "int", "int", name="setup_new_row")
     def setup_new_row(self, parent, first, last):
         if self.default_class_name:
             self.model.setData(self.model.index(first, 0), self.default_class_name)
@@ -717,7 +717,7 @@ class AddParameterValuesDialog(CustomQDialog):
         header.resizeSection(4, 80)  # json
         super().resize_tableview()
 
-    @Slot(name="setup_new_row")
+    @Slot("QModelIndex", "int", "int", name="setup_new_row")
     def setup_new_row(self, parent, first, last):
         if self.default_class_name:
             self.model.setData(self.model.index(first, 0), self.default_class_name)

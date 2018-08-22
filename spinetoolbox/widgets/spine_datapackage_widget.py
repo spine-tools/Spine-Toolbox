@@ -30,7 +30,7 @@ import shutil
 import logging
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.combobox_delegate import ComboBoxDelegate
+from widgets.combobox_delegate import ComboBoxDelegate, CheckableComboBoxDelegate
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.checkbox_delegate import CheckBoxDelegate
 from widgets.custom_menus import DescriptorTreeContextMenu
@@ -38,7 +38,7 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QDialog
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, SIGNAL
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
 from helpers import busy_effect
-from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel
+from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from spinedatabase_api import SpineDBAPIError
 
 
@@ -71,16 +71,17 @@ class SpineDatapackageWidget(QMainWindow):
         self.selected_resource_name = None
         self.resource_tables = dict()
         self.export_name = self._data_connection.name + '.sqlite'
-        self.resources_model = DatapackageResourcesModel(self.datapackage.resources, self.object_class_name_list, self)
+        self.resources_model = DatapackageResourcesModel(self)
         self.fields_model = DatapackageFieldsModel(self)
+        self.foreign_keys_model = DatapackageForeignKeysModel(self)
         self.resource_data_model = MinimalTableModel()
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox datapackage form")
         self.restore_ui()
-        # Hack: remove unusable tab
-        self.ui.tabWidget_resources.removeTab(1)
+        self.ui.toolButton_insert_foreign_key.setDefaultAction(self.ui.actionInsert_foreign_key)
+        self.ui.toolButton_remove_foreign_keys.setDefaultAction(self.ui.actionRemove_foreign_keys)
         self.load_resource_data()
         # Add status bar to form
         self.ui.statusbar.setFixedHeight(20)
@@ -90,36 +91,64 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionExport.setText("Export as '{0}'".format(self.export_name))
         self.ui.treeView_resources.setModel(self.resources_model)
         self.ui.treeView_fields.setModel(self.fields_model)
+        self.ui.treeView_foreign_keys.setModel(self.foreign_keys_model)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
         self.ui.treeView_resources.header().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.treeView_fields.header().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.ui.treeView_foreign_keys.header().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_resource_data.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_resource_data.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        # self.descriptor_model.build_tree(self.datapackage.descriptor)
         self.connect_signals()
+        self.resources_model.reset_model(self.datapackage)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def connect_signals(self):
         """Connect signals to slots."""
+        # Message actions
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
+        # DC destroyed
         self._data_connection.destroyed.connect(self.close)
-        self.ui.actionQuit.triggered.connect(self.close)
-        self.ui.actionExport.triggered.connect(self.export)
-        self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
+        # Delegates
+        # Resource data
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
+        # Resource name
         combobox_delegate = ComboBoxDelegate(self)
         combobox_delegate.closeEditor.connect(self.update_resource_name)
         self.ui.treeView_resources.setItemDelegateForColumn(0, combobox_delegate)
+        # Field name
         lineedit_delegate = LineEditDelegate(self)
         lineedit_delegate.closeEditor.connect(self.update_field_name)
         self.ui.treeView_fields.setItemDelegateForColumn(0, lineedit_delegate)
+        # Primary key
         checkbox_delegate = CheckBoxDelegate(self)
         checkbox_delegate.commit_data.connect(self.update_primary_key)
         self.ui.treeView_fields.setItemDelegateForColumn(2, checkbox_delegate)
+        self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
+        # Foreign key fields
+        combobox_delegate = CheckableComboBoxDelegate(self)
+        combobox_delegate.closeEditor.connect(self.update_foreign_key_fields)
+        self.ui.treeView_foreign_keys.setItemDelegateForColumn(0, combobox_delegate)
+        combobox_delegate = ComboBoxDelegate(self)
+        combobox_delegate.closeEditor.connect(self.update_foreign_key_ref_resource)
+        self.ui.treeView_foreign_keys.setItemDelegateForColumn(1, combobox_delegate)
+        combobox_delegate = CheckableComboBoxDelegate(self)
+        combobox_delegate.closeEditor.connect(self.update_foreign_key_ref_fields)
+        self.ui.treeView_foreign_keys.setItemDelegateForColumn(2, combobox_delegate)
+        # Selected resource changed
         self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.filter_resource_data)
+        # Actions
+        self.ui.actionQuit.triggered.connect(self.close)
+        self.ui.actionExport.triggered.connect(self.export)
+        self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
+        self.ui.actionInsert_foreign_key.triggered.connect(self.insert_foreign_key_row)
+        self.ui.actionRemove_foreign_keys.triggered.connect(self.remove_foreign_key_rows)
+        # Rows inserted
+        self.resources_model.rowsInserted.connect(self.setup_new_resource_row)
+        self.foreign_keys_model.rowsInserted.connect(self.setup_new_foreign_key_row)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -161,11 +190,31 @@ class SpineDatapackageWidget(QMainWindow):
             msg_box.setInformativeText(info)
         msg_box.exec_()
 
+    @Slot("QModelIndex", "int", "int", name="setup_new_resource_row")
+    def setup_new_resource_row(self, parent, first, last):
+        index = self.resources_model.index(first, 0, parent)
+        self.resources_model.setData(index, self.object_class_name_list, Qt.UserRole)
+        self.check_resource_name(index)
+
+    @Slot("QModelIndex", "int", "int", name="setup_new_foreign_key_row")
+    def setup_new_foreign_key_row(self, parent, first, last):
+        index = self.foreign_keys_model.index(first, 0, parent)
+        field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
+        self.foreign_keys_model.setData(index, field_names, Qt.UserRole)
+        resource_names = self.datapackage.resource_names
+        self.foreign_keys_model.setData(index.siblingAtColumn(1), resource_names, Qt.UserRole)
+
+    def check_resource_name(self, index):
+        name = index.data(Qt.DisplayRole)
+        if name in self.object_class_name_list:
+            self.resources_model.set_name_valid(index, True)
+        else:
+            self.resources_model.set_name_valid(index, False)
+
     def load_resource_data(self):
         """Load resource data into a local list of tables."""
         for resource in self.datapackage.resources:
             table = list()
-            table.append(resource.schema.field_names)
             table.extend(resource.read(cast=False))
             self.resource_tables[resource.name] = table
 
@@ -185,7 +234,9 @@ class SpineDatapackageWidget(QMainWindow):
             return
         self.selected_resource_name = new_selected_resource_name
         self.reset_resource_data_model()
-        self.fields_model.reset_model(self.datapackage.get_resource(self.selected_resource_name).schema)
+        schema = self.datapackage.get_resource(self.selected_resource_name).schema
+        self.fields_model.reset_model(schema)
+        self.foreign_keys_model.reset_model(schema)
 
     def reset_resource_data_model(self):
         """Reset resource data model with data from newly selected resource."""
@@ -214,7 +265,7 @@ class SpineDatapackageWidget(QMainWindow):
         old_name = index.data(Qt.DisplayRole)
         if not self.resources_model.setData(index, new_name, Qt.EditRole):
             return
-        self.resources_model.check_name_validity(index.row())
+        self.check_resource_name(index)
         resource_data = self.resource_tables.pop(self.selected_resource_name, None)
         if resource_data is None:
             msg = "Couldn't find key in resource data dict. Something is wrong."
@@ -255,6 +306,47 @@ class SpineDatapackageWidget(QMainWindow):
             self.fields_model.setData(index, False, Qt.EditRole)
             self.datapackage.remove_from_primary_key(self.selected_resource_name, field_name)
 
+    @Slot(name="insert_foreign_key_row")
+    def insert_foreign_key_row(self):
+        row = self.ui.treeView_foreign_keys.currentIndex().row()+1
+        self.foreign_keys_model.insert_empty_row(row)
+
+    @Slot(name="remove_foreign_key_rows")
+    def remove_foreign_key_rows(self):
+        selection = self.ui.treeView_foreign_keys.selectionModel().selection()
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom+1))
+        for row in reversed(list(row_set)):
+            self.foreign_keys_model.removeRows(row, 1)
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_fields")
+    def update_foreign_key_fields(self, editor, hint):
+        print('upd fk fields')
+        model = editor.model()
+        for i in range(model.rowCount()):
+            index = model.index(i, 0)
+            print(index.data(Qt.DisplayRole))
+            print(index.data(Qt.CheckStateRole))
+        index = editor.index
+        value = editor.currentText()
+        self.foreign_keys_model.setData(index, value, Qt.EditRole)
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_resource")
+    def update_foreign_key_ref_resource(self, editor, hint):
+        index = editor.index
+        value = editor.currentText()
+        self.foreign_keys_model.setData(index, value, Qt.EditRole)
+
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_fields")
+    def update_foreign_key_ref_fields(self, editor, hint):
+        index = editor.index
+        value = editor.currentText()
+        self.foreign_keys_model.setData(index, value, Qt.EditRole)
+
     @Slot(name="export")
     def export(self):
         """Check if everything is fine (destination, resource names), launch conversion,
@@ -278,8 +370,8 @@ class SpineDatapackageWidget(QMainWindow):
             if resource.name not in self.object_class_name_list:
                 unsupported_names.append(resource.name)
         if unsupported_names:
-            text = ("The following resources have unsupported names "
-                    "and will be ignored by the conversion process:<ul>")
+            text = ("The following resources have invalid names "
+                    "and will be ignored in the conversion process:<ul>")
             for name in unsupported_names:
                 text += "<li>{}</li>".format(name)
             text += "</ul>"
@@ -315,19 +407,67 @@ class SpineDatapackageWidget(QMainWindow):
             primary_key = resource.schema.primary_key
             foreign_keys = resource.schema.foreign_keys
             for field in resource.schema.fields:
-                if not field.name in primary_key:
-                    if not self.try_and_add_parameter(field.name, foreign_keys, object_class_id):
-                        self.try_and_add_relationship_class(field.name, foreign_keys, object_class_id)
-            for i, row in enumerate(self.resource_tables[resource.name][1:]):
-                row_dict = dict(zip(resource.schema.field_names, row))
-                object_ = self.try_and_add_object(primary_key, row_dict, object_class_name + str(i), object_class_id)
-                if not object_:
+                # Skip fields in primary key
+                if field.name in primary_key:
                     continue
+                # Find field in foreign keys, and prepare list of child object classes
+                child_object_class_name_list = list()
+                for foreign_key in foreign_keys:
+                    if field_name in foreign_key['fields']:
+                        child_object_class_name = foreign_key['reference']['resource']
+                        if child_object_class_name not in self.object_class_name_list:
+                            continue
+                        child_object_class_name_list.append(child_object_class_name)
+                # If field is not in any foreign keys, use it to create a parameter
+                if not child_object_class_name_list:
+                    try:
+                        self.mapping.add_parameter(object_class_id=object_class_id, name=field_name)
+                    except SpineDBAPIError as e:
+                        self.msg_error.emit("SpineDBAPIError",  e.msg, "")
+                    continue
+                # Create relationship classes
+                for child_object_class_name in child_object_class_name_list:
+                    child_object_class = self.mapping.single_object_class(name=child_object_class_name).one_or_none()
+                    if not child_object_class:
+                        continue
+                    relationship_class_name = object_class_name + "_" + child_object_class.name
+                    try:
+                        self.mapping.add_wide_relationship_class(
+                            object_class_id_list=[object_class_id, child_object_class.id],
+                            name=relationship_class_name
+                        )
+                    except SpineDBAPIError as e:
+                        self.msg_error.emit("SpineDBAPIError",  e.msg, "")
+            # Iterate over resource rows to create objects and parameter values
+            for i, row in enumerate(self.resource_tables[resource.name]):
+                row_dict = dict(zip(resource.schema.field_names, row))
+                # Create object
+                if primary_key:
+                    object_name = "_".join(row_dict[field] for field in primary_key)
+                else:
+                    object_name = object_class_name + str(i)
+                try:
+                    object_ = self.mapping.add_object(class_id=object_class_id, name=object_name)
+                except SpineDBAPIError as e:
+                    self.msg_error.emit("SpineDBAPIError",  e.msg, "")
+                    self.msg.emit(e.msg)
+                    continue
+                # Create parameters
                 object_id = object_.id
                 for field_name, value in row_dict.items():
                     if field_name in primary_key:
                         continue
+                    if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: try and move this
+                                                                                      # comprehension outside the loop
+                        continue
                     self.try_and_add_parameter_value(field_name, foreign_keys, object_id, value)
+                    parameter = self.mapping.single_parameter(name=field_name).one_or_none()
+                    if not parameter:
+                        continue
+                    try:
+                        self.mapping.add_parameter_value(object_id=object_id, parameter_id=parameter.id, value=value)
+                    except SpineDBAPIError as e:
+                        self.msg_error.emit("SpineDBAPIError",  e.msg, "")
         try:
             self.mapping.commit_session("Automatically created by Spine Toolbox.")
             return True
@@ -335,74 +475,6 @@ class SpineDatapackageWidget(QMainWindow):
             self.msg_error.emit("SpineDBAPIError",  e.msg, "")
             return False
 
-    def try_and_add_parameter(self, field_name, foreign_keys, object_class_id):
-        """"""
-        if field_name in [x for a in foreign_keys for x in a["fields"]]:
-            return False
-        try:
-            self.mapping.add_parameter(
-                object_class_id=object_class_id,
-                name=field_name
-            )
-        except SpineDBAPIError as e:
-            self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-        return True
-
-    def try_and_add_relationship_class(self, field_name, foreign_keys, object_class_id):
-        """"""
-        # Find out child object class names from foreign keys
-        child_object_class_name_list = list()
-        for foreign_key in foreign_keys:
-            if field_name in foreign_key['fields']:
-                child_object_class_name = foreign_key['reference']['resource']
-                if child_object_class_name not in self.object_class_name_list:
-                    continue
-                child_object_class_name_list.append(child_object_class_name)
-        for child_object_class_name in child_object_class_name_list:
-            child_object_class = self.mapping.single_object_class(name=child_object_class_name).one_or_none()
-            if not child_object_class:
-                continue
-            relationship_class_name = object_class_name + "_" + child_object_class.name
-            try:
-                self.mapping.add_wide_relationship_class(
-                    object_class_id_list=[object_class_id, child_object_class.id],
-                    name=relationship_class_name
-                )
-            except SpineDBAPIError as e:
-                self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-
-    def try_and_add_object(self, primary_key, row_dict, default_name, object_class_id):
-        """"""
-        if primary_key:
-            object_name = "_".join(row_dict[field] for field in primary_key)
-        else:
-            object_name = default_name
-        try:
-            object_ = self.mapping.add_object(
-                class_id=object_class_id,
-                name=object_name
-            )
-            return object_
-        except SpineDBAPIError as e:
-            #self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-            self.msg.emit(e.msg)
-            return None
-
-    def try_and_add_parameter_value(self, field_name, foreign_keys, object_id, value):
-        """"""
-        if field_name in [x for a in foreign_keys for x in a["fields"]]:
-            return
-        parameter = self.mapping.single_parameter(name=field_name).one_or_none()
-        if not parameter:
-            return
-        try:
-            self.mapping.add_parameter_value(
-                object_id=object_id,
-                parameter_id=parameter.id,
-                value=value
-            )
-        except SpineDBAPIError as e:
-            self.msg_error.emit("SpineDBAPIError",  e.msg, "")
 
         # Iterate over resources (again) to create relationships
         #for resource in self.datapackage.resources:

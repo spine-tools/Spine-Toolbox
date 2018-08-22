@@ -27,7 +27,7 @@ Widget to show Data Store Form.
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from PySide2.QtWidgets import QMainWindow, QWidget, QHeaderView, QDialog, QLineEdit, QInputDialog, \
-    QMessageBox
+    QMessageBox, QFileDialog
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
 from ui.data_store_form import Ui_MainWindow
@@ -38,6 +38,8 @@ from widgets.lineedit_delegate import LineEditDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, AddParametersDialog, AddParameterValuesDialog, CommitDialog
 from models import ObjectTreeModel, MinimalTableModel, CustomSortFilterProxyModel
+from datapackage import Package
+from helpers import busy_effect
 
 
 class DataStoreForm(QMainWindow):
@@ -89,11 +91,8 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_context_menu = None
         # init models and views
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
-        self.init_object_tree_model()
-        self.init_parameter_value_models()
-        self.init_parameter_models()
-        self.init_parameter_value_views()
-        self.init_parameter_views()
+        self.init_models()
+        self.init_views()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
@@ -108,9 +107,10 @@ class DataStoreForm(QMainWindow):
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
         # Menu commands
+        self.ui.actionImport.triggered.connect(self.import_file)
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
-        self.ui.actionClose.triggered.connect(self.close_session)
+        self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAdd_object_classes.triggered.connect(self.add_object_classes)
         self.ui.actionAdd_objects.triggered.connect(self.add_objects)
         self.ui.actionAdd_relationship_classes.triggered.connect(self.add_relationship_classes)
@@ -123,7 +123,6 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
-        self.object_tree_model.rowsInserted.connect(self.scroll_to_new_item)
         # Parameter tables
         # Editor closed
         lineedit_delegate = LineEditDelegate(self)
@@ -148,14 +147,15 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.customContextMenuRequested.\
             connect(self.show_relationship_parameter_context_menu)
         # Rows inserted
-        self.object_parameter_model.row_with_data_inserted.\
-            connect(self.scroll_to_new_object_parameter)
-        self.relationship_parameter_model.row_with_data_inserted.\
-            connect(self.scroll_to_new_relationship_parameter)
-        self.object_parameter_value_model.row_with_data_inserted.\
-            connect(self.scroll_to_new_object_parameter_value)
-        self.relationship_parameter_value_model.row_with_data_inserted.\
-            connect(self.scroll_to_new_relationship_parameter_value)
+        # self.object_tree_model.rowsInserted.connect(self.scroll_to_new_item)
+        # self.object_parameter_model.row_with_data_inserted.\
+        #     connect(self.scroll_to_new_object_parameter)
+        # self.relationship_parameter_model.row_with_data_inserted.\
+        #     connect(self.scroll_to_new_relationship_parameter)
+        # self.object_parameter_value_model.row_with_data_inserted.\
+        #     connect(self.scroll_to_new_object_parameter_value)
+        # self.relationship_parameter_value_model.row_with_data_inserted.\
+        #     connect(self.scroll_to_new_relationship_parameter_value)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
 
@@ -181,6 +181,22 @@ class DataStoreForm(QMainWindow):
         msg_box.setText(msg)
         msg_box.exec_()
 
+    @Slot(name="import_file")
+    def import_file(self):
+        """Import data from file into current database."""
+        answer = QFileDialog.getOpenFileName(self, "Import file", self._data_store.project().project_dir, "*.*")
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        if file_path.lower().endswith('datapackage.json'):
+            try:
+                self.import_datapackage(file_path)
+                self.msg.emit("Datapackage succesfully imported.")
+            except SpineDBAPIError as e:
+                self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
+        elif file_path.lower().endswith('xlsx'):  # TODO: import excel file
+            pass
+
     @Slot(name="commit_session")
     def commit_session(self):
         """Query user for a commit message and commit changes to source database."""
@@ -205,6 +221,9 @@ class DataStoreForm(QMainWindow):
             return
         msg = "All changes since last commit rolled back successfully."
         self.msg.emit(msg)
+        self.init_models()
+
+    def init_models(self):
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_models()
@@ -264,9 +283,11 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
         self.relationship_parameter_proxy.add_fixed_column('relationship_class_name', 'object_class_name_list')
 
-    def init_parameter_value_views(self):
+    def init_views(self):
         self.init_object_parameter_value_view()
         self.init_relationship_parameter_value_view()
+        self.init_object_parameter_view()
+        self.init_relationship_parameter_view()
 
     def init_object_parameter_value_view(self):
         """Init the object parameter table view."""
@@ -289,10 +310,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
-
-    def init_parameter_views(self):
-        self.init_object_parameter_view()
-        self.init_relationship_parameter_view()
 
     def init_object_parameter_view(self):
         """Init the object parameter table view."""
@@ -875,7 +892,6 @@ class DataStoreForm(QMainWindow):
         """Update parameter table with newly edited data.
         If successful, also update item in the model.
         """
-        print("hey")
         index = editor.index
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
@@ -937,11 +953,6 @@ class DataStoreForm(QMainWindow):
         if splitter_tree_parameter_state:
             self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
 
-    @Slot(name="close_session")
-    def close_session(self):
-        """Close this form without commiting any changes."""
-        self.close()
-
     def closeEvent(self, event=None):
         """Handle close window.
 
@@ -959,3 +970,88 @@ class DataStoreForm(QMainWindow):
         self.mapping.close()
         if event:
             event.accept()
+
+    @busy_effect
+    def import_datapackage(self, datapackage_path):
+        """Import datapackage into current Database."""
+        self.msg.emit("Importing datapackage... ")
+        object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+        datapackage = Package(datapackage_path)
+        for resource in datapackage.resources:
+            if resource.name not in object_class_name_list:
+                logging.debug("Ignoring resource '{}'.".format(resource.name))
+                continue
+            logging.debug("Importing resource '{}'.".format(resource.name))
+            object_class_name = resource.name
+            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+            if not object_class:
+                continue
+            object_class_id = object_class.id
+            primary_key = resource.schema.primary_key
+            foreign_keys = resource.schema.foreign_keys
+            for field in resource.schema.fields:
+                logging.debug("Checking field '{}'.".format(field.name))
+                # Skip fields in primary key
+                if field.name in primary_key:
+                    continue
+                # Find field in foreign keys, and prepare list of child object classes
+                child_object_class_name_list = list()
+                for foreign_key in foreign_keys:
+                    if field.name in foreign_key['fields']:
+                        child_object_class_name = foreign_key['reference']['resource']
+                        if child_object_class_name not in object_class_name_list:
+                            continue
+                        child_object_class_name_list.append(child_object_class_name)
+                # If field is not in any foreign keys, use it to create a parameter
+                if not child_object_class_name_list:
+                    try:
+                        parameter = self.mapping.add_parameter(object_class_id=object_class_id, name=field.name)
+                        self.add_parameter_to_model(parameter.__dict__)
+                    except SpineDBAPIError as e:
+                        logging.debug(e.msg)
+                    continue
+                # Create relationship classes
+                for child_object_class_name in child_object_class_name_list:
+                    child_object_class = self.mapping.single_object_class(name=child_object_class_name).one_or_none()
+                    if not child_object_class:
+                        continue
+                    relationship_class_name = object_class_name + "_" + child_object_class.name
+                    try:
+                        wide_relationship_class = self.mapping.add_wide_relationship_class(
+                            object_class_id_list=[object_class_id, child_object_class.id],
+                            name=relationship_class_name
+                        )
+                        self.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
+                    except SpineDBAPIError as e:
+                        logging.debug(e.msg)
+            # Iterate over resource rows to create objects and parameter values
+            for i, row in enumerate(resource.read(cast=False)):  # TODO: try and get also field keys from read method
+                row_dict = dict(zip(resource.schema.field_names, row))
+                # Create object
+                if primary_key:
+                    object_name = "_".join(row_dict[field] for field in primary_key)
+                else:
+                    object_name = object_class_name + str(i)
+                try:
+                    object_ = self.mapping.add_object(class_id=object_class_id, name=object_name)
+                    self.object_tree_model.add_object(object_.__dict__)
+                except SpineDBAPIError as e:
+                    logging.debug(e.msg)
+                    continue
+                # Create parameters
+                object_id = object_.id
+                for field_name, value in row_dict.items():
+                    if field_name in primary_key:
+                        continue
+                    if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: try and move this
+                                                                                      # comprehension outside the loop
+                        continue
+                    parameter = self.mapping.single_parameter(name=field_name).one_or_none()
+                    if not parameter:
+                        continue
+                    try:
+                        parameter_value = self.mapping.add_parameter_value(object_id=object_id,
+                            parameter_id=parameter.id, value=value)
+                        self.add_parameter_value_to_model(parameter_value.__dict__)
+                    except SpineDBAPIError as e:
+                        logging.debug(e.msg)
