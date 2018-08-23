@@ -31,7 +31,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Spine datapackage</string>
+   <string>Spine datapackage editor</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_8">
@@ -132,7 +132,7 @@
            <enum>QTabWidget::Rounded</enum>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>0</number>
           </property>
           <property name="tabsClosable">
            <bool>false</bool>
@@ -169,7 +169,7 @@
                <bool>false</bool>
               </property>
               <attribute name="horizontalHeaderVisible">
-               <bool>false</bool>
+               <bool>true</bool>
               </attribute>
               <attribute name="horizontalHeaderHighlightSections">
                <bool>false</bool>
@@ -330,13 +330,12 @@
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
-     <string>Datapackage</string>
+     <string>File</string>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
     <addaction name="actionSave_datapackage"/>
-    <addaction name="actionExport"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">

@@ -69,6 +69,7 @@ class CustomQTableView(QTableView):
             if not selection:
                 super().keyPressEvent(event)
                 return
+            # Take only the first selection in case of multiple selection.
             first = selection.first()
             content = ""
             v_header = self.verticalHeader()
@@ -94,13 +95,22 @@ class CustomQTableView(QTableView):
                 return
             data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
             self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
-            top = top_left_index.row()
-            left = top_left_index.column()
-            for i, line in enumerate(data):
-                for j, value in enumerate(line):
-                    sibling = top_left_index.sibling(top + i, left + j)
-                    self.model().setData(sibling, value, Qt.EditRole)
-                    self.selectionModel().select(sibling, QItemSelectionModel.Select)
+            v_header = self.verticalHeader()
+            h_header = self.horizontalHeader()
+            row = top_left_index.row()
+            for line in data:
+                if v_header.isSectionHidden(row):
+                    row += 1
+                column = top_left_index.column()
+                for value in line:
+                    if h_header.isSectionHidden(column):
+                        column += 1
+                    sibling = top_left_index.sibling(row, column)
+                    if sibling.flags() & Qt.ItemIsEditable:
+                        self.model().setData(sibling, value, Qt.EditRole)
+                        self.selectionModel().select(sibling, QItemSelectionModel.Select)
+                    column += 1
+                row += 1
         else:
             super().keyPressEvent(event)
 

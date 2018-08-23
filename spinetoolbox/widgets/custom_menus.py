@@ -198,7 +198,7 @@ class ParameterValueContextMenu(CustomContextMenu):
         super().__init__(parent, index)
         if not index.isValid():
             return
-        self.add_action("Remove parameter value")
+        self.add_action("Remove selected")
         self.exec_(position)
 
 

@@ -282,21 +282,7 @@ class DataConnection(MetaObject):
         datapackage = self.load_datapackage()
         if not datapackage:
             return
-        temp_filename = os.path.join(tempfile.gettempdir(), 'Spine.sqlite')
-        if temp_filename:
-            try:
-                os.remove(temp_filename)
-            except FileNotFoundError:
-                pass  # File not found, that's ok
-        url = "sqlite:///" + temp_filename
-        create_new_spine_database(url)
-        username = getpass.getuser()
-        try:
-            mapping = DatabaseMapping(url, username)
-        except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
-            return
-        self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self, datapackage, mapping, temp_filename)
+        self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self, datapackage)
         self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
         self.spine_datapackage_form.show()
 

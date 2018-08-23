@@ -39,7 +39,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QSettings, SIGNAL
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
 from helpers import busy_effect
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
-from spinedatabase_api import SpineDBAPIError
+from spinedatabase_api import OBJECT_CLASS_NAMES
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -50,27 +50,21 @@ class SpineDatapackageWidget(QMainWindow):
         parent (ToolboxUI): QMainWindow instance
         data_connection (DataConnection): Data Connection associated to this widget
         datapackage (CustomPackage): Datapackage to load and use
-        mapping (DatabaseMapping): Mapping to an empty sqlite database to work with
-        temp_filename (str): The sqlite filename
     """
 
     msg = Signal(str, name="msg")
     msg_error = Signal(str, str, str, name="msg_error")
 
-    def __init__(self, parent, data_connection, datapackage, mapping, temp_filename):
+    def __init__(self, parent, data_connection, datapackage):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._parent = parent
         self._data_connection = data_connection
-        self.output_data_stores = None
-        self.mapping = mapping
-        self.temp_filename = temp_filename
-        self.object_class_name_list = [item.name for item in self.mapping.object_class_list()]
+        self.object_class_name_list = OBJECT_CLASS_NAMES
         self.datapackage = datapackage
         self.descriptor_tree_context_menu = None
         self.selected_resource_name = None
         self.resource_tables = dict()
-        self.export_name = self._data_connection.name + '.sqlite'
         self.resources_model = DatapackageResourcesModel(self)
         self.fields_model = DatapackageFieldsModel(self)
         self.foreign_keys_model = DatapackageForeignKeysModel(self)
@@ -88,7 +82,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         # Set name of export action
-        self.ui.actionExport.setText("Export as '{0}'".format(self.export_name))
         self.ui.treeView_resources.setModel(self.resources_model)
         self.ui.treeView_fields.setModel(self.fields_model)
         self.ui.treeView_foreign_keys.setModel(self.foreign_keys_model)
@@ -128,7 +121,7 @@ class SpineDatapackageWidget(QMainWindow):
         checkbox_delegate.commit_data.connect(self.update_primary_key)
         self.ui.treeView_fields.setItemDelegateForColumn(2, checkbox_delegate)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
-        # Foreign key fields
+        # Foreign key fields, ref resource,
         combobox_delegate = CheckableComboBoxDelegate(self)
         combobox_delegate.closeEditor.connect(self.update_foreign_key_fields)
         self.ui.treeView_foreign_keys.setItemDelegateForColumn(0, combobox_delegate)
@@ -142,7 +135,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.filter_resource_data)
         # Actions
         self.ui.actionQuit.triggered.connect(self.close)
-        self.ui.actionExport.triggered.connect(self.export)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         self.ui.actionInsert_foreign_key.triggered.connect(self.insert_foreign_key_row)
         self.ui.actionRemove_foreign_keys.triggered.connect(self.remove_foreign_key_rows)
@@ -214,9 +206,7 @@ class SpineDatapackageWidget(QMainWindow):
     def load_resource_data(self):
         """Load resource data into a local list of tables."""
         for resource in self.datapackage.resources:
-            table = list()
-            table.extend(resource.read(cast=False))
-            self.resource_tables[resource.name] = table
+            self.resource_tables[resource.name] = resource.read(cast=False)
 
     @Slot(name="save_datapackage")
     def save_datapackage(self):  #TODO: handle zip as well?
@@ -241,8 +231,9 @@ class SpineDatapackageWidget(QMainWindow):
     def reset_resource_data_model(self):
         """Reset resource data model with data from newly selected resource."""
         table = self.resource_tables[self.selected_resource_name]
-        self.resource_data_model.header = table[0]  # We need a header for columnCount() to work in MinimalTableModel
-        self.resource_data_model.reset_model(table[1:-1])
+        field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
+        self.resource_data_model.set_horizontal_header_labels(field_names)
+        self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
@@ -346,135 +337,6 @@ class SpineDatapackageWidget(QMainWindow):
         index = editor.index
         value = editor.currentText()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
-
-    @Slot(name="export")
-    def export(self):
-        """Check if everything is fine (destination, resource names), launch conversion,
-        save output as .sqlite in destination Data Stores' directory, and clean up session
-        for future conversions."""
-        output_data_directories = list()
-        for output_item in self._parent.connection_model.output_items(self._data_connection.name):
-            found_item = self._parent.project_item_model.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
-            if found_item:
-                if found_item.data(Qt.UserRole).item_type == 'Data Store':
-                    output_data_directories.append(found_item.data(Qt.UserRole).data_dir)
-        if not output_data_directories:
-            title = "Destination not found"
-            text = ("The datapackage cannot be exported because the Data Connection <b>{}</b> "
-                    "is not connected to any destination Data Stores.").format(self._data_connection.name)
-            info = "Connect <b>{}</b> to a Data Store and try again.".format(self._data_connection.name)
-            self.msg_error.emit(title, text, info)
-            return
-        unsupported_names = list()
-        for resource in self.datapackage.resources:
-            if resource.name not in self.object_class_name_list:
-                unsupported_names.append(resource.name)
-        if unsupported_names:
-            text = ("The following resources have invalid names "
-                    "and will be ignored in the conversion process:<ul>")
-            for name in unsupported_names:
-                text += "<li>{}</li>".format(name)
-            text += "</ul>"
-            text += ("Do you want to proceed anyway?")
-            answer = QMessageBox.question(None, 'Unsupported resource names"', text, QMessageBox.Yes, QMessageBox.Cancel)
-            if answer != QMessageBox.Yes:
-                return
-        if not self.convert():
-            return
-        for data_dir in output_data_directories:
-            target_filename = os.path.join(data_dir, self.export_name)
-            try:
-                shutil.copy(self.temp_filename, target_filename)
-                msg = "File '{0}' saved in {1}".format(self.export_name, data_dir)
-                self.msg.emit(msg)
-            except OSError:
-                msg = "[OSError] Unable to copy file to {}.".format(data_dir)
-                self.msg.emit(msg)
-        self.mapping.reset()
-
-    @busy_effect
-    def convert(self):
-        """Convert datapackage to Spine database."""
-        self.mapping.new_commit()
-        for resource in self.datapackage.resources:
-            object_class_name = resource.name
-            if object_class_name not in self.object_class_name_list:
-                continue
-            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
-            if not object_class:
-                continue
-            object_class_id = object_class.id
-            primary_key = resource.schema.primary_key
-            foreign_keys = resource.schema.foreign_keys
-            for field in resource.schema.fields:
-                # Skip fields in primary key
-                if field.name in primary_key:
-                    continue
-                # Find field in foreign keys, and prepare list of child object classes
-                child_object_class_name_list = list()
-                for foreign_key in foreign_keys:
-                    if field_name in foreign_key['fields']:
-                        child_object_class_name = foreign_key['reference']['resource']
-                        if child_object_class_name not in self.object_class_name_list:
-                            continue
-                        child_object_class_name_list.append(child_object_class_name)
-                # If field is not in any foreign keys, use it to create a parameter
-                if not child_object_class_name_list:
-                    try:
-                        self.mapping.add_parameter(object_class_id=object_class_id, name=field_name)
-                    except SpineDBAPIError as e:
-                        self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-                    continue
-                # Create relationship classes
-                for child_object_class_name in child_object_class_name_list:
-                    child_object_class = self.mapping.single_object_class(name=child_object_class_name).one_or_none()
-                    if not child_object_class:
-                        continue
-                    relationship_class_name = object_class_name + "_" + child_object_class.name
-                    try:
-                        self.mapping.add_wide_relationship_class(
-                            object_class_id_list=[object_class_id, child_object_class.id],
-                            name=relationship_class_name
-                        )
-                    except SpineDBAPIError as e:
-                        self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-            # Iterate over resource rows to create objects and parameter values
-            for i, row in enumerate(self.resource_tables[resource.name]):
-                row_dict = dict(zip(resource.schema.field_names, row))
-                # Create object
-                if primary_key:
-                    object_name = "_".join(row_dict[field] for field in primary_key)
-                else:
-                    object_name = object_class_name + str(i)
-                try:
-                    object_ = self.mapping.add_object(class_id=object_class_id, name=object_name)
-                except SpineDBAPIError as e:
-                    self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-                    self.msg.emit(e.msg)
-                    continue
-                # Create parameters
-                object_id = object_.id
-                for field_name, value in row_dict.items():
-                    if field_name in primary_key:
-                        continue
-                    if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: try and move this
-                                                                                      # comprehension outside the loop
-                        continue
-                    self.try_and_add_parameter_value(field_name, foreign_keys, object_id, value)
-                    parameter = self.mapping.single_parameter(name=field_name).one_or_none()
-                    if not parameter:
-                        continue
-                    try:
-                        self.mapping.add_parameter_value(object_id=object_id, parameter_id=parameter.id, value=value)
-                    except SpineDBAPIError as e:
-                        self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-        try:
-            self.mapping.commit_session("Automatically created by Spine Toolbox.")
-            return True
-        except SpineDBAPIError as e:
-            self.msg_error.emit("SpineDBAPIError",  e.msg, "")
-            return False
-
 
         # Iterate over resources (again) to create relationships
         #for resource in self.datapackage.resources:
@@ -602,7 +464,5 @@ class SpineDatapackageWidget(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
-        # close sql session
-        self.mapping.close()
         if event:
             event.accept()

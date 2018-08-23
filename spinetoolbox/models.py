@@ -703,6 +703,10 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = False
 
+    def parent(self):
+        """Return _parent attribute."""
+        return self._parent        
+
     def clear(self):
         self.beginResetModel()
         self._data = list()
@@ -742,6 +746,13 @@ class MinimalTableModel(QAbstractTableModel):
             return h
         elif orientation == Qt.Vertical and role == Qt.DisplayRole:
             return section + 1
+
+    def set_horizontal_header_labels(self, header):
+        """sets header for the given orientation and role."""
+        if not header:
+            return
+        self.header = header
+        self.headerDataChanged.emit(Qt.Horizontal, 0, len(header))
 
     def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
         """Sets the data for the given role and section in the header
@@ -833,7 +844,7 @@ class MinimalTableModel(QAbstractTableModel):
         self._data[index.row()][index.column()][role] = value
         if role == Qt.EditRole:
             self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        self.dataChanged.emit(index, index)
+        self.dataChanged.emit(index, index, [role])
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -857,7 +868,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginInsertRows(parent, row, row)
         if self.columnCount() == 0:
             new_row = [{}]
-            new_flags_row = [flags]
+            new_flags_row = [self.default_flags]
         else:
             new_row = [{} for i in range(self.columnCount())]
             new_flags_row = [self.default_flags for i in range(self.columnCount())]
@@ -1226,29 +1237,40 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.fixed_column_list = list()  # Non-editable columns
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.setDynamicSortFilter(False)  # Important so we can setData within filterAcceptRows
+        self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.gray_background = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
 
-    def data(self, index, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the item referred to by the index."""
-        if role == Qt.BackgroundRole:
-            if not index.flags() & Qt.ItemIsEditable: # Item is not editable
-                return self.gray_background
-        return super().data(index, role)
-
     def reset(self):
-        self.condition_list = list()
+        """Reset all filters, unbold all bolded items."""
         self.hidden_column_list = list()
+        for source_column in [column for cond in self.condition_list for column in cond.keys()]:
+            for source_row in range(self.sourceModel().rowCount()):
+                source_index = self.sourceModel().index(source_row, source_column)
+                self.sourceModel().setData(source_index, None, Qt.FontRole)
+        self.condition_list = list()
 
     def apply(self):
         self.setFilterRegExp("")
 
     def add_fixed_column(self, *names):
+        """Set columns as fixed so they are not editable and painted gray."""
         h = self.sourceModel().header
         for name in names:
-            self.fixed_column_list.append(h.index(name))
+            column = h.index(name)
+            self.fixed_column_list.append(column)
+        for row in range(self.sourceModel().rowCount()):
+            self.apply_fixed_columns_for_row(row)
+
+    def apply_fixed_columns_for_row(self, row):
+        """Set background role data and flags for row according to fixed columns."""
+        h = self.sourceModel().header
+        for column in self.fixed_column_list:
+            index = self.sourceModel().index(row, column)
+            self.sourceModel().setData(index, self.gray_background, Qt.BackgroundRole)
+            self.sourceModel().set_flags(index, ~Qt.ItemIsEditable)
 
     def add_hidden_column(self, *names):
+        """Set columns as hidden in the view."""
         h = self.sourceModel().header
         for name in names:
             self.hidden_column_list.append(h.index(name))
@@ -1262,6 +1284,10 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         for key, value in kwargs.items():
             column = h.index(key)
             condition[column] = value
+            # Bold column in case the condition is met
+            for row in range(self.sourceModel().rowCount()):
+                source_index = self.sourceModel().index(row, column)
+                self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
         self.condition_list.append(condition)
 
     def filterAcceptsRow(self, source_row, source_parent):
@@ -1269,11 +1295,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         and source_parent should be included in the model; otherwise returns false.
         All the conditions in the list need to be satisfied, however each condition
         is satisfied as soon as ANY of its statements is satisfied.
-        Also set bold font for matched items in each row.
         """
-        for column in range(self.sourceModel().columnCount()):
-            source_index = self.sourceModel().index(source_row, column, source_parent)
-            self.sourceModel().setData(source_index, None, Qt.FontRole)
         if not self.condition_list:
             return False
         result = True
@@ -1287,7 +1309,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
                 data = data.split(',')  # Split in case of name list
                 if value in data:
                     partial_result = True
-                    self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
+                    break
             result = result and partial_result
         return result
 
@@ -1299,12 +1321,12 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             return True
         return source_column not in self.hidden_column_list
 
-    def flags(self, index):
-        """Returns the item flags for the given index."""
-        source_column = self.mapToSource(index).column()
-        if source_column in self.fixed_column_list:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+    #def flags(self, index):
+    #    """Returns the item flags for the given index."""
+    #    source_column = self.mapToSource(index).column()
+    #    if source_column in self.fixed_column_list:
+    #        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+    #    return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
 
 class DatapackageResourcesModel(QStandardItemModel):

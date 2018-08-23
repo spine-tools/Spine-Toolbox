@@ -88,10 +88,94 @@ class CheckableComboBoxDelegate(ComboBoxDelegate):
         pass
 
 
+class ObjectParameterValueDelegate(ComboBoxDelegate):
+    """A QComboBox delegate for the object parameter value model and view in DataStoreForm."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+        self.mapping = parent.mapping
+
+    def createEditor(self, parent, option, proxy_index):
+        """Return CustomComboEditor."""
+        combo = CustomComboEditor(parent)
+        combo.index = proxy_index
+        model = proxy_index.model().sourceModel()
+        index = proxy_index.model().mapToSource(proxy_index)
+        header = model.header
+        h = header.index
+        if index.column() == h('object_class_name'):
+            object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+            combo.addItems(object_class_name_list)
+        elif index.column() == h('object_name'):
+            object_class_name = index.siblingAtColumn(h('object_class_name')).data(Qt.DisplayRole)
+            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+            if not object_class:
+                object_name_list = list()
+            else:
+                object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
+            combo.addItems(object_name_list)
+        elif index.column() == h('parameter_name'):
+            object_name = index.siblingAtColumn(h('object_name')).data(Qt.DisplayRole)
+            object_ = self.mapping.single_object(name=object_name).one_or_none()
+            if not object_:
+                parameter_list = list()
+            else:
+                parameter_list = self.mapping.unvalued_object_parameter_list(object_.id)
+            parameter_name_list = [x.name for x in parameter_list]
+            combo.addItems(parameter_name_list)
+        combo.setCurrentIndex(-1) # force index change
+        combo.currentIndexChanged.connect(self.current_index_changed)
+        return combo
+
+
+class RelationshipParameterValueDelegate(ComboBoxDelegate):
+    """A QComboBox delegate for the relationship parameter value model and view in DataStoreForm."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+        self.mapping = parent.mapping
+
+    def createEditor(self, parent, option, proxy_index):
+        """Return CustomComboEditor."""
+        combo = CustomComboEditor(parent)
+        combo.index = proxy_index
+        model = proxy_index.model().sourceModel()
+        index = proxy_index.model().mapToSource(proxy_index)
+        header = model.header
+        h = header.index
+        print(header[index.column()])
+        if index.column() == h('relationship_class_name'):
+            relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
+            combo.addItems(relationship_class_name_list)
+        elif index.column() == h('relationship_name'):
+            print('hey')
+            relationship_class_name = index.siblingAtColumn(h('relationship_class_name')).data(Qt.DisplayRole)
+            relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).one_or_none()
+            if not relationship_class:
+                relationship_name_list = list()
+            else:
+                wide_relationship_list = self.mapping.wide_relationship_list(class_id=relationship_class.id)
+                relationship_name_list = [x.name for x in wide_relationship_list]
+            combo.addItems(relationship_name_list)
+        elif index.column() == h('parameter_name'):
+            relationship_name = index.siblingAtColumn(h('relationship_name')).data(Qt.DisplayRole)
+            relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
+            if not relationship:
+                parameter_list = list()
+            else:
+                parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
+            parameter_name_list = [x.name for x in parameter_list]
+            combo.addItems(parameter_name_list)
+        combo.setCurrentIndex(-1) # force index change
+        combo.currentIndexChanged.connect(self.current_index_changed)
+        return combo
+
+
 class CustomComboEditor(QComboBox):
     """A custom QComboBox to handle data from the model."""
     def __init__(self, parent):
         super().__init__(parent)
+        self.text = self.currentText
         self.index = None
         self.previous_data = None
         self.row = None

@@ -35,6 +35,7 @@ from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
 from widgets.lineedit_delegate import LineEditDelegate
+from widgets.combobox_delegate import ObjectParameterValueDelegate, RelationshipParameterValueDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, AddParametersDialog, AddParameterValuesDialog, CommitDialog
 from models import ObjectTreeModel, MinimalTableModel, CustomSortFilterProxyModel
@@ -89,10 +90,20 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
+        # Button actions
+        self.ui.toolButton_add_object_parameter_values.\
+            setDefaultAction(self.ui.actionAdd_object_parameter_values)
+        self.ui.toolButton_remove_object_parameter_values.\
+            setDefaultAction(self.ui.actionRemove_object_parameter_values)
+        self.ui.toolButton_add_relationship_parameter_values.\
+            setDefaultAction(self.ui.actionAdd_relationship_parameter_values)
+        self.ui.toolButton_remove_relationship_parameter_values.\
+            setDefaultAction(self.ui.actionRemove_relationship_parameter_values)
         # init models and views
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_models()
         self.init_views()
+        self.set_delegates()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
@@ -100,6 +111,18 @@ class DataStoreForm(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
         logging.debug("Elapsed = {}".format(toc - tic))
+
+    def set_delegates(self):
+        """Set delegates for tables."""
+        for column in range(4):
+            self.ui.tableView_object_parameter_value.setItemDelegateForColumn(column,
+                ObjectParameterValueDelegate(self))
+            self.ui.tableView_relationship_parameter_value.setItemDelegateForColumn(column,
+                RelationshipParameterValueDelegate(self))
+        self.ui.tableView_object_parameter_value.setItemDelegate(LineEditDelegate(self))
+        self.ui.tableView_relationship_parameter_value.setItemDelegate(LineEditDelegate(self))
+        self.ui.tableView_object_parameter.setItemDelegate(LineEditDelegate(self))
+        self.ui.tableView_relationship_parameter.setItemDelegate(LineEditDelegate(self))
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -117,26 +140,37 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_relationships.triggered.connect(self.add_relationships)
         self.ui.actionAdd_parameters.triggered.connect(self.add_parameters)
         self.ui.actionAdd_parameter_values.triggered.connect(self.add_parameter_values)
+        self.ui.actionAdd_object_parameter_values.triggered.connect(self.add_object_parameter_values)
+        self.ui.actionAdd_relationship_parameter_values.triggered.connect(self.add_relationship_parameter_values)
+        self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
+        self.ui.actionRemove_relationship_parameter_values.triggered.connect(self.remove_relationship_parameter_values)
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
+        # Close editor
+        # Parameter value tables
+        for column in range(4):
+            self.ui.tableView_object_parameter_value.itemDelegateForColumn(column).closeEditor.\
+                connect(self.update_parameter_value_in_model)
+            self.ui.tableView_relationship_parameter_value.itemDelegateForColumn(column).closeEditor.\
+                connect(self.update_parameter_value_in_model)
+        self.ui.tableView_object_parameter_value.itemDelegate().closeEditor.\
+            connect(self.update_parameter_value_in_model)
+        self.ui.tableView_relationship_parameter_value.itemDelegate().closeEditor.\
+            connect(self.update_parameter_value_in_model)
         # Parameter tables
-        # Editor closed
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
-        self.ui.tableView_object_parameter_value.setItemDelegate(lineedit_delegate)
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter_value)
-        self.ui.tableView_relationship_parameter_value.setItemDelegate(lineedit_delegate)
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter)
-        self.ui.tableView_object_parameter.setItemDelegate(lineedit_delegate)
-        lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_parameter)
-        self.ui.tableView_relationship_parameter.setItemDelegate(lineedit_delegate)
+        self.ui.tableView_object_parameter.itemDelegate().closeEditor.\
+            connect(self.update_parameter_in_model)
+        self.ui.tableView_relationship_parameter.itemDelegate().closeEditor.\
+            connect(self.update_parameter_in_model)
+        # Model data changed
+        self.object_parameter_value_model.dataChanged.connect(self.object_parameter_value_data_committed)
+        self.relationship_parameter_value_model.dataChanged.connect(self.relationship_parameter_value_data_committed)
+        self.object_parameter_model.dataChanged.connect(self.update_parameter_in_db)
+        self.relationship_parameter_model.dataChanged.connect(self.update_parameter_in_db)
         # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -158,6 +192,225 @@ class DataStoreForm(QMainWindow):
         #     connect(self.scroll_to_new_relationship_parameter_value)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
+
+    @Slot(name="remove_object_parameter_values")
+    def remove_object_parameter_values(self):
+        selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom+1))
+        for row in reversed(list(row_set)):
+            proxy_index = self.object_parameter_value_proxy.index(row, 0)
+            self.remove_parameter_value(proxy_index)
+
+    @Slot(name="remove_relationship_parameter_values")
+    def remove_relationship_parameter_values(self):
+        selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom+1))
+        for row in reversed(list(row_set)):
+            proxy_index = self.relationship_parameter_value_proxy.index(row, 0)
+            self.remove_parameter_value(proxy_index)
+
+    @Slot(name="add_object_parameter_values")
+    def add_object_parameter_values(self):
+        """Insert a new row in object parameter value model, so the user can select
+        values for a new parameter value.
+        """
+        row = self.ui.tableView_object_parameter_value.currentIndex().row()+1
+        model = self.object_parameter_value_model
+        h = model.header.index
+        object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+        model.insertRows(row, 1)
+        object_class_name = None
+        object_name = None
+        for condition in self.object_parameter_value_proxy.condition_list:
+            for column, value in condition.items():
+                if column == h('object_class_name'):
+                    object_class_name = value
+                if column == h('object_name'):
+                    object_name = value
+        if object_class_name:
+            model.setData(model.index(row, h('object_class_name')), object_class_name)
+        if object_name:
+            model.setData(model.index(row, h('object_name')), object_name)
+        self.ui.tabWidget_object.setCurrentIndex(0)
+        self.object_parameter_value_proxy.apply()
+        # It seems scrolling is not necessary
+        index = model.index(row, 0)
+        proxy_index = self.object_parameter_value_proxy.mapFromSource(index)
+        self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
+
+    @Slot(name="add_relationship_parameter_values")
+    def add_relationship_parameter_values(self):
+        """Insert a new row in relationship parameter value model, so the user can select
+        values for a new parameter value.
+        """
+        row = self.ui.tableView_relationship_parameter_value.currentIndex().row()+1
+        model = self.relationship_parameter_value_model
+        h = model.header.index
+        relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
+        model.insertRows(row, 1)
+        relationship_class_name = None
+        relationship_name = None
+        for condition in self.relationship_parameter_value_proxy.condition_list:
+            for column, value in condition.items():
+                if column == h('relationship_class_name'):
+                    relationship_class_name = value
+                if column == h('relationship_name'):
+                    relationship_name = value
+        if relationship_class_name:
+            model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
+        if relationship_name:
+            model.setData(model.index(row, h('relationship_name')), relationship_name)
+        self.ui.tabWidget_relationship.setCurrentIndex(0)
+        self.relationship_parameter_value_proxy.apply()
+        # It seems scrolling is not necessary
+        index = model.index(row, 0)
+        proxy_index = self.relationship_parameter_value_proxy.mapFromSource(index)
+        self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_value_data_committed")
+    def object_parameter_value_data_committed(self, top_left, bottom_right, roles):
+        """Called when data in the object parameter value model changes. Add new parameter
+        or edit existing ones."""
+        model = self.object_parameter_value_model
+        header = model.header
+        h = model.header.index
+        if roles[0] != Qt.EditRole:
+            return
+        if top_left.column() == h('parameter_name'):
+            object_name = top_left.siblingAtColumn(h('object_name')).data(Qt.DisplayRole)
+            object_ = self.mapping.single_object(name=object_name).one_or_none()
+            if not object_:
+                return
+            parameter_name = top_left.data(Qt.DisplayRole)
+            if not parameter_name:
+                return
+            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            if not parameter:
+                return
+            # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
+            kwargs = {}
+            for column in range(h('parameter_name')+1, len(header)):
+                kwargs[header[column]] = top_left.siblingAtColumn(column).data(Qt.DisplayRole)
+            try:
+                parameter_value = self.mapping.add_parameter_value(
+                    object_id=object_.id, parameter_id=parameter.id, **kwargs)
+                model.blockSignals(True)
+                model.setData(top_left.siblingAtColumn(h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                # TODO: Also set object class id in case it's not there yet
+                model.blockSignals(False)
+                # Set flags for fixed columns (non editable)
+                self.object_parameter_value_proxy.apply_fixed_columns_for_row(top_left.row())
+                msg = "Successfully added new parameter value."
+                self.msg.emit(msg)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+        else:
+            self.update_parameter_value_in_db(top_left)
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_value_data_committed")
+    def relationship_parameter_value_data_committed(self, top_left, bottom_right, roles):
+        """Called when data in the relationship parameter value model changes. Add new parameter
+        or edit existing ones."""
+        model = self.relationship_parameter_value_model
+        header = model.header
+        h = model.header.index
+        if roles[0] != Qt.EditRole:
+            return
+        if top_left.column() == h('parameter_name'):
+            relationship_name = top_left.siblingAtColumn(h('relationship_name')).data(Qt.DisplayRole)
+            relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
+            if not relationship:
+                return
+            parameter_name = top_left.data(Qt.DisplayRole)
+            if not parameter_name:
+                return
+            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            if not parameter:
+                return
+            # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
+            kwargs = {}
+            for column in range(h('parameter_name')+1, len(header)):
+                kwargs[header[column]] = top_left.siblingAtColumn(column).data(Qt.DisplayRole)
+            try:
+                parameter_value = self.mapping.add_parameter_value(
+                    relationship_id=relationship.id, parameter_id=parameter.id, **kwargs)
+                model.blockSignals(True)
+                model.setData(top_left.siblingAtColumn(h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                # TODO: Also set object class id in case it's not there yet
+                model.blockSignals(False)
+                # Set flags for fixed columns (non editable)
+                self.relationship_parameter_value_proxy.apply_fixed_columns_for_row(top_left.row())
+                msg = "Successfully added new parameter value."
+                self.msg.emit(msg)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+        else:
+            self.update_parameter_value_in_db(top_left)
+
+    def update_parameter_value_in_db(self, index):
+        """After updating a paramater value in the model, try and update it in the database.
+        Undo the model update if unsuccessful.
+        """
+        model = index.model()
+        header = model.header
+        h = header.index
+        id_column = h('parameter_value_id')
+        sibling = index.siblingAtColumn(id_column)
+        parameter_value_id = sibling.data()
+        if not parameter_value_id:
+            return
+        field_name = header[index.column()]
+        new_value = index.data(Qt.DisplayRole)
+        try:
+            parameter_value = self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
+            msg = "Parameter value succesfully updated."
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.sender().blockSignals(True)
+            self.msg_error.emit(e.msg)
+            self.sender().blockSignals(False)
+            # TODO: undo change in model while blocking signals
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="update_parameter_in_db")
+    def update_parameter_in_db(self, top_left, bottom_right, roles):
+        """After updating a paramater in the model, try and update it in the database.
+        Undo the model update if unsuccessful.
+        """
+        if roles[0] != Qt.EditRole:
+            return
+        model = top_left.model()
+        header = model.header
+        id_column = header.index('parameter_id')
+        sibling = top_left.sibling(top_left.row(), id_column)
+        parameter_id = sibling.data()
+        field_name = header[top_left.column()]
+        new_value = top_left.data(Qt.DisplayRole)
+        if field_name == 'parameter_name':
+            field_name = 'name'
+        try:
+            parameter = self.mapping.update_parameter(parameter_id, field_name, new_value)
+        except SpineDBAPIError as e:
+            self.sender().blockSignals(True)
+            self.msg_error.emit(e.msg)
+            self.sender().blockSignals(False)
+            return
+        if not parameter:
+            return
+        msg = "Parameter succesfully updated."
+        self.msg.emit(msg)
+        # refresh parameter value models to reflect name change
+        if field_name == 'name':
+            self.init_parameter_value_models()
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -243,6 +496,7 @@ class DataStoreForm(QMainWindow):
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         # Object
+        self.object_parameter_value_model.blockSignals(True)
         object_parameter_value_list = self.mapping.object_parameter_value_list()
         header = object_parameter_value_list.column_descriptions
         object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
@@ -250,7 +504,9 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_value_model.reset_model(object_parameter_value_data)
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         self.object_parameter_value_proxy.add_fixed_column('object_class_name', 'object_name', 'parameter_name')
+        self.object_parameter_value_model.blockSignals(False)
         # Relationship
+        self.relationship_parameter_value_model.blockSignals(True)
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         header = relationship_parameter_value_list.column_descriptions
         self.relationship_parameter_value_model.header = [column['name'] for column in header]
@@ -263,10 +519,15 @@ class DataStoreForm(QMainWindow):
             'relationship_name',
             'object_name_list',
             'parameter_name')
+        self.relationship_parameter_value_model.blockSignals(False)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
         # Object
+        # TODO: blockSignal also blocks modelReset signal (or something)
+        # We only want it to block dataChanged
+        # Maybe a better idea is to catch modelAboutToBeReset and modelReset and set blockSignals there
+        self.object_parameter_model.blockSignals(True)
         object_parameter_list = self.mapping.object_parameter_list()
         header = object_parameter_list.column_descriptions
         self.object_parameter_model.header = [column['name'] for column in header]
@@ -274,7 +535,9 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_model.reset_model(object_parameter_data)
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
         self.object_parameter_proxy.add_fixed_column('object_class_name')
+        self.object_parameter_model.blockSignals(False)
         # Relationship
+        self.relationship_parameter_model.blockSignals(True)
         relationship_parameter_list = self.mapping.relationship_parameter_list()
         header = relationship_parameter_list.column_descriptions
         self.relationship_parameter_model.header = [column['name'] for column in header]
@@ -282,6 +545,7 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_model.reset_model(relationship_parameter_data)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
         self.relationship_parameter_proxy.add_fixed_column('relationship_class_name', 'object_class_name_list')
+        self.relationship_parameter_model.blockSignals(False)
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -420,7 +684,9 @@ class DataStoreForm(QMainWindow):
             self.relationship_parameter_value_proxy.add_condition(object_class_name_list=object_class_name)
             self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
         elif selected_type == 'object':
+            object_class_name = parent['name']
             object_name = selected['name']
+            self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
             self.object_parameter_value_proxy.add_condition(object_name=object_name)
             self.relationship_parameter_value_proxy.add_condition(object_name_list=object_name)
             self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
@@ -429,7 +695,9 @@ class DataStoreForm(QMainWindow):
             self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
             self.relationship_parameter_value_proxy.add_hidden_column("object_class_name_list", "object_name_list")
         elif selected_type == 'relationship':
+            relationship_class_name = parent['name']
             relationship_name = selected['name']
+            self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
             self.relationship_parameter_value_proxy.add_condition(relationship_name=relationship_name)
             self.relationship_parameter_value_proxy.add_hidden_column("object_class_name_list", "object_name_list")
         self.object_parameter_value_proxy.apply()
@@ -787,8 +1055,8 @@ class DataStoreForm(QMainWindow):
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
         self.object_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
         option = self.object_parameter_value_context_menu.get_action()
-        if option == "Remove parameter value":
-            self.remove_parameter_value(index)
+        if option == "Remove selected":
+            self.remove_object_parameter_values()
         self.object_parameter_value_context_menu.deleteLater()
         self.object_parameter_value_context_menu = None
 
@@ -804,38 +1072,20 @@ class DataStoreForm(QMainWindow):
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
         self.relationship_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
         option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove parameter value":
-            self.remove_parameter_value(index)
+        if option == "Remove selected":
+            self.remove_relationship_parameter_values()
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value")
-    def update_parameter_value(self, editor, hint):
-        """Update (object or relationship) parameter_value table with newly edited data.
-        If successful, also update item in the model.
-        """
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_value_in_model")
+    def update_parameter_value_in_model(self, editor, hint):
+        """Update (object or relationship) parameter_value table with newly edited data."""
         index = editor.index
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
-        header = source_model.header
-        id_column = header.index('parameter_value_id')
-        sibling = source_index.sibling(source_index.row(), id_column)
-        parameter_value_id = sibling.data()
-        field_name = header[source_index.column()]
         new_value = editor.text()
-        try:
-            parameter_value = self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
-        except SpineDBAPIError as e:
-            self.sender().blockSignals(True)
-            self.msg_error.emit(e.msg)
-            self.sender().blockSignals(False)
-            return
-        if not parameter_value:
-            return
         source_model.setData(source_index, new_value)
-        msg = "Parameter value succesfully updated."
-        self.msg.emit(msg)
 
     def remove_parameter_value(self, proxy_index):
         """Remove row from (object or relationship) parameter_value table.
@@ -846,11 +1096,13 @@ class DataStoreForm(QMainWindow):
         id_column = source_model.header.index('parameter_value_id')
         sibling = source_index.sibling(source_index.row(), id_column)
         parameter_value_id = sibling.data()
-        try:
-            self.mapping.remove_parameter_value(parameter_value_id)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-            return
+        # Only attempt to remove parameter if it's not a 'work-in-progress'
+        if parameter_value_id:
+            try:
+                self.mapping.remove_parameter_value(parameter_value_id)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                return
         source_model.removeRows(source_index.row(), 1)
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
@@ -887,39 +1139,16 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter")
-    def update_parameter(self, editor, hint):
-        """Update parameter table with newly edited data.
-        If successful, also update item in the model.
+    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_parameter_in_model")
+    def update_parameter_in_model(self, editor, hint):
+        """Update parameter (object or relationship) with newly edited data.
         """
         index = editor.index
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
-        header = source_model.header
-        id_column = header.index('parameter_id')
-        sibling = source_index.sibling(source_index.row(), id_column)
-        parameter_id = sibling.data()
-        field_name = header[index.column()]
-        if field_name == 'parameter_name':
-            field_name = 'name'
         new_value = editor.text()
-        try:
-            parameter = self.mapping.update_parameter(parameter_id, field_name, new_value)
-        except SpineDBAPIError as e:
-            self.sender().blockSignals(True)
-            self.msg_error.emit(e.msg)
-            self.sender().blockSignals(False)
-            return
-        if not parameter:
-            return
         source_model.setData(source_index, new_value)
-        msg = "Parameter succesfully updated."
-        self.msg.emit(msg)
-        self.init_parameter_models()
-        # refresh parameter value models to reflect name change
-        if field_name == 'name':
-            self.init_parameter_value_models()
 
     def remove_parameter(self, proxy_index):
         """Remove row from (object or relationship) parameter table.
