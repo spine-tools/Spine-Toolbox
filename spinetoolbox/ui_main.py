@@ -121,8 +121,8 @@ class ToolboxUI(QMainWindow):
         self.test2_action = QAction(self)
         self.test2_action.setShortcut("F6")
         self.addAction(self.test2_action)
-        self.init_conf()  # Load settings to memory
-        self.set_debug_level(level=self._config.get("settings", "logging_level"))
+        self.init_conf()
+        self.set_debug_level()
         self.connect_signals()
         self.init_project()
         self.restore_ui()
@@ -142,12 +142,9 @@ class ToolboxUI(QMainWindow):
         self._config.load()
 
     # noinspection PyMethodMayBeStatic
-    def set_debug_level(self, level):
-        """Control application debug message verbosity.
-
-        Args:
-            level (str): '0': Error messages only, '2': All messages
-        """
+    def set_debug_level(self):
+        """Control application debug message verbosity."""
+        level = self._config.get("settings", "logging_level")
         if level == '2':
             logging.getLogger().setLevel(level=logging.DEBUG)
             logging.debug("Logging level: All messages")
@@ -323,18 +320,6 @@ class ToolboxUI(QMainWindow):
         self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
         self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
         self.ui.graphicsView.set_connection_model(self.connection_model)
-        # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
-        # NOTE: it seems we don't need this below anymore, the CheckBoxDelegate takes care of it
-        # n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
-        # if n_connected == 0:
-        #     # logging.debug("Connecting clicked signal for QTableView")
-        #     self.ui.tableView_connections.clicked.connect(self.toggle_connection)
-        # elif n_connected > 1:
-        #     # Check that this never gets over 1
-        #     logging.error("Number of receivers for tableView_connections clicked signal is now:{0}"
-        #                   .format(n_connected))
-        # else:
-        #     pass  # signal already connected
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
@@ -604,24 +589,27 @@ class ToolboxUI(QMainWindow):
             return
         def_file = os.path.abspath(answer[0])
         # Load tool definition
-        tool = self._project.load_tool_template_from_file(def_file)
-        if not tool:
+        tool_template = self._project.load_tool_template_from_file(def_file)
+        if not tool_template:
             self.msg_error.emit("Adding Tool template failed".format(def_file))
             return
-        if self.tool_template_model.find_tool_template(tool.name):
+        if self.tool_template_model.find_tool_template(tool_template.name):
             # Tool template already added to project
-            self.msg_warning.emit("Tool template <b>{0}</b> already in project".format(tool.name))
+            self.msg_warning.emit("Tool template <b>{0}</b> already in project".format(tool_template.name))
             return
-        # Add definition file path into tool
-        tool.set_def_path(def_file)
-        self.add_tool_template(tool)
+        # Add definition file path into tool tool template
+        tool_template.set_def_path(def_file)
+        self.add_tool_template(tool_template)
 
-    def add_tool_template(self, tool):
-        """Add a ToolTemplate instance to project, which then can be added to a Tool item."""
-        # Get definition file path
-        def_file = tool.get_def_path()
+    def add_tool_template(self, tool_template):
+        """Add a ToolTemplate instance to project, which then can be added to a Tool item.
+        Add tool template definition file path into project file (.proj)
+
+        tool_template (ToolTemplate): Tool template that is added to project
+        """
+        def_file = tool_template.get_def_path()  # Definition file path (.json)
         # Insert tool template into model
-        self.tool_template_model.insertRow(tool)
+        self.tool_template_model.insertRow(tool_template)
         # Save Tool def file path to project file
         project_file = self._project.path  # Path to project file
         if project_file.lower().endswith('.proj'):
@@ -648,7 +636,7 @@ class ToolboxUI(QMainWindow):
             dicts['objects'] = objects_dict
             with open(project_file, 'w') as fp:
                 json.dump(dicts, fp, indent=4)
-            self.msg_success.emit("Tool template <b>{0}</b> added to project".format(tool.name))
+            self.msg_success.emit("Tool template <b>{0}</b> added to project".format(tool_template.name))
         else:
             self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
             return
@@ -804,20 +792,6 @@ class ToolboxUI(QMainWindow):
         dicts['objects'] = object_dict
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
-        # Remove tool template also from Tools that use it
-        # NOTE: We don't seem to need this below;
-        # Apparently calling self.tool_template_model.removeRow(index.row()) does the job for us
-        # tools_item = self.project_item_model.find_item("Tools")
-        # if tools_item.hasChildren():
-        #     n_tool_items = tools_item.rowCount()
-        #     for i in range(n_tool_items):
-        #         tool_item = tools_item.child(i, 0)
-        #         tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data ata
-        #         if tool.tool_template() is not None:
-        #             logging.debug(tool.tool_template().name)
-        #             if tool.tool_template().name == sel_tool.name:
-        #                 tool.set_tool_template(None)
-        #                 self.msg.emit("Removed {0} from Tool <b>{1}</b>".format(sel_tool.name, tool.name))
         self.msg_success.emit("Tool template removed successfully")
 
     def add_item_to_model(self, category, text, data):
@@ -954,7 +928,6 @@ class ToolboxUI(QMainWindow):
         if index.row() == 0:
             return  # Don't do anything if No Tool option is double-clicked
         tool_template = self.tool_template_model.tool_template(index.row())
-
         # Show the template in the Tool Template Form
         self.show_tool_template_form(tool_template)
 
