@@ -181,7 +181,8 @@ class ProjectItemModel(QStandardItemModel):
 
         Args:
             name (str): Item name to find
-            match_flags (QFlags): Or combination of Qt.MatchFlag types
+            match_flags (QFlags): Or combination of Qt.MatchFlag types. Use Qt.MatchExactly | Qt.MatchRecursive
+                to find project items by name.
 
         Returns:
             Matching QStandardItem or None if item not found or more than one item with the same name found.

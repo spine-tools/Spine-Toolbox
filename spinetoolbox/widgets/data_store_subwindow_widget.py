@@ -46,7 +46,7 @@ class DataStoreWidget(QWidget):
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
         self.reference_model = QStandardItemModel()  # References to databases
-        self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
+        self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. Found in DS data directory.
         self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         self.ui.listView_references.setModel(self.reference_model)

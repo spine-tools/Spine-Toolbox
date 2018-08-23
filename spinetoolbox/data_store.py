@@ -48,6 +48,8 @@ class DataStore(MetaObject):
         description (str): Object description
         project (SpineToolboxProject): Project
         references (list): List of references (for now it's only database references)
+        x (int): Initial X coordinate of item icon
+        y (int): Initial Y coordinate of item icon
     """
     def __init__(self, parent, name, description, project, references, x, y):
         super().__init__(name, description)
