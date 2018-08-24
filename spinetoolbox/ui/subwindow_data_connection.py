@@ -196,10 +196,10 @@ class Ui_Form(object):
         self.toolButton_plus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references</p></body></html>", None, -1))
         self.toolButton_minus.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected references or all if nothing is selected</p></body></html>", None, -1))
         self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add references to project. Copies files to Data connection\'s directory.</p></body></html>", None, -1))
-        self.toolButton_datapackage.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Spine datapackage form.</p></body></html>", None, -1))
+        self.toolButton_datapackage.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Create datapackage from CSV files in directory.</p></body></html>", None, -1))
         self.treeView_data.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Drag-and-drop files here, they will be copied to the data directory.</p></body></html>", None, -1))
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc

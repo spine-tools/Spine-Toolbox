@@ -24,7 +24,6 @@ Widget shown to user when a new Data Connection is created.
 :date:   19.1.2017
 """
 
-import logging
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
 import ui.add_data_connection
@@ -33,19 +32,20 @@ from helpers import short_name_reserved
 
 
 class AddDataConnectionWidget(QWidget):
-    """A widget to query user's preferences for a new item.
+    """A widget that queries user's preferences for a new item.
 
     Attributes:
         parent (ToolboxUI): Parent widget
-        project (SpineToolboxProject): Project for the new item
+        x (int): X coordinate of new item
+        y (int): Y coordinate of new item
     """
-    def __init__(self, parent, project, x, y):
+    def __init__(self, parent, x, y):
         """Initialize class."""
         super().__init__(f=Qt.Window)
         self._parent = parent
-        self._project = project
         self._x = x
         self._y = y
+        self._project = self._parent.project()
         #  Set up the user interface from Designer.
         self.ui = ui.add_data_connection.Ui_Form()
         self.ui.setupUi(self)
@@ -97,7 +97,6 @@ class AddDataConnectionWidget(QWidget):
         if self._parent.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
-            logging.error("Item with same name already in project")
             return
         # Check that short name (folder) is not reserved
         short_name = self.name.lower().replace(' ', '_')

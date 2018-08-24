@@ -29,6 +29,7 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_store import Ui_Form
+from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 
 
 class DataStoreWidget(QWidget):
@@ -45,9 +46,9 @@ class DataStoreWidget(QWidget):
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
         self.reference_model = QStandardItemModel()  # References to databases
-        self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. These are found in DS data directory.
-        self.icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
-        self.ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
+        self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. Found in DS data directory.
+        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
+        self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         self.ui.listView_references.setModel(self.reference_model)
         self.ui.listView_data.setModel(self.data_model)
         self.ui.label_name.setFocus()
@@ -74,7 +75,7 @@ class DataStoreWidget(QWidget):
                 qitem = QStandardItem(item['database'])
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(item['url'], Qt.ToolTipRole)
-                qitem.setData(self.ref_icon, Qt.DecorationRole)
+                qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):
@@ -87,7 +88,8 @@ class DataStoreWidget(QWidget):
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(item, Qt.ToolTipRole)
-                qitem.setData(self.icon, Qt.DecorationRole)
+                if item.endswith('sqlite'):
+                    qitem.setData(self.spine_icon, Qt.DecorationRole)
                 self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):

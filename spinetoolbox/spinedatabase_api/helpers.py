@@ -31,6 +31,28 @@ from sqlalchemy.dialects.mysql import TINYINT, DOUBLE
 from sqlalchemy.engine import Engine
 from .exception import SpineDBAPIError
 
+OBJECT_CLASS_NAMES = (
+    'unittemplate',
+    'unit',
+    'commodity',
+    'archetype',
+    'node',
+    'grid',
+    'normalized',
+    'absolute',
+    'flow',
+    'influx',
+    'time',
+    'arc',
+    'simulation_settings',
+    'hidden_settings',
+    'constraint',
+    'variable',
+    'objective_term',
+    'group',
+    'alternative'
+)
+
 @compiles(TINYINT, 'sqlite')
 def compile_TINYINT_mysql_sqlite(element, compiler, **kw):
     """ Handles mysql TINYINT datatype as INTEGER in sqlite """

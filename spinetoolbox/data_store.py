@@ -46,15 +46,17 @@ class DataStore(MetaObject):
         parent (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        project (SpineToolboxProject): Project
         references (list): List of references (for now it's only database references)
+        x (int): Initial X coordinate of item icon
+        y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, project, references, x, y):
+    def __init__(self, parent, name, description, references, x, y):
+        """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
+        self._project = self._parent.project()
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
-        self._project = project
         self._widget = DataStoreWidget(self.item_type)
         self._widget.set_name_label(name)
         self.data_dir_watcher = QFileSystemWatcher(self)
@@ -74,7 +76,6 @@ class DataStore(MetaObject):
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self.add_db_reference_form = None
-        self.data_store_form = None
         self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
         self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
@@ -89,6 +90,10 @@ class DataStore(MetaObject):
         self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
+
+    def project(self):
+        """Returns current project or None if no project open."""
+        return self._project
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -183,7 +188,7 @@ class DataStore(MetaObject):
     @busy_effect
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):
-        """Open file in spine data explorer."""
+        """Open file in Data Store form."""
         if not index:
             return
         if not index.isValid():
@@ -200,8 +205,8 @@ class DataStore(MetaObject):
                 self._parent.msg_error.emit(e.msg)
                 return
             database = data_file
-            self.data_store_form = DataStoreForm(self, mapping, database)
-            self.data_store_form.show()
+            data_store_form = DataStoreForm(self, mapping, database)
+            data_store_form.show()
 
     @busy_effect
     @Slot("QModelIndex", name="open_reference")
@@ -222,8 +227,8 @@ class DataStore(MetaObject):
             except SpineDBAPIError as e:
                 self._parent.msg_error.emit(e.msg)
                 return
-            self.data_store_form = DataStoreForm(self, mapping, database)
-            self.data_store_form.show()
+            data_store_form = DataStoreForm(self, mapping, database)
+            data_store_form.show()
 
     def data_references(self):
         """Returns a list of connection strings that are in this item as references (self.references)."""

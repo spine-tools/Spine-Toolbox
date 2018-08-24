@@ -14,8 +14,8 @@ Spine Toolbox is an application to define, manage, and execute various energy sy
 
     intro
     tutorial
-    readme_link
-    code
+    contribution_guide
+    code_ref
 
 Glossary
 ========
@@ -23,11 +23,6 @@ Glossary
 .. todo::
 
     Grab the most important terms from deliverable 2.1 and include them here.
-
-Contribution Guide
-==================
-
-You can find the contribution guide in README.md.
 
 Indices and tables
 ==================

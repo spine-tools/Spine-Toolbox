@@ -41,7 +41,7 @@ class TableNotFoundError(SpineDBAPIError):
 class RecordNotFoundError(SpineDBAPIError):
     """Can't find one record in one of the tables."""
     def __init__(self, table, name=None, id=None):
-        super().__init__(msg="Unable to find item in table '{}'.".format(fields, table))
+        super().__init__(msg="Unable to find item in table '{}'.".format(table))
         self.table = table
         self.name = name
         self.id = id
