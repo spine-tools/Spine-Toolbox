@@ -52,15 +52,17 @@ class DataConnection(MetaObject):
         parent (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        project (SpineToolboxProject): Project
         references (list): List of file references
+        x (int): Initial X coordinate of item icon
+        y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, project, references, x, y):
+    def __init__(self, parent, name, description, references, x, y):
+        """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
+        self._project = self._parent.project()
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
-        self._project = project
         self._widget = DataConnectionWidget(self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()

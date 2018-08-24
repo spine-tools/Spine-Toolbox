@@ -405,6 +405,6 @@ class Ui_MainWindow(object):
         self.actionAdd_relationship_parameter_values.setText(QtWidgets.QApplication.translate("MainWindow", "Add relationship parameter values", None, -1))
         self.actionRemove_relationship_parameter_values.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameter values", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import CustomQTableView
 import resources_icons_rc

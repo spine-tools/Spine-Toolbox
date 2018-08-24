@@ -24,7 +24,6 @@ Widget shown to user when a new Tool is created.
 :date:   19.1.2017
 """
 
-import logging
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
 import ui.add_tool
@@ -33,19 +32,20 @@ from helpers import short_name_reserved
 
 
 class AddToolWidget(QWidget):
-    """A widget to query user's preferences for a new item.
+    """A widget that queries user's preferences for a new item.
 
     Attributes:
         parent (ToolboxUI): Parent widget
-        project(SpineToolboxProject): Project where to add the new Tool
+        x (int): X coordinate of new item
+        y (int): Y coordinate of new item
     """
-    def __init__(self, parent, project, x, y):
+    def __init__(self, parent, x, y):
         """Initialize class."""
         super().__init__(f=Qt.Window)
         self._parent = parent
-        self._project = project
         self._x = x
         self._y = y
+        self._project = self._parent.project()
         #  Set up the user interface from Designer.
         self.ui = ui.add_tool.Ui_Form()
         self.ui.setupUi(self)

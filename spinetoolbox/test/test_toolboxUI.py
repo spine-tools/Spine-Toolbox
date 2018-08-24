@@ -164,7 +164,7 @@ class TestToolboxUI(unittest.TestCase):
         # Add Data Store item
         ds_name = "DS"
         with mock.patch("data_store.create_dir") as mock_create_dir:
-            ds_item = DataStore(self.mw, ds_name, "", self.mw.project(), references=None, x=0, y=0)
+            ds_item = DataStore(self.mw, ds_name, "", references=None, x=0, y=0)
         retval = self.mw.add_item_to_model("Data Stores", ds_name, ds_item)
         self.assertTrue(retval)
         # Check that new item is found from project_item_model
@@ -178,7 +178,7 @@ class TestToolboxUI(unittest.TestCase):
         # Add Data Connection item
         dc_name = "DC"
         with mock.patch("data_connection.create_dir") as mock_create_dir:
-            dc_item = DataConnection(self.mw, dc_name, "", self.mw.project(), references=None, x=0, y=0)
+            dc_item = DataConnection(self.mw, dc_name, "", references=None, x=0, y=0)
         retval = self.mw.add_item_to_model("Data Connections", dc_name, dc_item)
         self.assertTrue(retval)
         # Check that new item is found from project_item_model
@@ -192,7 +192,7 @@ class TestToolboxUI(unittest.TestCase):
         # Add Tool item
         tool_name = "Tool"
         with mock.patch("tool.create_dir") as mock_create_dir:
-            tool_item = Tool(self.mw, tool_name, "", self.mw.project(), tool_template=None, x=0, y=0)
+            tool_item = Tool(self.mw, tool_name, "", tool_template=None, x=0, y=0)
         retval = self.mw.add_item_to_model("Tools", tool_name, tool_item)
         self.assertTrue(retval)
         # Check that new item is found from project_item_model
@@ -206,7 +206,7 @@ class TestToolboxUI(unittest.TestCase):
         # Add View item
         view_name = "View"
         with mock.patch("view.create_dir") as mock_create_dir:
-            view_item = View(self.mw, view_name, "", self.mw.project(), 0, 0)
+            view_item = View(self.mw, view_name, "", 0, 0)
         retval = self.mw.add_item_to_model("Views", view_name, view_item)
         self.assertTrue(retval)
         # Check that new item is found from project_item_model

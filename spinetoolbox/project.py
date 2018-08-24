@@ -370,28 +370,28 @@ class SpineToolboxProject(MetaObject):
 
     def add_data_store(self, name, description, references, x=0, y=0):
         """Add data store to project item model."""
-        data_store = DataStore(self._parent, name, description, self, references, x, y)
+        data_store = DataStore(self._parent, name, description, references, x, y)
         self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Stores", name, data_store)
         self._parent.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
 
     def add_data_connection(self, name, description, references, x=0, y=0):
         """Add Data Connection to project item model."""
-        data_connection = DataConnection(self._parent, name, description, self, references, x, y)
+        data_connection = DataConnection(self._parent, name, description, references, x, y)
         self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Data Connections", name, data_connection)
         self._parent.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
 
     def add_tool(self, name, description, tool_template, x=0, y=0):
         """Add Tool to project item model."""
-        tool = Tool(self._parent, name, description, self, tool_template, x, y)
+        tool = Tool(self._parent, name, description, tool_template, x, y)
         self._parent.project_refs.append(tool)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Tools", name, tool)
         self._parent.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
     def add_view(self, name, description, x=0, y=0, data="View data"):
         """Add View to project item model."""
-        view = View(self._parent, name, description, self, x, y)
+        view = View(self._parent, name, description, x, y)
         view.set_data(data)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)

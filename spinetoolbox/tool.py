@@ -46,16 +46,17 @@ class Tool(MetaObject):
         parent (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        project (SpineToolboxProject): Project
         tool_template (ToolTemplate): Template for this Tool
+        x (int): Initial X coordinate of item icon
+        y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, project, tool_template, x, y):
+    def __init__(self, parent, name, description, tool_template, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = parent
+        self._project = self._parent.project()
         self.item_type = "Tool"
         self.item_category = "Tools"
-        self._project = project
         self._widget = ToolSubWindowWidget(self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_input_files()
