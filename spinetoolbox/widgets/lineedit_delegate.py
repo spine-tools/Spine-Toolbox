@@ -40,7 +40,7 @@ class LineEditDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         """Return CustomLineEditor. Set up a validator depending on datatype."""
         editor = CustomLineEditor(parent)
-        data = index.data(Qt.DisplayRole)
+        data = index.data(Qt.EditRole)
         # editor.original_data = data
         editor.index = index
         if type(data) is int:
@@ -49,7 +49,7 @@ class LineEditDelegate(QItemDelegate):
 
     def setEditorData(self, editor, index):
         """Init the line editor with previous data from the index."""
-        data = index.data(Qt.DisplayRole)
+        data = index.data(Qt.EditRole)
         if data:
             editor.setText(str(data))
 

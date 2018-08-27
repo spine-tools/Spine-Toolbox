@@ -703,10 +703,16 @@ class MinimalTableModel(QAbstractTableModel):
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = False
+        self.is_being_reset = False
+        self.modelAboutToBeReset.connect(lambda: self.set_being_reset(True))
+        self.modelReset.connect(lambda: self.set_being_reset(False))
+
+    def set_being_reset(self, on):
+        self.is_being_reset = on
 
     def parent(self):
         """Return _parent attribute."""
-        return self._parent        
+        return self._parent
 
     def clear(self):
         self.beginResetModel()
@@ -968,9 +974,20 @@ class MinimalTableModel(QAbstractTableModel):
         """Reset model."""
         self.beginResetModel()
         self._data = list()
+        self._flags = list()
         if new_data:
-            for row, row_data in enumerate(new_data):
-                self.insert_row_with_data(row, row_data, Qt.EditRole)
+            for line in new_data:
+                new_row = list()
+                new_flags_row = list()
+                for value in line:
+                    new_dict = {
+                        Qt.EditRole: value,
+                        Qt.DisplayRole: value
+                    }
+                    new_row.append(new_dict)
+                    new_flags_row.append(self.default_flags)
+                self._data.append(new_row)
+                self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right)
@@ -993,20 +1010,14 @@ class ObjectTreeModel(QStandardItemModel):
         """Returns the data stored under the given role for the item referred to by the index."""
         if role == Qt.ForegroundRole:
             item_type = index.data(Qt.UserRole)
-            if not item_type:
-                return super().data(index, role)
             if item_type.endswith('class') and not self.hasChildren(index):
                 return QBrush(Qt.gray)
         if role == Qt.FontRole:
             item_type = index.data(Qt.UserRole)
-            if not item_type:
-                return super().data(index, role)
             if item_type.endswith('class'):
                 return self.bold_font
         if role == Qt.DecorationRole:
             item_type = index.data(Qt.UserRole)
-            if not item_type:
-                return super().data(index, role)
             if item_type.startswith('object'):
                 return self.object_icon
             else:
@@ -1019,6 +1030,7 @@ class ObjectTreeModel(QStandardItemModel):
         """
         self.clear()
         root_item = QStandardItem(db_name)
+        root_item.setData('root', Qt.UserRole)
         for object_class in self.mapping.object_class_list():
             object_class_item = self.new_object_class_item(object_class._asdict())
             root_item.appendRow(object_class_item)
@@ -1133,8 +1145,7 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            # Skip root item
-            if not visited_type:
+            if visited_type == 'root':
                 continue
             if not visited_type == 'object':
                 continue
@@ -1156,7 +1167,7 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if not visited_type: # root item
+            if visited_type == 'root':
                 continue
             if not visited_type == 'relationship_class':
                 continue
@@ -1175,10 +1186,9 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems(curr_name, Qt.MatchExactly | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            visited = visited_item.data(Qt.UserRole+1)
-            # Skip root
-            if not visited_type:
+            if visited_type == 'root':
                 continue
+            visited = visited_item.data(Qt.UserRole+1)
             visited_id = visited['id']
             if visited_type == renamed_type and visited_id == renamed_id:
                 visited['name'] = new_name
@@ -1191,8 +1201,7 @@ class ObjectTreeModel(QStandardItemModel):
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
             visited = visited_item.data(Qt.UserRole+1)
-            # Skip root
-            if not visited_type:
+            if visited_type == 'root':
                 continue
             # Get visited id
             visited_id = visited['id']
@@ -1235,11 +1244,14 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self._parent = parent
         self.condition_list = list()
         self.hidden_column_list = list()
-        self.fixed_column_list = list()  # Non-editable columns
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
-        self.gray_background = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
+        self.gray_brush = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
+
+    def setSourceModel(self, source_model):
+        super().setSourceModel(source_model)
+        self.h = source_model.header.index
 
     def reset(self):
         """Reset all filters, unbold all bolded items."""
@@ -1251,39 +1263,34 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.condition_list = list()
 
     def apply(self):
+        """Trigger filtering."""
         self.setFilterRegExp("")
 
-    def add_fixed_column(self, *names):
+    def make_columns_fixed(self, *column_names):
         """Set columns as fixed so they are not editable and painted gray."""
-        h = self.sourceModel().header
-        for name in names:
-            column = h.index(name)
-            self.fixed_column_list.append(column)
         for row in range(self.sourceModel().rowCount()):
-            self.apply_fixed_columns_for_row(row)
+            self.make_columns_fixed_for_row(row, *column_names)
 
-    def apply_fixed_columns_for_row(self, row):
-        """Set background role data and flags for row according to fixed columns."""
-        h = self.sourceModel().header
-        for column in self.fixed_column_list:
+    def make_columns_fixed_for_row(self, row, *column_names):
+        """Set background role data and flags for row according to fixed column names."""
+        for name in column_names:
+            column = self.h(name)
             index = self.sourceModel().index(row, column)
-            self.sourceModel().setData(index, self.gray_background, Qt.BackgroundRole)
+            self.sourceModel().setData(index, self.gray_brush, Qt.BackgroundRole)
             self.sourceModel().set_flags(index, ~Qt.ItemIsEditable)
 
     def add_hidden_column(self, *names):
         """Set columns as hidden in the view."""
-        h = self.sourceModel().header
         for name in names:
-            self.hidden_column_list.append(h.index(name))
+            self.hidden_column_list.append(self.h(name))
 
     def add_condition(self, **kwargs):
         """Add a condition to the list by taking the kwargs as statements.
         The condition will be considered True if ANY of the statements is True.
         """
-        h = self.sourceModel().header
         condition = {}
         for key, value in kwargs.items():
-            column = h.index(key)
+            column = self.h(key)
             condition[column] = value
             # Bold column in case the condition is met
             for row in range(self.sourceModel().rowCount()):
@@ -1291,14 +1298,21 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
                 self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
         self.condition_list.append(condition)
 
+    def set_work_in_progress(self, row, on):
+        """Set user role of index in first column."""
+        index = self.sourceModel().index(row, 0)
+        self.sourceModel().setData(index, on, Qt.UserRole)
+
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
         All the conditions in the list need to be satisfied, however each condition
         is satisfied as soon as ANY of its statements is satisfied.
         """
-        if not self.condition_list:
-            return False
+        # Let pass rows without id, they'are work in progress
+        source_index = self.sourceModel().index(source_row, 0, source_parent)
+        if source_index.data(Qt.UserRole):
+            return True
         result = True
         for condition in self.condition_list:
             partial_result = False
@@ -1321,13 +1335,6 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         if not self.hidden_column_list:
             return True
         return source_column not in self.hidden_column_list
-
-    #def flags(self, index):
-    #    """Returns the item flags for the given index."""
-    #    source_column = self.mapToSource(index).column()
-    #    if source_column in self.fixed_column_list:
-    #        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-    #    return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
 
 class DatapackageResourcesModel(QStandardItemModel):
@@ -1392,7 +1399,6 @@ class DatapackageForeignKeysModel(QStandardItemModel):
         self.schema = None
 
     def reset_model(self, schema):
-        print('reset fks')
         self.clear()
         self.setHorizontalHeaderLabels(["fields", "reference resource", "reference fields"])
         self.schema = schema
@@ -1409,8 +1415,6 @@ class DatapackageForeignKeysModel(QStandardItemModel):
         self.insertRow(row)
         for column in range(self.columnCount()):
             self.setData(self.index(row, column), "0", Qt.EditRole)
-
-
 
 
 class DatapackageDescriptorModel(QStandardItemModel):

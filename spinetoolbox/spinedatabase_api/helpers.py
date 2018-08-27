@@ -250,7 +250,9 @@ def create_new_spine_database(db_url):
             FOREIGN KEY(relationship_id, dummy_relationship_dimmension)
                 REFERENCES relationship (id, dimension) ON DELETE CASCADE ON UPDATE CASCADE,
             FOREIGN KEY(parameter_id) REFERENCES parameter (id) ON DELETE CASCADE ON UPDATE CASCADE,
-            CHECK (`relationship_id` IS NOT NULL OR `object_id` IS NOT NULL)
+            CHECK (`relationship_id` IS NOT NULL OR `object_id` IS NOT NULL),
+            UNIQUE (parameter_id, object_id),
+            UNIQUE (parameter_id, relationship_id)
         );
     """
     sql_list.append(sql)

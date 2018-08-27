@@ -342,7 +342,7 @@ class DatabaseMapping(object):
 
     def single_parameter(self, id=None, name=None):
         """Return parameter corresponding to id."""
-        if id is None and name is None:
+        if not id and not name:
             return self.empty_list()
         qry = self.parameter_list()
         if id:
