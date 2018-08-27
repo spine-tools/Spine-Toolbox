@@ -116,7 +116,7 @@ class ParameterValueDelegate(DataStoreDelegate):
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.header.index
-        if not index.siblingAtColumn(h('parameter_value_id')).data(Qt.DisplayRole):
+        if not index.sibling(index.row(), h('parameter_value_id')).data(Qt.DisplayRole):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
             x1, y1, x2, y2 = option.rect.getCoords()
@@ -142,7 +142,7 @@ class ParameterDelegate(DataStoreDelegate):
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.header.index
-        if not index.siblingAtColumn(h('parameter_id')).data(Qt.DisplayRole):
+        if not index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
             x1, y1, x2, y2 = option.rect.getCoords()
@@ -174,7 +174,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
             object_class_name_list = [x.name for x in self.mapping.object_class_list()]
             combo.addItems(object_class_name_list)
         elif index.column() == h('object_name'):
-            object_class_name = index.siblingAtColumn(h('object_class_name')).data(Qt.DisplayRole)
+            object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
             object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
                 object_name_list = list()
@@ -182,7 +182,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
                 object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
             combo.addItems(object_name_list)
         elif index.column() == h('parameter_name'):
-            object_name = index.siblingAtColumn(h('object_name')).data(Qt.DisplayRole)
+            object_name = index.sibling(index.row(), h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
             if not object_:
                 parameter_list = list()
@@ -236,7 +236,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
             combo.addItems(relationship_class_name_list)
         elif index.column() == h('relationship_name'):
-            relationship_class_name = index.siblingAtColumn(h('relationship_class_name')).data(Qt.DisplayRole)
+            relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).one_or_none()
             if not relationship_class:
                 relationship_name_list = list()
@@ -245,7 +245,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
                 relationship_name_list = [x.name for x in wide_relationship_list]
             combo.addItems(relationship_name_list)
         elif index.column() == h('parameter_name'):
-            relationship_name = index.siblingAtColumn(h('relationship_name')).data(Qt.DisplayRole)
+            relationship_name = index.sibling(index.row(), h('relationship_name')).data(Qt.DisplayRole)
             relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
             if not relationship:
                 parameter_list = list()

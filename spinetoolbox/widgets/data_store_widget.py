@@ -798,7 +798,7 @@ class DataStoreForm(QMainWindow):
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(proxy_index)
         id_column = source_model.header.index('parameter_value_id')
-        sibling = source_index.siblingAtColumn(id_column)
+        sibling = source_index.sibling(source_index.row(), id_column)
         parameter_value_id = sibling.data()
         # Only attempt to remove parameter value from db if it's not a 'work-in-progress'
         if parameter_value_id:
@@ -816,7 +816,7 @@ class DataStoreForm(QMainWindow):
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(proxy_index)
         id_column = source_model.header.index('parameter_id')
-        sibling = source_index.siblingAtColumn(id_column)
+        sibling = source_index.sibling(source_index.row(), id_column)
         parameter_id = sibling.data()
         # Only attempt to remove parameter from db if it's not a 'work-in-progress'
         if parameter_id:
@@ -952,31 +952,31 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.siblingAtColumn(h('parameter_value_id')).data(Qt.DisplayRole):
-            object_name = top_left.siblingAtColumn(h('object_name')).data(Qt.DisplayRole)
+        if not top_left.sibling(top_left.row(), h('parameter_value_id')).data(Qt.DisplayRole):
+            object_name = top_left.sibling(top_left.row(), h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
             if not object_:
                 return
-            object_class_name = top_left.siblingAtColumn(h('object_class_name')).data(Qt.DisplayRole)
+            object_class_name = top_left.sibling(top_left.row(), h('object_class_name')).data(Qt.DisplayRole)
             if not object_class_name:
                 object_class = self.mapping.single_object_class(id=object_.class_id).one_or_none()
                 if not object_class:
                     return
                 object_class_name = object_class.name
-            parameter_name = top_left.siblingAtColumn(h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.siblingAtColumn(column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
             try:
                 parameter_value = self.mapping.add_parameter_value(
                     object_id=object_.id, parameter_id=parameter.id, **kwargs)
                 model.blockSignals(True)
-                model.setData(top_left.siblingAtColumn(h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                model.setData(top_left.siblingAtColumn(h('object_class_name')), object_class_name, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('object_class_name')), object_class_name, Qt.EditRole)
                 model.blockSignals(False)
                 self.object_parameter_value_proxy.set_work_in_progress(top_left.row(), False)
                 self.object_parameter_value_proxy.make_columns_fixed_for_row(top_left.row(),
@@ -1002,23 +1002,23 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.siblingAtColumn(h('parameter_id')).data(Qt.DisplayRole):
-            object_class_name = top_left.siblingAtColumn(h('object_class_name')).data(Qt.DisplayRole)
+        if not top_left.sibling(top_left.row(), h('parameter_id')).data(Qt.DisplayRole):
+            object_class_name = top_left.sibling(top_left.row(), h('object_class_name')).data(Qt.DisplayRole)
             object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
                 return
-            parameter_name = top_left.siblingAtColumn(h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
             if not parameter_name:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.siblingAtColumn(column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
             try:
                 parameter = self.mapping.add_parameter(
                     object_class_id=object_class.id, name=parameter_name, **kwargs)
                 model.blockSignals(True)
-                model.setData(top_left.siblingAtColumn(h('parameter_id')), parameter.id, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole)
                 model.blockSignals(False)
                 self.object_parameter_proxy.set_work_in_progress(top_left.row(), False)
                 self.object_parameter_proxy.make_columns_fixed_for_row(top_left.row(), 'object_class_name')
@@ -1043,7 +1043,7 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.siblingAtColumn(h('parameter_value_id')).data(Qt.DisplayRole):
+        if not top_left.sibling(top_left.row(), h('parameter_value_id')).data(Qt.DisplayRole):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
@@ -1051,7 +1051,7 @@ class DataStoreForm(QMainWindow):
                     one_or_none()
                 if relationship_class:
                     model.blockSignals(True)
-                    model.setData(top_left.siblingAtColumn(h('object_class_name_list')),
+                    model.setData(top_left.sibling(top_left.row(), h('object_class_name_list')),
                         relationship_class.object_class_name_list, Qt.EditRole)
                     model.blockSignals(False)
             # Autocomplete object name list
@@ -1060,34 +1060,34 @@ class DataStoreForm(QMainWindow):
                 relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
                 if relationship:
                     model.blockSignals(True)
-                    model.setData(top_left.siblingAtColumn(h('object_name_list')),
+                    model.setData(top_left.sibling(top_left.row(), h('object_name_list')),
                         relationship.object_name_list, Qt.EditRole)
                     model.blockSignals(False)
             # Try to add new parameter value
-            relationship_name = top_left.siblingAtColumn(h('relationship_name')).data(Qt.DisplayRole)
+            relationship_name = top_left.sibling(top_left.row(), h('relationship_name')).data(Qt.DisplayRole)
             relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
             if not relationship:
                 return
-            relationship_class_name = top_left.siblingAtColumn(h('relationship_class_name')).data(Qt.DisplayRole)
+            relationship_class_name = top_left.sibling(top_left.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             if not relationship_class_name:
                 relationship_class = self.mapping.single_wide_relationship_class(id=relationship.class_id).one_or_none()
                 if not relationship_class:
                     return
                 relationship_class_name = relationship_class.name
-            parameter_name = top_left.siblingAtColumn(h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.siblingAtColumn(column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
             try:
                 parameter_value = self.mapping.add_parameter_value(
                     relationship_id=relationship.id, parameter_id=parameter.id, **kwargs)
                 model.blockSignals(True)
-                model.setData(top_left.siblingAtColumn(h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                model.setData(top_left.siblingAtColumn(h('relationship_class_name')), relationship_class_name,
+                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('relationship_class_name')), relationship_class_name,
                     Qt.EditRole)
                 model.blockSignals(False)
                 self.relationship_parameter_value_proxy.set_work_in_progress(top_left.row(), False)
@@ -1118,7 +1118,7 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.siblingAtColumn(h('parameter_id')).data(Qt.DisplayRole):
+        if not top_left.sibling(top_left.row(), h('parameter_id')).data(Qt.DisplayRole):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
@@ -1126,27 +1126,27 @@ class DataStoreForm(QMainWindow):
                     one_or_none()
                 if relationship_class:
                     model.blockSignals(True)
-                    model.setData(top_left.siblingAtColumn(h('object_class_name_list')),
+                    model.setData(top_left.sibling(top_left.row(), h('object_class_name_list')),
                         relationship_class.object_class_name_list, Qt.EditRole)
                     model.blockSignals(False)
             # Try to add new parameter
-            relationship_class_name = top_left.siblingAtColumn(h('relationship_class_name')).data(Qt.DisplayRole)
+            relationship_class_name = top_left.sibling(top_left.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return
-            parameter_name = top_left.siblingAtColumn(h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
             if not parameter_name:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.siblingAtColumn(column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
             try:
                 parameter = self.mapping.add_parameter(
                     relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
                 model.blockSignals(True)
-                model.setData(top_left.siblingAtColumn(h('parameter_id')), parameter.id, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole)
                 model.blockSignals(False)
                 self.relationship_parameter_proxy.set_work_in_progress(top_left.row(), False)
                 self.relationship_parameter_proxy.make_columns_fixed_for_row(top_left.row(), 'relationship_class_name')
@@ -1168,7 +1168,7 @@ class DataStoreForm(QMainWindow):
         header = model.header
         h = header.index
         id_column = h('parameter_value_id')
-        sibling = index.siblingAtColumn(id_column)
+        sibling = index.sibling(index.row(), id_column)
         parameter_value_id = sibling.data()
         if not parameter_value_id:
             return

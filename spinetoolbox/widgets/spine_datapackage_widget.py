@@ -194,7 +194,7 @@ class SpineDatapackageWidget(QMainWindow):
         field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
         self.foreign_keys_model.setData(index, field_names, Qt.UserRole)
         resource_names = self.datapackage.resource_names
-        self.foreign_keys_model.setData(index.siblingAtColumn(1), resource_names, Qt.UserRole)
+        self.foreign_keys_model.setData(index.sibling(index.row(), 1), resource_names, Qt.UserRole)
 
     def check_resource_name(self, index):
         name = index.data(Qt.DisplayRole)
@@ -289,7 +289,7 @@ class SpineDatapackageWidget(QMainWindow):
         Add or remove primary key field accordingly.
         """
         status = index.data(Qt.EditRole)
-        field_name = index.siblingAtColumn(0).data(Qt.DisplayRole)
+        field_name = index.sibling(index.row(), 0).data(Qt.DisplayRole)
         if status is False:  # Add to primary key
             self.fields_model.setData(index, True, Qt.EditRole)
             self.datapackage.append_to_primary_key(self.selected_resource_name, field_name)
