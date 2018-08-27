@@ -754,7 +754,7 @@ class DatabaseMapping(object):
         except TypeError:
             new_casted_value = new_value
         except ValueError:
-            raise ParameterValueError(new_value)
+            raise ParameterValueError(new_value, data_type)
         if value == new_casted_value:
             return None
         try:

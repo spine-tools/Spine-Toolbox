@@ -220,7 +220,7 @@ class DataStoreForm(QMainWindow):
                 self.msg.emit("Datapackage succesfully imported.")
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
-        elif file_path.lower().endswith('xlsx'):  # TODO: import excel file
+        elif file_path.lower().endswith('xlsx'):
             try:
                 insert_log, error_log = import_xlsx_to_db(self.mapping, file_path)
                 self.msg.emit("Excelfile succesfully imported.")
@@ -1274,6 +1274,7 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def import_datapackage(self, datapackage_path):
         """Import datapackage into current Database."""
+        # TODO: move this to a different file, pass the mapping as argument and use pvper's logging approach
         self.msg.emit("Importing datapackage... ")
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         datapackage = Package(datapackage_path)
