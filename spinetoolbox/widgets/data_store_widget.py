@@ -210,7 +210,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="import_file")
     def import_file(self):
         """Import data from file into current database."""
-        answer = QFileDialog.getOpenFileName(self, "Import file", self._data_store.project().project_dir, "*.*")
+        answer = QFileDialog.getOpenFileName(self, "Select file to import", self._data_store.project().project_dir, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
@@ -229,7 +229,7 @@ class DataStoreForm(QMainWindow):
                 self.init_models()
             except:
                 self.msg_error.emit("Unable to import excelfile")
-    
+
     @Slot(name="export_file")
     def export_file(self):
         """export data from database into file."""
@@ -721,8 +721,8 @@ class DataStoreForm(QMainWindow):
         global_pos = self.ui.tableView_object_parameter.viewport().mapToGlobal(pos)
         self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.object_parameter_context_menu.get_action()
-        if option == "Remove parameter":
-            self.remove_parameter(index)
+        if option == "Remove selected":
+            self.remove_object_parameters()
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
 
@@ -737,8 +737,8 @@ class DataStoreForm(QMainWindow):
         global_pos = self.ui.tableView_relationship_parameter.viewport().mapToGlobal(pos)
         self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.relationship_parameter_context_menu.get_action()
-        if option == "Remove parameter":
-            self.remove_parameter(index)
+        if option == "Remove selected":
+            self.remove_relationship_parameters()
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
