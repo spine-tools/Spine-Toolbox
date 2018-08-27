@@ -285,14 +285,3 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.add_action("New file", self._parent.new_include)
         self.addSeparator()
         self.add_action("Open file", self._parent.add_includes)
-
-
-# class DatapackagePopupMenu(CustomPopupMenu):
-#     """Popup menu class for datapackage button in Data Connection's subwindow widget."""
-#
-#     def __init__(self, parent):
-#         super().__init__()
-#         self._parent = parent
-#         # Open a tool template file
-#         self.add_action("Edit datapackage keys", self._parent.show_edit_keys_form)
-#         self.add_action("Convert datapackage to Spine", self._parent.show_datapackage2spine_form)

@@ -26,8 +26,6 @@ Module for data connection class.
 
 import os
 import shutil
-import getpass
-import tempfile
 import logging
 from collections import Counter
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
@@ -37,8 +35,6 @@ from metaobject import MetaObject
 from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
-# from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
-# from widgets.custom_menus import DatapackagePopupMenu
 from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
@@ -85,7 +81,6 @@ class DataConnection(MetaObject):
         self._graphics_item = DataConnectionImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
         self.connect_signals()
-        # self.datapackage_popup_menu = DatapackagePopupMenu(self)
         # self._widget.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)
 
     def connect_signals(self):

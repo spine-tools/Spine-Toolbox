@@ -6,7 +6,7 @@ Contribution Guide for Spine Toolbox
 ************************************
 All are welcome to contribute!
 
-The following is based on a set of best practices for open source projects (http://contribution-guide-org.readthedocs.io/).
+The following is based on a set of best practices for open source projects `contrib_guide`_.
 
 Submitting bugs
 ===============
@@ -43,7 +43,7 @@ bare minimum; more info is almost always better:
     (e.g. 10.7.4, 10.9.0) Linux (Which distro? Which version of that distro? 32 or 64 bits?) Again, more
     detail is better.
 #. Which version or versions of the software are you using? If you have forked the project from Git,
-    which branch and which commit? Otherwise, app version number (from Help->About menu) should be mentioned.
+    which branch and which commit? Otherwise, application version number (Help->About menu) should be mentioned.
     Also, ideally you followed the advice above and have ruled out (or verified that the problem exists in)
     a few different versions.
 #. How can the developers recreate the bug? What were the steps used to invoke it. A screenshot demonstrating

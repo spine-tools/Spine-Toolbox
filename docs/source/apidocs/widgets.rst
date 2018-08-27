@@ -140,14 +140,6 @@ widgets.data\_store\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.edit\_datapackage\_keys\_widget module
-----------------------------------------------
-
-.. automodule:: widgets.edit_datapackage_keys_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.julia\_repl\_widget module
 ----------------------------------
 
