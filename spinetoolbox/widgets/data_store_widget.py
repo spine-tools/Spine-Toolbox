@@ -24,6 +24,7 @@ Widget to show Data Store Form.
 :date:   21.4.2018
 """
 
+import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
@@ -204,6 +205,7 @@ class DataStoreForm(QMainWindow):
         """
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Critical)
+        msg_box.setWindowTitle("Operation failed")
         msg_box.setText(msg)
         msg_box.exec_()
 
@@ -217,34 +219,40 @@ class DataStoreForm(QMainWindow):
         if file_path.lower().endswith('datapackage.json'):
             try:
                 self.import_datapackage(file_path)
-                self.msg.emit("Datapackage succesfully imported.")
+                self.msg.emit("Datapackage successfully imported.")
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
         elif file_path.lower().endswith('xlsx'):
             try:
                 insert_log, error_log = import_xlsx_to_db(self.mapping, file_path)
-                self.msg.emit("Excelfile succesfully imported.")
+                self.msg.emit("Excel file successfully imported.")
                 logging.debug(insert_log)
                 logging.debug(error_log)
                 self.init_models()
             except:
-                self.msg_error.emit("Unable to import excelfile")
+                self.msg_error.emit("Unable to import Excel file")
 
     @Slot(name="export_file")
     def export_file(self):
         """export data from database into file."""
-        answer = QFileDialog.getSaveFileName(self, "save file", self._data_store.project().project_dir, "*.xlsx")
+        answer = QFileDialog.getSaveFileName(self, "Export to file", self._data_store.project().project_dir, "*.xlsx")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
         if file_path.lower().endswith('datapackage.json'):
             pass
         elif file_path.lower().endswith('xlsx'):
+            filename = os.path.split(file_path)[1]
             try:
                 export_spine_database_to_xlsx(self.mapping, file_path)
-                self.msg.emit("Excelfile succesfully exported.")
-            except:
-                self.msg_error.emit("Unable to export excelfile")
+                self.msg.emit("Excel file successfully exported.")
+            except PermissionError:
+                self.msg_error.emit("Unable to export to file <b>{0}</b>.<br/>"
+                                    "Close the file in Excel and try again.".format(filename))
+            except OSError:
+                self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
+        else:
+            self.msg_error.emit("Unsupported file format")
 
     @Slot(name="commit_session")
     def commit_session(self):
@@ -258,7 +266,7 @@ class DataStoreForm(QMainWindow):
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
-        msg = "All changes commited successfully."
+        msg = "All changes committed successfully."
         self.msg.emit(msg)
 
     @Slot(name="rollback_session")
@@ -1352,7 +1360,8 @@ class DataStoreForm(QMainWindow):
                         continue
                     try:
                         parameter_value = self.mapping.add_parameter_value(object_id=object_id,
-                            parameter_id=parameter.id, value=value)
+                                                                           parameter_id=parameter.id,
+                                                                           value=value)
                         self.add_parameter_value_to_model(parameter_value.__dict__)
                     except SpineDBAPIError as e:
                         logging.debug(e.msg)
