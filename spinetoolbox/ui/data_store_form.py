@@ -269,7 +269,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.splitter_tree_parameter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -341,7 +341,6 @@ class Ui_MainWindow(object):
         self.actionRemove_relationship_parameters = QtWidgets.QAction(MainWindow)
         self.actionRemove_relationship_parameters.setIcon(icon2)
         self.actionRemove_relationship_parameters.setObjectName("actionRemove_relationship_parameters")
-        self.menuSession.addSeparator()
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
         self.menuEdit.addAction(self.actionCopy)
@@ -395,8 +394,8 @@ class Ui_MainWindow(object):
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
         self.actionRollback.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Backspace", None, -1))
-        self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Quit", None, -1))
-        self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Q", None, -1))
+        self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
+        self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Esc", None, -1))
         self.actionAdd_object_classes.setText(QtWidgets.QApplication.translate("MainWindow", "Add object classes", None, -1))
         self.actionAdd_object_classes.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add object classes", None, -1))
         self.actionAdd_object_classes.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+O", None, -1))
@@ -431,6 +430,6 @@ class Ui_MainWindow(object):
         self.actionRemove_object_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object parameters", None, -1))
         self.actionRemove_relationship_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameters", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import CustomQTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

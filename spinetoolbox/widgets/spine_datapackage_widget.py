@@ -25,19 +25,14 @@ in Data Connection item.
 :date:   7.7.2018
 """
 
-import os
-import shutil
-import logging
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.combobox_delegate import ComboBoxDelegate, CheckableComboBoxDelegate
 from widgets.lineedit_delegate import LineEditDelegate
 from widgets.checkbox_delegate import CheckBoxDelegate
 from widgets.custom_menus import DescriptorTreeContextMenu
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QDialog
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, SIGNAL
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
-from helpers import busy_effect
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
+from PySide2.QtCore import Qt, Signal, Slot, QSettings
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from spinedatabase_api import OBJECT_CLASS_NAMES
 
@@ -209,7 +204,7 @@ class SpineDatapackageWidget(QMainWindow):
             self.resource_tables[resource.name] = resource.read(cast=False)
 
     @Slot(name="save_datapackage")
-    def save_datapackage(self):  #TODO: handle zip as well?
+    def save_datapackage(self):  # TODO: handle zip as well?
         """Save datapackage.json to datadir."""
         self._data_connection.save_datapackage(self.datapackage)
 
@@ -238,6 +233,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
     def update_resource_data(self, editor, hint):
+        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
         """Update resource data with newly edited data."""
         index = editor.index
         new_value = editor.text()
@@ -248,6 +244,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_name")
     def update_resource_name(self, editor, hint):
+        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
         """Update resources model and descriptor with new resource name."""
         new_name = editor.currentText()
         if not new_name:
@@ -268,6 +265,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
     def update_field_name(self, editor, hint):
+        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
         """Called when line edit delegate wants to edit field name data.
         Update name in fields_model, resource_data_model's header and datapackage descriptor.
         """
@@ -285,6 +283,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QModelIndex", name="update_primary_key")
     def update_primary_key(self, index):
+        # TODO: Should 'name' be in arguments?
         """Called when checkbox delegate wants to edit primary key data.
         Add or remove primary key field accordingly.
         """
@@ -316,6 +315,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_fields")
     def update_foreign_key_fields(self, editor, hint):
+        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
         print('upd fk fields')
         model = editor.model()
         for i in range(model.rowCount()):
@@ -328,12 +328,14 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_resource")
     def update_foreign_key_ref_resource(self, editor, hint):
+        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
         index = editor.index
         value = editor.currentText()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
     @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_fields")
     def update_foreign_key_ref_fields(self, editor, hint):
+        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
         index = editor.index
         value = editor.currentText()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
@@ -426,6 +428,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QPoint", name="show_descriptor_tree_context_menu")
     def show_descriptor_tree_context_menu(self, pos):
+        # TODO: Obsolete?
         """Context menu for descriptor treeview.
 
         Args:

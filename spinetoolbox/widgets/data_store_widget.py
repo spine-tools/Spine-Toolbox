@@ -26,15 +26,14 @@ Widget to show Data Store Form.
 
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
-from PySide2.QtWidgets import QMainWindow, QWidget, QHeaderView, QDialog, QLineEdit, QInputDialog, \
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
     QMessageBox, QFileDialog
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
-from PySide2.QtGui import QStandardItem, QFont, QFontMetrics
+from PySide2.QtGui import QFont, QFontMetrics
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterValueContextMenu, ParameterContextMenu
-from widgets.lineedit_delegate import LineEditDelegate
 from widgets.combobox_delegate import ObjectParameterValueDelegate, ObjectParameterDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
@@ -374,7 +373,7 @@ class DataStoreForm(QMainWindow):
         self.expand_next(index)
 
     def expand_next(self, index):
-        """Expand next ocurrence of a relationship."""
+        """Expand next occurrence of a relationship."""
         next_index = self.object_tree_model.next_relationship_index(index)
         if not next_index:
             return
@@ -793,7 +792,7 @@ class DataStoreForm(QMainWindow):
 
     def remove_single_parameter_value(self, proxy_index):
         """Remove row from (object or relationship) parameter_value table.
-        If succesful, also remove row from model"""
+        If successful, also remove row from model"""
         proxy_model = proxy_index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(proxy_index)
@@ -1161,7 +1160,7 @@ class DataStoreForm(QMainWindow):
             self.update_parameter_in_db(top_left)
 
     def update_parameter_value_in_db(self, index):
-        """After updating a paramater value in the model, try and update it in the database.
+        """After updating a parameter value in the model, try and update it in the database.
         Undo the model update if unsuccessful.
         """
         model = index.model()
@@ -1176,7 +1175,7 @@ class DataStoreForm(QMainWindow):
         new_value = index.data(Qt.DisplayRole)
         try:
             self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
-            msg = "Parameter value succesfully updated."
+            msg = "Parameter value successfully updated."
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.sender().blockSignals(True)
@@ -1187,7 +1186,7 @@ class DataStoreForm(QMainWindow):
             self.sender().blockSignals(False)
 
     def update_parameter_in_db(self, index):
-        """After updating a paramater in the model, try and update it in the database.
+        """After updating a parameter in the model, try and update it in the database.
         Undo the model update if unsuccessful.
         """
         model = index.model()
@@ -1201,7 +1200,7 @@ class DataStoreForm(QMainWindow):
             field_name = 'name'
         try:
             self.mapping.update_parameter(parameter_id, field_name, new_value)
-            msg = "Parameter succesfully updated."
+            msg = "Parameter successfully updated."
             self.msg.emit(msg)
             # refresh parameter value models to reflect name change
             if field_name == 'name':

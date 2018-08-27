@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -519,7 +519,7 @@
      <x>0</x>
      <y>0</y>
      <width>789</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -529,7 +529,6 @@
     <property name="title">
      <string>Session</string>
     </property>
-    <addaction name="separator"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
    </widget>
@@ -582,10 +581,10 @@
   </action>
   <action name="actionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Q</string>
+    <string>Esc</string>
    </property>
   </action>
   <action name="actionAdd_object_classes">

@@ -32,7 +32,7 @@ from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from metaobject import MetaObject
-from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
+# from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir

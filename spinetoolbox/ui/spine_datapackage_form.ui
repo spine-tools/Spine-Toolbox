@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -27,7 +27,7 @@
     <x>0</x>
     <y>0</y>
     <width>921</width>
-    <height>939</height>
+    <height>548</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -325,7 +325,7 @@
      <x>0</x>
      <y>0</y>
      <width>921</width>
-     <height>27</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -338,13 +338,7 @@
     <addaction name="actionSave_datapackage"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuHelp">
-    <property name="title">
-     <string>Help</string>
-    </property>
-   </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionSave_datapackage">
@@ -371,10 +365,10 @@
   </action>
   <action name="actionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Q</string>
+    <string>Esc</string>
    </property>
   </action>
   <action name="actionInfer_datapackage">
