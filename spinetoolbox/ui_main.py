@@ -114,15 +114,8 @@ class ToolboxUI(QMainWindow):
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
         # Add toggleview actions
         self.add_toggle_view_actions()
-        # Make keyboard shortcuts
-        self.test1_action = QAction(self)
-        self.test1_action.setShortcut("F5")
-        self.addAction(self.test1_action)
-        self.test2_action = QAction(self)
-        self.test2_action.setShortcut("F6")
-        self.addAction(self.test2_action)
         self.init_conf()
-        self.set_debug_level()
+        self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
         self.init_project()
         self.restore_ui()
@@ -142,9 +135,12 @@ class ToolboxUI(QMainWindow):
         self._config.load()
 
     # noinspection PyMethodMayBeStatic
-    def set_debug_level(self):
-        """Control application debug message verbosity."""
-        level = self._config.get("settings", "logging_level")
+    def set_debug_level(self, level):
+        """Control application debug message verbosity.
+
+        Args:
+            level (str): '2' shows all messages, not '2' shows only error messages
+        """
         if level == '2':
             logging.getLogger().setLevel(level=logging.DEBUG)
             logging.debug("Logging level: All messages")
@@ -174,11 +170,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
-        # Keyboard shortcut actions
-        # noinspection PyUnresolvedReferences
-        self.test1_action.triggered.connect(self.test1)
-        # noinspection PyUnresolvedReferences
-        self.test2_action.triggered.connect(self.test2)
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
         # self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
@@ -507,44 +498,6 @@ class ToolboxUI(QMainWindow):
                 self.show_info(item_data.name)
             return
 
-    @Slot(name="test1")
-    def test1(self):
-        # sub_windows = self.ui.graphicsView.subWindowList()
-        # self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
-        logging.debug("Total number of items: {0}".format(self.project_item_model.n_items("all")))
-        logging.debug("Number of Data Stores: {0}".format(self.project_item_model.n_items("Data Stores")))
-        logging.debug("Number of Data Connections: {0}".format(self.project_item_model.n_items("Data Connections")))
-        logging.debug("Number of Tools: {0}".format(self.project_item_model.n_items("Tools")))
-        logging.debug("Number of Views: {0}".format(self.project_item_model.n_items("Views")))
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
-            # if top_level_item.hasChildren():
-            #     n_children = top_level_item.rowCount()
-            #     for i in range(n_children):
-            #         child = top_level_item.child(i, 0)
-            #         self.msg.emit("{0}".format(child.data(Qt.DisplayRole)))
-            if top_level_item.data(Qt.DisplayRole) == "Tools":
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    child = top_level_item.child(i, 0)
-                    self.msg.emit("{0}".format(child.data(Qt.DisplayRole)))
-
-    @Slot(name="test2")
-    def test2(self):
-        connections = self.connection_model.get_connections()
-        logging.debug("connections:\n{0}".format(connections))
-        # links = self.connection_model.get_links()
-        # logging.debug("links:\n{0}".format(links))
-        logging.debug("Items on scene:{0}".format(len(self.ui.graphicsView.scene().items())))
-        # for item in self.ui.graphicsView.scene().items():
-        #     logging.debug(item)
-        # scene_size = self.ui.graphicsView.scene().sceneRect()
-        # logging.debug("sceneRect:{0}".format(scene_size))
-        # mouse_item = self.ui.graphicsView.scene().mouseGrabberItem()
-        # logging.debug("mouse grabber item:{0}".format(mouse_item))
-        # self.ui.graphicsView.scene().addItem(self.dc)
-
     def show_info(self, name):
         """Show information of selected item. Embed old item widgets into QDockWidget."""
         item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item
@@ -861,16 +814,19 @@ class ToolboxUI(QMainWindow):
         """
         name = ind.data(Qt.UserRole).name
         if check_dialog:
-            msg = "Are you sure? This will delete this item's data from your project.".format(name)
+            msg = "Are you sure? Item's data will be deleted from you project.\n\n" \
+                  "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
             # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(self, 'Remove item from project?', msg, QMessageBox.Yes, QMessageBox.No)
+            answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return
         item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
-        data_dir = None
-        if item_data.item_type in ("Data Connection", "Data Store"):
+        try:
             data_dir = item_data.data_dir
+        except AttributeError:
+            logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
+            data_dir = None
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
         item_data.set_icon(None)
@@ -1096,7 +1052,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_store_form = AddDataStoreWidget(self, self._project, x, y)
+        self.add_data_store_form = AddDataStoreWidget(self, x, y)
         self.add_data_store_form.show()
 
     @Slot("float", "float", name="show_add_data_connection_form")
@@ -1105,7 +1061,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_connection_form = AddDataConnectionWidget(self, self._project, x, y)
+        self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
         self.add_data_connection_form.show()
 
     @Slot("float", "float", name="show_add_tool_form")
@@ -1114,7 +1070,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_tool_form = AddToolWidget(self, self._project, x, y)
+        self.add_tool_form = AddToolWidget(self, x, y)
         self.add_tool_form.show()
 
     @Slot("float", "float", name="show_add_view_form")
@@ -1123,7 +1079,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_view_form = AddViewWidget(self, self._project, x, y)
+        self.add_view_form = AddViewWidget(self, x, y)
         self.add_view_form.show()
 
     @Slot(name="show_tool_template_form")
@@ -1132,13 +1088,13 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.tool_template_form = ToolTemplateWidget(self, self._project, tool_template)
+        self.tool_template_form = ToolTemplateWidget(self, tool_template)
         self.tool_template_form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):
         """Show Settings widget."""
-        self.settings_form = SettingsWidget(self, self._config, self._project)
+        self.settings_form = SettingsWidget(self, self._config)
         self.settings_form.show()
 
     @Slot(name="show_about")

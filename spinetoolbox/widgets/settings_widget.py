@@ -24,7 +24,6 @@ Widget for controlling user settings.
 :date:   17.1.2018
 """
 
-import logging
 import os
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
@@ -40,14 +39,14 @@ class SettingsWidget(QWidget):
         parent (QObject): Parent widget.
         configs (ConfigurationParser): Configuration object
     """
-    def __init__(self, parent, configs, project):
+    def __init__(self, parent, configs):
         """ Initialize class. """
         super().__init__(f=Qt.Window)
         self._parent = parent  # QWidget parent
         self._configs = configs
-        self._project = project
-        self.orig_work_dir = ""  # Work dir when this widget was created
-        # Set up the user interface from Designer.
+        self._project = self._parent.project()
+        self.orig_work_dir = ""  # Work dir when this widget was opened
+        # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.CustomizeWindowHint)

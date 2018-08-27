@@ -8,7 +8,7 @@ spinetoolbox
    configuration
    data_connection
    data_store
-   database_mapping
+   excel_handler
    graphics_items
    helpers
    metaobject
@@ -18,7 +18,9 @@ spinetoolbox
    resources_icons_rc
    resources_logos_rc
    setup
+   spinedatabase_api
    spinetoolbox
+   test
    tool
    tool_instance
    tool_templates

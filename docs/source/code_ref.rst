@@ -9,4 +9,4 @@ Source Code Reference
     :maxdepth: 4
     :caption: Modules and Packages
 
-    modules
+    apidocs/modules

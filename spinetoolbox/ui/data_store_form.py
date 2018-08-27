@@ -431,6 +431,6 @@ class Ui_MainWindow(object):
         self.actionRemove_object_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object parameters", None, -1))
         self.actionRemove_relationship_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameters", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import CustomQTableView
 import resources_icons_rc

@@ -41,24 +41,21 @@ import logging
 
 
 class ToolTemplateWidget(QWidget):
-    """A widget to query user's preferences for a new tool template"""
+    """A widget to query user's preferences for a new tool template.
 
-    def __init__(self, parent, project, tool_template=None):
-        """ Initialize class.
-
-        Args:
-            parent (ToolBoxUI): QMainWindow instance
-            project (SpineToolboxProject): A project instance
-            tool_template (ToolTemplate): If given, the form is pre-filled with data
-                from this template
-        """
+    Attributes:
+        parent(ToolBoxUI): QMainWindow instance
+        tool_template(ToolTemplate): If given, the form is prefilled with this template
+    """
+    def __init__(self, parent, tool_template=None):
+        """ Initialize class."""
         super().__init__(f=Qt.Window)
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         # Class attributes
         self._parent = parent
-        self._project = project
+        self._project = self._parent.project()
         # init models
         self.includes_model = QStandardItemModel()
         self.inputfiles_model = QStandardItemModel()
