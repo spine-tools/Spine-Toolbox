@@ -41,6 +41,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, Add
 from models import ObjectTreeModel, MinimalTableModel, CustomSortFilterProxyModel
 from datapackage import Package
 from helpers import busy_effect
+from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 
 
 class DataStoreForm(QMainWindow):
@@ -134,6 +135,7 @@ class DataStoreForm(QMainWindow):
         self.msg_error.connect(self.add_error_message)
         # Menu commands
         self.ui.actionImport.triggered.connect(self.import_file)
+        self.ui.actionExport.triggered.connect(self.export_file)
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionQuit.triggered.connect(self.close)
@@ -219,7 +221,30 @@ class DataStoreForm(QMainWindow):
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
         elif file_path.lower().endswith('xlsx'):  # TODO: import excel file
+            try:
+                insert_log, error_log = import_xlsx_to_db(self.mapping, file_path)
+                self.msg.emit("Excelfile succesfully imported.")
+                logging.debug(insert_log)
+                logging.debug(error_log)
+                self.init_models()
+            except:
+                self.msg_error.emit("Unable to import excelfile")
+    
+    @Slot(name="export_file")
+    def export_file(self):
+        """export data from database into file."""
+        answer = QFileDialog.getSaveFileName(self, "save file", self._data_store.project().project_dir, "*.xlsx")
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        if file_path.lower().endswith('datapackage.json'):
             pass
+        elif file_path.lower().endswith('xlsx'):
+            try:
+                export_spine_database_to_xlsx(self.mapping, file_path)
+                self.msg.emit("Excelfile succesfully exported.")
+            except:
+                self.msg_error.emit("Unable to export excelfile")
 
     @Slot(name="commit_session")
     def commit_session(self):
