@@ -113,6 +113,7 @@ class ParameterValueDelegate(DataStoreDelegate):
 
     def paint(self, painter, option, proxy_index):
         """Paint a blue frame on the work in progress rows."""
+        super().paint(painter, option, proxy_index)
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.header.index
@@ -127,7 +128,6 @@ class ParameterValueDelegate(DataStoreDelegate):
             if index.column() == model.columnCount()-1:
                 painter.drawLine(x2, y1, x2, y2)
             painter.setPen(pen)
-        super().paint(painter, option, index)
 
 
 class ParameterDelegate(DataStoreDelegate):
@@ -139,6 +139,7 @@ class ParameterDelegate(DataStoreDelegate):
 
     def paint(self, painter, option, proxy_index):
         """Paint a blue frame on the work in progress rows."""
+        super().paint(painter, option, proxy_index)
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.header.index
@@ -153,7 +154,6 @@ class ParameterDelegate(DataStoreDelegate):
             if index.column() == model.columnCount()-1:
                 painter.drawLine(x2, y1, x2, y2)
             painter.setPen(pen)
-        super().paint(painter, option, index)
 
 
 class ObjectParameterValueDelegate(ParameterValueDelegate):

@@ -77,11 +77,11 @@ class DatabaseMapping(object):
             except DatabaseError as e:
                 msg = "Could not open '{}' as SQLite database: {}".format(self.db_url, e.orig.args)
                 raise SpineDBAPIError(msg)
-            try:
-                self.engine.execute('BEGIN IMMEDIATE')
-            except DatabaseError as e:
-                msg = "Could not open '{}', seems to be locked: {}".format(self.db_url, e.orig.args)
-                raise SpineDBAPIError(msg)
+            # try:
+            #     self.engine.execute('BEGIN IMMEDIATE')
+            # except DatabaseError as e:
+            #     msg = "Could not open '{}', seems to be locked: {}".format(self.db_url, e.orig.args)
+            #     raise SpineDBAPIError(msg)
         self.session = Session(self.engine)
 
     def init_base(self):
@@ -405,9 +405,9 @@ class DatabaseMapping(object):
         ).filter(self.Parameter.relationship_class_id == wide_relationship_class_subqry.c.id).\
         order_by(self.Parameter.id)
 
-    def object_parameter_value_list(self):
+    def object_parameter_value_list(self, parameter_name=None):
         """Return objects and their parameter values."""
-        return self.session.query(
+        qry = self.session.query(
             #self.Parameter.object_class_id,
             self.ObjectClass.name.label('object_class_name'),
             #self.ParameterValue.object_id,
@@ -424,12 +424,15 @@ class DatabaseMapping(object):
         ).filter(self.Parameter.id == self.ParameterValue.parameter_id).\
         filter(self.ParameterValue.object_id == self.Object.id).\
         filter(self.Parameter.object_class_id == self.ObjectClass.id)
+        if parameter_name:
+            qry = qry.filter(self.Parameter.name == parameter_name)
+        return qry
 
-    def relationship_parameter_value_list(self):
+    def relationship_parameter_value_list(self, parameter_name=None):
         """Return relationships and their parameter values."""
         wide_relationship_class_subqry = self.wide_relationship_class_list().subquery()
         wide_relationship_subqry = self.wide_relationship_list().subquery()
-        return self.session.query(
+        qry = self.session.query(
             #self.Parameter.relationship_class_id,
             wide_relationship_class_subqry.c.name.label('relationship_class_name'),
             #self.ParameterValue.relationship_id,
@@ -449,6 +452,9 @@ class DatabaseMapping(object):
         ).filter(self.Parameter.id == self.ParameterValue.parameter_id).\
         filter(self.ParameterValue.relationship_id == wide_relationship_subqry.c.id).\
         filter(self.Parameter.relationship_class_id == wide_relationship_class_subqry.c.id)
+        if parameter_name:
+            qry = qry.filter(self.Parameter.name == parameter_name)
+        return qry
 
     def add_object_class(self, **kwargs):
         """Add object class to database.

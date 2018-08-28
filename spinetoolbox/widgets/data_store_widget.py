@@ -69,7 +69,6 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.mapping = mapping
         self.database = database
-        self.mapping.new_commit()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
@@ -109,6 +108,8 @@ class DataStoreForm(QMainWindow):
             setDefaultAction(self.ui.actionAdd_relationship_parameters)
         self.ui.toolButton_remove_relationship_parameters.\
             setDefaultAction(self.ui.actionRemove_relationship_parameters)
+        # Insert new working commit
+        self.new_commit()
         # init models and views
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_models()
@@ -253,6 +254,13 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
         else:
             self.msg_error.emit("Unsupported file format")
+
+    def new_commit(self):
+        """Try and insert new work in progress commit in the database."""
+        try:
+            self.mapping.new_commit()
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     @Slot(name="commit_session")
     def commit_session(self):
