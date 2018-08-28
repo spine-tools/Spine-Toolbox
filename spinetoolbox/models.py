@@ -703,12 +703,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = False
-        self.is_being_reset = False
-        self.modelAboutToBeReset.connect(lambda: self.set_being_reset(True))
-        self.modelReset.connect(lambda: self.set_being_reset(False))
-
-    def set_being_reset(self, on):
-        self.is_being_reset = on
 
     def parent(self):
         """Return _parent attribute."""
@@ -845,13 +839,14 @@ class MinimalTableModel(QAbstractTableModel):
         """
         return [self.rowData(row, role) for row in range(self.rowCount())]
 
-    def setData(self, index, value, role=Qt.EditRole):
+    def setData(self, index, value, role=Qt.EditRole, sneaky=False):
         if not index.isValid():
             return False
         self._data[index.row()][index.column()][role] = value
         if role == Qt.EditRole:
             self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        self.dataChanged.emit(index, index, [role])
+        if not sneaky:
+            self.dataChanged.emit(index, index, [role])
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -885,11 +880,11 @@ class MinimalTableModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
+    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, sneaky=False, parent=QModelIndex()):
         if not self.insertRows(row, 1, parent):
             return False
         for column, value in enumerate(row_data):
-            self.setData(self.index(row, column), value, role)
+            self.setData(self.index(row, column), value, role, sneaky)
         self.row_with_data_inserted.emit(parent, row)
         return True
 
@@ -970,7 +965,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, new_data=None):
+    def reset_model(self, new_data=None, sneaky=False):
         """Reset model."""
         self.beginResetModel()
         self._data = list()
@@ -990,7 +985,8 @@ class MinimalTableModel(QAbstractTableModel):
                 self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
-        self.dataChanged.emit(top_left, bottom_right)
+        if not sneaky:
+            self.dataChanged.emit(top_left, bottom_right)
         self.endResetModel()
 
 
@@ -1248,10 +1244,43 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.bold_font.setBold(True)
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.gray_brush = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
+        self.wip_row_list = list()
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         self.h = source_model.header.index
+        source_model.rowsInserted.connect(self.source_model_rows_inserted)
+        source_model.rowsRemoved.connect(self.source_model_rows_removed)
+
+    def source_model_rows_inserted(self, parent, first, last):
+        """Update work in progress row list."""
+        for i, row in enumerate(self.wip_row_list):
+            if first <= row:
+                self.wip_row_list[i] += 1
+
+    def source_model_rows_removed(self, parent, first, last):
+        """Update work in progress row list."""
+        try:
+            self.wip_row_list.remove(first)
+        except ValueError:
+            pass
+        for i, row in enumerate(self.wip_row_list):
+            if first < row:
+                self.wip_row_list[i] -= 1
+
+    def set_work_in_progress(self, row, on):
+        """Set user role of index in first column."""
+        if on:
+            self.wip_row_list.append(row)
+        else:
+            try:
+                self.wip_row_list.remove(row)
+            except ValueError:
+                pass
+
+    def is_work_in_progress(self, row):
+        """Return whether or not row is a work in progress."""
+        return row in self.wip_row_list
 
     def reset(self):
         """Reset all filters, unbold all bolded items."""
@@ -1298,20 +1327,13 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
                 self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
         self.condition_list.append(condition)
 
-    def set_work_in_progress(self, row, on):
-        """Set user role of index in first column."""
-        index = self.sourceModel().index(row, 0)
-        self.sourceModel().setData(index, on, Qt.UserRole)
-
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
         All the conditions in the list need to be satisfied, however each condition
         is satisfied as soon as ANY of its statements is satisfied.
         """
-        # Let pass rows without id, they'are work in progress
-        source_index = self.sourceModel().index(source_row, 0, source_parent)
-        if source_index.data(Qt.UserRole):
+        if self.is_work_in_progress(source_row):
             return True
         result = True
         for condition in self.condition_list:

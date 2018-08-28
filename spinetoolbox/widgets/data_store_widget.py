@@ -40,9 +40,8 @@ from widgets.combobox_delegate import ObjectParameterValueDelegate, ObjectParame
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, CommitDialog
 from models import ObjectTreeModel, MinimalTableModel, CustomSortFilterProxyModel
-from datapackage import Package
-from helpers import busy_effect
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
+from datapackage_import_export import import_datapackage
 
 
 class DataStoreForm(QMainWindow):
@@ -195,7 +194,7 @@ class DataStoreForm(QMainWindow):
             msg (str): String to show in QStatusBar
         """
         current_msg = self.ui.statusbar.currentMessage()
-        self.ui.statusbar.showMessage(current_msg + " " + msg, 5000)
+        self.ui.statusbar.showMessage(" ".join([current_msg, msg]), 5000)
 
     @Slot(str, name="add_error_message")
     def add_error_message(self, msg):
@@ -219,7 +218,7 @@ class DataStoreForm(QMainWindow):
             return
         if file_path.lower().endswith('datapackage.json'):
             try:
-                self.import_datapackage(file_path)
+                import_datapackage(self, file_path)
                 self.msg.emit("Datapackage successfully imported.")
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
@@ -312,7 +311,7 @@ class DataStoreForm(QMainWindow):
         header = object_parameter_value_list.column_descriptions
         object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
         self.object_parameter_value_model.header = [column['name'] for column in header]
-        self.object_parameter_value_model.reset_model(object_parameter_value_data)
+        self.object_parameter_value_model.reset_model(object_parameter_value_data, sneaky=True)
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         self.object_parameter_value_proxy.make_columns_fixed('object_class_name', 'object_name', 'parameter_name')
         # Relationship
@@ -320,7 +319,7 @@ class DataStoreForm(QMainWindow):
         header = relationship_parameter_value_list.column_descriptions
         self.relationship_parameter_value_model.header = [column['name'] for column in header]
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
-        self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
+        self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data, sneaky=True)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
         self.relationship_parameter_value_proxy.make_columns_fixed(
             'relationship_class_name',
@@ -336,7 +335,7 @@ class DataStoreForm(QMainWindow):
         header = object_parameter_list.column_descriptions
         self.object_parameter_model.header = [column['name'] for column in header]
         object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
-        self.object_parameter_model.reset_model(object_parameter_data)
+        self.object_parameter_model.reset_model(object_parameter_data, sneaky=True)
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
         self.object_parameter_proxy.make_columns_fixed('object_class_name')
         # Relationship
@@ -344,7 +343,7 @@ class DataStoreForm(QMainWindow):
         header = relationship_parameter_list.column_descriptions
         self.relationship_parameter_model.header = [column['name'] for column in header]
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
-        self.relationship_parameter_model.reset_model(relationship_parameter_data)
+        self.relationship_parameter_model.reset_model(relationship_parameter_data, sneaky=True)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
         self.relationship_parameter_proxy.make_columns_fixed('relationship_class_name', 'object_class_name_list')
 
@@ -435,14 +434,14 @@ class DataStoreForm(QMainWindow):
                 object_class_name = selected['name']
                 self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
                 self.relationship_parameter_value_proxy.add_condition(object_class_name_list=object_class_name)
-                self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
+                # self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
             elif selected_type == 'object':
                 object_class_name = parent['name']
                 object_name = selected['name']
                 self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
                 self.object_parameter_value_proxy.add_condition(object_name=object_name)
                 self.relationship_parameter_value_proxy.add_condition(object_name_list=object_name)
-                self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
+                # self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
             elif selected_type == 'relationship_class':
                 relationship_class_name = selected['name']
                 self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
@@ -986,13 +985,11 @@ class DataStoreForm(QMainWindow):
         """Called when data in the object parameter value model changes. Add new parameter
         or edit existing ones."""
         model = self.object_parameter_value_model
-        if model.is_being_reset:
-            return
         header = model.header
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.sibling(top_left.row(), h('parameter_value_id')).data(Qt.DisplayRole):
+        if self.object_parameter_value_proxy.is_work_in_progress(top_left.row()):
             object_name = top_left.sibling(top_left.row(), h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
             if not object_:
@@ -1014,19 +1011,16 @@ class DataStoreForm(QMainWindow):
             try:
                 parameter_value = self.mapping.add_parameter_value(
                     object_id=object_.id, parameter_id=parameter.id, **kwargs)
-                model.blockSignals(True)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id,
+                              Qt.EditRole, sneaky=True)
                 model.setData(top_left.sibling(top_left.row(), h('object_class_name')), object_class_name, Qt.EditRole)
-                model.blockSignals(False)
                 self.object_parameter_value_proxy.set_work_in_progress(top_left.row(), False)
                 self.object_parameter_value_proxy.make_columns_fixed_for_row(top_left.row(),
                     'object_class_name', 'object_name', 'parameter_name')
                 msg = "Successfully added new parameter value."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.blockSignals(True)
-                model.setData(top_left, None, Qt.EditRole)
-                model.blockSignals(False)
+                model.setData(top_left, None, Qt.EditRole, sneaky=True)
                 self.msg_error.emit(e.msg)
         else:
             self.update_parameter_value_in_db(top_left)
@@ -1036,13 +1030,11 @@ class DataStoreForm(QMainWindow):
         """Called when data in the object parameter model changes. Add new parameter
         or edit existing ones."""
         model = self.object_parameter_model
-        if model.is_being_reset:
-            return
         header = model.header
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.sibling(top_left.row(), h('parameter_id')).data(Qt.DisplayRole):
+        if self.object_parameter_proxy.is_work_in_progress(top_left.row()):
             object_class_name = top_left.sibling(top_left.row(), h('object_class_name')).data(Qt.DisplayRole)
             object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
@@ -1057,17 +1049,14 @@ class DataStoreForm(QMainWindow):
             try:
                 parameter = self.mapping.add_parameter(
                     object_class_id=object_class.id, name=parameter_name, **kwargs)
-                model.blockSignals(True)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole)
-                model.blockSignals(False)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole,
+                              sneaky=True)
                 self.object_parameter_proxy.set_work_in_progress(top_left.row(), False)
                 self.object_parameter_proxy.make_columns_fixed_for_row(top_left.row(), 'object_class_name')
                 msg = "Successfully added new parameter."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.blockSignals(True)
-                model.setData(top_left, None, Qt.EditRole)
-                model.blockSignals(False)
+                model.setData(top_left, None, Qt.EditRole, sneaky=True)
                 self.msg_error.emit(e.msg)
         else:
             self.update_parameter_in_db(top_left)
@@ -1077,32 +1066,26 @@ class DataStoreForm(QMainWindow):
         """Called when data in the relationship parameter value model changes. Add new parameter
         or edit existing ones."""
         model = self.relationship_parameter_value_model
-        if model.is_being_reset:
-            return
         header = model.header
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.sibling(top_left.row(), h('parameter_value_id')).data(Qt.DisplayRole):
+        if self.relationship_parameter_value_proxy.is_work_in_progress(top_left.row()):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
                 relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                     one_or_none()
                 if relationship_class:
-                    model.blockSignals(True)
                     model.setData(top_left.sibling(top_left.row(), h('object_class_name_list')),
-                        relationship_class.object_class_name_list, Qt.EditRole)
-                    model.blockSignals(False)
+                                  relationship_class.object_class_name_list, Qt.EditRole, sneaky=True)
             # Autocomplete object name list
             if top_left.column() == h('relationship_name'):
                 relationship_name = top_left.data(Qt.DisplayRole)
                 relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
                 if relationship:
-                    model.blockSignals(True)
                     model.setData(top_left.sibling(top_left.row(), h('object_name_list')),
-                        relationship.object_name_list, Qt.EditRole)
-                    model.blockSignals(False)
+                                  relationship.object_name_list, Qt.EditRole, sneaky=True)
             # Try to add new parameter value
             relationship_name = top_left.sibling(top_left.row(), h('relationship_name')).data(Qt.DisplayRole)
             relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
@@ -1125,11 +1108,10 @@ class DataStoreForm(QMainWindow):
             try:
                 parameter_value = self.mapping.add_parameter_value(
                     relationship_id=relationship.id, parameter_id=parameter.id, **kwargs)
-                model.blockSignals(True)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id,
+                              Qt.EditRole, sneaky=True)
                 model.setData(top_left.sibling(top_left.row(), h('relationship_class_name')), relationship_class_name,
-                    Qt.EditRole)
-                model.blockSignals(False)
+                              Qt.EditRole, sneaky=True)
                 self.relationship_parameter_value_proxy.set_work_in_progress(top_left.row(), False)
                 self.relationship_parameter_value_proxy.make_columns_fixed_for_row(
                     top_left.row(),
@@ -1140,9 +1122,7 @@ class DataStoreForm(QMainWindow):
                 msg = "Successfully added new parameter value."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.blockSignals(True)
-                model.setData(top_left, None, Qt.EditRole)
-                model.blockSignals(False)
+                model.setData(top_left, None, Qt.EditRole, sneaky=True)
                 self.msg_error.emit(e.msg)
         else:
             self.update_parameter_value_in_db(top_left)
@@ -1152,23 +1132,19 @@ class DataStoreForm(QMainWindow):
         """Called when data in the relationship parameter model changes. Add new parameter
         or edit existing ones."""
         model = self.relationship_parameter_model
-        if model.is_being_reset:
-            return
         header = model.header
         h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if not top_left.sibling(top_left.row(), h('parameter_id')).data(Qt.DisplayRole):
+        if self.relationship_parameter_proxy.is_work_in_progress(top_left.row()):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
                 relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                     one_or_none()
                 if relationship_class:
-                    model.blockSignals(True)
                     model.setData(top_left.sibling(top_left.row(), h('object_class_name_list')),
-                        relationship_class.object_class_name_list, Qt.EditRole)
-                    model.blockSignals(False)
+                                  relationship_class.object_class_name_list, Qt.EditRole, sneaky=True)
             # Try to add new parameter
             relationship_class_name = top_left.sibling(top_left.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
@@ -1185,17 +1161,14 @@ class DataStoreForm(QMainWindow):
             try:
                 parameter = self.mapping.add_parameter(
                     relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
-                model.blockSignals(True)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole)
-                model.blockSignals(False)
+                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole,
+                              sneaky=True)
                 self.relationship_parameter_proxy.set_work_in_progress(top_left.row(), False)
                 self.relationship_parameter_proxy.make_columns_fixed_for_row(top_left.row(), 'relationship_class_name')
                 msg = "Successfully added new parameter."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.blockSignals(True)
-                model.setData(top_left, None, Qt.EditRole)
-                model.blockSignals(False)
+                model.setData(top_left, None, Qt.EditRole, sneaky=True)
                 self.msg_error.emit(e.msg)
         else:
             self.update_parameter_in_db(top_left)
@@ -1219,10 +1192,8 @@ class DataStoreForm(QMainWindow):
             msg = "Parameter value successfully updated."
             self.msg.emit(msg)
         except SpineDBAPIError as e:
+            model.setData(index, None, Qt.EditRole, sneaky=True)
             self.sender().blockSignals(True)
-            model.blockSignals(True)
-            model.setData(index, None, Qt.EditRole)
-            model.blockSignals(False)
             self.msg_error.emit(e.msg)
             self.sender().blockSignals(False)
 
@@ -1247,10 +1218,8 @@ class DataStoreForm(QMainWindow):
             if field_name == 'name':
                 self.init_parameter_value_models()
         except SpineDBAPIError as e:
+            model.setData(index, None, Qt.EditRole, sneaky=True)
             self.sender().blockSignals(True)
-            model.blockSignals(True)
-            model.setData(index, None, Qt.EditRole)
-            model.blockSignals(False)
             self.msg_error.emit(e.msg)
             self.sender().blockSignals(False)
 
@@ -1286,90 +1255,3 @@ class DataStoreForm(QMainWindow):
         self.mapping.close()
         if event:
             event.accept()
-
-    @busy_effect
-    def import_datapackage(self, datapackage_path):
-        """Import datapackage into current Database."""
-        # TODO: move this to a different file, pass the mapping as argument and use pvper's logging approach
-        self.msg.emit("Importing datapackage... ")
-        object_class_name_list = [x.name for x in self.mapping.object_class_list()]
-        datapackage = Package(datapackage_path)
-        for resource in datapackage.resources:
-            if resource.name not in object_class_name_list:
-                logging.debug("Ignoring resource '{}'.".format(resource.name))
-                continue
-            logging.debug("Importing resource '{}'.".format(resource.name))
-            object_class_name = resource.name
-            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
-            if not object_class:
-                continue
-            object_class_id = object_class.id
-            primary_key = resource.schema.primary_key
-            foreign_keys = resource.schema.foreign_keys
-            for field in resource.schema.fields:
-                logging.debug("Checking field '{}'.".format(field.name))
-                # Skip fields in primary key
-                if field.name in primary_key:
-                    continue
-                # Find field in foreign keys, and prepare list of child object classes
-                child_object_class_name_list = list()
-                for foreign_key in foreign_keys:
-                    if field.name in foreign_key['fields']:
-                        child_object_class_name = foreign_key['reference']['resource']
-                        if child_object_class_name not in object_class_name_list:
-                            continue
-                        child_object_class_name_list.append(child_object_class_name)
-                # If field is not in any foreign keys, use it to create a parameter
-                if not child_object_class_name_list:
-                    try:
-                        parameter = self.mapping.add_parameter(object_class_id=object_class_id, name=field.name)
-                        self.add_parameter_to_model(parameter.__dict__)
-                    except SpineDBAPIError as e:
-                        logging.debug(e.msg)
-                    continue
-                # Create relationship classes
-                for child_object_class_name in child_object_class_name_list:
-                    child_object_class = self.mapping.single_object_class(name=child_object_class_name).one_or_none()
-                    if not child_object_class:
-                        continue
-                    relationship_class_name = object_class_name + "_" + child_object_class.name
-                    try:
-                        wide_relationship_class = self.mapping.add_wide_relationship_class(
-                            object_class_id_list=[object_class_id, child_object_class.id],
-                            name=relationship_class_name
-                        )
-                        self.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
-                    except SpineDBAPIError as e:
-                        logging.debug(e.msg)
-            # Iterate over resource rows to create objects and parameter values
-            for i, row in enumerate(resource.read(cast=False)):  # TODO: try and get field keys from read method too
-                row_dict = dict(zip(resource.schema.field_names, row))
-                # Create object
-                if primary_key:
-                    object_name = "_".join(row_dict[field] for field in primary_key)
-                else:
-                    object_name = object_class_name + str(i)
-                try:
-                    object_ = self.mapping.add_object(class_id=object_class_id, name=object_name)
-                    self.object_tree_model.add_object(object_.__dict__)
-                except SpineDBAPIError as e:
-                    logging.debug(e.msg)
-                    continue
-                # Create parameters
-                object_id = object_.id
-                for field_name, value in row_dict.items():
-                    if field_name in primary_key:
-                        continue
-                    if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: try and move this
-                                                                                      # comprehension outside the loop
-                        continue
-                    parameter = self.mapping.single_parameter(name=field_name).one_or_none()
-                    if not parameter:
-                        continue
-                    try:
-                        parameter_value = self.mapping.add_parameter_value(object_id=object_id,
-                                                                           parameter_id=parameter.id,
-                                                                           value=value)
-                        self.add_parameter_value_to_model(parameter_value.__dict__)
-                    except SpineDBAPIError as e:
-                        logging.debug(e.msg)
