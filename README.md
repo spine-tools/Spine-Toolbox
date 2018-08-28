@@ -27,6 +27,8 @@ All version numbers next to the package names are minimum version numbers.
 - pyodbc 4.0.23
 - mysqlclient 1.3.12
 - qtconsole 4.3.1
+- sqlalchemy >=1.2.6
+- openpyxl >=2.4.0
 - spinedatabase_api 0.0.1
 
 For building the documentation you need the following packages:
@@ -37,7 +39,7 @@ For building the documentation you need the following packages:
 
 In addition, for deploying Spine Toolbox you need:
 
-cx-Freeze 6.0b1
+- cx-Freeze 6.0b1
 
 ### Installing requirements on Python 3.5+
 

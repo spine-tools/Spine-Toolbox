@@ -1,0 +1,4 @@
+cx_Freeze >= 6.0  # Not available on PyPi (checked Aug, 2018)
+sphinx >= 1.7.5
+sphinx_rtd_theme >= 0.4.0
+recommonmark >=0.4.0

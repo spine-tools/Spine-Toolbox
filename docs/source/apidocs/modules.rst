@@ -8,7 +8,7 @@ spinetoolbox
    configuration
    data_connection
    data_store
-   excel_handler
+   excel_import_export
    graphics_items
    helpers
    metaobject
