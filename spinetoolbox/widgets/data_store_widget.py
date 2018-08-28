@@ -311,22 +311,24 @@ class DataStoreForm(QMainWindow):
         header = object_parameter_value_list.column_descriptions
         object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
         self.object_parameter_value_model.header = [column['name'] for column in header]
-        self.object_parameter_value_model.reset_model(object_parameter_value_data, sneaky=True)
+        self.object_parameter_value_model.reset_model(object_parameter_value_data)
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
-        self.object_parameter_value_proxy.make_columns_fixed('object_class_name', 'object_name', 'parameter_name')
+        self.object_parameter_value_proxy.make_columns_fixed('object_class_name', 'object_name', 'parameter_name',
+            'parameter_value_id')
         # Relationship
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         header = relationship_parameter_value_list.column_descriptions
         self.relationship_parameter_value_model.header = [column['name'] for column in header]
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
-        self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data, sneaky=True)
+        self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
         self.relationship_parameter_value_proxy.make_columns_fixed(
             'relationship_class_name',
             'object_class_name_list',
             'relationship_name',
             'object_name_list',
-            'parameter_name')
+            'parameter_name',
+            'parameter_value_id')
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
@@ -335,7 +337,7 @@ class DataStoreForm(QMainWindow):
         header = object_parameter_list.column_descriptions
         self.object_parameter_model.header = [column['name'] for column in header]
         object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
-        self.object_parameter_model.reset_model(object_parameter_data, sneaky=True)
+        self.object_parameter_model.reset_model(object_parameter_data)
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
         self.object_parameter_proxy.make_columns_fixed('object_class_name')
         # Relationship
@@ -343,7 +345,7 @@ class DataStoreForm(QMainWindow):
         header = relationship_parameter_list.column_descriptions
         self.relationship_parameter_model.header = [column['name'] for column in header]
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
-        self.relationship_parameter_model.reset_model(relationship_parameter_data, sneaky=True)
+        self.relationship_parameter_model.reset_model(relationship_parameter_data)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
         self.relationship_parameter_proxy.make_columns_fixed('relationship_class_name', 'object_class_name_list')
 
@@ -879,6 +881,7 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         model.insertRows(row, 1)
+        self.object_parameter_value_proxy.set_work_in_progress(row, True)
         object_class_name = None
         object_name = None
         for condition in self.object_parameter_value_proxy.condition_list:
@@ -892,7 +895,6 @@ class DataStoreForm(QMainWindow):
         if object_name:
             model.setData(model.index(row, h('object_name')), object_name)
         self.ui.tabWidget_object.setCurrentIndex(0)
-        self.object_parameter_value_proxy.set_work_in_progress(row, True)
         self.object_parameter_value_proxy.apply()
         # It seems scrolling is not necessary
         self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
@@ -909,6 +911,7 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         model.insertRows(row, 1)
+        self.object_parameter_proxy.set_work_in_progress(row, True)
         object_class_name = None
         for condition in self.object_parameter_proxy.condition_list:
             for column, value in condition.items():
@@ -917,7 +920,6 @@ class DataStoreForm(QMainWindow):
         if object_class_name:
             model.setData(model.index(row, h('object_class_name')), object_class_name)
         self.ui.tabWidget_object.setCurrentIndex(1)
-        self.object_parameter_proxy.set_work_in_progress(row, True)
         self.object_parameter_proxy.apply()
         # It seems scrolling is not necessary
         self.ui.tableView_object_parameter.scrollTo(proxy_index)
@@ -934,6 +936,7 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
         model.insertRows(row, 1)
+        self.relationship_parameter_value_proxy.set_work_in_progress(row, True)
         relationship_class_name = None
         relationship_name = None
         for condition in self.relationship_parameter_value_proxy.condition_list:
@@ -949,7 +952,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tabWidget_relationship.setCurrentIndex(0)
         self.relationship_parameter_value_proxy.make_columns_fixed_for_row(row, 'object_class_name_list',
             'object_name_list')
-        self.relationship_parameter_value_proxy.set_work_in_progress(row, True)
         self.relationship_parameter_value_proxy.apply()
         # It seems scrolling is not necessary
         self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
@@ -966,6 +968,7 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
         model.insertRows(row, 1)
+        self.relationship_parameter_proxy.set_work_in_progress(row, True)
         relationship_class_name = None
         for condition in self.relationship_parameter_proxy.condition_list:
             for column, value in condition.items():
@@ -975,7 +978,6 @@ class DataStoreForm(QMainWindow):
             model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
         self.ui.tabWidget_object.setCurrentIndex(1)
         self.relationship_parameter_proxy.make_columns_fixed_for_row(row, 'object_class_name_list')
-        self.relationship_parameter_proxy.set_work_in_progress(row, True)
         self.relationship_parameter_proxy.apply()
         # It seems scrolling is not necessary
         self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
@@ -984,193 +986,226 @@ class DataStoreForm(QMainWindow):
     def object_parameter_value_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the object parameter value model changes. Add new parameter
         or edit existing ones."""
-        model = self.object_parameter_value_model
-        header = model.header
-        h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if self.object_parameter_value_proxy.is_work_in_progress(top_left.row()):
-            object_name = top_left.sibling(top_left.row(), h('object_name')).data(Qt.DisplayRole)
+        if top_left.data(Qt.DisplayRole) is None:
+            return
+        model = self.object_parameter_value_model
+        if model.is_being_reset:
+            return
+        proxy = self.object_parameter_value_proxy
+        row = top_left.row()
+        header = model.header
+        h = model.header.index
+        if proxy.is_work_in_progress(row):
+            object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
             if not object_:
                 return
-            object_class_name = top_left.sibling(top_left.row(), h('object_class_name')).data(Qt.DisplayRole)
+            object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
             if not object_class_name:
                 object_class = self.mapping.single_object_class(id=object_.class_id).one_or_none()
                 if not object_class:
                     return
                 object_class_name = object_class.name
-            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter_value = self.mapping.add_parameter_value(
-                    object_id=object_.id, parameter_id=parameter.id, **kwargs)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id,
-                              Qt.EditRole, sneaky=True)
-                model.setData(top_left.sibling(top_left.row(), h('object_class_name')), object_class_name, Qt.EditRole)
-                self.object_parameter_value_proxy.set_work_in_progress(top_left.row(), False)
-                self.object_parameter_value_proxy.make_columns_fixed_for_row(top_left.row(),
-                    'object_class_name', 'object_name', 'parameter_name')
+                    object_id=object_.id,
+                    parameter_id=parameter.id,
+                    **kwargs
+                )
+                proxy.set_work_in_progress(row, False)
+                proxy.make_columns_fixed_for_row(row, 'object_class_name', 'object_name', 'parameter_name',
+                    'parameter_value_id')
+                model.setData(top_left.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
                 msg = "Successfully added new parameter value."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole, sneaky=True)
+                model.setData(top_left, None, Qt.EditRole)
                 self.msg_error.emit(e.msg)
-        else:
+        elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_value_in_db(top_left)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_data_committed")
     def object_parameter_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the object parameter model changes. Add new parameter
         or edit existing ones."""
-        model = self.object_parameter_model
-        header = model.header
-        h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if self.object_parameter_proxy.is_work_in_progress(top_left.row()):
-            object_class_name = top_left.sibling(top_left.row(), h('object_class_name')).data(Qt.DisplayRole)
+        if top_left.data(Qt.DisplayRole) is None:
+            return
+        model = self.object_parameter_model
+        if model.is_being_reset:
+            return
+        proxy = self.object_parameter_proxy
+        row = top_left.row()
+        header = model.header
+        h = model.header.index
+        if proxy.is_work_in_progress(row):
+            object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
             object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
                 return
-            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
             if not parameter_name:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
-                parameter = self.mapping.add_parameter(
-                    object_class_id=object_class.id, name=parameter_name, **kwargs)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole,
-                              sneaky=True)
-                self.object_parameter_proxy.set_work_in_progress(top_left.row(), False)
-                self.object_parameter_proxy.make_columns_fixed_for_row(top_left.row(), 'object_class_name')
+                parameter = self.mapping.add_parameter(object_class_id=object_class.id, name=parameter_name, **kwargs)
+                proxy.set_work_in_progress(row, False)
+                proxy.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
+                model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
                 msg = "Successfully added new parameter."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole, sneaky=True)
+                model.setData(top_left, None, Qt.EditRole)
                 self.msg_error.emit(e.msg)
-        else:
+        elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_in_db(top_left)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_value_data_committed")
     def relationship_parameter_value_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the relationship parameter value model changes. Add new parameter
         or edit existing ones."""
-        model = self.relationship_parameter_value_model
-        header = model.header
-        h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if self.relationship_parameter_value_proxy.is_work_in_progress(top_left.row()):
+        if top_left.data(Qt.DisplayRole) is None:
+            return
+        model = self.relationship_parameter_value_model
+        if model.is_being_reset:
+            return
+        proxy = self.relationship_parameter_value_proxy
+        row = top_left.row()
+        header = model.header
+        h = model.header.index
+        if proxy.is_work_in_progress(row):
             # Autocomplete object class name list
+            if top_left.column() == h('object_class_name_list'):
+                return
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
                 relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                     one_or_none()
                 if relationship_class:
-                    model.setData(top_left.sibling(top_left.row(), h('object_class_name_list')),
-                                  relationship_class.object_class_name_list, Qt.EditRole, sneaky=True)
+                    sibling = top_left.sibling(row, h('object_class_name_list'))
+                    model.setData(sibling, relationship_class.object_class_name_list, Qt.EditRole)
+            if top_left.column() == h('object_name_list'):
+                return
             # Autocomplete object name list
             if top_left.column() == h('relationship_name'):
                 relationship_name = top_left.data(Qt.DisplayRole)
                 relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
                 if relationship:
-                    model.setData(top_left.sibling(top_left.row(), h('object_name_list')),
-                                  relationship.object_name_list, Qt.EditRole, sneaky=True)
+                    sibling = top_left.sibling(row, h('object_name_list'))
+                    model.setData(sibling, relationship.object_name_list, Qt.EditRole)
             # Try to add new parameter value
-            relationship_name = top_left.sibling(top_left.row(), h('relationship_name')).data(Qt.DisplayRole)
+            relationship_name = top_left.sibling(row, h('relationship_name')).data(Qt.DisplayRole)
             relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
             if not relationship:
                 return
-            relationship_class_name = top_left.sibling(top_left.row(), h('relationship_class_name')).data(Qt.DisplayRole)
+            relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
             if not relationship_class_name:
-                relationship_class = self.mapping.single_wide_relationship_class(id=relationship.class_id).one_or_none()
+                relationship_class = self.mapping.single_wide_relationship_class(id=relationship.class_id).\
+                    one_or_none()
                 if not relationship_class:
                     return
                 relationship_class_name = relationship_class.name
-            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter_value = self.mapping.add_parameter_value(
-                    relationship_id=relationship.id, parameter_id=parameter.id, **kwargs)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_value_id')), parameter_value.id,
-                              Qt.EditRole, sneaky=True)
-                model.setData(top_left.sibling(top_left.row(), h('relationship_class_name')), relationship_class_name,
-                              Qt.EditRole, sneaky=True)
-                self.relationship_parameter_value_proxy.set_work_in_progress(top_left.row(), False)
-                self.relationship_parameter_value_proxy.make_columns_fixed_for_row(
-                    top_left.row(),
+                    relationship_id=relationship.id,
+                    parameter_id=parameter.id,
+                    **kwargs
+                )
+                proxy.set_work_in_progress(row, False)
+                proxy.make_columns_fixed_for_row(
+                    row,
                     'relationship_class_name',
                     'relationship_name',
-                    'parameter_name'
+                    'parameter_name',
+                    'parameter_value_id'
                 )
+                model.setData(top_left.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                model.setData(top_left.sibling(row, h('relationship_class_name')), relationship_class_name, Qt.EditRole)
                 msg = "Successfully added new parameter value."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole, sneaky=True)
+                model.setData(top_left, None, Qt.EditRole)
                 self.msg_error.emit(e.msg)
-        else:
+        elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_value_in_db(top_left)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_data_committed")
     def relationship_parameter_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the relationship parameter model changes. Add new parameter
         or edit existing ones."""
-        model = self.relationship_parameter_model
-        header = model.header
-        h = model.header.index
         if roles[0] != Qt.EditRole:
             return
-        if self.relationship_parameter_proxy.is_work_in_progress(top_left.row()):
+        if top_left.data(Qt.DisplayRole) is None:
+            return
+        model = self.relationship_parameter_model
+        if model.is_being_reset:
+            return
+        proxy = self.relationship_parameter_proxy
+        row = top_left.row()
+        header = model.header
+        h = model.header.index
+        if proxy.is_work_in_progress(row):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
                 relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                     one_or_none()
                 if relationship_class:
-                    model.setData(top_left.sibling(top_left.row(), h('object_class_name_list')),
-                                  relationship_class.object_class_name_list, Qt.EditRole, sneaky=True)
+                    sibling = top_left.sibling(row, h('object_class_name_list'))
+                    model.setData(sibling, relationship_class.object_class_name_list, Qt.EditRole)
             # Try to add new parameter
-            relationship_class_name = top_left.sibling(top_left.row(), h('relationship_class_name')).data(Qt.DisplayRole)
+            relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return
-            parameter_name = top_left.sibling(top_left.row(), h('parameter_name')).data(Qt.DisplayRole)
+            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
             if not parameter_name:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
             for column in range(h('parameter_name')+1, len(header)):
-                kwargs[header[column]] = top_left.sibling(top_left.row(), column).data(Qt.DisplayRole)
+                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter = self.mapping.add_parameter(
-                    relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_id')), parameter.id, Qt.EditRole,
-                              sneaky=True)
-                self.relationship_parameter_proxy.set_work_in_progress(top_left.row(), False)
-                self.relationship_parameter_proxy.make_columns_fixed_for_row(top_left.row(), 'relationship_class_name')
+                    relationship_class_id=relationship_class.id,
+                    name=parameter_name,
+                    **kwargs
+                )
+                proxy.set_work_in_progress(row, False)
+                proxy.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
+                model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
                 msg = "Successfully added new parameter."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole, sneaky=True)
+                model.setData(top_left, None, Qt.EditRole)
                 self.msg_error.emit(e.msg)
-        else:
+        elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_in_db(top_left)
 
     def update_parameter_value_in_db(self, index):
@@ -1192,7 +1227,7 @@ class DataStoreForm(QMainWindow):
             msg = "Parameter value successfully updated."
             self.msg.emit(msg)
         except SpineDBAPIError as e:
-            model.setData(index, None, Qt.EditRole, sneaky=True)
+            model.setData(index, None, Qt.EditRole)
             self.sender().blockSignals(True)
             self.msg_error.emit(e.msg)
             self.sender().blockSignals(False)
@@ -1218,7 +1253,7 @@ class DataStoreForm(QMainWindow):
             if field_name == 'name':
                 self.init_parameter_value_models()
         except SpineDBAPIError as e:
-            model.setData(index, None, Qt.EditRole, sneaky=True)
+            model.setData(index, None, Qt.EditRole)
             self.sender().blockSignals(True)
             self.msg_error.emit(e.msg)
             self.sender().blockSignals(False)

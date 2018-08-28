@@ -703,6 +703,12 @@ class MinimalTableModel(QAbstractTableModel):
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = False
+        self.is_being_reset = False
+        self.modelAboutToBeReset.connect(lambda: self.set_being_reset(True))
+        self.modelReset.connect(lambda: self.set_being_reset(False))
+
+    def set_being_reset(self, on):
+        self.is_being_reset = on
 
     def parent(self):
         """Return _parent attribute."""
@@ -839,14 +845,13 @@ class MinimalTableModel(QAbstractTableModel):
         """
         return [self.rowData(row, role) for row in range(self.rowCount())]
 
-    def setData(self, index, value, role=Qt.EditRole, sneaky=False):
+    def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
             return False
         self._data[index.row()][index.column()][role] = value
         if role == Qt.EditRole:
             self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        if not sneaky:
-            self.dataChanged.emit(index, index, [role])
+        self.dataChanged.emit(index, index, [role])
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -880,11 +885,11 @@ class MinimalTableModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, sneaky=False, parent=QModelIndex()):
+    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
         if not self.insertRows(row, 1, parent):
             return False
         for column, value in enumerate(row_data):
-            self.setData(self.index(row, column), value, role, sneaky)
+            self.setData(self.index(row, column), value, role)
         self.row_with_data_inserted.emit(parent, row)
         return True
 
@@ -965,11 +970,12 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, new_data=None, sneaky=False):
+    def reset_model(self, new_data=None):
         """Reset model."""
         self.beginResetModel()
         self._data = list()
         self._flags = list()
+        roles = list()
         if new_data:
             for line in new_data:
                 new_row = list()
@@ -981,12 +987,12 @@ class MinimalTableModel(QAbstractTableModel):
                     }
                     new_row.append(new_dict)
                     new_flags_row.append(self.default_flags)
+                    roles.append(Qt.EditRole)
                 self._data.append(new_row)
                 self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
-        if not sneaky:
-            self.dataChanged.emit(top_left, bottom_right)
+        self.dataChanged.emit(top_left, bottom_right, roles)
         self.endResetModel()
 
 
