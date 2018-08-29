@@ -25,8 +25,8 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 """
 
 import logging
-from PySide2.QtWidgets import QTableView, QApplication
-from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel
+from PySide2.QtWidgets import QTableView, QApplication, QMenu, QAction
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelection, QItemSelectionModel, QPoint, QSignalMapper
 from PySide2.QtGui import QKeySequence
 
 class CustomQTableView(QTableView):
@@ -36,13 +36,49 @@ class CustomQTableView(QTableView):
         parent (QWidget): The parent of this view
     """
 
+    filter_selected_signal = Signal("QObject", "int", "QString", name="filter_selected_signal")
+
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent)
         # self.editing = False
+        self.filter_signal_mapper = None
+        self.filter_text = None
+        self.filter_column = None
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
+        self.horizontalHeader().sectionPressed.disconnect(self.selectColumn)
+        self.horizontalHeader().sectionClicked.connect(self.show_filter_menu)
+
+    @Slot(int, name="show_filter_menu")
+    def show_filter_menu(self, logical_index):
+        """Called when user clicks on a horizontal section header.
+        Show the menu to select a filter."""
+        self.filter_column = logical_index
+        model = self.model()
+        self.filter_signal_mapper = QSignalMapper(self)
+        filter_menu = QMenu(self)
+        action_all = QAction("All", self)
+        filter_menu.addAction(action_all)
+        filter_menu.addSeparator()
+        values = [model.index(row, self.filter_column).data(Qt.DisplayRole) for row in range(model.rowCount())]
+        for i, value in enumerate(sorted(list(set(values)))):
+            action = QAction(str(value), self)
+            self.filter_signal_mapper.setMapping(action, i)
+            action.triggered.connect(self.filter_signal_mapper.map)
+            filter_menu.addAction(action)
+        self.filter_signal_mapper.mapped.connect(self.filter_selected)
+        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_y = header_pos.y() + self.horizontalHeader().height()
+        pos_x = header_pos.x() + self.horizontalHeader().sectionPosition(self.filter_column)
+        filter_menu.exec_(QPoint(pos_x, pos_y))
+
+    @Slot(int, name="filter_column_selected")
+    def filter_selected(self, i):
+        """Called when user selects a filter. Emit the `filter_selected_signal` signal."""
+        self.filter_text = self.filter_signal_mapper.mapping(i).text()
+        self.filter_selected_signal.emit(self.model(), self.filter_column, self.filter_text)
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):

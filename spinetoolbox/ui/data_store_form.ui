@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -124,7 +124,7 @@
             <enum>QTabWidget::West</enum>
            </property>
            <property name="currentIndex">
-            <number>1</number>
+            <number>0</number>
            </property>
            <widget class="QWidget" name="tab_object_parameter_value">
             <attribute name="title">
@@ -200,7 +200,7 @@
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -291,12 +291,15 @@
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
                  </property>
                  <attribute name="horizontalHeaderHighlightSections">
+                  <bool>false</bool>
+                 </attribute>
+                 <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
                   <bool>false</bool>
                  </attribute>
                  <attribute name="verticalHeaderVisible">
@@ -326,7 +329,7 @@
             <enum>QTabWidget::West</enum>
            </property>
            <property name="currentIndex">
-            <number>1</number>
+            <number>0</number>
            </property>
            <widget class="QWidget" name="tab_relationship_parameter_value">
             <attribute name="title">
@@ -396,7 +399,7 @@
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -484,7 +487,7 @@
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -519,7 +522,7 @@
      <x>0</x>
      <y>0</y>
      <width>789</width>
-     <height>21</height>
+     <height>27</height>
     </rect>
    </property>
    <property name="nativeMenuBar">

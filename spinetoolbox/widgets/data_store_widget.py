@@ -158,6 +158,15 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
+        # Horizontal header filter selected
+        self.ui.tableView_object_parameter_value.filter_selected_signal.\
+            connect(self.refilter_object_parameter_value_model)
+        self.ui.tableView_relationship_parameter_value.filter_selected_signal.\
+            connect(self.refilter_relationship_parameter_value_model)
+        self.ui.tableView_object_parameter.filter_selected_signal.\
+            connect(self.refilter_object_parameter_model)
+        self.ui.tableView_relationship_parameter.filter_selected_signal.\
+            connect(self.refilter_relationship_parameter_model)
         # Close editor
         # Parameter value tables
         self.ui.tableView_object_parameter_value.itemDelegate().closeEditor.\
@@ -219,6 +228,8 @@ class DataStoreForm(QMainWindow):
         if file_path.lower().endswith('datapackage.json'):
             try:
                 import_datapackage(self, file_path)
+                self.init_parameter_value_models()
+                self.init_parameter_models()
                 self.msg.emit("Datapackage successfully imported.")
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
@@ -487,6 +498,39 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_proxy.apply()
         self.ui.tableView_object_parameter.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+
+    @Slot("QObject", "int", "QString", name="refilter_object_parameter_value_model")
+    def refilter_object_parameter_value_model(self, model, column, text):
+        """Called when the tableview wants to filter data according to
+        filter selected by the user from header menu."""
+        print(model)
+        print(column)
+        print(text)
+        header = self.object_parameter_value_model.header
+        kwargs = {header[column]: text}
+        self.object_parameter_value_proxy.add_condition(**kwargs)
+        self.object_parameter_value_proxy.apply()
+
+    @Slot(int, str, name="refilter_relationship_parameter_value_model")
+    def refilter_relationship_parameter_value_model(self, column, text):
+        """Called when the tableview wants to filter data according to
+        filter selected by the user from header menu."""
+        print(column)
+        print(text)
+
+    @Slot(int, str, name="refilter_object_parameter_model")
+    def refilter_object_parameter_model(self, column, text):
+        """Called when the tableview wants to filter data according to
+        filter selected by the user from header menu."""
+        print(column)
+        print(text)
+
+    @Slot(int, str, name="refilter_relationship_parameter_model")
+    def refilter_relationship_parameter_model(self, column, text):
+        """Called when the tableview wants to filter data according to
+        filter selected by the user from header menu."""
+        print(column)
+        print(text)
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
@@ -986,6 +1030,8 @@ class DataStoreForm(QMainWindow):
     def object_parameter_value_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the object parameter value model changes. Add new parameter
         or edit existing ones."""
+        if not top_left.isValid():
+            return
         if roles[0] != Qt.EditRole:
             return
         if top_left.data(Qt.DisplayRole) is None:
@@ -1039,6 +1085,8 @@ class DataStoreForm(QMainWindow):
     def object_parameter_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the object parameter model changes. Add new parameter
         or edit existing ones."""
+        if not top_left.isValid():
+            return
         if roles[0] != Qt.EditRole:
             return
         if top_left.data(Qt.DisplayRole) is None:
@@ -1079,6 +1127,8 @@ class DataStoreForm(QMainWindow):
     def relationship_parameter_value_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the relationship parameter value model changes. Add new parameter
         or edit existing ones."""
+        if not top_left.isValid():
+            return
         if roles[0] != Qt.EditRole:
             return
         if top_left.data(Qt.DisplayRole) is None:
@@ -1158,6 +1208,8 @@ class DataStoreForm(QMainWindow):
     def relationship_parameter_data_committed(self, top_left, bottom_right, roles):
         """Called when data in the relationship parameter model changes. Add new parameter
         or edit existing ones."""
+        if not top_left.isValid():
+            return
         if roles[0] != Qt.EditRole:
             return
         if top_left.data(Qt.DisplayRole) is None:

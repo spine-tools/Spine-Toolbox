@@ -24,6 +24,7 @@ Functions to import/export between spine database and frictionless data's datapa
 :date:   28.8.2018
 """
 
+from PySide2.QtCore import Qt
 from datapackage import Package
 from spinedatabase_api import SpineDBAPIError
 from helpers import busy_effect
@@ -65,15 +66,6 @@ def import_datapackage(data_store_form, datapackage_path):
             if not child_object_class_name_list:
                 try:
                     parameter = mapping.add_parameter(object_class_id=object_class_id, name=field.name)
-                    object_parameter = mapping.single_object_parameter(id=parameter.id).one_or_none()
-                    if not object_parameter:
-                        continue
-                    object_parameter_row = object_parameter._asdict().values()
-                    model = data_store_form.object_parameter_model
-                    row = model.rowCount()
-                    model.insert_row_with_data(row, object_parameter_row, sneaky=True)
-                    proxy_model = data_store_form.object_parameter_proxy
-                    proxy_model.make_columns_fixed_for_row(row, 'object_class_name')
                 except SpineDBAPIError as e:
                     logging.debug(e.msg)
                 continue
@@ -111,24 +103,16 @@ def import_datapackage(data_store_form, datapackage_path):
             for field_name, value in row_dict.items():
                 if field_name in primary_key:
                     continue
-                if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: try and move this
-                                                                                  # comprehension outside the loop
+                if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: compute this outside the loop
                     continue
                 parameter = mapping.single_parameter(name=field_name).one_or_none()
                 if not parameter:
                     continue
                 try:
-                    parameter_value = mapping.add_parameter_value(object_id=object_id,
-                                                                parameter_id=parameter.id,
-                                                                value=value)
-                    object_parameter_value = mapping.single_object_parameter_value(id=parameter_value.id).one_or_none()
-                    if not object_parameter_value:
-                        continue
-                    object_parameter_value_row = object_parameter_value._asdict().values()
-                    model = data_store_form.object_parameter_value_model
-                    row = model.rowCount()
-                    model.insert_row_with_data(row, object_parameter_value_row, sneaky=True)
-                    proxy_model = data_store_form.object_parameter_value_proxy
-                    proxy_model.make_columns_fixed_for_row(row, 'object_class_name', 'object_name', 'parameter_name')
+                    parameter_value = mapping.add_parameter_value(
+                        object_id=object_id,
+                        parameter_id=parameter.id,
+                        value=value
+                    )
                 except SpineDBAPIError as e:
                     logging.debug(e.msg)
