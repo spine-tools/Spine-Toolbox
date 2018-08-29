@@ -173,10 +173,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
-        # self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
         # Project TreeView
         self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
-        # self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
         self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
