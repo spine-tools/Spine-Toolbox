@@ -33,6 +33,7 @@ from widgets.checkbox_delegate import CheckBoxDelegate
 from widgets.custom_menus import DescriptorTreeContextMenu
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
+from PySide2.QtGui import QGuiApplication
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from spinedatabase_api import OBJECT_CLASS_NAMES
 
@@ -67,7 +68,7 @@ class SpineDatapackageWidget(QMainWindow):
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox datapackage form")
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
         self.ui.toolButton_insert_foreign_key.setDefaultAction(self.ui.actionInsert_foreign_key)
         self.ui.toolButton_remove_foreign_keys.setDefaultAction(self.ui.actionRemove_foreign_keys)
@@ -139,10 +140,11 @@ class SpineDatapackageWidget(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("mainWindow/windowSize")
-        window_pos = self.qsettings.value("mainWindow/windowPosition")
-        splitter_state = self.qsettings.value("mainWindow/splitterState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')
+        window_size = self.qsettings.value("dataPackageWidget/windowSize")
+        window_pos = self.qsettings.value("dataPackageWidget/windowPosition")
+        splitter_state = self.qsettings.value("dataPackageWidget/splitterState")
+        window_maximized = self.qsettings.value("dataPackageWidget/windowMaximized", defaultValue='false')
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -151,6 +153,10 @@ class SpineDatapackageWidget(QMainWindow):
             self.setWindowState(Qt.WindowMaximized)
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < n_screens:
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -460,12 +466,12 @@ class SpineDatapackageWidget(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("mainWindow/splitterState", self.ui.splitter.saveState())
-        self.qsettings.setValue("mainWindow/windowSize", self.size())
-        self.qsettings.setValue("mainWindow/windowPosition", self.pos())
+        self.qsettings.setValue("dataPackageWidget/splitterState", self.ui.splitter.saveState())
+        self.qsettings.setValue("dataPackageWidget/windowSize", self.size())
+        self.qsettings.setValue("dataPackageWidget/windowPosition", self.pos())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("mainWindow/windowMaximized", True)
+            self.qsettings.setValue("dataPackageWidget/windowMaximized", True)
         else:
-            self.qsettings.setValue("mainWindow/windowMaximized", False)
+            self.qsettings.setValue("dataPackageWidget/windowMaximized", False)
         if event:
             event.accept()

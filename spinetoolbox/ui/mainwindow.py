@@ -120,7 +120,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dockWidget_process_output.sizePolicy().hasHeightForWidth())
         self.dockWidget_process_output.setSizePolicy(sizePolicy)
-        self.dockWidget_process_output.setMinimumSize(QtCore.QSize(91, 133))
+        self.dockWidget_process_output.setMinimumSize(QtCore.QSize(80, 93))
         self.dockWidget_process_output.setObjectName("dockWidget_process_output")
         self.dockWidgetContents_2 = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -349,6 +349,8 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setObjectName("actionJulia_REPL")
         self.actionUser_Guide = QtWidgets.QAction(MainWindow)
         self.actionUser_Guide.setObjectName("actionUser_Guide")
+        self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
+        self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
@@ -363,6 +365,8 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionAdd_Data_Connection)
         self.menuEdit.addAction(self.actionAdd_Tool)
         self.menuEdit.addAction(self.actionAdd_View)
+        self.menuDock_Widgets.addAction(self.actionRestore_Dock_Widgets)
+        self.menuDock_Widgets.addSeparator()
         self.menuView.addAction(self.menuToolbars.menuAction())
         self.menuView.addAction(self.menuDock_Widgets.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
@@ -436,7 +440,9 @@ class Ui_MainWindow(object):
         self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
         self.actionUser_Guide.setText(QtWidgets.QApplication.translate("MainWindow", "User Guide", None, -1))
         self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
+        self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
+        self.actionRestore_Dock_Widgets.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

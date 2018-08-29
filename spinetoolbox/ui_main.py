@@ -30,8 +30,8 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QAction, QInputDialog
-from PySide2.QtGui import QStandardItem, QDesktopServices
+    QCheckBox, QInputDialog, QAction, QDockWidget
+from PySide2.QtGui import QStandardItem, QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -170,6 +170,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
         # self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
@@ -213,7 +214,10 @@ class ToolboxUI(QMainWindow):
         window_size = self.qsettings.value("mainWindow/windowSize")
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
+        # noinspection PyArgumentList
+        n_screens_now = len(QGuiApplication.screens())  # number of screens now
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -222,6 +226,19 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
+        if n_screens_now < n_screens:
+            # There are less screens available now than on previous application startup
+            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
+            self.move(0, 0)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the main window."""
+        for dock in self.findChildren(QDockWidget):
+            if not dock.isVisible():
+                dock.setVisible(True)
+            if dock.isFloating():
+                dock.setFloating(False)
 
     # noinspection PyMethodMayBeStatic
     def init_models(self, tool_template_paths):
@@ -1278,6 +1295,9 @@ class ToolboxUI(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
+        # Save number of screens
+        # noinspection PyArgumentList
+        self.qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         if event:
             event.accept()

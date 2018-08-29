@@ -165,6 +165,8 @@
      <property name="title">
       <string>Dock Widgets</string>
      </property>
+     <addaction name="actionRestore_Dock_Widgets"/>
+     <addaction name="separator"/>
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
@@ -239,8 +241,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>91</width>
-     <height>133</height>
+     <width>80</width>
+     <height>93</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -833,6 +835,14 @@
    </property>
    <property name="shortcut">
     <string>F2</string>
+   </property>
+  </action>
+  <action name="actionRestore_Dock_Widgets">
+   <property name="text">
+    <string>Restore Dock Widgets</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Dock all floating and/or hidden dock widgets back to main window.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>

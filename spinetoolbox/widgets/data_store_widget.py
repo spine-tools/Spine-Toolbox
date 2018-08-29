@@ -30,7 +30,7 @@ import logging
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
     QMessageBox, QFileDialog
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
-from PySide2.QtGui import QFont, QFontMetrics
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError
@@ -64,7 +64,7 @@ class DataStoreForm(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox Data Store")
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class attributes
         self.mapping = mapping
         self.database = database
@@ -1312,10 +1312,11 @@ class DataStoreForm(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("mainWindow/windowSize")
-        window_pos = self.qsettings.value("mainWindow/windowPosition")
-        splitter_tree_parameter_state = self.qsettings.value("mainWindow/splitterTreeParameterState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
+        window_size = self.qsettings.value("dataStoreWidget/windowSize")
+        window_pos = self.qsettings.value("dataStoreWidget/windowPosition")
+        splitter_tree_parameter_state = self.qsettings.value("dataStoreWidget/splitterTreeParameterState")
+        window_maximized = self.qsettings.value("dataStoreWidget/windowMaximized", defaultValue='false')  # returns str
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -1324,6 +1325,10 @@ class DataStoreForm(QMainWindow):
             self.setWindowState(Qt.WindowMaximized)
         if splitter_tree_parameter_state:
             self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < n_screens:
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -1332,13 +1337,13 @@ class DataStoreForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("mainWindow/splitterTreeParameterState", self.ui.splitter_tree_parameter.saveState())
-        self.qsettings.setValue("mainWindow/windowSize", self.size())
-        self.qsettings.setValue("mainWindow/windowPosition", self.pos())
+        self.qsettings.setValue("dataStoreWidget/splitterTreeParameterState", self.ui.splitter_tree_parameter.saveState())
+        self.qsettings.setValue("dataStoreWidget/windowSize", self.size())
+        self.qsettings.setValue("dataStoreWidget/windowPosition", self.pos())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("mainWindow/windowMaximized", True)
+            self.qsettings.setValue("dataStoreWidget/windowMaximized", True)
         else:
-            self.qsettings.setValue("mainWindow/windowMaximized", False)
+            self.qsettings.setValue("dataStoreWidget/windowMaximized", False)
         self.mapping.close()
         if event:
             event.accept()
