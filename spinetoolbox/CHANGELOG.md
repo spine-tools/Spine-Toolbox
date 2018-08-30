@@ -9,7 +9,7 @@ This section is for upcoming changes. This serves two purposes:
 2. At release time, Unreleased section changes can be moved into a new release version section
 
 ### Added (for new features)
-- Advanced copy/pasting support for the treeview 
+- Advanced copy/pasting support for the treeview
 - Import data from Excel files into the treeview
 - Export treeview into an Excel file
 - Add metadata to database commits
@@ -23,8 +23,6 @@ This section is for upcoming changes. This serves two purposes:
 
 ### Removed (for now removed features)
 - Connections tab on the main window is useless and should be removed.
-
-### Fixed (for any bug fixes)
 
 ### Security (in case of vulnerabilities)
 

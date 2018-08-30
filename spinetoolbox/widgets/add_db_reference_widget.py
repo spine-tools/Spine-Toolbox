@@ -80,7 +80,6 @@ class AddDbReferenceWidget(QWidget):
         self.ui.pushButton_browse.clicked.connect(self.browse_clicked)
         self.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
 
-
     @Slot(name='browse_clicked')
     def browse_clicked(self):
         """Open file browser where user can select the path to an SQLite
@@ -139,6 +138,7 @@ class AddDbReferenceWidget(QWidget):
         """
         if dialect == 'Select dialect...':
             return
+        dbapi = SQL_DIALECT_API[dialect]
         try:
             if dialect == 'sqlite':
                 create_engine('sqlite://')
@@ -160,8 +160,9 @@ class AddDbReferenceWidget(QWidget):
                     msg = "Please create a SQL Server ODBC Data Source first."
                     self.statusbar.showMessage(msg, 3000)
             else:
+                print('{}://username:password@host/database'.format("+".join([dialect, dbapi])))
+                create_engine('{}://username:password@host/database'.format("+".join([dialect, dbapi])))
                 self.enable_common()
-                create_engine('{}://username:password@host/database'.format(dialect))
             return True
         except ModuleNotFoundError:
             dbapi = SQL_DIALECT_API[dialect]
@@ -199,8 +200,9 @@ class AddDbReferenceWidget(QWidget):
         """Install DBAPI using pip."""
         msg = "Installing module '{}' via 'pip'.".format(dbapi)
         self.statusbar.showMessage(msg)
-        command = 'pip install {0}'.format(dbapi)
-        self.pip_install = qsubprocess.QSubProcess(self._parent, command)
+        program = "pip"
+        args = ["install {0}".format(dbapi)]
+        self.pip_install = qsubprocess.QSubProcess(self._parent, program, args)
         self.pip_install.start_process()
         if self.pip_install.wait_for_finished():
             msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)

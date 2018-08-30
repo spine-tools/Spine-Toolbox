@@ -81,7 +81,7 @@ OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt', 'o
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 SQL_DIALECT_API = {
-    'mysql': 'mysqlclient',
+    'mysql': 'pymysql',
     'sqlite': 'sqlite3',
     'mssql': 'pyodbc',
     'postgresql': 'psycopg2',
