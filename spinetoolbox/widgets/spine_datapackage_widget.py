@@ -154,7 +154,7 @@ class SpineDatapackageWidget(QMainWindow):
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
         # noinspection PyArgumentList
-        if len(QGuiApplication.screens()) < n_screens:
+        if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
 

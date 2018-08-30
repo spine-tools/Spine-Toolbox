@@ -215,7 +215,7 @@ class ToolboxUI(QMainWindow):
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
         window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
-        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
+        n_screens = int(self.qsettings.value("mainWindow/n_screens", defaultValue=1))  # number of screens on last exit
         # noinspection PyArgumentList
         n_screens_now = len(QGuiApplication.screens())  # number of screens now
         if window_size:

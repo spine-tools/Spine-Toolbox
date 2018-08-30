@@ -1326,7 +1326,7 @@ class DataStoreForm(QMainWindow):
         if splitter_tree_parameter_state:
             self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
         # noinspection PyArgumentList
-        if len(QGuiApplication.screens()) < n_screens:
+        if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
