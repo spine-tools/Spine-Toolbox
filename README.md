@@ -20,25 +20,8 @@ from the command prompt in the `spinetoolbox` directory.
 
 <b>Python 3.5+</b>
 
-All version numbers next to the package names are minimum version numbers.
-
-- PySide2 5.6
-- datapackage 1.2.3
-- pyodbc 4.0.23
-- pymysql 0.9.2
-- qtconsole 4.3.1
-- spinedatabase_api 0.0.1
-
-For building the documentation you need the following packages:
-
-- Sphinx 1.7.5
-- sphinx_rtd_theme 0.4.0
-- recommonmark 0.4.0
-
-In addition, for deploying Spine Toolbox you need:
-
-cx-Freeze 6.0b1
-
+See requirements.txt for must have packages and optional-requirements.txt optional ones. The 
+optional packages are needed for building the documentation and for deploying the application.
 
 ### Installing requirements on Python 3.5+
 

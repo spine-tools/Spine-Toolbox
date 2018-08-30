@@ -8,6 +8,7 @@ spinetoolbox
    configuration
    data_connection
    data_store
+   datapackage_import_export
    excel_import_export
    graphics_items
    helpers
