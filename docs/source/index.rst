@@ -31,7 +31,7 @@ _________________________
   (‘datapackage.json’) and resources such as data files.
 - **Data sources** are all the original, unaltered, sources of data that are used to generate
   necessary input data for Spine Toolbox tools.
-- **Scenario** A scenario combines data collections to form a meaningful data set for the target tool.
+- **Scenario** A scenario combines data connections to form a meaningful data set for the target tool.
 - **Spine data structure** Spine data structure defines the format for storing and moving data within
   Spine Toolbox. A generic data structure allows representation of many
   different modelling entities. Data structures have a class defining the type of
