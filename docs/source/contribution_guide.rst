@@ -1,6 +1,5 @@
-..  Spine Toolbox contribution guide
-    Author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-    Date created: 19.6.2018
+..  Contribution guide
+    Created: 19.6.2018
 
 .. _Qt Style Sheets: http://doc.qt.io/qt-5/stylesheet.html
 .. _PEP-8: https://www.python.org/dev/peps/pep-0008/

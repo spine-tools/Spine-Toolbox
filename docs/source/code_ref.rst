@@ -1,6 +1,5 @@
-..  Spine Toolbox source code reference
-    Author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-    Date created: 19.6.2018
+..  Source code reference
+    Created: 19.6.2018
 
 Source Code Reference
 =====================

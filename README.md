@@ -18,15 +18,18 @@ from the command prompt in the `spinetoolbox` directory.
 
 ## Requirements
 
-<b>Python 3.5+</b>
+Spine Toolbox requires Python 3.5 or higher.
 
-See requirements.txt for must have packages and optional-requirements.txt optional ones. The 
-optional packages are needed for building the documentation and for deploying the application.
-
+See requirements.txt for must have packages and optional-requirements.txt optional ones. Users can 
+choose the SQL dialect API (pymysql, pyodbc psycopg2, and cx_Oracle) they want to use. These can 
+be installed in Spine Toolbox when needed. Sphinx, recommonmark, and cx_Freeze packages 
+are needed for building the user guide and for deploying the application. All version numbers are 
+minimum versions.
+ 
 ### Installing requirements on Python 3.5+
 
-The first official release of PySide2 module is now available. To learn more about the release,
-check out the [blog post](http://blog.qt.io/blog/2018/06/13/qt-python-5-11-released/)
+The first official release of PySide2 module was released in June, 2018. To learn more about 
+the release, check out the [blog post](http://blog.qt.io/blog/2018/06/13/qt-python-5-11-released/)
 on the official Qt for Python pages.
 
 To install PySide2 with pip, run
@@ -51,6 +54,9 @@ To install spinedatabase_api run
     pip install git+https://gitlab.vtt.fi/spine/data.git@database_api
 
 ### Installing requirements for Anaconda & Miniconda Python (3.5+)
+
+..
+**TODO: This should be updated**
 
 PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge
 channel. Datapackage 1.2.3 is available on the manulero channel.

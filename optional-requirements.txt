@@ -1,4 +1,8 @@
-cx_Freeze >= 6.0  # Not available on PyPi (checked Aug, 2018)
+pymysql >=0.9.2
+pyodbc >=4.0.23
+psycopg2 >= 2.7.4
+cx_Oracle >= 6.3.1
 sphinx >= 1.7.5
 sphinx_rtd_theme >= 0.4.0
 recommonmark >=0.4.0
+cx_Freeze >= 6.0  # Not available on PyPi (checked Aug, 2018)

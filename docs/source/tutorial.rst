@@ -1,6 +1,5 @@
 ..  Tutorial for Spine Toolbox
-    Author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Manuel Marin <manuelma@kth.se>
-    Date created: 18.6.2018
+    Created: 18.6.2018
 
 .. |ds_icon| image:: ../../spinetoolbox/ui/resources/ds_icon.png
              :width: 24

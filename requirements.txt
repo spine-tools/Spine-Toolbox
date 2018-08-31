@@ -1,7 +1,5 @@
 pyside2 >=5.6.*
 datapackage >=1.2.3
-pyodbc >=4.0.23
-pymysql ==0.9.2
 qtconsole >=4.3.1
 sqlalchemy >=1.2.6
 spinedatabase_api >= 0.0.1
