@@ -26,8 +26,32 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 
 import logging
 from PySide2.QtWidgets import QTableView, QApplication, QMenu, QAction
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelection, QItemSelectionModel, QPoint, QSignalMapper
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelection, QItemSelectionModel, QPoint, QSignalMapper, \
+    QModelIndex
 from PySide2.QtGui import QKeySequence
+
+
+class QFilterMenu(QMenu):
+    """An autofilter-like QMenu."""
+
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent)
+
+    def mouseReleaseEvent(self, event):
+        """The super implementation triggers the action and closes the menu.
+        Here, we only close the menu if the action is the 'Ok' action.
+        Otherwise we just trigger it.
+        """
+        action = self.activeAction()
+        if action is None:
+            super().mouseReleaseEvent(event)
+            return
+        if action.text() == "Ok":
+            super().mouseReleaseEvent(event)
+            return
+        action.trigger()
+
 
 class CustomQTableView(QTableView):
     """Custom QTableView class.
@@ -36,20 +60,26 @@ class CustomQTableView(QTableView):
         parent (QWidget): The parent of this view
     """
 
-    filter_selected_signal = Signal("QObject", "int", "QString", name="filter_selected_signal")
+    filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
+    filter_triggered = Signal("QObject", name="filter_triggered")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
+        """Initialize the class."""
         super().__init__(parent)
         # self.editing = False
-        self.filter_signal_mapper = None
+        self.filter_action_list = list()
+        self.filter_action_checked_count = 0
+        self.action_all = None
         self.filter_text = None
         self.filter_column = None
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
-        self.horizontalHeader().sectionPressed.disconnect(self.selectColumn)
-        self.horizontalHeader().sectionClicked.connect(self.show_filter_menu)
+
+    def setModel(self, model):
+        super().setModel(model)
+        self.horizontalHeader().sectionPressed.disconnect()
+        self.horizontalHeader().sectionPressed.connect(self.show_filter_menu)
 
     @Slot(int, name="show_filter_menu")
     def show_filter_menu(self, logical_index):
@@ -57,46 +87,80 @@ class CustomQTableView(QTableView):
         Show the menu to select a filter."""
         self.filter_column = logical_index
         model = self.model()
-        self.filter_signal_mapper = QSignalMapper(self)
-        filter_menu = QMenu(self)
-        action_all = QAction("All", self)
-        filter_menu.addAction(action_all)
+        filter_menu = QFilterMenu(self)
+        self.filter_action_list = list()
+        # Add 'All' action
+        self.action_all = QAction("All", self)
+        self.action_all.setCheckable(True)
+        self.action_all.triggered.connect(self.action_all_triggered)
+        filter_menu.addAction(self.action_all)
         filter_menu.addSeparator()
-        values = [model.index(row, self.filter_column).data(Qt.DisplayRole) for row in range(model.rowCount())]
+        # Get values from model, after the application of all filters and subfilters from other columns
+        values = list()
+        source_model = model.sourceModel()
+        for source_row in range(source_model.rowCount()):
+            # Skip values rejected by filter
+            if not model.filter_accept_rows(source_row, QModelIndex()):
+                continue
+            # Skip values rejected by subfilters from *other* columns
+            if not model.subfilter_accept_rows(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
+                continue
+            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
+            if data is None:
+                continue
+            values.append(data)
+        # Get values currently filter in this column
+        filtered_values = list()
+        for key, value in model.subrule_dict.items():
+            if key == self.filter_column:
+                filtered_values.extend(value)
+        # Add filter actions
+        self.filter_action_list = list()
+        self.filter_action_checked_count = 0
         for i, value in enumerate(sorted(list(set(values)))):
             action = QAction(str(value), self)
-            self.filter_signal_mapper.setMapping(action, i)
-            action.triggered.connect(self.filter_signal_mapper.map)
+            action.setCheckable(True)
+            action.triggered.connect(self.update_action_all_checked)
             filter_menu.addAction(action)
-        self.filter_signal_mapper.mapped.connect(self.filter_selected)
+            self.filter_action_list.append(action)
+            if value not in filtered_values:
+                action.trigger()
+        # 'Ok' action
+        action_ok = QAction("Ok", self)
+        action_ok.triggered.connect(self.update_and_apply_filter)
+        filter_menu.addSeparator()
+        filter_menu.addAction(action_ok)
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
-        pos_x = header_pos.x() + self.horizontalHeader().sectionPosition(self.filter_column)
         filter_menu.exec_(QPoint(pos_x, pos_y))
 
-    @Slot(int, name="filter_column_selected")
-    def filter_selected(self, i):
-        """Called when user selects a filter. Emit the `filter_selected_signal` signal."""
-        self.filter_text = self.filter_signal_mapper.mapping(i).text()
-        self.filter_selected_signal.emit(self.model(), self.filter_column, self.filter_text)
+    @Slot("bool", name="update_action_all_checked")
+    def update_action_all_checked(self, checked):
+        if checked:
+            self.filter_action_checked_count += 1
+        else:
+            self.filter_action_checked_count -= 1
+        self.action_all.setChecked(len(self.filter_action_list) == self.filter_action_checked_count)
+
+    @Slot("bool", name="action_all_triggered")
+    def action_all_triggered(self, checked):
+        """Check or uncheck all filter actions."""
+        for action in self.filter_action_list:
+            action.setChecked(checked)
+
+    @Slot(name="apply_filter")
+    def update_and_apply_filter(self):
+        """Called when user selects Ok in a filter. Emit `filter_triggered` signal."""
+        filter_text_list = list()
+        for action in self.filter_action_list:
+            if not action.isChecked():
+                filter_text_list.append(action.text())
+        self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
         self.clipboard_text = self.clipboard.text()
-
-    # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
-    # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
-    # def moveCursor(self, cursor_action, modifiers):
-    #     """Don't move to next index if the self.editing flag is set.
-    #     """
-    #     if self.editing and cursor_action == self.CursorAction.MoveNext:
-    #         self.editing = False
-    #         return self.currentIndex()
-    #     return super().moveCursor(cursor_action, modifiers)
-
-    # def edit(self, index, trigger, event):
-    #     self.editing = True
-    #     return super().edit(index, trigger, event)
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -150,29 +214,17 @@ class CustomQTableView(QTableView):
         else:
             super().keyPressEvent(event)
 
-# NOTE: Not in use, we should eliminate it
-# class DataPackageKeyTableView(QTableView):
-#     """Custom QTableView class.
-#
-#     Attributes:
-#         parent (QWidget): The parent of this view
-#     """
-#
-#     def __init__(self, parent):
-#         """Initialize the QGraphicsView."""
-#         super().__init__(parent)
-#         self.setup_combo_items = None
-#
-#     def edit(self, index, trigger=QTableView.AllEditTriggers, event=None):
-#         """Starts editing the item corresponding to the given index if it is editable.
-#         """
-#         if not index.isValid():
-#             return False
-#         column = index.column()
-#         header = self.model().headerData(column)
-#         if header == 'Select': # this column should be editable with only one click
-#             return super().edit(index, trigger, event)
-#         if not trigger & self.editTriggers():
-#             return False
-#         self.setup_combo_items(index)
-#         return super().edit(index, trigger, event)
+
+    # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
+    # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
+    # def moveCursor(self, cursor_action, modifiers):
+    #     """Don't move to next index if the self.editing flag is set.
+    #     """
+    #     if self.editing and cursor_action == self.CursorAction.MoveNext:
+    #         self.editing = False
+    #         return self.currentIndex()
+    #     return super().moveCursor(cursor_action, modifiers)
+
+    # def edit(self, index, trigger, event):
+    #     self.editing = True
+    #     return super().edit(index, trigger, event)

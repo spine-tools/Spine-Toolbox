@@ -213,7 +213,7 @@ class ToolboxUI(QMainWindow):
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
         window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
-        n_screens = int(self.qsettings.value("mainWindow/n_screens", defaultValue=1))  # number of screens on last exit
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
         n_screens_now = len(QGuiApplication.screens())  # number of screens now
         if window_size:
@@ -224,7 +224,7 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
-        if n_screens_now < n_screens:
+        if n_screens_now < int(n_screens):
             # There are less screens available now than on previous application startup
             # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
             self.move(0, 0)

@@ -87,7 +87,8 @@ class ProjectItemModel(QStandardItemModel):
         try:
             old_data_dir = item.data_dir  # Full path
         except AttributeError:
-            logging.error("Item does not have a data_dir. Make sure that class {0} creates one.".format(item.item_type))
+            logging.error("Item does not have a data_dir. "
+                          "Make sure that class {0} creates one.".format(item.item_type))
             return False
         # Get project path from the old data dir path
         project_path = os.path.split(old_data_dir)[0]
@@ -1242,33 +1243,24 @@ class ObjectTreeModel(QStandardItemModel):
         return self.indexFromItem(items[position])
 
 
-class CustomSortFilterProxyModel(QSortFilterProxyModel):
-    """A custom sort filter proxy model."""
+class ParameterTableModel(MinimalTableModel):
+    """A model to use with parameter tables in DataStoreForm."""
     def __init__(self, parent=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self.condition_list = list()
-        self.hidden_column_list = list()
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
-        self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.gray_brush = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
         self.wip_row_list = list()
+        self.rowsInserted.connect(self.rows_inserted)
+        self.rowsRemoved.connect(self.rows_removed)
 
-    def setSourceModel(self, source_model):
-        super().setSourceModel(source_model)
-        self.h = source_model.header.index
-        source_model.rowsInserted.connect(self.source_model_rows_inserted)
-        source_model.rowsRemoved.connect(self.source_model_rows_removed)
-
-    def source_model_rows_inserted(self, parent, first, last):
+    def rows_inserted(self, parent, first, last):
         """Update work in progress row list."""
         for i, row in enumerate(self.wip_row_list):
             if first <= row:
                 self.wip_row_list[i] += 1
 
-    def source_model_rows_removed(self, parent, first, last):
+    def rows_removed(self, parent, first, last):
         """Update work in progress row list."""
         try:
             self.wip_row_list.remove(first)
@@ -1292,81 +1284,129 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         """Return whether or not row is a work in progress."""
         return row in self.wip_row_list
 
-    def reset(self):
-        """Reset all filters, unbold all bolded items."""
-        self.hidden_column_list = list()
-        for source_column in [column for cond in self.condition_list for column in cond.keys()]:
-            for source_row in range(self.sourceModel().rowCount()):
-                source_index = self.sourceModel().index(source_row, source_column)
-                self.sourceModel().setData(source_index, None, Qt.FontRole)
-        self.condition_list = list()
-
-    def apply(self):
-        """Trigger filtering."""
-        self.setFilterRegExp("")
-
     def make_columns_fixed(self, *column_names):
         """Set columns as fixed so they are not editable and painted gray."""
-        for row in range(self.sourceModel().rowCount()):
+        for row in range(self.rowCount()):
             self.make_columns_fixed_for_row(row, *column_names)
 
     def make_columns_fixed_for_row(self, row, *column_names):
         """Set background role data and flags for row according to fixed column names."""
         for name in column_names:
-            column = self.h(name)
-            index = self.sourceModel().index(row, column)
-            self.sourceModel().setData(index, self.gray_brush, Qt.BackgroundRole)
-            self.sourceModel().set_flags(index, ~Qt.ItemIsEditable)
+            column = self.header.index(name)
+            index = self.index(row, column)
+            self.setData(index, self.gray_brush, Qt.BackgroundRole)
+            self.set_flags(index, ~Qt.ItemIsEditable)
 
-    def add_hidden_column(self, *names):
-        """Set columns as hidden in the view."""
+
+class CustomSortFilterProxyModel(QSortFilterProxyModel):
+    """A custom sort filter proxy model."""
+    def __init__(self, parent=None):
+        """Initialize class."""
+        super().__init__(parent)
+        self._parent = parent
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+        self.rule_dict = dict()
+        self.subrule_dict = dict()
+        self.rejected_column_list = list()
+        self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
+
+    def setSourceModel(self, source_model):
+        super().setSourceModel(source_model)
+        self.h = source_model.header.index
+
+    def clear_filter(self):
+        """Clear all rules, unbold all bolded items."""
+        self.rejected_column_list = list()
+        for source_column in self.rule_dict:
+            for source_row in range(self.sourceModel().rowCount()):
+                source_index = self.sourceModel().index(source_row, source_column)
+                self.sourceModel().setData(source_index, None, Qt.FontRole)
+        self.rule_dict = dict()
+        self.subrule_dict = dict()
+
+    def apply_filter(self):
+        """Trigger filtering."""
+        self.setFilterRegExp("")
+
+    def reject_column(self, *names):
+        """Add rejected columns."""
         for name in names:
-            self.hidden_column_list.append(self.h(name))
+            self.rejected_column_list.append(self.h(name))
 
-    def add_condition(self, **kwargs):
-        """Add a condition to the list by taking the kwargs as statements.
-        The condition will be considered True if ANY of the statements is True.
-        """
-        condition = {}
+    def add_rule(self, **kwargs):
+        """Add NEGATIVE rules by taking the kwargs as statements.
+        Negative rules trigger a violation if not met."""
         for key, value in kwargs.items():
             column = self.h(key)
-            condition[column] = value
+            self.rule_dict[column] = value
             # Bold column in case the condition is met
             for row in range(self.sourceModel().rowCount()):
                 source_index = self.sourceModel().index(row, column)
                 self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
-        self.condition_list.append(condition)
+
+    def add_subrule(self, **kwargs):
+        """Add POSITIVE subrules by taking the kwargs as statements.
+        Positive rules trigger a violation if met."""
+        for key, value in kwargs.items():
+            column = self.h(key)
+            value_list = self.subrule_dict.setdefault(column, [])
+            value_list.extend(value)
+
+
+    def remove_subrule(self, *args):
+        """Remove subrules."""
+        for field_name in args:
+            column = self.h(field_name)
+            try:
+                del self.subrule_dict[column]
+            except KeyError:
+                pass
+
+    def filter_accept_rows(self, source_row, source_parent):
+        for column, value in self.rule_dict.items():
+            source_index = self.sourceModel().index(source_row, column, source_parent)
+            data = self.sourceModel().data(source_index, self.filterRole())
+            if data is None:
+                continue
+            # Split data in case of name list
+            data = data.split(',')
+            if value not in data:
+                return False
+        return True
+
+    def subfilter_accept_rows(self, source_row, source_parent, skip_source_column=list()):
+        for column, value in self.subrule_dict.items():
+            if column in skip_source_column:
+                continue
+            source_index = self.sourceModel().index(source_row, column, source_parent)
+            data = self.sourceModel().data(source_index, self.filterRole())
+            if data is None:
+                return False
+            if data in value:
+                return False
+        return True
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
-        All the conditions in the list need to be satisfied, however each condition
-        is satisfied as soon as ANY of its statements is satisfied.
+        All the rules and subrules need to pass.
         """
-        if self.is_work_in_progress(source_row):
+        if self.sourceModel().is_work_in_progress(source_row):
             return True
-        result = True
-        for condition in self.condition_list:
-            partial_result = False
-            for column, value in condition.items():
-                source_index = self.sourceModel().index(source_row, column, source_parent)
-                data = self.sourceModel().data(source_index, self.filterRole())
-                if data is None:
-                    continue
-                data = data.split(',')  # Split in case of name list
-                if value in data:
-                    partial_result = True
-                    break
-            result = result and partial_result
-        return result
+        if not self.filter_accept_rows(source_row, source_parent):
+            return False
+        if not self.subfilter_accept_rows(source_row, source_parent):
+            return False
+        return True
 
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column
         and source_parent should be included in the model; otherwise returns false.
         """
-        if not self.hidden_column_list:
+        if not self.rejected_column_list:
             return True
-        return source_column not in self.hidden_column_list
+        return source_column not in self.rejected_column_list
 
 
 class DatapackageResourcesModel(QStandardItemModel):

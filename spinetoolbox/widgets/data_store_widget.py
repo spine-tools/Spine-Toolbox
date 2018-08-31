@@ -39,7 +39,7 @@ from widgets.combobox_delegate import ObjectParameterValueDelegate, ObjectParame
     RelationshipParameterValueDelegate, RelationshipParameterDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, CommitDialog
-from models import ObjectTreeModel, MinimalTableModel, CustomSortFilterProxyModel
+from models import ObjectTreeModel, ParameterTableModel, CustomSortFilterProxyModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import import_datapackage
 
@@ -71,14 +71,14 @@ class DataStoreForm(QMainWindow):
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
-        self.object_parameter_value_model = MinimalTableModel(self)
+        self.object_parameter_value_model = ParameterTableModel(self)
         self.object_parameter_value_proxy = CustomSortFilterProxyModel(self)
-        self.relationship_parameter_value_model = MinimalTableModel(self)
+        self.relationship_parameter_value_model = ParameterTableModel(self)
         self.relationship_parameter_value_proxy = CustomSortFilterProxyModel(self)
         # Parameter (definition) models
-        self.object_parameter_model = MinimalTableModel(self)
+        self.object_parameter_model = ParameterTableModel(self)
         self.object_parameter_proxy = CustomSortFilterProxyModel(self)
-        self.relationship_parameter_model = MinimalTableModel(self)
+        self.relationship_parameter_model = ParameterTableModel(self)
         self.relationship_parameter_proxy = CustomSortFilterProxyModel(self)
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
@@ -158,15 +158,11 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
-        # Horizontal header filter selected
-        self.ui.tableView_object_parameter_value.filter_selected_signal.\
-            connect(self.refilter_object_parameter_value_model)
-        self.ui.tableView_relationship_parameter_value.filter_selected_signal.\
-            connect(self.refilter_relationship_parameter_value_model)
-        self.ui.tableView_object_parameter.filter_selected_signal.\
-            connect(self.refilter_object_parameter_model)
-        self.ui.tableView_relationship_parameter.filter_selected_signal.\
-            connect(self.refilter_relationship_parameter_model)
+        # Horizontal header subfilter
+        self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_parameter_model_subfilter)
+        self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_parameter_model_subfilter)
+        self.ui.tableView_object_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
+        self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
         # Close editor
         # Parameter value tables
         self.ui.tableView_object_parameter_value.itemDelegate().closeEditor.\
@@ -303,8 +299,8 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_value_models()
         self.init_parameter_models()
         # clear filters
-        self.object_parameter_value_proxy.reset()
-        self.relationship_parameter_value_proxy.reset()
+        self.object_parameter_value_proxy.clear_filter()
+        self.relationship_parameter_value_proxy.clear_filter()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -323,23 +319,23 @@ class DataStoreForm(QMainWindow):
         object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
         self.object_parameter_value_model.header = [column['name'] for column in header]
         self.object_parameter_value_model.reset_model(object_parameter_value_data)
-        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
-        self.object_parameter_value_proxy.make_columns_fixed('object_class_name', 'object_name', 'parameter_name',
+        self.object_parameter_value_model.make_columns_fixed('object_class_name', 'object_name', 'parameter_name',
             'parameter_value_id')
+        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         # Relationship
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         header = relationship_parameter_value_list.column_descriptions
         self.relationship_parameter_value_model.header = [column['name'] for column in header]
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
         self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
-        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
-        self.relationship_parameter_value_proxy.make_columns_fixed(
+        self.relationship_parameter_value_model.make_columns_fixed(
             'relationship_class_name',
             'object_class_name_list',
             'relationship_name',
             'object_name_list',
             'parameter_name',
             'parameter_value_id')
+        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
@@ -349,16 +345,16 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_model.header = [column['name'] for column in header]
         object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
         self.object_parameter_model.reset_model(object_parameter_data)
+        self.object_parameter_model.make_columns_fixed('object_class_name')
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
-        self.object_parameter_proxy.make_columns_fixed('object_class_name')
         # Relationship
         relationship_parameter_list = self.mapping.relationship_parameter_list()
         header = relationship_parameter_list.column_descriptions
         self.relationship_parameter_model.header = [column['name'] for column in header]
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
         self.relationship_parameter_model.reset_model(relationship_parameter_data)
+        self.relationship_parameter_model.make_columns_fixed('relationship_class_name', 'object_class_name_list')
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
-        self.relationship_parameter_proxy.make_columns_fixed('relationship_class_name', 'object_class_name_list')
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -437,44 +433,44 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
         """Populate tableViews whenever an object item is selected in the treeView"""
-        self.object_parameter_value_proxy.reset()
-        self.relationship_parameter_value_proxy.reset()
+        self.object_parameter_value_proxy.clear_filter()
+        self.relationship_parameter_value_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
         if not selected_type == 'root':
             selected = current.data(Qt.UserRole+1)
             parent = current.parent().data(Qt.UserRole+1)
             if selected_type == 'object_class':
                 object_class_name = selected['name']
-                self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
-                self.relationship_parameter_value_proxy.add_condition(object_class_name_list=object_class_name)
-                # self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
+                self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
+                self.relationship_parameter_value_proxy.add_rule(object_class_name_list=object_class_name)
+                # self.relationship_parameter_value_proxy.reject_column("relationship_name")
             elif selected_type == 'object':
                 object_class_name = parent['name']
                 object_name = selected['name']
-                self.object_parameter_value_proxy.add_condition(object_class_name=object_class_name)
-                self.object_parameter_value_proxy.add_condition(object_name=object_name)
-                self.relationship_parameter_value_proxy.add_condition(object_name_list=object_name)
-                # self.relationship_parameter_value_proxy.add_hidden_column("relationship_name")
+                self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name,
+                    object_name=object_name)
+                self.relationship_parameter_value_proxy.add_rule(object_name_list=object_name)
+                # self.relationship_parameter_value_proxy.reject_column("relationship_name")
             elif selected_type == 'relationship_class':
                 relationship_class_name = selected['name']
-                self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
-                self.relationship_parameter_value_proxy.add_hidden_column("object_class_name_list", "object_name_list")
+                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
+                self.relationship_parameter_value_proxy.reject_column("object_class_name_list", "object_name_list")
             elif selected_type == 'relationship':
                 relationship_class_name = parent['name']
                 relationship_name = selected['name']
-                self.relationship_parameter_value_proxy.add_condition(relationship_class_name=relationship_class_name)
-                self.relationship_parameter_value_proxy.add_condition(relationship_name=relationship_name)
-                self.relationship_parameter_value_proxy.add_hidden_column("object_class_name_list", "object_name_list")
-        self.object_parameter_value_proxy.apply()
-        self.relationship_parameter_value_proxy.apply()
+                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name,
+                    relationship_name=relationship_name)
+                self.relationship_parameter_value_proxy.reject_column("object_class_name_list", "object_name_list")
+        self.object_parameter_value_proxy.apply_filter()
+        self.relationship_parameter_value_proxy.apply_filter()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
         """Populate tableViews whenever an object item is selected in the treeView"""
-        self.object_parameter_proxy.reset()
-        self.relationship_parameter_proxy.reset()
+        self.object_parameter_proxy.clear_filter()
+        self.relationship_parameter_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
         if not selected_type:
             return
@@ -482,55 +478,31 @@ class DataStoreForm(QMainWindow):
         parent = current.parent().data(Qt.UserRole+1)
         if selected_type == 'object_class': # show only this class
             object_class_name = selected['name']
-            self.object_parameter_proxy.add_condition(object_class_name=object_class_name)
-            self.relationship_parameter_proxy.add_condition(object_class_name_list=object_class_name)
+            self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
+            self.relationship_parameter_proxy.add_rule(object_class_name_list=object_class_name)
         elif selected_type == 'object': # show only this object's class
             object_class_name = parent['name']
-            self.object_parameter_proxy.add_condition(object_class_name=object_class_name)
-            self.relationship_parameter_proxy.add_condition(object_class_name_list=object_class_name)
+            self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
+            self.relationship_parameter_proxy.add_rule(object_class_name_list=object_class_name)
         elif selected_type == 'relationship_class':
             relationship_class_name = selected['name']
-            self.relationship_parameter_proxy.add_condition(relationship_class_name=relationship_class_name)
+            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
         elif selected_type == 'relationship':
             relationship_class_name = parent['name']
-            self.relationship_parameter_proxy.add_condition(relationship_class_name=relationship_class_name)
-        self.object_parameter_proxy.apply()
-        self.relationship_parameter_proxy.apply()
+            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
+        self.object_parameter_proxy.apply_filter()
+        self.relationship_parameter_proxy.apply_filter()
         self.ui.tableView_object_parameter.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
-    @Slot("QObject", "int", "QString", name="refilter_object_parameter_value_model")
-    def refilter_object_parameter_value_model(self, model, column, text):
-        """Called when the tableview wants to filter data according to
-        filter selected by the user from header menu."""
-        print(model)
-        print(column)
-        print(text)
-        header = self.object_parameter_value_model.header
-        kwargs = {header[column]: text}
-        self.object_parameter_value_proxy.add_condition(**kwargs)
-        self.object_parameter_value_proxy.apply()
-
-    @Slot(int, str, name="refilter_relationship_parameter_value_model")
-    def refilter_relationship_parameter_value_model(self, column, text):
-        """Called when the tableview wants to filter data according to
-        filter selected by the user from header menu."""
-        print(column)
-        print(text)
-
-    @Slot(int, str, name="refilter_object_parameter_model")
-    def refilter_object_parameter_model(self, column, text):
-        """Called when the tableview wants to filter data according to
-        filter selected by the user from header menu."""
-        print(column)
-        print(text)
-
-    @Slot(int, str, name="refilter_relationship_parameter_model")
-    def refilter_relationship_parameter_model(self, column, text):
-        """Called when the tableview wants to filter data according to
-        filter selected by the user from header menu."""
-        print(column)
-        print(text)
+    @Slot("QObject", name="apply_parameter_model_subfilter")
+    def apply_parameter_model_subfilter(self, proxy_model, column, text_list):
+        """Called when the tableview wants to trigger the subfilter."""
+        header = proxy_model.sourceModel().header
+        proxy_model.remove_subrule(header[column])
+        kwargs = {header[column]: text_list}
+        proxy_model.add_subrule(**kwargs)
+        proxy_model.apply_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
@@ -925,21 +897,20 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         model.insertRows(row, 1)
-        self.object_parameter_value_proxy.set_work_in_progress(row, True)
+        model.set_work_in_progress(row, True)
         object_class_name = None
         object_name = None
-        for condition in self.object_parameter_value_proxy.condition_list:
-            for column, value in condition.items():
-                if column == h('object_class_name'):
-                    object_class_name = value
-                if column == h('object_name'):
-                    object_name = value
+        for column, value in self.object_parameter_value_proxy.rule_dict.items():
+            if column == h('object_class_name'):
+                object_class_name = value
+            if column == h('object_name'):
+                object_name = value
         if object_class_name:
             model.setData(model.index(row, h('object_class_name')), object_class_name)
         if object_name:
             model.setData(model.index(row, h('object_name')), object_name)
         self.ui.tabWidget_object.setCurrentIndex(0)
-        self.object_parameter_value_proxy.apply()
+        self.object_parameter_value_proxy.apply_filter()
         # It seems scrolling is not necessary
         self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
 
@@ -955,16 +926,15 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         model.insertRows(row, 1)
-        self.object_parameter_proxy.set_work_in_progress(row, True)
+        model.set_work_in_progress(row, True)
         object_class_name = None
-        for condition in self.object_parameter_proxy.condition_list:
-            for column, value in condition.items():
-                if column == h('object_class_name'):
-                    object_class_name = value
+        for column, value in self.object_parameter_proxy.rule_dict.items():
+            if column == h('object_class_name'):
+                object_class_name = value
         if object_class_name:
             model.setData(model.index(row, h('object_class_name')), object_class_name)
         self.ui.tabWidget_object.setCurrentIndex(1)
-        self.object_parameter_proxy.apply()
+        self.object_parameter_proxy.apply_filter()
         # It seems scrolling is not necessary
         self.ui.tableView_object_parameter.scrollTo(proxy_index)
 
@@ -980,23 +950,21 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
         model.insertRows(row, 1)
-        self.relationship_parameter_value_proxy.set_work_in_progress(row, True)
+        model.set_work_in_progress(row, True)
         relationship_class_name = None
         relationship_name = None
-        for condition in self.relationship_parameter_value_proxy.condition_list:
-            for column, value in condition.items():
-                if column == h('relationship_class_name'):
-                    relationship_class_name = value
-                if column == h('relationship_name'):
-                    relationship_name = value
+        for column, value in self.relationship_parameter_value_proxy.rule_dict.items():
+            if column == h('relationship_class_name'):
+                relationship_class_name = value
+            if column == h('relationship_name'):
+                relationship_name = value
         if relationship_class_name:
             model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
         if relationship_name:
             model.setData(model.index(row, h('relationship_name')), relationship_name)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
-        self.relationship_parameter_value_proxy.make_columns_fixed_for_row(row, 'object_class_name_list',
-            'object_name_list')
-        self.relationship_parameter_value_proxy.apply()
+        model.make_columns_fixed_for_row(row, 'object_class_name_list', 'object_name_list')
+        self.relationship_parameter_value_proxy.apply_filter()
         # It seems scrolling is not necessary
         self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
 
@@ -1012,17 +980,16 @@ class DataStoreForm(QMainWindow):
         h = model.header.index
         relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
         model.insertRows(row, 1)
-        self.relationship_parameter_proxy.set_work_in_progress(row, True)
+        model.set_work_in_progress(row, True)
         relationship_class_name = None
-        for condition in self.relationship_parameter_proxy.condition_list:
-            for column, value in condition.items():
-                if column == h('relationship_class_name'):
-                    relationship_class_name = value
+        for column, value in self.relationship_parameter_proxy.rule_dict.items():
+            if column == h('relationship_class_name'):
+                relationship_class_name = value
         if relationship_class_name:
             model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
         self.ui.tabWidget_object.setCurrentIndex(1)
-        self.relationship_parameter_proxy.make_columns_fixed_for_row(row, 'object_class_name_list')
-        self.relationship_parameter_proxy.apply()
+        model.make_columns_fixed_for_row(row, 'object_class_name_list')
+        self.relationship_parameter_proxy.apply_filter()
         # It seems scrolling is not necessary
         self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
 
@@ -1039,11 +1006,10 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_value_model
         if model.is_being_reset:
             return
-        proxy = self.object_parameter_value_proxy
         row = top_left.row()
         header = model.header
         h = model.header.index
-        if proxy.is_work_in_progress(row):
+        if model.is_work_in_progress(row):
             object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
             if not object_:
@@ -1068,8 +1034,8 @@ class DataStoreForm(QMainWindow):
                     parameter_id=parameter.id,
                     **kwargs
                 )
-                proxy.set_work_in_progress(row, False)
-                proxy.make_columns_fixed_for_row(row, 'object_class_name', 'object_name', 'parameter_name',
+                model.set_work_in_progress(row, False)
+                model.make_columns_fixed_for_row(row, 'object_class_name', 'object_name', 'parameter_name',
                     'parameter_value_id')
                 model.setData(top_left.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
                 model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
@@ -1094,11 +1060,10 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_model
         if model.is_being_reset:
             return
-        proxy = self.object_parameter_proxy
         row = top_left.row()
         header = model.header
         h = model.header.index
-        if proxy.is_work_in_progress(row):
+        if model.is_work_in_progress(row):
             object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
             object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
@@ -1112,8 +1077,8 @@ class DataStoreForm(QMainWindow):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter = self.mapping.add_parameter(object_class_id=object_class.id, name=parameter_name, **kwargs)
-                proxy.set_work_in_progress(row, False)
-                proxy.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
+                model.set_work_in_progress(row, False)
+                model.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
                 model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
                 msg = "Successfully added new parameter."
                 self.msg.emit(msg)
@@ -1136,11 +1101,10 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_value_model
         if model.is_being_reset:
             return
-        proxy = self.relationship_parameter_value_proxy
         row = top_left.row()
         header = model.header
         h = model.header.index
-        if proxy.is_work_in_progress(row):
+        if model.is_work_in_progress(row):
             # Autocomplete object class name list
             if top_left.column() == h('object_class_name_list'):
                 return
@@ -1186,8 +1150,8 @@ class DataStoreForm(QMainWindow):
                     parameter_id=parameter.id,
                     **kwargs
                 )
-                proxy.set_work_in_progress(row, False)
-                proxy.make_columns_fixed_for_row(
+                model.set_work_in_progress(row, False)
+                model.make_columns_fixed_for_row(
                     row,
                     'relationship_class_name',
                     'relationship_name',
@@ -1221,7 +1185,7 @@ class DataStoreForm(QMainWindow):
         row = top_left.row()
         header = model.header
         h = model.header.index
-        if proxy.is_work_in_progress(row):
+        if model.is_work_in_progress(row):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
@@ -1249,8 +1213,8 @@ class DataStoreForm(QMainWindow):
                     name=parameter_name,
                     **kwargs
                 )
-                proxy.set_work_in_progress(row, False)
-                proxy.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
+                model.set_work_in_progress(row, False)
+                model.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
                 model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
                 msg = "Successfully added new parameter."
                 self.msg.emit(msg)

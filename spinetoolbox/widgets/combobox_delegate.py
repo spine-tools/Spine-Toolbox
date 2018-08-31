@@ -117,7 +117,7 @@ class ParameterValueDelegate(DataStoreDelegate):
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.header.index
-        if proxy_index.model().is_work_in_progress(index.row()):
+        if model.is_work_in_progress(index.row()):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
             x1, y1, x2, y2 = option.rect.getCoords()
@@ -143,7 +143,7 @@ class ParameterDelegate(DataStoreDelegate):
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.header.index
-        if proxy_index.model().is_work_in_progress(index.row()):
+        if model.is_work_in_progress(index.row()):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
             x1, y1, x2, y2 = option.rect.getCoords()
