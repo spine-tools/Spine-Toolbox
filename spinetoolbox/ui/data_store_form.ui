@@ -174,12 +174,27 @@
                    <property name="text">
                     <string>...</string>
                    </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
+                   </property>
+                   <property name="shortcut">
+                    <string>Ctrl+S</string>
+                   </property>
                   </widget>
                  </item>
                  <item>
                   <widget class="QToolButton" name="toolButton_add_object_parameter_values">
                    <property name="text">
                     <string>...</string>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -548,8 +563,8 @@
     <addaction name="actionAdd_relationships"/>
     <addaction name="separator"/>
     <addaction name="actionAdd_object_parameters"/>
-    <addaction name="actionAdd_relationship_parameters"/>
     <addaction name="actionAdd_object_parameter_values"/>
+    <addaction name="actionAdd_relationship_parameters"/>
     <addaction name="actionAdd_relationship_parameter_values"/>
    </widget>
    <widget class="QMenu" name="menuFile">
@@ -591,6 +606,10 @@
    </property>
   </action>
   <action name="actionAdd_object_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add object classes</string>
    </property>
@@ -602,6 +621,10 @@
    </property>
   </action>
   <action name="actionAdd_objects">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add objects</string>
    </property>
@@ -613,6 +636,10 @@
    </property>
   </action>
   <action name="actionAdd_relationship_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add relationship classes</string>
    </property>
@@ -624,6 +651,10 @@
    </property>
   </action>
   <action name="actionAdd_relationships">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add relationships</string>
    </property>
@@ -694,7 +725,7 @@
   <action name="actionAdd_object_parameters">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_object_parameter_icon.png</normaloff>:/icons/plus_object_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Add object parameters</string>
@@ -703,7 +734,7 @@
   <action name="actionAdd_object_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_object_parameter_icon.png</normaloff>:/icons/plus_object_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Add object parameter values</string>
@@ -712,7 +743,7 @@
   <action name="actionRemove_object_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove object parameter values</string>
@@ -721,7 +752,7 @@
   <action name="actionAdd_relationship_parameters">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_relationship_parameter_icon.png</normaloff>:/icons/plus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Add relationship parameters</string>
@@ -730,7 +761,7 @@
   <action name="actionAdd_relationship_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_relationship_parameter_icon.png</normaloff>:/icons/plus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Add relationship parameter values</string>
@@ -739,7 +770,7 @@
   <action name="actionRemove_relationship_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove relationship parameter values</string>
@@ -748,7 +779,7 @@
   <action name="actionRemove_object_parameters">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove object parameters</string>
@@ -757,7 +788,7 @@
   <action name="actionRemove_relationship_parameters">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove relationship parameters</string>

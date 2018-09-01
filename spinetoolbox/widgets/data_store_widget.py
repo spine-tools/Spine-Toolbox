@@ -988,7 +988,7 @@ class DataStoreForm(QMainWindow):
                 relationship_class_name = value
         if relationship_class_name:
             model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
-        self.ui.tabWidget_object.setCurrentIndex(1)
+        self.ui.tabWidget_relationship.setCurrentIndex(1)
         model.make_columns_fixed_for_row(row, 'object_class_name_list')
         self.relationship_parameter_proxy.apply_filter()
         # It seems scrolling is not necessary
