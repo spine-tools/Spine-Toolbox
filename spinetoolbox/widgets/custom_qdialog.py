@@ -74,8 +74,10 @@ class CustomQDialog(QDialog):
 
     def resize_tableview(self):
         table_width = self.font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        for j in range(self.ui.tableView.horizontalHeader().count()):
-            table_width += self.ui.tableView.columnWidth(j)
+        for j in range(self.ui.tableView.horizontalHeader().count()-1):
+            table_width += self.ui.tableView.horizontalHeader().sectionSize(j)
+        section = self.ui.tableView.horizontalHeader().count()-1
+        table_width += min(250, self.ui.tableView.horizontalHeader().sectionSize(section))
         self.ui.tableView.setMinimumWidth(table_width)
 
     @Slot(name="insert_row")
@@ -118,7 +120,7 @@ class AddObjectClassesDialog(CustomQDialog):
         self.object_class_args_list = list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(self))
-        self.model.header = ['object class name', 'description']
+        self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.model.clear()
         # Add items to combobox
         insert_position_list = ['Insert new classes at the top']
@@ -140,7 +142,7 @@ class AddObjectClassesDialog(CustomQDialog):
         else:
             display_order = self.object_class_list.all()[index-1].display_order
         for i in range(self.model.rowCount()):
-            name, description = self.model.rowData(i)
+            name, description = self.model.row_data(i)
             if not name:
                 continue
             object_class_args = {
@@ -161,7 +163,7 @@ class AddObjectsDialog(CustomQDialog):
         default_class = mapping.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.model.header = ['object class name', 'object name', 'description']
+        self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddObjectsDelegate(self))
         self.connect_signals()
@@ -193,13 +195,13 @@ class AddObjectsDialog(CustomQDialog):
     def model_data_changed(self, top_left, bottom_right, roles):
         if roles[0] != Qt.EditRole:
             return
-        h = self.model.header.index
+        h = self.model.horizontal_header_labels().index
         if top_left.column() == h('object class name'):
             self.model.setData(top_left, self.object_icon, Qt.DecorationRole)
 
     def accept(self):
         for i in range(self.model.rowCount()):
-            class_name, name, description = self.model.rowData(i)
+            class_name, name, description = self.model.row_data(i)
             if not class_name or not name:
                 continue
             class_ = self.mapping.single_object_class(name=class_name).one_or_none()
@@ -226,7 +228,8 @@ class AddRelationshipClassesDialog(CustomQDialog):
             object_class_one = mapping.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
-        self.model.header = ['object class 1 name', 'object class 2 name', 'relationship class name']
+        self.model.set_horizontal_header_labels(
+            ['object class 1 name', 'object class 2 name', 'relationship class name'])
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self))
         self.connect_signals()
@@ -263,7 +266,9 @@ class AddRelationshipClassesDialog(CustomQDialog):
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        self.model.header.insert(column, "object class {} name".format(self.number_of_dimensions))
+        self.model.header.insert(column, {})
+        column_name = "object class {} name".format(self.number_of_dimensions)
+        self.model.setHeaderData(column, Qt.Horizontal, column_name, Qt.EditRole)
         self.model.insertColumns(column, 1)
         self.ui.tableView.resizeColumnToContents(column)
 
@@ -282,7 +287,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
     def model_data_changed(self, top_left, bottom_right, roles):
         if roles[0] != Qt.EditRole:
             return
-        h = self.model.header.index
+        h = self.model.horizontal_header_labels().index
         if top_left.column() != h('relationship class name'):
             self.model.setData(top_left, self.object_icon, Qt.DecorationRole)
             self.compose_relationship_class_name(top_left.row())
@@ -296,13 +301,13 @@ class AddRelationshipClassesDialog(CustomQDialog):
             object_class_name = self.model.data(index, Qt.DisplayRole)
             if object_class_name:
                 object_class_name_list.append(object_class_name)
-        relationship_class_name = "_".join(object_class_name_list)
+        relationship_class_name = "__".join(object_class_name_list)
         self.model.setData(index.sibling(row, name_column), relationship_class_name, Qt.EditRole)
 
     def accept(self):
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
-            row = self.model.rowData(i)
+            row = self.model.row_data(i)
             relationship_class_name = row[name_column]
             if not relationship_class_name:
                 continue
@@ -414,7 +419,7 @@ class AddRelationshipsDialog(CustomQDialog):
                 return
             header.append("{} name".format(object_class.name))
         header.append('relationship name')
-        self.model.header = header
+        self.model.set_horizontal_header_labels(header)
         self.model.clear()
         self.reset_default_object_column()
         self.insert_row()
@@ -451,7 +456,7 @@ class AddRelationshipsDialog(CustomQDialog):
     def model_data_changed(self, top_left, bottom_right, roles):
         if roles[0] != Qt.EditRole:
             return
-        h = self.model.header.index
+        h = self.model.horizontal_header_labels().index
         if top_left.column() != h('relationship name'):
             self.model.setData(top_left, self.object_icon, Qt.DecorationRole)
             self.compose_relationship_name(top_left.row())
@@ -465,13 +470,13 @@ class AddRelationshipsDialog(CustomQDialog):
             object_name = self.model.data(index, Qt.DisplayRole)
             if object_name:
                 object_name_list.append(object_name)
-        relationship_name = "_".join(object_name_list)
+        relationship_name = "__".join(object_name_list)
         self.model.setData(index.sibling(row, name_column), relationship_name, Qt.EditRole)
 
     def accept(self):
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
-            row = self.model.rowData(i)
+            row = self.model.row_data(i)
             relationship_name = row[name_column]
             if not relationship_name:
                 continue

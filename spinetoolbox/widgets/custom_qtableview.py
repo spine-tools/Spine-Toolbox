@@ -54,109 +54,19 @@ class QFilterMenu(QMenu):
 
 
 class CustomQTableView(QTableView):
-    """Custom QTableView class.
+    """Custom QTableView class with copy-paste functionality.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
 
-    filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
-    filter_triggered = Signal("QObject", name="filter_triggered")
-
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent)
         # self.editing = False
-        self.filter_action_list = list()
-        self.filter_action_checked_count = 0
-        self.action_all = None
-        self.filter_text = None
-        self.filter_column = None
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
-
-    def setModel(self, model):
-        super().setModel(model)
-        self.horizontalHeader().sectionPressed.disconnect()
-        self.horizontalHeader().sectionPressed.connect(self.show_filter_menu)
-
-    @Slot(int, name="show_filter_menu")
-    def show_filter_menu(self, logical_index):
-        """Called when user clicks on a horizontal section header.
-        Show the menu to select a filter."""
-        self.filter_column = logical_index
-        model = self.model()
-        filter_menu = QFilterMenu(self)
-        self.filter_action_list = list()
-        # Add 'All' action
-        self.action_all = QAction("All", self)
-        self.action_all.setCheckable(True)
-        self.action_all.triggered.connect(self.action_all_triggered)
-        filter_menu.addAction(self.action_all)
-        filter_menu.addSeparator()
-        # Get values from model, after the application of all filters and subfilters from other columns
-        values = list()
-        source_model = model.sourceModel()
-        for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter
-            if not model.filter_accept_rows(source_row, QModelIndex()):
-                continue
-            # Skip values rejected by subfilters from *other* columns
-            if not model.subfilter_accept_rows(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
-                continue
-            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
-            if data is None:
-                continue
-            values.append(data)
-        # Get values currently filter in this column
-        filtered_values = list()
-        for key, value in model.subrule_dict.items():
-            if key == self.filter_column:
-                filtered_values.extend(value)
-        # Add filter actions
-        self.filter_action_list = list()
-        self.filter_action_checked_count = 0
-        for i, value in enumerate(sorted(list(set(values)))):
-            action = QAction(str(value), self)
-            action.setCheckable(True)
-            action.triggered.connect(self.update_action_all_checked)
-            filter_menu.addAction(action)
-            self.filter_action_list.append(action)
-            if value not in filtered_values:
-                action.trigger()
-        # 'Ok' action
-        action_ok = QAction("Ok", self)
-        action_ok.triggered.connect(self.update_and_apply_filter)
-        filter_menu.addSeparator()
-        filter_menu.addAction(action_ok)
-        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
-        pos_y = header_pos.y() + self.horizontalHeader().height()
-        filter_menu.exec_(QPoint(pos_x, pos_y))
-
-    @Slot("bool", name="update_action_all_checked")
-    def update_action_all_checked(self, checked):
-        if checked:
-            self.filter_action_checked_count += 1
-        else:
-            self.filter_action_checked_count -= 1
-        self.action_all.setChecked(len(self.filter_action_list) == self.filter_action_checked_count)
-
-    @Slot("bool", name="action_all_triggered")
-    def action_all_triggered(self, checked):
-        """Check or uncheck all filter actions."""
-        for action in self.filter_action_list:
-            action.setChecked(checked)
-
-    @Slot(name="apply_filter")
-    def update_and_apply_filter(self):
-        """Called when user selects Ok in a filter. Emit `filter_triggered` signal."""
-        filter_text_list = list()
-        for action in self.filter_action_list:
-            if not action.isChecked():
-                filter_text_list.append(action.text())
-        self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
@@ -228,3 +138,105 @@ class CustomQTableView(QTableView):
     # def edit(self, index, trigger, event):
     #     self.editing = True
     #     return super().edit(index, trigger, event)
+
+
+class ParameterTableView(CustomQTableView):
+    """Custom QTableView class with autofilter functionality.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
+    filter_triggered = Signal("QObject", name="filter_triggered")
+
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent)
+        self.filter_action_list = list()
+        self.action_all = None
+        self.filter_text = None
+        self.filter_column = None
+
+    def setModel(self, model):
+        """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
+        Otherwise the column is selected when pressing on the header."""
+        super().setModel(model)
+        self.horizontalHeader().sectionPressed.disconnect()
+        self.horizontalHeader().sectionPressed.connect(self.show_filter_menu)
+
+    @Slot(int, name="show_filter_menu")
+    def show_filter_menu(self, logical_index):
+        """Called when user clicks on a horizontal section header.
+        Show the menu to select a filter."""
+        self.filter_column = logical_index
+        model = self.model()
+        filter_menu = QFilterMenu(self)
+        self.filter_action_list = list()
+        # Add 'All' action
+        self.action_all = QAction("All", self)
+        self.action_all.setCheckable(True)
+        self.action_all.triggered.connect(self.action_all_triggered)
+        filter_menu.addAction(self.action_all)
+        filter_menu.addSeparator()
+        # Get values from model, after the application of all filters and subfilters from other columns
+        values = list()
+        source_model = model.sourceModel()
+        for source_row in range(source_model.rowCount()):
+            # Skip values rejected by filter
+            if not model.filter_accept_rows(source_row, QModelIndex()):
+                continue
+            # Skip values rejected by subfilters from *other* columns
+            if not model.subfilter_accept_rows(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
+                continue
+            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
+            if data is None:
+                continue
+            values.append(data)
+        # Get values currently filter in this column
+        filtered_values = list()
+        for key, value in model.subrule_dict.items():
+            if key == self.filter_column:
+                filtered_values.extend(value)
+        # Add filter actions
+        self.filter_action_list = list()
+        for i, value in enumerate(sorted(list(set(values)))):
+            action = QAction(str(value), self)
+            action.setCheckable(True)
+            action.triggered.connect(self.update_action_all_checked)
+            filter_menu.addAction(action)
+            self.filter_action_list.append(action)
+            if value in filtered_values:
+                action.setChecked(True)
+            action.trigger()  # Note: this toggles the checked property
+        # 'Ok' action
+        action_ok = QAction("Ok", self)
+        action_ok.triggered.connect(self.update_and_apply_filter)
+        filter_menu.addSeparator()
+        filter_menu.addAction(action_ok)
+        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
+        pos_y = header_pos.y() + self.horizontalHeader().height()
+        filter_menu.exec_(QPoint(pos_x, pos_y))
+
+    @Slot("bool", name="update_action_all_checked")
+    def update_action_all_checked(self, checked):
+        """Called when one filter action is triggered.
+        In case they are all checked, check to 'All' action too.
+        """
+        self.action_all.setChecked(all([a.isChecked() for a in self.filter_action_list]))
+
+    @Slot("bool", name="action_all_triggered")
+    def action_all_triggered(self, checked):
+        """Check or uncheck all filter actions."""
+        for action in self.filter_action_list:
+            action.setChecked(checked)
+
+    @Slot(name="apply_filter")
+    def update_and_apply_filter(self):
+        """Called when user clicks Ok in a filter. Emit `filter_triggered` signal."""
+        filter_text_list = list()
+        for action in self.filter_action_list:
+            if not action.isChecked():
+                filter_text_list.append(action.text())
+        self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)

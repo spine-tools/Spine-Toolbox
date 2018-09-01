@@ -116,7 +116,7 @@ class ParameterValueDelegate(DataStoreDelegate):
         super().paint(painter, option, proxy_index)
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         if model.is_work_in_progress(index.row()):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
@@ -142,7 +142,7 @@ class ParameterDelegate(DataStoreDelegate):
         super().paint(painter, option, proxy_index)
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         if model.is_work_in_progress(index.row()):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
@@ -165,7 +165,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
         """Return CustomComboEditor."""
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         if index.column() not in (h('object_class_name'), h('object_name'), h('parameter_name')):
             return LineEditDelegate.createEditor(self, parent, option, proxy_index)
         combo = CustomComboEditor(parent)
@@ -206,7 +206,7 @@ class ObjectParameterDelegate(ParameterDelegate):
         combo.index = proxy_index
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         if not index.column() == h('object_class_name'):
             return LineEditDelegate.createEditor(self, parent, option, proxy_index)
@@ -226,7 +226,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
         """Return CustomComboEditor."""
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         if index.column() not in (h('relationship_class_name'), h('relationship_name'), h('parameter_name')):
             return LineEditDelegate.createEditor(self, parent, option, proxy_index)
@@ -269,7 +269,7 @@ class RelationshipParameterDelegate(ParameterDelegate):
         combo.index = proxy_index
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         if not index.column() == h('relationship_class_name'):
             return LineEditDelegate.createEditor(self, parent, option, proxy_index)
@@ -289,7 +289,7 @@ class AddObjectsDelegate(DataStoreDelegate):
         combo = CustomComboEditor(parent)
         combo.index = index
         model = index.model()
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         if index.column() != h('object class name'):
             return LineEditDelegate.createEditor(self, parent, option, index)
@@ -310,7 +310,7 @@ class AddRelationshipClassesDelegate(DataStoreDelegate):
         combo = CustomComboEditor(parent)
         combo.index = index
         model = index.model()
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         if index.column() == h('relationship class name'):
             return LineEditDelegate.createEditor(self, parent, option, index)
@@ -331,7 +331,7 @@ class AddRelationshipsDelegate(DataStoreDelegate):
         combo = CustomComboEditor(parent)
         combo.index = index
         model = index.model()
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         if index.column() == h('relationship name'):
             return LineEditDelegate.createEditor(self, parent, option, index)

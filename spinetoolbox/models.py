@@ -750,29 +750,39 @@ class MinimalTableModel(QAbstractTableModel):
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Get headers."""
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+        if orientation == Qt.Horizontal:
             try:
-                h = self.header[section]
+                return self.header[section][role]
             except IndexError:
                 return None
-            return h
-        elif orientation == Qt.Vertical and role == Qt.DisplayRole:
-            return section + 1
+            except KeyError:
+                return None
+        elif orientation == Qt.Vertical:
+            return None
 
     def set_horizontal_header_labels(self, header):
         """sets header for the given orientation and role."""
         if not header:
             return
-        self.header = header
+        self.header = list()
+        for section, value in enumerate(header):
+            if section >= self.columnCount():
+                self.header.append({})
+            self.setHeaderData(section, Qt.Horizontal, value, role=Qt.EditRole)
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(header))
+
+    def horizontal_header_labels(self):
+        return [self.headerData(section, Qt.Horizontal, Qt.DisplayRole) for section in range(self.columnCount())]
 
     def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
         """Sets the data for the given role and section in the header
         with the specified orientation to the value supplied.
         """
-        if orientation == Qt.Horizontal and role == Qt.EditRole:
+        if orientation == Qt.Horizontal:
             try:
-                self.header[section] = value
+                self.header[section][role] = value
+                if role == Qt.EditRole:
+                    self.header[section][Qt.DisplayRole] = value
                 self.headerDataChanged.emit(orientation, section, section)
                 return True
             except IndexError:
@@ -811,7 +821,7 @@ class MinimalTableModel(QAbstractTableModel):
         except KeyError:
             return None
 
-    def rowData(self, row, role=Qt.DisplayRole):
+    def row_data(self, row, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the given row.
 
         Args:
@@ -825,7 +835,7 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         return [self.data(self.index(row, column), role) for column in range(self.columnCount())]
 
-    def columnData(self, column, role=Qt.DisplayRole):
+    def column_data(self, column, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the given column.
 
         Args:
@@ -839,7 +849,7 @@ class MinimalTableModel(QAbstractTableModel):
             return None
         return [self.data(self.index(row, column), role) for row in range(self.rowCount())]
 
-    def modelData(self, role=Qt.DisplayRole):
+    def model_data(self, role=Qt.DisplayRole):
         """Returns the data stored under the given role in the entire model.
 
         Args:
@@ -848,7 +858,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             Model data for given role.
         """
-        return [self.rowData(row, role) for row in range(self.rowCount())]
+        return [self.row_data(row, role) for row in range(self.rowCount())]
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
@@ -1292,7 +1302,7 @@ class ParameterTableModel(MinimalTableModel):
     def make_columns_fixed_for_row(self, row, *column_names):
         """Set background role data and flags for row according to fixed column names."""
         for name in column_names:
-            column = self.header.index(name)
+            column = self.horizontal_header_labels().index(name)
             index = self.index(row, column)
             self.setData(index, self.gray_brush, Qt.BackgroundRole)
             self.set_flags(index, ~Qt.ItemIsEditable)
@@ -1306,6 +1316,8 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self._parent = parent
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.italic_font = QFont()
+        self.italic_font.setItalic(True)
         self.rule_dict = dict()
         self.subrule_dict = dict()
         self.rejected_column_list = list()
@@ -1313,7 +1325,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
-        self.h = source_model.header.index
+        self.h = source_model.horizontal_header_labels().index
 
     def clear_filter(self):
         """Clear all rules, unbold all bolded items."""
@@ -1328,6 +1340,14 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def apply_filter(self):
         """Trigger filtering."""
         self.setFilterRegExp("")
+        # Bold column in case the rule is met
+        for column in self.rule_dict:
+            for row in range(self.sourceModel().rowCount()):
+                source_index = self.sourceModel().index(row, column)
+                self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
+        # Italize header in case the subrule is met
+        for column in self.subrule_dict:
+            self.sourceModel().setHeaderData(column, Qt.Horizontal, self.italic_font, Qt.FontRole)
 
     def reject_column(self, *names):
         """Add rejected columns."""
@@ -1340,10 +1360,6 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         for key, value in kwargs.items():
             column = self.h(key)
             self.rule_dict[column] = value
-            # Bold column in case the condition is met
-            for row in range(self.sourceModel().rowCount()):
-                source_index = self.sourceModel().index(row, column)
-                self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
 
     def add_subrule(self, **kwargs):
         """Add POSITIVE subrules by taking the kwargs as statements.
@@ -1353,13 +1369,13 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             value_list = self.subrule_dict.setdefault(column, [])
             value_list.extend(value)
 
-
     def remove_subrule(self, *args):
         """Remove subrules."""
         for field_name in args:
             column = self.h(field_name)
             try:
                 del self.subrule_dict[column]
+                self.sourceModel().setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
             except KeyError:
                 pass
 

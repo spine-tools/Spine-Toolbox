@@ -112,7 +112,7 @@ class Ui_MainWindow(object):
         self.toolButton_add_object_parameter_values.setObjectName("toolButton_add_object_parameter_values")
         self.horizontalLayout.addWidget(self.toolButton_add_object_parameter_values)
         self.verticalLayout_2.addLayout(self.horizontalLayout)
-        self.tableView_object_parameter_value = CustomQTableView(self.tab_object_parameter_value)
+        self.tableView_object_parameter_value = ParameterTableView(self.tab_object_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -155,7 +155,7 @@ class Ui_MainWindow(object):
         self.toolButton_add_object_parameters.setObjectName("toolButton_add_object_parameters")
         self.horizontalLayout_4.addWidget(self.toolButton_add_object_parameters)
         self.verticalLayout_5.addLayout(self.horizontalLayout_4)
-        self.tableView_object_parameter = CustomQTableView(self.tab_object_parameter)
+        self.tableView_object_parameter = ParameterTableView(self.tab_object_parameter)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -207,7 +207,7 @@ class Ui_MainWindow(object):
         self.toolButton_add_relationship_parameter_values.setObjectName("toolButton_add_relationship_parameter_values")
         self.horizontalLayout_3.addWidget(self.toolButton_add_relationship_parameter_values)
         self.verticalLayout.addLayout(self.horizontalLayout_3)
-        self.tableView_relationship_parameter_value = CustomQTableView(self.tab_relationship_parameter_value)
+        self.tableView_relationship_parameter_value = ParameterTableView(self.tab_relationship_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -249,7 +249,7 @@ class Ui_MainWindow(object):
         self.toolButton_add_relationship_parameters.setObjectName("toolButton_add_relationship_parameters")
         self.horizontalLayout_5.addWidget(self.toolButton_add_relationship_parameters)
         self.verticalLayout_7.addLayout(self.horizontalLayout_5)
-        self.tableView_relationship_parameter = CustomQTableView(self.tab_relationship_parameter)
+        self.tableView_relationship_parameter = ParameterTableView(self.tab_relationship_parameter)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -431,6 +431,6 @@ class Ui_MainWindow(object):
         self.actionRemove_object_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object parameters", None, -1))
         self.actionRemove_relationship_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameters", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView
+from widgets.custom_qtableview import ParameterTableView
 from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

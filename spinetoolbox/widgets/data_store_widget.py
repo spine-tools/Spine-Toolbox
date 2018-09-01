@@ -317,7 +317,7 @@ class DataStoreForm(QMainWindow):
         object_parameter_value_list = self.mapping.object_parameter_value_list()
         header = object_parameter_value_list.column_descriptions
         object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
-        self.object_parameter_value_model.header = [column['name'] for column in header]
+        self.object_parameter_value_model.set_horizontal_header_labels([column['name'] for column in header])
         self.object_parameter_value_model.reset_model(object_parameter_value_data)
         self.object_parameter_value_model.make_columns_fixed('object_class_name', 'object_name', 'parameter_name',
             'parameter_value_id')
@@ -325,7 +325,7 @@ class DataStoreForm(QMainWindow):
         # Relationship
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         header = relationship_parameter_value_list.column_descriptions
-        self.relationship_parameter_value_model.header = [column['name'] for column in header]
+        self.relationship_parameter_value_model.set_horizontal_header_labels([column['name'] for column in header])
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
         self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
         self.relationship_parameter_value_model.make_columns_fixed(
@@ -342,7 +342,7 @@ class DataStoreForm(QMainWindow):
         # Object
         object_parameter_list = self.mapping.object_parameter_list()
         header = object_parameter_list.column_descriptions
-        self.object_parameter_model.header = [column['name'] for column in header]
+        self.object_parameter_model.set_horizontal_header_labels([column['name'] for column in header])
         object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
         self.object_parameter_model.reset_model(object_parameter_data)
         self.object_parameter_model.make_columns_fixed('object_class_name')
@@ -350,7 +350,7 @@ class DataStoreForm(QMainWindow):
         # Relationship
         relationship_parameter_list = self.mapping.relationship_parameter_list()
         header = relationship_parameter_list.column_descriptions
-        self.relationship_parameter_model.header = [column['name'] for column in header]
+        self.relationship_parameter_model.set_horizontal_header_labels([column['name'] for column in header])
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
         self.relationship_parameter_model.reset_model(relationship_parameter_data)
         self.relationship_parameter_model.make_columns_fixed('relationship_class_name', 'object_class_name_list')
@@ -365,7 +365,7 @@ class DataStoreForm(QMainWindow):
     def init_object_parameter_value_view(self):
         """Init the object parameter table view."""
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
-        header = self.object_parameter_value_model.header
+        header = self.object_parameter_value_model.horizontal_header_labels()
         if not header:
             return
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(header.index('parameter_value_id'))
@@ -376,7 +376,7 @@ class DataStoreForm(QMainWindow):
     def init_relationship_parameter_value_view(self):
         """Init the relationship parameter table view."""
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
-        header = self.relationship_parameter_value_model.header
+        header = self.relationship_parameter_value_model.horizontal_header_labels()
         if not header:
             return
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(header.index('parameter_value_id'))
@@ -387,7 +387,7 @@ class DataStoreForm(QMainWindow):
     def init_object_parameter_view(self):
         """Init the object parameter table view."""
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
-        header = self.object_parameter_model.header
+        header = self.object_parameter_model.horizontal_header_labels()
         if not header:
             return
         self.ui.tableView_object_parameter.horizontalHeader().hideSection(header.index('parameter_id'))
@@ -398,7 +398,7 @@ class DataStoreForm(QMainWindow):
     def init_relationship_parameter_view(self):
         """Init the object parameter table view."""
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
-        header = self.relationship_parameter_model.header
+        header = self.relationship_parameter_model.horizontal_header_labels()
         if not header:
             return
         self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(header.index('parameter_id'))
@@ -498,10 +498,11 @@ class DataStoreForm(QMainWindow):
     @Slot("QObject", name="apply_parameter_model_subfilter")
     def apply_parameter_model_subfilter(self, proxy_model, column, text_list):
         """Called when the tableview wants to trigger the subfilter."""
-        header = proxy_model.sourceModel().header
+        header = proxy_model.sourceModel().horizontal_header_labels()
         proxy_model.remove_subrule(header[column])
-        kwargs = {header[column]: text_list}
-        proxy_model.add_subrule(**kwargs)
+        if text_list:
+            kwargs = {header[column]: text_list}
+            proxy_model.add_subrule(**kwargs)
         proxy_model.apply_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
@@ -854,7 +855,7 @@ class DataStoreForm(QMainWindow):
         proxy_model = proxy_index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(proxy_index)
-        id_column = source_model.header.index('parameter_value_id')
+        id_column = source_model.horizontal_header_labels().index('parameter_value_id')
         sibling = source_index.sibling(source_index.row(), id_column)
         parameter_value_id = sibling.data()
         # Only attempt to remove parameter value from db if it's not a 'work-in-progress'
@@ -872,7 +873,7 @@ class DataStoreForm(QMainWindow):
         proxy_model = proxy_index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(proxy_index)
-        id_column = source_model.header.index('parameter_id')
+        id_column = source_model.horizontal_header_labels().index('parameter_id')
         sibling = source_index.sibling(source_index.row(), id_column)
         parameter_id = sibling.data()
         # Only attempt to remove parameter from db if it's not a 'work-in-progress'
@@ -894,7 +895,7 @@ class DataStoreForm(QMainWindow):
         index = self.object_parameter_value_proxy.mapToSource(proxy_index)
         row = index.row()+1
         model = self.object_parameter_value_model
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         model.insertRows(row, 1)
         model.set_work_in_progress(row, True)
@@ -923,7 +924,7 @@ class DataStoreForm(QMainWindow):
         index = self.object_parameter_proxy.mapToSource(proxy_index)
         row = index.row()+1
         model = self.object_parameter_model
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         object_class_name_list = [x.name for x in self.mapping.object_class_list()]
         model.insertRows(row, 1)
         model.set_work_in_progress(row, True)
@@ -947,7 +948,7 @@ class DataStoreForm(QMainWindow):
         index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
         row = index.row()+1
         model = self.relationship_parameter_value_model
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
         model.insertRows(row, 1)
         model.set_work_in_progress(row, True)
@@ -977,7 +978,7 @@ class DataStoreForm(QMainWindow):
         index = self.relationship_parameter_proxy.mapToSource(proxy_index)
         row = index.row()+1
         model = self.relationship_parameter_model
-        h = model.header.index
+        h = model.horizontal_header_labels().index
         relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
         model.insertRows(row, 1)
         model.set_work_in_progress(row, True)
@@ -1007,8 +1008,8 @@ class DataStoreForm(QMainWindow):
         if model.is_being_reset:
             return
         row = top_left.row()
-        header = model.header
-        h = model.header.index
+        header = model.horizontal_header_labels()
+        h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
             object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
@@ -1026,7 +1027,7 @@ class DataStoreForm(QMainWindow):
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
-            for column in range(h('parameter_name')+1, len(header)):
+            for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter_value = self.mapping.add_parameter_value(
@@ -1061,8 +1062,8 @@ class DataStoreForm(QMainWindow):
         if model.is_being_reset:
             return
         row = top_left.row()
-        header = model.header
-        h = model.header.index
+        header = model.horizontal_header_labels()
+        h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
             object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
             object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
@@ -1073,7 +1074,7 @@ class DataStoreForm(QMainWindow):
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
-            for column in range(h('parameter_name')+1, len(header)):
+            for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter = self.mapping.add_parameter(object_class_id=object_class.id, name=parameter_name, **kwargs)
@@ -1102,8 +1103,8 @@ class DataStoreForm(QMainWindow):
         if model.is_being_reset:
             return
         row = top_left.row()
-        header = model.header
-        h = model.header.index
+        header = model.horizontal_header_labels()
+        h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
             # Autocomplete object class name list
             if top_left.column() == h('object_class_name_list'):
@@ -1142,7 +1143,7 @@ class DataStoreForm(QMainWindow):
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
-            for column in range(h('parameter_name')+1, len(header)):
+            for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter_value = self.mapping.add_parameter_value(
@@ -1183,8 +1184,8 @@ class DataStoreForm(QMainWindow):
             return
         proxy = self.relationship_parameter_proxy
         row = top_left.row()
-        header = model.header
-        h = model.header.index
+        header = model.horizontal_header_labels()
+        h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
@@ -1205,7 +1206,7 @@ class DataStoreForm(QMainWindow):
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
             kwargs = {}
-            for column in range(h('parameter_name')+1, len(header)):
+            for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
                 parameter = self.mapping.add_parameter(
@@ -1229,7 +1230,7 @@ class DataStoreForm(QMainWindow):
         Undo the model update if unsuccessful.
         """
         model = index.model()
-        header = model.header
+        header = model.horizontal_header_labels()
         h = header.index
         id_column = h('parameter_value_id')
         sibling = index.sibling(index.row(), id_column)
@@ -1253,7 +1254,7 @@ class DataStoreForm(QMainWindow):
         Undo the model update if unsuccessful.
         """
         model = index.model()
-        header = model.header
+        header = model.horizontal_header_labels()
         id_column = header.index('parameter_id')
         sibling = index.sibling(index.row(), id_column)
         parameter_id = sibling.data()

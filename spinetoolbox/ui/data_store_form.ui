@@ -186,7 +186,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_object_parameter_value">
+                <widget class="ParameterTableView" name="tableView_object_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -277,7 +277,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_object_parameter">
+                <widget class="ParameterTableView" name="tableView_object_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -385,7 +385,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_relationship_parameter_value">
+                <widget class="ParameterTableView" name="tableView_relationship_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -473,7 +473,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_relationship_parameter">
+                <widget class="ParameterTableView" name="tableView_relationship_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -766,14 +766,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CustomQTableView</class>
-   <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
    <class>ObjectTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ParameterTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <resources>
