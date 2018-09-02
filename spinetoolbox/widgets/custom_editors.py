@@ -80,7 +80,7 @@ class CustomLineEditor(QLineEdit):
 
 class CustomToolButtonEditor(QToolButton):
     """A custom QToolButton to popup a Qmenu with multiple horizontal sections."""
-    def __init__(self, parent, index, object_class_name_list, **object_name_dict):
+    def __init__(self, parent, index, object_class_name_list, current_object_name_list, **object_name_dict):
         """Initialize class."""
         super().__init__(parent)
         self._text = None
@@ -92,7 +92,8 @@ class CustomToolButtonEditor(QToolButton):
         widget.setLayout(QHBoxLayout(widget))
         widget.layout().setContentsMargins(6, 6, 6, 6)
         widget.layout().setSpacing(6)
-        for object_class_name in object_class_name_list:
+        for i, object_class_name in enumerate(object_class_name_list):
+            current_object_name = current_object_name_list[i] if current_object_name_list else None
             object_name_list = object_name_dict[object_class_name]
             submenu = QMenu(self.menu)
             submenu.addSection(object_class_name)
@@ -100,6 +101,8 @@ class CustomToolButtonEditor(QToolButton):
             for object_name in object_name_list:
                 action = submenu.addAction(object_name)
                 action.setCheckable(True)
+                if object_name == current_object_name:
+                    action.setChecked(True)
                 action_group.addAction(action)
             widget.layout().addWidget(submenu)
         self.widget_action = QWidgetAction(self.menu)

@@ -298,6 +298,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
             return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
         elif index.column() == h('object_name_list'):
+            current_object_name_list = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else None
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
@@ -311,7 +312,8 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
                     continue
                 object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
                 object_name_dict[object_class_name] = object_name_list
-            return CustomToolButtonEditor(parent, proxy_index, object_class_name_list, **object_name_dict)
+            return CustomToolButtonEditor(parent, proxy_index, object_class_name_list, current_object_name_list,
+                **object_name_dict)
         elif index.column() == h('parameter_name'):
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\

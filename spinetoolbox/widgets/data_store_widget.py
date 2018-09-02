@@ -957,9 +957,9 @@ class DataStoreForm(QMainWindow):
         relationship_class_name = None
         object_name_list = None
         for column, value in self.relationship_parameter_value_proxy.rule_dict.items():
-            if column == h('relationship_class_name'):
+            if column == h('relationship_class_name') and not isinstance(value, list):
                 relationship_class_name = value
-            if column == h('object_name_list'):
+            if column == h('object_name_list') and not isinstance(value, list):
                 object_name_list = value
         if relationship_class_name:
             model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
@@ -985,7 +985,7 @@ class DataStoreForm(QMainWindow):
         model.set_work_in_progress(row, True)
         relationship_class_name = None
         for column, value in self.relationship_parameter_proxy.rule_dict.items():
-            if column == h('relationship_class_name'):
+            if column == h('relationship_class_name') and not isinstance(value, list):
                 relationship_class_name = value
         if relationship_class_name:
             model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
