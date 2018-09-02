@@ -1126,6 +1126,7 @@ class DataStoreForm(QMainWindow):
             if top_left.column() == h('relationship_class_name'):
                 self.set_object_class_name_list(top_left.row())
             # Try to add new parameter value
+            # Start by adding the relationship
             relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
@@ -1142,7 +1143,7 @@ class DataStoreForm(QMainWindow):
                     return
                 object_id_list.append(object_.id)
             relationship_name = "__".join(object_name_list.split(','))
-            # Check if name already taken
+            # Check if name is already taken
             other_relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
             if other_relationship:
                 relationship_name = relationship_name + "0"
@@ -1152,12 +1153,19 @@ class DataStoreForm(QMainWindow):
                     object_id_list=object_id_list,
                     class_id=relationship_class.id
                 )
-                msg = "Successfully added or retrieved relationship '{}'.".format(relationship.name)
+                self.object_tree_model.add_relationship(relationship._asdict())
+                msg = "Successfully added new relationship '{}'.".format(relationship.name)
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole)
-                self.msg_error.emit(e.msg)
-                return
+                # Maybe the relationship already exists, try to retrieve it
+                relationship = self.mapping.single_wide_relationship(class_id=relationship_class.id,
+                    object_name_list=object_name_list).one_or_none()
+                if not relationship:
+                    model.setData(top_left, None, Qt.EditRole)
+                    self.msg_error.emit(e.msg)
+                    return
+                msg = "Successfully retrieved relationship '{}'.".format(relationship.name)
+                self.msg.emit(msg)
             # Continue adding the parameter value
             parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()

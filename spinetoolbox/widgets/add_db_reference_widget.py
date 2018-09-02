@@ -160,7 +160,6 @@ class AddDbReferenceWidget(QWidget):
                     msg = "Please create a SQL Server ODBC Data Source first."
                     self.statusbar.showMessage(msg, 3000)
             else:
-                print('{}://username:password@host/database'.format("+".join([dialect, dbapi])))
                 create_engine('{}://username:password@host/database'.format("+".join([dialect, dbapi])))
                 self.enable_common()
             return True

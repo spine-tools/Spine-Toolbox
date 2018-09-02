@@ -39,6 +39,7 @@ class ComboBoxDelegate(QItemDelegate):
 
     def createEditor(self, parent, option, index):
         """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
+        items = index.data(Qt.UserRole)
         return CustomComboEditor(parent, index, items)
 
     def setEditorData(self, editor, index):

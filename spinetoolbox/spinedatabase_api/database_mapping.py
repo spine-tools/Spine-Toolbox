@@ -555,7 +555,9 @@ class DatabaseMapping(object):
         wide_relationship = self.single_wide_relationship(class_id=wide_relationship_args['class_id'],
             object_id_list=object_id_str).one_or_none()
         if wide_relationship:
-            return wide_relationship
+            err = "A relationship between these objects already exists in this class."
+            msg = "DBAPIError while inserting relationship '{}': {}".format(wide_relationship_args['name'], err)
+            raise SpineDBAPIError(msg)
         id = self.session.query(func.max(self.Relationship.id)).scalar()
         if not id:
             id = 0
