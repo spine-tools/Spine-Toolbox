@@ -711,9 +711,42 @@ class MinimalTableModel(QAbstractTableModel):
         self.is_being_reset = False
         self.modelAboutToBeReset.connect(lambda: self.set_being_reset(True))
         self.modelReset.connect(lambda: self.set_being_reset(False))
+        self.wip_row_list = list()
+        self.rowsInserted.connect(self.rows_inserted)
+        self.rowsRemoved.connect(self.rows_removed)
 
     def set_being_reset(self, on):
         self.is_being_reset = on
+
+    def rows_inserted(self, parent, first, last):
+        """Update work in progress row list."""
+        for i, row in enumerate(self.wip_row_list):
+            if first <= row:
+                self.wip_row_list[i] += 1
+
+    def rows_removed(self, parent, first, last):
+        """Update work in progress row list."""
+        try:
+            self.wip_row_list.remove(first)
+        except ValueError:
+            pass
+        for i, row in enumerate(self.wip_row_list):
+            if first < row:
+                self.wip_row_list[i] -= 1
+
+    def set_work_in_progress(self, row, on):
+        """Set user role of index in first column."""
+        if on:
+            self.wip_row_list.append(row)
+        else:
+            try:
+                self.wip_row_list.remove(row)
+            except ValueError:
+                pass
+
+    def is_work_in_progress(self, row):
+        """Return whether or not row is a work in progress."""
+        return row in self.wip_row_list
 
     def parent(self):
         """Return _parent attribute."""
@@ -1260,39 +1293,6 @@ class ParameterTableModel(MinimalTableModel):
         super().__init__(parent)
         self._parent = parent
         self.gray_brush = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
-        self.wip_row_list = list()
-        self.rowsInserted.connect(self.rows_inserted)
-        self.rowsRemoved.connect(self.rows_removed)
-
-    def rows_inserted(self, parent, first, last):
-        """Update work in progress row list."""
-        for i, row in enumerate(self.wip_row_list):
-            if first <= row:
-                self.wip_row_list[i] += 1
-
-    def rows_removed(self, parent, first, last):
-        """Update work in progress row list."""
-        try:
-            self.wip_row_list.remove(first)
-        except ValueError:
-            pass
-        for i, row in enumerate(self.wip_row_list):
-            if first < row:
-                self.wip_row_list[i] -= 1
-
-    def set_work_in_progress(self, row, on):
-        """Set user role of index in first column."""
-        if on:
-            self.wip_row_list.append(row)
-        else:
-            try:
-                self.wip_row_list.remove(row)
-            except ValueError:
-                pass
-
-    def is_work_in_progress(self, row):
-        """Return whether or not row is a work in progress."""
-        return row in self.wip_row_list
 
     def make_columns_fixed(self, *column_names):
         """Set columns as fixed so they are not editable and painted gray."""
@@ -1326,6 +1326,13 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         self.h = source_model.horizontal_header_labels().index
+
+    def is_work_in_progress(self, row):
+        """Return whether or not row is a work in progress."""
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        source_row = source_index.row()
+        return self.sourceModel().is_work_in_progress(source_row)
 
     def clear_filter(self):
         """Clear all rules, unbold all bolded items."""
@@ -1477,7 +1484,7 @@ class DatapackageFieldsModel(QStandardItemModel):
             self.appendRow([name_item, type_item, primary_key_item])
 
 
-class DatapackageForeignKeysModel(QStandardItemModel):
+class DatapackageForeignKeysModel(MinimalTableModel):
     """A class to hold schema foreign keys and show them in a treeview."""
     def __init__(self, parent=None):
         """Initialize class"""
@@ -1486,21 +1493,21 @@ class DatapackageForeignKeysModel(QStandardItemModel):
 
     def reset_model(self, schema):
         self.clear()
-        self.setHorizontalHeaderLabels(["fields", "reference resource", "reference fields"])
+        self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
         self.schema = schema
+        data = list()
         for foreign_key in schema.foreign_keys:
             fields = foreign_key['fields']
-            ref_resource = foreign_key['reference']['resource']
-            ref_fields = foreign_key['reference']['fields']
-            fields_item = QStandardItem(fields)
-            ref_resource_item = QStandardItem(ref_resource)
-            ref_fields_item = QStandardItem(ref_fields)
-            self.appendRow([fields_item, ref_resource_item, ref_fields_item])
+            reference_resource = foreign_key['reference']['resource']
+            reference_fields = foreign_key['reference']['fields']
+            data.append([fields, reference_resource, reference_fields])
+        super().reset_model(data)
 
     def insert_empty_row(self, row):
         self.insertRow(row)
+        self.set_work_in_progress(row, True)
         for column in range(self.columnCount()):
-            self.setData(self.index(row, column), "0", Qt.EditRole)
+            self.setData(self.index(row, column), None, Qt.EditRole)
 
 
 class DatapackageDescriptorModel(QStandardItemModel):

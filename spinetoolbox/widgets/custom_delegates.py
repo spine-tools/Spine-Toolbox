@@ -151,7 +151,6 @@ class DataStoreDelegate(QItemDelegate):
         super().__init__(parent)
         self._parent = parent
         self.mapping = parent.mapping
-        self.highlight_pen = QPen(self._parent.palette().highlight(), 1)
 
     def setEditorData(self, editor, index):
         """Do nothing."""
@@ -180,19 +179,17 @@ class DataStoreDelegate(QItemDelegate):
                 return True
         return super().eventFilter(editor, event)
 
-class ParameterValueDelegate(DataStoreDelegate):
-    """A QComboBox delegate for the (object and relationship) parameter
-    value models and views in DataStoreForm.
-    """
+
+class HighlightFrameDelegate(QItemDelegate):
+    """A delegate that paints a blue frame around the row."""
     def __init__(self, parent):
         super().__init__(parent)
+        self.highlight_pen = QPen(parent.palette().highlight(), 1)
 
-    def paint(self, painter, option, proxy_index):
+    def paint(self, painter, option, index):
         """Paint a blue frame on the work in progress rows."""
-        super().paint(painter, option, proxy_index)
-        model = proxy_index.model().sourceModel()
-        index = proxy_index.model().mapToSource(proxy_index)
-        h = model.horizontal_header_labels().index
+        super().paint(painter, option, index)
+        model = index.model()
         if model.is_work_in_progress(index.row()):
             pen = painter.pen()
             painter.setPen(self.highlight_pen)
@@ -206,33 +203,7 @@ class ParameterValueDelegate(DataStoreDelegate):
             painter.setPen(pen)
 
 
-class ParameterDelegate(DataStoreDelegate):
-    """A QComboBox delegate for the (object and relationship) parameter
-    models and views in DataStoreForm.
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def paint(self, painter, option, proxy_index):
-        """Paint a blue frame on the work in progress rows."""
-        super().paint(painter, option, proxy_index)
-        model = proxy_index.model().sourceModel()
-        index = proxy_index.model().mapToSource(proxy_index)
-        h = model.horizontal_header_labels().index
-        if model.is_work_in_progress(index.row()):
-            pen = painter.pen()
-            painter.setPen(self.highlight_pen)
-            x1, y1, x2, y2 = option.rect.getCoords()
-            painter.drawLine(x1, y1, x2, y1)
-            painter.drawLine(x1, y2, x2, y2)
-            if index.column() == 0:
-                painter.drawLine(x1+1, y1, x1+1, y2)
-            if index.column() == model.columnCount()-1:
-                painter.drawLine(x2, y1, x2, y2)
-            painter.setPen(pen)
-
-
-class ObjectParameterValueDelegate(ParameterValueDelegate):
+class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
     """A delegate for the object parameter value model and view in DataStoreForm."""
     def __init__(self, parent):
         super().__init__(parent)
@@ -266,7 +237,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
             return CustomLineEditor(parent, proxy_index)
 
 
-class ObjectParameterDelegate(ParameterDelegate):
+class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
     """A delegate for the object parameter model and view in DataStoreForm."""
     def __init__(self, parent):
         super().__init__(parent)
@@ -283,7 +254,7 @@ class ObjectParameterDelegate(ParameterDelegate):
         return CustomComboEditor(parent, proxy_index, object_class_name_list)
 
 
-class RelationshipParameterValueDelegate(ParameterValueDelegate):
+class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
     """A delegate for the relationship parameter value model and view in DataStoreForm."""
     def __init__(self, parent):
         super().__init__(parent)
@@ -333,7 +304,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             return CustomLineEditor(parent, proxy_index)
 
 
-class RelationshipParameterDelegate(ParameterDelegate):
+class RelationshipParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
     """A delegate for the object parameter model and view in DataStoreForm."""
     def __init__(self, parent):
         super().__init__(parent)
@@ -422,7 +393,7 @@ class ResourceNameDelegate(QItemDelegate):
         """Do nothing. Model data is updated by handling the `commitData` signal."""
         pass
 
-class ForeignKeysDelegate(QItemDelegate):
+class ForeignKeysDelegate(HighlightFrameDelegate):
     """A QComboBox delegate with checkboxes."""
     def __init__(self, parent):
         super().__init__(parent)
@@ -437,17 +408,21 @@ class ForeignKeysDelegate(QItemDelegate):
         header = [model.headerData(j, Qt.Horizontal, Qt.DisplayRole) for j in range(model.columnCount())]
         h = header.index
         if index.column() == h('fields'):
+            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
-            return CustomSimpleToolButtonEditor(parent, index, field_names)
-        if index.column() == h('reference resource'):
+            return CustomSimpleToolButtonEditor(parent, index, field_names, current_field_names)
+        elif index.column() == h('reference resource'):
             return CustomComboEditor(parent, index, self.datapackage.resource_names)
-        if index.column() == h('reference fields'):
-            reference_resource = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
+        elif index.column() == h('reference fields'):
+            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
+            reference_resource_name = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
+            reference_resource = self.datapackage.get_resource(reference_resource_name)
             if not reference_resource:
                 return None
-            field_names = self.datapackage.get_resource(reference_resource).schema.field_names
-            return CustomSimpleToolButtonEditor(parent, index, field_names)
-        return None
+            field_names = reference_resource.schema.field_names
+            return CustomSimpleToolButtonEditor(parent, index, field_names, current_field_names)
+        else:
+            return None
 
     def setEditorData(self, editor, index):
         """Do nothing."""

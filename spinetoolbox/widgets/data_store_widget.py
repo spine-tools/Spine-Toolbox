@@ -1137,11 +1137,16 @@ class DataStoreForm(QMainWindow):
                     logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
                     return
                 object_id_list.append(object_.id)
+            # Create relationship name
             relationship_name = "__".join(object_name_list.split(','))
-            # Check if name is already taken
-            other_relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
-            if other_relationship:
-                relationship_name = relationship_name + "0"
+            base_relationship_name = relationship_name
+            i = 0
+            while True:
+                other_relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
+                if not other_relationship:
+                    break
+                relationship_name = base_relationship_name + str(i)
+                i += 1
             try:
                 relationship = self.mapping.add_wide_relationship(
                     name=relationship_name,

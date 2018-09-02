@@ -134,7 +134,7 @@ class CustomToolButtonEditor(QToolButton):
 
 class CustomSimpleToolButtonEditor(QToolButton):
     """A custom QToolButton to popup a Qmenu."""
-    def __init__(self, parent, index, field_name_list):
+    def __init__(self, parent, index, field_name_list, current_field_name_list):
         """Initialize class."""
         super().__init__(parent)
         self._text = None
@@ -144,6 +144,8 @@ class CustomSimpleToolButtonEditor(QToolButton):
         for field_name in field_name_list:
             action = self.menu.addAction(field_name)
             action.setCheckable(True)
+            if field_name in current_field_name_list:
+                action.setChecked(True)
         self.menu.addSeparator()
         action_ok = self.menu.addAction("Ok")
         action_ok.triggered.connect(self.commit_data)
