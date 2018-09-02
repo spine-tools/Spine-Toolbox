@@ -1373,7 +1373,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         Positive rules trigger a violation if met."""
         for key, value in kwargs.items():
             column = self.h(key)
-            self.rule_dict[column] = value
+            self.subrule_dict[column] = value
 
     def remove_subrule(self, *args):
         """Remove subrules."""
@@ -1469,8 +1469,8 @@ class DatapackageFieldsModel(QStandardItemModel):
 
     def reset_model(self, schema):
         self.clear()
-        self.setHorizontalHeaderLabels(["name", "type", "primary key?", ""]) # NOTE: dummy section so primary key field
-                                                                             # is not stretched
+        self.setHorizontalHeaderLabels(["name", "type", "primary key?", ""])
+        # NOTE: A dummy section is added at the end so primary key field is not stretched
         self.schema = schema
         for field in schema.fields:
             name = field.name
@@ -1490,10 +1490,9 @@ class DatapackageForeignKeysModel(MinimalTableModel):
         """Initialize class"""
         super().__init__(parent)
         self.schema = None
+        self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
 
     def reset_model(self, schema):
-        self.clear()
-        self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
         self.schema = schema
         data = list()
         for foreign_key in schema.foreign_keys:

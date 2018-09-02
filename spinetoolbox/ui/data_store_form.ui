@@ -582,6 +582,10 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCommit">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
+   </property>
    <property name="text">
     <string>Commit</string>
    </property>
@@ -590,6 +594,10 @@
    </property>
   </action>
   <action name="actionRollback">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
+   </property>
    <property name="text">
     <string>Rollback</string>
    </property>

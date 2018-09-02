@@ -172,11 +172,11 @@ class ParameterTableView(CustomQTableView):
             if data is None:
                 continue
             values.append(data)
-        # Get values currently filter in this column
-        filtered_values = list()
-        for key, value in model.subrule_dict.items():
-            if key == self.filter_column:
-                filtered_values.extend(value)
+        # Get values currently filtered in this column
+        try:
+            filtered_values = model.subrule_dict[self.filter_column]
+        except KeyError:
+            filtered_values = list()
         # Add filter actions
         self.filter_action_list = list()
         for i, value in enumerate(sorted(list(set(values)))):

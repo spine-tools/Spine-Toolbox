@@ -131,7 +131,6 @@ class SpineDatapackageWidget(QMainWindow):
         # Rows inserted or Data changed
         self.resources_model.rowsInserted.connect(self.resources_model_rows_inserted)
         self.resources_model.dataChanged.connect(self.resources_model_data_changed)
-        self.foreign_keys_model.rowsInserted.connect(self.setup_new_foreign_key_row)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -178,10 +177,6 @@ class SpineDatapackageWidget(QMainWindow):
             msg_box.setInformativeText(info)
         msg_box.exec_()
 
-    @Slot("QModelIndex", "int", "int", name="setup_new_foreign_key_row")
-    def setup_new_foreign_key_row(self, parent, first, last):
-        index = self.foreign_keys_model.index(first, 0, parent)
-
     @Slot("QModelIndex", "int", "int", name="resources_model_rows_inserted")
     def resources_model_rows_inserted(self, parent, first, last):
         self.check_resource_name(first)
@@ -212,7 +207,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QModelIndex", "QModelIndex", name="reset_resource_models")
     def reset_resource_models(self, selected, deselected):
-        """Reset resource data and schema model whenever a new resource is selected."""
+        """Reset resource data and schema models whenever a new resource is selected."""
         try:
             new_selected_resource_name = selected.indexes()[0].data(Qt.DisplayRole)
         except IndexError:
