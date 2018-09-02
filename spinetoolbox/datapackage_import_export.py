@@ -116,3 +116,91 @@ def import_datapackage(data_store_form, datapackage_path):
                     )
                 except SpineDBAPIError as e:
                     logging.debug(e.msg)
+
+
+        # TODO: Import relationships from foreign keys
+        # Iterate over resources (again) to create relationships
+        #for resource in self.datapackage.resources:
+        #    parent_object_class_name = resource.name
+        #    if parent_object_class_name not in self.object_class_name_list:
+        #        continue
+        #    relationship_class_id_dict = dict()
+        #    child_object_class_id_dict = dict()
+        #    for field in resource.schema.fields:
+        #        # A field whose named starts with the object_class is an index and should be skipped
+        #        if field.name.startswith(parent_object_class_name):
+        #            continue
+        #        # Fields whose name ends with an object class name are foreign keys
+        #        # and used to create relationships
+        #        child_object_class_name = None
+        #        for x in self.object_class_name_list:
+        #            if field.name.endswith(x):
+        #                child_object_class_name = x
+        #                break
+        #        if child_object_class_name:
+        #            relationship_class_name = resource.name + "_" + field.name
+        #            relationship_class_id_dict[field.name] = self.session.query(self.RelationshipClass.id).\
+        #                filter_by(name=relationship_class_name).one().id
+        #            child_object_class_id_dict[field.name] = self.session.query(self.ObjectClass.id).\
+        #                filter_by(name=child_object_class_name).one().id
+        #    for i, row in enumerate(self.resource_tables[resource.name][1:]):
+        #        row_dict = dict(zip(resource.schema.field_names, row))
+        #        if parent_object_class_name in row_dict:
+        #            parent_object_name = row_dict[parent_object_class_name]
+        #        else:
+        #            parent_object_name = parent_object_class_name + str(i)
+        #        parent_object_id = self.session.query(self.Object.id).\
+        #            filter_by(name=parent_object_name).one().id
+        #        for field_name, value in row_dict.items():
+        #            if field_name in relationship_class_id_dict:
+        #                relationship_class_id = relationship_class_id_dict[field_name]
+        #                child_object_name = None
+        #                child_object_ref = value
+        #                child_object_class_id = child_object_class_id_dict[field_name]
+        #                child_object_class_name = self.session.query(self.ObjectClass.name).\
+        #                    filter_by(id=child_object_class_id).one().name
+        #                child_resource = self.datapackage.get_resource(child_object_class_name)
+        #                # Collect index and primary key columns in child resource
+        #                indices = list()
+        #                primary_key = None
+        #                for j, field in enumerate(child_resource.schema.fields):
+        #                    # A field whose named starts with the object_class is an index
+        #                    if field.name.startswith(child_object_class_name):
+        #                        indices.append(j)
+        #                        # A field named exactly as the object_class is the primary key
+        #                        if field.name == child_object_class_name:
+        #                            primary_key = j
+        #                # Look up the child object ref. in the child resource table
+        #                for k, row in enumerate(self.resource_tables[child_resource.name][1:]):
+        #                    if child_object_ref in [row[j] for j in indices]:
+        #                        # Found reference in index values
+        #                        if primary_key is not None:
+        #                            child_object_name = row[primary_key]
+        #                        else:
+        #                            child_object_name = child_object_class_name + str(k)
+        #                        break
+        #                if child_object_name is None:
+        #                    msg = "Couldn't find object ref {} to create relationship for field {}".\
+        #                        format(child_object_ref, field_name)
+        #                    self.ui.statusbar.showMessage(msg, 5000)
+        #                    continue
+        #                child_object_id = self.session.query(self.Object.id).\
+        #                    filter_by(name=child_object_name, class_id=child_object_class_id).one().id
+        #                relationship_name = parent_object_name + field_name + child_object_name
+        #                relationship = self.Relationship(
+        #                    commit_id=1,
+        #                    class_id=relationship_class_id,
+        #                    parent_object_id=parent_object_id,
+        #                    child_object_id=child_object_id,
+        #                    name=relationship_name
+        #                )
+        #                try:
+        #                    self.session.add(relationship)
+        #                    self.session.flush()
+        #                    object_id = object_.id
+        #                except DBAPIError as e:
+        #                    msg = "Failed to insert relationship {0} for object {1} of class {2}: {3}".\
+        #                        format(field_name, parent_object_name, parent_object_class_name, e.orig.args)
+        #                    self.ui.statusbar.showMessage(msg, 5000)
+        #                    self.session.rollback()
+        #                    return False

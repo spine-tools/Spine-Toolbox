@@ -863,10 +863,12 @@ class MinimalTableModel(QAbstractTableModel):
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
             return False
+        roles = [role]
         self._data[index.row()][index.column()][role] = value
         if role == Qt.EditRole:
             self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        self.dataChanged.emit(index, index, [role])
+            roles.append(Qt.DisplayRole)
+        self.dataChanged.emit(index, index, roles)
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -990,7 +992,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginResetModel()
         self._data = list()
         self._flags = list()
-        roles = list()
         if new_data:
             for line in new_data:
                 new_row = list()
@@ -1002,12 +1003,11 @@ class MinimalTableModel(QAbstractTableModel):
                     }
                     new_row.append(new_dict)
                     new_flags_row.append(self.default_flags)
-                    roles.append(Qt.EditRole)
                 self._data.append(new_row)
                 self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
-        self.dataChanged.emit(top_left, bottom_right, roles)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
         self.endResetModel()
 
 
@@ -1340,7 +1340,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def apply_filter(self):
         """Trigger filtering."""
         self.setFilterRegExp("")
-        # Bold column in case the rule is met
+        # Bold entire column in case the rule is met
         for column in self.rule_dict:
             for row in range(self.sourceModel().rowCount()):
                 source_index = self.sourceModel().index(row, column)
@@ -1366,8 +1366,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         Positive rules trigger a violation if met."""
         for key, value in kwargs.items():
             column = self.h(key)
-            value_list = self.subrule_dict.setdefault(column, [])
-            value_list.extend(value)
+            self.rule_dict[column] = value
 
     def remove_subrule(self, *args):
         """Remove subrules."""
@@ -1385,7 +1384,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             data = self.sourceModel().data(source_index, self.filterRole())
             if data is None:
                 continue
-            if value not in data:
+            if data not in value:
                 return False
         return True
 
@@ -1424,7 +1423,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
 
 
 class DatapackageResourcesModel(QStandardItemModel):
-    """A class to hold datapackage resources and show them in a treeview."""
+    """A class to hold datapackage resources and show them in a tableview."""
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
@@ -1449,7 +1448,7 @@ class DatapackageResourcesModel(QStandardItemModel):
             self.setData(index, None, Qt.ToolTipRole)
         else:
             tool_tip = ("<html>Set this resource's name to one of Spine object classes "
-                       "to include it in the export.</html>")
+                       "to be able to import it.</html>")
             self.setData(index, self.nok_icon, Qt.DecorationRole)
             self.setData(index, tool_tip, Qt.ToolTipRole)
 
@@ -1476,6 +1475,7 @@ class DatapackageFieldsModel(QStandardItemModel):
             primary_key_item = QStandardItem(primary_key)
             primary_key_item.setData(primary_key, Qt.EditRole)
             self.appendRow([name_item, type_item, primary_key_item])
+
 
 class DatapackageForeignKeysModel(QStandardItemModel):
     """A class to hold schema foreign keys and show them in a treeview."""
@@ -1504,6 +1504,7 @@ class DatapackageForeignKeysModel(QStandardItemModel):
 
 
 class DatapackageDescriptorModel(QStandardItemModel):
+    # TODO: Obsolete? Probably... let me check if we wanna use it -manuelma
     """A class to hold a datapackage descriptor in a treeview."""
 
     def __init__(self, parent=None):

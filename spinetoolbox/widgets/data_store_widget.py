@@ -328,26 +328,12 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_value_model.set_horizontal_header_labels([column['name'] for column in header])
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
         self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
-        for row in range(self.relationship_parameter_value_model.rowCount()):
-            self.set_object_class_name_list(row)
         self.relationship_parameter_value_model.make_columns_fixed(
             'relationship_class_name',
             'object_name_list',
             'parameter_name',
             'parameter_value_id')
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
-
-    # NOTE: this is only used for filtering and I don't think it looks pretty well, maybe remove it
-    def set_object_class_name_list(self, row):
-        """Set object class name list in ToolTipRole of relationship class name items."""
-        model = self.relationship_parameter_value_model
-        h = model.horizontal_header_labels().index
-        index = model.index(row, h('relationship_class_name'))
-        relationship_class_name = index.data(Qt.DisplayRole)
-        relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
-            one_or_none()
-        if relationship_class:
-            model.setData(index, relationship_class.object_class_name_list, Qt.ToolTipRole)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
@@ -445,26 +431,32 @@ class DataStoreForm(QMainWindow):
             parent = current.parent().data(Qt.UserRole+1)
             if selected_type == 'object_class':
                 object_class_name = selected['name']
+                object_class_id = selected['id']
+                relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+                relationship_class_name = [x.name for x in relationship_class_list]
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
-                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=object_class_name)
-                # self.relationship_parameter_value_proxy.reject_column("relationship_name")
+                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
             elif selected_type == 'object':
                 object_class_name = parent['name']
+                object_class_id = parent['id']
                 object_name = selected['name']
+                object_id = selected['id']
+                relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+                relationship_class_name = [x.name for x in relationship_class_list]
+                relationship_list = self.mapping.wide_relationship_list(object_id=object_id)
+                object_name_list = [x.object_name_list for x in relationship_list]
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name,
                     object_name=object_name)
-                self.relationship_parameter_value_proxy.add_rule(object_name_list=object_name)
-                # self.relationship_parameter_value_proxy.reject_column("relationship_name")
+                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name,
+                    object_name_list=object_name_list)
             elif selected_type == 'relationship_class':
                 relationship_class_name = selected['name']
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
-                # self.relationship_parameter_value_proxy.reject_column("object_name_list")
             elif selected_type == 'relationship':
                 relationship_class_name = parent['name']
                 object_name_list = selected['object_name_list']
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name,
                     object_name_list=object_name_list)
-                # self.relationship_parameter_value_proxy.reject_column("object_name_list")
         self.object_parameter_value_proxy.apply_filter()
         self.relationship_parameter_value_proxy.apply_filter()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
@@ -480,14 +472,20 @@ class DataStoreForm(QMainWindow):
             return
         selected = current.data(Qt.UserRole+1)
         parent = current.parent().data(Qt.UserRole+1)
-        if selected_type == 'object_class': # show only this class
+        if selected_type == 'object_class':
             object_class_name = selected['name']
+            object_class_id = selected['id']
+            relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+            relationship_class_name = [x.name for x in relationship_class_list]
             self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
-            self.relationship_parameter_proxy.add_rule(object_class_name_list=object_class_name)
-        elif selected_type == 'object': # show only this object's class
+            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
+        elif selected_type == 'object':
             object_class_name = parent['name']
+            object_class_id = parent['id']
+            relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+            relationship_class_name = [x.name for x in relationship_class_list]
             self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
-            self.relationship_parameter_proxy.add_rule(object_class_name_list=object_class_name)
+            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
         elif selected_type == 'relationship_class':
             relationship_class_name = selected['name']
             self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
@@ -1003,7 +1001,7 @@ class DataStoreForm(QMainWindow):
         or edit existing ones."""
         if not top_left.isValid():
             return
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
         if top_left.data(Qt.DisplayRole) is None:
             return
@@ -1064,7 +1062,7 @@ class DataStoreForm(QMainWindow):
         or edit existing ones."""
         if not top_left.isValid():
             return
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
         if top_left.data(Qt.DisplayRole) is None:
             return
@@ -1105,7 +1103,7 @@ class DataStoreForm(QMainWindow):
         or edit existing ones."""
         if not top_left.isValid():
             return
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
         if top_left.data(Qt.DisplayRole) is None:
             return
@@ -1122,9 +1120,6 @@ class DataStoreForm(QMainWindow):
                 model.setData(top_left.sibling(top_left.row(), h('parameter_name')), None, Qt.EditRole)
             if top_left.column() == h('object_name_list'):
                 model.setData(top_left.sibling(top_left.row(), h('parameter_name')), None, Qt.EditRole)
-            # Update object class name list (NOTE: this may become obsolete)
-            if top_left.column() == h('relationship_class_name'):
-                self.set_object_class_name_list(top_left.row())
             # Try to add new parameter value
             # Start by adding the relationship
             relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
@@ -1205,7 +1200,7 @@ class DataStoreForm(QMainWindow):
         or edit existing ones."""
         if not top_left.isValid():
             return
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
         if top_left.data(Qt.DisplayRole) is None:
             return

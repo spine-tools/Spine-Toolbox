@@ -29,6 +29,7 @@ from PySide2.QtWidgets import QTableView, QApplication, QMenu, QAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelection, QItemSelectionModel, QPoint, QSignalMapper, \
     QModelIndex
 from PySide2.QtGui import QKeySequence
+from widgets.custom_menus import QOkMenu
 
 
 class CustomQTableView(QTableView):
@@ -118,28 +119,6 @@ class CustomQTableView(QTableView):
     #     return super().edit(index, trigger, event)
 
 
-class QFilterMenu(QMenu):
-    """An autofilter-like QMenu."""
-
-    def __init__(self, parent):
-        """Initialize the class."""
-        super().__init__(parent)
-
-    def mouseReleaseEvent(self, event):
-        """The super implementation triggers the action and closes the menu.
-        Here, we only close the menu if the action is the 'Ok' action.
-        Otherwise we just trigger it.
-        """
-        action = self.activeAction()
-        if action is None:
-            super().mouseReleaseEvent(event)
-            return
-        if action.text() == "Ok":
-            super().mouseReleaseEvent(event)
-            return
-        action.trigger()
-
-
 class ParameterTableView(CustomQTableView):
     """Custom QTableView class with autofilter functionality.
 
@@ -171,7 +150,7 @@ class ParameterTableView(CustomQTableView):
         Show the menu to select a filter."""
         self.filter_column = logical_index
         model = self.model()
-        filter_menu = QFilterMenu(self)
+        filter_menu = QOkMenu(self)
         self.filter_action_list = list()
         # Add 'All' action
         self.action_all = QAction("All", self)

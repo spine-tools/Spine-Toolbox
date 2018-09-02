@@ -27,7 +27,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QPen
 from widgets.custom_editors import CustomComboEditor, CustomCheckableComboEditor, CustomLineEditor, \
-    CustomToolButtonEditor
+    CustomToolButtonEditor, CustomSimpleToolButtonEditor
 import logging
 
 
@@ -48,22 +48,6 @@ class ComboBoxDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `commitData` signal."""
-        pass
-
-
-class CheckableComboBoxDelegate(ComboBoxDelegate):
-    """A QComboBox delegate with checkboxes."""
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def createEditor(self, parent, option, index):
-        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
-        combo = CustomComboEditor(parent, index, items)
-        # combo.currentIndexChanged.connect(self.current_index_changed)
-        return combo
-
-    def setEditorData(self, editor, index):
-        """Show pop up as soon as editing starts."""
         pass
 
 
@@ -170,7 +154,7 @@ class DataStoreDelegate(QItemDelegate):
         self.highlight_pen = QPen(self._parent.palette().highlight(), 1)
 
     def setEditorData(self, editor, index):
-        """Init the line editor with previous data from the index."""
+        """Do nothing."""
         pass
 
     def setModelData(self, editor, model, index):
@@ -178,6 +162,7 @@ class DataStoreDelegate(QItemDelegate):
         pass
 
     def eventFilter(self, editor, event):
+        """Setup editor in show event, and wrap it up in hide events."""
         if event.type() == QEvent.ShowToParent:
             if isinstance(editor, CustomComboEditor):
                 editor.showPopup()
@@ -414,3 +399,73 @@ class AddRelationshipsDelegate(DataStoreDelegate):
         else:
             object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
         return CustomComboEditor(parent, index, object_name_list)
+
+
+class ResourceNameDelegate(QItemDelegate):
+    """A QComboBox delegate with checkboxes."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+
+    def createEditor(self, parent, option, index):
+        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
+        items = self._parent.object_class_name_list
+        return CustomComboEditor(parent, index, items)
+
+    def setEditorData(self, editor, index):
+        """Show pop up as soon as editing starts."""
+        editor.showPopup()
+
+    def setModelData(self, editor, model, index):
+        """Do nothing. Model data is updated by handling the `commitData` signal."""
+        pass
+
+class ForeignKeysDelegate(QItemDelegate):
+    """A QComboBox delegate with checkboxes."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+        self.datapackage = parent.datapackage
+        self.selected_resource_name = None
+
+    def createEditor(self, parent, option, index):
+        """Return editor."""
+        self.selected_resource_name = self._parent.selected_resource_name
+        model = index.model()
+        header = [model.headerData(j, Qt.Horizontal, Qt.DisplayRole) for j in range(model.columnCount())]
+        h = header.index
+        if index.column() == h('fields'):
+            field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
+            return CustomSimpleToolButtonEditor(parent, index, field_names)
+        if index.column() == h('reference resource'):
+            return CustomComboEditor(parent, index, self.datapackage.resource_names)
+        if index.column() == h('reference fields'):
+            reference_resource = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
+            if not reference_resource:
+                return None
+            field_names = self.datapackage.get_resource(reference_resource).schema.field_names
+            return CustomSimpleToolButtonEditor(parent, index, field_names)
+        return None
+
+    def setEditorData(self, editor, index):
+        """Do nothing."""
+        pass
+
+    def setModelData(self, editor, model, index):
+        """Do nothing."""
+        pass
+
+    def eventFilter(self, editor, event):
+        """Setup editor in show event, and wrap it up in hide events."""
+        if event.type() == QEvent.ShowToParent:
+            if isinstance(editor, CustomComboEditor):
+                editor.showPopup()
+            elif isinstance(editor, CustomSimpleToolButtonEditor):
+                editor.click()
+            return True
+        elif event.type() == QEvent.HideToParent:
+            if isinstance(editor, CustomSimpleToolButtonEditor):
+                self.commitData.emit(editor)
+                self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
+                return True
+        return super().eventFilter(editor, event)

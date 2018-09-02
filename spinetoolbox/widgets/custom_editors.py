@@ -27,6 +27,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QAction, QWidgetAction, QWidget, \
     QHBoxLayout, QActionGroup
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QIntValidator
+from widgets.custom_menus import QOkMenu
 import logging
 
 
@@ -78,14 +79,13 @@ class CustomLineEditor(QLineEdit):
 
 
 class CustomToolButtonEditor(QToolButton):
-    """A custom QToolButton to handle data from models."""
+    """A custom QToolButton to popup a Qmenu with multiple horizontal sections."""
     def __init__(self, parent, index, object_class_name_list, **object_name_dict):
         """Initialize class."""
         super().__init__(parent)
         self._text = None
         self._index = index
         self.setPopupMode(QToolButton.InstantPopup)
-        #self.setPopupMode(QToolButton.MenuButtonPopup)
         self.setText(index.data(Qt.DisplayRole))
         self.menu = QMenu(parent)
         widget = QWidget(self)
@@ -105,14 +105,12 @@ class CustomToolButtonEditor(QToolButton):
         self.widget_action = QWidgetAction(self.menu)
         self.widget_action.setDefaultWidget(widget)
         self.menu.addAction(self.widget_action)
-        action_ok = QAction("Ok", self.menu)
+        action_ok = self.menu.addAction("Ok")
         action_ok.triggered.connect(self.commit_data)
-        self.menu.addAction(action_ok)
         self.setMenu(self.menu)
 
     @Slot("bool", name="commit_data")
     def commit_data(self, checked):
-        #self.setPopupMode(QToolButton.DelayedPopup)
         layout = self.widget_action.defaultWidget().layout()
         object_name_list = list()
         for i in range(layout.count()):
@@ -129,3 +127,38 @@ class CustomToolButtonEditor(QToolButton):
 
     def text(self):
         return self._text
+
+
+class CustomSimpleToolButtonEditor(QToolButton):
+    """A custom QToolButton to popup a Qmenu."""
+    def __init__(self, parent, index, field_name_list):
+        """Initialize class."""
+        super().__init__(parent)
+        self._text = None
+        self._index = index
+        self.setPopupMode(QToolButton.InstantPopup)
+        self.menu = QOkMenu(parent)
+        for field_name in field_name_list:
+            action = self.menu.addAction(field_name)
+            action.setCheckable(True)
+        self.menu.addSeparator()
+        action_ok = self.menu.addAction("Ok")
+        action_ok.triggered.connect(self.commit_data)
+        self.setMenu(self.menu)
+
+    @Slot("bool", name="commit_data")
+    def commit_data(self, checked):
+        field_name_list = list()
+        for action in self.menu.actions():
+            if action.isChecked():
+                field_name_list.append(action.text())
+        self._text = ",".join(field_name_list)
+        self.close()
+
+    def index(self):
+        return self._index
+
+    def text(self):
+        return self._text
+
+CustomSimpleToolButtonEditor

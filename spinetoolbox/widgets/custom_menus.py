@@ -290,3 +290,27 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.add_action("New file", self._parent.new_include)
         self.addSeparator()
         self.add_action("Open file", self._parent.add_includes)
+
+
+class QOkMenu(QMenu):
+    """An QMenu that only hides when 'Ok' action is triggered.
+    It allows selecting multiple checkable options.
+    """
+
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent)
+
+    def mouseReleaseEvent(self, event):
+        """The super implementation triggers the action and closes the menu.
+        Here, we only close the menu if the action is the 'Ok' action.
+        Otherwise we just trigger it.
+        """
+        action = self.activeAction()
+        if action is None:
+            super().mouseReleaseEvent(event)
+            return
+        if action.text() == "Ok":
+            super().mouseReleaseEvent(event)
+            return
+        action.trigger()
