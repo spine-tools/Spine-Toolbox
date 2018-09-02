@@ -1385,8 +1385,6 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             data = self.sourceModel().data(source_index, self.filterRole())
             if data is None:
                 continue
-            # Split data in case of name list
-            data = data.split(',')
             if value not in data:
                 return False
         return True

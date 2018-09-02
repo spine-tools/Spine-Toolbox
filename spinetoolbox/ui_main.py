@@ -43,7 +43,7 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.tool_template_widget import ToolTemplateWidget
-from widgets.checkbox_delegate import CheckBoxDelegate
+from widgets.custom_delegates import CheckBoxDelegate
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser

@@ -156,8 +156,6 @@ class DatabaseMapping(object):
 
     def single_object_class(self, id=None, name=None):
         """Return a single object class given the id or name."""
-        if not id and not name:
-            return self.empty_list()
         qry = self.session.query(
             self.ObjectClass.id,
             self.ObjectClass.name,
@@ -167,11 +165,10 @@ class DatabaseMapping(object):
             return qry.filter_by(id=id)
         if name:
             return qry.filter_by(name=name)
+        return self.empty_list()
 
     def single_object(self, id=None, name=None):
         """Return a single object given the id or name."""
-        if not id and not name:
-            return self.empty_list()
         qry = self.session.query(
             self.Object.id,
             self.Object.class_id,
@@ -181,11 +178,10 @@ class DatabaseMapping(object):
             return qry.filter_by(id=id)
         if name:
             return qry.filter_by(name=name)
+        return self.empty_list()
 
     def single_wide_relationship_class(self, id=None, name=None):
         """Return a single relationship class in wide format given the id or name."""
-        if not id and not name:
-            return self.empty_list()
         qry = self.session.query(
             self.RelationshipClass.id,
             func.group_concat(self.RelationshipClass.object_class_id).label('object_class_id_list'),
@@ -197,11 +193,10 @@ class DatabaseMapping(object):
             return qry.filter_by(id=id)
         if name:
             return qry.filter_by(name=name)
+        return self.empty_list()
 
-    def single_wide_relationship(self, id=None, name=None):
+    def single_wide_relationship(self, id=None, name=None, class_id=None, object_id_list=None, object_name_list=None):
         """Return a single relationship in wide format given the id or name."""
-        if not id and not name:
-            return self.empty_list()
         qry = self.session.query(
             self.Relationship.id,
             func.group_concat(self.Relationship.object_id).label('object_id_list'),
@@ -214,6 +209,27 @@ class DatabaseMapping(object):
             return qry.filter_by(id=id)
         if name:
             return qry.filter_by(name=name)
+        if class_id:
+            subqry = qry.subquery()
+            if object_id_list:
+                return self.session.query(
+                    subqry.c.id,
+                    subqry.c.object_id_list,
+                    subqry.c.object_name_list,
+                    subqry.c.name,
+                    subqry.c.class_id
+                ).filter(subqry.c.class_id == class_id).\
+                filter(subqry.c.object_id_list == object_id_list)
+            if object_name_list:
+                return self.session.query(
+                    subqry.c.id,
+                    subqry.c.object_id_list,
+                    subqry.c.object_name_list,
+                    subqry.c.name,
+                    subqry.c.class_id
+                ).filter(subqry.c.class_id == class_id).\
+                filter(subqry.c.object_name_list == object_name_list)
+        return self.empty_list()
 
     def object_class_list(self):
         """Return object classes ordered by display order."""
@@ -332,7 +348,7 @@ class DatabaseMapping(object):
 
     def unvalued_relationship_parameter_list(self, relationship_id):
         """Return parameters that do not have a value for given relationship."""
-        relationship = self.single_wide_relationship(relationship_id).one_or_none()
+        relationship = self.single_wide_relationship(id=relationship_id).one_or_none()
         if not relationship:
             return self.empty_list()
         valued_parameter_ids = self.session.query(self.ParameterValue.parameter_id).\
@@ -342,13 +358,12 @@ class DatabaseMapping(object):
 
     def single_parameter(self, id=None, name=None):
         """Return parameter corresponding to id."""
-        if not id and not name:
-            return self.empty_list()
         qry = self.parameter_list()
         if id:
             return qry.filter_by(id=id)
         if name:
             return qry.filter_by(name=name)
+        return self.empty_list()
 
     def single_object_parameter(self, id):
         """Return object class and the parameter corresponding to id."""
@@ -408,9 +423,9 @@ class DatabaseMapping(object):
     def object_parameter_value_list(self, parameter_name=None):
         """Return objects and their parameter values."""
         qry = self.session.query(
-            #self.Parameter.object_class_id,
+            # self.Parameter.object_class_id,
             self.ObjectClass.name.label('object_class_name'),
-            #self.ParameterValue.object_id,
+            # self.ParameterValue.object_id,
             self.Object.name.label('object_name'),
             self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
@@ -433,12 +448,12 @@ class DatabaseMapping(object):
         wide_relationship_class_subqry = self.wide_relationship_class_list().subquery()
         wide_relationship_subqry = self.wide_relationship_list().subquery()
         qry = self.session.query(
-            #self.Parameter.relationship_class_id,
+            # self.Parameter.relationship_class_id,
             wide_relationship_class_subqry.c.name.label('relationship_class_name'),
-            #self.ParameterValue.relationship_id,
-            wide_relationship_class_subqry.c.object_class_name_list,
-            wide_relationship_subqry.c.name.label('relationship_name'),
-            #wide_relationship_subqry.c.object_id_list,
+            # self.ParameterValue.relationship_id,
+            # wide_relationship_class_subqry.c.object_class_name_list,
+            # wide_relationship_subqry.c.name.label('relationship_name'),
+            # wide_relationship_subqry.c.object_id_list,
             wide_relationship_subqry.c.object_name_list,
             self.ParameterValue.id.label('parameter_value_id'),
             self.Parameter.name.label('parameter_name'),
@@ -535,6 +550,12 @@ class DatabaseMapping(object):
         Returns:
             wide_relationship (KeyedTuple): the relationship now with the id
         """
+        # If relationship already exists (same class, same object_id_list), return it quietly
+        object_id_str = ",".join([str(x) for x in wide_relationship_args['object_id_list']])
+        wide_relationship = self.single_wide_relationship(class_id=wide_relationship_args['class_id'],
+            object_id_list=object_id_str).one_or_none()
+        if wide_relationship:
+            return wide_relationship
         id = self.session.query(func.max(self.Relationship.id)).scalar()
         if not id:
             id = 0

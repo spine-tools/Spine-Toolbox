@@ -34,8 +34,8 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from config import STATUSBAR_SS
 from models import MinimalTableModel
-from widgets.combobox_delegate import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate
-from widgets.lineedit_delegate import LineEditDelegate
+from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
+    LineEditDelegate
 import ui.add_object_classes
 import ui.add_objects
 import ui.add_relationship_classes
@@ -69,7 +69,7 @@ class CustomQDialog(QDialog):
         """Connect signals to slots."""
         self.ui.actionInsert_row.triggered.connect(self.insert_row)
         self.ui.actionRemove_rows.triggered.connect(self.remove_rows)
-        self.ui.tableView.itemDelegate().closeEditor.connect(self.data_committed)
+        self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
         self.model.dataChanged.connect(self.model_data_changed)
 
     def resize_tableview(self):
@@ -104,7 +104,7 @@ class CustomQDialog(QDialog):
         data = editor.text()
         if not data:
             return
-        index = editor.index
+        index = editor.index()
         self.model.setData(index, data, Qt.EditRole)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
@@ -349,7 +349,7 @@ class AddRelationshipsDialog(CustomQDialog):
         self.ui.toolButton_insert_row.setEnabled(False)
         self.ui.toolButton_remove_rows.setEnabled(False)
         self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self))
-        self.ui.tableView.itemDelegate().closeEditor.connect(self.data_committed)
+        self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
         self.init_relationship_class()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
@@ -400,6 +400,8 @@ class AddRelationshipsDialog(CustomQDialog):
 
     @Slot("int", name='call_reset_model')
     def call_reset_model(self, index):
+        """Called when relationship class's combobox's index changes.
+        Update relationship_class attribute accordingly and reset model."""
         self.relationship_class = self.relationship_class_list[index]
         self.reset_model()
 

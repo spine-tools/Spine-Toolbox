@@ -64,6 +64,7 @@ def compile_DOUBLE_mysql_sqlite(element, compiler, **kw):
     """ Handles mysql DOUBLE datatype as REAL in sqlite """
     return compiler.visit_REAL(element, **kw)
 
+# FIXME: this bothers other dialects, need to revise
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor = dbapi_connection.cursor()

@@ -27,9 +27,7 @@ in Data Connection item.
 
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.combobox_delegate import ComboBoxDelegate, CheckableComboBoxDelegate
-from widgets.lineedit_delegate import LineEditDelegate
-from widgets.checkbox_delegate import CheckBoxDelegate
+from widgets.custom_delegates import ComboBoxDelegate, CheckableComboBoxDelegate, LineEditDelegate, CheckBoxDelegate
 from widgets.custom_menus import DescriptorTreeContextMenu
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot, QSettings
@@ -102,15 +100,15 @@ class SpineDatapackageWidget(QMainWindow):
         # Delegates
         # Resource data
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_resource_data)
+        lineedit_delegate.commitData.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Resource name
         combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_resource_name)
+        combobox_delegate.commitData.connect(self.update_resource_name)
         self.ui.treeView_resources.setItemDelegateForColumn(0, combobox_delegate)
         # Field name
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_field_name)
+        lineedit_delegate.commitData.connect(self.update_field_name)
         self.ui.treeView_fields.setItemDelegateForColumn(0, lineedit_delegate)
         # Primary key
         checkbox_delegate = CheckBoxDelegate(self)
@@ -119,13 +117,13 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Foreign key fields, ref resource,
         combobox_delegate = CheckableComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_foreign_key_fields)
+        combobox_delegate.commitData.connect(self.update_foreign_key_fields)
         self.ui.treeView_foreign_keys.setItemDelegateForColumn(0, combobox_delegate)
         combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_foreign_key_ref_resource)
+        combobox_delegate.commitData.connect(self.update_foreign_key_ref_resource)
         self.ui.treeView_foreign_keys.setItemDelegateForColumn(1, combobox_delegate)
         combobox_delegate = CheckableComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_foreign_key_ref_fields)
+        combobox_delegate.commitData.connect(self.update_foreign_key_ref_fields)
         self.ui.treeView_foreign_keys.setItemDelegateForColumn(2, combobox_delegate)
         # Selected resource changed
         self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.filter_resource_data)
@@ -237,25 +235,23 @@ class SpineDatapackageWidget(QMainWindow):
         self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
-    def update_resource_data(self, editor, hint):
-        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
+    @Slot("QWidget", name="update_resource_data")
+    def update_resource_data(self, editor):
         """Update resource data with newly edited data."""
-        index = editor.index
+        index = editor.index()
         new_value = editor.text()
         if not self.resource_data_model.setData(index, new_value, Qt.EditRole):
             return
         self.ui.tableView_resource_data.resizeColumnsToContents()
         self.resource_tables[self.selected_resource_name][index.row()][index.column()] = new_value
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_name")
-    def update_resource_name(self, editor, hint):
-        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
+    @Slot("QWidget", name="update_resource_name")
+    def update_resource_name(self, editor):
         """Update resources model and descriptor with new resource name."""
         new_name = editor.currentText()
         if not new_name:
             return
-        index = editor.index
+        index = editor.index()
         old_name = index.data(Qt.DisplayRole)
         if not self.resources_model.setData(index, new_name, Qt.EditRole):
             return
@@ -269,13 +265,12 @@ class SpineDatapackageWidget(QMainWindow):
         self.selected_resource_name = new_name
         self.datapackage.rename_resource(old_name, new_name)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
-    def update_field_name(self, editor, hint):
-        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
+    @Slot("QWidget", name="update_resource_data")
+    def update_field_name(self, editor):
         """Called when line edit delegate wants to edit field name data.
         Update name in fields_model, resource_data_model's header and datapackage descriptor.
         """
-        index = editor.index
+        index = editor.index()
         new_name = editor.text()
         # Save old name to look up field
         old_name = index.data(Qt.DisplayRole)
@@ -319,30 +314,27 @@ class SpineDatapackageWidget(QMainWindow):
         for row in reversed(list(row_set)):
             self.foreign_keys_model.removeRows(row, 1)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_fields")
-    def update_foreign_key_fields(self, editor, hint):
-        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
+    @Slot("QWidget", name="update_foreign_key_fields")
+    def update_foreign_key_fields(self, editor):
         print('upd fk fields')
         model = editor.model()
         for i in range(model.rowCount()):
             index = model.index(i, 0)
             print(index.data(Qt.DisplayRole))
             print(index.data(Qt.CheckStateRole))
-        index = editor.index
+        index = editor.index()
         value = editor.currentText()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_resource")
-    def update_foreign_key_ref_resource(self, editor, hint):
-        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
-        index = editor.index
+    @Slot("QWidget", name="update_foreign_key_ref_resource")
+    def update_foreign_key_ref_resource(self, editor):
+        index = editor.index()
         value = editor.currentText()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_fields")
-    def update_foreign_key_ref_fields(self, editor, hint):
-        # TODO: Slot line has 3 arguments but def line has only 2 (editor and hint). Which one is correct?
-        index = editor.index
+    @Slot("QWidget", name="update_foreign_key_ref_fields")
+    def update_foreign_key_ref_fields(self, editor):
+        index = editor.index()
         value = editor.currentText()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 

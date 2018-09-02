@@ -31,28 +31,6 @@ from PySide2.QtCore import Qt, Signal, Slot, QItemSelection, QItemSelectionModel
 from PySide2.QtGui import QKeySequence
 
 
-class QFilterMenu(QMenu):
-    """An autofilter-like QMenu."""
-
-    def __init__(self, parent):
-        """Initialize the class."""
-        super().__init__(parent)
-
-    def mouseReleaseEvent(self, event):
-        """The super implementation triggers the action and closes the menu.
-        Here, we only close the menu if the action is the 'Ok' action.
-        Otherwise we just trigger it.
-        """
-        action = self.activeAction()
-        if action is None:
-            super().mouseReleaseEvent(event)
-            return
-        if action.text() == "Ok":
-            super().mouseReleaseEvent(event)
-            return
-        action.trigger()
-
-
 class CustomQTableView(QTableView):
     """Custom QTableView class with copy-paste functionality.
 
@@ -138,6 +116,28 @@ class CustomQTableView(QTableView):
     # def edit(self, index, trigger, event):
     #     self.editing = True
     #     return super().edit(index, trigger, event)
+
+
+class QFilterMenu(QMenu):
+    """An autofilter-like QMenu."""
+
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent)
+
+    def mouseReleaseEvent(self, event):
+        """The super implementation triggers the action and closes the menu.
+        Here, we only close the menu if the action is the 'Ok' action.
+        Otherwise we just trigger it.
+        """
+        action = self.activeAction()
+        if action is None:
+            super().mouseReleaseEvent(event)
+            return
+        if action.text() == "Ok":
+            super().mouseReleaseEvent(event)
+            return
+        action.trigger()
 
 
 class ParameterTableView(CustomQTableView):
