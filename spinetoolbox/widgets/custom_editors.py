@@ -113,7 +113,7 @@ class CustomToolButtonEditor(QToolButton):
         self.setMenu(self.menu)
 
     @Slot("bool", name="commit_data")
-    def commit_data(self, checked):
+    def commit_data(self, checked=False):
         layout = self.widget_action.defaultWidget().layout()
         object_name_list = list()
         for i in range(layout.count()):
@@ -152,7 +152,7 @@ class CustomSimpleToolButtonEditor(QToolButton):
         self.setMenu(self.menu)
 
     @Slot("bool", name="commit_data")
-    def commit_data(self, checked):
+    def commit_data(self, checked=False):
         field_name_list = list()
         for action in self.menu.actions():
             if action.isChecked():

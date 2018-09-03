@@ -199,14 +199,14 @@ class ParameterTableView(CustomQTableView):
         filter_menu.exec_(QPoint(pos_x, pos_y))
 
     @Slot("bool", name="update_action_all_checked")
-    def update_action_all_checked(self, checked):
+    def update_action_all_checked(self, checked=False):
         """Called when one filter action is triggered.
         In case they are all checked, check to 'All' action too.
         """
         self.action_all.setChecked(all([a.isChecked() for a in self.filter_action_list]))
 
     @Slot("bool", name="action_all_triggered")
-    def action_all_triggered(self, checked):
+    def action_all_triggered(self, checked=False):
         """Check or uncheck all filter actions."""
         for action in self.filter_action_list:
             action.setChecked(checked)
