@@ -208,6 +208,7 @@ class ParameterTableView(CustomQTableView):
     @Slot("bool", name="action_all_triggered")
     def action_all_triggered(self, checked=False):
         """Check or uncheck all filter actions."""
+        checked = self.action_all.isChecked()
         for action in self.filter_action_list:
             action.setChecked(checked)
 
