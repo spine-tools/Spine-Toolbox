@@ -987,6 +987,7 @@ class MinimalTableModel(QAbstractTableModel):
             return False
         self.beginRemoveRows(parent, row, row)
         removed_data_row = self._data.pop(row)
+        removed_flags_data_row = self._flags.pop(row)
         self.endRemoveRows()
         return True
 
@@ -1008,14 +1009,18 @@ class MinimalTableModel(QAbstractTableModel):
             return False
         self.beginRemoveColumns(parent, column, column)
         # for loop all rows and remove the column from each
-        removed_column = list()  # for testing and debugging
+        removed_data_column = list()  # for testing and debugging
+        removed_flags_column = list()  # for testing and debugging
         removing_last_column = False
         if self.columnCount() == 1:
             removing_last_column = True
         for r in self._data:
-            removed_column.append(r.pop(column))
+            removed_data_column.append(r.pop(column))
+        for r in self._flags:
+            removed_flags_column.append(r.pop(column))
         if removing_last_column:
             self._data = []
+            self._flags = []
         # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
         return True
