@@ -52,18 +52,18 @@ widgets.add\_view\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.checkbox\_delegate module
----------------------------------
+widgets.custom\_delegates module
+--------------------------------
 
-.. automodule:: widgets.checkbox_delegate
+.. automodule:: widgets.custom_delegates
     :members:
     :undoc-members:
     :show-inheritance:
 
-widgets.combobox\_delegate module
----------------------------------
+widgets.custom\_editors module
+------------------------------
 
-.. automodule:: widgets.combobox_delegate
+.. automodule:: widgets.custom_editors
     :members:
     :undoc-members:
     :show-inheritance:
@@ -144,14 +144,6 @@ widgets.julia\_repl\_widget module
 ----------------------------------
 
 .. automodule:: widgets.julia_repl_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.lineedit\_delegate module
----------------------------------
-
-.. automodule:: widgets.lineedit_delegate
     :members:
     :undoc-members:
     :show-inheritance:

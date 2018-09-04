@@ -9,9 +9,13 @@ This section is for upcoming changes. This serves two purposes:
 2. At release time, Unreleased section changes can be moved into a new release version section
 
 ### Added (for new features)
+In development branches:
 - Advanced copy/pasting support for the treeview
 - Import data from Excel files into the treeview
 - Export treeview into an Excel file
+- Save at exit prompt
+
+Upcoming:
 - Tool-Tool interface
 - Widget for viewing the code of Tool templates
 - Undo-redo functionality for the main view

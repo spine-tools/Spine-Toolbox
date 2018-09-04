@@ -25,6 +25,7 @@ Widget for controlling user settings.
 """
 
 import os
+import logging
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 import ui.settings
@@ -126,6 +127,7 @@ class SettingsWidget(QWidget):
         """Read current settings from config object and update UI to show them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
+        save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
         logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
@@ -136,7 +138,19 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
-        if logging_level == '2':
+
+        logging.debug("save at exit:{0}".format(save_at_exit))
+
+        if save_at_exit == "0":  # Not needed but makes the code more readable.
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
+        elif save_at_exit == "1":
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+        elif save_at_exit == "2":
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
+        else:  # default
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+
+        if logging_level == "2":
             self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
         else:
             self.ui.checkBox_debug_messages.setCheckState(Qt.Unchecked)
@@ -165,6 +179,7 @@ class SettingsWidget(QWidget):
         """Get selections and save them to conf file."""
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
+        f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
@@ -186,6 +201,7 @@ class SettingsWidget(QWidget):
         # Write to config object
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
+        self._configs.set("settings", "save_at_exit", f)
         self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)

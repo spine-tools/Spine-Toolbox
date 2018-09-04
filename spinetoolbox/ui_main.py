@@ -30,7 +30,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QAction, QDockWidget
+    QCheckBox, QInputDialog, QDockWidget
 from PySide2.QtGui import QStandardItem, QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
@@ -1267,6 +1267,41 @@ class ToolboxUI(QMainWindow):
                 return False
         return True
 
+    def show_save_project_prompt(self):
+        """Shows the save project message box."""
+        save_at_exit = self._config.get("settings", "save_at_exit")
+        if save_at_exit == "0":
+            # Don't save project and don't show message box
+            logging.debug("Project changes not saved")
+            return
+        elif save_at_exit == "1":  # Default
+            # Show message box
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Save project")
+            msg.setText("Save changes to project?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            chk = chkbox.checkState()
+            if answer == QMessageBox.Yes:
+                self.save_project()
+                if chk == 2:
+                    # Save preference into config file
+                    self._config.set("settings", "save_at_exit", "2")
+            else:
+                if chk == 2:
+                    # Save preference into config file
+                    self._config.set("settings", "save_at_exit", "0")
+        elif save_at_exit == "2":
+            # Save project and don't show message box
+            self.save_project()
+        else:
+            self._config.set("settings", "save_at_exit", "1")
+        return
+
     def closeEvent(self, event=None):
         """Method for handling application exit.
 
@@ -1285,6 +1320,8 @@ class ToolboxUI(QMainWindow):
             self._config.set("settings", "previous_project", "")
         else:
             self._config.set("settings", "previous_project", self._project.path)
+            # Show save project prompt
+            self.show_save_project_prompt()
         self._config.save()
         self.qsettings.setValue("mainWindow/windowSize", self.size())
         self.qsettings.setValue("mainWindow/windowPosition", self.pos())
