@@ -25,7 +25,6 @@ Widget for controlling user settings.
 """
 
 import os
-import logging
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 import ui.settings
@@ -138,9 +137,6 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
-
-        logging.debug("save at exit:{0}".format(save_at_exit))
-
         if save_at_exit == "0":  # Not needed but makes the code more readable.
             self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
         elif save_at_exit == "1":
@@ -149,7 +145,6 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
         else:  # default
             self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
-
         if logging_level == "2":
             self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
         else:
