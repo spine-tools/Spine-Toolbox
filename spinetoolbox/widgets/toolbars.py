@@ -31,6 +31,7 @@ from PySide2.QtCore import Qt, QMimeData
 from config import ICON_TOOLBAR_SS
 from graphics_items import ItemImage
 
+
 class ItemToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions"""
     def __init__(self, parent):

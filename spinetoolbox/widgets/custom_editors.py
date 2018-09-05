@@ -47,6 +47,7 @@ class CustomComboEditor(QComboBox):
     def index(self):
         return self._index
 
+
 class CustomCheckableComboEditor(QComboBox):
     """A custom QComboBox to handle data from models."""
     def __init__(self, parent, index, items):
@@ -166,4 +167,5 @@ class CustomSimpleToolButtonEditor(QToolButton):
     def text(self):
         return self._text
 
+# TODO: What the hell is this?
 CustomSimpleToolButtonEditor

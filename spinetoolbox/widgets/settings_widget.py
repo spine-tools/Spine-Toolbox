@@ -36,15 +36,15 @@ class SettingsWidget(QWidget):
     """ A widget to change user's preferred settings.
 
     Attributes:
-        parent (QObject): Parent widget.
+        toolbox (ToolboxUI): Parent widget.
         configs (ConfigurationParser): Configuration object
     """
-    def __init__(self, parent, configs):
+    def __init__(self, toolbox, configs):
         """ Initialize class. """
         super().__init__(f=Qt.Window)
-        self._parent = parent  # QWidget parent
+        self._toolbox = toolbox  # QWidget parent
         self._configs = configs
-        self._project = self._parent.project()
+        self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
@@ -203,7 +203,7 @@ class SettingsWidget(QWidget):
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)
         # Set logging level
-        self._parent.set_debug_level(c)
+        self._toolbox.set_debug_level(c)
         # Update project settings
         self.update_project_settings()
         self._configs.save()
@@ -221,7 +221,7 @@ class SettingsWidget(QWidget):
         # Check if work directory was changed
         if not self.orig_work_dir == work_dir:
             if not self._project.change_work_dir(work_dir):
-                self._parent.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
+                self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
                                             .format(work_dir))
             else:
                 save = True
@@ -230,8 +230,8 @@ class SettingsWidget(QWidget):
             self._project.set_description(self.ui.textEdit_project_description.toPlainText())
             save = True
         if save:
-            self._parent.msg.emit("Project settings changed. Saving project...")
-            self._parent.save_project()
+            self._toolbox.msg.emit("Project settings changed. Saving project...")
+            self._toolbox.save_project()
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.

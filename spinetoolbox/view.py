@@ -37,17 +37,17 @@ class View(MetaObject):
     """View class.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, x, y):
+    def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.item_type = "View"
         self.item_category = "Views"
         self._data = "data"
@@ -60,9 +60,9 @@ class View(MetaObject):
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
-        self._graphics_item = ViewImage(self._parent, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):

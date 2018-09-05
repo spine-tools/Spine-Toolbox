@@ -42,11 +42,11 @@ import qsubprocess
 class AddDbReferenceWidget(QWidget):
     """A widget to query user's input for a new connection string"""
 
-    def __init__(self, parent, data_store):
+    def __init__(self, toolbox, data_store):
         """ Initialize class.
 
         Args:
-            parent (ToolBoxUI): QMainWindow instance
+            toolbox (ToolBoxUI): QMainWindow instance
             data_store (DataStore): A data store instance
         """
         super().__init__(f=Qt.Window)
@@ -54,7 +54,7 @@ class AddDbReferenceWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         # Class attributes
-        self._parent = parent
+        self._toolbox = toolbox
         self._data_store = data_store
         self.dialects = list(SQL_DIALECT_API.keys())
         self.string_dict = dict()
@@ -201,7 +201,7 @@ class AddDbReferenceWidget(QWidget):
         self.statusbar.showMessage(msg)
         program = "pip"
         args = ["install {0}".format(dbapi)]
-        self.pip_install = qsubprocess.QSubProcess(self._parent, program, args)
+        self.pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
         self.pip_install.start_process()
         if self.pip_install.wait_for_finished():
             msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)

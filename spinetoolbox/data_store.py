@@ -43,18 +43,18 @@ class DataStore(MetaObject):
     """Data Store class.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
         references (list): List of references (for now it's only database references)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, references, x, y):
+    def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
         self._widget = DataStoreWidget(self.item_type)
@@ -67,7 +67,7 @@ class DataStore(MetaObject):
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
         self.databases = list()  # name of imported databases NOTE: Not in use at the moment
         # Populate references model
@@ -76,7 +76,7 @@ class DataStore(MetaObject):
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self.add_db_reference_form = None
-        self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
         self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
 
@@ -113,12 +113,12 @@ class DataStore(MetaObject):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(name="show_add_db_reference_form")
     def show_add_db_reference_form(self):
         """Show the form for querying database connection options."""
-        self.add_db_reference_form = AddDbReferenceWidget(self._parent, self)
+        self.add_db_reference_form = AddDbReferenceWidget(self._toolbox, self)
         self.add_db_reference_form.show()
 
     def add_reference(self, reference):
@@ -134,13 +134,13 @@ class DataStore(MetaObject):
         indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
-            self._parent.msg.emit("All references removed")
+            self._toolbox.msg.emit("All references removed")
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
                 self.references.pop(row)
-            self._parent.msg.emit("Selected references removed")
+            self._toolbox.msg.emit("Selected references removed")
         self._widget.populate_reference_list(self.references)
 
     @Slot(name="import_references")
@@ -149,7 +149,7 @@ class DataStore(MetaObject):
         If no item is selected then import all of them.
         """
         if not self.references:
-            self._parent.msg_warning.emit("No data to import")
+            self._toolbox.msg_warning.emit("No data to import")
             return
         indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected, import all
@@ -160,7 +160,7 @@ class DataStore(MetaObject):
             try:
                 self.import_reference(reference)
             except Exception as e:
-                self._parent.msg_error.emit("Import failed: {}".format(e))
+                self._toolbox.msg_error.emit("Import failed: {}".format(e))
                 continue
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
@@ -169,7 +169,7 @@ class DataStore(MetaObject):
     def import_reference(self, reference):
         """Import reference database into local SQLite file"""
         database = reference['database']
-        self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
+        self._toolbox.msg.emit("Importing database <b>{0}</b>".format(database))
         # Source
         source_url = reference['url']
         # Destination
@@ -202,7 +202,7 @@ class DataStore(MetaObject):
             try:
                 mapping = DatabaseMapping(db_url, username)
             except SpineDBAPIError as e:
-                self._parent.msg_error.emit(e.msg)
+                self._toolbox.msg_error.emit(e.msg)
                 return
             database = data_file
             data_store_form = DataStoreForm(self, mapping, database)
@@ -225,7 +225,7 @@ class DataStore(MetaObject):
             try:
                 mapping = DatabaseMapping(db_url, username)
             except SpineDBAPIError as e:
-                self._parent.msg_error.emit(e.msg)
+                self._toolbox.msg_error.emit(e.msg)
                 return
             data_store_form = DataStoreForm(self, mapping, database)
             data_store_form.show()
@@ -255,15 +255,15 @@ class DataStore(MetaObject):
             return None
         if fname in self.data_files():
             # logging.debug("{0} found in DS {1}".format(fname, self.name))
-            self._parent.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
+            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
             path = os.path.join(self.data_dir, fname)
             return path
         visited_items.append(self)
-        for input_item in self._parent.connection_model.input_items(self.name):
+        for input_item in self._toolbox.connection_model.input_items(self.name):
             # Find item from project model
-            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
-                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
             item_data = found_item.data(Qt.UserRole)
             if item_data.item_type in ["Data Store", "Data Connection"]:
@@ -275,7 +275,7 @@ class DataStore(MetaObject):
     @Slot(name="create_new_spine_database")
     def create_new_spine_database(self):
         """Create new (empty) Spine database file in data directory."""
-        answer = QInputDialog.getText(self._parent, "Create fresh Spine database", "Database name:")
+        answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
         database = answer[0]
         if not database:
             return

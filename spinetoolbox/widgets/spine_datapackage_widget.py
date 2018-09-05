@@ -41,7 +41,7 @@ class SpineDatapackageWidget(QMainWindow):
     to a Spine database in SQLite.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         data_connection (DataConnection): Data Connection associated to this widget
         datapackage (CustomPackage): Datapackage to load and use
     """
@@ -49,10 +49,10 @@ class SpineDatapackageWidget(QMainWindow):
     msg = Signal(str, name="msg")
     msg_error = Signal(str, str, str, name="msg_error")
 
-    def __init__(self, parent, data_connection, datapackage):
+    def __init__(self, toolbox, data_connection, datapackage):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
-        self._parent = parent
+        self._toolbox = toolbox
         self._data_connection = data_connection
         self.object_class_name_list = OBJECT_CLASS_NAMES
         self.datapackage = datapackage

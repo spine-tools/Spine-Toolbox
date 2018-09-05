@@ -44,18 +44,18 @@ class ToolTemplateWidget(QWidget):
     """A widget to query user's preferences for a new tool template.
 
     Attributes:
-        parent(ToolBoxUI): QMainWindow instance
-        tool_template(ToolTemplate): If given, the form is prefilled with this template
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): If given, the form is prefilled with this template
     """
-    def __init__(self, parent, tool_template=None):
+    def __init__(self, toolbox, tool_template=None):
         """ Initialize class."""
         super().__init__(f=Qt.Window)
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         # Class attributes
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         # init models
         self.includes_model = QStandardItemModel()
         self.inputfiles_model = QStandardItemModel()
@@ -252,7 +252,7 @@ class ToolTemplateWidget(QWidget):
             url = "file:///" + os.path.join(self.includes_main_path, includes_file)
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
-                self._parent.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
+                self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
     @Slot(name="remove_includes")
     def remove_includes(self):
@@ -427,22 +427,22 @@ class ToolTemplateWidget(QWidget):
             self.statusbar.showMessage("Adding Tool template failed", 3000)
             return False
         # Check if a tool template with this name already exists
-        row = self._parent.tool_template_model.tool_template_row(tool.name)
+        row = self._toolbox.tool_template_model.tool_template_row(tool.name)
         if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
-            old_tool = self._parent.tool_template_model.tool_template(row)
+            old_tool = self._toolbox.tool_template_model.tool_template(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
                 return True
             logging.debug("Updating definition for tool template '{}'".format(tool.name))
-            self._parent.update_tool_template(row, tool)
+            self._toolbox.update_tool_template(row, tool)
         else:
             answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
             if answer[0] == '':  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])  # TODO: maybe check that extension is .json?
             tool.set_def_path(def_file)
-            self._parent.add_tool_template(tool)
+            self._toolbox.add_tool_template(tool)
         # Save path of main program file relative to definition file in case they differ
         def_path = os.path.dirname(def_file)
         if def_path != self.includes_main_path:

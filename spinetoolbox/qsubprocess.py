@@ -33,16 +33,16 @@ class QSubProcess(QObject):
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
 
-    def __init__(self, ui, program=None, args=None):
+    def __init__(self, toolbox, program=None, args=None):
         """Class constructor.
 
         Args:
-            ui (ToolboxUI): Instance of Main UI class.
+            toolbox (ToolboxUI): Instance of Main UI class.
             program (str): Path to program to run in the subprocess (e.g. julia.exe)
             args (list): List of argument for the program (e.g. path to script file)
         """
         super().__init__()
-        self._ui = ui
+        self._toolbox = toolbox
         self._program = program
         self._args = args
         self.process_failed = False
@@ -65,8 +65,8 @@ class QSubProcess(QObject):
         self._process.finished.connect(self.process_finished)
         self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
         self._process.stateChanged.connect(self.on_state_changed)
-        self._ui.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
-        self._ui.msg.emit("\tArguments: <b>{0}</b>".format(self._args))
+        self._toolbox.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
+        self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(self._args))
         self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
@@ -89,7 +89,7 @@ class QSubProcess(QObject):
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
-        self._ui.msg.emit("\tSubprocess started...")
+        self._toolbox.msg.emit("\tSubprocess started...")
 
     @Slot("QProcess::ProcessState", name="on_state_changed")
     def on_state_changed(self, new_state):
@@ -131,7 +131,7 @@ class QSubProcess(QObject):
 
     def terminate_process(self):
         """Shutdown simulation in a QProcess."""
-        # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
+        # self._toolbox.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
         logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
                       .format(self._process.processId(), self._process.state(), self._process.error()))
         self._user_stopped = True
@@ -152,10 +152,10 @@ class QSubProcess(QObject):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             logging.error("QProcess CrashExit")
-            self._ui.msg_error.emit("\tSubprocess crashed")
+            self._toolbox.msg_error.emit("\tSubprocess crashed")
             self.process_failed = True
         elif exit_status == QProcess.NormalExit:
-            self._ui.msg.emit("\tSubprocess finished")
+            self._toolbox.msg.emit("\tSubprocess finished")
             logging.debug("QProcess NormalExit")
         else:
             logging.error("Unknown exit from QProcess '{0}'".format(exit_status))
@@ -165,9 +165,9 @@ class QSubProcess(QObject):
         if not self._user_stopped:
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
             if out is not None:
-                self._ui.msg_proc.emit(out.strip())
+                self._toolbox.msg_proc.emit(out.strip())
         else:
-            self._ui.msg.emit("*** Terminating subprocess ***")
+            self._toolbox.msg.emit("*** Terminating subprocess ***")
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
@@ -177,10 +177,10 @@ class QSubProcess(QObject):
     def on_ready_stdout(self):
         """Emit data from stdout."""
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
-        self._ui.msg_proc.emit(out.strip())
+        self._toolbox.msg_proc.emit(out.strip())
 
     @Slot(name="on_ready_stderr")
     def on_ready_stderr(self):
         """Emit data from stderr."""
         out = str(self._process.readAllStandardError().data(), "utf-8")
-        self._ui.msg_proc_error.emit(out.strip())
+        self._toolbox.msg_proc_error.emit(out.strip())

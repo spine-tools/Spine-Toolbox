@@ -33,14 +33,14 @@ import ui.about
 class AboutWidget(QWidget):
     """About QWidget class."""
 
-    def __init__(self, parent, version):
+    def __init__(self, toolbox, version):
         """Initializes About widget.
 
         Params:
-            parent (QWidget): Parent widget
+            toolbox (QWidget): toolbox widget
             version (str): Application version number
         """
-        self._parent = parent
+        self._toolbox = toolbox
         super().__init__(f=Qt.Window)
         # Set up the user interface from Designer file.
         self.ui = ui.about.Ui_Form()

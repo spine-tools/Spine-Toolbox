@@ -393,6 +393,7 @@ class ResourceNameDelegate(QItemDelegate):
         """Do nothing. Model data is updated by handling the `commitData` signal."""
         pass
 
+
 class ForeignKeysDelegate(HighlightFrameDelegate):
     """A QComboBox delegate with checkboxes."""
     def __init__(self, parent):

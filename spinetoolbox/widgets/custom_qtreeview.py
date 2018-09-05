@@ -40,7 +40,7 @@ class ObjectTreeView(QTreeView):
     editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
+        """Initialize the view."""
         super().__init__(parent)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
@@ -64,7 +64,7 @@ class ReferencesTreeView(QTreeView):
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
+        """Initialize the view."""
         super().__init__(parent)
 
     def dragEnterEvent(self, event):
@@ -100,7 +100,7 @@ class DataTreeView(QTreeView):
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
+        """Initialize the view."""
         super().__init__(parent)
 
     def dragEnterEvent(self, event):
@@ -136,7 +136,7 @@ class IncludesTreeView(QTreeView):
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
+        """Initialize the view."""
         super().__init__(parent)
 
     def dragEnterEvent(self, event):
