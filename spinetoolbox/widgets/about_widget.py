@@ -24,6 +24,7 @@ A widget for presenting basic information about the application.
 @date 14.12.2017
 """
 
+import logging
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor
@@ -44,7 +45,7 @@ class AboutWidget(QWidget):
         # Set up the user interface from Designer file.
         self.ui = ui.about.Ui_Form()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.label_version_str.setText("v{0}".format(version))

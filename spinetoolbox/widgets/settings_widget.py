@@ -41,11 +41,11 @@ class SettingsWidget(QWidget):
     """
     def __init__(self, toolbox, configs):
         """ Initialize class. """
-        super().__init__(f=Qt.Window)  # Do not set parent. Uses own stylesheet.
+        super().__init__(parent=toolbox, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
         # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self._toolbox = toolbox  # QWidget parent

@@ -236,16 +236,15 @@ class Ui_SettingsForm(object):
         self.retranslateUi(SettingsForm)
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.checkBox_open_previous_project, self.checkBox_exit_prompt)
-        SettingsForm.setTabOrder(self.checkBox_exit_prompt, self.checkBox_debug_messages)
+        SettingsForm.setTabOrder(self.checkBox_exit_prompt, self.checkBox_save_at_exit)
+        SettingsForm.setTabOrder(self.checkBox_save_at_exit, self.checkBox_debug_messages)
         SettingsForm.setTabOrder(self.checkBox_debug_messages, self.checkBox_datetime)
-        SettingsForm.setTabOrder(self.checkBox_datetime, self.lineEdit_project_dir)
-        SettingsForm.setTabOrder(self.lineEdit_project_dir, self.lineEdit_gams_path)
+        SettingsForm.setTabOrder(self.checkBox_datetime, self.lineEdit_gams_path)
         SettingsForm.setTabOrder(self.lineEdit_gams_path, self.pushButton_browse_gams)
         SettingsForm.setTabOrder(self.pushButton_browse_gams, self.checkBox_use_repl)
         SettingsForm.setTabOrder(self.checkBox_use_repl, self.lineEdit_julia_path)
         SettingsForm.setTabOrder(self.lineEdit_julia_path, self.pushButton_browse_julia)
-        SettingsForm.setTabOrder(self.pushButton_browse_julia, self.lineEdit_project_name)
-        SettingsForm.setTabOrder(self.lineEdit_project_name, self.textEdit_project_description)
+        SettingsForm.setTabOrder(self.pushButton_browse_julia, self.textEdit_project_description)
         SettingsForm.setTabOrder(self.textEdit_project_description, self.lineEdit_work_dir)
         SettingsForm.setTabOrder(self.lineEdit_work_dir, self.pushButton_browse_work)
         SettingsForm.setTabOrder(self.pushButton_browse_work, self.pushButton_ok)
@@ -285,8 +284,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave this empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))

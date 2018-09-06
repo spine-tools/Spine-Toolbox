@@ -34,7 +34,7 @@ from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
-    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, TT_FOCUS_SS
+    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import busy_effect
 from widgets.custom_menus import AddIncludesPopupMenu
 import logging
@@ -68,7 +68,6 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.setStyleSheet(TT_FOCUS_SS)
         self.ui.treeView_includes.setModel(self.includes_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
