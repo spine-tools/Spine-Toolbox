@@ -19,16 +19,16 @@
 
 """
 Custom item delegates.
+TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   1.9.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
+from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QPen
-from widgets.custom_editors import CustomComboEditor, CustomCheckableComboEditor, CustomLineEditor, \
+from PySide2.QtGui import QPen
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, \
     CustomToolButtonEditor, CustomSimpleToolButtonEditor
-import logging
 
 
 class ComboBoxDelegate(QItemDelegate):
@@ -129,19 +129,15 @@ class CheckBoxDelegate(QItemDelegate):
             self.checkbox_pressed = False
         return False
 
-    def setModelData (self, editor, model, index):
+    def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `commit_data` signal."""
         pass
 
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
         checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
-        checkbox_point = QPoint(option.rect.x() +
-                            option.rect.width() / 2 -
-                            checkbox_rect.width() / 2,
-                            option.rect.y() +
-                            option.rect.height() / 2 -
-                            checkbox_rect.height() / 2)
+        checkbox_point = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
+                                option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
         return QRect(checkbox_point, checkbox_rect.size())
 
 
@@ -283,8 +279,8 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
                     continue
                 object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
                 object_name_dict[object_class_name] = object_name_list
-            return CustomToolButtonEditor(parent, proxy_index, object_class_name_list, current_object_name_list,
-                **object_name_dict)
+            return CustomToolButtonEditor(parent, proxy_index, object_class_name_list,
+                                          current_object_name_list, **object_name_dict)
         elif index.column() == h('parameter_name'):
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
@@ -293,7 +289,7 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
                 return None
             object_name_list = index.sibling(index.row(), h('object_name_list')).data(Qt.DisplayRole)
             relationship = self.mapping.single_wide_relationship(class_id=relationship_class.id,
-                object_name_list=object_name_list).one_or_none()
+                                                                 object_name_list=object_name_list).one_or_none()
             if not relationship:
                 parameter_list = list()
             else:

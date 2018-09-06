@@ -49,7 +49,7 @@ class ToolTemplateWidget(QWidget):
     """
     def __init__(self, toolbox, tool_template=None):
         """ Initialize class."""
-        super().__init__(f=Qt.Window)
+        super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)

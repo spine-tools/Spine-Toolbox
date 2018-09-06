@@ -25,8 +25,7 @@ Classes for custom QTreeView.
 """
 
 import os
-import logging
-from PySide2.QtWidgets import QTreeView, QAbstractItemView
+from PySide2.QtWidgets import QTreeView
 from PySide2.QtCore import Signal, Slot, Qt
 
 
@@ -36,12 +35,11 @@ class ObjectTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
 
     def __init__(self, parent):
         """Initialize the view."""
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):
@@ -60,12 +58,11 @@ class ReferencesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
         """Initialize the view."""
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
@@ -96,12 +93,11 @@ class DataTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
         """Initialize the view."""
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
@@ -132,12 +128,11 @@ class IncludesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
         """Initialize the view."""
-        super().__init__(parent)
+        super().__init__(parent=parent)
 
     def dragEnterEvent(self, event):
         """Accept file and folder drops from the filesystem."""

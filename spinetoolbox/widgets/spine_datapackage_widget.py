@@ -41,17 +41,18 @@ class SpineDatapackageWidget(QMainWindow):
     to a Spine database in SQLite.
 
     Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance  TODO: Not used. Remove?
         data_connection (DataConnection): Data Connection associated to this widget
         datapackage (CustomPackage): Datapackage to load and use
     """
-
     msg = Signal(str, name="msg")
     msg_error = Signal(str, str, str, name="msg_error")
 
     def __init__(self, toolbox, data_connection, datapackage):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
+        # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
+        # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
         self._toolbox = toolbox
         self._data_connection = data_connection
         self.object_class_name_list = OBJECT_CLASS_NAMES

@@ -41,7 +41,7 @@ class AddDataConnectionWidget(QWidget):
     """
     def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(f=Qt.Window)
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox
         self._x = x
         self._y = y

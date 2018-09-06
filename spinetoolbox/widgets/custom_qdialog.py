@@ -22,6 +22,8 @@ Various QDialogs to add items to Database in DataStoreForm,
 and a QDialog that can be programmatically populated with many options.
 Originally intended to be used within DataStoreForm
 
+TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
+TODO: Check if some classes here are obsolete. For instance, CustomQDialog has a syntax error, so it does not even work.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   13.5.2018
 """

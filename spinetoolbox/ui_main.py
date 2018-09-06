@@ -48,7 +48,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SEPARATOR_SS, DOC_INDEX_PATH
+    MAINWINDOW_SS, DOC_INDEX_PATH
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
@@ -105,7 +105,7 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
-        self.setStyleSheet(SEPARATOR_SS)
+        self.setStyleSheet(MAINWINDOW_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)

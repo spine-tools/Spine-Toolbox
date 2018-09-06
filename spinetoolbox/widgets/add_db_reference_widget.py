@@ -40,16 +40,15 @@ import qsubprocess
 
 
 class AddDbReferenceWidget(QWidget):
-    """A widget to query user's input for a new connection string"""
+    """A widget to query user's input for a new connection string
 
+    Attributes:
+        toolbox (ToolBoxUI): QMainWindow instance
+        data_store (DataStore): A data store instance
+    """
     def __init__(self, toolbox, data_store):
-        """ Initialize class.
-
-        Args:
-            toolbox (ToolBoxUI): QMainWindow instance
-            data_store (DataStore): A data store instance
-        """
-        super().__init__(f=Qt.Window)
+        """ Initialize class."""
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)

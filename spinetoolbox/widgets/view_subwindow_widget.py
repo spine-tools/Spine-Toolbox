@@ -24,13 +24,12 @@ QWidget that is used to display information contained in a View.
 :date:   25.4.2018
 """
 
-import logging
 from PySide2.QtWidgets import QWidget
 from ui.subwindow_view import Ui_Form
 
 
 class ViewWidget(QWidget):
-    """Class constructor.
+    """View subwindow class.
 
     Attributes:
         item_type (str): Internal widget object type (should always be 'View')
@@ -41,7 +40,7 @@ class ViewWidget(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of View objects
         self.ui.label_name.setFocus()
 
     def set_name_label(self, txt):

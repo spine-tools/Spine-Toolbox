@@ -40,9 +40,9 @@ class NewProjectForm(QWidget):
         configs (ConfigurationParser): Configurations object
     """
     def __init__(self, toolbox, configs):
-        """ Initialize class. """
-        super().__init__(f=Qt.Window)
-        self._toolbox = toolbox  # QWidget parent
+        """Initialize class."""
+        super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
+        self._toolbox = toolbox
         self._configs = configs
         # Set up the user interface from Designer.
         self.ui = ui.project_form.Ui_Form()

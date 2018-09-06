@@ -41,17 +41,17 @@ class SettingsWidget(QWidget):
     """
     def __init__(self, toolbox, configs):
         """ Initialize class. """
-        super().__init__(f=Qt.Window)
-        self._toolbox = toolbox  # QWidget parent
-        self._configs = configs
-        self._project = self._toolbox.project()
-        self.orig_work_dir = ""  # Work dir when this widget was opened
+        super().__init__(f=Qt.Window)  # Do not set parent. Uses own stylesheet.
         # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self._toolbox = toolbox  # QWidget parent
+        self._configs = configs
+        self._project = self._toolbox.project()
+        self.orig_work_dir = ""  # Work dir when this widget was opened
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)

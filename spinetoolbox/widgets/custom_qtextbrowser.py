@@ -28,11 +28,14 @@ from PySide2.QtWidgets import QTextBrowser, QAction
 
 
 class CustomQTextBrowser(QTextBrowser):
-    """Custom QTextBrowser class."""
+    """Custom QTextBrowser class.
 
+    Attributes:
+        parent (QWidget): Parent widget
+    """
     def __init__(self, parent):
-        super().__init__()
-        self._parent = parent
+        super().__init__(parent=parent)
+        # self._parent = parent  # Is this needed?
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

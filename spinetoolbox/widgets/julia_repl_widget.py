@@ -46,7 +46,7 @@ class JuliaREPLWidget(RichJupyterWidget):
     execution_finished_signal = Signal(int, name="execution_finished_signal")
 
     def __init__(self, toolbox):
-        super().__init__()
+        super().__init__(parent=toolbox)
         self._toolbox = toolbox
         self.kernel_manager = None
         self.kernel_client = None

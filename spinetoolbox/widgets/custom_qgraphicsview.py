@@ -40,7 +40,7 @@ class CustomQGraphicsView(QGraphicsView):
     """
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
-        super().__init__(parent)
+        super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._scene = QGraphicsScene(self)
         self.setScene(self._scene)
         self._toolbox = None

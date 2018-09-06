@@ -33,7 +33,9 @@ from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
 class DataConnectionWidget(QWidget):
-    """Class constructor.
+    """Data Connection subwindow widget. Inherits stylesheet from ToolboxUI,
+    because this widget is inserted into a QDockWidget that
+    inherits the QMainWindow
 
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
@@ -44,7 +46,7 @@ class DataConnectionWidget(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of DataConnection objects
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory.
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))

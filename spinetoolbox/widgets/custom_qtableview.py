@@ -24,10 +24,8 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-import logging
-from PySide2.QtWidgets import QTableView, QApplication, QMenu, QAction
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelection, QItemSelectionModel, QPoint, QSignalMapper, \
-    QModelIndex
+from PySide2.QtWidgets import QTableView, QApplication, QAction
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
 from PySide2.QtGui import QKeySequence
 from widgets.custom_menus import QOkMenu
 
@@ -41,7 +39,7 @@ class CustomQTableView(QTableView):
 
     def __init__(self, parent):
         """Initialize the class."""
-        super().__init__(parent)
+        super().__init__(parent=parent)
         # self.editing = False
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
@@ -131,7 +129,7 @@ class ParameterTableView(CustomQTableView):
 
     def __init__(self, parent):
         """Initialize the class."""
-        super().__init__(parent)
+        super().__init__(parent=parent)
         self.filter_action_list = list()
         self.action_all = None
         self.filter_text = None

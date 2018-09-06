@@ -19,6 +19,8 @@
 
 """
 Classes for custom context menus.
+TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
+TODO: Some parent attributes were changed to toolbox. Should they be changed back to parent?
 
 :author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
 :date:   9.1.2018

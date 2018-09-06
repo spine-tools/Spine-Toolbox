@@ -175,6 +175,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_open.sizePolicy().hasHeightForWidth())
         self.pushButton_open.setSizePolicy(sizePolicy)
+        self.pushButton_open.setMinimumSize(QtCore.QSize(0, 0))
         self.pushButton_open.setMaximumSize(QtCore.QSize(120, 23))
         self.pushButton_open.setObjectName("pushButton_open")
         self.horizontalLayout.addWidget(self.pushButton_open)
@@ -201,5 +202,5 @@ class Ui_Form(object):
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc
