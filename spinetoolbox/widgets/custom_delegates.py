@@ -19,7 +19,6 @@
 
 """
 Custom item delegates.
-TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   1.9.2018
@@ -31,30 +30,12 @@ from widgets.custom_editors import CustomComboEditor, CustomLineEditor, \
     CustomToolButtonEditor, CustomSimpleToolButtonEditor
 
 
-class ComboBoxDelegate(QItemDelegate):
-    """A QComboBox delegate."""
-
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def createEditor(self, parent, option, index):
-        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
-        items = index.data(Qt.UserRole)
-        return CustomComboEditor(parent, index, items)
-
-    def setEditorData(self, editor, index):
-        """Show pop up as soon as editing starts."""
-        editor.showPopup()
-
-    def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `commitData` signal."""
-        pass
-
-
 class LineEditDelegate(QItemDelegate):
-    """A delegate that places a fully functioning QLineEdit in every
-    cell of the column to which it's applied."""
+    """A delegate that places a fully functioning QLineEdit.
 
+    Attributes:
+        parent (QMainWindow): either data store or spine datapackage widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -74,8 +55,11 @@ class LineEditDelegate(QItemDelegate):
 
 
 class CheckBoxDelegate(QItemDelegate):
-    """A delegate that places a fully functioning QCheckBox in every
-    cell of the column to which it's applied."""
+    """A delegate that places a fully functioning QCheckBox.
+
+    Attributes:
+        parent (QMainWindow): either toolbox or spine datapackage widget
+    """
 
     commit_data = Signal("QModelIndex", name="commit_data")
 
@@ -142,7 +126,11 @@ class CheckBoxDelegate(QItemDelegate):
 
 
 class DataStoreDelegate(QItemDelegate):
-    """A custom delegate for the parameter value models and views in DataStoreForm."""
+    """A custom delegate for the parameter value models and views in DataStoreForm.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
@@ -177,7 +165,11 @@ class DataStoreDelegate(QItemDelegate):
 
 
 class HighlightFrameDelegate(QItemDelegate):
-    """A delegate that paints a blue frame around the row."""
+    """A delegate that paints a blue frame around the row.
+
+    Attributes:
+        parent (QMainWindow): either data store or spine datapackage widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self.highlight_pen = QPen(parent.palette().highlight(), 1)
@@ -200,7 +192,11 @@ class HighlightFrameDelegate(QItemDelegate):
 
 
 class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
-    """A delegate for the object parameter value model and view in DataStoreForm."""
+    """A delegate for the object parameter value model and view in DataStoreForm.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -234,7 +230,11 @@ class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
 
 
 class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
-    """A delegate for the object parameter model and view in DataStoreForm."""
+    """A delegate for the object parameter model and view in DataStoreForm.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -251,7 +251,11 @@ class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
 
 
 class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
-    """A delegate for the relationship parameter value model and view in DataStoreForm."""
+    """A delegate for the relationship parameter value model and view in DataStoreForm.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -301,7 +305,11 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
 
 
 class RelationshipParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
-    """A delegate for the object parameter model and view in DataStoreForm."""
+    """A delegate for the object parameter model and view in DataStoreForm.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -318,7 +326,11 @@ class RelationshipParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
 
 
 class AddObjectsDelegate(DataStoreDelegate):
-    """A delegate for the model and view in AddObjectsDialog."""
+    """A delegate for the model and view in AddObjectsDialog.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -334,7 +346,11 @@ class AddObjectsDelegate(DataStoreDelegate):
 
 
 class AddRelationshipClassesDelegate(DataStoreDelegate):
-    """A delegate for the model and view in AddRelationshipClassesDialog."""
+    """A delegate for the model and view in AddRelationshipClassesDialog.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -350,7 +366,11 @@ class AddRelationshipClassesDelegate(DataStoreDelegate):
 
 
 class AddRelationshipsDelegate(DataStoreDelegate):
-    """A delegate for the model and view in AddRelationshipsDialog."""
+    """A delegate for the model and view in AddRelationshipsDialog.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -371,7 +391,11 @@ class AddRelationshipsDelegate(DataStoreDelegate):
 
 
 class ResourceNameDelegate(QItemDelegate):
-    """A QComboBox delegate with checkboxes."""
+    """A QComboBox delegate with checkboxes.
+
+    Attributes:
+        parent (SpineDatapackageWidget): spine datapackage widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
@@ -391,7 +415,11 @@ class ResourceNameDelegate(QItemDelegate):
 
 
 class ForeignKeysDelegate(HighlightFrameDelegate):
-    """A QComboBox delegate with checkboxes."""
+    """A QComboBox delegate with checkboxes.
+
+    Attributes:
+        parent (SpineDatapackageWidget): spine datapackage widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent

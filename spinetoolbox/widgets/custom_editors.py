@@ -19,7 +19,6 @@
 
 """
 Custom editors for model/view programming.
-TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
 
 
 :author: Manuel Marin <manuelma@kth.se>
@@ -33,7 +32,13 @@ from widgets.custom_menus import QOkMenu
 
 
 class CustomComboEditor(QComboBox):
-    """A custom QComboBox to handle data from models."""
+    """A custom QComboBox to handle data from models.
+
+    Attributes:
+        parent (QMainWindow): either data store or spine datapackage widget
+        index (QModelIndex): the model index being edited
+        items (list): list of items to populate the combobox
+    """
     def __init__(self, parent, index, items):
         super().__init__(parent)
         self.text = self.currentText
@@ -49,26 +54,13 @@ class CustomComboEditor(QComboBox):
         return self._index
 
 
-class CustomCheckableComboEditor(QComboBox):
-    """A custom QComboBox to handle data from models."""
-    def __init__(self, parent, index, items):
-        super().__init__(parent)
-        self.text = self.currentText
-        self.index = index
-        self.row = index.row()
-        self.column = index.column()
-        self.previous_data = index.data(Qt.EditRole)
-        model = QStandardItemModel()
-        for item in items:
-            q_item = QStandardItem(item)
-            q_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-            q_item.setData(Qt.Unchecked, Qt.CheckStateRole)
-            model.appendRow(q_item)
-        self.setModel(model)
-
-
 class CustomLineEditor(QLineEdit):
-    """A custom QLineEdit to handle data from models."""
+    """A custom QLineEdit to handle data from models.
+
+    Attributes:
+        parent (QMainWindow): either data store or spine datapackage widget
+        index (QModelIndex): the model index being edited
+    """
     def __init__(self, parent, index):
         super().__init__(parent)
         self._index = index
@@ -81,7 +73,15 @@ class CustomLineEditor(QLineEdit):
 
 
 class CustomToolButtonEditor(QToolButton):
-    """A custom QToolButton to popup a Qmenu with multiple horizontal sections."""
+    """A custom QToolButton to popup a Qmenu with multiple horizontal sections and options.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        index (QModelIndex): the model index being edited
+        object_class_name_list (list): list of all object class names in the database
+        current_object_name_list (list): list of currently selected object names
+        object_name_dict (dict): dictionary of object class name => list of object names of that class
+    """
     def __init__(self, parent, index, object_class_name_list, current_object_name_list, **object_name_dict):
         """Initialize class."""
         super().__init__(parent)
@@ -135,7 +135,14 @@ class CustomToolButtonEditor(QToolButton):
 
 
 class CustomSimpleToolButtonEditor(QToolButton):
-    """A custom QToolButton to popup a Qmenu."""
+    """A custom QToolButton to popup a Qmenu.
+
+    Attributes:
+        parent (SpineDatapackageWidget): spine datapackage widget
+        index (QModelIndex): the model index being edited
+        field_name_list (list): list of all field names in the datapackage
+        current_field_name_list (list): list of currently selected field names
+    """
     def __init__(self, parent, index, field_name_list, current_field_name_list):
         """Initialize class."""
         super().__init__(parent)
@@ -167,6 +174,3 @@ class CustomSimpleToolButtonEditor(QToolButton):
 
     def text(self):
         return self._text
-
-# TODO: What the hell is this?
-CustomSimpleToolButtonEditor
