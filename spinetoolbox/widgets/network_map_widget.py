@@ -24,21 +24,17 @@ Widget to show Network Map Form.
 :date:   7.9.2018
 """
 
+import os
 from ui.network_map_form import Ui_Form
 from PySide2.QtWidgets import QWidget, QPushButton
 from PySide2.QtCore import Qt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
-import random
-
-
-import os
 import numpy as np
 from numpy import flatnonzero as find
 from numpy import atleast_1d as arr
 import matplotlib.pyplot as plt
-from matplotlib import collections as mcoll
 from matplotlib import cm
+from matplotlib import collections as mcoll
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.spatial.distance import cdist
 from scipy.sparse.csgraph import dijkstra
 from scipy.optimize import minimize
@@ -61,20 +57,16 @@ class NetworkMapForm(QWidget):
         self.network_map = NetworkMap(mapping, settings_path)
         self.button = QPushButton('Plot')
         self.button.clicked.connect(self.plot)
-        # set the layout
-        self.ui.horizontalLayout.addWidget(self.network_map.qt_canvas)
-        self.ui.horizontalLayout.addWidget(self.button)
+        self.ui.horizontalLayout_network_map_placeholder.addWidget(self.network_map.qt_canvas)
 
     def plot(self):
-        pass
+        self.network_map.make_map()
 
 class NetworkMap:
     """Class for making network plots, see documentation and methods for more info."""
 
     def __init__(self, mapping, settings_path=""):
         """ Initialize class."""
-        super().__init__()
-        # super().__init__(parent)
         self.mapping = mapping
         # Class attributes
         self.settings = None
@@ -136,22 +128,20 @@ class NetworkMap:
         self.arrows_drawn = False
         self.heatmap_drawn = False
         self.annot = None
-        # node data
         self.node_name_list = None
         self.N = None
         self.node = None
         self.node_status = None
         self.node_info = None
         self.node_parameter_dict = None
-        self.node_info_param = None # s['node_info_parameter'] # parameters to be displayed in interactive mode
-        # conn data
+        self.node_info_param = None
         self.from_node_index_arr = None
         self.to_node_index_arr = None
         self.conn_name_list = None
         self.conn_status = None
         self.conn_info = None
         self.conn_parameter_dict = None
-        self.conn_info_param = None # s['conn_info_parameter'] # parameters to be displayed in interactive mode
+        self.conn_info_param = None
         self.init_settings(settings_path)
         self.init_network_data()
         self.make_map()
@@ -432,8 +422,6 @@ class NetworkMap:
         elif self.settings['xy_type'] == 3:
             self.x = self.settings['x_coordinate']
             self.y = self.settings['y_coordinate']
-        print(self.x)
-        print(self.y)
         # map properties and initiate plot
         self.set_map_properties()
         self.init_plot()
@@ -477,7 +465,7 @@ class NetworkMap:
             self.old_pos = [] # previous position (to undo a move) [node_index,x,y]
             self.new_pos = [] # to redo a move
             self.interactive_info_display = 1
-            print("\nInformation mode:\nClick on nodes and conn for info\nPress 'm' to change to layout edit mode")
+            # print("\nInformation mode:\nClick on nodes and conn for info\nPress 'm' to change to layout edit mode")
 
     def compute_unique_conns(self):
         """Compute unique conns and related info."""
@@ -936,7 +924,8 @@ class NetworkMap:
             else:
                 self.hm = self.ax.imshow(hm,extent=self.extent,clim=clim,cmap=cmap,zorder=0,aspect=aspect)
         else:
-            print('First use obj.calculate_heatmap() to calculate heatmap of selected variable.')
+            pass
+            # print('First use obj.calculate_heatmap() to calculate heatmap of selected variable.')
         self.heatmap_drawn = True
 
     def add_legend(self):
@@ -980,7 +969,8 @@ class NetworkMap:
             plt.savefig(file_save)
             self.map_saved = file_save
         except PermissionError:
-            print('%s already open or permission denied' % file_save)
+            pass
+            # print('%s already open or permission denied' % file_save)
 
     def update_plot(self,node,x,y):
         """ Update plot after one node has been moved (layout edit mode). """
@@ -1142,7 +1132,8 @@ class NetworkMap:
                     self.fig.canvas.mpl_disconnect(cid)
             if self.mode == 'info':
                 if self.heatmap_drawn or self.arrows_drawn:
-                    print('\nWarning: arrows and heatmap will not be updated on the fly.')
+                    pass
+                    # print('\nWarning: arrows and heatmap will not be updated on the fly.')
                 self.mode = 'edit'
                 self.annot.set_visible(False)
                 self.event_id = ''

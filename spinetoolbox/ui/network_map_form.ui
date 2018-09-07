@@ -26,14 +26,22 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>891</width>
+    <width>937</width>
     <height>676</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QHBoxLayout" name="horizontalLayout"/>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_network_map_placeholder">
+     <item>
+      <widget class="QWidget" name="widget_invisible_dummy" native="true"/>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

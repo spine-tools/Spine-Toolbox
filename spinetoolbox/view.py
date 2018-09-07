@@ -39,8 +39,6 @@ from spinedatabase_api import DatabaseMapping, SpineDBAPIError, copy_database
 from widgets.network_map_widget import NetworkMapForm
 from graphics_items import ViewImage
 from helpers import create_dir, busy_effect
-import numpy as np
-from numpy import atleast_1d as arr
 
 
 class View(MetaObject):

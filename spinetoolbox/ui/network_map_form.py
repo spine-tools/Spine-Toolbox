@@ -30,9 +30,15 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(891, 676)
+        Form.resize(937, 676)
         self.horizontalLayout = QtWidgets.QHBoxLayout(Form)
         self.horizontalLayout.setObjectName("horizontalLayout")
+        self.horizontalLayout_network_map_placeholder = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_network_map_placeholder.setObjectName("horizontalLayout_network_map_placeholder")
+        self.widget_invisible_dummy = QtWidgets.QWidget(Form)
+        self.widget_invisible_dummy.setObjectName("widget_invisible_dummy")
+        self.horizontalLayout_network_map_placeholder.addWidget(self.widget_invisible_dummy)
+        self.horizontalLayout.addLayout(self.horizontalLayout_network_map_placeholder)
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
