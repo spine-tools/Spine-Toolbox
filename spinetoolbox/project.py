@@ -390,9 +390,7 @@ class SpineToolboxProject(MetaObject):
 
     def add_view(self, name, description, references, x=0, y=0):
         """Add View to project item model."""
-        view = View(self._parent, name, description, references, x, y)
-        self._parent.project_refs.append(view)  # Save reference or signals don't stick
-        self._parent.add_item_to_model("Views", name, view)
-        self._parent.msg.emit("View <b>{0}</b> added to project.".format(name))
-        self._parent.msg_warning.emit("<b>Not implemented</b>. The functionality for View items is not "
-                                      "implemented yet.")
+        view = View(self._toolbox, name, description, references, x, y)
+        self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
+        self._toolbox.add_item_to_model("Views", name, view)
+        self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))

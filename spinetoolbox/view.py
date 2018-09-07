@@ -36,6 +36,7 @@ from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
 from widgets.add_db_reference_widget import AddDbReferenceWidget
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError, copy_database
+from widgets.network_map_widget import NetworkMapForm
 from network_map import NetworkMap
 from graphics_items import ViewImage
 from helpers import create_dir, busy_effect
@@ -54,7 +55,7 @@ class View(MetaObject):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, references, x, y):
+    def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -80,7 +81,7 @@ class View(MetaObject):
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
         self.add_db_reference_form = None
-        self._graphics_item = ViewImage(self._parent, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):
@@ -115,12 +116,12 @@ class View(MetaObject):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(name="show_add_db_reference_form")
     def show_add_db_reference_form(self):
         """Show the form for querying database connection options."""
-        self.add_db_reference_form = AddDbReferenceWidget(self._parent, self)
+        self.add_db_reference_form = AddDbReferenceWidget(self._toolbox, self)
         self.add_db_reference_form.show()
 
     def add_reference(self, reference):
@@ -136,13 +137,13 @@ class View(MetaObject):
         indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
-            self._parent.msg.emit("All references removed")
+            self._toolbox.msg.emit("All references removed")
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
                 self.references.pop(row)
-            self._parent.msg.emit("Selected references removed")
+            self._toolbox.msg.emit("Selected references removed")
         self._widget.populate_reference_list(self.references)
 
     @Slot(name="import_references")
@@ -151,7 +152,7 @@ class View(MetaObject):
         If no item is selected then import all of them.
         """
         if not self.references:
-            self._parent.msg_warning.emit("No data to import")
+            self._toolbox.msg_warning.emit("No data to import")
             return
         indexes = self._widget.ui.listView_references.selectedIndexes()
         if not indexes:  # Nothing selected, import all
@@ -162,7 +163,7 @@ class View(MetaObject):
             try:
                 self.import_reference(reference)
             except Exception as e:
-                self._parent.msg_error.emit("Import failed: {}".format(e))
+                self._toolbox.msg_error.emit("Import failed: {}".format(e))
                 continue
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
@@ -171,7 +172,7 @@ class View(MetaObject):
     def import_reference(self, reference):
         """Import reference database into local SQLite file"""
         database = reference['database']
-        self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
+        self._toolbox.msg.emit("Importing database <b>{0}</b>".format(database))
         # Source
         source_url = reference['url']
         # Destination
@@ -203,10 +204,11 @@ class View(MetaObject):
         try:
             mapping = DatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
+            self._toolbox.msg_error.emit(e.msg)
             return
-        network_map = NetworkMap(self, mapping)
-        network_map.show()
+        # network_map = NetworkMap(self, mapping)
+        network_map_form = NetworkMapForm(self._toolbox, self, mapping)
+        network_map_form.show()
 
     @busy_effect
     @Slot("QModelIndex", name="open_reference")
@@ -224,10 +226,10 @@ class View(MetaObject):
         try:
             mapping = DatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
+            self._toolbox.msg_error.emit(e.msg)
             return
-        network_map = NetworkMap(self, mapping)
-        network_map.show()
+        network_map_form = NetworkMapForm(self._toolbox, self, mapping)
+        network_map_form.show()
 
     def data_references(self):
         """Returns a list of connection strings that are in this item as references (self.references)."""
