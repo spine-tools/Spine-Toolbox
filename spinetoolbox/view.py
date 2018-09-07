@@ -37,7 +37,6 @@ from widgets.view_subwindow_widget import ViewWidget
 from widgets.add_db_reference_widget import AddDbReferenceWidget
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError, copy_database
 from widgets.network_map_widget import NetworkMapForm
-from network_map import NetworkMap
 from graphics_items import ViewImage
 from helpers import create_dir, busy_effect
 import numpy as np
