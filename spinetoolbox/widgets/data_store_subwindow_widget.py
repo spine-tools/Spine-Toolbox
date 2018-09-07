@@ -29,7 +29,6 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_store import Ui_Form
-from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 
 
 class DataStoreWidget(QWidget):

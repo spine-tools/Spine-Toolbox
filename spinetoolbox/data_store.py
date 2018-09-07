@@ -78,7 +78,6 @@ class DataStore(MetaObject):
         self.add_db_reference_form = None
         self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
-        self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
@@ -194,19 +193,18 @@ class DataStore(MetaObject):
         if not index.isValid():
             logging.error("Index not valid")
             return
-        else:
-            data_file = self.data_files()[index.row()]
-            data_file_path = os.path.join(self.data_dir, data_file)
-            db_url = "sqlite:///" + data_file_path
-            username = getpass.getuser()
-            try:
-                mapping = DatabaseMapping(db_url, username)
-            except SpineDBAPIError as e:
-                self._parent.msg_error.emit(e.msg)
-                return
-            database = data_file
-            data_store_form = DataStoreForm(self, mapping, database)
-            data_store_form.show()
+        data_file = self.data_files()[index.row()]
+        data_file_path = os.path.join(self.data_dir, data_file)
+        db_url = "sqlite:///" + data_file_path
+        username = getpass.getuser()
+        try:
+            mapping = DatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
+            return
+        database = data_file
+        data_store_form = DataStoreForm(self, mapping, database)
+        data_store_form.show()
 
     @busy_effect
     @Slot("QModelIndex", name="open_reference")
@@ -217,18 +215,17 @@ class DataStore(MetaObject):
         if not index.isValid():
             logging.error("Index not valid")
             return
-        else:
-            reference = self.references[index.row()]
-            db_url = reference['url']
-            database = reference['database']
-            username = reference['username']
-            try:
-                mapping = DatabaseMapping(db_url, username)
-            except SpineDBAPIError as e:
-                self._parent.msg_error.emit(e.msg)
-                return
-            data_store_form = DataStoreForm(self, mapping, database)
-            data_store_form.show()
+        reference = self.references[index.row()]
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            mapping = DatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
+            return
+        data_store_form = DataStoreForm(self, mapping, database)
+        data_store_form.show()
 
     def data_references(self):
         """Returns a list of connection strings that are in this item as references (self.references)."""

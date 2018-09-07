@@ -217,21 +217,29 @@ class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
             object_class_name_list = [x.name for x in self.mapping.object_class_list()]
             return CustomComboEditor(parent, proxy_index, object_class_name_list)
         elif index.column() == h('object_name'):
-            object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
-            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
-            if not object_class:
-                object_name_list = list()
+            parameter_name = index.sibling(index.row(), h('parameter_name')).data(Qt.DisplayRole)
+            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            if parameter:
+                object_list = self.mapping.unvalued_object_list(parameter_id=parameter.id)
             else:
-                object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
+                object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
+                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+                object_class_id = object_class.id if object_class else None
+                object_list = self.mapping.object_list(class_id=object_class_id)
+            object_name_list = [x.name for x in object_list]
             return CustomComboEditor(parent, proxy_index, object_name_list)
         elif index.column() == h('parameter_name'):
             object_name = index.sibling(index.row(), h('object_name')).data(Qt.DisplayRole)
             object_ = self.mapping.single_object(name=object_name).one_or_none()
-            if not object_:
-                parameter_list = list()
+            if object_:
+                parameter_list = self.mapping.unvalued_object_parameter_list(object_id=object_.id)
+                parameter_name_list = [x.name for x in parameter_list]
             else:
-                parameter_list = self.mapping.unvalued_object_parameter_list(object_.id)
-            parameter_name_list = [x.name for x in parameter_list]
+                object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
+                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+                object_class_id = object_class.id if object_class else None
+                parameter_list = self.mapping.object_parameter_list(object_class_id=object_class_id)
+                parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
         else:
             return CustomLineEditor(parent, proxy_index)
@@ -269,36 +277,40 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
             relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
             return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
         elif index.column() == h('object_name_list'):
-            current_object_name_list = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else None
+            # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return None
-            object_name_dict = dict()
+            # Get object class name list
             object_class_name_list = relationship_class.object_class_name_list.split(',')
+            # Create object name dictionary from object class name list
+            object_name_dict = dict()
             for object_class_name in object_class_name_list:
                 object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
                 if not object_class:
                     continue
                 object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
                 object_name_dict[object_class_name] = object_name_list
+            # Get current object name list to set as initial choices
+            current_object_name_list = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else None
             return CustomToolButtonEditor(parent, proxy_index, object_class_name_list, current_object_name_list,
                 **object_name_dict)
         elif index.column() == h('parameter_name'):
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
-            if not relationship_class:
-                return None
+            relationship_class_id = relationship_class.id if relationship_class else None
             object_name_list = index.sibling(index.row(), h('object_name_list')).data(Qt.DisplayRole)
-            relationship = self.mapping.single_wide_relationship(class_id=relationship_class.id,
+            relationship = self.mapping.single_wide_relationship(class_id=relationship_class_id,
                 object_name_list=object_name_list).one_or_none()
-            if not relationship:
-                parameter_list = list()
-            else:
+            if relationship:
                 parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
-            parameter_name_list = [x.name for x in parameter_list]
+                parameter_name_list = [x.name for x in parameter_list]
+            else:
+                parameter_list = self.mapping.relationship_parameter_list(relationship_class_id=relationship_class_id)
+                parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
         else:
             return CustomLineEditor(parent, proxy_index)

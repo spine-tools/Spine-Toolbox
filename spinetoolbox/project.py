@@ -218,7 +218,7 @@ class SpineToolboxProject(MetaObject):
                     elif child_data.item_type == "Data Store":
                         item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
                     elif child_data.item_type == "View":
-                        item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
+                        item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
                     else:
                         logging.error("Unrecognized item type: {0}".format(child_data.item_type))
         # Save project stuff
@@ -299,10 +299,9 @@ class SpineToolboxProject(MetaObject):
             short_name = views[name]['short name']
             desc = views[name]['description']
             try:
-                data = views[name]['data']
+                refs = views[name]['references']
             except KeyError:
-                logging.error("'data' keyword not found in View {0}".format(name))
-                data = ''
+                refs = list()
             try:
                 x = views[name]["x"]
                 y = views[name]["y"]
@@ -310,7 +309,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, x, y, data)
+            self.add_view(name, desc, refs, x, y)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -389,10 +388,9 @@ class SpineToolboxProject(MetaObject):
         self._parent.add_item_to_model("Tools", name, tool)
         self._parent.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
-    def add_view(self, name, description, x=0, y=0, data="View data"):
+    def add_view(self, name, description, references, x=0, y=0):
         """Add View to project item model."""
-        view = View(self._parent, name, description, x, y)
-        view.set_data(data)
+        view = View(self._parent, name, description, references, x, y)
         self._parent.project_refs.append(view)  # Save reference or signals don't stick
         self._parent.add_item_to_model("Views", name, view)
         self._parent.msg.emit("View <b>{0}</b> added to project.".format(name))

@@ -51,55 +51,68 @@ class CustomQTableView(QTableView):
     def clipboard_data_changed(self):
         self.clipboard_text = self.clipboard.text()
 
+    def copy(self):
+        """Copy current selection to clipboard in excel format."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        # Take only the first selection in case of multiple selection.
+        first = selection.first()
+        rows = list()
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        for i in range(first.top(), first.bottom()+1):
+            if v_header.isSectionHidden(i):
+                continue
+            row = list()
+            for j in range(first.left(), first.right()+1):
+                if h_header.isSectionHidden(j):
+                    continue
+                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+            rows.append("\t".join(row))
+        content = "\n".join(rows)
+        self.clipboard.setText(content)
+        return True
+
+    def paste(self):
+        """Paste data from clipboard."""
+        if not self.clipboard_text:
+            return False
+        top_left_index = self.currentIndex()
+        if not top_left_index.isValid():
+            return False
+        data = [line.split('\t') for line in self.clipboard_text.split('\n')]
+        self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        row = top_left_index.row()
+        for line in data:
+            if not line:
+                continue
+            if v_header.isSectionHidden(row):
+                row += 1
+            column = top_left_index.column()
+            for value in line:
+                if not value:
+                    continue
+                if h_header.isSectionHidden(column):
+                    column += 1
+                sibling = top_left_index.sibling(row, column)
+                if sibling.flags() & Qt.ItemIsEditable:
+                    self.model().setData(sibling, value, Qt.EditRole)
+                    self.selectionModel().select(sibling, QItemSelectionModel.Select)
+                column += 1
+            row += 1
+        return True
+
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
         if event.matches(QKeySequence.Copy):
-            selection = self.selectionModel().selection()
-            if not selection:
+            if not self.copy():
                 super().keyPressEvent(event)
-                return
-            # Take only the first selection in case of multiple selection.
-            first = selection.first()
-            content = ""
-            v_header = self.verticalHeader()
-            h_header = self.horizontalHeader()
-            for i in range(first.top(), first.bottom()+1):
-                if v_header.isSectionHidden(i):
-                    continue
-                row = list()
-                for j in range(first.left(), first.right()+1):
-                    if h_header.isSectionHidden(j):
-                        continue
-                    row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
-                content += "\t".join(row)
-                content += "\n"
-            self.clipboard.setText(content)
         elif event.matches(QKeySequence.Paste):
-            if not self.clipboard_text:
+            if not self.paste():
                 super().keyPressEvent(event)
-                return
-            top_left_index = self.currentIndex()
-            if not top_left_index.isValid():
-                super().keyPressEvent(event)
-                return
-            data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
-            self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
-            v_header = self.verticalHeader()
-            h_header = self.horizontalHeader()
-            row = top_left_index.row()
-            for line in data:
-                if v_header.isSectionHidden(row):
-                    row += 1
-                column = top_left_index.column()
-                for value in line:
-                    if h_header.isSectionHidden(column):
-                        column += 1
-                    sibling = top_left_index.sibling(row, column)
-                    if sibling.flags() & Qt.ItemIsEditable:
-                        self.model().setData(sibling, value, Qt.EditRole)
-                        self.selectionModel().select(sibling, QItemSelectionModel.Select)
-                    column += 1
-                row += 1
         else:
             super().keyPressEvent(event)
 

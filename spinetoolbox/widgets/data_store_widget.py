@@ -175,10 +175,10 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
             connect(self.update_parameter_in_model)
         # Model data changed
-        self.object_parameter_value_model.dataChanged.connect(self.object_parameter_value_data_committed)
-        self.relationship_parameter_value_model.dataChanged.connect(self.relationship_parameter_value_data_committed)
-        self.object_parameter_model.dataChanged.connect(self.object_parameter_data_committed)
-        self.relationship_parameter_model.dataChanged.connect(self.relationship_parameter_data_committed)
+        self.object_parameter_value_model.dataChanged.connect(self.object_parameter_value_data_changed)
+        self.relationship_parameter_value_model.dataChanged.connect(self.relationship_parameter_value_data_changed)
+        self.object_parameter_model.dataChanged.connect(self.object_parameter_data_changed)
+        self.relationship_parameter_model.dataChanged.connect(self.relationship_parameter_data_changed)
         # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -781,22 +781,26 @@ class DataStoreForm(QMainWindow):
     @Slot("QWidget", name="update_parameter_value_in_model")
     def update_parameter_value_in_model(self, editor):
         """Update (object or relationship) parameter_value table with newly edited data."""
+        new_value = editor.text()
+        if not new_value:
+            return
         index = editor.index()
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
-        new_value = editor.text()
         source_model.setData(source_index, new_value)
 
     @Slot("QWidget", name="update_parameter_in_model")
     def update_parameter_in_model(self, editor):
         """Update parameter (object or relationship) with newly edited data.
         """
+        new_value = editor.text()
+        if not new_value:
+            return
         index = editor.index()
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
-        new_value = editor.text()
         source_model.setData(source_index, new_value)
 
     @Slot(name="remove_object_parameter_values")
@@ -995,8 +999,8 @@ class DataStoreForm(QMainWindow):
         # It seems scrolling is not necessary
         self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_value_data_committed")
-    def object_parameter_value_data_committed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_value_data_changed")
+    def object_parameter_value_data_changed(self, top_left, bottom_right, roles):
         """Called when data in the object parameter value model changes. Add new parameter
         or edit existing ones."""
         if not top_left.isValid():
@@ -1012,23 +1016,35 @@ class DataStoreForm(QMainWindow):
         header = model.horizontal_header_labels()
         h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
-            # When one field changes that makes others invalid, set these to None.
-            if top_left.column() == h('object_class_name'):
-                model.setData(top_left.sibling(top_left.row(), h('object_name')), None, Qt.EditRole)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_name')), None, Qt.EditRole)
-            if top_left.column() == h('object_name'):
-                model.setData(top_left.sibling(top_left.row(), h('parameter_name')), None, Qt.EditRole)
-            object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
-            object_ = self.mapping.single_object(name=object_name).one_or_none()
-            if not object_:
-                return
             # Try and fill object class name from object name, to make user's life easier
-            object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
-            if not object_class_name:
+            if top_left.column() == h('object_name'):
+                object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
+                object_ = self.mapping.single_object(name=object_name).one_or_none()
+                if not object_:
+                    return
                 object_class = self.mapping.single_object_class(id=object_.class_id).one_or_none()
                 if not object_class:
                     return
                 object_class_name = object_class.name
+                model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
+                return
+            # Try and fill object class name from parameter name, to make user's life easier
+            if top_left.column() == h('parameter_name'):
+                parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+                parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+                if not parameter:
+                    return
+                object_class = self.mapping.single_object_class(id=parameter.object_class_id).one_or_none()
+                if not object_class:
+                    return
+                object_class_name = object_class.name
+                model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
+                return
+            # Now try and add the parameter value
+            object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
+            object_ = self.mapping.single_object(name=object_name).one_or_none()
+            if not object_:
+                return
             parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
@@ -1047,7 +1063,6 @@ class DataStoreForm(QMainWindow):
                 model.make_columns_fixed_for_row(row, 'object_class_name', 'object_name', 'parameter_name',
                     'parameter_value_id')
                 model.setData(top_left.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
                 msg = "Successfully added new parameter value."
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
@@ -1056,8 +1071,8 @@ class DataStoreForm(QMainWindow):
         elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_value_in_db(top_left)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_data_committed")
-    def object_parameter_data_committed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_data_changed")
+    def object_parameter_data_changed(self, top_left, bottom_right, roles):
         """Called when data in the object parameter model changes. Add new parameter
         or edit existing ones."""
         if not top_left.isValid():
@@ -1097,8 +1112,8 @@ class DataStoreForm(QMainWindow):
         elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_in_db(top_left)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_value_data_committed")
-    def relationship_parameter_value_data_committed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_value_data_changed")
+    def relationship_parameter_value_data_changed(self, top_left, bottom_right, roles):
         """Called when data in the relationship parameter value model changes. Add new parameter
         or edit existing ones."""
         if not top_left.isValid():
@@ -1114,12 +1129,20 @@ class DataStoreForm(QMainWindow):
         header = model.horizontal_header_labels()
         h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
-            # When one field changes that makes others invalid, set these to None.
-            if top_left.column() == h('relationship_class_name'):
-                model.setData(top_left.sibling(top_left.row(), h('object_name_list')), None, Qt.EditRole)
-                model.setData(top_left.sibling(top_left.row(), h('parameter_name')), None, Qt.EditRole)
-            if top_left.column() == h('object_name_list'):
-                model.setData(top_left.sibling(top_left.row(), h('parameter_name')), None, Qt.EditRole)
+            # Try and fill relationship class name from parameter name, to make user's life easier
+            if top_left.column() == h('parameter_name'):
+                parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+                parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+                if not parameter:
+                    return
+                relationship_class = self.mapping.single_wide_relationship_class(
+                    id=parameter.relationship_class_id).one_or_none()
+                if not relationship_class:
+                    return
+                relationship_class_name = relationship_class.name
+                model.setData(top_left.sibling(row, h('relationship_class_name')), relationship_class_name,
+                    Qt.EditRole)
+                return
             # Try to add new parameter value
             # Start by adding the relationship
             relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
@@ -1199,8 +1222,8 @@ class DataStoreForm(QMainWindow):
         elif top_left.flags() & Qt.ItemIsEditable:
             self.update_parameter_value_in_db(top_left)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_data_committed")
-    def relationship_parameter_data_committed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_data_changed")
+    def relationship_parameter_data_changed(self, top_left, bottom_right, roles):
         """Called when data in the relationship parameter model changes. Add new parameter
         or edit existing ones."""
         if not top_left.isValid():

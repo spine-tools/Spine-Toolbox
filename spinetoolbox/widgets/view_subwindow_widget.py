@@ -25,6 +25,8 @@ QWidget that is used to display information contained in a View.
 """
 
 import logging
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget
 from ui.subwindow_view import Ui_Form
 
@@ -42,6 +44,12 @@ class ViewWidget(QWidget):
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.reference_model = QStandardItemModel()  # References to databases
+        self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. Found in DS data directory.
+        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
+        self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
+        self.ui.listView_references.setModel(self.reference_model)
+        self.ui.listView_data.setModel(self.data_model)
         self.ui.label_name.setFocus()
 
     def set_name_label(self, txt):
@@ -56,29 +64,32 @@ class ViewWidget(QWidget):
         """Return name label text."""
         return self.ui.label_name.text()
 
-    def set_type_label(self, txt):
-        """Set new text for the type label.
-
-        Args:
-            txt (str): Text to display in the QLabel
+    def populate_reference_list(self, items):
+        """List file references in QTreeView.
+        If items is None or empty list, model is cleared.
         """
-        self.ui.label_type.setText(txt)
+        self.reference_model.clear()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item['database'])
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(item['url'], Qt.ToolTipRole)
+                qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
+                self.reference_model.appendRow(qitem)
 
-    def type_label(self):
-        """Return type label text."""
-        return self.ui.label_type.text()
-
-    def set_data_label(self, txt):
-        """Set new text for the data label.
-
-        Args:
-            txt (str): Text to display in the QLabel
+    def populate_data_list(self, items):
+        """List project internal data (files) in QTreeView.
+        If items is None or empty list, model is cleared.
         """
-        self.ui.label_data.setText(txt)
-
-    def data_label(self):
-        """Return data label text."""
-        return self.ui.label_data.text()
+        self.data_model.clear()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(item, Qt.ToolTipRole)
+                if item.endswith('sqlite'):
+                    qitem.setData(self.spine_icon, Qt.DecorationRole)
+                self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):
         """Hide widget and is proxy instead of closing them.

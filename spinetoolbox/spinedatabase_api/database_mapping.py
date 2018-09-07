@@ -320,9 +320,9 @@ class DatabaseMapping(object):
         filter(self.Relationship.id.in_(distinct_relationship_id_list)).\
         group_by(self.Relationship.id)
 
-    def parameter_list(self):
+    def parameter_list(self, object_class_id=None, relationship_class_id=None):
         """Return parameters."""
-        return self.session.query(
+        qry = self.session.query(
             self.Parameter.id,
             self.Parameter.name,
             self.Parameter.relationship_class_id,
@@ -335,6 +335,32 @@ class DatabaseMapping(object):
             self.Parameter.precision,
             self.Parameter.minimum_value,
             self.Parameter.maximum_value)
+        if object_class_id:
+            qry = qry.filter_by(object_class_id=object_class_id)
+        if relationship_class_id:
+            qry = qry.filter_by(object_class_id=object_class_id)
+        return qry
+
+    def all_object_parameter_value_list(self, parameter_id=None):
+        """Return all object parameter values, even those that don't have a value."""
+        qry = self.session.query(
+            self.Parameter.id.label('parameter_id'),
+            self.Object.name.label('object_name'),
+            self.ParameterValue.id.label('parameter_value_id'),
+            self.Parameter.name.label('parameter_name'),
+            self.ParameterValue.index,
+            self.ParameterValue.value,
+            self.ParameterValue.json,
+            self.ParameterValue.expression,
+            self.ParameterValue.time_pattern,
+            self.ParameterValue.time_series_id,
+            self.ParameterValue.stochastic_model_id
+        ).filter(self.ParameterValue.object_id == self.Object.id).\
+        outerjoin(self.ParameterValue).\
+        filter(self.Parameter.id == self.ParameterValue.parameter_id)
+        if parameter_id:
+            qry = qry.filter(self.Parameter.id == parameter_id)
+        return qry
 
     def unvalued_object_parameter_list(self, object_id):
         """Return parameters that do not have a value for given object."""
@@ -345,6 +371,16 @@ class DatabaseMapping(object):
             filter_by(object_id=object_id)
         return self.parameter_list().filter_by(object_class_id=object_.class_id).\
             filter(~self.Parameter.id.in_(valued_parameter_ids))
+
+    def unvalued_object_list(self, parameter_id):
+        """Return objects for which given parameter does not have a value."""
+        parameter = self.single_parameter(parameter_id).one_or_none()
+        if not parameter:
+            return self.empty_list()
+        valued_object_ids = self.session.query(self.ParameterValue.object_id).\
+            filter_by(parameter_id=parameter_id)
+        return self.object_list().filter_by(class_id=parameter.object_class_id).\
+            filter(~self.Object.id.in_(valued_object_ids))
 
     def unvalued_relationship_parameter_list(self, relationship_id):
         """Return parameters that do not have a value for given relationship."""
@@ -373,17 +409,25 @@ class DatabaseMapping(object):
         """Return relationship class and the parameter corresponding to id."""
         return self.relationship_parameter_list().filter(self.Parameter.id == id)
 
-    def single_object_parameter_value(self, id):
-        """Return object and the parameter value corresponding to id."""
-        return self.object_parameter_value_list().filter(self.ParameterValue.id == id)
+    def single_object_parameter_value(self, id=None, parameter_id=None, object_id=None):
+        """Return object and the parameter value, either corresponding to id,
+        or to parameter_id and object_id.
+        """
+        qry = self.object_parameter_value_list()
+        if id:
+            return qry.filter(self.ParameterValue.id == id)
+        if parameter_id and object_id:
+            return qry.filter(self.ParameterValue.parameter_id == parameter_id).\
+                filter(self.ParameterValue.object_id == object_id)
+        return self.empty_list()
 
     def single_relationship_parameter_value(self, id):
         """Return relationship and the parameter value corresponding to id."""
         return self.relationship_parameter_value_list().filter(self.ParameterValue.id == id)
 
-    def object_parameter_list(self):
+    def object_parameter_list(self, object_class_id=None):
         """Return object classes and their parameters."""
-        return self.session.query(
+        qry = self.session.query(
             #self.Parameter.object_class_id,
             self.ObjectClass.name.label('object_class_name'),
             self.Parameter.id.label('parameter_id'),
@@ -398,11 +442,14 @@ class DatabaseMapping(object):
             self.Parameter.maximum_value
         ).filter(self.ObjectClass.id == self.Parameter.object_class_id).\
         order_by(self.Parameter.id)
+        if object_class_id:
+            qry = qry.filter(self.Parameter.object_class_id == object_class_id)
+        return qry
 
-    def relationship_parameter_list(self):
+    def relationship_parameter_list(self, relationship_class_id=None):
         """Return relationship classes and their parameters."""
         wide_relationship_class_subqry = self.wide_relationship_class_list().subquery()
-        return self.session.query(
+        qry = self.session.query(
             #self.Parameter.relationship_class_id,
             wide_relationship_class_subqry.c.name.label('relationship_class_name'),
             #wide_relationship_class_subqry.c.object_class_id_list,
@@ -419,6 +466,9 @@ class DatabaseMapping(object):
             self.Parameter.maximum_value
         ).filter(self.Parameter.relationship_class_id == wide_relationship_class_subqry.c.id).\
         order_by(self.Parameter.id)
+        if relationship_class_id:
+            qry = qry.filter(self.Parameter.relationship_class_id == relationship_class_id)
+        return qry
 
     def object_parameter_value_list(self, parameter_name=None):
         """Return objects and their parameter values."""
