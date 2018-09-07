@@ -357,7 +357,7 @@ class CustomPackage(Package):
         if old in primary_key:
             primary_key_index = primary_key.index(old)
             resource_dict['schema']['primaryKey'][primary_key_index] = new
-        # TODO: the same with foreign keys
+        # TODO: also rename the field in foreign keys
         self.commit()
 
     def primary_keys_data(self):

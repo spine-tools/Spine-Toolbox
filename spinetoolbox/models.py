@@ -748,12 +748,6 @@ class MinimalTableModel(QAbstractTableModel):
         """Return whether or not row is a work in progress."""
         return row in self.wip_row_list
 
-    def parent(self):
-        """Return _parent attribute."""
-        # TODO: This is not correct. In a model parent should return a QModelIndex.
-        # TODO: This overrides a method in superclass.
-        return self._parent
-
     def clear(self):
         self.beginResetModel()
         self._data = list()

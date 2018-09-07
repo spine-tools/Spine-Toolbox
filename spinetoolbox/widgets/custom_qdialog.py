@@ -22,8 +22,8 @@ Various QDialogs to add items to Database in DataStoreForm,
 and a QDialog that can be programmatically populated with many options.
 Originally intended to be used within DataStoreForm
 
-TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
-TODO: Check if some classes here are obsolete. For instance, CustomQDialog has a syntax error, so it does not even work.
+TODO: CustomQDialog has a syntax error, so it does not even work.
+NOTE: Where is this syntax error? We better fix it, since CustomQDialog is inherited by all other AddStuffDialogs
 :author: Manuel Marin <manuelma@kth.se>
 :date:   13.5.2018
 """
@@ -47,8 +47,11 @@ import ui.add_parameter_values
 
 
 class CustomQDialog(QDialog):
-    """A dialog with options to insert and remove rows from a tableview."""
-    # TODO: If this class is used, what is parent? QWidget?
+    """A dialog with options to insert and remove rows from a tableview.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
     def __init__(self, parent):
         super().__init__(parent)
         self.ui = None
@@ -116,13 +119,18 @@ class CustomQDialog(QDialog):
 
 
 class AddObjectClassesDialog(CustomQDialog):
-    """A dialog to query user's preferences for new object classes."""
+    """A dialog to query user's preferences for new object classes.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+    """
     def __init__(self, parent, mapping):
         super().__init__(parent)
         self.object_class_list = mapping.object_class_list()
         self.object_class_args_list = list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(LineEditDelegate(self))
+        self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.model.clear()
         # Add items to combobox
@@ -158,7 +166,13 @@ class AddObjectClassesDialog(CustomQDialog):
 
 
 class AddObjectsDialog(CustomQDialog):
-    """A dialog to query user's preferences for new objects."""
+    """A dialog to query user's preferences for new objects.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        class_id (int): default object class id
+    """
     def __init__(self, parent, mapping, class_id=None):
         super().__init__(parent)
         self.object_args_list = list()
@@ -168,7 +182,7 @@ class AddObjectsDialog(CustomQDialog):
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.setup_ui(ui.add_objects.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddObjectsDelegate(self))
+        self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
         self.insert_row()
         self.resize_tableview()
@@ -220,7 +234,13 @@ class AddObjectsDialog(CustomQDialog):
 
 
 class AddRelationshipClassesDialog(CustomQDialog):
-    """A dialog to query user's preferences for new relationship classes."""
+    """A dialog to query user's preferences for new relationship classes.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        object_class_one_id (int): default object class id to put in dimension '1'
+    """
     def __init__(self, parent, mapping, object_class_one_id=None):
         super().__init__(parent)
         self.wide_relationship_class_args_list = list()
@@ -234,7 +254,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
         self.model.set_horizontal_header_labels(
             ['object class 1 name', 'object class 2 name', 'relationship class name'])
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self))
+        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
         self.connect_signals()
         self.insert_row()
         self.resize_tableview()
@@ -334,7 +354,15 @@ class AddRelationshipClassesDialog(CustomQDialog):
 
 
 class AddRelationshipsDialog(CustomQDialog):
-    """A dialog to query user's preferences for new relationships."""
+    """A dialog to query user's preferences for new relationships.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        relationship_class_id (int): default relationship class id
+        object_id (int): default object id
+        object_class_id (int): default object class id
+    """
     def __init__(self, parent, mapping, relationship_class_id=None, object_id=None, object_class_id=None):
         super().__init__(parent)
         self.wide_relationship_args_list = list()
@@ -351,7 +379,7 @@ class AddRelationshipsDialog(CustomQDialog):
         self.setup_ui(ui.add_relationships.Ui_Dialog())
         self.ui.toolButton_insert_row.setEnabled(False)
         self.ui.toolButton_remove_rows.setEnabled(False)
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self))
+        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
         self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
         self.init_relationship_class()
         # Add status bar to form
@@ -506,14 +534,14 @@ class AddRelationshipsDialog(CustomQDialog):
 
 
 class CommitDialog(QDialog):
-    """A dialog to query user's preferences for new parameter values."""
-    def __init__(self, parent, database):
-        """Initialize class
+    """A dialog to query user's preferences for new parameter values.
 
-        Args:
-            parent (QWidget): the parent of this dialog, needed to center it properly.
-            database (str): The database name.
-        """
+    Attributes:
+        parent (DataStoreForm): data store widget
+        database (str): database name
+    """
+    def __init__(self, parent, database):
+        """Initialize class"""
         super().__init__(parent)
         self.commit_msg = None
         self.setWindowTitle('Commit changes to {}'.format(database))
