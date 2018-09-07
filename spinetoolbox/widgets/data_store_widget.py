@@ -45,21 +45,22 @@ from datapackage_import_export import import_datapackage
 
 
 class DataStoreForm(QMainWindow):
-    """A widget to show and edit Spine objects in a data store."""
+    """A widget to show and edit Spine objects in a data store.
 
+    Attributes:
+        data_store (DataStore): The DataStore instance that owns this form
+        mapping (DatabaseMapping): The object relational mapping
+        database (str): The database name
+    """
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
 
     def __init__(self, data_store, mapping, database):
-        """ Initialize class.
-
-        Args:
-            data_store (DataStore): The DataStore instance that owns this form
-            mapping (DatabaseMapping): The object relational mapping
-            database (str): The database name
-        """
+        """Initialize class."""
         tic = time.clock()
         super().__init__(flags=Qt.Window)
+        # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
+        # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
         self._data_store = data_store
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()

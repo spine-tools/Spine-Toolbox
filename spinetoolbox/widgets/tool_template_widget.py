@@ -34,7 +34,7 @@ from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
-    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, TT_FOCUS_SS
+    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import busy_effect
 from widgets.custom_menus import AddIncludesPopupMenu
 import logging
@@ -44,18 +44,18 @@ class ToolTemplateWidget(QWidget):
     """A widget to query user's preferences for a new tool template.
 
     Attributes:
-        parent(ToolBoxUI): QMainWindow instance
-        tool_template(ToolTemplate): If given, the form is prefilled with this template
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): If given, the form is prefilled with this template
     """
-    def __init__(self, parent, tool_template=None):
+    def __init__(self, toolbox, tool_template=None):
         """ Initialize class."""
-        super().__init__(f=Qt.Window)
+        super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
         # Class attributes
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         # init models
         self.includes_model = QStandardItemModel()
         self.inputfiles_model = QStandardItemModel()
@@ -68,7 +68,6 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.setStyleSheet(TT_FOCUS_SS)
         self.ui.treeView_includes.setModel(self.includes_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -252,7 +251,7 @@ class ToolTemplateWidget(QWidget):
             url = "file:///" + os.path.join(self.includes_main_path, includes_file)
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
-                self._parent.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
+                self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
     @Slot(name="remove_includes")
     def remove_includes(self):
@@ -427,22 +426,22 @@ class ToolTemplateWidget(QWidget):
             self.statusbar.showMessage("Adding Tool template failed", 3000)
             return False
         # Check if a tool template with this name already exists
-        row = self._parent.tool_template_model.tool_template_row(tool.name)
+        row = self._toolbox.tool_template_model.tool_template_row(tool.name)
         if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
-            old_tool = self._parent.tool_template_model.tool_template(row)
+            old_tool = self._toolbox.tool_template_model.tool_template(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
                 return True
             logging.debug("Updating definition for tool template '{}'".format(tool.name))
-            self._parent.update_tool_template(row, tool)
+            self._toolbox.update_tool_template(row, tool)
         else:
             answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
             if answer[0] == '':  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])  # TODO: maybe check that extension is .json?
             tool.set_def_path(def_file)
-            self._parent.add_tool_template(tool)
+            self._toolbox.add_tool_template(tool)
         # Save path of main program file relative to definition file in case they differ
         def_path = os.path.dirname(def_file)
         if def_path != self.includes_main_path:

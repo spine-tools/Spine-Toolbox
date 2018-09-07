@@ -19,16 +19,17 @@
 
 """
 Custom editors for model/view programming.
+TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
+
 
 :author: Manuel Marin <manuelma@kth.se>
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QAction, QWidgetAction, QWidget, \
+from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QWidgetAction, QWidget, \
     QHBoxLayout, QActionGroup
 from PySide2.QtGui import QStandardItemModel, QStandardItem, QIntValidator
 from widgets.custom_menus import QOkMenu
-import logging
 
 
 class CustomComboEditor(QComboBox):
@@ -41,11 +42,12 @@ class CustomComboEditor(QComboBox):
         self.column = index.column()
         self.previous_data = index.data(Qt.EditRole)
         self.addItems(items)
-        self.setCurrentIndex(-1) # force index change
+        self.setCurrentIndex(-1)  # force index change
         self.currentIndexChanged.connect(self.close)
 
     def index(self):
         return self._index
+
 
 class CustomCheckableComboEditor(QComboBox):
     """A custom QComboBox to handle data from models."""
@@ -166,4 +168,5 @@ class CustomSimpleToolButtonEditor(QToolButton):
     def text(self):
         return self._text
 
+# TODO: What the hell is this?
 CustomSimpleToolButtonEditor

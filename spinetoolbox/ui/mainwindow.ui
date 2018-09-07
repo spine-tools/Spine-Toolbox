@@ -120,7 +120,7 @@
      <x>0</x>
      <y>0</y>
      <width>765</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -241,8 +241,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>80</width>
-     <height>93</height>
+     <width>95</width>
+     <height>113</height>
     </size>
    </property>
    <property name="windowTitle">

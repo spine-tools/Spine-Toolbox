@@ -39,9 +39,9 @@ from helpers import rename_dir
 
 class ProjectItemModel(QStandardItemModel):
     """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
-    def __init__(self, parent=None):
+    def __init__(self, toolbox=None):
         super().__init__()
-        self._parent = parent
+        self._toolbox = toolbox
 
     def setData(self, index, value, role=Qt.EditRole):
         """Change name of item in index to value.
@@ -64,14 +64,14 @@ class ProjectItemModel(QStandardItemModel):
         if any(True for x in value if x in INVALID_CHARS):
             msg = "<b>{0}</b> contains invalid characters.".format(value)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._parent, "Invalid characters", msg)
+            QMessageBox.information(self._toolbox, "Invalid characters", msg)
             return False
         # Check if project item with the same name already exists
         taken_names = self.return_item_names()
         if value in taken_names:
             msg = "Project item <b>{0}</b> already exists".format(value)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self._parent, "Invalid name", msg)
+            QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
         # Check that no existing project item short name matches the new item's short name.
         # This is to prevent two project items from using the same folder.
@@ -81,7 +81,7 @@ class ProjectItemModel(QStandardItemModel):
             if new_short_name == taken_short_name:
                 msg = "Project item using directory <b>{0}</b> already exists".format(taken_short_name)
                 # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-                QMessageBox.information(self._parent, "Invalid name", msg)
+                QMessageBox.information(self._toolbox, "Invalid name", msg)
                 return False
         # Get old data dir which will be renamed
         try:
@@ -95,10 +95,10 @@ class ProjectItemModel(QStandardItemModel):
         # Make path for new data dir
         new_data_dir = os.path.join(project_path, new_short_name)
         # Rename item project directory
-        if not rename_dir(self._parent, old_data_dir, new_data_dir):
+        if not rename_dir(self._toolbox, old_data_dir, new_data_dir):
             return False
         # Find item from project refs list
-        project_refs = self._parent.project_refs
+        project_refs = self._toolbox.project_refs
         item_ref = None
         for ref in project_refs:
             if ref.name == old_name:
@@ -107,7 +107,7 @@ class ProjectItemModel(QStandardItemModel):
                 break
         # Change name for item in project ref list
         item_ref.set_name(value)
-        self._parent.project_refs.append(item_ref)
+        self._toolbox.project_refs.append(item_ref)
         # Update DisplayRole of the QStardardItem in Project QTreeView
         q_item = self.find_item(old_name, Qt.MatchExactly | Qt.MatchRecursive)
         q_item.setData(value, Qt.DisplayRole)
@@ -127,12 +127,12 @@ class ProjectItemModel(QStandardItemModel):
         # Update name item of the QGraphicsItem
         item.get_icon().update_name_item(value)
         # Change old item names in connection model headers to the new name
-        header_index = self._parent.connection_model.find_index_in_header(old_name)
-        self._parent.connection_model.setHeaderData(header_index, Qt.Horizontal, value)
-        self._parent.connection_model.setHeaderData(header_index, Qt.Vertical, value)
+        header_index = self._toolbox.connection_model.find_index_in_header(old_name)
+        self._toolbox.connection_model.setHeaderData(header_index, Qt.Horizontal, value)
+        self._toolbox.connection_model.setHeaderData(header_index, Qt.Vertical, value)
         # Force save project
-        self._parent.save_project()
-        self._parent.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
+        self._toolbox.save_project()
+        self._toolbox.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
         return True
 
     def n_items(self, typ):
@@ -216,11 +216,11 @@ class ProjectItemModel(QStandardItemModel):
 
 class ToolTemplateModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
-    def __init__(self, parent=None):
+    def __init__(self, toolbox=None):
         super().__init__()
         self._tools = list()
         self._tools.append('No Tool template')  # TODO: Try to get rid of this
-        self._parent = parent
+        self._toolbox = toolbox
 
     def rowCount(self, parent=None, *args, **kwargs):
         """Must be reimplemented when subclassing. Returns
@@ -365,9 +365,9 @@ class ToolTemplateModel(QAbstractListModel):
 class ConnectionModel(QAbstractTableModel):
     """Table model for storing connections between items."""
 
-    def __init__(self, parent=None):
+    def __init__(self, toolbox=None):
         super().__init__()
-        self._parent = parent  # QMainWindow
+        self._toolbox = toolbox  # QMainWindow
         self.connections = []
         self.header = list()
 
@@ -522,7 +522,7 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
-        """Removes count rows starting with the given row under parent parent from the model.
+        """Removes count rows starting with the given row under parent.
 
         Args:
             row (int): Row number where to start removing rows
@@ -546,7 +546,7 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def removeColumns(self, column, count, parent=QModelIndex()):
-        """Removes count columns starting with the given column under parent parent from the model.
+        """Removes count columns starting with the given column under parent.
 
         Args:
             column (int): Column number where to start removing columns
@@ -699,10 +699,10 @@ class MinimalTableModel(QAbstractTableModel):
 
     row_with_data_inserted = Signal(QModelIndex, int, name="row_with_data_inserted")
 
-    def __init__(self, parent=None):
+    def __init__(self, toolbox=None):
         """Initialize class"""
         super().__init__()
-        self._parent = parent  # QMainWindow
+        self._toolbox = toolbox  # QMainWindow
         self._data = list()
         self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
@@ -750,6 +750,8 @@ class MinimalTableModel(QAbstractTableModel):
 
     def parent(self):
         """Return _parent attribute."""
+        # TODO: This is not correct. In a model parent should return a QModelIndex.
+        # TODO: This overrides a method in superclass.
         return self._parent
 
     def clear(self):
@@ -970,7 +972,7 @@ class MinimalTableModel(QAbstractTableModel):
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
-        """Removes count rows starting with the given row under parent parent from the model.
+        """Removes count rows starting with the given row under parent.
 
         Args:
             row (int): Row number where to start removing rows
@@ -992,7 +994,7 @@ class MinimalTableModel(QAbstractTableModel):
         return True
 
     def removeColumns(self, column, count, parent=QModelIndex()):
-        """Removes count columns starting with the given column under parent parent from the model.
+        """Removes count columns starting with the given column under parent.
 
         Args:
             column (int): Column number where to start removing columns
@@ -1052,10 +1054,10 @@ class MinimalTableModel(QAbstractTableModel):
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview."""
 
-    def __init__(self, parent):
+    def __init__(self, data_store_form):
         """Initialize class"""
-        super().__init__(parent)
-        self.mapping = parent.mapping
+        super().__init__(data_store_form)
+        self.mapping = data_store_form.mapping
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
@@ -1293,11 +1295,11 @@ class ObjectTreeModel(QStandardItemModel):
 
 class ParameterTableModel(MinimalTableModel):
     """A model to use with parameter tables in DataStoreForm."""
-    def __init__(self, parent=None):
+    def __init__(self, data_store_form=None):
         """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-        self.gray_brush = self._parent.palette().button() if self._parent else QBrush(Qt.lightGray)
+        super().__init__(data_store_form)
+        self._data_store_form = data_store_form
+        self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
 
     def make_columns_fixed(self, *column_names):
         """Set columns as fixed so they are not editable and painted gray."""
@@ -1315,10 +1317,10 @@ class ParameterTableModel(MinimalTableModel):
 
 class CustomSortFilterProxyModel(QSortFilterProxyModel):
     """A custom sort filter proxy model."""
-    def __init__(self, parent=None):
+    def __init__(self, data_store_form=None):
         """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
+        super().__init__(data_store_form)
+        self._data_store_form = data_store_form
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.italic_font = QFont()
@@ -1436,9 +1438,9 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
 
 class DatapackageResourcesModel(QStandardItemModel):
     """A class to hold datapackage resources and show them in a tableview."""
-    def __init__(self, parent=None):
+    def __init__(self, spine_datapackage_widget=None):
         """Initialize class"""
-        super().__init__(parent)
+        super().__init__(spine_datapackage_widget)
         self.datapackage = None
         self.setHorizontalHeaderLabels(["name", "source"])
         self.ok_icon = QIcon(QPixmap(":/icons/ok.png"))
@@ -1467,9 +1469,9 @@ class DatapackageResourcesModel(QStandardItemModel):
 
 class DatapackageFieldsModel(QStandardItemModel):
     """A class to hold schema fields and show them in a treeview."""
-    def __init__(self, parent=None):
+    def __init__(self, spine_datapackage_widget=None):
         """Initialize class"""
-        super().__init__(parent)
+        super().__init__(spine_datapackage_widget)
         self.schema = None
 
     def reset_model(self, schema):
@@ -1494,6 +1496,7 @@ class DatapackageForeignKeysModel(MinimalTableModel):
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
+        # TODO: Change parent (attribute name) to something else
         self.schema = None
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
 
@@ -1516,6 +1519,7 @@ class DatapackageForeignKeysModel(MinimalTableModel):
 
 class DatapackageDescriptorModel(QStandardItemModel):
     # TODO: Obsolete? Probably... let me check if we wanna use it -manuelma
+    # TODO: Change parent (attribute name) to something else if this is used.
     """A class to hold a datapackage descriptor in a treeview."""
 
     def __init__(self, parent=None):

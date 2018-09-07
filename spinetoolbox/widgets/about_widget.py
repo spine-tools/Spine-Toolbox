@@ -24,6 +24,7 @@ A widget for presenting basic information about the application.
 @date 14.12.2017
 """
 
+import logging
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor
@@ -31,21 +32,20 @@ import ui.about
 
 
 class AboutWidget(QWidget):
-    """About QWidget class."""
+    """About widget class.
 
-    def __init__(self, parent, version):
-        """Initializes About widget.
-
-        Params:
-            parent (QWidget): Parent widget
-            version (str): Application version number
-        """
-        self._parent = parent
-        super().__init__(f=Qt.Window)
+    Attributes:
+        toolbox (ToolboxUI): QMainWindow instance
+        version (str): Application version number
+    """
+    def __init__(self, toolbox, version):
+        """Initializes About widget."""
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        self._toolbox = toolbox
         # Set up the user interface from Designer file.
         self.ui = ui.about.Ui_Form()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.label_version_str.setText("v{0}".format(version))

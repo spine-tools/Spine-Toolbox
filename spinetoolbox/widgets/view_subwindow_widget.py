@@ -32,7 +32,7 @@ from ui.subwindow_view import Ui_Form
 
 
 class ViewWidget(QWidget):
-    """Class constructor.
+    """View subwindow class.
 
     Attributes:
         item_type (str): Internal widget object type (should always be 'View')
@@ -43,7 +43,7 @@ class ViewWidget(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of View objects
         self.reference_model = QStandardItemModel()  # References to databases
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. Found in DS data directory.
         self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))

@@ -35,7 +35,7 @@ class ToolTemplate(MetaObject):
     """Super class for various tool templates.
 
     Attributes:
-        parent (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         name (str): Name of the tool
         description (str): Short description of the tool
         path (str): Path to tool
@@ -45,12 +45,12 @@ class ToolTemplate(MetaObject):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, tooltype, path, includes,
+    def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
+        self._toolbox = toolbox
         self.tooltype = tooltype
         if not os.path.exists(path):
             pass
@@ -133,11 +133,11 @@ class GAMSTool(ToolTemplate):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, tooltype, path, includes,
+    def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, tooltype, path, includes,
+        super().__init__(toolbox, name, tooltype, path, includes,
                          description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
@@ -185,21 +185,21 @@ class GAMSTool(ToolTemplate):
             logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
 
     @staticmethod
-    def load(parent, path, data):
+    def load(toolbox, path, data):
         """Create a GAMSTool according to a tool definition.
 
         Args:
-            parent (ToolboxUI): QMainWindow instance
+            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
 
         Returns:
             GAMSTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = GAMSTool.check_definition(parent, data)
+        kwargs = GAMSTool.check_definition(toolbox, data)
         if kwargs is not None:
             # Return an executable model instance
-            return GAMSTool(parent=parent, path=path, **kwargs)
+            return GAMSTool(toolbox=toolbox, path=path, **kwargs)
         else:
             return None
 
@@ -218,11 +218,11 @@ class JuliaTool(ToolTemplate):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, tooltype, path, includes,
+    def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, tooltype, path, includes,
+        super().__init__(toolbox, name, tooltype, path, includes,
                          description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
@@ -246,20 +246,20 @@ class JuliaTool(ToolTemplate):
         pass
 
     @staticmethod
-    def load(parent, path, data):
+    def load(toolbox, path, data):
         """Create a JuliaTool according to a tool definition.
 
         Args:
-            parent (ToolboxUI): QMainWindow instance
+            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
 
         Returns:
             JuliaTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = JuliaTool.check_definition(parent, data)
+        kwargs = JuliaTool.check_definition(toolbox, data)
         if kwargs is not None:
             # Return an executable model instance
-            return JuliaTool(parent=parent, path=path, **kwargs)
+            return JuliaTool(toolbox=toolbox, path=path, **kwargs)
         else:
             return None

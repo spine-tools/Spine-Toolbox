@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -84,6 +84,9 @@
      <property name="editTriggers">
       <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
      </property>
+     <property name="tabKeyNavigation">
+      <bool>false</bool>
+     </property>
      <attribute name="horizontalHeaderStretchLastSection">
       <bool>true</bool>
      </attribute>
@@ -94,6 +97,9 @@
    </item>
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="focusPolicy">
+      <enum>Qt::StrongFocus</enum>
+     </property>
      <property name="orientation">
       <enum>Qt::Horizontal</enum>
      </property>
@@ -143,9 +149,10 @@
  </customwidgets>
  <tabstops>
   <tabstop>tableView</tabstop>
+  <tabstop>buttonBox</tabstop>
   <tabstop>spinBox</tabstop>
-  <tabstop>toolButton_insert_row</tabstop>
   <tabstop>toolButton_remove_rows</tabstop>
+  <tabstop>toolButton_insert_row</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

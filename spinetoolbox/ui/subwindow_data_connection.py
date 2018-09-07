@@ -175,6 +175,7 @@ class Ui_Form(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_open.sizePolicy().hasHeightForWidth())
         self.pushButton_open.setSizePolicy(sizePolicy)
+        self.pushButton_open.setMinimumSize(QtCore.QSize(0, 0))
         self.pushButton_open.setMaximumSize(QtCore.QSize(120, 23))
         self.pushButton_open.setObjectName("pushButton_open")
         self.horizontalLayout.addWidget(self.pushButton_open)

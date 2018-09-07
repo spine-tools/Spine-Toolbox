@@ -22,6 +22,8 @@ Various QDialogs to add items to Database in DataStoreForm,
 and a QDialog that can be programmatically populated with many options.
 Originally intended to be used within DataStoreForm
 
+TODO: Add Attributes to docstrings for all classes. Especially parent type is needed!!
+TODO: Check if some classes here are obsolete. For instance, CustomQDialog has a syntax error, so it does not even work.
 :author: Manuel Marin <manuelma@kth.se>
 :date:   13.5.2018
 """
@@ -46,6 +48,7 @@ import ui.add_parameter_values
 
 class CustomQDialog(QDialog):
     """A dialog with options to insert and remove rows from a tableview."""
+    # TODO: If this class is used, what is parent? QWidget?
     def __init__(self, parent):
         super().__init__(parent)
         self.ui = None
@@ -545,56 +548,3 @@ class CommitDialog(QDialog):
             self.statusbar.showMessage("Please enter a commit message.", 3000)
             return
         self.accept()
-
-
-# NOTE: Not in use anymore, too general
-# class CustomQDialog(QDialog):
-#     """A class to create custom forms with several line edits and comboboxes."""
-#     def __init__(self, parent=None, title="", **kwargs):
-#         """Initialize class
-#
-#         Args:
-#             parent (QWidget): the parent of this dialog, needed to center it properly
-#             title (str): window title
-#             kwargs (dict): keys to use when collecting the answer in output dict.
-#                 Values are either placeholder texts or combobox lists.
-#         """
-#         super().__init__(parent)
-#         self.font = QFont("", 0)
-#         self.font_metric = QFontMetrics(self.font)
-#         self.input = dict()
-#         self.answer = dict()
-#         self.setWindowTitle(title)
-#         form = QFormLayout(self)
-#         for key,value in kwargs.items():
-#             if isinstance(value, str): # line edit
-#                 input_ = QLineEdit(self)
-#                 input_.setPlaceholderText(value)
-#                 input_.setMinimumWidth(self.font_metric.width(value))
-#             elif isinstance(value, list): # combo box
-#                 input_ = QComboBox(self)
-#                 max_width = max(self.font_metric.width(x) for x in value if isinstance(x, str))
-#                 input_.setMinimumWidth(max_width)
-#                 input_.addItems(value)
-#             self.input[key] = input_
-#             form.addRow(input_)
-#         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-#         button_box.accepted.connect(self.save_and_accept)
-#         button_box.rejected.connect(self.reject)
-#         form.addRow(button_box)
-#         # Ensure this window gets garbage-collected when closed
-#         self.setAttribute(Qt.WA_DeleteOnClose)
-#
-#     @Slot(name="save_and_accept")
-#     def save_and_accept(self):
-#         """Collect answer in output dict and accept"""
-#         for key,value in self.input.items():
-#             if isinstance(value, QLineEdit):
-#                 self.answer[key] = value.text()
-#             elif isinstance(value, QComboBox):
-#                 self.answer[key] = {
-#                     'text': value.currentText(),
-#                     'index': value.currentIndex()
-#                 }
-#         self.accept()
-#

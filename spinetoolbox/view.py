@@ -47,7 +47,7 @@ class View(MetaObject):
     """View class.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
         references (list): List of references (for now it's only database references)
@@ -57,8 +57,8 @@ class View(MetaObject):
     def __init__(self, parent, name, description, references, x, y):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.item_type = "View"
         self.item_category = "Views"
         self._widget = ViewWidget(self.item_type)
@@ -71,7 +71,7 @@ class View(MetaObject):
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
         self.databases = list()  # name of imported databases NOTE: Not in use at the moment
         # Populate references model

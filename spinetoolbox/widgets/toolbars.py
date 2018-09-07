@@ -31,14 +31,18 @@ from PySide2.QtCore import Qt, QMimeData
 from config import ICON_TOOLBAR_SS
 from graphics_items import ItemImage
 
+
 class ItemToolBar(QToolBar):
-    """A toolbar to add items using drag and drop actions"""
+    """A toolbar to add items using drag and drop actions.
+
+    Attributes:
+        parent (ToolboxUI): QMainWindow instance
+    """
     def __init__(self, parent):
         """Init class"""
-        super().__init__("Add Item Toolbar", parent)
+        super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         label = QLabel("Add Item")
         self.addWidget(label)
-        # Draw item pixmaps
         # DS
         data_store_pixmap = QPixmap(":/icons/ds_icon.png")
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
@@ -68,14 +72,20 @@ class ItemToolBar(QToolBar):
 
 
 class DraggableWidget(QLabel):
-    """A draggable QLabel"""
+    """A draggable QLabel.
+
+    Attributes:
+        parent (QWidget): Parent widget
+        pixmap (QPixMap): Picture for the label
+        text (str): Item type
+    """
     def __init__(self, parent, pixmap, text):
-        super().__init__(parent)
+        super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
         self.text = text
         self.setPixmap(pixmap.scaled(28, 28))
         self.drag_start_pos = None
         self.setToolTip("""
-            <p>Drag-and-drop this icon onto the Main Project View to create a new <b>{}</b> item.</p>
+            <p>Drag-and-drop this icon into the Main View to create a new <b>{}</b> item.</p>
         """.format(self.text))
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)

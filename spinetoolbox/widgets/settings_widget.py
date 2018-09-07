@@ -36,22 +36,22 @@ class SettingsWidget(QWidget):
     """ A widget to change user's preferred settings.
 
     Attributes:
-        parent (QObject): Parent widget.
+        toolbox (ToolboxUI): Parent widget.
         configs (ConfigurationParser): Configuration object
     """
-    def __init__(self, parent, configs):
+    def __init__(self, toolbox, configs):
         """ Initialize class. """
-        super().__init__(f=Qt.Window)
-        self._parent = parent  # QWidget parent
-        self._configs = configs
-        self._project = self._parent.project()
-        self.orig_work_dir = ""  # Work dir when this widget was opened
+        super().__init__(parent=toolbox, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
         # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self._toolbox = toolbox  # QWidget parent
+        self._configs = configs
+        self._project = self._toolbox.project()
+        self.orig_work_dir = ""  # Work dir when this widget was opened
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)
@@ -126,6 +126,7 @@ class SettingsWidget(QWidget):
         """Read current settings from config object and update UI to show them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
+        save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
         logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
@@ -136,7 +137,15 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
-        if logging_level == '2':
+        if save_at_exit == "0":  # Not needed but makes the code more readable.
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
+        elif save_at_exit == "1":
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+        elif save_at_exit == "2":
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
+        else:  # default
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+        if logging_level == "2":
             self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
         else:
             self.ui.checkBox_debug_messages.setCheckState(Qt.Unchecked)
@@ -165,6 +174,7 @@ class SettingsWidget(QWidget):
         """Get selections and save them to conf file."""
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
+        f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
@@ -186,13 +196,14 @@ class SettingsWidget(QWidget):
         # Write to config object
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
+        self._configs.set("settings", "save_at_exit", f)
         self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)
         # Set logging level
-        self._parent.set_debug_level(c)
+        self._toolbox.set_debug_level(c)
         # Update project settings
         self.update_project_settings()
         self._configs.save()
@@ -210,7 +221,7 @@ class SettingsWidget(QWidget):
         # Check if work directory was changed
         if not self.orig_work_dir == work_dir:
             if not self._project.change_work_dir(work_dir):
-                self._parent.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
+                self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
                                             .format(work_dir))
             else:
                 save = True
@@ -219,8 +230,8 @@ class SettingsWidget(QWidget):
             self._project.set_description(self.ui.textEdit_project_description.toPlainText())
             save = True
         if save:
-            self._parent.msg.emit("Project settings changed. Saving project...")
-            self._parent.save_project()
+            self._toolbox.msg.emit("Project settings changed. Saving project...")
+            self._toolbox.save_project()
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.

@@ -35,17 +35,17 @@ class AddToolWidget(QWidget):
     """A widget that queries user's preferences for a new item.
 
     Attributes:
-        parent (ToolboxUI): Parent widget
+        toolbox (ToolboxUI): Parent widget
         x (int): X coordinate of new item
         y (int): Y coordinate of new item
     """
-    def __init__(self, parent, x, y):
+    def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(f=Qt.Window)
-        self._parent = parent
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
+        self._toolbox = toolbox
         self._x = x
         self._y = y
-        self._project = self._parent.project()
+        self._project = self._toolbox.project()
         #  Set up the user interface from Designer.
         self.ui = ui.add_tool.Ui_Form()
         self.ui.setupUi(self)
@@ -59,7 +59,7 @@ class AddToolWidget(QWidget):
         self.name = ''
         self.description = ''
         # Init
-        self.ui.comboBox_tool.setModel(self._parent.tool_template_model)
+        self.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self.ui.lineEdit_name.setFocus()
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
@@ -83,7 +83,7 @@ class AddToolWidget(QWidget):
             # No Tool selected
             self.ui.lineEdit_tool_args.setText("")
             return
-        selected_tool = self._parent.tool_template_model.tool_template(row)
+        selected_tool = self._toolbox.tool_template_model.tool_template(row)
         args = selected_tool.cmdline_args
         if not args:
             # Tool cmdline_args is None if the line does not exist in Tool definition file
@@ -116,13 +116,13 @@ class AddToolWidget(QWidget):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._toolbox.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
             return
         # Check that short name (folder) is not reserved
         short_name = self.name.lower().replace(' ', '_')
-        if short_name_reserved(short_name, self._parent.project_item_model):
+        if short_name_reserved(short_name, self._toolbox.project_item_model):
             msg = "Item using folder '{0}' already exists".format(short_name)
             self.statusbar.showMessage(msg, 3000)
             return
@@ -136,7 +136,7 @@ class AddToolWidget(QWidget):
         if selected_row == 0:
             selected_tool = None
         else:
-            selected_tool = self._parent.tool_template_model.tool_template(selected_row)
+            selected_tool = self._toolbox.tool_template_model.tool_template(selected_row)
         self._project.add_tool(self.name, self.description, selected_tool, self._x, self._y)
 
     def keyPressEvent(self, e):
@@ -158,7 +158,7 @@ class AddToolWidget(QWidget):
         """
         if event:
             event.accept()
-            item_shadow = self._parent.ui.graphicsView.item_shadow
+            item_shadow = self._toolbox.ui.graphicsView.item_shadow
             if item_shadow:
-                self._parent.ui.graphicsView.scene().removeItem(item_shadow)
-                self._parent.ui.graphicsView.item_shadow = None
+                self._toolbox.ui.graphicsView.scene().removeItem(item_shadow)
+                self._toolbox.ui.graphicsView.item_shadow = None

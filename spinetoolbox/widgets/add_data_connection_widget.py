@@ -35,17 +35,17 @@ class AddDataConnectionWidget(QWidget):
     """A widget that queries user's preferences for a new item.
 
     Attributes:
-        parent (ToolboxUI): Parent widget
+        toolbox (ToolboxUI): toolbox widget
         x (int): X coordinate of new item
         y (int): Y coordinate of new item
     """
-    def __init__(self, parent, x, y):
+    def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(f=Qt.Window)
-        self._parent = parent
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        self._toolbox = toolbox
         self._x = x
         self._y = y
-        self._project = self._parent.project()
+        self._project = self._toolbox.project()
         #  Set up the user interface from Designer.
         self.ui = ui.add_data_connection.Ui_Form()
         self.ui.setupUi(self)
@@ -94,13 +94,13 @@ class AddDataConnectionWidget(QWidget):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._toolbox.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
             return
         # Check that short name (folder) is not reserved
         short_name = self.name.lower().replace(' ', '_')
-        if short_name_reserved(short_name, self._parent.project_item_model):
+        if short_name_reserved(short_name, self._toolbox.project_item_model):
             msg = "Item using folder '{0}' already exists".format(short_name)
             self.statusbar.showMessage(msg, 3000)
             return
@@ -131,7 +131,7 @@ class AddDataConnectionWidget(QWidget):
         """
         if event:
             event.accept()
-            item_shadow = self._parent.ui.graphicsView.item_shadow
+            item_shadow = self._toolbox.ui.graphicsView.item_shadow
             if item_shadow:
-                self._parent.ui.graphicsView.scene().removeItem(item_shadow)
-                self._parent.ui.graphicsView.item_shadow = None
+                self._toolbox.ui.graphicsView.scene().removeItem(item_shadow)
+                self._toolbox.ui.graphicsView.item_shadow = None
