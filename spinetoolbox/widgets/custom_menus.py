@@ -71,11 +71,17 @@ class CustomContextMenu(QMenu):
 
 
 class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items both in the QTreeView and in the QGraphicsView."""
+    """Context menu for project items both in the QTreeView and in the QGraphicsView.
 
+    Attributes:
+        toolbox (ToolboxUI): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
     def __init__(self, toolbox, position, index):
         """Class constructor."""
         super().__init__(toolbox, index)
+        print(type(position))
         if not index.isValid():
             # If no item at index
             return
@@ -113,8 +119,14 @@ class ProjectItemContextMenu(CustomContextMenu):
 
 
 class LinkContextMenu(CustomContextMenu):
-    """Context menu class for connection links."""
+    """Context menu class for connection links.
 
+    Attributes:
+        toolbox (ToolboxUI): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+        parallel_link (Link(QGraphicsPathItem)): Link that is parallel to the one that requested the menu
+    """
     def __init__(self, toolbox, position, index, parallel_link=None):
         """Class constructor."""
         super().__init__(toolbox, index)
@@ -127,7 +139,13 @@ class LinkContextMenu(CustomContextMenu):
 
 
 class ToolTemplateContextMenu(CustomContextMenu):
-    """Context menu class for tool templates."""
+    """Context menu class for tool templates.
+
+    Attributes:
+        toolbox (ToolboxUI): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
 
     def __init__(self, toolbox, position, index):
         """Class constructor."""
@@ -147,11 +165,16 @@ class ToolTemplateContextMenu(CustomContextMenu):
 
 
 class ObjectTreeContextMenu(CustomContextMenu):
-    """Context menu class for Data store form, object tree items."""
+    """Context menu class for object tree items in Data store form.
 
-    def __init__(self, toolbox, position, index):
+    Attributes:
+        parent (DataStoreForm): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(toolbox, index)
+        super().__init__(parent, index)
         if not index.isValid():
             return
         plus_object_icon = toolbox.ui.actionAdd_objects.icon()
@@ -198,11 +221,16 @@ class ObjectTreeContextMenu(CustomContextMenu):
 
 
 class ParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for object parameter value items in Data Store."""
+    """Context menu class for object parameter value items in Data Store.
 
-    def __init__(self, toolbox, position, index):
+    Attributes:
+        parent (DataStoreForm): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(toolbox, index)
+        super().__init__(parent, index)
         if not index.isValid():
             return
         self.add_action("Remove selected")
@@ -210,23 +238,34 @@ class ParameterValueContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object parameter items in Data Store."""
+    """Context menu class for object parameter items in Data Store.
 
-    def __init__(self, toolbox, position, index):
+    Attributes:
+        parent (DataStoreForm): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(toolbox, index)
+        super().__init__(parent, index)
         if not index.isValid():
             return
         self.add_action("Remove selected")
         self.exec_(position)
 
 
+# NOTE: obsolete?
 class DescriptorTreeContextMenu(CustomContextMenu):
-    """Context menu class for descriptor treeview in Spine datapackage form."""
+    """Context menu class for descriptor treeview in Spine datapackage form.
 
-    def __init__(self, toolbox, position, index):
+    Attributes:
+        parent (SpineDatapackageWidget): Parent for menu widget
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(toolbox, index)
+        super().__init__(parent, index)
         if not index.isValid():
             return
         self.add_action("Expand all children")
@@ -254,8 +293,11 @@ class CustomPopupMenu(QMenu):
 
 
 class AddToolTemplatePopupMenu(CustomPopupMenu):
-    """Popup menu class for add tool template button."""
+    """Popup menu class for add tool template button.
 
+    Attributes:
+        toolbox (ToolboxUI): toolbox widget
+    """
     def __init__(self, toolbox):
         """Class constructor."""
         super().__init__()
@@ -267,8 +309,11 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
 
 
 class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
-    """Popup menu class for tool template options button in Tool item."""
-    # TODO: What is parent
+    """Popup menu class for tool template options button in Tool item.
+
+    Attributes:
+        parent (Tool(MetaObject)): tool item
+    """
     def __init__(self, parent):
         super().__init__()
         self._parent = parent
@@ -282,9 +327,11 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
 
 
 class AddIncludesPopupMenu(CustomPopupMenu):
-    """Popup menu class for add includes button in Tool Template widget."""
-    # TODO: What is parent
+    """Popup menu class for add includes button in Tool Template widget.
 
+    Attributes:
+        parent (ToolTemplateWidget): tool template widget
+    """
     def __init__(self, parent):
         """Class constructor."""
         super().__init__()
@@ -298,9 +345,10 @@ class AddIncludesPopupMenu(CustomPopupMenu):
 class QOkMenu(QMenu):
     """An QMenu that only hides when 'Ok' action is triggered.
     It allows selecting multiple checkable options.
-    """
-    # TODO: What is parent
 
+    Attributes:
+        parent (QWidget): The parent of the QMenu
+    """
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent)
