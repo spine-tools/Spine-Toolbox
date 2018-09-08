@@ -4,6 +4,9 @@
   </qresource>
   <qresource prefix="icons">
     <file>minus_object_parameter_icon.png</file>
+    <file>minus_object_icon.png</file>
+    <file>plus_relationship_icon.png</file>
+    <file>minus_relationship_icon.png</file>
     <file>object_parameter_icon.png</file>
     <file>relationship_parameter_icon.png</file>
     <file>minus_relationship_parameter_icon.png</file>
