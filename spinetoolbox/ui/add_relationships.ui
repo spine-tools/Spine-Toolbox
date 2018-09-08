@@ -161,7 +161,7 @@
   <action name="actionInsert_row">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
    </property>
    <property name="text">
     <string>Insert row</string>
@@ -176,7 +176,7 @@
   <action name="actionRemove_rows">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_relationship_icon.png</normaloff>:/icons/minus_relationship_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove rows</string>
