@@ -10,10 +10,17 @@ This section is for upcoming changes. This serves two purposes:
 
 ### Added (for new features)
 In development branches:
-- Advanced copy/pasting support for the treeview
-- Import data from Excel files into the treeview
-- Export treeview into an Excel file
-- Save at exit prompt
+- Advanced copy/pasting support for the Data store form.
+- Import data from Excel files into the Data store form.
+- Export Spine database from the Data store form into an Excel file.
+- Save at exit prompt.
+- Import data from datapackage into the Data store form.
+- Restore Dock Widgets in the main window.
+- Autofilter for parameter tables in Data store form.
+- On-the-fly creation of necessary relationships when entering parameters in Data store form.
+- View item feature for visualizing networks from a Spine database.
+- Packages numpy, scipy, and matplotlib are now mandatory requirements.
+- Drag and drop files between data connections, data stores, and views.
 
 Upcoming:
 - Tool-Tool interface
@@ -26,8 +33,8 @@ Upcoming:
 
 ### Changed (for changes in existing functionality)
 - Changed DBAPI package mysqlclient (GPL license, not good) to pymysql (MIT license, good)
-- spinedatabase_api is not included in Spine Toolbox repository anymore. It is a required 
-package from now on. 
+- spinedatabase_api is not included in Spine Toolbox repository anymore. It is a required
+package from now on.
 ### Deprecated (for soon-to-be removed features)
 
 ### Removed (for now removed features)
