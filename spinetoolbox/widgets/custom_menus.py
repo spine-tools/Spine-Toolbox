@@ -253,25 +253,6 @@ class ParameterContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-# NOTE: obsolete?
-class DescriptorTreeContextMenu(CustomContextMenu):
-    """Context menu class for descriptor treeview in Spine datapackage form.
-
-    Attributes:
-        parent (QWidget): Parent for menu widget (SpineDatapackageWidget)
-        position (QPoint): Position on screen
-        index (QModelIndex): Index of item that requested the context-menu
-    """
-    def __init__(self, parent, position, index):
-        """Class constructor."""
-        super().__init__(parent, index)
-        if not index.isValid():
-            return
-        self.add_action("Expand all children")
-        self.add_action("Collapse all children")
-        self.exec_(position)
-
-
 class CustomPopupMenu(QMenu):
     """Popup menu master class for several popup menus.
 

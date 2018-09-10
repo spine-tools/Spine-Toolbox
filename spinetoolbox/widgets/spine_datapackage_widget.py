@@ -314,33 +314,6 @@ class SpineDatapackageWidget(QMainWindow):
         value = editor.text()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
-    @Slot("QPoint", name="show_descriptor_tree_context_menu")
-    def show_descriptor_tree_context_menu(self, pos):
-        # TODO: Obsolete? Probably... let me check if we wanna use it -manuelma
-        """Context menu for descriptor treeview.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        index = self.ui.treeView_descriptor.indexAt(pos)
-        global_pos = self.ui.treeView_descriptor.viewport().mapToGlobal(pos)
-        self.descriptor_tree_context_menu = DescriptorTreeContextMenu(self, global_pos, index)
-        option = self.descriptor_tree_context_menu.get_action()
-        if option == "Expand all children":
-            self.ui.treeView_descriptor.expand(index)
-            if not self.descriptor_model.hasChildren(index):
-                return
-            for i in range(self.descriptor_model.rowCount(index)):
-                child_index = self.descriptor_model.index(i, 0, index)
-                self.ui.treeView_descriptor.expand(child_index)
-        elif option == "Collapse all children":
-            self.ui.treeView_descriptor.collapse(index)
-            if not self.descriptor_model.hasChildren(index):
-                return
-            for i in range(self.descriptor_model.rowCount(index)):
-                child_index = self.descriptor_model.index(i, 0, index)
-                self.ui.treeView_descriptor.collapse(child_index)
-
     def closeEvent(self, event=None):
         """Handle close event.
 
