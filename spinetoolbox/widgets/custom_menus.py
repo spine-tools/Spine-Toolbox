@@ -177,10 +177,10 @@ class ObjectTreeContextMenu(CustomContextMenu):
         super().__init__(parent, index)
         if not index.isValid():
             return
-        plus_object_icon = toolbox.ui.actionAdd_objects.icon()
-        plus_relationship_icon = toolbox.ui.actionAdd_relationships.icon()
-        plus_object_parameter_icon = toolbox.ui.actionAdd_object_parameters.icon()
-        plus_relationship_parameter_icon = toolbox.ui.actionAdd_relationship_parameters.icon()
+        plus_object_icon = parent.ui.actionAdd_objects.icon()
+        plus_relationship_icon = parent.ui.actionAdd_relationships.icon()
+        plus_object_parameter_icon = parent.ui.actionAdd_object_parameters.icon()
+        plus_relationship_parameter_icon = parent.ui.actionAdd_relationship_parameters.icon()
         if not index.parent().isValid():  # root item
             self.add_action("Add object classes")
         else:
