@@ -96,8 +96,7 @@ class ToolboxUI(QMainWindow):
         self.add_view_form = None
         self.tool_template_form = None
         self.placing_item = ""
-        self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
-        self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
+        self.add_tool_template_popup_menu = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # self.scene_bg = SceneBackground(self)
         # Initialize application
@@ -177,8 +176,10 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
-        self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
-        self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
+        self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
+        self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
+        self.ui.toolButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
+        self.ui.toolButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)

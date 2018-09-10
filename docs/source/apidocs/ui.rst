@@ -116,6 +116,14 @@ ui.mainwindow module
     :undoc-members:
     :show-inheritance:
 
+ui.network\_map\_form module
+----------------------------
+
+.. automodule:: ui.network_map_form
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ui.project\_form module
 -----------------------
 
