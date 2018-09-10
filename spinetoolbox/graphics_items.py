@@ -122,6 +122,7 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
+        icon.setAcceptDrops(True)
         return icon
 
     def make_master(self, pen, brush):
@@ -140,6 +141,7 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
+        icon.setAcceptDrops(True)
         return icon
 
     def name(self):
@@ -226,19 +228,27 @@ class ItemImage(QGraphicsItem):
         QGraphicsItem.mouseReleaseEvent(self._master, event)
 
     def drag_enter_event(self, event):
-        """Drag and drop action enters."""
+        """Drag and drop action enters.
+
+        Args:
+            event (QGraphicsSceneDragDropEvent): Event
+        """
         event.accept()
         if self.drag_over:
             return
         self.drag_over = True
-        QTimer.singleShot(500, self.select_and_show_info)
+        QTimer.singleShot(500, self.select_on_drag_over)
 
     def drag_leave_event(self, event):
-        """Drag and drop action leaves."""
+        """Drag and drop action leaves.
+
+        Args:
+            event (QGraphicsSceneDragDropEvent): Event
+        """
         event.accept()
         self.drag_over = False
 
-    def select_and_show_info(self):
+    def select_on_drag_over(self):
         if not self.drag_over:
             return
         self.drag_over = False
@@ -709,7 +719,7 @@ class ViewImage(ItemImage):
     def drag_leave_event(self, event):
         """Calls super class method."""
         super().drag_leave_event(event)
-        
+
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
         super().connector_mouse_press_event(event)

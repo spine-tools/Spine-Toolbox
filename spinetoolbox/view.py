@@ -26,6 +26,7 @@ Module for view class.
 """
 
 import os
+import shutil
 import copy
 import getpass
 import logging
@@ -113,17 +114,17 @@ class View(MetaObject):
     @Slot("QString", name="add_file_to_references")
     def add_file_to_references(self, path):
         """Add filepath to reference list"""
-        url = os.path.abspath(path)
-        if not url.lower().endswith('sqlite'):
+        if not path.lower().endswith('sqlite'):
             self._toolbox.msg_warning.emit("File name has unsupported extension. Only .sqlite files supported")
             return
+        url = 'sqlite:///' + os.path.abspath(path)
         if url in [ref['url'] for ref in self.references]:
-            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(url))
+            self._toolbox.msg_warning.emit("Reference to <b>{0}</b> already available".format(url))
             return
         reference = {
             'database': os.path.basename(url),
             'username': getpass.getuser(),
-            'url': 'sqlite:///' + url
+            'url': url
         }
         self.references.append(reference)
         self._widget.populate_reference_list(self.references)

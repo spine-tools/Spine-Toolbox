@@ -307,25 +307,24 @@ class CustomQGraphicsScene(QGraphicsScene):
         event.accept()
 
     def dragEnterEvent(self, event):
-        """Only accept drops where the source is an instance of either
-        DraggableWidget (from Add Item toolbar) or DataTreeView."""
+        """Check if an item is behind and trigger the corresponding event."""
         event.accept()
         item = self.itemAt(event.scenePos(), QTransform())
         if item:
-            item.dragEnterEvent(event)
-        return
+            super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        """Only accept drops where the source is an instance of either
-        DraggableWidget (from Add Item toolbar) or DataTreeView."""
+        """Check if an item is behind and trigger the corresponding event."""
         event.accept()
         item = self.itemAt(event.scenePos(), QTransform())
         if item:
-            item.dragEnterEvent(event)
-        return
+            super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Capture text from event's mimedata and show the appropriate 'Add Item form.'"""
+        """Only accept drops when the source is an instance of
+        DraggableWidget (from Add Item toolbar).
+        Capture text from event's mimedata and show the appropriate 'Add Item form.'
+        """
         source = event.source()
         if not isinstance(source, DraggableWidget):
             event.ignore()
