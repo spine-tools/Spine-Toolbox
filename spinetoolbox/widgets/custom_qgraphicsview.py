@@ -304,21 +304,24 @@ class CustomQGraphicsScene(QGraphicsScene):
 
     def dragLeaveEvent(self, event):
         """Accept event."""
+        super().dragEnterEvent(event)
         event.accept()
+        #item = self.itemAt(event.scenePos(), QTransform())
+        #if item:
 
     def dragEnterEvent(self, event):
         """Check if an item is behind and trigger the corresponding event."""
+        super().dragEnterEvent(event)
         event.accept()
-        item = self.itemAt(event.scenePos(), QTransform())
-        if item:
-            super().dragEnterEvent(event)
+        #item = self.itemAt(event.scenePos(), QTransform())
+        #if item:
 
     def dragMoveEvent(self, event):
         """Check if an item is behind and trigger the corresponding event."""
+        super().dragMoveEvent(event)
         event.accept()
-        item = self.itemAt(event.scenePos(), QTransform())
-        if item:
-            super().dragMoveEvent(event)
+        #item = self.itemAt(event.scenePos(), QTransform())
+        #if item:
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of
