@@ -249,6 +249,10 @@ class ItemImage(QGraphicsItem):
         self.drag_over = False
 
     def select_on_drag_over(self):
+        """Called when the timer started in drag_enter_event is elapsed.
+        Check if the drag action is still over the item,
+        and show its info in that case.
+        """
         if not self.drag_over:
             return
         self.drag_over = False

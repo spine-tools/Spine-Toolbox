@@ -303,19 +303,28 @@ class CustomQGraphicsScene(QGraphicsScene):
         self.item_shadow = None
 
     def dragLeaveEvent(self, event):
-        """Accept event."""
-        super().dragEnterEvent(event)
+        """Accept event. Then call the super class method
+        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
         event.accept()
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            super().dragLeaveEvent(event)
 
     def dragEnterEvent(self, event):
-        """Check if an item is behind and trigger the corresponding event."""
-        super().dragEnterEvent(event)
+        """Accept event. Then call the super class method
+        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
         event.accept()
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
-        """Check if an item is behind and trigger the corresponding event."""
-        super().dragMoveEvent(event)
+        """Accept event. Then call the super class method
+        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
         event.accept()
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            super().dragMoveEvent(event)
 
     def dropEvent(self, event):
         """Only accept drops when the source is an instance of

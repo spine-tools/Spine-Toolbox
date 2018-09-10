@@ -81,7 +81,6 @@ class ProjectItemContextMenu(CustomContextMenu):
     def __init__(self, toolbox, position, index):
         """Class constructor."""
         super().__init__(toolbox, index)
-        print(type(position))
         if not index.isValid():
             # If no item at index
             return
