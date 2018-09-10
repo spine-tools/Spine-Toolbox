@@ -28,7 +28,6 @@ in Data Connection item.
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.custom_delegates import ResourceNameDelegate, ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
-from widgets.custom_menus import DescriptorTreeContextMenu
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
 from PySide2.QtGui import QGuiApplication
