@@ -148,6 +148,14 @@ widgets.julia\_repl\_widget module
     :undoc-members:
     :show-inheritance:
 
+widgets.network\_map\_widget module
+-----------------------------------
+
+.. automodule:: widgets.network_map_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.project\_form\_widget module
 ------------------------------------
 

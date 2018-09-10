@@ -140,12 +140,14 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
 MAINWINDOW_SS = "QMainWindow:separator{width: 3px; background-color: lightgray; border: 1px solid white;}" \
-                "QPushButton{border-width: 1px; border-style: inset; " \
-                    "border-color: black; border-radius: 6px; min-width: 70px; min-height: 23px;" \
+                "QPushButton{border-width: 2px; border-style: inset; " \
+                    "border-color: brown; border-radius: 2px; min-width: 70px; min-height: 23px;" \
                     "background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #d9d9d9, stop: 1 #f2f2f2);}" \
-                "QPushButton:focus{border-color: black; border-width: 2px; border-style: dashed;}" \
+                "QPushButton:focus{border-color: brown; border-width: 2px; border-style: dashed;}" \
                 "QPushButton:pressed{background-color: #f2f2f2;}" \
                 "QToolButton:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
+                "QToolButton::pressed{background-color: #f2f2f2;}" \
+                "QToolButton::menu-indicator{width: 0px;}" \
                 "QCheckBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \

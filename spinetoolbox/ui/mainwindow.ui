@@ -120,7 +120,7 @@
      <x>0</x>
      <y>0</y>
      <width>765</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -500,7 +500,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout">
            <item>
-            <widget class="QPushButton" name="pushButton_add_tool_template">
+            <widget class="QToolButton" name="toolButton_add_tool_template">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -532,10 +532,13 @@
                <height>22</height>
               </size>
              </property>
+             <property name="popupMode">
+              <enum>QToolButton::InstantPopup</enum>
+             </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_refresh_tool_templates">
+            <widget class="QToolButton" name="toolButton_refresh_tool_templates">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -570,7 +573,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_remove_tool_template">
+            <widget class="QToolButton" name="toolButton_remove_tool_template">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -862,9 +865,9 @@
   <tabstop>tabWidget</tabstop>
   <tabstop>treeView_project</tabstop>
   <tabstop>listView_tool_templates</tabstop>
-  <tabstop>pushButton_add_tool_template</tabstop>
-  <tabstop>pushButton_refresh_tool_templates</tabstop>
-  <tabstop>pushButton_remove_tool_template</tabstop>
+  <tabstop>toolButton_add_tool_template</tabstop>
+  <tabstop>toolButton_refresh_tool_templates</tabstop>
+  <tabstop>toolButton_remove_tool_template</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
  </tabstops>

@@ -62,6 +62,7 @@ class NetworkMapForm(QWidget):
     def plot(self):
         self.network_map.make_map()
 
+
 class NetworkMap:
     """Class for making network plots, see documentation and methods for more info."""
 
@@ -778,10 +779,11 @@ class NetworkMap:
 
     def init_plot(self):
         """ Initialize plot.
-        fig_size can be:
-            1) [w,h] in inches, the one that limits sets size
-            2) height in inches
-            3) [x,y,dx,dy] in pixels"""
+            fig_size can be:
+                1) [w,h] in inches, the one that limits sets size
+                2) height in inches
+                3) [x,y,dx,dy] in pixels
+        """
         fig_size = self.settings['fig_size']
         if type(fig_size) in [float, int]: # fig height given
             fs = (fig_size*self.x_range/self.y_range, fig_size)

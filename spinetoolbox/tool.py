@@ -83,7 +83,7 @@ class Tool(MetaObject):
             create_dir(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                        " Check permissions.".format(self.data_dir))
+                                         " Check permissions.".format(self.data_dir))
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
@@ -102,7 +102,7 @@ class Tool(MetaObject):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no results. "
-                                          "Click Execute to generate them.".format(self.name))
+                                           "Click Execute to generate them.".format(self.name))
             return
         url = "file:///" + self.output_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -165,7 +165,7 @@ class Tool(MetaObject):
         else:
             self._tool_template_index = None
         self.update_tool_ui()
-        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self)
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
         self._widget.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
 
     def update_tool_ui(self):
@@ -250,7 +250,8 @@ class Tool(MetaObject):
                 self._toolbox.msg.emit("*** Copying input files to work directory ***")
                 # Copy input files to ToolInstance work directory
                 if not self.copy_input_files(file_copy_paths):
-                    self._toolbox.msg_error.emit("Unable to copy input files to work directory. Tool execution aborted.")
+                    self._toolbox.msg_error.emit("Unable to copy input files to work directory. "
+                                                 "Tool execution aborted.")
                     return
             else:  # just for testing
                 # logging.debug("No input files to copy")
@@ -303,7 +304,7 @@ class Tool(MetaObject):
                     create_dir(path_to_create)
                 except OSError:
                     self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                                " Check permissions.".format(path_to_create))
+                                                 " Check permissions.".format(path_to_create))
                     return False
                 self._toolbox.msg.emit("\tDirectory <b>{0}</b> created".format(path_to_create))
             else:
@@ -395,17 +396,17 @@ class Tool(MetaObject):
                         create_dir(work_subdir_path)
                     except OSError:
                         self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                    .format(work_subdir_path))
+                                                     .format(work_subdir_path))
                         return False
                     self._toolbox.msg.emit("\tCopying <b>{0}</b> -> work subdirectory <b>{1}</b>"
-                                          .format(fname, dst_subdir))
+                                           .format(fname, dst_subdir))
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
             except OSError as e:
                 logging.error(e)
                 self._toolbox.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
-                                            .format(src_path, dst_path))
+                                             .format(src_path, dst_path))
                 return False
         self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
         return True
@@ -434,7 +435,7 @@ class Tool(MetaObject):
         """
         for item in output_items:
             self._toolbox.msg.emit("*** Copying Tool <b>{0}</b> output files to {1} <b>{2}</b> ***"
-                                  .format(self.name, item.item_type, item.name))
+                                   .format(self.name, item.item_type, item.name))
             dst_dir = ""
             # Copy to child Data Store
             if item.item_type == "Data Store":
@@ -462,7 +463,7 @@ class Tool(MetaObject):
                 except OSError as e:
                     logging.error(e)
                     self._toolbox.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
-                                                .format(src_path, dst_path))
+                                                 .format(src_path, dst_path))
             self._toolbox.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
 
     @Slot(int, name="execution_finished")
