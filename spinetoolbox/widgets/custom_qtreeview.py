@@ -26,7 +26,7 @@ Classes for custom QTreeView.
 
 import os
 from PySide2.QtWidgets import QTreeView, QApplication
-from PySide2.QtCore import Signal, Slot, Qt, QMimeData
+from PySide2.QtCore import Signal, Slot, Qt, QMimeData, QUrl
 from PySide2.QtGui import QPixmap, QDrag
 
 
@@ -143,7 +143,7 @@ class DataTreeView(QTreeView):
         mimeData = QMimeData()
         data_dir = self.parent().owner().data_dir
         filename = self.drag_index.data(Qt.DisplayRole)
-        url = "file://" + os.path.join(data_dir, filename)
+        url = QUrl.fromLocalFile(os.path.join(data_dir, filename))
         mimeData.setUrls([url])
         drag.setMimeData(mimeData)
         icon = self.drag_index.data(Qt.DecorationRole)
