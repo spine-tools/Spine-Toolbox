@@ -281,7 +281,8 @@ class AddDbReferenceWidget(QWidget):
             port = self.ui.lineEdit_port.text()
             username = self.ui.lineEdit_username.text()
             password = self.ui.lineEdit_password.text()
-            url = dialect + "://"
+            dbapi = SQL_DIALECT_API[dialect]
+            url = "+".join([dialect, dbapi]) + "://"
             if username:
                 url += username
             if password:
