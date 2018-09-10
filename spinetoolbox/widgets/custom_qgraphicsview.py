@@ -27,9 +27,10 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide2.QtCore import Slot, Qt, QRectF
-from PySide2.QtGui import QColor, QPen, QBrush
+from PySide2.QtGui import QColor, QPen, QBrush, QTransform
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
+from widgets.custom_qtreeview import DataTreeView
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -41,25 +42,25 @@ class CustomQGraphicsView(QGraphicsView):
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
-        self._scene = QGraphicsScene(self)
-        self.setScene(self._scene)
+        self._scene = None
         self._toolbox = None
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
-        self.item_shadow = None
-        self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
         self.active_subwindow = None
         self.src_widget = None  # source widget when drawing links
         self.dst_widget = None  # destination widget when drawing links
-        self.init_scene()
         self.show()
 
     def set_ui(self, toolbox):
         """Set the main ToolboxUI instance."""
         self._toolbox = toolbox
+        self._scene = CustomQGraphicsScene(self, toolbox)
+        self.setScene(self._scene)
+        self.make_link_drawer()
+        self.init_scene()
 
     @Slot("QList", name='scene_changed')
     def scene_changed(self, changed_qrects):
@@ -71,7 +72,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Make a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
         self._scene.changed.disconnect(self.scene_changed)
-        self._scene = QGraphicsScene(self)
+        self._scene = CustomQGraphicsScene(self, self._toolbox)
         self.setScene(self._scene)
         self._scene.addItem(self.link_drawer)
 
@@ -207,7 +208,6 @@ class CustomQGraphicsView(QGraphicsView):
                                   .format(self.src_widget, self.dst_widget))
             self.emit_connection_information_message()
 
-
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
         if self.src_widget == self.dst_widget:
@@ -251,61 +251,6 @@ class CustomQGraphicsView(QGraphicsView):
                 self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
                                           "is not implemented yet :)")
 
-    def dragLeaveEvent(self, event):
-        """Accept event."""
-        event.accept()
-
-    def dragEnterEvent(self, event):
-        """Only accept drops of DraggableWidget instances (from Add Item toolbar)."""
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            event.ignore()
-        else:
-            event.acceptProposedAction()
-            event.accept()
-
-    def dragMoveEvent(self, event):
-        """Only accept drops of DraggableWidget instances (from Add Item toolbar)"""
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            event.ignore()
-        else:
-            event.acceptProposedAction()
-            event.accept()
-
-    def dropEvent(self, event):
-        """Capture text from event's mimedata and show the appropriate 'Add Item form.'"""
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Create or open a project first")
-            event.ignore()
-            return
-        event.acceptProposedAction()
-        text = event.mimeData().text()
-        pos = self.mapToScene(event.pos())
-        pen = QPen(QColor('white'))
-        x = pos.x() - 35
-        y = pos.y() - 35
-        w = 70
-        h = 70
-        # self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)
-        if text == "Data Store":
-            brush = QBrush(QColor(0, 255, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
-        elif text == "Data Connection":
-            brush = QBrush(QColor(0, 0, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
-        elif text == "Tool":
-            brush = QBrush(QColor(255, 0, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._toolbox.show_add_tool_form(pos.x(), pos.y())
-        elif text == "View":
-            brush = QBrush(QColor(0, 255, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._toolbox.show_add_view_form(pos.x(), pos.y())
-        self._scene.addItem(self.item_shadow)
-
     def mouseMoveEvent(self, e):
         """Update line end position.
 
@@ -346,3 +291,71 @@ class CustomQGraphicsView(QGraphicsView):
         """Make the scene at least as big as the viewport."""
         super().resizeEvent(event)
         self.resize_scene(recenter=True)
+
+
+class CustomQGraphicsScene(QGraphicsScene):
+    """A scene that handles drag and drop events."""
+
+    def __init__(self, parent, toolbox):
+        """Initialize class."""
+        super().__init__(parent)
+        self._toolbox = toolbox
+        self.item_shadow = None
+
+    def dragLeaveEvent(self, event):
+        """Accept event."""
+        event.accept()
+
+    def dragEnterEvent(self, event):
+        """Only accept drops where the source is an instance of either
+        DraggableWidget (from Add Item toolbar) or DataTreeView."""
+        event.accept()
+        item = self.itemAt(event.scenePos(), QTransform())
+        if item:
+            item.dragEnterEvent(event)
+        return
+
+    def dragMoveEvent(self, event):
+        """Only accept drops where the source is an instance of either
+        DraggableWidget (from Add Item toolbar) or DataTreeView."""
+        event.accept()
+        item = self.itemAt(event.scenePos(), QTransform())
+        if item:
+            item.dragEnterEvent(event)
+        return
+
+    def dropEvent(self, event):
+        """Capture text from event's mimedata and show the appropriate 'Add Item form.'"""
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            event.ignore()
+            return
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Create or open a project first")
+            event.ignore()
+            return
+        event.acceptProposedAction()
+        text = event.mimeData().text()
+        pos = event.scenePos()
+        pen = QPen(QColor('white'))
+        x = pos.x() - 35
+        y = pos.y() - 35
+        w = 70
+        h = 70
+        if text == "Data Store":
+            brush = QBrush(QColor(0, 255, 255, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
+            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
+        elif text == "Data Connection":
+            brush = QBrush(QColor(0, 0, 255, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
+            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
+        elif text == "Tool":
+            brush = QBrush(QColor(255, 0, 0, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
+            self._toolbox.show_add_tool_form(pos.x(), pos.y())
+        elif text == "View":
+            brush = QBrush(QColor(0, 255, 0, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
+            self._toolbox.show_add_view_form(pos.x(), pos.y())
+        self.addItem(self.item_shadow)

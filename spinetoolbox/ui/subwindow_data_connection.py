@@ -74,7 +74,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.treeView_references.sizePolicy().hasHeightForWidth())
         self.treeView_references.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
-        font.setPointSize(8)
+        font.setPointSize(10)
         self.treeView_references.setFont(font)
         self.treeView_references.setAcceptDrops(True)
         self.treeView_references.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
@@ -154,7 +154,7 @@ class Ui_Form(object):
         sizePolicy.setHeightForWidth(self.treeView_data.sizePolicy().hasHeightForWidth())
         self.treeView_data.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
-        font.setPointSize(8)
+        font.setPointSize(10)
         self.treeView_data.setFont(font)
         self.treeView_data.setAcceptDrops(True)
         self.treeView_data.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
@@ -202,5 +202,5 @@ class Ui_Form(object):
         self.pushButton_open.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_open.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc

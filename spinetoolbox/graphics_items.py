@@ -25,7 +25,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import logging
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
@@ -90,6 +90,7 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.drag_over = False
 
     def make_data_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -224,6 +225,27 @@ class ItemImage(QGraphicsItem):
         """
         QGraphicsItem.mouseReleaseEvent(self._master, event)
 
+    def drag_enter_event(self, event):
+        """Drag and drop action enters."""
+        event.accept()
+        if self.drag_over:
+            return
+        self.drag_over = True
+        QTimer.singleShot(500, self.select_and_show_info)
+
+    def drag_leave_event(self, event):
+        """Drag and drop action leaves."""
+        event.accept()
+        self.drag_over = False
+
+    def select_and_show_info(self):
+        if not self.drag_over:
+            return
+        self.drag_over = False
+        self._toolbox.ui.graphicsView.scene().clearSelection()
+        self._master.setSelected(True)
+        self.show_item_info()
+
     def connector_mouse_press_event(self, event):
         """Catch connector button click. Starts drawing a link."""
         if not event.button() == Qt.LeftButton:
@@ -317,6 +339,8 @@ class DataConnectionImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
+        self._master.dragEnterEvent = self.drag_enter_event
+        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -350,6 +374,14 @@ class DataConnectionImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
+
+    def drag_enter_event(self, event):
+        """Calls super class method."""
+        super().drag_enter_event(event)
+
+    def drag_leave_event(self, event):
+        """Calls super class method."""
+        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
@@ -535,6 +567,8 @@ class DataStoreImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
+        self._master.dragEnterEvent = self.drag_enter_event
+        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -568,6 +602,14 @@ class DataStoreImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
+
+    def drag_enter_event(self, event):
+        """Calls super class method."""
+        super().drag_enter_event(event)
+
+    def drag_leave_event(self, event):
+        """Calls super class method."""
+        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
@@ -624,6 +666,8 @@ class ViewImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
+        self._master.dragEnterEvent = self.drag_enter_event
+        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -658,6 +702,14 @@ class ViewImage(ItemImage):
         """Calls super class method."""
         super().hover_leave_event(event)
 
+    def drag_enter_event(self, event):
+        """Calls super class method."""
+        super().drag_enter_event(event)
+
+    def drag_leave_event(self, event):
+        """Calls super class method."""
+        super().drag_leave_event(event)
+        
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
         super().connector_mouse_press_event(event)

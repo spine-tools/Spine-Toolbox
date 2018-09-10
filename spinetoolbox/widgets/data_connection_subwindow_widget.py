@@ -40,9 +40,10 @@ class DataConnectionWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
     """
-    def __init__(self, item_type):
+    def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
+        self._owner = owner
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -55,6 +56,10 @@ class DataConnectionWidget(QWidget):
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
+
+    def owner(self):
+        """Return owner of this window, ie an instance of DataConection."""
+        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.

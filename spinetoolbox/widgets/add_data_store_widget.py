@@ -131,7 +131,8 @@ class AddDataStoreWidget(QWidget):
         """
         if event:
             event.accept()
-            item_shadow = self._toolbox.ui.graphicsView.item_shadow
+            scene = self._toolbox.ui.graphicsView.scene()
+            item_shadow = scene.item_shadow
             if item_shadow:
-                self._toolbox.ui.graphicsView.scene().removeItem(item_shadow)
-                self._toolbox.ui.graphicsView.item_shadow = None
+                scene.removeItem(item_shadow)
+                scene.item_shadow = None

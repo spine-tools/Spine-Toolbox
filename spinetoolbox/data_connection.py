@@ -59,7 +59,7 @@ class DataConnection(MetaObject):
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
-        self._widget = DataConnectionWidget(self.item_type)
+        self._widget = DataConnectionWidget(self, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()

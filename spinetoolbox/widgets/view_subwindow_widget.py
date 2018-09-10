@@ -29,6 +29,7 @@ from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget
 from ui.subwindow_view import Ui_Form
+from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
 class ViewWidget(QWidget):
@@ -37,9 +38,10 @@ class ViewWidget(QWidget):
     Attributes:
         item_type (str): Internal widget object type (should always be 'View')
     """
-    def __init__(self, item_type):
+    def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
+        self._owner = owner
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -48,9 +50,15 @@ class ViewWidget(QWidget):
         self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. Found in DS data directory.
         self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
-        self.ui.listView_references.setModel(self.reference_model)
-        self.ui.listView_data.setModel(self.data_model)
+        self.ui.treeView_references.setModel(self.reference_model)
+        self.ui.treeView_data.setModel(self.data_model)
+        self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
+
+    def owner(self):
+        """Return owner of this window, ie an instance of View."""
+        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.
@@ -64,11 +72,30 @@ class ViewWidget(QWidget):
         """Return name label text."""
         return self.ui.label_name.text()
 
+    def make_header_for_references(self):
+        """Add header to files model. I.e. External Data Connection files."""
+        h = QStandardItem("References")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.reference_model.setHorizontalHeaderItem(0, h)
+
+    def make_header_for_data(self):
+        """Add header to data model. I.e. Internal Data Connection files."""
+        h = QStandardItem("Data")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.data_model.setHorizontalHeaderItem(0, h)
+
     def populate_reference_list(self, items):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
         """
         self.reference_model.clear()
+        self.make_header_for_references()
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item['database'])
@@ -82,6 +109,7 @@ class ViewWidget(QWidget):
         If items is None or empty list, model is cleared.
         """
         self.data_model.clear()
+        self.make_header_for_data()
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)

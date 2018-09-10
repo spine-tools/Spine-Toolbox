@@ -25,6 +25,7 @@ Module for data store class.
 """
 
 import os
+import shutil
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
@@ -57,8 +58,10 @@ class DataStore(MetaObject):
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
-        self._widget = DataStoreWidget(self.item_type)
+        self._widget = DataStoreWidget(self, self.item_type)
         self._widget.set_name_label(name)
+        self._widget.make_header_for_references()
+        self._widget.make_header_for_data()
         self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
@@ -85,8 +88,10 @@ class DataStore(MetaObject):
         self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
         self._widget.ui.toolButton_Spine.clicked.connect(self.create_new_spine_database)
-        self._widget.ui.listView_data.doubleClicked.connect(self.open_data_file)
-        self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
+        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
+        self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
+        self._widget.ui.treeView_references.file_dropped.connect(self.add_file_to_references)
+        self._widget.ui.treeView_data.file_dropped.connect(self.add_file_to_data_dir)
         self._widget.ui.toolButton_add.clicked.connect(self.import_references)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
@@ -104,6 +109,37 @@ class DataStore(MetaObject):
     def get_widget(self):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    @Slot("QString", name="add_file_to_references")
+    def add_file_to_references(self, path):
+        """Add filepath to reference list"""
+        url = os.path.abspath(path)
+        if not url.lower().endswith('sqlite'):
+            self._toolbox.msg_warning.emit("File name has unsupported extension. Only .sqlite files supported")
+            return
+        if url in [ref['url'] for ref in self.references]:
+            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(url))
+            return
+        reference = {
+            'database': os.path.basename(url),
+            'username': getpass.getuser(),
+            'url': 'sqlite:///' + url
+        }
+        self.references.append(reference)
+        self._widget.populate_reference_list(self.references)
+
+    @Slot("QString", name="add_file_to_data_dir")
+    def add_file_to_data_dir(self, file_path):
+        """Add file to data directory"""
+        src_dir, filename = os.path.split(file_path)
+        self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
+        try:
+            shutil.copy(file_path, self.data_dir)
+        except OSError:
+            self._toolbox.msg_error.emit("[OSError] Copying failed")
+            return
+        data_files = self.data_files()
+        self._widget.populate_data_list(data_files)
 
     @Slot(name="open_directory")
     def open_directory(self):
@@ -130,7 +166,7 @@ class DataStore(MetaObject):
         """Remove selected references from reference list.
         Removes all references if nothing is selected.
         """
-        indexes = self._widget.ui.listView_references.selectedIndexes()
+        indexes = self._widget.ui.treeView_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
             self._toolbox.msg.emit("All references removed")
@@ -150,7 +186,7 @@ class DataStore(MetaObject):
         if not self.references:
             self._toolbox.msg_warning.emit("No data to import")
             return
-        indexes = self._widget.ui.listView_references.selectedIndexes()
+        indexes = self._widget.ui.treeView_references.selectedIndexes()
         if not indexes:  # Nothing selected, import all
             references_to_import = self.references
         else:
@@ -200,7 +236,7 @@ class DataStore(MetaObject):
         try:
             mapping = DatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
+            self._toolbox.msg_error.emit(e.msg)
             return
         database = data_file
         data_store_form = DataStoreForm(self, mapping, database)
@@ -222,7 +258,7 @@ class DataStore(MetaObject):
         try:
             mapping = DatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
+            self._toolbox.msg_error.emit(e.msg)
             return
         data_store_form = DataStoreForm(self, mapping, database)
         data_store_form.show()
