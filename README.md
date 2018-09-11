@@ -58,6 +58,11 @@ To install spinedatabase_api run
 
     pip install git+https://gitlab.vtt.fi/spine/data.git@database_api
 
+To update spinedatabase_api run
+
+    pip install --upgrade git+https://gitlab.vtt.fi/spine/data.git@database_api
+
+
 ### Installing requirements for Anaconda & Miniconda Python (3.5+)
 
 ..
