@@ -52,6 +52,15 @@ class ObjectTreeView(QTreeView):
             self.editKeyPressed.emit(index)
         return False
 
+    def copy(self):
+        """Copy data from current index to clipboard."""
+        selection = self.selectionModel().selection()
+        index = self.currentIndex()
+        if not index.isValid():
+            return False
+        content = index.data(Qt.DisplayRole)
+        QApplication.clipboard().setText(content)
+
 
 class ReferencesTreeView(QTreeView):
     """Custom QTreeView class for 'references' in Data Connection subwindow.

@@ -25,9 +25,9 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu
+from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, Signal, Slot
 
 
 class CustomContextMenu(QMenu):
@@ -218,26 +218,8 @@ class ObjectTreeContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-class ParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for object parameter value items in Data Store.
-
-    Attributes:
-        parent (QWidget): Parent for menu widget (DataStoreForm)
-        position (QPoint): Position on screen
-        index (QModelIndex): Index of item that requested the context-menu
-    """
-    def __init__(self, parent, position, index):
-        """Class constructor."""
-        super().__init__(parent, index)
-        if not index.isValid():
-            return
-        self.add_action("Remove selected")
-        self.exec_(position)
-
-
 class ParameterContextMenu(CustomContextMenu):
-    # TODO: This is exactly the same as ParameterValueContextMenu. Remove?
-    """Context menu class for object parameter items in Data Store.
+    """Context menu class for object (relationship) parameter (value) items in Data Store.
 
     Attributes:
         parent (QWidget): Parent for menu widget (DataStoreForm)
@@ -250,6 +232,10 @@ class ParameterContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Remove selected")
+        self.addSeparator()
+        self.add_action("Copy")
+        self.add_action("Paste")
+        self.add_action("Paste into new row(s)")
         self.exec_(position)
 
 
@@ -327,7 +313,7 @@ class AddIncludesPopupMenu(CustomPopupMenu):
 
 
 class QOkMenu(QMenu):
-    """An QMenu that only hides when 'Ok' action is triggered.
+    """A QMenu that only hides when 'Ok' action is triggered.
     It allows selecting multiple checkable options.
 
     Attributes:
@@ -350,3 +336,36 @@ class QOkMenu(QMenu):
             super().mouseReleaseEvent(event)
             return
         action.trigger()
+
+
+class QSpinBoxMenu(QMenu):
+    """A QMenu with a QSpinBox.
+    It allows selecting multiple checkable options.
+
+    Attributes:
+        parent (QWidget): Parent of the QMenu
+    """
+
+    data_committed = Signal("int", name="data_committed")
+
+    def __init__(self, parent, value=None, suffix=None, prefix=None):
+        """Initialize the class."""
+        super().__init__(parent)
+        self.spinbox = QSpinBox(self)
+        self.spinbox.setMinimum(1)
+        if value:
+            self.spinbox.setValue(value)
+        if suffix:
+            self.spinbox.setSuffix(suffix)
+        if prefix:
+            self.spinbox.setPrefix(prefix)
+        widget_action = QWidgetAction(self)
+        widget_action.setDefaultWidget(self.spinbox)
+        self.addAction(widget_action)
+        action_ok = self.addAction("Ok")
+        action_ok.triggered.connect(self.commit_data)
+
+    @Slot("bool", name="commit_data")
+    def commit_data(self):
+        """Called when Ok is clicked in the menu."""
+        self.data_committed.emit(self.spinbox.value())

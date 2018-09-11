@@ -735,7 +735,7 @@ class MinimalTableModel(QAbstractTableModel):
                 self.wip_row_list[i] -= 1
 
     def set_work_in_progress(self, row, on):
-        """Set user role of index in first column."""
+        """Add row into list of work in progress."""
         if on:
             self.wip_row_list.append(row)
         else:
@@ -787,7 +787,9 @@ class MinimalTableModel(QAbstractTableModel):
             except KeyError:
                 return None
         elif orientation == Qt.Vertical:
-            return None
+            if role != Qt.DisplayRole:
+                return None
+            return section + 1
 
     def set_horizontal_header_labels(self, header):
         """sets header for the given orientation and role."""
@@ -915,19 +917,17 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if row < 0 or row > self.rowCount():
             return False
-        if not count == 1:
-            logging.error("Insert 1 row at a time")
-            return False
-        self.beginInsertRows(parent, row, row)
-        if self.columnCount() == 0:
-            new_row = [{}]
-            new_flags_row = [self.default_flags]
-        else:
-            new_row = [{} for i in range(self.columnCount())]
-            new_flags_row = [self.default_flags for i in range(self.columnCount())]
-        # Notice if insert index > rowCount(), new object is inserted to end
-        self._data.insert(row, new_row)
-        self._flags.insert(row, new_flags_row)
+        self.beginInsertRows(parent, row, row + count - 1)
+        for i in range(count):
+            if self.columnCount() == 0:
+                new_row = [{}]
+                new_flags_row = [self.default_flags]
+            else:
+                new_row = [{} for i in range(self.columnCount())]
+                new_flags_row = [self.default_flags for i in range(self.columnCount())]
+            # Notice if insert index > rowCount(), new object is inserted to end
+            self._data.insert(row + i, new_row)
+            self._flags.insert(row + i, new_flags_row)
         self.endInsertRows()
         return True
 
@@ -1327,6 +1327,13 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         self.h = source_model.horizontal_header_labels().index
+
+    def set_work_in_progress(self, row, on):
+        """Add row into list of work in progress."""
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        source_row = source_index.row()
+        self.sourceModel().set_work_in_progress(source_row, on)
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""

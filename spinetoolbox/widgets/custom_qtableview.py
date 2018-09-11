@@ -41,13 +41,23 @@ class CustomQTableView(QTableView):
         """Initialize the class."""
         super().__init__(parent=parent)
         # self.editing = False
-        self.clipboard = QApplication.clipboard()
-        self.clipboard_text = self.clipboard.text()
-        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
+        QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
+        self.clipboard_text = QApplication.clipboard().text()
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
-        self.clipboard_text = self.clipboard.text()
+        self.clipboard_text = QApplication.clipboard().text()
+
+    def keyPressEvent(self, event):
+        """Copy and paste to and from clipboard in Excel-like format."""
+        if event.matches(QKeySequence.Copy):
+            if not self.copy():
+                super().keyPressEvent(event)
+        elif event.matches(QKeySequence.Paste):
+            if not self.paste(self.clipboard_text):
+                super().keyPressEvent(event)
+        else:
+            super().keyPressEvent(event)
 
     def copy(self):
         """Copy current selection to clipboard in excel format."""
@@ -69,17 +79,52 @@ class CustomQTableView(QTableView):
                 row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
             rows.append("\t".join(row))
         content = "\n".join(rows)
-        self.clipboard.setText(content)
+        QApplication.clipboard().setText(content)
         return True
 
-    def paste(self):
+    def paste(self, text, into_new_rows=False):
         """Paste data from clipboard."""
-        if not self.clipboard_text:
+        if into_new_rows:
+            self.paste_normal(text, into_new_rows=True)
+        else:
+            selection = self.selectionModel().selection()
+            if len(selection.indexes()) > 1:
+                self.paste_on_selection(text)
+            else:
+                self.paste_normal(text, into_new_rows=False)
+
+    def paste_on_selection(self, text):
+        """Paste clipboard data on selection, but not beyond.
+        If data is smaller than selection, repeat data to fit selection."""
+        if not text:
             return False
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        first = selection.first()
+        data = [line.split('\t') for line in text.split('\n')]
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        for i in range(first.top(), first.bottom()+1):
+            if v_header.isSectionHidden(i):
+                continue
+            for j in range(first.left(), first.right()+1):
+                if h_header.isSectionHidden(j):
+                    continue
+                index = self.model().index(i, j)
+                ii = i % len(data)
+                jj = j % len(data[ii])
+                value = data[ii][jj]
+                self.model().setData(index, value, Qt.DisplayRole)
+
+    def paste_normal(self, text, into_new_rows=False):
+        """Paste clipboard data, overwritting cells if needed"""
+        if not text:
+            return False
+        data = [line.split('\t') for line in text.split('\n')]
         top_left_index = self.currentIndex()
         if not top_left_index.isValid():
             return False
-        data = [line.split('\t') for line in self.clipboard_text.split('\n')]
         self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
@@ -89,6 +134,8 @@ class CustomQTableView(QTableView):
                 continue
             if v_header.isSectionHidden(row):
                 row += 1
+            if into_new_rows:
+                self.model().insertRows(row, 1)
             column = top_left_index.column()
             for value in line:
                 if not value:
@@ -102,18 +149,6 @@ class CustomQTableView(QTableView):
                 column += 1
             row += 1
         return True
-
-    def keyPressEvent(self, event):
-        """Copy and paste to and from clipboard in Excel-like format."""
-        if event.matches(QKeySequence.Copy):
-            if not self.copy():
-                super().keyPressEvent(event)
-        elif event.matches(QKeySequence.Paste):
-            if not self.paste():
-                super().keyPressEvent(event)
-        else:
-            super().keyPressEvent(event)
-
 
     # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
     # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
