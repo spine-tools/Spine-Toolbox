@@ -20,19 +20,16 @@
 """
 Module for view class.
 
-:author: Jon Olauson <jolauson@kth.se>
+:authors: P. Savolainen (VTT), M. Marin (KHT), J. Olauson (KTH)
 :date:   14.07.2018
-
 """
 
 import os
 import shutil
-import copy
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
-from PySide2.QtWidgets import QInputDialog
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
 from widgets.add_db_reference_widget import AddDbReferenceWidget

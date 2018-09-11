@@ -20,7 +20,7 @@
 """
 Class for a custom QTableView that allows copy-paste, and maybe some other feature we may think of.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   18.5.2018
 """
 

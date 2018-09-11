@@ -20,7 +20,7 @@
 """
 Module to handle running tools in a QProcess.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   1.2.2018
 """
 

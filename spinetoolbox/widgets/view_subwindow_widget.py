@@ -20,7 +20,7 @@
 """
 QWidget that is used to display information contained in a View.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi
+:author: P. Savolainen (VTT)
 :date:   25.4.2018
 """
 

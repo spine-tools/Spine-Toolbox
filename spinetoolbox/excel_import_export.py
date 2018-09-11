@@ -20,7 +20,7 @@
 """
 Functions to import and export from excel to spine database.
 
-:author: Per Vennström <per.vennstrom@vtt.fi>
+:author: P. Vennström (VTT)
 :date:   21.8.2018
 """
 

@@ -20,7 +20,7 @@
 """
 Class for a custom RichJupyterWidget to use as julia REPL.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   22.5.2018
 """
 

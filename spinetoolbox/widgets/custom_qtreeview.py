@@ -20,7 +20,7 @@
 """
 Classes for custom QTreeView.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   25.4.2018
 """
 

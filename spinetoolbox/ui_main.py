@@ -20,7 +20,7 @@
 """
 Class for main application GUI functions.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   14.12.2017
 """
 

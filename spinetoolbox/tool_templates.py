@@ -20,7 +20,7 @@
 """
 Tool template classes.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Erkka Rinne <erkka.rinne@vtt.fi>
+:authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   24.1.2018
 """
 

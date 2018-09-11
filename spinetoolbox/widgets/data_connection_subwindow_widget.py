@@ -20,7 +20,7 @@
 """
 QWidget that is used to display information contained in a Data Connection.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   22.2.2018
 """
 

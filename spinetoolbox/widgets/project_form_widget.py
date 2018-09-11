@@ -20,7 +20,7 @@
 """
 Widget shown to user when a new project is created.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:authors: P. Savolainen (VTT)
 :date:   10.1.2018
 """
 

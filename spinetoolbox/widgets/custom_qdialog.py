@@ -24,7 +24,7 @@ Originally intended to be used within DataStoreForm
 
 TODO: CustomQDialog has a syntax error, so it does not even work.
 NOTE: Where is this syntax error? We better fix it, since CustomQDialog is inherited by all other AddStuffDialogs
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   13.5.2018
 """
 
