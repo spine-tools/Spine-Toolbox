@@ -20,11 +20,10 @@
 """
 A widget for presenting basic information about the application.
 
-@author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
-@date 14.12.2017
+:author: P. Savolainen (VTT)
+:date: 14.12.2017
 """
 
-import logging
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QTextCursor

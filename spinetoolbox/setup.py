@@ -25,7 +25,7 @@ CX-FREEZE setup file for Spine Toolbox.
     - Create a Windows Installer distribution package (.msi) with the following command:
         python setup.py bdist_msi
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   29.5.2018
 """
 

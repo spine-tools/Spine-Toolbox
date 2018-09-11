@@ -20,7 +20,7 @@
 """
 General helper functions and classes.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:authors: P. Savolainen (VTT)
 :date:   10.1.2018
 """
 

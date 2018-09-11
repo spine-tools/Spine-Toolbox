@@ -20,7 +20,7 @@
 """
 QWidget that is used to display information contained in a Data Store.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   19.4.2018
 """
 

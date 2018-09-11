@@ -20,7 +20,7 @@
 """
 Widget to show Data Store Form.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   21.4.2018
 """
 

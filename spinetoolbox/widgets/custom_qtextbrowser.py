@@ -20,7 +20,7 @@
 """
 Class for a custom QTextBrowser to add options to context menu.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   6.2.2018
 """
 

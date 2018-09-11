@@ -20,7 +20,7 @@
 """
 Widget to show Network Map Form.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   7.9.2018
 """
 

@@ -22,7 +22,7 @@ QWidget that is used to create or edit Tool Templates.
 In the former case it is presented empty, but in the latter it
 is filled with all the information from the template being edited.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   12.4.2018
 """
 

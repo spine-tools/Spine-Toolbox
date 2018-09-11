@@ -20,7 +20,7 @@
 """
 Custom item delegates.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   1.9.2018
 """
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect

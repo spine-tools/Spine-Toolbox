@@ -20,7 +20,7 @@
 """
 Module for data connection class.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   19.12.2017
 """
 

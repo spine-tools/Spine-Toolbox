@@ -20,7 +20,7 @@
 """
 QWidget that is used to display information contained in a Tool.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   31.1.2018
 """
 

@@ -22,7 +22,7 @@ Classes for handling models in PySide2's model/view framework.
 Note: These are Spine Toolbox internal data models.
 
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   23.1.2018
 """
 

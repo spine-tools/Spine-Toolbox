@@ -20,7 +20,7 @@
 """
 Classes for drawing graphics items on QGraphicsScene.
 
-:authors: Manuel Marin <manuelma@kth.se>, Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
 

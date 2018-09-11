@@ -20,7 +20,7 @@
 """
 QWidget that is shown to user when adding Connection strings to a Data Store.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   21.4.2018
 """
 

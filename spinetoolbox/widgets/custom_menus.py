@@ -20,7 +20,7 @@
 """
 Classes for custom context menus and pop-up menus.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   9.1.2018
 """
 
@@ -306,8 +306,8 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         self.add_action("Open definition file", tool.open_tool_template_file, enabled=enabled)
         self.add_action("Open main program file", tool.open_tool_main_program_file, enabled=enabled)
         self.addSeparator()
-        self.add_action("New Tool template", tool.get_parent().show_tool_template_form)
-        self.add_action("Add Tool template...", tool.get_parent().open_tool_template)
+        self.add_action("New Tool template", self._parent.show_tool_template_form)
+        self.add_action("Add Tool template...", self._parent.open_tool_template)
 
 
 class AddIncludesPopupMenu(CustomPopupMenu):

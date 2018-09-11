@@ -20,7 +20,7 @@
 """
 ToolInstance class definition.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Erkka Rinne <erkka.rinne@vtt.fi>
+:authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   1.2.2018
 """
 

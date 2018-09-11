@@ -21,7 +21,7 @@
 Custom editors for model/view programming.
 
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot

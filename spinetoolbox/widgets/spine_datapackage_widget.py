@@ -21,7 +21,7 @@
 Widget shown to user when opening a 'datapackage.json' file
 in Data Connection item.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   7.7.2018
 """
 

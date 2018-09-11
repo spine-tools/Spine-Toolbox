@@ -20,7 +20,7 @@
 """
 Widget for controlling user settings.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   17.1.2018
 """
 

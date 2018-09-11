@@ -20,7 +20,7 @@
 """
 Class for a custom QGraphicsView for visualizing project items and connections.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   6.2.2018
 """
 

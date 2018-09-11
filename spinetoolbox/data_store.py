@@ -20,7 +20,7 @@
 """
 Module for data store class.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   18.12.2017
 """
 

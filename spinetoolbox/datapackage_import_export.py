@@ -20,7 +20,7 @@
 """
 Functions to import/export between spine database and frictionless data's datapackage.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   28.8.2018
 """
 
