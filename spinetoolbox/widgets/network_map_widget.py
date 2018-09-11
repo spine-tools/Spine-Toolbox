@@ -20,7 +20,7 @@
 """
 Widget to show Network Map Form.
 
-:author: M. Marin (KTH)
+:author: M. Marin (KTH), J. Olauson (KTH)
 :date:   7.9.2018
 """
 
