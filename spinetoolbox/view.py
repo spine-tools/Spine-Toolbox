@@ -32,7 +32,6 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
-from widgets.add_db_reference_widget import AddDbReferenceWidget
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError, copy_database
 from widgets.network_map_widget import NetworkMapForm
 from graphics_items import ViewImage
@@ -151,8 +150,7 @@ class View(MetaObject):
     @Slot(name="show_add_db_reference_form")
     def show_add_db_reference_form(self):
         """Show the form for querying database connection options."""
-        self.add_db_reference_form = AddDbReferenceWidget(self._toolbox, self)
-        self.add_db_reference_form.show()
+        pass
 
     def add_reference(self, reference):
         """Add reference to reference list and populate widget's reference list."""

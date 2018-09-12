@@ -216,7 +216,7 @@ class SpineToolboxProject(MetaObject):
                         # Save references
                         item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
                     elif child_data.item_type == "Data Store":
-                        item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
+                        item_dict[top_level_item_txt][name]["reference"] = child_data.reference()
                     elif child_data.item_type == "View":
                         item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
                     else:
@@ -248,17 +248,21 @@ class SpineToolboxProject(MetaObject):
             short_name = data_stores[name]['short name']
             desc = data_stores[name]['description']
             try:
-                refs = data_stores[name]["references"]
+                ref = data_stores[name]["reference"]
             except KeyError:
-                refs = list()
+                # Keep compatibility with previous version where a list of references was stored
+                try:
+                    ref = data_stores[name]["references"][0]
+                except KeyError:
+                    ref = None
             try:
                 x = data_stores[name]["x"]
                 y = data_stores[name]["y"]
             except KeyError:
                 x = 0
                 y = 0
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, refs))
-            self.add_data_store(name, desc, refs, x, y)
+            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
+            self.add_data_store(name, desc, ref, x, y)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
@@ -367,9 +371,9 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, references, x=0, y=0):
+    def add_data_store(self, name, description, reference, x=0, y=0):
         """Add data store to project item model."""
-        data_store = DataStore(self._toolbox, name, description, references, x, y)
+        data_store = DataStore(self._toolbox, name, description, reference, x, y)
         self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Data Stores", name, data_store)
         self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))

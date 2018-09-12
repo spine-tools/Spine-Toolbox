@@ -30,7 +30,7 @@ import logging
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
     QMessageBox, QFileDialog, QApplication
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError
@@ -66,6 +66,9 @@ class DataStoreForm(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.actionCopy.setIcon(QIcon.fromTheme("edit-copy"))
+        self.ui.actionPaste.setIcon(QIcon.fromTheme("edit-paste"))
+        self.ui.actionPaste_into_new_rows.setIcon(QIcon.fromTheme("edit-paste"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class attributes
         self.mapping = mapping
@@ -112,7 +115,7 @@ class DataStoreForm(QMainWindow):
             setDefaultAction(self.ui.actionAdd_relationship_parameters)
         self.ui.toolButton_remove_relationship_parameters.\
             setDefaultAction(self.ui.actionRemove_relationship_parameters)
-        #Setup bButton menus
+        #Setup Button menus
         spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
         spin_box_menu.data_committed.connect(self.add_object_parameter_values)
         self.ui.toolButton_add_object_parameter_values.setMenu(spin_box_menu)

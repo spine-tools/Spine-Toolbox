@@ -528,7 +528,7 @@ class ToolboxUI(QMainWindow):
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
-        if item_data.item_type == "Data Connection" or item_data.item_type == "Data Store":
+        if item_data.item_type == "Data Connection":
             item_data.refresh()
 
     def clear_info_area(self):
@@ -1165,6 +1165,8 @@ class ToolboxUI(QMainWindow):
         d = ind.data(Qt.UserRole)
         if option == "Open directory...":
             d.open_directory()  # Open data_dir of Data Connection or Data Store
+        elif option == "Open treeview...":
+            d.open_treeview()  # Open treeview of Data Store
         elif option == "Execute":
             d.execute()
         elif option == "Results...":

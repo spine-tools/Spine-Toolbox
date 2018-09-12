@@ -35,6 +35,9 @@ Upcoming:
 - Changed DBAPI package mysqlclient (GPL license, not good) to pymysql (MIT license, good)
 - spinedatabase_api is not included in Spine Toolbox repository anymore. It is a required
 package from now on.
+- Data Store item can have only one database, not many. When opening a project created with a
+previous version, the first database in the list of saved references will be loaded for each Data Store.
+
 ### Deprecated (for soon-to-be removed features)
 
 ### Removed (for now removed features)
