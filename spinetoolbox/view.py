@@ -28,14 +28,13 @@ import os
 import shutil
 import getpass
 import logging
-from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher
+from PySide2.QtCore import Qt, Slot
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
-from spinedatabase_api import DatabaseMapping, SpineDBAPIError, copy_database
+from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 from widgets.network_map_widget import NetworkMapForm
 from graphics_items import ViewImage
-from helpers import create_dir, busy_effect
+from helpers import busy_effect
 
 
 class View(MetaObject):
@@ -45,52 +44,28 @@ class View(MetaObject):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        references (list): List of references (for now it's only database references)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, toolbox, name, description, references, x, y):
+    def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "View"
         self.item_category = "Views"
+        self.references = list()
         self._widget = ViewWidget(self, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
-        self._widget.make_header_for_data()
-        self.data_dir_watcher = QFileSystemWatcher(self)
-        # Make directory for View
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        self.references = references
-        try:
-            create_dir(self.data_dir)
-            self.data_dir_watcher.addPath(self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                        " Check permissions.".format(self.data_dir))
-        self.databases = list()  # name of imported databases NOTE: Not in use at the moment
-        # Populate references model
-        self._widget.populate_reference_list(self.references)
         # Populate data (files) model
-        data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
-        self.add_db_reference_form = None
         self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
-        self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
-        self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
-        self._widget.ui.treeView_references.file_dropped.connect(self.add_file_to_references)
-        self._widget.ui.treeView_data.file_dropped.connect(self.add_file_to_data_dir)
-        self._widget.ui.toolButton_add.clicked.connect(self.import_references)
-        self.data_dir_watcher.directoryChanged.connect(self.refresh)
+        self._widget.ui.treeView_references.doubleClicked.connect(self.open_network_map)
+        self._widget.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -107,143 +82,36 @@ class View(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot("QString", name="add_file_to_references")
-    def add_file_to_references(self, path):
-        """Add filepath to reference list"""
-        if not path.lower().endswith('sqlite'):
-            self._toolbox.msg_warning.emit("File name has unsupported extension. Only .sqlite files supported")
-            return
-        url = 'sqlite:///' + os.path.abspath(path)
-        if url in [ref['url'] for ref in self.references]:
-            self._toolbox.msg_warning.emit("Reference to <b>{0}</b> already available".format(url))
-            return
-        reference = {
-            'database': os.path.basename(url),
-            'username': getpass.getuser(),
-            'url': url
-        }
-        self.references.append(reference)
-        self._widget.populate_reference_list(self.references)
+    def find_input_items(self):
+        """Find input items of this View.
 
-    @Slot("QString", name="add_file_to_data_dir")
-    def add_file_to_data_dir(self, file_path):
-        """Add file to data directory"""
-        src_dir, filename = os.path.split(file_path)
-        self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
-        try:
-            shutil.copy(file_path, self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit("[OSError] Copying failed")
-            return
-        data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
-
-    @Slot(name="open_directory")
-    def open_directory(self):
-        """Open file explorer in this Data Store's data directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
-
-    @Slot(name="show_add_db_reference_form")
-    def show_add_db_reference_form(self):
-        """Show the form for querying database connection options."""
-        pass
-
-    def add_reference(self, reference):
-        """Add reference to reference list and populate widget's reference list."""
-        self.references.append(reference)
-        self._widget.populate_reference_list(self.references)
-
-    @Slot(name="remove_references")
-    def remove_references(self):
-        """Remove selected references from reference list.
-        Removes all references if nothing is selected.
+        Returns:
+            List of Data Store items.
         """
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
-        if not indexes:  # Nothing selected
-            self.references.clear()
-            self._toolbox.msg.emit("All references removed")
-        else:
-            rows = [ind.row() for ind in indexes]
-            rows.sort(reverse=True)
-            for row in rows:
-                self.references.pop(row)
-            self._toolbox.msg.emit("Selected references removed")
-        self._widget.populate_reference_list(self.references)
-
-    @Slot(name="import_references")
-    def import_references(self):
-        """Import data from selected items in reference list into local SQLite file.
-        If no item is selected then import all of them.
-        """
-        if not self.references:
-            self._toolbox.msg_warning.emit("No data to import")
-            return
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
-        if not indexes:  # Nothing selected, import all
-            references_to_import = self.references
-        else:
-            references_to_import = [self.references[ind.row()] for ind in indexes]
-        for reference in references_to_import:
-            try:
-                self.import_reference(reference)
-            except Exception as e:
-                self._toolbox.msg_error.emit("Import failed: {}".format(e))
+        item_list = list()
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
-        data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
+            item_data = found_item.data(Qt.UserRole)
+            item_list.append(item_data)
+        return item_list
+
+    def refresh(self):
+        """Update list of references that this item is viewing."""
+        input_items = self.find_input_items()
+        self.references = [item.reference() for item in input_items if item.reference()]
+        if not self.references:
+            return
+        self._widget.populate_reference_list(self.references)
 
     @busy_effect
-    def import_reference(self, reference):
-        """Import reference database into local SQLite file"""
-        database = reference['database']
-        self._toolbox.msg.emit("Importing database <b>{0}</b>".format(database))
-        # Source
-        source_url = reference['url']
-        # Destination
-        if source_url.startswith('sqlite'):
-            dest_filename = os.path.join(self.data_dir, database)
-        else:
-            dest_filename = os.path.join(self.data_dir, database + ".sqlite")
-        try:
-            os.remove(dest_filename)
-        except OSError:
-            pass
-        dest_url = "sqlite:///" + dest_filename
-        copy_database(dest_url, source_url)
-        self.databases.append(database)
-
-    @busy_effect
-    @Slot("QModelIndex", name="open_data_file")
-    def open_data_file(self, index):
-        """Open file in Data Store form."""
+    @Slot("QModelIndex", name="open_network_map")
+    def open_network_map(self, index=None):
+        """Open reference in Network Map form."""
         if not index:
-            return
-        if not index.isValid():
-            logging.error("Index not valid")
-            return
-        data_file = self.data_files()[index.row()]
-        data_file_path = os.path.join(self.data_dir, data_file)
-        db_url = "sqlite:///" + data_file_path
-        username = getpass.getuser()
-        try:
-            mapping = DatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            return
-        # network_map = NetworkMap(self, mapping)
-        network_map_form = NetworkMapForm(self._toolbox, self, mapping)
-        network_map_form.show()
-
-    @busy_effect
-    @Slot("QModelIndex", name="open_reference")
-    def open_reference(self, index):
-        """Open reference in spine data explorer."""
-        if not index:
-            return
+            index = self._widget.ui.treeView_references.currentIndex()
         if not index.isValid():
             logging.error("Index not valid")
             return
@@ -262,16 +130,3 @@ class View(MetaObject):
     def data_references(self):
         """Returns a list of connection strings that are in this item as references (self.references)."""
         return self.references
-
-    def data_files(self):
-        """Return a list of files in the data directory."""
-        if not os.path.isdir(self.data_dir):
-            return None
-        return os.listdir(self.data_dir)
-
-    @Slot(name="refresh")
-    def refresh(self):
-        """Refresh data files QTreeView.
-        NOTE: Might lead to performance issues."""
-        d = self.data_files()
-        self._widget.populate_data_list(d)

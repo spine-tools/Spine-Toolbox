@@ -147,6 +147,8 @@ class DataStore(MetaObject):
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
             self._widget.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
+            self._widget.ui.lineEdit_database.setText(database)
+            self._widget.ui.lineEdit_username.setText(username)
 
     def enable_mssql(self):
         """Adjust controls to mssql connection specification."""

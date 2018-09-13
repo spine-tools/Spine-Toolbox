@@ -218,7 +218,7 @@ class SpineToolboxProject(MetaObject):
                     elif child_data.item_type == "Data Store":
                         item_dict[top_level_item_txt][name]["reference"] = child_data.reference()
                     elif child_data.item_type == "View":
-                        item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
+                        pass
                     else:
                         logging.error("Unrecognized item type: {0}".format(child_data.item_type))
         # Save project stuff
@@ -305,17 +305,13 @@ class SpineToolboxProject(MetaObject):
             short_name = views[name]['short name']
             desc = views[name]['description']
             try:
-                refs = views[name]['references']
-            except KeyError:
-                refs = list()
-            try:
                 x = views[name]["x"]
                 y = views[name]["y"]
             except KeyError:
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, refs, x, y)
+            self.add_view(name, desc, x, y)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -394,9 +390,9 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.add_item_to_model("Tools", name, tool)
         self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
-    def add_view(self, name, description, references, x=0, y=0):
+    def add_view(self, name, description, x=0, y=0):
         """Add View to project item model."""
-        view = View(self._toolbox, name, description, references, x, y)
+        view = View(self._toolbox, name, description, x, y)
         self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Views", name, view)
         self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))

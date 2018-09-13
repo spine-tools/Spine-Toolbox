@@ -528,7 +528,7 @@ class ToolboxUI(QMainWindow):
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
-        if item_data.item_type == "Data Connection":
+        if item_data.item_type in ("Data Connection", "View"):
             item_data.refresh()
 
     def clear_info_area(self):

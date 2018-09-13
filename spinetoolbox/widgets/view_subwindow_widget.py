@@ -47,13 +47,9 @@ class ViewWidget(QWidget):
         self.ui.setupUi(self)
         self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of View objects
         self.reference_model = QStandardItemModel()  # References to databases
-        self.data_model = QStandardItemModel()  # Paths of project internal Spine objects. Found in DS data directory.
-        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         self.ui.treeView_references.setModel(self.reference_model)
-        self.ui.treeView_data.setModel(self.data_model)
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
 
     def owner(self):
@@ -81,15 +77,6 @@ class ViewWidget(QWidget):
         h.setFont(font)
         self.reference_model.setHorizontalHeaderItem(0, h)
 
-    def make_header_for_data(self):
-        """Add header to data model. I.e. Internal Data Connection files."""
-        h = QStandardItem("Data")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.data_model.setHorizontalHeaderItem(0, h)
-
     def populate_reference_list(self, items):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
@@ -103,21 +90,6 @@ class ViewWidget(QWidget):
                 qitem.setData(item['url'], Qt.ToolTipRole)
                 qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
-
-    def populate_data_list(self, items):
-        """List project internal data (files) in QTreeView.
-        If items is None or empty list, model is cleared.
-        """
-        self.data_model.clear()
-        self.make_header_for_data()
-        if items is not None:
-            for item in items:
-                qitem = QStandardItem(item)
-                qitem.setFlags(~Qt.ItemIsEditable)
-                qitem.setData(item, Qt.ToolTipRole)
-                if item.endswith('sqlite'):
-                    qitem.setData(self.spine_icon, Qt.DecorationRole)
-                self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):
         """Hide widget and is proxy instead of closing them.

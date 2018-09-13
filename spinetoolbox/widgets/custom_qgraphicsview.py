@@ -234,19 +234,20 @@ class CustomQGraphicsView(QGraphicsView):
                                   format(self.dst_widget, self.src_widget))
             elif src_item_type == 'Tool' and dst_item_type in ['Data Connection', 'Data Store']:
                 self._toolbox.msg.emit("\t-> Output files from <b>{0}</b>'s execution "
-                                  "will be copied to <b>{1}</b>'s data directory.".\
+                                  "will be passed as reference to <b>{1}</b>'s data directory.".\
                                   format(self.src_widget, self.dst_widget))
             elif src_item_type in ['Data Connection', 'Data Store']\
                     and dst_item_type in ['Data Connection', 'Data Store']:
                 self._toolbox.msg.emit("\t-> Input files for a tool's execution "
                                   "will be looked up in <b>{0}</b> if not found in <b>{1}</b>.".\
                                   format(self.src_widget, self.dst_widget))
+            elif src_item_type == 'Data Store' and dst_item_type == 'View':
+                self._toolbox.msg_warning.emit("\t-> Database references in <b>{0}</b> will be "
+                                               "viewed by <b>{1}</b>.".\
+                                               format(self.src_widget, self.dst_widget))
             elif src_item_type == 'Tool' and dst_item_type == 'Tool':
                 self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Interaction between two "
                                           "Tool items is not implemented yet.")
-            elif src_item_type == 'View' or dst_item_type == 'View':
-                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Interaction with View items "
-                                          "is not implemented yet.")
             else:
                 self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
                                           "is not implemented yet :)")
