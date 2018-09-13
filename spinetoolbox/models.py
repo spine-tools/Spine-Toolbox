@@ -115,8 +115,8 @@ class ProjectItemModel(QStandardItemModel):
         item.set_name(value)
         # Update project item directory variable
         item.data_dir = new_data_dir
-        # If item is a Data Store or Data Connection the QFileSystemWatcher path must be updated
-        if item.item_type == "Data Store" or item.item_type == "Data Connection":
+        # If item is a Data Connection the QFileSystemWatcher path must be updated
+        if item.item_type == "Data Connection":
             item.data_dir_watcher.removePaths(item.data_dir_watcher.directories())
             item.data_dir_watcher.addPath(item.data_dir)
         # If item is a Tool, also output_dir must be updated

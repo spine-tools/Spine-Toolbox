@@ -64,8 +64,7 @@ class DataStore(MetaObject):
         self._widget.set_name_label(name)
         self._widget.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self._widget.ui.comboBox_dialect.setCurrentIndex(-1)
-        # self._widget.ui.toolButton_browse.setIcon(self._widget.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self._widget.ui.toolButton_browse.setIcon(QIcon.fromTheme("document-open"))        
+        self._widget.ui.toolButton_browse.setIcon(self._widget.style().standardIcon(QStyle.SP_DialogOpenButton))
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -143,7 +142,7 @@ class DataStore(MetaObject):
                                            "'{2}' is the recommended.".format(dialect, dbapi, recommended_dbapi))
         if dialect == 'sqlite':
             try:
-                file_path = db_url.split('://')[1]
+                file_path = db_url.split(':///')[1]
             except IndexError:
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
@@ -153,7 +152,7 @@ class DataStore(MetaObject):
         """Adjust controls to mssql connection specification."""
         self._widget.ui.comboBox_dsn.setEnabled(True)
         self._widget.ui.lineEdit_SQLite_file.setEnabled(False)
-        self._widget.ui.pushButton_browse.setEnabled(False)
+        self._widget.ui.toolButton_browse.setEnabled(False)
         self._widget.ui.lineEdit_host.setEnabled(False)
         self._widget.ui.lineEdit_port.setEnabled(False)
         self._widget.ui.lineEdit_database.setEnabled(False)
@@ -166,7 +165,7 @@ class DataStore(MetaObject):
         self._widget.ui.comboBox_dsn.setEnabled(False)
         self._widget.ui.comboBox_dsn.setCurrentIndex(0)
         self._widget.ui.lineEdit_SQLite_file.setEnabled(True)
-        self._widget.ui.pushButton_browse.setEnabled(True)
+        self._widget.ui.toolButton_browse.setEnabled(True)
         self._widget.ui.lineEdit_host.setEnabled(False)
         self._widget.ui.lineEdit_port.setEnabled(False)
         self._widget.ui.lineEdit_database.setEnabled(False)
@@ -179,7 +178,7 @@ class DataStore(MetaObject):
         self._widget.ui.comboBox_dsn.setEnabled(False)
         self._widget.ui.comboBox_dsn.setCurrentIndex(0)
         self._widget.ui.lineEdit_SQLite_file.setEnabled(False)
-        self._widget.ui.pushButton_browse.setEnabled(False)
+        self._widget.ui.toolButton_browse.setEnabled(False)
         self._widget.ui.lineEdit_host.setEnabled(True)
         self._widget.ui.lineEdit_port.setEnabled(True)
         self._widget.ui.lineEdit_database.setEnabled(True)

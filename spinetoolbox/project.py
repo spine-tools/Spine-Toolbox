@@ -255,6 +255,8 @@ class SpineToolboxProject(MetaObject):
                     ref = data_stores[name]["references"][0]
                 except KeyError:
                     ref = None
+                except IndexError:
+                    ref = None
             try:
                 x = data_stores[name]["x"]
                 y = data_stores[name]["y"]
