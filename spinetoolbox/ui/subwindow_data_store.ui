@@ -367,6 +367,9 @@ color: rgb(255, 255, 255);</string>
          </item>
          <item>
           <widget class="QToolButton" name="toolButton_browse">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <property name="text">
             <string>...</string>
            </property>

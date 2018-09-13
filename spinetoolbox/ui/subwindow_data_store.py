@@ -186,6 +186,7 @@ class Ui_Form(object):
         self.lineEdit_SQLite_file.setObjectName("lineEdit_SQLite_file")
         self.horizontalLayout_3.addWidget(self.lineEdit_SQLite_file)
         self.toolButton_browse = QtWidgets.QToolButton(Form)
+        self.toolButton_browse.setEnabled(False)
         self.toolButton_browse.setObjectName("toolButton_browse")
         self.horizontalLayout_3.addWidget(self.toolButton_browse)
         self.gridLayout.addLayout(self.horizontalLayout_3, 2, 1, 1, 2)

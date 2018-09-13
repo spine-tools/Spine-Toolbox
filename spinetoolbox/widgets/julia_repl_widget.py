@@ -60,7 +60,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.IJulia_process_succeeded = False  # True if IJulia installation was successful
         self.execution_failed_to_start = False
         self.starting = False
-        self.cursor = self._control.viewport().cursor()
+        self.normal_cursor = self._control.viewport().cursor()
 
     def find_julia_kernel(self):
         """Return the name of the most recent julia kernel available
@@ -200,11 +200,10 @@ class JuliaREPLWidget(RichJupyterWidget):
         # logging.debug("id: {}".format(msg['msg_id']))
         # logging.debug("type: {}".format(msg['msg_type']))
         # logging.debug("content: {}".format(msg['content']))
-        # try:
-        #     logging.debug("status: {}".format(msg['content']['status']))
-        # except KeyError:
-        #     logging.debug("key status not found")
         if self.running and msg['msg_type'] == 'execute_reply':
+            # Kernel sends execute_reply when started, ignore that (execution_count is zero)
+            if msg['content']['execution_count'] == 0:
+                return
             if msg['content']['status'] == 'ok':
                 self.execution_finished_signal.emit(0) # success code
             else:
@@ -227,7 +226,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_execution_state = msg['content']['execution_state']
             if self.starting and self.kernel_execution_state == 'idle':
                 self.starting = False
-                self._control.viewport().setCursor(self.cursor)
+                self._control.viewport().setCursor(self.normal_cursor)
             if self.command and self.kernel_execution_state == 'idle':
                 self.running = True
                 self.execute(self.command)
