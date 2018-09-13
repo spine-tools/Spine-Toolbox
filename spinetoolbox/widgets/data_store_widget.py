@@ -128,8 +128,6 @@ class DataStoreForm(QMainWindow):
         spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
         spin_box_menu.data_committed.connect(self.add_relationship_parameters)
         self.ui.toolButton_add_relationship_parameters.setMenu(spin_box_menu)
-        # Insert new working commit
-        self.new_commit()
         # init models and views
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.init_models()
@@ -341,13 +339,6 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
         else:
             self.msg_error.emit("Unsupported file format")
-
-    def new_commit(self):
-        """Try and insert new work in progress commit in the database."""
-        try:
-            self.mapping.new_commit()
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
 
     @Slot(name="commit_session")
     def commit_session(self):
@@ -640,16 +631,16 @@ class DataStoreForm(QMainWindow):
     def call_add_parameters(self, tree_index):
         class_type = tree_index.data(Qt.UserRole)
         if class_type == 'object_class':
-            self.add_object_parameters()
+            self.add_object_parameters(count=1)
         elif class_type == 'relationship_class':
-            self.add_relationship_parameters()
+            self.add_relationship_parameters(count=1)
 
     def call_add_parameter_values(self, tree_index):
         entity_type = tree_index.data(Qt.UserRole)
         if entity_type == 'object':
-            self.add_object_parameter_values()
+            self.add_object_parameter_values(count=1)
         elif entity_type == 'relationship':
-            self.add_relationship_parameter_values()
+            self.add_relationship_parameter_values(count=1)
 
     @Slot(name="add_object_classes")
     def add_object_classes(self):
@@ -995,7 +986,7 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_value_models()
 
     @Slot("int", name="add_object_parameter_values")
-    def add_object_parameter_values(self, count):
+    def add_object_parameter_values(self, count=None):
         """Insert count new rows in object parameter value model, so the user can select
         values for a new parameter value.
         """
@@ -1033,7 +1024,7 @@ class DataStoreForm(QMainWindow):
                 model.setData(model.index(row, h('object_name')), object_name)
 
     @Slot("int", name="add_object_parameters")
-    def add_object_parameters(self, count):
+    def add_object_parameters(self, count=None):
         """Insert count new rows in object parameter model, so the user can select
         values for a new parameter.
         """
