@@ -60,8 +60,9 @@ class DataStoreForm(QMainWindow):
         tic = time.clock()
         super().__init__(flags=Qt.Window)
         # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
-        # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
-        # TODO: Alternatively, make this class inherit from QWidget and implement the menubar by hand
+        # reimplementing the window minimizing and maximizing actions as well as setting the window modality
+        # NOTE: Alternatively, make this class inherit from QWidget rather than QMainWindow,
+        # and implement the menubar by hand
         self._data_store = data_store
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -70,7 +71,12 @@ class DataStoreForm(QMainWindow):
         self.ui.actionPaste.setIcon(QIcon.fromTheme("edit-paste"))
         self.ui.actionPaste_into_new_rows.setIcon(QIcon.fromTheme("edit-paste"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        # Set up status bar
+        self.ui.statusbar.setFixedHeight(20)
+        self.ui.statusbar.setSizeGripEnabled(False)
+        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         # Class attributes
+        # DB mapping
         self.mapping = mapping
         self.database = database
         # Object tree model
@@ -85,19 +91,31 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_proxy = CustomSortFilterProxyModel(self)
         self.relationship_parameter_model = ParameterTableModel(self)
         self.relationship_parameter_proxy = CustomSortFilterProxyModel(self)
-        # Set up status bar
-        self.ui.statusbar.setFixedHeight(20)
-        self.ui.statusbar.setSizeGripEnabled(False)
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         # Context menus
         self.object_tree_context_menu = None
         self.object_parameter_value_context_menu = None
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
-        # Clipboard
+        # Others
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        # init models and views
+        self.init_models()
+        self.init_views()
+        self.setup_delegates()
+        self.setup_buttons()
+        self.connect_signals()
+        self.restore_ui()
+        self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
+        # Ensure this window gets garbage-collected when closed
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        toc = time.clock()
+        logging.debug("Elapsed = {}".format(toc - tic))
+
+    def setup_buttons(self):
+        """Specify actions and menus for add/remove parameter buttons."""
         # Setup button actions
         self.ui.toolButton_add_object_parameter_values.\
             setDefaultAction(self.ui.actionAdd_object_parameter_values)
@@ -128,20 +146,8 @@ class DataStoreForm(QMainWindow):
         spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
         spin_box_menu.data_committed.connect(self.add_relationship_parameters)
         self.ui.toolButton_add_relationship_parameters.setMenu(spin_box_menu)
-        # init models and views
-        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
-        self.init_models()
-        self.init_views()
-        self.set_delegates()
-        self.connect_signals()
-        self.restore_ui()
-        self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
-        # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        toc = time.clock()
-        logging.debug("Elapsed = {}".format(toc - tic))
 
-    def set_delegates(self):
+    def setup_delegates(self):
         """Set delegates for tables."""
         self.ui.tableView_object_parameter_value.setItemDelegate(ObjectParameterValueDelegate(self))
         self.ui.tableView_relationship_parameter_value.setItemDelegate(RelationshipParameterValueDelegate(self))
@@ -223,20 +229,6 @@ class DataStoreForm(QMainWindow):
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
 
-    @Slot(name="set_paste_enabled")
-    def set_paste_enabled(self):
-        """Called when Edit menu is about to show.
-        Enable or disable paste options depending on wheter or not
-        the focus is on one of the parameter tables.
-        """
-        on = False
-        on |= self.ui.tableView_object_parameter.hasFocus()
-        on |= self.ui.tableView_relationship_parameter.hasFocus()
-        on |= self.ui.tableView_object_parameter_value.hasFocus()
-        on |= self.ui.tableView_relationship_parameter_value.hasFocus()
-        self.ui.actionPaste.setEnabled(on)
-        self.ui.actionPaste_into_new_rows.setEnabled(on)
-
     @Slot(str, name="add_message")
     def add_message(self, msg):
         """Append regular message to status bar.
@@ -291,6 +283,20 @@ class DataStoreForm(QMainWindow):
             focus_widget.paste(self.clipboard_text, into_new_rows=True)
         except AttributeError:
             self.msg.emit("Cannot paste to widget ({})".format(focus_widget.objectName()))
+
+    @Slot(name="set_paste_enabled")
+    def set_paste_enabled(self):
+        """Called when Edit menu is about to show.
+        Enable or disable paste options depending on wheter or not
+        the focus is on one of the parameter tables.
+        """
+        on = False
+        on |= self.ui.tableView_object_parameter.hasFocus()
+        on |= self.ui.tableView_relationship_parameter.hasFocus()
+        on |= self.ui.tableView_object_parameter_value.hasFocus()
+        on |= self.ui.tableView_relationship_parameter_value.hasFocus()
+        self.ui.actionPaste.setEnabled(on)
+        self.ui.actionPaste_into_new_rows.setEnabled(on)
 
     @Slot(name="import_file")
     def import_file(self):
@@ -396,12 +402,19 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         # Relationship
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
-        header = relationship_parameter_value_list.column_descriptions
-        self.relationship_parameter_value_model.set_horizontal_header_labels([column['name'] for column in header])
+        # Determine the lenght of the largest 'object_name_list'
+        max_object_name_list_len = max([len(x.object_name_list.split(',')) for x in relationship_parameter_value_list])
+        print(max_object_name_list_len)
+        header = [x['name'] for x in relationship_parameter_value_list.column_descriptions]
+        object_name_list_index = header.index("object_name_list")
+        del header[object_name_list_index]
+        for i in range(max_object_name_list_len):
+            header.insert(object_name_list_index, "object_name")
+        self.relationship_parameter_value_model.set_horizontal_header_labels(header)
         relationship_parameter_value_data = [list(row._asdict().values()) for row in relationship_parameter_value_list]
         self.relationship_parameter_value_model.reset_model(relationship_parameter_value_data)
         self.relationship_parameter_value_model.make_columns_fixed(
-            'relationship_class_name', 'object_name_list', 'parameter_name', 'parameter_value_id')
+            'relationship_class_name', 'object_name', 'parameter_name', 'parameter_value_id')
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
