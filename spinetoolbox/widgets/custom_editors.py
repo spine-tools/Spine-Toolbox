@@ -72,68 +72,6 @@ class CustomLineEditor(QLineEdit):
         return self._index
 
 
-class CustomToolButtonEditor(QToolButton):
-    """A custom QToolButton to popup a Qmenu with multiple horizontal sections and options.
-
-    Attributes:
-        parent (DataStoreForm): data store widget
-        index (QModelIndex): the model index being edited
-        object_class_name_list (list): list of all object class names in the database
-        current_object_name_list (list): list of currently selected object names
-        object_name_dict (dict): dictionary of object class name => list of object names of that class
-    """
-    def __init__(self, parent, index, object_class_name_list, current_object_name_list, **object_name_dict):
-        """Initialize class."""
-        super().__init__(parent)
-        self._text = None
-        self._index = index
-        self.setPopupMode(QToolButton.InstantPopup)
-        self.setText(index.data(Qt.DisplayRole))
-        self.menu = QMenu(parent)
-        widget = QWidget(self)
-        widget.setLayout(QHBoxLayout(widget))
-        widget.layout().setContentsMargins(6, 6, 6, 6)
-        widget.layout().setSpacing(6)
-        for i, object_class_name in enumerate(object_class_name_list):
-            current_object_name = current_object_name_list[i] if current_object_name_list else None
-            object_name_list = object_name_dict[object_class_name]
-            submenu = QMenu(self.menu)
-            submenu.addSection(object_class_name)
-            action_group = QActionGroup(submenu)
-            for object_name in object_name_list:
-                action = submenu.addAction(object_name)
-                action.setCheckable(True)
-                if object_name == current_object_name:
-                    action.setChecked(True)
-                action_group.addAction(action)
-            widget.layout().addWidget(submenu)
-        self.widget_action = QWidgetAction(self.menu)
-        self.widget_action.setDefaultWidget(widget)
-        self.menu.addAction(self.widget_action)
-        action_ok = self.menu.addAction("Ok")
-        action_ok.triggered.connect(self.commit_data)
-        self.setMenu(self.menu)
-
-    @Slot("bool", name="commit_data")
-    def commit_data(self, checked=False):
-        layout = self.widget_action.defaultWidget().layout()
-        object_name_list = list()
-        for i in range(layout.count()):
-            submenu = layout.itemAt(i).widget()
-            for action in submenu.actions():
-                if action.isChecked():
-                    object_name_list.append(action.text())
-                    break
-        self._text = ",".join(object_name_list)
-        self.close()
-
-    def index(self):
-        return self._index
-
-    def text(self):
-        return self._text
-
-
 class CustomSimpleToolButtonEditor(QToolButton):
     """A custom QToolButton to popup a Qmenu.
 

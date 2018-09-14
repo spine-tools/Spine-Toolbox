@@ -736,7 +736,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     def set_work_in_progress(self, row, on):
         """Add row into list of work in progress."""
-        if on:
+        if on and row not in self.wip_row_list:
             self.wip_row_list.append(row)
         else:
             try:
@@ -1295,13 +1295,15 @@ class ParameterTableModel(MinimalTableModel):
         self._data_store_form = data_store_form
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
 
-    def make_columns_fixed(self, *column_names):
+    def make_columns_fixed(self, *column_names, skip_wip=False):
         """Set columns as fixed so they are not editable and painted gray."""
         for row in range(self.rowCount()):
+            if skip_wip and row in self.wip_row_list:
+                continue
             self.make_columns_fixed_for_row(row, *column_names)
 
     def make_columns_fixed_for_row(self, row, *column_names):
-        """Set background role data and flags for row according to fixed column names."""
+        """Set background role data and flags for row and column names."""
         for name in column_names:
             column = self.horizontal_header_labels().index(name)
             index = self.index(row, column)
@@ -1319,7 +1321,8 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.bold_font.setBold(True)
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
-        self.rule_dict = dict()
+        # List of rules. Each rule is a dict. Items are the terms of an 'or' statement
+        self.rule_dict_list = list()
         self.subrule_dict = dict()
         self.rejected_column_list = list()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
@@ -1345,21 +1348,17 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def clear_filter(self):
         """Clear all rules, unbold all bolded items."""
         self.rejected_column_list = list()
-        for source_column in self.rule_dict:
-            for source_row in range(self.sourceModel().rowCount()):
-                source_index = self.sourceModel().index(source_row, source_column)
-                self.sourceModel().setData(source_index, None, Qt.FontRole)
-        self.rule_dict = dict()
+        for rule_dict in self.rule_dict_list:
+            for source_column in rule_dict:
+                for source_row in range(self.sourceModel().rowCount()):
+                    source_index = self.sourceModel().index(source_row, source_column)
+                    self.sourceModel().setData(source_index, None, Qt.FontRole)
+        self.rule_dict_list = list()
         self.subrule_dict = dict()
 
     def apply_filter(self):
         """Trigger filtering."""
         self.setFilterRegExp("")
-        # Bold entire column in case the rule is met
-        for column in self.rule_dict:
-            for row in range(self.sourceModel().rowCount()):
-                source_index = self.sourceModel().index(row, column)
-                self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
         # Italize header in case the subrule is met
         for column in self.subrule_dict:
             self.sourceModel().setHeaderData(column, Qt.Horizontal, self.italic_font, Qt.FontRole)
@@ -1370,14 +1369,16 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             self.rejected_column_list.append(self.h(name))
 
     def add_rule(self, **kwargs):
-        """Add NEGATIVE rules by taking the kwargs as statements.
+        """Add NEGATIVE rules by joining the kwargs into a 'or' statement.
         Negative rules trigger a violation if not met."""
+        rule_dict = {}
         for key, value in kwargs.items():
             column = self.h(key)
-            self.rule_dict[column] = value
+            rule_dict[column] = value
+        self.rule_dict_list.append(rule_dict)
 
     def add_subrule(self, **kwargs):
-        """Add POSITIVE subrules by taking the kwargs as statements.
+        """Add POSITIVE subrules by taking the kwargs as individual statements (key = value).
         Positive rules trigger a violation if met."""
         for key, value in kwargs.items():
             column = self.h(key)
@@ -1394,12 +1395,22 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
                 pass
 
     def filter_accept_rows(self, source_row, source_parent):
-        for column, value in self.rule_dict.items():
-            source_index = self.sourceModel().index(source_row, column, source_parent)
-            data = self.sourceModel().data(source_index, self.filterRole())
-            if data is None:
-                continue
-            if data not in value:
+        """Sweep rules. """
+        for rule_dict in self.rule_dict_list:
+            result = False
+            for column, value in rule_dict.items():
+                source_index = self.sourceModel().index(source_row, column, source_parent)
+                data = self.sourceModel().data(source_index, self.filterRole())
+                if data is None:
+                    continue
+                if isinstance(value, list):
+                    cond = (data in value)
+                else:
+                    cond = (data == value)
+                if cond:
+                    result = True
+                    self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
+            if not result:
                 return False
         return True
 
