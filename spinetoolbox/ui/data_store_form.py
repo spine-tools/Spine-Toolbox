@@ -63,6 +63,7 @@ class Ui_MainWindow(object):
         self.treeView_object.setSizePolicy(sizePolicy)
         self.treeView_object.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
+        self.treeView_object.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_object.setObjectName("treeView_object")
         self.verticalLayout_3.addWidget(self.treeView_object)
         self.layoutWidget_2 = QtWidgets.QWidget(self.splitter_tree_parameter)
@@ -460,6 +461,6 @@ class Ui_MainWindow(object):
         self.actionPaste_into_new_rows.setText(QtWidgets.QApplication.translate("MainWindow", "Paste into new row(s)", None, -1))
         self.actionPaste_into_new_rows.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+V", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import ParameterTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

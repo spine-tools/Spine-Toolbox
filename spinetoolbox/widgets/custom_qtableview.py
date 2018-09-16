@@ -115,7 +115,7 @@ class CustomQTableView(QTableView):
                 ii = i % len(data)
                 jj = j % len(data[ii])
                 value = data[ii][jj]
-                self.model().setData(index, value, Qt.DisplayRole)
+                self.model().setData(index, value, Qt.EditRole)
 
     def paste_normal(self, text, into_new_rows=False):
         """Paste clipboard data, overwritting cells if needed"""

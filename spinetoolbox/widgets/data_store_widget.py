@@ -34,7 +34,7 @@ from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError
-from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, QSpinBoxMenu
+from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
@@ -134,19 +134,6 @@ class DataStoreForm(QMainWindow):
             setDefaultAction(self.ui.actionAdd_relationship_parameters)
         self.ui.toolButton_remove_relationship_parameters.\
             setDefaultAction(self.ui.actionRemove_relationship_parameters)
-        #Setup Button menus
-        spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
-        spin_box_menu.data_committed.connect(self.add_object_parameter_values)
-        self.ui.toolButton_add_object_parameter_values.setMenu(spin_box_menu)
-        spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
-        spin_box_menu.data_committed.connect(self.add_relationship_parameter_values)
-        self.ui.toolButton_add_relationship_parameter_values.setMenu(spin_box_menu)
-        spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
-        spin_box_menu.data_committed.connect(self.add_object_parameters)
-        self.ui.toolButton_add_object_parameters.setMenu(spin_box_menu)
-        spin_box_menu = QSpinBoxMenu(self, value=10, prefix="Add ", suffix=" rows")
-        spin_box_menu.data_committed.connect(self.add_relationship_parameters)
-        self.ui.toolButton_add_relationship_parameters.setMenu(spin_box_menu)
 
     def setup_delegates(self):
         """Set delegates for tables."""
@@ -166,14 +153,14 @@ class DataStoreForm(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionQuit.triggered.connect(self.close)
-        self.ui.actionAdd_object_classes.triggered.connect(self.add_object_classes)
-        self.ui.actionAdd_objects.triggered.connect(self.add_objects)
-        self.ui.actionAdd_relationship_classes.triggered.connect(self.add_relationship_classes)
-        self.ui.actionAdd_relationships.triggered.connect(self.add_relationships)
-        self.ui.actionAdd_object_parameters.triggered.connect(self.add_object_parameters)
+        self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
+        self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
+        self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
+        self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionAdd_object_parameter_values.triggered.connect(self.add_object_parameter_values)
-        self.ui.actionAdd_relationship_parameters.triggered.connect(self.add_relationship_parameters)
         self.ui.actionAdd_relationship_parameter_values.triggered.connect(self.add_relationship_parameter_values)
+        self.ui.actionAdd_object_parameters.triggered.connect(self.add_object_parameters)
+        self.ui.actionAdd_relationship_parameters.triggered.connect(self.add_relationship_parameters)
         self.ui.actionRemove_object_parameters.triggered.connect(self.remove_object_parameters)
         self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
         self.ui.actionRemove_relationship_parameters.triggered.connect(self.remove_relationship_parameters)
@@ -209,11 +196,6 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_value_model.dataChanged.connect(self.relationship_parameter_value_data_changed)
         self.object_parameter_model.dataChanged.connect(self.object_parameter_data_changed)
         self.relationship_parameter_model.dataChanged.connect(self.relationship_parameter_data_changed)
-        # Model rows inserted
-        self.object_parameter_value_model.rowsInserted.connect(self.setup_object_parameter_value_rows)
-        self.relationship_parameter_value_model.rowsInserted.connect(self.setup_relationship_parameter_value_rows)
-        self.object_parameter_model.rowsInserted.connect(self.setup_object_parameter_rows)
-        self.relationship_parameter_model.rowsInserted.connect(self.setup_relationship_parameter_rows)
         # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -264,8 +246,8 @@ class DataStoreForm(QMainWindow):
         focus_widget = self.focusWidget()
         try:
             focus_widget.copy()
-        except AttributeError:
-            self.msg.emit("Cannot copy from widget ({})".format(focus_widget.objectName()))
+        except AttributeError as err:
+            self.msg.emit("Cannot copy from widget ({0}): {1}".format(focus_widget.objectName(), err))
 
     @Slot(name="paste")
     def paste(self):
@@ -273,8 +255,8 @@ class DataStoreForm(QMainWindow):
         focus_widget = self.focusWidget()
         try:
             focus_widget.paste(self.clipboard_text)
-        except AttributeError:
-            self.msg.emit("Cannot paste to widget ({})".format(focus_widget.objectName()))
+        except AttributeError as err:
+            self.msg.emit("Cannot paste to widget ({0}): {1}".format(focus_widget.objectName(), err))
 
     @Slot(name="paste_into_new_rows")
     def paste_into_new_rows(self):
@@ -282,8 +264,8 @@ class DataStoreForm(QMainWindow):
         focus_widget = self.focusWidget()
         try:
             focus_widget.paste(self.clipboard_text, into_new_rows=True)
-        except AttributeError:
-            self.msg.emit("Cannot paste to widget ({})".format(focus_widget.objectName()))
+        except AttributeError as err:
+            self.msg.emit("Cannot paste to widget ({0}): {1}".format(focus_widget.objectName(), err))
 
     @Slot(name="set_paste_enabled")
     def set_paste_enabled(self):
@@ -662,20 +644,22 @@ class DataStoreForm(QMainWindow):
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
         option = self.object_tree_context_menu.get_action()
-        if option == "Add object classes":
-            self.add_object_classes()
+        if option == "Copy":
+            self.ui.treeView_object.copy()
+        elif option == "Add object classes":
+            self.show_add_object_classes_form()
         elif option == "Add objects":
-            self.call_add_objects(index)
+            self.call_show_add_objects_form(index)
         elif option == "Add relationship classes":
-            self.call_add_relationship_classes(index)
+            self.call_show_add_relationship_classes_form(index)
         elif option == "Add relationships":
-            self.call_add_relationships(index)
+            self.call_show_add_relationships_form(index)
         elif option == "Expand next":
             self.expand_next(index)
         elif option.startswith("Rename"):
             self.rename_item(index)
-        elif option.startswith("Remove"):
-            self.remove_item(index)
+        elif option.startswith("Remove selected"):
+            self.remove_items()
         elif option == "Add parameters":
             self.call_add_parameters(index)
         elif option == "Add parameter values":
@@ -685,19 +669,19 @@ class DataStoreForm(QMainWindow):
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
 
-    def call_add_objects(self, index):
+    def call_show_add_objects_form(self, index):
         class_id = index.data(Qt.UserRole+1)['id']
-        self.add_objects(class_id=class_id)
+        self.show_add_objects_form(class_id=class_id)
 
-    def call_add_relationship_classes(self, index):
+    def call_show_add_relationship_classes_form(self, index):
         object_class_id = index.data(Qt.UserRole+1)['id']
-        self.add_relationship_classes(object_class_id=object_class_id)
+        self.show_add_relationship_classes_form(object_class_id=object_class_id)
 
-    def call_add_relationships(self, index):
+    def call_show_add_relationships_form(self, index):
         relationship_class = index.data(Qt.UserRole+1)
         object_ = index.parent().data(Qt.UserRole+1)
         object_class = index.parent().parent().data(Qt.UserRole+1)
-        self.add_relationships(
+        self.show_add_relationships_form(
             relationship_class_id=relationship_class['id'],
             object_id=object_['id'],
             object_class_id=object_class['id']
@@ -706,25 +690,28 @@ class DataStoreForm(QMainWindow):
     def call_add_parameters(self, tree_index):
         class_type = tree_index.data(Qt.UserRole)
         if class_type == 'object_class':
-            self.add_object_parameters(count=1)
+            self.add_object_parameters()
         elif class_type == 'relationship_class':
-            self.add_relationship_parameters(count=1)
+            self.add_relationship_parameters()
 
     def call_add_parameter_values(self, tree_index):
         entity_type = tree_index.data(Qt.UserRole)
         if entity_type == 'object':
-            self.add_object_parameter_values(count=1)
+            self.add_object_parameter_values()
         elif entity_type == 'relationship':
-            self.add_relationship_parameter_values(count=1)
+            self.add_relationship_parameter_values()
 
-    @Slot(name="add_object_classes")
-    def add_object_classes(self):
-        """Insert new object classes."""
+    @Slot(name="show_add_object_classes_form")
+    def show_add_object_classes_form(self):
+        """Show dialog to let user select preferences for new object classes."""
         dialog = AddObjectClassesDialog(self, self.mapping)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return
-        for object_class_args in dialog.object_class_args_list:
+        dialog.confirmed.connect(self.add_object_classes)
+        dialog.show()
+
+    @Slot("QVariant", name="add_object_classes")
+    def add_object_classes(self, object_class_args_list):
+        """Insert new object classes."""
+        for object_class_args in object_class_args_list:
             try:
                 object_class = self.mapping.add_object_class(**object_class_args)
             except SpineDBAPIError as e:
@@ -734,14 +721,17 @@ class DataStoreForm(QMainWindow):
             msg = "Successfully added new object class '{}'.".format(object_class.name)
             self.msg.emit(msg)
 
-    @Slot(name="add_objects")
-    def add_objects(self, class_id=None):
-        """Insert new objects."""
+    @Slot(name="show_add_objects_form")
+    def show_add_objects_form(self, class_id=None):
+        """Show dialog to let user select preferences for new objects."""
         dialog = AddObjectsDialog(self, self.mapping, class_id=class_id)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return
-        for object_args in dialog.object_args_list:
+        dialog.confirmed.connect(self.add_objects)
+        dialog.show()
+
+    @Slot("QVariant", name="add_objects")
+    def add_objects(self, object_args_list):
+        """Insert new objects."""
+        for object_args in object_args_list:
             try:
                 object_ = self.mapping.add_object(**object_args)
             except SpineDBAPIError as e:
@@ -751,15 +741,16 @@ class DataStoreForm(QMainWindow):
             msg = "Successfully added new object '{}'.".format(object_.name)
             self.msg.emit(msg)
 
-    @Slot(name="add_relationship_classes")
-    def add_relationship_classes(self, object_class_id=None):
-        """Insert new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, self.mapping,
-            object_class_one_id=object_class_id)
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return
-        for wide_relationship_class_args in dialog.wide_relationship_class_args_list:
+    def show_add_relationship_classes_form(self, object_class_id=None):
+        """Show dialog to let user select preferences for new relationship class."""
+        dialog = AddRelationshipClassesDialog(self, self.mapping, object_class_one_id=object_class_id)
+        dialog.confirmed.connect(self.add_relationship_classes)
+        dialog.show()
+
+    @Slot("QVariant", name="add_relationship_classes")
+    def add_relationship_classes(self, wide_relationship_class_args_list):
+        """Insert new relationship classes."""
+        for wide_relationship_class_args in wide_relationship_class_args_list:
             try:
                 wide_relationship_class = self.mapping.add_wide_relationship_class(**wide_relationship_class_args)
             except SpineDBAPIError as e:
@@ -780,9 +771,9 @@ class DataStoreForm(QMainWindow):
             msg = "Successfully added new relationship class '{}'.".format(wide_relationship_class.name)
             self.msg.emit(msg)
 
-    @Slot(name="add_relationships")
-    def add_relationships(self, relationship_class_id=None, object_id=None, object_class_id=None):
-        """Insert new relationship."""
+    @Slot(name="show_add_relationships_form")
+    def show_add_relationships_form(self, relationship_class_id=None, object_id=None, object_class_id=None):
+        """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
             self.mapping,
@@ -790,10 +781,13 @@ class DataStoreForm(QMainWindow):
             object_id=object_id,
             object_class_id=object_class_id
         )
-        answer = dialog.exec_()
-        if answer != QDialog.Accepted:
-            return
-        for wide_relationship_args in dialog.wide_relationship_args_list:
+        dialog.confirmed.connect(self.add_relationships)
+        dialog.show()
+
+    @Slot("QVariant", name="add_relationships")
+    def add_relationships(self, wide_relationship_args_list):
+        """Insert new relationships."""
+        for wide_relationship_args in wide_relationship_args_list:
             try:
                 wide_relationship = self.mapping.add_wide_relationship(**wide_relationship_args)
             except SpineDBAPIError as e:
@@ -839,7 +833,17 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_value_models()
         self.init_parameter_models()
 
-    def remove_item(self, removed_index):
+    def remove_items(self):
+        """Remove all selected items from the object treeview."""
+        selection = self.ui.treeView_object.selectionModel().selection()
+        if not selection:
+            return
+        for index in reversed(selection.indexes()):
+            self.remove_item(index, refresh_parameter_views=False)
+        self.init_parameter_value_models()
+        self.init_parameter_models()
+
+    def remove_item(self, removed_index, refresh_parameter_views=False):
         """Remove item from the treeview"""
         removed_item = self.object_tree_model.itemFromIndex(removed_index)
         removed_type = removed_item.data(Qt.UserRole)
@@ -865,7 +869,8 @@ class DataStoreForm(QMainWindow):
             self.msg_error.emit(e.msg)
             return
         self.object_tree_model.remove_item(removed_type, removed_id)
-        # refresh parameter models
+        if not refresh_parameter_views:
+            return
         self.init_parameter_value_models()
         self.init_parameter_models()
 
@@ -1071,166 +1076,144 @@ class DataStoreForm(QMainWindow):
         source_model.removeRows(source_index.row(), 1)
         self.init_parameter_value_models()
 
-    @Slot("int", name="add_object_parameter_values")
-    def add_object_parameter_values(self, count=None):
-        """Insert count new rows in object parameter value model, so the user can select
-        values for a new parameter value.
+    @Slot(name="add_parameter_values")
+    def add_parameter_values(self):
+        """Sweep object treeview selection. For each object and relationship in the selection,
+        add a parameter value row."""
+        selection = self.ui.treeView_object.selectionModel().selection()
+
+    @Slot(name="add_object_parameter_values")
+    def add_object_parameter_values(self):
+        """Sweep object treeview selection.
+        For each item in the selection, add a parameter value row if needed.
         """
-        if not count:
-            count = 1
+        model = self.object_parameter_value_model
         proxy_index = self.ui.tableView_object_parameter_value.currentIndex()
         index = self.object_parameter_value_proxy.mapToSource(proxy_index)
         row = index.row()+1
-        model = self.object_parameter_value_model
-        model.insertRows(row, count)
+        selection = self.ui.treeView_object.selectionModel().selection()
+        some_inserted = False
+        if selection:
+            object_class_name_column = model.horizontal_header_labels().index('object_class_name')
+            object_name_column = model.horizontal_header_labels().index('object_name')
+            i = 0
+            for index in selection.indexes():
+                if index.data(Qt.UserRole) == 'object_class':
+                    object_class_name = index.data(Qt.DisplayRole)
+                    object_name = None
+                elif index.data(Qt.UserRole) == 'object':
+                    object_class_name = index.parent().data(Qt.DisplayRole)
+                    object_name = index.data(Qt.DisplayRole)
+                else:
+                    continue
+                model.insertRows(row + i, 1)
+                model.set_work_in_progress(row + i, True)
+                model.setData(model.index(row + i, object_class_name_column), object_class_name)
+                model.setData(model.index(row + i, object_name_column), object_name)
+                some_inserted = True
+                i += 1
+        if not some_inserted:
+            model.insertRows(row, 1)
+            model.set_work_in_progress(row, True)
         self.ui.tabWidget_object.setCurrentIndex(0)
         self.object_parameter_value_proxy.apply_filter()
-        # It seems scrolling is not necessary
-        self.ui.tableView_object_parameter_value.scrollTo(proxy_index)
 
-    @Slot("int", name="add_object_parameters")
-    def add_object_parameters(self, count=None):
-        """Insert count new rows in object parameter model, so the user can select
-        values for a new parameter.
+    @Slot(name="add_relationship_parameter_values")
+    def add_relationship_parameter_values(self):
+        """Sweep object treeview selection.
+        For each item in the selection, add a parameter value row if needed.
         """
-        if not count:
-            count = 1
-        proxy_index = self.ui.tableView_object_parameter.currentIndex()
-        index = self.object_parameter_proxy.mapToSource(proxy_index)
-        row = index.row()+1
-        model = self.object_parameter_model
-        model.insertRows(row, count)
-        self.ui.tabWidget_object.setCurrentIndex(1)
-        self.object_parameter_proxy.apply_filter()
-        # It seems scrolling is not necessary
-        self.ui.tableView_object_parameter.scrollTo(proxy_index)
-
-    @Slot("int", name="add_relationship_parameter_values")
-    def add_relationship_parameter_values(self, count):
-        """Insert count new rows in relationship parameter value model, so the user can select
-        values for a new parameter value.
-        """
-        if not count:
-            count = 1
+        model = self.relationship_parameter_value_model
         proxy_index = self.ui.tableView_relationship_parameter_value.currentIndex()
         index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
         row = index.row()+1
-        model = self.relationship_parameter_value_model
-        model.insertRows(row, count)
+        selection = self.ui.treeView_object.selectionModel().selection()
+        some_inserted = False
+        if selection:
+            relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
+            object_name_1_column = model.horizontal_header_labels().index('object_name_1')
+            i = 0
+            for index in selection.indexes():
+                if index.data(Qt.UserRole) == 'relationship_class':
+                    relationship_class_name = index.data(Qt.DisplayRole)
+                    object_name_list = list()
+                elif index.data(Qt.UserRole) == 'relationship':
+                    relationship_class_name = index.parent().data(Qt.DisplayRole)
+                    object_name_list = index.data(Qt.UserRole+1)["object_name_list"].split(",")
+                else:
+                    continue
+                model.insertRows(row + i, 1)
+                model.set_work_in_progress(row + i, True)
+                model.setData(model.index(row + i, relationship_class_name_column), relationship_class_name)
+                for j, object_name in enumerate(object_name_list):
+                    model.setData(model.index(row + i, object_name_1_column + j), object_name)
+                some_inserted = True
+                i += 1
+        if not some_inserted:
+            model.insertRows(row, 1)
+            model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
         self.relationship_parameter_value_proxy.apply_filter()
-        # It seems scrolling is not necessary
-        self.ui.tableView_relationship_parameter_value.scrollTo(proxy_index)
 
-    @Slot("int", name="add_relationship_parameters")
-    def add_relationship_parameters(self, count):
-        """Insert count new rows in relationship parameter model, so the user can select
-        values for a new parameter.
+    @Slot(name="add_object_parameters")
+    def add_object_parameters(self):
+        """Sweep object treeview selection.
+        For each item in the selection, add a parameter value row if needed.
         """
-        if not count:
-            count = 1
+        model = self.object_parameter_model
+        proxy_index = self.ui.tableView_object_parameter.currentIndex()
+        index = self.object_parameter_proxy.mapToSource(proxy_index)
+        row = index.row()+1
+        selection = self.ui.treeView_object.selectionModel().selection()
+        some_inserted = False
+        if selection:
+            object_class_name_column = model.horizontal_header_labels().index('object_class_name')
+            i = 0
+            for index in selection.indexes():
+                if index.data(Qt.UserRole) == 'object_class':
+                    object_class_name = index.data(Qt.DisplayRole)
+                else:
+                    continue
+                model.insertRows(row + i, 1)
+                model.set_work_in_progress(row + i, True)
+                model.setData(model.index(row + i, object_class_name_column), object_class_name)
+                some_inserted = True
+                i += 1
+        if not some_inserted:
+            model.insertRows(row, 1)
+            model.set_work_in_progress(row, True)
+        self.ui.tabWidget_object.setCurrentIndex(1)
+        self.object_parameter_proxy.apply_filter()
+
+    @Slot(name="add_relationship_parameters")
+    def add_relationship_parameters(self):
+        """Sweep object treeview selection.
+        For each item in the selection, add a parameter row if needed.
+        """
+        model = self.relationship_parameter_model
         proxy_index = self.ui.tableView_relationship_parameter.currentIndex()
         index = self.relationship_parameter_proxy.mapToSource(proxy_index)
         row = index.row()+1
-        model = self.relationship_parameter_model
-        model.insertRows(row, count)
+        selection = self.ui.treeView_object.selectionModel().selection()
+        some_inserted = False
+        if selection:
+            relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
+            i = 0
+            for index in selection.indexes():
+                if index.data(Qt.UserRole) == 'relationship_class':
+                    relationship_class_name = index.data(Qt.DisplayRole)
+                else:
+                    continue
+                model.insertRows(row + i, 1)
+                model.set_work_in_progress(row + i, True)
+                model.setData(model.index(row + i, relationship_class_name_column), relationship_class_name)
+                some_inserted = True
+                i += 1
+        if not some_inserted:
+            model.insertRows(row, 1)
+            model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
-        model.make_columns_fixed_for_row(row, 'object_class_name_list')
         self.relationship_parameter_proxy.apply_filter()
-        # It seems scrolling is not necessary
-        self.ui.tableView_relationship_parameter.scrollTo(proxy_index)
-
-    @Slot("QModelIndex", "int", "int", name="setup_object_parameter_value_rows")
-    def setup_object_parameter_value_rows(self, parent, first, last):
-        """Called when inserting new rows into the model.
-        Set defaults and mark row as 'work in progress'.
-        """
-        model = self.object_parameter_value_model
-        header = model.horizontal_header_labels()
-        h = header.index
-        object_class_name = None
-        object_name = None
-        for rule_dict in self.object_parameter_value_proxy.rule_dict_list:
-            for column, value in rule_dict.items():
-                if header[column] == 'object_class_name':
-                    object_class_name = value
-                if header[column] == 'object_name':
-                    object_name = value
-        for row in range(first, last + 1):
-            model.set_work_in_progress(row, True)
-            if object_class_name:
-                model.setData(model.index(row, h('object_class_name')), object_class_name)
-            if object_name:
-                model.setData(model.index(row, h('object_name')), object_name)
-
-    @Slot("QModelIndex", "int", "int", name="setup_object_parameter_rows")
-    def setup_object_parameter_rows(self, parent, first, last):
-        """Called when inserting new rows into the model.
-        Set defaults and mark row as 'work in progress'.
-        """
-        model = self.object_parameter_model
-        header = model.horizontal_header_labels()
-        h = header.index
-        object_class_name = None
-        for rule_dict in self.object_parameter_proxy.rule_dict_list:
-            for column, value in rule_dict.items():
-                if header[column] == 'object_class_name':
-                    object_class_name = value
-        for row in range(first, last + 1):
-            model.set_work_in_progress(row, True)
-            if object_class_name:
-                model.setData(model.index(row, h('object_class_name')), object_class_name)
-
-    @Slot("QModelIndex", "int", "int", name="setup_relationship_parameter_value_rows")
-    def setup_relationship_parameter_value_rows(self, parent, first, last):
-        """Called when inserting new rows into the model.
-        Set defaults and mark row as 'work in progress'.
-        """
-        model = self.relationship_parameter_value_model
-        for row in range(first, last + 1):
-            model.set_work_in_progress(row, True)
-        tree_index = self.ui.treeView_object.currentIndex()
-        tree_index_type = tree_index.data(Qt.UserRole)
-        if tree_index_type not in ("relationship_class", "relationship"):
-            return
-        header = model.horizontal_header_labels()
-        h = header.index
-        relationship_class_name = None
-        object_name_dict = {}
-        for rule_dict in self.relationship_parameter_value_proxy.rule_dict_list:
-            for column, value in rule_dict.items():
-                if header[column] == 'relationship_class_name':
-                    relationship_class_name = value
-                if header[column].startswith('object_name_'):
-                    object_name_dict[header[column]] = value
-        for row in range(first, last + 1):
-            if relationship_class_name:
-                model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
-            for x, object_name in object_name_dict.items():
-                model.setData(model.index(row, h(x)), object_name)
-
-    @Slot("QModelIndex", "int", "int", name="setup_relationship_parameter_rows")
-    def setup_relationship_parameter_rows(self, parent, first, last):
-        """Called when inserting new rows into the model.
-        Set defaults and mark row as 'work in progress'.
-        """
-        model = self.relationship_parameter_model
-        for row in range(first, last + 1):
-            model.set_work_in_progress(row, True)
-        tree_index = self.ui.treeView_object.currentIndex()
-        tree_index_type = tree_index.data(Qt.UserRole)
-        if tree_index_type not in ("relationship_class", "relationship"):
-            return
-        header = model.horizontal_header_labels()
-        h = header.index
-        relationship_class_name = None
-        for rule_dict in self.relationship_parameter_proxy.rule_dict_list:
-            for column, value in rule_dict.items():
-                if header[column] == 'relationship_class_name':
-                    relationship_class_name = value
-        for row in range(first, last + 1):
-            if relationship_class_name:
-                model.setData(model.index(row, h('relationship_class_name')), relationship_class_name)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_value_data_changed")
     def object_parameter_value_data_changed(self, top_left, bottom_right, roles):

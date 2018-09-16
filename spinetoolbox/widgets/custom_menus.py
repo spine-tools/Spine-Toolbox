@@ -35,13 +35,11 @@ class CustomContextMenu(QMenu):
 
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
-        index (QModelIndex): Index of item that requested the context-menu
     """
-    def __init__(self, parent, index):
+    def __init__(self, parent):
         """Constructor."""
         super().__init__(parent=parent)
         self._parent = parent
-        self.index = index
         self.option = "None"
 
     def add_action(self, text, icon=QIcon(), enabled=True):
@@ -79,7 +77,7 @@ class ProjectItemContextMenu(CustomContextMenu):
     """
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             # If no item at index
             return
@@ -128,7 +126,7 @@ class LinkContextMenu(CustomContextMenu):
     """
     def __init__(self, parent, position, index, parallel_link=None):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             return
         self.add_action("Remove Connection")
@@ -148,7 +146,7 @@ class ToolTemplateContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             # If no item at index
             return
@@ -173,49 +171,45 @@ class ObjectTreeContextMenu(CustomContextMenu):
     """
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             return
         plus_object_icon = self._parent.ui.actionAdd_objects.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameters.icon()
         plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameters.icon()
-        if not index.parent().isValid():  # root item
+        item = index.model().itemFromIndex(index)
+        item_type = item.data(Qt.UserRole)
+        self.add_action("Copy")
+        self.addSeparator()
+        if item_type == 'root':
             self.add_action("Add object classes")
-        else:
-            item = index.model().itemFromIndex(index)
-            item_type = item.data(Qt.UserRole)
-            if item_type == 'object_class':
-                self.add_action("Add relationship classes", plus_relationship_icon)
-                self.add_action("Add objects", plus_object_icon)
-                self.addSeparator()
-                self.add_action("Add parameters", plus_object_parameter_icon)
-                self.addSeparator()
-                self.add_action("Rename object class")
-                self.addSeparator()
-                self.add_action("Remove object class")
-            elif item_type == 'object':
-                self.add_action("Add parameter values", plus_object_parameter_icon)
-                self.addSeparator()
-                self.add_action("Rename object")
-                self.addSeparator()
-                self.add_action("Remove object")
-            elif item_type == 'relationship_class':
-                self.add_action("Add relationships", plus_relationship_icon)
-                self.addSeparator()
-                self.add_action("Add parameters", plus_relationship_parameter_icon)
-                self.addSeparator()
-                self.add_action("Rename relationship class")
-                self.addSeparator()
-                self.add_action("Remove relationship class")
-            elif item_type == 'relationship':
-                self.add_action("Expand next")
-                self.addSeparator()
-                self.add_action("Add parameter values", plus_relationship_parameter_icon)
-                self.addSeparator()
-                self.add_action("Rename relationship")
-                self.addSeparator()
-                self.add_action("Remove relationship")
+        elif item_type == 'object_class':
+            self.add_action("Add relationship classes", plus_relationship_icon)
+            self.add_action("Add objects", plus_object_icon)
+            self.addSeparator()
+            self.add_action("Add parameters", plus_object_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename object class")
+        elif item_type == 'object':
+            self.add_action("Add parameter values", plus_object_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename object")
+        elif item_type == 'relationship_class':
+            self.add_action("Add relationships", plus_relationship_icon)
+            self.addSeparator()
+            self.add_action("Add parameters", plus_relationship_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename relationship class")
+        elif item_type == 'relationship':
+            self.add_action("Expand next")
+            self.addSeparator()
+            self.add_action("Add parameter values", plus_relationship_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename relationship")
+        if item_type != 'root':
+            self.addSeparator()
+            self.add_action("Remove selected")
         self.exec_(position)
 
 
@@ -229,7 +223,7 @@ class ParameterContextMenu(CustomContextMenu):
     """
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             return
         self.add_action("Remove selected")
@@ -340,8 +334,8 @@ class QOkMenu(QMenu):
 
 
 class QSpinBoxMenu(QMenu):
-    """A QMenu with a QSpinBox.
-    It allows selecting multiple checkable options.
+    """NOTE: Not in use at the moment.
+    A QMenu with a QSpinBox.
 
     Attributes:
         parent (QWidget): Parent of the QMenu

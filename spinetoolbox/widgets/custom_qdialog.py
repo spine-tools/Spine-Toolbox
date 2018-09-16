@@ -32,7 +32,7 @@ import logging
 from copy import deepcopy
 from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
     QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QStyle
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from config import STATUSBAR_SS
 from models import MinimalTableModel
@@ -52,11 +52,14 @@ class CustomQDialog(QDialog):
     Attributes:
         parent (DataStoreForm): data store widget
     """
+    confirmed = Signal("QVariant", name="confirmed")
+
     def __init__(self, parent):
         super().__init__(parent)
         self.ui = None
         self.model = MinimalTableModel(self)
         self.model.can_grow = True
+        self.args_list = list()
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         self.icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
@@ -117,6 +120,11 @@ class CustomQDialog(QDialog):
     def model_data_changed(self, top_left, bottom_right, roles):
         pass
 
+    def accept(self):
+        """Emit confirmed signal"""
+        self.confirmed.emit(self.args_list)
+        super().accept()
+
 
 class AddObjectClassesDialog(CustomQDialog):
     """A dialog to query user's preferences for new object classes.
@@ -128,7 +136,6 @@ class AddObjectClassesDialog(CustomQDialog):
     def __init__(self, parent, mapping):
         super().__init__(parent)
         self.object_class_list = mapping.object_class_list()
-        self.object_class_args_list = list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.model.set_horizontal_header_labels(['object class name', 'description'])
@@ -161,7 +168,7 @@ class AddObjectClassesDialog(CustomQDialog):
                 'description': description,
                 'display_order': display_order
             }
-            self.object_class_args_list.append(object_class_args)
+            self.args_list.append(object_class_args)
         super().accept()
 
 
@@ -175,7 +182,6 @@ class AddObjectsDialog(CustomQDialog):
     """
     def __init__(self, parent, mapping, class_id=None):
         super().__init__(parent)
-        self.object_args_list = list()
         self.mapping = mapping
         default_class = mapping.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
@@ -229,7 +235,7 @@ class AddObjectsDialog(CustomQDialog):
                 'name': name,
                 'description': description
             }
-            self.object_args_list.append(object_args)
+            self.args_list.append(object_args)
         super().accept()
 
 
@@ -243,7 +249,6 @@ class AddRelationshipClassesDialog(CustomQDialog):
     """
     def __init__(self, parent, mapping, object_class_one_id=None):
         super().__init__(parent)
-        self.wide_relationship_class_args_list = list()
         self.mapping = mapping
         self.number_of_dimensions = 2
         self.object_class_one_name = None
@@ -349,7 +354,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
             }
-            self.wide_relationship_class_args_list.append(wide_relationship_class_args)
+            self.args_list.append(wide_relationship_class_args)
         super().accept()
 
 
@@ -365,7 +370,6 @@ class AddRelationshipsDialog(CustomQDialog):
     """
     def __init__(self, parent, mapping, relationship_class_id=None, object_id=None, object_class_id=None):
         super().__init__(parent)
-        self.wide_relationship_args_list = list()
         self.mapping = mapping
         self.relationship_class_list = mapping.wide_relationship_class_list(object_class_id=object_class_id).all()
         self.relationship_class = None
@@ -529,7 +533,7 @@ class AddRelationshipsDialog(CustomQDialog):
                 'object_id_list': object_id_list,
                 'class_id': self.relationship_class.id
             }
-            self.wide_relationship_args_list.append(wide_relationship_args)
+            self.args_list.append(wide_relationship_args)
         super().accept()
 
 

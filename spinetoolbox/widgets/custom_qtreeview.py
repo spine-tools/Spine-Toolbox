@@ -53,13 +53,15 @@ class ObjectTreeView(QTreeView):
         return False
 
     def copy(self):
-        """Copy data from current index to clipboard."""
+        """Copy current selection to clipboard in excel format."""
         selection = self.selectionModel().selection()
-        index = self.currentIndex()
-        if not index.isValid():
+        if not selection:
             return False
-        content = index.data(Qt.DisplayRole)
+        indexes = selection.indexes()
+        values = [index.data(Qt.DisplayRole) for index in indexes]
+        content = "\n".join(values)
         QApplication.clipboard().setText(content)
+        return True
 
 
 class ReferencesTreeView(QTreeView):

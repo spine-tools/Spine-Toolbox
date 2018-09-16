@@ -93,6 +93,9 @@
           <property name="editTriggers">
            <set>QAbstractItemView::EditKeyPressed</set>
           </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::ExtendedSelection</enum>
+          </property>
          </widget>
         </item>
        </layout>
