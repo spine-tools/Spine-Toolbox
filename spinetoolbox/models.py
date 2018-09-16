@@ -791,16 +791,29 @@ class MinimalTableModel(QAbstractTableModel):
                 return None
             return section + 1
 
-    def set_horizontal_header_labels(self, header):
-        """sets header for the given orientation and role."""
-        if not header:
+    def set_horizontal_header_labels(self, labels):
+        """Set horizontal header labels."""
+        if not labels:
             return
         self.header = list()
-        for section, value in enumerate(header):
-            if section >= self.columnCount():
+        for j, value in enumerate(labels):
+            if j >= self.columnCount():
                 self.header.append({})
-            self.setHeaderData(section, Qt.Horizontal, value, role=Qt.EditRole)
-        self.headerDataChanged.emit(Qt.Horizontal, 0, len(header))
+            # self.setHeaderData(j, Qt.Horizontal, value, role=Qt.EditRole)
+            self.header[j][Qt.DisplayRole] = value
+        self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
+
+    def insert_horizontal_header_labels(self, section, labels):
+        """Insert horizontal header labels at the given section."""
+        if not labels:
+            return
+        for j, value in enumerate(labels):
+            if section + j >= self.columnCount():
+                self.header.append({})
+            else:
+                self.header.insert(section + j, {})
+            self.header[section + j][Qt.DisplayRole] = value
+        self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels))
 
     def horizontal_header_labels(self):
         return [self.headerData(section, Qt.Horizontal, Qt.DisplayRole) for section in range(self.columnCount())]
@@ -923,8 +936,8 @@ class MinimalTableModel(QAbstractTableModel):
                 new_row = [{}]
                 new_flags_row = [self.default_flags]
             else:
-                new_row = [{} for i in range(self.columnCount())]
-                new_flags_row = [self.default_flags for i in range(self.columnCount())]
+                new_row = [{} for j in range(self.columnCount())]
+                new_flags_row = [self.default_flags for j in range(self.columnCount())]
             # Notice if insert index > rowCount(), new object is inserted to end
             self._data.insert(row + i, new_row)
             self._flags.insert(row + i, new_flags_row)
@@ -954,14 +967,12 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if column < 0 or column > self.columnCount():
             return False
-        if not count == 1:
-            logging.error("Insert 1 column at a time")
-            return False
-        self.beginInsertColumns(parent, column, column)
-        for j in range(self.rowCount()):
-            # Notice if insert index > rowCount(), new object is inserted to end
-            self._data[j].insert(column, {})
-            self._flags[j].insert(column, self.default_flags)
+        self.beginInsertColumns(parent, column, column + count - 1)
+        for j in range(count):
+            for i in range(self.rowCount()):
+                # Notice if insert index > rowCount(), new object is inserted to end
+                self._data[i].insert(column + j, {})
+                self._flags[i].insert(column + j, self.default_flags)
         self.endInsertColumns()
         return True
 
@@ -1321,6 +1332,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.bold_font.setBold(True)
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
+        self.h = None
         # List of rules. Each rule is a dict. Items are the terms of an 'or' statement
         self.rule_dict_list = list()
         self.subrule_dict = dict()
@@ -1329,7 +1341,11 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
-        self.h = source_model.horizontal_header_labels().index
+        source_model.headerDataChanged.connect(self.update_h)
+        self.update_h()
+
+    def update_h(self):
+        self.h = self.sourceModel().horizontal_header_labels().index
 
     def set_work_in_progress(self, row, on):
         """Add row into list of work in progress."""

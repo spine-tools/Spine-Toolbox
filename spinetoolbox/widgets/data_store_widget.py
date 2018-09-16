@@ -414,8 +414,10 @@ class DataStoreForm(QMainWindow):
         relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
         # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
         header = [x['name'] for x in relationship_parameter_value_list.column_descriptions]
-        max_object_list_len = max([len(x.object_name_list.split(',')) for x in relationship_parameter_value_list])
-        self.object_name_header = ["object_name_" + str(i+1) for i in range(max_object_list_len)]
+        relationship_class_list = self.mapping.wide_relationship_class_list()
+        max_dim_count = max(
+            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
+        self.object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count)]
         object_name_list_index = header.index("object_name_list")
         header.pop(object_name_list_index)
         for i, x in enumerate(self.object_name_header):
@@ -426,7 +428,7 @@ class DataStoreForm(QMainWindow):
         for row in relationship_parameter_value_list:
             row_values_list = list(row._asdict().values())
             object_name_list = row_values_list.pop(object_name_list_index).split(',')
-            for i in range(max_object_list_len):
+            for i in range(max_dim_count):
                 try:
                     value = object_name_list[i]
                 except IndexError:
@@ -557,7 +559,8 @@ class DataStoreForm(QMainWindow):
                 relationship_class_name = [x.name for x in relationship_class_list]
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
-                max_object_count = max([len(x.object_class_id_list.split(',')) for x in relationship_class_list])
+                max_object_count = max(
+                    [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
             elif selected_type == 'object':
                 object_class_name = parent['name']
                 object_class_id = parent['id']
@@ -569,7 +572,8 @@ class DataStoreForm(QMainWindow):
                 self.object_parameter_value_proxy.add_rule(object_name=object_name)
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
                 self.relationship_parameter_value_proxy.add_rule(**object_name_dict)
-                max_object_count = max([len(x.object_class_id_list.split(',')) for x in relationship_class_list])
+                max_object_count = max(
+                    [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
             elif selected_type == 'relationship_class':
                 selected_object_class_name = grand_parent['name']
                 object_name = parent['name']
@@ -762,6 +766,17 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit(e.msg)
                 continue
             self.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
+            dim_count = len(wide_relationship_class.object_class_id_list.split(','))
+            max_dim_count = len(self.object_name_header)
+            ext_object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count, dim_count)]
+            print(ext_object_name_header)
+            if ext_object_name_header:
+                header = self.relationship_parameter_value_model.horizontal_header_labels()
+                section = header.index(self.object_name_header[-1]) + 1
+                self.relationship_parameter_value_model.insertColumns(section, len(ext_object_name_header))
+                self.relationship_parameter_value_model.insert_horizontal_header_labels(
+                    section, ext_object_name_header)
+                self.object_name_header.extend(ext_object_name_header)
             msg = "Successfully added new relationship class '{}'.".format(wide_relationship_class.name)
             self.msg.emit(msg)
 
