@@ -95,6 +95,8 @@ class View(MetaObject):
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
             item_data = found_item.data(Qt.UserRole)
+            if item_data.item_type != "Data Store":
+                continue
             item_list.append(item_data)
         return item_list
 

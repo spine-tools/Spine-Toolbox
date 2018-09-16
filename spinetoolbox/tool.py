@@ -28,6 +28,7 @@ import logging
 import os
 import json
 import shutil
+import getpass
 from metaobject import MetaObject
 from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt, QUrl
@@ -427,44 +428,43 @@ class Tool(MetaObject):
             item_list.append(item_data)
         return item_list
 
-    def copy_output_files(self, output_items):
-        """Copy all Tool output files to all child Data Connections and Data Stores.
+    def create_refs_to_output_files(self, output_items):
+        """Create refs to Tool output files in all child Data Connections and Data Stores.
+        In case of Data Store only one reference is created (to the first file in the list)
 
         Args:
             output_items (list): Destination items for output files.
         """
         for item in output_items:
-            self._toolbox.msg.emit("*** Copying Tool <b>{0}</b> output files to {1} <b>{2}</b> ***"
-                                   .format(self.name, item.item_type, item.name))
-            dst_dir = ""
-            # Copy to child Data Store
-            if item.item_type == "Data Store":
-                if os.path.isdir(item.data_dir):
-                    dst_dir = item.data_dir
-            # Copy to child Data Connection
-            elif item.item_type == "Data Connection":
-                if os.path.isdir(item.data_dir):
-                    dst_dir = item.data_dir
-            else:
-                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>")
-                continue
-            n_copied_files = 0
-            for output_file in self._tool_template.outputfiles:
+            n_created_refs = 0
+            # NOTE: We need to take the basename here since the tool instance saves
+            # the output files *without* the 'subfolder' part in the output folder
+            for output_file in [os.path.basename(x) for x in self._tool_template.outputfiles]:
+                self._toolbox.msg.emit("*** Creating reference to Tool <b>{0}</b>'s output file {1} "
+                                       "in {2} <b>{3}</b> ***"
+                                       .format(self.name, output_file, item.item_type, item.name))
+                # NOTE: output files are saved
                 src_path = os.path.join(self.instance.output_dir, output_file)
                 if not os.path.exists(src_path):
-                    self._toolbox.msg_error.emit("\t Source file <b>{0}</b> does not exist".format(src_path))
+                    self._toolbox.msg_error.emit("\t Output file <b>{0}</b> does not exist".format(src_path))
                     continue
-                # Join filename to dst folder
-                dst_path = os.path.join(dst_dir, output_file)
-                self._toolbox.msg.emit("\tCopying <b>{0}</b>".format(output_file))
-                try:
-                    shutil.copyfile(src_path, dst_path)
-                    n_copied_files += 1
-                except OSError as e:
-                    logging.error(e)
-                    self._toolbox.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
-                                                 .format(src_path, dst_path))
-            self._toolbox.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+                if item.item_type == "Data Connection":
+                    item.add_file_to_references(src_path)
+                    n_created_refs += 1
+                elif item.item_type == "Data Store":
+                    reference = {
+                        'url': 'sqlite:///{0}'.format(src_path),
+                        'database': output_file,
+                        'username': getpass.getuser()
+                    }
+                    item.load_reference(reference)
+                    self._toolbox.msg.emit("\tCreated <b>1</b> reference")
+                    break
+                else:
+                    self._toolbox.msg_warning.emit("\t<b>Not implemented</b>")
+                    break
+            if item.item_type == "Data Connection":
+                self._toolbox.msg.emit("\tCreated <b>{0}</b> reference(s)".format(n_created_refs))
 
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
@@ -478,8 +478,8 @@ class Tool(MetaObject):
             # copy output files to data directories of connected items
             output_items = self.find_output_items()
             if output_items:
-                # self._toolbox.msg.emit("Copying Tool output files to connected items")
-                self.copy_output_files(output_items)
+                # self._toolbox.msg.emit("Creating references to Tool output files in connected items")
+                self.create_refs_to_output_files(output_items)
             self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
         else:
             self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))

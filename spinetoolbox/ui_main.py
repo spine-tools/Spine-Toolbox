@@ -838,10 +838,13 @@ class ToolboxUI(QMainWindow):
                 return
         item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
-        try:
-            data_dir = item_data.data_dir
-        except AttributeError:
-            logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
+        if item_data.item_type in ("Data Connection", "Data Store"):
+            try:
+                data_dir = item_data.data_dir
+            except AttributeError:
+                logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
+                data_dir = None
+        else:
             data_dir = None
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
