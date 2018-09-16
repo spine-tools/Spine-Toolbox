@@ -26,8 +26,7 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication
 from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, \
-    CustomToolButtonEditor, CustomSimpleToolButtonEditor
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor
 
 
 class LineEditDelegate(QItemDelegate):
@@ -138,30 +137,16 @@ class DataStoreDelegate(QItemDelegate):
 
     def setEditorData(self, editor, index):
         """Do nothing."""
-        pass
+        if isinstance(editor, CustomComboEditor):
+            editor.showPopup()
+        elif isinstance(editor, CustomLineEditor):
+            data = editor.index().data(Qt.EditRole)
+            if data:
+                editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `commitData` signal."""
         pass
-
-    def eventFilter(self, editor, event):
-        """Setup editor in show event, and wrap it up in hide events."""
-        if event.type() == QEvent.ShowToParent:
-            if isinstance(editor, CustomComboEditor):
-                editor.showPopup()
-            elif isinstance(editor, CustomLineEditor):
-                data = editor.index().data(Qt.EditRole)
-                if data:
-                    editor.setText(str(data))
-            elif isinstance(editor, CustomToolButtonEditor):
-                editor.click()
-            return True
-        elif event.type() == QEvent.HideToParent:
-            if isinstance(editor, CustomToolButtonEditor):
-                self.commitData.emit(editor)
-                self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
-                return True
-        return super().eventFilter(editor, event)
 
 
 class HighlightFrameDelegate(QItemDelegate):
@@ -273,44 +258,58 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
         index = proxy_index.model().mapToSource(proxy_index)
         header = model.horizontal_header_labels()
         h = header.index
-        if index.column() == h('relationship_class_name'):
+        if header[index.column()] == 'relationship_class_name':
             relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
             return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
-        elif index.column() == h('object_name_list'):
+        elif header[index.column()].startswith('object_name_'):
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return None
-            # Get object class name list
+            # Get object class
+            dimension = int(header[index.column()].split('object_name_')[1]) - 1
             object_class_name_list = relationship_class.object_class_name_list.split(',')
-            # Create object name dictionary from object class name list
-            object_name_dict = dict()
-            for object_class_name in object_class_name_list:
-                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
-                if not object_class:
-                    continue
-                object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
-                object_name_dict[object_class_name] = object_name_list
-            # Get current object name list to set as initial choices
-            current_object_name_list = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else None
-            return CustomToolButtonEditor(parent, proxy_index, object_class_name_list, current_object_name_list,
-                **object_name_dict)
-        elif index.column() == h('parameter_name'):
+            try:
+                object_class_name = object_class_name_list[dimension]
+            except IndexError:
+                return None
+            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+            if not object_class:
+                return None
+            # Get object name list
+            object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
+            return CustomComboEditor(parent, proxy_index, object_name_list)
+        elif header[index.column()] == 'parameter_name':
+            # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
-            relationship_class_id = relationship_class.id if relationship_class else None
-            object_name_list = index.sibling(index.row(), h('object_name_list')).data(Qt.DisplayRole)
-            relationship = self.mapping.single_wide_relationship(class_id=relationship_class_id,
-                object_name_list=object_name_list).one_or_none()
-            if relationship:
-                parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
-                parameter_name_list = [x.name for x in parameter_list]
-            else:
-                parameter_list = self.mapping.relationship_parameter_list(relationship_class_id=relationship_class_id)
+            # Get parameter name list
+            if not relationship_class:
+                parameter_list = self.mapping.relationship_parameter_list()
                 parameter_name_list = [x.parameter_name for x in parameter_list]
+            else:
+                # Get object name list
+                object_name_list = list()
+                object_class_count = len(relationship_class.object_class_id_list.split(','))
+                for j in range(h('object_name_1'), h('object_name_1') + object_class_count):
+                    object_name = index.sibling(index.row(), j).data(Qt.DisplayRole)
+                    if not object_name:
+                        break
+                    object_name_list.append(object_name)
+                # Get relationship
+                relationship = self.mapping.single_wide_relationship(
+                    class_id=relationship_class.id,
+                    object_name_list=",".join(object_name_list)).one_or_none()
+                if relationship:
+                    parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
+                    parameter_name_list = [x.name for x in parameter_list]
+                else:
+                    parameter_list = self.mapping.relationship_parameter_list(
+                        relationship_class_id=relationship_class.id)
+                    parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
         else:
             return CustomLineEditor(parent, proxy_index)

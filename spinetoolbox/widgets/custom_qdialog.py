@@ -195,8 +195,8 @@ class AddObjectsDialog(CustomQDialog):
     def resize_tableview(self):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
-        object_class_width = max([self.font_metric.width(x.name) for x in self.mapping.object_class_list()],
-            default=0)
+        object_class_width = max(
+            [self.font_metric.width(x.name) for x in self.mapping.object_class_list()], default=0)
         class_width = max(object_class_width, header.sectionSize(0))
         header.resizeSection(0, self.icon_width + class_width)
         header.resizeSection(1, 200)
