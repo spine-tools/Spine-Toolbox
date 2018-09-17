@@ -69,7 +69,6 @@ class DataStoreForm(QMainWindow):
         self.ui.setupUi(self)
         self.ui.actionCopy.setIcon(QIcon.fromTheme("edit-copy"))
         self.ui.actionPaste.setIcon(QIcon.fromTheme("edit-paste"))
-        self.ui.actionPaste_into_new_rows.setIcon(QIcon.fromTheme("edit-paste"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
@@ -168,7 +167,6 @@ class DataStoreForm(QMainWindow):
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
-        self.ui.actionPaste_into_new_rows.triggered.connect(self.paste_into_new_rows)
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
@@ -258,15 +256,6 @@ class DataStoreForm(QMainWindow):
         except AttributeError as err:
             self.msg.emit("Cannot paste to widget ({0}): {1}".format(focus_widget.objectName(), err))
 
-    @Slot(name="paste_into_new_rows")
-    def paste_into_new_rows(self):
-        """Paste data from clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.paste(self.clipboard_text, into_new_rows=True)
-        except AttributeError as err:
-            self.msg.emit("Cannot paste to widget ({0}): {1}".format(focus_widget.objectName(), err))
-
     @Slot(name="set_paste_enabled")
     def set_paste_enabled(self):
         """Called when Edit menu is about to show.
@@ -279,7 +268,6 @@ class DataStoreForm(QMainWindow):
         on |= self.ui.tableView_object_parameter_value.hasFocus()
         on |= self.ui.tableView_relationship_parameter_value.hasFocus()
         self.ui.actionPaste.setEnabled(on)
-        self.ui.actionPaste_into_new_rows.setEnabled(on)
 
     @Slot(name="import_file")
     def import_file(self):
@@ -684,8 +672,7 @@ class DataStoreForm(QMainWindow):
         self.show_add_relationships_form(
             relationship_class_id=relationship_class['id'],
             object_id=object_['id'],
-            object_class_id=object_class['id']
-        )
+            object_class_id=object_class['id'])
 
     def call_add_parameters(self, tree_index):
         class_type = tree_index.data(Qt.UserRole)
@@ -891,8 +878,6 @@ class DataStoreForm(QMainWindow):
             self.ui.tableView_object_parameter_value.copy()
         elif option == "Paste":
             self.ui.tableView_object_parameter_value.paste(self.clipboard_text)
-        elif option == "Paste into new row(s)":
-            self.ui.tableView_object_parameter_value.paste(self.clipboard_text, into_new_rows=True)
         self.object_parameter_value_context_menu.deleteLater()
         self.object_parameter_value_context_menu = None
 
@@ -913,8 +898,6 @@ class DataStoreForm(QMainWindow):
             self.ui.tableView_relationship_parameter_value.copy()
         elif option == "Paste":
             self.ui.tableView_relationship_parameter_value.paste(self.clipboard_text)
-        elif option == "Paste into new row(s)":
-            self.ui.tableView_relationship_parameter_value.paste(self.clipboard_text, into_new_rows=True)
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
 
@@ -935,8 +918,6 @@ class DataStoreForm(QMainWindow):
             self.ui.tableView_object_parameter.copy()
         elif option == "Paste":
             self.ui.tableView_object_parameter.paste(self.clipboard_text)
-        elif option == "Paste into new row(s)":
-            self.ui.tableView_object_parameter.paste(self.clipboard_text, into_new_rows=True)
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
 
@@ -957,8 +938,6 @@ class DataStoreForm(QMainWindow):
             self.ui.tableView_relationship_parameter.copy()
         elif option == "Paste":
             self.ui.tableView_relationship_parameter.paste(self.clipboard_text)
-        elif option == "Paste into new row(s)":
-            self.ui.tableView_relationship_parameter.paste(self.clipboard_text, into_new_rows=True)
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
@@ -1135,8 +1114,16 @@ class DataStoreForm(QMainWindow):
             i = 0
             for index in selection.indexes():
                 if index.data(Qt.UserRole) == 'relationship_class':
+                    selected_object_class_name = index.parent().parent().data(Qt.DisplayRole)
+                    object_name = index.parent().data(Qt.DisplayRole)
                     relationship_class_name = index.data(Qt.DisplayRole)
+                    object_class_name_list = index.data(Qt.UserRole+1)["object_class_name_list"].split(",")
                     object_name_list = list()
+                    for object_class_name in object_class_name_list:
+                        if object_class_name == selected_object_class_name:
+                            object_name_list.append(object_name)
+                        else:
+                            object_name_list.append(None)
                 elif index.data(Qt.UserRole) == 'relationship':
                     relationship_class_name = index.parent().data(Qt.DisplayRole)
                     object_name_list = index.data(Qt.UserRole+1)["object_name_list"].split(",")

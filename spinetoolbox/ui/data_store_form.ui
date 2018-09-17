@@ -618,7 +618,6 @@
     </property>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
-    <addaction name="actionPaste_into_new_rows"/>
     <addaction name="separator"/>
     <addaction name="actionAdd_object_classes"/>
     <addaction name="actionAdd_objects"/>
@@ -869,14 +868,6 @@
    </property>
    <property name="text">
     <string>Remove relationship parameter definitions</string>
-   </property>
-  </action>
-  <action name="actionPaste_into_new_rows">
-   <property name="text">
-    <string>Paste into new row(s)</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+V</string>
    </property>
   </action>
  </widget>

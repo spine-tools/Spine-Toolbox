@@ -224,13 +224,11 @@ class ParameterContextMenu(CustomContextMenu):
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
-        if not index.isValid():
-            return
-        self.add_action("Remove selected")
-        self.addSeparator()
-        self.add_action("Copy")
-        self.add_action("Paste")
-        self.add_action("Paste into new row(s)")
+        if index.isValid():
+            self.add_action("Remove selected")
+            self.addSeparator()
+            self.add_action("Copy")
+            self.add_action("Paste")
         self.exec_(position)
 
 

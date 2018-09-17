@@ -368,13 +368,10 @@ class Ui_MainWindow(object):
         self.actionRemove_relationship_parameters = QtWidgets.QAction(MainWindow)
         self.actionRemove_relationship_parameters.setIcon(icon10)
         self.actionRemove_relationship_parameters.setObjectName("actionRemove_relationship_parameters")
-        self.actionPaste_into_new_rows = QtWidgets.QAction(MainWindow)
-        self.actionPaste_into_new_rows.setObjectName("actionPaste_into_new_rows")
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
         self.menuEdit.addAction(self.actionCopy)
         self.menuEdit.addAction(self.actionPaste)
-        self.menuEdit.addAction(self.actionPaste_into_new_rows)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionAdd_object_classes)
         self.menuEdit.addAction(self.actionAdd_objects)
@@ -458,8 +455,6 @@ class Ui_MainWindow(object):
         self.actionRemove_relationship_parameter_values.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameter values", None, -1))
         self.actionRemove_object_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object parameter definitions", None, -1))
         self.actionRemove_relationship_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameter definitions", None, -1))
-        self.actionPaste_into_new_rows.setText(QtWidgets.QApplication.translate("MainWindow", "Paste into new row(s)", None, -1))
-        self.actionPaste_into_new_rows.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+V", None, -1))
 
 from widgets.custom_qtableview import ParameterTableView
 from widgets.custom_qtreeview import ObjectTreeView

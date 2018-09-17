@@ -82,16 +82,13 @@ class CustomQTableView(QTableView):
         QApplication.clipboard().setText(content)
         return True
 
-    def paste(self, text, into_new_rows=False):
+    def paste(self, text):
         """Paste data from clipboard."""
-        if into_new_rows:
-            self.paste_normal(text, into_new_rows=True)
+        selection = self.selectionModel().selection()
+        if len(selection.indexes()) > 1:
+            self.paste_on_selection(text)
         else:
-            selection = self.selectionModel().selection()
-            if len(selection.indexes()) > 1:
-                self.paste_on_selection(text)
-            else:
-                self.paste_normal(text, into_new_rows=False)
+            self.paste_normal(text)
 
     def paste_on_selection(self, text):
         """Paste clipboard data on selection, but not beyond.
@@ -117,7 +114,7 @@ class CustomQTableView(QTableView):
                 value = data[ii][jj]
                 self.model().setData(index, value, Qt.EditRole)
 
-    def paste_normal(self, text, into_new_rows=False):
+    def paste_normal(self, text):
         """Paste clipboard data, overwritting cells if needed"""
         if not text:
             return False
@@ -134,8 +131,6 @@ class CustomQTableView(QTableView):
                 continue
             if v_header.isSectionHidden(row):
                 row += 1
-            if into_new_rows:
-                self.model().insertRows(row, 1)
             column = top_left_index.column()
             for value in line:
                 if not value:
