@@ -1055,6 +1055,55 @@ class ObjectTreeModel(QStandardItemModel):
         self.clear()
         root_item = QStandardItem(db_name)
         root_item.setData('root', Qt.UserRole)
+        object_class_list = self.db_mngr.object_class_list()
+        object_list = self.db_mngr.object_list()
+        wide_relationship_class_list = self.db_mngr.wide_relationship_class_list()
+        wide_relationship_list = self.db_mngr.wide_relationship_list()
+        for object_class in object_class_list:
+            object_class_item = QStandardItem(object_class.name)
+            object_class_item.setData('object_class', Qt.UserRole)
+            object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
+            object_list = self.db_mngr.object_list(class_id=object_class.id)
+            wide_relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class.id)
+            for object_ in object_list:
+                if object_.class_id != object_class.id:
+                    continue
+                object_item = QStandardItem(object_.name)
+                object_item.setData('object', Qt.UserRole)
+                object_item.setData(object_._asdict(), Qt.UserRole+1)
+                for wide_relationship_class in wide_relationship_class_list:
+                    if object_class.id not in wide_relationship_class.object_class_id_list.split(","):
+                        continue
+                    relationship_class_item = QStandardItem(wide_relationship_class.name)
+                    relationship_class_item.setData('relationship_class', Qt.UserRole)
+                    relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole+1)
+                    relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+                    wide_relationship_list = self.db_mngr.wide_relationship_list(
+                        class_id=wide_relationship_class.id,
+                        object_id=object_.id)
+                    for wide_relationship in wide_relationship_list:
+                        if wide_relationship.class_id != wide_relationship_class.id:
+                            continue
+                        if object_.id not in wide_relationship.object_id_list.split(","):
+                            continue
+                        relationship_item = QStandardItem(wide_relationship.name)
+                        relationship_item.setData('relationship', Qt.UserRole)
+                        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole+1)
+                        relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
+                        relationship_class_item.appendRow(relationship_item)
+                    object_item.appendRow(relationship_class_item)
+                object_class_item.appendRow(object_item)
+            root_item.appendRow(object_class_item)
+        self.appendRow(root_item)
+        return root_item
+
+    def _build_tree(self, db_name):
+        """Create root item and object class items. This triggers a recursion
+        that builds up the tree.
+        """
+        self.clear()
+        root_item = QStandardItem(db_name)
+        root_item.setData('root', Qt.UserRole)
         for object_class in self.db_mngr.object_class_list():
             object_class_item = self.new_object_class_item(object_class._asdict())
             root_item.appendRow(object_class_item)
