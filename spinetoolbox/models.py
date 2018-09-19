@@ -1062,7 +1062,7 @@ class ObjectTreeModel(QStandardItemModel):
     def __init__(self, data_store_form):
         """Initialize class"""
         super().__init__(data_store_form)
-        self.mapping = data_store_form.mapping
+        self.db_mngr = data_store_form.db_mngr
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
@@ -1093,7 +1093,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.clear()
         root_item = QStandardItem(db_name)
         root_item.setData('root', Qt.UserRole)
-        for object_class in self.mapping.object_class_list():
+        for object_class in self.db_mngr.object_class_list():
             object_class_item = self.new_object_class_item(object_class._asdict())
             root_item.appendRow(object_class_item)
         self.appendRow(root_item)
@@ -1108,8 +1108,8 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item = QStandardItem(object_class['name'])
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class, Qt.UserRole+1)
-        object_list = self.mapping.object_list(class_id=object_class['id'])
-        wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class['id'])
+        object_list = self.db_mngr.object_list(class_id=object_class['id'])
+        wide_relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class['id'])
         for object_ in object_list:
             object_item = self.new_object_item(object_._asdict(), wide_relationship_class_list)
             object_class_item.appendRow(object_item)
@@ -1143,7 +1143,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class['object_class_name_list'], Qt.ToolTipRole)
         # get relationship involving the present object and class in wide format
-        wide_relationship_list = self.mapping.wide_relationship_list(
+        wide_relationship_list = self.db_mngr.wide_relationship_list(
             class_id=wide_relationship_class['id'],
             object_id=object_['id'])
         for wide_relationship in wide_relationship_list:
@@ -1198,7 +1198,7 @@ class ObjectTreeModel(QStandardItemModel):
         if not object_class_item:
             logging.debug("Object class item not found in model. This is probably a bug.")
             return
-        wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_['class_id'])
+        wide_relationship_class_list = self.db_mngr.wide_relationship_class_list(object_['class_id'])
         object_item = self.new_object_item(object_, wide_relationship_class_list)
         object_class_item.appendRow(object_item)
 

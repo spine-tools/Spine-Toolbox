@@ -30,9 +30,9 @@ import getpass
 import logging
 from PySide2.QtGui import QDesktopServices, QIcon
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QStyle
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QStyle, QFileIconProvider
 from metaobject import MetaObject
-from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database
+from spinedatabase_api import DatabaseManager, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from graphics_items import DataStoreImage
@@ -64,7 +64,9 @@ class DataStore(MetaObject):
         self._widget.set_name_label(name)
         self._widget.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self._widget.ui.comboBox_dialect.setCurrentIndex(-1)
-        self._widget.ui.toolButton_browse.setIcon(self._widget.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self._widget.ui.toolButton_browse.setIcon(self._widget.style().standardIcon(QStyle.SP_DialogOpenButton))
+        icon_provider = QFileIconProvider()
+        self._widget.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -383,11 +385,11 @@ class DataStore(MetaObject):
         database = reference['database']
         username = reference['username']
         try:
-            mapping = DatabaseMapping(db_url, username)
+            db_mngr = DatabaseManager(db_url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        data_store_form = DataStoreForm(self, mapping, database)
+        data_store_form = DataStoreForm(self, db_mngr, database)
         data_store_form.show()
 
     @Slot(name="open_directory")

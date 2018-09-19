@@ -133,7 +133,7 @@ class DataStoreDelegate(QItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.mapping = parent.mapping
+        self.db_mngr = parent.db_mngr
 
     def setEditorData(self, editor, index):
         """Do nothing."""
@@ -191,31 +191,31 @@ class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
         index = proxy_index.model().mapToSource(proxy_index)
         h = model.horizontal_header_labels().index
         if index.column() == h('object_class_name'):
-            object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+            object_class_name_list = [x.name for x in self.db_mngr.object_class_list()]
             return CustomComboEditor(parent, proxy_index, object_class_name_list)
         elif index.column() == h('object_name'):
             parameter_name = index.sibling(index.row(), h('parameter_name')).data(Qt.DisplayRole)
-            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
             if parameter:
-                object_list = self.mapping.unvalued_object_list(parameter_id=parameter.id)
+                object_list = self.db_mngr.unvalued_object_list(parameter_id=parameter.id)
             else:
                 object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
-                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+                object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
                 object_class_id = object_class.id if object_class else None
-                object_list = self.mapping.object_list(class_id=object_class_id)
+                object_list = self.db_mngr.object_list(class_id=object_class_id)
             object_name_list = [x.name for x in object_list]
             return CustomComboEditor(parent, proxy_index, object_name_list)
         elif index.column() == h('parameter_name'):
             object_name = index.sibling(index.row(), h('object_name')).data(Qt.DisplayRole)
-            object_ = self.mapping.single_object(name=object_name).one_or_none()
+            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
             if object_:
-                parameter_list = self.mapping.unvalued_object_parameter_list(object_id=object_.id)
+                parameter_list = self.db_mngr.unvalued_object_parameter_list(object_id=object_.id)
                 parameter_name_list = [x.name for x in parameter_list]
             else:
                 object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
-                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+                object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
                 object_class_id = object_class.id if object_class else None
-                parameter_list = self.mapping.object_parameter_list(object_class_id=object_class_id)
+                parameter_list = self.db_mngr.object_parameter_list(object_class_id=object_class_id)
                 parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
         else:
@@ -239,7 +239,7 @@ class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
         h = header.index
         if not index.column() == h('object_class_name'):
             return CustomLineEditor(parent, proxy_index)
-        object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+        object_class_name_list = [x.name for x in self.db_mngr.object_class_list()]
         return CustomComboEditor(parent, proxy_index, object_class_name_list)
 
 
@@ -259,12 +259,12 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
         header = model.horizontal_header_labels()
         h = header.index
         if header[index.column()] == 'relationship_class_name':
-            relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
+            relationship_class_name_list = [x.name for x in self.db_mngr.wide_relationship_class_list()]
             return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
         elif header[index.column()].startswith('object_name_'):
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
+            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return None
@@ -275,20 +275,20 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
                 object_class_name = object_class_name_list[dimension]
             except IndexError:
                 return None
-            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+            object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
                 return None
             # Get object name list
-            object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
+            object_name_list = [x.name for x in self.db_mngr.object_list(class_id=object_class.id)]
             return CustomComboEditor(parent, proxy_index, object_name_list)
         elif header[index.column()] == 'parameter_name':
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
+            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             # Get parameter name list
             if not relationship_class:
-                parameter_list = self.mapping.relationship_parameter_list()
+                parameter_list = self.db_mngr.relationship_parameter_list()
                 parameter_name_list = [x.parameter_name for x in parameter_list]
             else:
                 # Get object name list
@@ -300,14 +300,14 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
                         break
                     object_name_list.append(object_name)
                 # Get relationship
-                relationship = self.mapping.single_wide_relationship(
+                relationship = self.db_mngr.single_wide_relationship(
                     class_id=relationship_class.id,
                     object_name_list=",".join(object_name_list)).one_or_none()
                 if relationship:
-                    parameter_list = self.mapping.unvalued_relationship_parameter_list(relationship.id)
+                    parameter_list = self.db_mngr.unvalued_relationship_parameter_list(relationship.id)
                     parameter_name_list = [x.name for x in parameter_list]
                 else:
-                    parameter_list = self.mapping.relationship_parameter_list(
+                    parameter_list = self.db_mngr.relationship_parameter_list(
                         relationship_class_id=relationship_class.id)
                     parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
@@ -332,7 +332,7 @@ class RelationshipParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
         h = header.index
         if not index.column() == h('relationship_class_name'):
             return CustomLineEditor(parent, proxy_index)
-        relationship_class_name_list = [x.name for x in self.mapping.wide_relationship_class_list()]
+        relationship_class_name_list = [x.name for x in self.db_mngr.wide_relationship_class_list()]
         return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
 
 
@@ -352,7 +352,7 @@ class AddObjectsDelegate(DataStoreDelegate):
         h = header.index
         if index.column() != h('object class name'):
             return CustomLineEditor(parent, index)
-        object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+        object_class_name_list = [x.name for x in self.db_mngr.object_class_list()]
         return CustomComboEditor(parent, index, object_class_name_list)
 
 
@@ -372,7 +372,7 @@ class AddRelationshipClassesDelegate(DataStoreDelegate):
         h = header.index
         if index.column() == h('relationship class name'):
             return CustomLineEditor(parent, index)
-        object_class_name_list = [x.name for x in self.mapping.object_class_list()]
+        object_class_name_list = [x.name for x in self.db_mngr.object_class_list()]
         return CustomComboEditor(parent, index, object_class_name_list)
 
 
@@ -393,11 +393,11 @@ class AddRelationshipsDelegate(DataStoreDelegate):
         if index.column() == h('relationship name'):
             return CustomLineEditor(parent, index)
         object_class_name = header[index.column()].split(' ', 1)[0]
-        object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+        object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
         if not object_class:
             object_name_list = list()
         else:
-            object_name_list = [x.name for x in self.mapping.object_list(class_id=object_class.id)]
+            object_name_list = [x.name for x in self.db_mngr.object_list(class_id=object_class.id)]
         return CustomComboEditor(parent, index, object_name_list)
 
 

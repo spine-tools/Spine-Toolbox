@@ -49,13 +49,13 @@ class DataStoreForm(QMainWindow):
 
     Attributes:
         data_store (DataStore): The DataStore instance that owns this form
-        mapping (DatabaseMapping): The object relational mapping
+        db_mngr (Databasedb_mngr): The object relational db_mngr
         database (str): The database name
     """
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
 
-    def __init__(self, data_store, mapping, database):
+    def __init__(self, data_store, db_mngr, database):
         """Initialize class."""
         tic = time.clock()
         super().__init__(flags=Qt.Window)
@@ -75,8 +75,8 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         # Class attributes
-        # DB mapping
-        self.mapping = mapping
+        # DB db_mngr
+        self.db_mngr = db_mngr
         self.database = database
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
@@ -287,7 +287,7 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
         elif file_path.lower().endswith('xlsx'):
             try:
-                insert_log, error_log = import_xlsx_to_db(self.mapping, file_path)
+                insert_log, error_log = import_xlsx_to_db(self.db_mngr, file_path)
                 self.msg.emit("Excel file successfully imported.")
                 logging.debug(insert_log)
                 logging.debug(error_log)
@@ -307,7 +307,7 @@ class DataStoreForm(QMainWindow):
         elif file_path.lower().endswith('xlsx'):
             filename = os.path.split(file_path)[1]
             try:
-                export_spine_database_to_xlsx(self.mapping, file_path)
+                export_spine_database_to_xlsx(self.db_mngr, file_path)
                 self.msg.emit("Excel file successfully exported.")
             except PermissionError:
                 self.msg_error.emit("Unable to export to file <b>{0}</b>.<br/>"
@@ -325,7 +325,7 @@ class DataStoreForm(QMainWindow):
         if answer != QDialog.Accepted:
             return
         try:
-            self.mapping.commit_session(dialog.commit_msg)
+            self.db_mngr.commit_session(dialog.commit_msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -335,7 +335,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="rollback_session")
     def rollback_session(self):
         try:
-            self.mapping.rollback_session()
+            self.db_mngr.rollback_session()
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -366,8 +366,8 @@ class DataStoreForm(QMainWindow):
         # Get old data
         old_object_parameter_value_data = self.object_parameter_value_model.model_data().copy()
         # Add new data
-        object_parameter_value_list = self.mapping.object_parameter_value_list()
-        header = [x['name'] for x in object_parameter_value_list.column_descriptions]
+        object_parameter_value_list = self.db_mngr.object_parameter_value_list()
+        header = self.db_mngr.object_parameter_value_fields()
         self.object_parameter_value_model.set_horizontal_header_labels(header)
         object_parameter_value_data = [list(row._asdict().values()) for row in object_parameter_value_list]
         # Add old wip rows
@@ -381,10 +381,10 @@ class DataStoreForm(QMainWindow):
         # Get old data
         old_relationship_parameter_value_data = self.relationship_parameter_value_model.model_data().copy()
         # Add new data
-        relationship_parameter_value_list = self.mapping.relationship_parameter_value_list()
+        relationship_parameter_value_list = self.db_mngr.relationship_parameter_value_list()
         # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
-        header = [x['name'] for x in relationship_parameter_value_list.column_descriptions]
-        relationship_class_list = self.mapping.wide_relationship_class_list()
+        header = self.db_mngr.relationship_parameter_value_fields()
+        relationship_class_list = self.db_mngr.wide_relationship_class_list()
         max_dim_count = max(
             [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
         self.object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count)]
@@ -419,9 +419,9 @@ class DataStoreForm(QMainWindow):
         # Get old data
         old_object_parameter_data = self.object_parameter_model.model_data().copy()
         # Add new data
-        object_parameter_list = self.mapping.object_parameter_list()
-        header = object_parameter_list.column_descriptions
-        self.object_parameter_model.set_horizontal_header_labels([column['name'] for column in header])
+        object_parameter_list = self.db_mngr.object_parameter_list()
+        header = self.db_mngr.object_parameter_fields()
+        self.object_parameter_model.set_horizontal_header_labels(header)
         object_parameter_data = [list(row._asdict().values()) for row in object_parameter_list]
         # Add old wip rows
         for row in sorted(self.object_parameter_model.wip_row_list.copy()):
@@ -433,9 +433,9 @@ class DataStoreForm(QMainWindow):
         # Get old data
         old_relationship_parameter_data = self.relationship_parameter_model.model_data().copy()
         # Add new data
-        relationship_parameter_list = self.mapping.relationship_parameter_list()
-        header = relationship_parameter_list.column_descriptions
-        self.relationship_parameter_model.set_horizontal_header_labels([column['name'] for column in header])
+        relationship_parameter_list = self.db_mngr.relationship_parameter_list()
+        header = self.db_mngr.relationship_parameter_fields()
+        self.relationship_parameter_model.set_horizontal_header_labels(header)
         relationship_parameter_data = [list(row._asdict().values()) for row in relationship_parameter_list]
         # Add old wip rows
         for row in sorted(self.relationship_parameter_model.wip_row_list.copy()):
@@ -525,7 +525,7 @@ class DataStoreForm(QMainWindow):
             if selected_type == 'object_class':
                 object_class_name = selected['name']
                 object_class_id = selected['id']
-                relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+                relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name = [x.name for x in relationship_class_list]
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
@@ -535,7 +535,7 @@ class DataStoreForm(QMainWindow):
                 object_class_name = parent['name']
                 object_class_id = parent['id']
                 object_name = selected['name']
-                relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+                relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name = [x.name for x in relationship_class_list]
                 object_name_dict = {x: object_name for x in self.object_name_header}
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
@@ -589,14 +589,14 @@ class DataStoreForm(QMainWindow):
         if selected_type == 'object_class':
             object_class_name = selected['name']
             object_class_id = selected['id']
-            relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+            relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class_id)
             relationship_class_name = [x.name for x in relationship_class_list]
             self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
             self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
         elif selected_type == 'object':
             object_class_name = parent['name']
             object_class_id = parent['id']
-            relationship_class_list = self.mapping.wide_relationship_class_list(object_class_id=object_class_id)
+            relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class_id)
             relationship_class_name = [x.name for x in relationship_class_list]
             self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
             self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
@@ -691,7 +691,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="show_add_object_classes_form")
     def show_add_object_classes_form(self):
         """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self, self.mapping)
+        dialog = AddObjectClassesDialog(self, self.db_mngr)
         dialog.confirmed.connect(self.add_object_classes)
         dialog.show()
 
@@ -700,18 +700,18 @@ class DataStoreForm(QMainWindow):
         """Insert new object classes."""
         for object_class_args in object_class_args_list:
             try:
-                object_class = self.mapping.add_object_class(**object_class_args)
+                object_class = self.db_mngr.add_object_class(**object_class_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_object_class(object_class.__dict__)
+            self.object_tree_model.add_object_class(object_class._asdict())
             msg = "Successfully added new object class '{}'.".format(object_class.name)
             self.msg.emit(msg)
 
     @Slot(name="show_add_objects_form")
     def show_add_objects_form(self, class_id=None):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, self.mapping, class_id=class_id)
+        dialog = AddObjectsDialog(self, self.db_mngr, class_id=class_id)
         dialog.confirmed.connect(self.add_objects)
         dialog.show()
 
@@ -720,17 +720,17 @@ class DataStoreForm(QMainWindow):
         """Insert new objects."""
         for object_args in object_args_list:
             try:
-                object_ = self.mapping.add_object(**object_args)
+                object_ = self.db_mngr.add_object(**object_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_tree_model.add_object(object_.__dict__)
+            self.object_tree_model.add_object(object_._asdict())
             msg = "Successfully added new object '{}'.".format(object_.name)
             self.msg.emit(msg)
 
     def show_add_relationship_classes_form(self, object_class_id=None):
         """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, self.mapping, object_class_one_id=object_class_id)
+        dialog = AddRelationshipClassesDialog(self, self.db_mngr, object_class_one_id=object_class_id)
         dialog.confirmed.connect(self.add_relationship_classes)
         dialog.show()
 
@@ -739,7 +739,7 @@ class DataStoreForm(QMainWindow):
         """Insert new relationship classes."""
         for wide_relationship_class_args in wide_relationship_class_args_list:
             try:
-                wide_relationship_class = self.mapping.add_wide_relationship_class(**wide_relationship_class_args)
+                wide_relationship_class = self.db_mngr.add_wide_relationship_class(**wide_relationship_class_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
@@ -747,7 +747,6 @@ class DataStoreForm(QMainWindow):
             dim_count = len(wide_relationship_class.object_class_id_list.split(','))
             max_dim_count = len(self.object_name_header)
             ext_object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count, dim_count)]
-            print(ext_object_name_header)
             if ext_object_name_header:
                 header = self.relationship_parameter_value_model.horizontal_header_labels()
                 section = header.index(self.object_name_header[-1]) + 1
@@ -763,7 +762,7 @@ class DataStoreForm(QMainWindow):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
-            self.mapping,
+            self.db_mngr,
             relationship_class_id=relationship_class_id,
             object_id=object_id,
             object_class_id=object_class_id
@@ -776,7 +775,7 @@ class DataStoreForm(QMainWindow):
         """Insert new relationships."""
         for wide_relationship_args in wide_relationship_args_list:
             try:
-                wide_relationship = self.mapping.add_wide_relationship(**wide_relationship_args)
+                wide_relationship = self.db_mngr.add_wide_relationship(**wide_relationship_args)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
@@ -799,16 +798,16 @@ class DataStoreForm(QMainWindow):
         renamed = renamed_item.data(Qt.UserRole+1)
         try:
             if renamed_type == 'object_class':
-                object_class = self.mapping.rename_object_class(renamed['id'], new_name)
+                object_class = self.db_mngr.rename_object_class(renamed['id'], new_name)
                 msg = "Successfully renamed object class to '{}'.".format(object_class.name)
             elif renamed_type == 'object':
-                object_ = self.mapping.rename_object(renamed['id'], new_name)
+                object_ = self.db_mngr.rename_object(renamed['id'], new_name)
                 msg = "Successfully renamed object to '{}'.".format(object_.name)
             elif renamed_type == 'relationship_class':
-                relationship_class = self.mapping.rename_relationship_class(renamed['id'], new_name)
+                relationship_class = self.db_mngr.rename_relationship_class(renamed['id'], new_name)
                 msg = "Successfully renamed relationship class to '{}'.".format(relationship_class.name)
             elif renamed_type == 'relationship':
-                relationship = self.mapping.rename_relationship(renamed['id'], new_name)
+                relationship = self.db_mngr.rename_relationship(renamed['id'], new_name)
                 msg = "Successfully renamed relationship to '{}'.".format(relationship.name)
             else:
                 return # should never happen
@@ -838,16 +837,16 @@ class DataStoreForm(QMainWindow):
         removed_id = removed['id']
         try:
             if removed_type == 'object_class':
-                self.mapping.remove_object_class(id=removed_id)
+                self.db_mngr.remove_object_class(id=removed_id)
                 msg = "Successfully removed object class."
             elif removed_type == 'object':
-                self.mapping.remove_object(id=removed_id)
+                self.db_mngr.remove_object(id=removed_id)
                 msg = "Successfully removed object."
             elif removed_type.endswith('relationship_class'):
-                self.mapping.remove_relationship_class(id=removed_id)
+                self.db_mngr.remove_relationship_class(id=removed_id)
                 msg = "Successfully removed relationship class."
             elif removed_type == 'relationship':
-                self.mapping.remove_relationship(id=removed_id)
+                self.db_mngr.remove_relationship(id=removed_id)
                 msg = "Successfully removed relationship."
             else:
                 return # should never happen
@@ -1030,7 +1029,7 @@ class DataStoreForm(QMainWindow):
         # Only attempt to remove parameter value from db if it's not a 'work-in-progress'
         if parameter_value_id:
             try:
-                self.mapping.remove_parameter_value(parameter_value_id)
+                self.db_mngr.remove_parameter_value(parameter_value_id)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 return
@@ -1048,7 +1047,7 @@ class DataStoreForm(QMainWindow):
         # Only attempt to remove parameter from db if it's not a 'work-in-progress'
         if parameter_id:
             try:
-                self.mapping.remove_parameter(parameter_id)
+                self.db_mngr.remove_parameter(parameter_id)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 return
@@ -1222,10 +1221,10 @@ class DataStoreForm(QMainWindow):
             # Try and fill object class name from object name, to make user's life easier
             if top_left.column() == h('object_name'):
                 object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
-                object_ = self.mapping.single_object(name=object_name).one_or_none()
+                object_ = self.db_mngr.single_object(name=object_name).one_or_none()
                 if not object_:
                     return
-                object_class = self.mapping.single_object_class(id=object_.class_id).one_or_none()
+                object_class = self.db_mngr.single_object_class(id=object_.class_id).one_or_none()
                 if not object_class:
                     return
                 object_class_name = object_class.name
@@ -1234,10 +1233,10 @@ class DataStoreForm(QMainWindow):
             # Try and fill object class name from parameter name, to make user's life easier
             if top_left.column() == h('parameter_name'):
                 parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-                parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+                parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
                 if not parameter:
                     return
-                object_class = self.mapping.single_object_class(id=parameter.object_class_id).one_or_none()
+                object_class = self.db_mngr.single_object_class(id=parameter.object_class_id).one_or_none()
                 if not object_class:
                     return
                 object_class_name = object_class.name
@@ -1245,11 +1244,11 @@ class DataStoreForm(QMainWindow):
                 return
             # Now try and add the parameter value
             object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
-            object_ = self.mapping.single_object(name=object_name).one_or_none()
+            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
             if not object_:
                 return
             parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
@@ -1257,7 +1256,7 @@ class DataStoreForm(QMainWindow):
             for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
-                parameter_value = self.mapping.add_parameter_value(
+                parameter_value = self.db_mngr.add_parameter_value(
                     object_id=object_.id,
                     parameter_id=parameter.id,
                     **kwargs
@@ -1292,7 +1291,7 @@ class DataStoreForm(QMainWindow):
         h = model.horizontal_header_labels().index
         if model.is_work_in_progress(row):
             object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
-            object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+            object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
                 return
             parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
@@ -1303,7 +1302,7 @@ class DataStoreForm(QMainWindow):
             for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
-                parameter = self.mapping.add_parameter(object_class_id=object_class.id, name=parameter_name, **kwargs)
+                parameter = self.db_mngr.add_parameter(object_class_id=object_class.id, name=parameter_name, **kwargs)
                 model.set_work_in_progress(row, False)
                 model.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
                 model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
@@ -1335,10 +1334,10 @@ class DataStoreForm(QMainWindow):
             # Try and fill relationship class name from parameter name, to make user's life easier
             if top_left.column() == h('parameter_name'):
                 parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-                parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+                parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
                 if not parameter:
                     return
-                relationship_class = self.mapping.single_wide_relationship_class(id=parameter.relationship_class_id).\
+                relationship_class = self.db_mngr.single_wide_relationship_class(id=parameter.relationship_class_id).\
                     one_or_none()
                 if not relationship_class:
                     return
@@ -1349,7 +1348,7 @@ class DataStoreForm(QMainWindow):
             # Try to add new parameter value
             # Start by adding the relationship
             relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
+            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return
@@ -1361,7 +1360,7 @@ class DataStoreForm(QMainWindow):
                 object_name = top_left.sibling(row, j).data(Qt.DisplayRole)
                 if not object_name:
                     return
-                object_ = self.mapping.single_object(name=object_name).one_or_none()
+                object_ = self.db_mngr.single_object(name=object_name).one_or_none()
                 if not object_:
                     logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
                     return
@@ -1372,13 +1371,13 @@ class DataStoreForm(QMainWindow):
             base_relationship_name = relationship_name
             i = 0
             while True:
-                other_relationship = self.mapping.single_wide_relationship(name=relationship_name).one_or_none()
+                other_relationship = self.db_mngr.single_wide_relationship(name=relationship_name).one_or_none()
                 if not other_relationship:
                     break
                 relationship_name = base_relationship_name + str(i)
                 i += 1
             try:
-                relationship = self.mapping.add_wide_relationship(
+                relationship = self.db_mngr.add_wide_relationship(
                     name=relationship_name,
                     object_id_list=object_id_list,
                     class_id=relationship_class.id
@@ -1388,7 +1387,7 @@ class DataStoreForm(QMainWindow):
                 self.msg.emit(msg)
             except SpineDBAPIError as e:
                 # Maybe the relationship already exists, try to retrieve it
-                relationship = self.mapping.single_wide_relationship(
+                relationship = self.db_mngr.single_wide_relationship(
                     class_id=relationship_class.id, object_name_list=",".join(object_name_list)).one_or_none()
                 if not relationship:
                     model.setData(top_left, None, Qt.EditRole)
@@ -1398,7 +1397,7 @@ class DataStoreForm(QMainWindow):
                 self.msg.emit(msg)
             # Continue adding the parameter value
             parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            parameter = self.mapping.single_parameter(name=parameter_name).one_or_none()
+            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
             if not parameter:
                 return
             # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
@@ -1406,7 +1405,7 @@ class DataStoreForm(QMainWindow):
             for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
-                parameter_value = self.mapping.add_parameter_value(
+                parameter_value = self.db_mngr.add_parameter_value(
                     relationship_id=relationship.id,
                     parameter_id=parameter.id,
                     **kwargs
@@ -1450,14 +1449,14 @@ class DataStoreForm(QMainWindow):
             # Autocomplete object class name list
             if top_left.column() == h('relationship_class_name'):
                 relationship_class_name = top_left.data(Qt.DisplayRole)
-                relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
+                relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
                     one_or_none()
                 if relationship_class:
                     sibling = top_left.sibling(row, h('object_class_name_list'))
                     model.setData(sibling, relationship_class.object_class_name_list, Qt.EditRole)
             # Try to add new parameter
             relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.mapping.single_wide_relationship_class(name=relationship_class_name).\
+            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
                 return
@@ -1469,7 +1468,7 @@ class DataStoreForm(QMainWindow):
             for column in range(h('parameter_name')+1, model.columnCount()):
                 kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
             try:
-                parameter = self.mapping.add_parameter(
+                parameter = self.db_mngr.add_parameter(
                     relationship_class_id=relationship_class.id,
                     name=parameter_name,
                     **kwargs
@@ -1500,10 +1499,13 @@ class DataStoreForm(QMainWindow):
         field_name = header[index.column()]
         new_value = index.data(Qt.DisplayRole)
         try:
-            self.mapping.update_parameter_value(parameter_value_id, field_name, new_value)
+            self.db_mngr.update_parameter_value(parameter_value_id, field_name, new_value)
             msg = "Parameter value successfully updated."
             self.msg.emit(msg)
         except SpineDBAPIError as e:
+            # parameter_value = self.db_mngr.single_parameter_value(id=parameter_value_id).one_or_none()
+            # if parameter_value:
+            #     model.setData(index, parameter_value._asdict()[field_name], Qt.EditRole)
             model.setData(index, None, Qt.EditRole)
             self.msg.emit(e.msg)
 
@@ -1521,13 +1523,16 @@ class DataStoreForm(QMainWindow):
         if field_name == 'parameter_name':
             field_name = 'name'
         try:
-            self.mapping.update_parameter(parameter_id, field_name, new_value)
+            self.db_mngr.update_parameter(parameter_id, field_name, new_value)
             msg = "Parameter successfully updated."
             self.msg.emit(msg)
             # refresh parameter value models to reflect name change
             if field_name == 'name':
                 self.init_parameter_value_models()
         except SpineDBAPIError as e:
+            # parameter = self.db_mngr.single_parameter(id=parameter_id).one_or_none()
+            # if parameter:
+            #     model.setData(index, parameter._asdict()[field_name], Qt.EditRole)
             model.setData(index, None, Qt.EditRole)
             self.msg.emit(e.msg)
 
@@ -1565,6 +1570,6 @@ class DataStoreForm(QMainWindow):
             self.qsettings.setValue("dataStoreWidget/windowMaximized", True)
         else:
             self.qsettings.setValue("dataStoreWidget/windowMaximized", False)
-        self.mapping.close()
+        self.db_mngr.close()
         if event:
             event.accept()

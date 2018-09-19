@@ -131,18 +131,19 @@ class AddObjectClassesDialog(CustomQDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        db_mngr (Databasedb_mngr): database handle from `spinedatabase_api`
     """
-    def __init__(self, parent, mapping):
+    def __init__(self, parent, db_mngr):
         super().__init__(parent)
-        self.object_class_list = mapping.object_class_list()
+        self.object_class_list = [x for x in db_mngr.object_class_list()]
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.model.clear()
         # Add items to combobox
         insert_position_list = ['Insert new classes at the top']
-        insert_position_list.extend(["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
+        insert_position_list.extend(
+            ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
         self.ui.comboBox.addItems(insert_position_list)
         self.connect_signals()
         self.insert_row()
@@ -156,9 +157,9 @@ class AddObjectClassesDialog(CustomQDialog):
     def accept(self):
         index = self.ui.comboBox.currentIndex()
         if index == 0:
-            display_order = self.object_class_list.first().display_order-1
+            display_order = self.object_class_list[0].display_order-1
         else:
-            display_order = self.object_class_list.all()[index-1].display_order
+            display_order = self.object_class_list[index-1].display_order
         for i in range(self.model.rowCount()):
             name, description = self.model.row_data(i)
             if not name:
@@ -177,13 +178,13 @@ class AddObjectsDialog(CustomQDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        db_mngr (Databasedb_mngr): database handle from `spinedatabase_api`
         class_id (int): default object class id
     """
-    def __init__(self, parent, mapping, class_id=None):
+    def __init__(self, parent, db_mngr, class_id=None):
         super().__init__(parent)
-        self.mapping = mapping
-        default_class = mapping.single_object_class(id=class_id).one_or_none()
+        self.db_mngr = db_mngr
+        default_class = db_mngr.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
@@ -202,7 +203,7 @@ class AddObjectsDialog(CustomQDialog):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
         object_class_width = max(
-            [self.font_metric.width(x.name) for x in self.mapping.object_class_list()], default=0)
+            [self.font_metric.width(x.name) for x in self.db_mngr.object_class_list()], default=0)
         class_width = max(object_class_width, header.sectionSize(0))
         header.resizeSection(0, self.icon_width + class_width)
         header.resizeSection(1, 200)
@@ -227,7 +228,7 @@ class AddObjectsDialog(CustomQDialog):
             class_name, name, description = self.model.row_data(i)
             if not class_name or not name:
                 continue
-            class_ = self.mapping.single_object_class(name=class_name).one_or_none()
+            class_ = self.db_mngr.single_object_class(name=class_name).one_or_none()
             if not class_:
                 continue
             object_args = {
@@ -244,16 +245,16 @@ class AddRelationshipClassesDialog(CustomQDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        db_mngr (Databasedb_mngr): database handle from `spinedatabase_api`
         object_class_one_id (int): default object class id to put in dimension '1'
     """
-    def __init__(self, parent, mapping, object_class_one_id=None):
+    def __init__(self, parent, db_mngr, object_class_one_id=None):
         super().__init__(parent)
-        self.mapping = mapping
+        self.db_mngr = db_mngr
         self.number_of_dimensions = 2
         self.object_class_one_name = None
         if object_class_one_id:
-            object_class_one = mapping.single_object_class(id=object_class_one_id).one_or_none()
+            object_class_one = db_mngr.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
         self.model.set_horizontal_header_labels(
@@ -273,7 +274,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
     def resize_tableview(self):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
-        object_class_width = max([self.font_metric.width(x.name) for x in self.mapping.object_class_list()], default=0)
+        object_class_width = max([self.font_metric.width(x.name) for x in self.db_mngr.object_class_list()], default=0)
         for column in range(self.number_of_dimensions):
             header.resizeSection(column, self.icon_width + object_class_width)
             header.resizeSection(column, self.icon_width + object_class_width)
@@ -344,7 +345,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
                 object_class_name = row[column]
                 if not object_class_name:
                     continue
-                object_class = self.mapping.single_object_class(name=object_class_name).one_or_none()
+                object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
                 if not object_class:
                     continue
                 object_class_id_list.append(object_class.id)
@@ -363,15 +364,16 @@ class AddRelationshipsDialog(CustomQDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        mapping (DatabaseMapping): database handle from `spinedatabase_api`
+        db_mngr (Databasedb_mngr): database handle from `spinedatabase_api`
         relationship_class_id (int): default relationship class id
         object_id (int): default object id
         object_class_id (int): default object class id
     """
-    def __init__(self, parent, mapping, relationship_class_id=None, object_id=None, object_class_id=None):
+    def __init__(self, parent, db_mngr, relationship_class_id=None, object_id=None, object_class_id=None):
         super().__init__(parent)
-        self.mapping = mapping
-        self.relationship_class_list = mapping.wide_relationship_class_list(object_class_id=object_class_id).all()
+        self.db_mngr = db_mngr
+        self.relationship_class_list = \
+            [x for x in db_mngr.wide_relationship_class_list(object_class_id=object_class_id)]
         self.relationship_class = None
         self.relationship_class_id = relationship_class_id
         self.object_id = object_id
@@ -400,7 +402,7 @@ class AddRelationshipsDialog(CustomQDialog):
         relationship_class_name_list = [x.name for x in self.relationship_class_list]
         self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
         self.ui.comboBox_relationship_class.setCurrentIndex(-1)
-        self.relationship_class = self.mapping.\
+        self.relationship_class = self.db_mngr.\
             single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
         if not self.relationship_class:
             return
@@ -423,7 +425,7 @@ class AddRelationshipsDialog(CustomQDialog):
         icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
         name_width = 0
         for section, object_class_id in enumerate(self.object_class_id_list):
-            object_list = self.mapping.object_list(class_id=object_class_id)
+            object_list = self.db_mngr.object_list(class_id=object_class_id)
             object_width = max([font_metric.width(x.name) for x in object_list], default=0)
             section_width = max(icon_width + object_width, header.sectionSize(section))
             header.resizeSection(section, section_width)
@@ -450,7 +452,7 @@ class AddRelationshipsDialog(CustomQDialog):
         self.object_class_id_list = [int(x) for x in object_class_id_list.split(',')]
         header = list()
         for object_class_id in self.object_class_id_list:
-            object_class = self.mapping.single_object_class(id=object_class_id).one_or_none()
+            object_class = self.db_mngr.single_object_class(id=object_class_id).one_or_none()
             if not object_class:
                 logging.debug("Couldn't find object class, probably a bug.")
                 return
@@ -467,7 +469,7 @@ class AddRelationshipsDialog(CustomQDialog):
     def set_default_object_name(self):
         if not self.object_id:
             return
-        object_ = self.mapping.single_object(id=self.object_id).one_or_none()
+        object_ = self.db_mngr.single_object(id=self.object_id).one_or_none()
         if not object_:
             return
         self.default_object_name = object_.name
@@ -522,7 +524,7 @@ class AddRelationshipsDialog(CustomQDialog):
                 object_name = row[column]
                 if not object_name:
                     continue
-                object_ = self.mapping.single_object(name=object_name).one_or_none()
+                object_ = self.db_mngr.single_object(name=object_name).one_or_none()
                 if not object_:
                     continue
                 object_id_list.append(object_.id)
