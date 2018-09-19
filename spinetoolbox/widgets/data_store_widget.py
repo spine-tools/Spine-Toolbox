@@ -39,7 +39,8 @@ from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParamet
     RelationshipParameterValueDelegate, RelationshipParameterDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, CommitDialog
-from models import ObjectTreeModel, ParameterTableModel, CustomSortFilterProxyModel
+from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterModel, \
+    RelationshipParameterModel, RelationshipParameterValueModel, CustomSortFilterProxyModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import import_datapackage
 
@@ -81,14 +82,14 @@ class DataStoreForm(QMainWindow):
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
-        self.object_parameter_value_model = ParameterTableModel(self)
+        self.object_parameter_value_model = ObjectParameterValueModel(self)
         self.object_parameter_value_proxy = CustomSortFilterProxyModel(self)
-        self.relationship_parameter_value_model = ParameterTableModel(self)
+        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
         self.relationship_parameter_value_proxy = CustomSortFilterProxyModel(self)
         # Parameter (definition) models
-        self.object_parameter_model = ParameterTableModel(self)
+        self.object_parameter_model = ObjectParameterModel(self)
         self.object_parameter_proxy = CustomSortFilterProxyModel(self)
-        self.relationship_parameter_model = ParameterTableModel(self)
+        self.relationship_parameter_model = RelationshipParameterModel(self)
         self.relationship_parameter_proxy = CustomSortFilterProxyModel(self)
         # Context menus
         self.object_tree_context_menu = None
@@ -178,22 +179,15 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_parameter_model_subfilter)
         self.ui.tableView_object_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
-        # Data from editor committed
-        # Parameter value tables
+        # Parameter table editors
         self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
             connect(self.update_parameter_value_in_model)
         self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
             connect(self.update_parameter_value_in_model)
-        # Parameter tables
         self.ui.tableView_object_parameter.itemDelegate().commitData.\
             connect(self.update_parameter_in_model)
         self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
             connect(self.update_parameter_in_model)
-        # Model data changed
-        self.object_parameter_value_model.dataChanged.connect(self.object_parameter_value_data_changed)
-        self.relationship_parameter_value_model.dataChanged.connect(self.relationship_parameter_value_data_changed)
-        self.object_parameter_model.dataChanged.connect(self.object_parameter_data_changed)
-        self.relationship_parameter_model.dataChanged.connect(self.relationship_parameter_data_changed)
         # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -1200,341 +1194,6 @@ class DataStoreForm(QMainWindow):
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
         self.relationship_parameter_proxy.apply_filter()
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_value_data_changed")
-    def object_parameter_value_data_changed(self, top_left, bottom_right, roles):
-        """Called when data in the object parameter value model changes. Add new parameter
-        or edit existing ones."""
-        if not top_left.isValid():
-            return
-        if Qt.EditRole not in roles:
-            return
-        if top_left.data(Qt.DisplayRole) is None:
-            return
-        model = self.object_parameter_value_model
-        if model.is_being_reset:
-            return
-        row = top_left.row()
-        header = model.horizontal_header_labels()
-        h = model.horizontal_header_labels().index
-        if model.is_work_in_progress(row):
-            # Try and fill object class name from object name, to make user's life easier
-            if top_left.column() == h('object_name'):
-                object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
-                object_ = self.db_mngr.single_object(name=object_name).one_or_none()
-                if not object_:
-                    return
-                object_class = self.db_mngr.single_object_class(id=object_.class_id).one_or_none()
-                if not object_class:
-                    return
-                object_class_name = object_class.name
-                model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
-                return
-            # Try and fill object class name from parameter name, to make user's life easier
-            if top_left.column() == h('parameter_name'):
-                parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-                parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
-                if not parameter:
-                    return
-                object_class = self.db_mngr.single_object_class(id=parameter.object_class_id).one_or_none()
-                if not object_class:
-                    return
-                object_class_name = object_class.name
-                model.setData(top_left.sibling(row, h('object_class_name')), object_class_name, Qt.EditRole)
-                return
-            # Now try and add the parameter value
-            object_name = top_left.sibling(row, h('object_name')).data(Qt.DisplayRole)
-            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
-            if not object_:
-                return
-            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
-            if not parameter:
-                return
-            # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
-            kwargs = {}
-            for column in range(h('parameter_name')+1, model.columnCount()):
-                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
-            try:
-                parameter_value = self.db_mngr.add_parameter_value(
-                    object_id=object_.id,
-                    parameter_id=parameter.id,
-                    **kwargs
-                )
-                model.set_work_in_progress(row, False)
-                model.make_columns_fixed_for_row(
-                    row, 'object_class_name', 'object_name', 'parameter_name', 'parameter_value_id')
-                model.setData(top_left.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                msg = "Successfully added new parameter value."
-                self.msg.emit(msg)
-            except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole)
-                self.msg_error.emit(e.msg)
-        elif top_left.flags() & Qt.ItemIsEditable:
-            self.update_parameter_value_in_db(top_left)
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="object_parameter_data_changed")
-    def object_parameter_data_changed(self, top_left, bottom_right, roles):
-        """Called when data in the object parameter model changes. Add new parameter
-        or edit existing ones."""
-        if not top_left.isValid():
-            return
-        if Qt.EditRole not in roles:
-            return
-        if top_left.data(Qt.DisplayRole) is None:
-            return
-        model = self.object_parameter_model
-        if model.is_being_reset:
-            return
-        row = top_left.row()
-        header = model.horizontal_header_labels()
-        h = model.horizontal_header_labels().index
-        if model.is_work_in_progress(row):
-            object_class_name = top_left.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
-            object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
-            if not object_class:
-                return
-            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            if not parameter_name:
-                return
-            # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
-            kwargs = {}
-            for column in range(h('parameter_name')+1, model.columnCount()):
-                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
-            try:
-                parameter = self.db_mngr.add_parameter(object_class_id=object_class.id, name=parameter_name, **kwargs)
-                model.set_work_in_progress(row, False)
-                model.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
-                model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
-                msg = "Successfully added new parameter."
-                self.msg.emit(msg)
-            except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole)
-                self.msg_error.emit(e.msg)
-        elif top_left.flags() & Qt.ItemIsEditable:
-            self.update_parameter_in_db(top_left)
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_value_data_changed")
-    def relationship_parameter_value_data_changed(self, top_left, bottom_right, roles):
-        """Called when data in the relationship parameter value model changes. Add new parameter
-        or edit existing ones."""
-        if not top_left.isValid():
-            return
-        if Qt.EditRole not in roles:
-            return
-        if top_left.data(Qt.DisplayRole) is None:
-            return
-        model = self.relationship_parameter_value_model
-        if model.is_being_reset:
-            return
-        row = top_left.row()
-        header = model.horizontal_header_labels()
-        h = model.horizontal_header_labels().index
-        if model.is_work_in_progress(row):
-            # Try and fill relationship class name from parameter name, to make user's life easier
-            if top_left.column() == h('parameter_name'):
-                parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-                parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
-                if not parameter:
-                    return
-                relationship_class = self.db_mngr.single_wide_relationship_class(id=parameter.relationship_class_id).\
-                    one_or_none()
-                if not relationship_class:
-                    return
-                relationship_class_name = relationship_class.name
-                model.setData(
-                    top_left.sibling(row, h('relationship_class_name')), relationship_class_name, Qt.EditRole)
-                return
-            # Try to add new parameter value
-            # Start by adding the relationship
-            relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            if not relationship_class:
-                return
-            # Get object_id_list and object_name_list
-            object_id_list = list()
-            object_name_list = list()
-            object_class_count = len(relationship_class.object_class_id_list.split(','))
-            for j in range(h('object_name_1'), h('object_name_1') + object_class_count):
-                object_name = top_left.sibling(row, j).data(Qt.DisplayRole)
-                if not object_name:
-                    return
-                object_ = self.db_mngr.single_object(name=object_name).one_or_none()
-                if not object_:
-                    logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
-                    return
-                object_id_list.append(object_.id)
-                object_name_list.append(object_name)
-            # Create relationship name
-            relationship_name = "__".join(object_name_list)
-            base_relationship_name = relationship_name
-            i = 0
-            while True:
-                other_relationship = self.db_mngr.single_wide_relationship(name=relationship_name).one_or_none()
-                if not other_relationship:
-                    break
-                relationship_name = base_relationship_name + str(i)
-                i += 1
-            try:
-                relationship = self.db_mngr.add_wide_relationship(
-                    name=relationship_name,
-                    object_id_list=object_id_list,
-                    class_id=relationship_class.id
-                )
-                self.object_tree_model.add_relationship(relationship._asdict())
-                msg = "Successfully added new relationship '{}'.".format(relationship.name)
-                self.msg.emit(msg)
-            except SpineDBAPIError as e:
-                # Maybe the relationship already exists, try to retrieve it
-                relationship = self.db_mngr.single_wide_relationship(
-                    class_id=relationship_class.id, object_name_list=",".join(object_name_list)).one_or_none()
-                if not relationship:
-                    model.setData(top_left, None, Qt.EditRole)
-                    self.msg_error.emit(e.msg)
-                    return
-                msg = "Successfully retrieved relationship '{}'.".format(relationship.name)
-                self.msg.emit(msg)
-            # Continue adding the parameter value
-            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
-            if not parameter:
-                return
-            # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
-            kwargs = {}
-            for column in range(h('parameter_name')+1, model.columnCount()):
-                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
-            try:
-                parameter_value = self.db_mngr.add_parameter_value(
-                    relationship_id=relationship.id,
-                    parameter_id=parameter.id,
-                    **kwargs
-                )
-                model.set_work_in_progress(row, False)
-                model.make_columns_fixed_for_row(
-                    row,
-                    'relationship_class_name',
-                    *self.object_name_header,
-                    'parameter_name',
-                    'parameter_value_id'
-                )
-                model.setData(top_left.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                model.setData(top_left.sibling(row, h('relationship_class_name')), relationship_class_name, Qt.EditRole)
-                msg = "Successfully added new parameter value."
-                self.msg.emit(msg)
-            except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole)
-                self.msg_error.emit(e.msg)
-        elif top_left.flags() & Qt.ItemIsEditable:
-            self.update_parameter_value_in_db(top_left)
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="relationship_parameter_data_changed")
-    def relationship_parameter_data_changed(self, top_left, bottom_right, roles):
-        """Called when data in the relationship parameter model changes. Add new parameter
-        or edit existing ones."""
-        if not top_left.isValid():
-            return
-        if Qt.EditRole not in roles:
-            return
-        if top_left.data(Qt.DisplayRole) is None:
-            return
-        model = self.relationship_parameter_model
-        if model.is_being_reset:
-            return
-        proxy = self.relationship_parameter_proxy
-        row = top_left.row()
-        header = model.horizontal_header_labels()
-        h = model.horizontal_header_labels().index
-        if model.is_work_in_progress(row):
-            # Autocomplete object class name list
-            if top_left.column() == h('relationship_class_name'):
-                relationship_class_name = top_left.data(Qt.DisplayRole)
-                relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
-                    one_or_none()
-                if relationship_class:
-                    sibling = top_left.sibling(row, h('object_class_name_list'))
-                    model.setData(sibling, relationship_class.object_class_name_list, Qt.EditRole)
-            # Try to add new parameter
-            relationship_class_name = top_left.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            if not relationship_class:
-                return
-            parameter_name = top_left.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            if not parameter_name:
-                return
-            # Pack all remaining fields in case the user 'misbehaves' and edit those before entering the parameter name
-            kwargs = {}
-            for column in range(h('parameter_name')+1, model.columnCount()):
-                kwargs[header[column]] = top_left.sibling(row, column).data(Qt.DisplayRole)
-            try:
-                parameter = self.db_mngr.add_parameter(
-                    relationship_class_id=relationship_class.id,
-                    name=parameter_name,
-                    **kwargs
-                )
-                model.set_work_in_progress(row, False)
-                model.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
-                model.setData(top_left.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
-                msg = "Successfully added new parameter."
-                self.msg.emit(msg)
-            except SpineDBAPIError as e:
-                model.setData(top_left, None, Qt.EditRole)
-                self.msg_error.emit(e.msg)
-        elif top_left.flags() & Qt.ItemIsEditable:
-            self.update_parameter_in_db(top_left)
-
-    def update_parameter_value_in_db(self, index):
-        """After updating a parameter value in the model, try and update it in the database.
-        Undo the model update if unsuccessful.
-        """
-        model = index.model()
-        header = model.horizontal_header_labels()
-        h = header.index
-        id_column = h('parameter_value_id')
-        sibling = index.sibling(index.row(), id_column)
-        parameter_value_id = sibling.data()
-        if not parameter_value_id:
-            return
-        field_name = header[index.column()]
-        new_value = index.data(Qt.DisplayRole)
-        try:
-            self.db_mngr.update_parameter_value(parameter_value_id, field_name, new_value)
-            msg = "Parameter value successfully updated."
-            self.msg.emit(msg)
-        except SpineDBAPIError as e:
-            # parameter_value = self.db_mngr.single_parameter_value(id=parameter_value_id).one_or_none()
-            # if parameter_value:
-            #     model.setData(index, parameter_value._asdict()[field_name], Qt.EditRole)
-            model.setData(index, None, Qt.EditRole)
-            self.msg.emit(e.msg)
-
-    def update_parameter_in_db(self, index):
-        """After updating a parameter in the model, try and update it in the database.
-        Undo the model update if unsuccessful.
-        """
-        model = index.model()
-        header = model.horizontal_header_labels()
-        id_column = header.index('parameter_id')
-        sibling = index.sibling(index.row(), id_column)
-        parameter_id = sibling.data()
-        field_name = header[index.column()]
-        new_value = index.data(Qt.DisplayRole)
-        if field_name == 'parameter_name':
-            field_name = 'name'
-        try:
-            self.db_mngr.update_parameter(parameter_id, field_name, new_value)
-            msg = "Parameter successfully updated."
-            self.msg.emit(msg)
-            # refresh parameter value models to reflect name change
-            if field_name == 'name':
-                self.init_parameter_value_models()
-        except SpineDBAPIError as e:
-            # parameter = self.db_mngr.single_parameter(id=parameter_id).one_or_none()
-            # if parameter:
-            #     model.setData(index, parameter._asdict()[field_name], Qt.EditRole)
-            model.setData(index, None, Qt.EditRole)
-            self.msg.emit(e.msg)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

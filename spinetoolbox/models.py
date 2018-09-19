@@ -35,6 +35,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIco
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
+from spinedatabase_api import SpineDBAPIError
 
 
 class ProjectItemModel(QStandardItemModel):
@@ -708,45 +709,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = False
-        self.is_being_reset = False
-        self.modelAboutToBeReset.connect(lambda: self.set_being_reset(True))
-        self.modelReset.connect(lambda: self.set_being_reset(False))
-        self.wip_row_list = list()
-        self.rowsInserted.connect(self.rows_inserted)
-        self.rowsRemoved.connect(self.rows_removed)
-
-    def set_being_reset(self, on):
-        self.is_being_reset = on
-
-    def rows_inserted(self, parent, first, last):
-        """Update work in progress row list."""
-        for i, row in enumerate(self.wip_row_list):
-            if first <= row:
-                self.wip_row_list[i] += 1
-
-    def rows_removed(self, parent, first, last):
-        """Update work in progress row list."""
-        try:
-            self.wip_row_list.remove(first)
-        except ValueError:
-            pass
-        for i, row in enumerate(self.wip_row_list):
-            if first < row:
-                self.wip_row_list[i] -= 1
-
-    def set_work_in_progress(self, row, on):
-        """Add row into list of work in progress."""
-        if on and row not in self.wip_row_list:
-            self.wip_row_list.append(row)
-        else:
-            try:
-                self.wip_row_list.remove(row)
-            except ValueError:
-                pass
-
-    def is_work_in_progress(self, row):
-        """Return whether or not row is a work in progress."""
-        return row in self.wip_row_list
 
     def clear(self):
         self.beginResetModel()
@@ -1298,13 +1260,48 @@ class ObjectTreeModel(QStandardItemModel):
         return self.indexFromItem(items[position])
 
 
-class ParameterTableModel(MinimalTableModel):
+class ParameterModel(MinimalTableModel):
     """A model to use with parameter tables in DataStoreForm."""
+
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
         self._data_store_form = data_store_form
+        self.db_mngr = self._data_store_form.db_mngr
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
+        self.wip_row_list = list()
+        self.rowsInserted.connect(self.rows_inserted)
+        self.rowsRemoved.connect(self.rows_removed)
+
+    def rows_inserted(self, parent, first, last):
+        """Update work in progress row list."""
+        for i, row in enumerate(self.wip_row_list):
+            if first <= row:
+                self.wip_row_list[i] += 1
+
+    def rows_removed(self, parent, first, last):
+        """Update work in progress row list."""
+        try:
+            self.wip_row_list.remove(first)
+        except ValueError:
+            pass
+        for i, row in enumerate(self.wip_row_list):
+            if first < row:
+                self.wip_row_list[i] -= 1
+
+    def set_work_in_progress(self, row, on):
+        """Add row into list of work in progress."""
+        if on and row not in self.wip_row_list:
+            self.wip_row_list.append(row)
+        else:
+            try:
+                self.wip_row_list.remove(row)
+            except ValueError:
+                pass
+
+    def is_work_in_progress(self, row):
+        """Return whether or not row is a work in progress."""
+        return row in self.wip_row_list
 
     def make_columns_fixed(self, *column_names, skip_wip=False):
         """Set columns as fixed so they are not editable and painted gray."""
@@ -1320,6 +1317,362 @@ class ParameterTableModel(MinimalTableModel):
             index = self.index(row, column)
             self.setData(index, self.gray_brush, Qt.BackgroundRole)
             self.set_flags(index, ~Qt.ItemIsEditable)
+
+
+class ObjectParameterModel(ParameterModel):
+    """A model to view and edit object parameters in DataStoreForm."""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Try an set data in the database first, if it passes, insert it in the model.
+        """
+        if not index.isValid():
+            return False
+        if role != Qt.EditRole:
+            return super().setData(index, value, role)
+        row = index.row()
+        header = self.horizontal_header_labels()
+        h = header.index
+        if self.is_work_in_progress(row):
+            if header[index.column()] == 'object_class_name':
+                object_class_name = value
+                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+            elif header[index.column()] == 'parameter_name':
+                object_class_name = index.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
+                parameter_name = value
+            else:
+                return super().setData(index, value, role)
+            # Check if we're ready to put something in the db
+            if object_class_name and parameter_name:
+                # Pack all remaining fields in case the user 'misbehaves'
+                # and edit those before entering the parameter name
+                kwargs = {}
+                for column in range(h('parameter_name')+1, self.columnCount()):
+                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                try:
+                    object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
+                    parameter = self.db_mngr.add_parameter(
+                        object_class_id=object_class.id, name=parameter_name, **kwargs)
+                    self.set_work_in_progress(row, False)
+                    self.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
+                    super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
+                    super().setData(index, value, role)
+                    msg = "Successfully added new parameter."
+                    self._data_store_form.msg.emit(msg)
+                    return True
+                except SpineDBAPIError as e:
+                    self._data_store_form.msg_error.emit(e.msg)
+                    return False
+            else:
+                super().setData(index, value, role)
+        else:
+            parameter_id = index.sibling(row, h('parameter_id')).data(Qt.EditRole)
+            if not parameter_id:
+                return False
+            field_name = header[index.column()]
+            if field_name == 'parameter_name':
+                field_name = 'name'
+            try:
+                self.db_mngr.update_parameter(parameter_id, field_name, value)
+                super().setData(index, value, role)
+                msg = "Parameter successfully updated."
+                self._data_store_form.msg.emit(msg)
+                # refresh parameter value models to reflect name change
+                if field_name == 'name':
+                    self._data_store_form.init_parameter_value_models()
+                return True
+            except SpineDBAPIError as e:
+                self._data_store_form.msg.emit(e.msg)
+                return False
+
+
+class RelationshipParameterModel(ParameterModel):
+    """A model to view and edit relationship parameters in DataStoreForm."""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Try an set data in the database first, if it passes, insert it in the model.
+        """
+        if not index.isValid():
+            return False
+        if role != Qt.EditRole:
+            return super().setData(index, value, role)
+        row = index.row()
+        header = self.horizontal_header_labels()
+        h = header.index
+        if self.is_work_in_progress(row):
+            if header[index.column()] == 'relationship_class_name':
+                relationship_class_name = value
+                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+                # Autocomplete object class name list
+                relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
+                    one_or_none()
+                if relationship_class:
+                    sibling = index.sibling(row, h('object_class_name_list'))
+                    super().setData(sibling, relationship_class.object_class_name_list, Qt.EditRole)
+            elif header[index.column()] == 'parameter_name':
+                relationship_class_name = index.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
+                parameter_name = value
+            else:
+                return super().setData(index, value, role)
+            # Check if we're ready to put something in the db
+            if relationship_class_name and parameter_name:
+                # Pack all remaining fields in case the user 'misbehaves'
+                # and edit those before entering the parameter name
+                kwargs = {}
+                for column in range(h('parameter_name')+1, self.columnCount()):
+                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                try:
+                    relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
+                        one_or_none()
+                    parameter = self.db_mngr.add_parameter(
+                        relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
+                    self.set_work_in_progress(row, False)
+                    self.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
+                    super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
+                    super().setData(index, value, role)
+                    msg = "Successfully added new parameter."
+                    self._data_store_form.msg.emit(msg)
+                    return True
+                except SpineDBAPIError as e:
+                    self._data_store_form.msg_error.emit(e.msg)
+                    return False
+            else:
+                super().setData(index, value, role)
+        else:
+            parameter_id = index.sibling(row, h('parameter_id')).data(Qt.EditRole)
+            if not parameter_id:
+                return False
+            field_name = header[index.column()]
+            if field_name == 'parameter_name':
+                field_name = 'name'
+            try:
+                self.db_mngr.update_parameter(parameter_id, field_name, value)
+                super().setData(index, value, role)
+                msg = "Parameter successfully updated."
+                self._data_store_form.msg.emit(msg)
+                # refresh parameter value models to reflect name change
+                if field_name == 'name':
+                    self._data_store_form.init_parameter_value_models()
+                return True
+            except SpineDBAPIError as e:
+                self._data_store_form.msg.emit(e.msg)
+                return False
+
+
+class ObjectParameterValueModel(ParameterModel):
+    """A model to view and edit object parameter values in DataStoreForm."""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        if role != Qt.EditRole:
+            return super().setData(index, value, role)
+        row = index.row()
+        header = self.horizontal_header_labels()
+        h = header.index
+        if self.is_work_in_progress(row):
+            if header[index.column()] == 'object_name':
+                object_name = value
+                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+            elif header[index.column()] == 'parameter_name':
+                object_name = index.sibling(row, h('object_name')).data(Qt.DisplayRole)
+                parameter_name = value
+            else:
+                return super().setData(index, value, role)
+            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
+            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
+            # Try and fill up object_class_name automatically
+            object_class = None
+            if object_:
+                object_class = self.db_mngr.single_object_class(id=object_.class_id).one_or_none()
+            if parameter:
+                object_class = self.db_mngr.single_object_class(id=parameter.object_class_id).one_or_none()
+            if object_class:
+                super().setData(index.sibling(row, h('object_class_name')), object_class.name, Qt.EditRole)
+            # Check if we're ready to put something in the db
+            if object_ and parameter:
+                # Pack all remaining fields in case the user 'misbehaves'
+                # and edit those before entering the parameter name
+                kwargs = {}
+                for column in range(h('parameter_name')+1, self.columnCount()):
+                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                try:
+                    parameter_value = self.db_mngr.add_parameter_value(
+                        object_id=object_.id,
+                        parameter_id=parameter.id,
+                        **kwargs
+                    )
+                    self.set_work_in_progress(row, False)
+                    self.make_columns_fixed_for_row(
+                        row, 'object_class_name', 'object_name', 'parameter_name', 'parameter_value_id')
+                    super().setData(index, value, role)
+                    super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                    msg = "Successfully added new parameter value."
+                    self._data_store_form.msg.emit(msg)
+                    return True
+                except SpineDBAPIError as e:
+                    self._data_store_form.msg_error.emit(e.msg)
+                    return False
+            else:
+                super().setData(index, value, role)
+        else:
+            parameter_value_id = index.sibling(row, h('parameter_value_id')).data(Qt.EditRole)
+            if not parameter_value_id:
+                return False
+            field_name = header[index.column()]
+            try:
+                self.db_mngr.update_parameter_value(parameter_value_id, field_name, value)
+                super().setData(index, value, role)
+                msg = "Parameter value successfully updated."
+                self._data_store_form.msg.emit(msg)
+            except SpineDBAPIError as e:
+                self._data_store_form.msg.emit(e.msg)
+
+
+class RelationshipParameterValueModel(ParameterModel):
+    """A model to view and edit relationship parameter values in DataStoreForm."""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+
+    def relationship_on_the_fly(self, relationship_class, index, value):
+        """Return a relationship retrieved or created for the current index."""
+        if not relationship_class:
+            return None
+        if not index.isValid():
+            return None
+        header = self.horizontal_header_labels()
+        h = header.index
+        object_id_list = list()
+        object_name_list = list()
+        object_class_count = len(relationship_class.object_class_id_list.split(','))
+        for j in range(h('object_name_1'), h('object_name_1') + object_class_count):
+            if j == index.column():
+                object_name = value
+            else:
+                object_name = index.sibling(index.row(), j).data(Qt.DisplayRole)
+            if not object_name:
+                return None
+            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
+            if not object_:
+                logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
+                return None
+            object_id_list.append(object_.id)
+            object_name_list.append(object_name)
+        # Try and retrieve an existing relationship
+        relationship = self.db_mngr.single_wide_relationship(
+            class_id=relationship_class.id, object_name_list=",".join(object_name_list)).one_or_none()
+        if relationship:
+            msg = "Successfully retrieved relationship '{}'.".format(relationship.name)
+            self._data_store_form.msg.emit(msg)
+            return relationship
+        # Try and insert new relationship
+        relationship_name = "__".join(object_name_list)
+        base_relationship_name = relationship_name
+        i = 0
+        while True:
+            other_relationship = self.db_mngr.single_wide_relationship(name=relationship_name).one_or_none()
+            if not other_relationship:
+                break
+            relationship_name = base_relationship_name + str(i)
+            i += 1
+        try:
+            relationship = self.db_mngr.add_wide_relationship(
+                name=relationship_name,
+                object_id_list=object_id_list,
+                class_id=relationship_class.id
+            )
+            self._data_store_form.object_tree_model.add_relationship(relationship._asdict())
+            msg = "Successfully added new relationship '{}'.".format(relationship.name)
+            self._data_store_form.msg.emit(msg)
+            return relationship
+        except SpineDBAPIError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return None
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        if role != Qt.EditRole:
+            return super().setData(index, value, role)
+        row = index.row()
+        header = self.horizontal_header_labels()
+        h = header.index
+        if self.is_work_in_progress(row):
+            if header[index.column()] == 'relationship_class_name':
+                relationship_class_name = value
+                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+            elif header[index.column()].startswith('object_name'):
+                relationship_class_name = index.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
+                object_name = value
+                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
+            elif header[index.column()] == 'parameter_name':
+                relationship_class_name = index.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
+                parameter_name = value
+            else:
+                return super().setData(index, value, role)
+            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
+                one_or_none()
+            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
+            # Try and fill up relationship_class_name automatically
+            if not relationship_class and parameter:
+                relationship_class = self.db_mngr.single_wide_relationship_class(id=parameter.relationship_class_id).\
+                    one_or_none()
+                if relationship_class:
+                    ind = index.sibling(row, h('relationship_class_name'))
+                    super().setData(ind, relationship_class.name, Qt.EditRole)
+            relationship = self.relationship_on_the_fly(relationship_class, index, value)
+            # Check if we're ready to put something in the db
+            if relationship and parameter:
+                # Pack all remaining fields in case the user 'misbehaves'
+                # and edit those before entering the parameter name
+                kwargs = {}
+                for column in range(h('parameter_name')+1, self.columnCount()):
+                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                try:
+                    parameter_value = self.db_mngr.add_parameter_value(
+                        relationship_id=relationship.id,
+                        parameter_id=parameter.id,
+                        **kwargs
+                    )
+                    self.set_work_in_progress(row, False)
+                    self.make_columns_fixed_for_row(
+                        row,
+                        'relationship_class_name',
+                        *self._data_store_form.object_name_header,
+                        'parameter_name',
+                        'parameter_value_id'
+                    )
+                    super().setData(index, value, role)
+                    super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                    msg = "Successfully added new parameter value."
+                    self._data_store_form.msg.emit(msg)
+                    return True
+                except SpineDBAPIError as e:
+                    self._data_store_form.msg_error.emit(e.msg)
+                    return False
+            else:
+                super().setData(index, value, role)
+        else:
+            parameter_value_id = index.sibling(row, h('parameter_value_id')).data(Qt.EditRole)
+            if not parameter_value_id:
+                return False
+            field_name = header[index.column()]
+            try:
+                self.db_mngr.update_parameter_value(parameter_value_id, field_name, value)
+                super().setData(index, value, role)
+                msg = "Parameter value successfully updated."
+                self._data_store_form.msg.emit(msg)
+            except SpineDBAPIError as e:
+                self._data_store_form.msg.emit(e.msg)
 
 
 class CustomSortFilterProxyModel(QSortFilterProxyModel):
