@@ -461,6 +461,6 @@ class Ui_MainWindow(object):
         self.actionPaste_into_new_rows.setText(QtWidgets.QApplication.translate("MainWindow", "Paste into new row(s)", None, -1))
         self.actionPaste_into_new_rows.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+V", None, -1))
 
-from widgets.custom_qtableview import ParameterTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import ParameterTableView
 import resources_icons_rc

@@ -187,7 +187,8 @@ class Ui_Form(object):
         Form.setTabOrder(self.treeView_references, self.toolButton_plus)
         Form.setTabOrder(self.toolButton_plus, self.toolButton_minus)
         Form.setTabOrder(self.toolButton_minus, self.toolButton_add)
-        Form.setTabOrder(self.toolButton_add, self.treeView_data)
+        Form.setTabOrder(self.toolButton_add, self.toolButton_datapackage)
+        Form.setTabOrder(self.toolButton_datapackage, self.treeView_data)
         Form.setTabOrder(self.treeView_data, self.pushButton_open)
 
     def retranslateUi(self, Form):

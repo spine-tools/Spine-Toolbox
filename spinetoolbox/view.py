@@ -115,7 +115,7 @@ class View(MetaObject):
         if not index:
             index = self._widget.ui.treeView_references.currentIndex()
         if not index.isValid():
-            logging.error("Index not valid")
+            self._toolbox.msg_warning.emit("Nothing to plot. Add connection or reference.")
             return
         reference = self.references[index.row()]
         db_url = reference['url']
