@@ -1782,64 +1782,8 @@ class RelationshipParameterValueModel(ParameterModel):
                 self._data_store_form.msg.emit(e.msg)
 
 
-class ObjectParameterValueProxy(QSortFilterProxyModel):
-    """"""
-    def __init__(self, data_store_form=None):
-        """Initialize class."""
-        super().__init__(data_store_form)
-        self._data_store_form = data_store_form
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
-        self.object_class_name = None
-        self.object_name = None
-        self.object_class_name_column = None
-        self.object_name_column = None
-        self.filter_role = self.filterRole()
-        self.setDynamicSortFilter(False)
 
-    def setSourceModel(self, source_model):
-        super().setSourceModel(source_model)
-        source_model.headerDataChanged.connect(self.update_column_pointers)
-
-    @Slot("Qt.Orientation", "int", "int", name="update_column_pointers")
-    def update_column_pointers(self, orientation, first, last):
-        if orientation != Qt.Horizontal:
-            return
-        header = self.sourceModel().horizontal_header_labels()
-        self.object_class_name_column = header.index("object_class_name")
-        self.object_name_column = header.index("object_name")
-        print(self.object_class_name_column)
-        print(self.object_name_column)
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        """Accept rows."""
-        result = True
-        if self.object_class_name:
-            object_class_name = self.sourceModel()._data[source_row][self.object_class_name_column][self.filter_role]
-            result = result and (object_class_name == self.object_class_name)
-        if self.object_name:
-            object_name = self.sourceModel()._data[source_row][self.object_name_column][self.filter_role]
-            result = result and (object_name == self.object_name)
-        return result
-
-    def apply_filter(self):
-        """Trigger filtering."""
-        self.setFilterRegExp("")
-
-    def clear_filter(self):
-        """Clear filter."""
-        self.object_class_name = None
-        self.object_name = None
-
-    def is_work_in_progress(self, row):
-        """Return whether or not row is a work in progress."""
-        index = self.index(row, 0)
-        source_index = self.mapToSource(index)
-        source_row = source_index.row()
-        return self.sourceModel().is_work_in_progress(source_row)
-
-
-class CustomSortFilterProxyModel(QSortFilterProxyModel):
+class CustomSortFilterProxyModel2(QSortFilterProxyModel):
     """A custom sort filter proxy model."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
@@ -1851,43 +1795,28 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         self.italic_font.setItalic(True)
         self.h = None
         # List of rules. Each rule is a dict. Items are the terms of an 'or' statement
-        self.rule_dict_list = list()
         self.subrule_dict = dict()
         self.rejected_column_list = list()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
+        self.filter_role = self.filterRole()
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
-        source_model.headerDataChanged.connect(self.update_h)
-        self.update_h()
+        source_model.headerDataChanged.connect(self.receive_header_data_changed)
 
-    def update_h(self):
+    @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
+    def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
+        if orientation != Qt.Horizontal:
+            return
         self.h = self.sourceModel().horizontal_header_labels().index
 
-    def set_work_in_progress(self, row, on):
-        """Add row into list of work in progress."""
-        index = self.index(row, 0)
-        source_index = self.mapToSource(index)
-        source_row = source_index.row()
-        self.sourceModel().set_work_in_progress(source_row, on)
-
     def is_work_in_progress(self, row):
-        """Return whether or not row is a work in progress."""
+        """TODO: This is so HighlightFrameDelegate works. Find a better way.
+        Return whether or not row is a work in progress."""
         index = self.index(row, 0)
         source_index = self.mapToSource(index)
         source_row = source_index.row()
         return self.sourceModel().is_work_in_progress(source_row)
-
-    def clear_filter(self):
-        """Clear all rules, unbold all bolded items."""
-        self.rejected_column_list = list()
-        #for rule_dict in self.rule_dict_list:
-        #    for source_column in rule_dict:
-        #        for source_row in range(self.sourceModel().rowCount()):
-        #            source_index = self.sourceModel().index(source_row, source_column)
-        #            self.sourceModel().setData(source_index, None, Qt.FontRole)
-        self.rule_dict_list = list()
-        self.subrule_dict = dict()
 
     def apply_filter(self):
         """Trigger filtering."""
@@ -1900,16 +1829,6 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         """Add rejected columns."""
         for name in names:
             self.rejected_column_list.append(self.h(name))
-
-    def add_rule(self, **kwargs):
-        """Add NEGATIVE rules by joining the kwargs into a 'or' statement.
-        Negative rules trigger a violation if not met."""
-
-        rule_dict = {}
-        for key, value in kwargs.items():
-            column = self.h(key)
-            rule_dict[column] = value
-        self.rule_dict_list.append(rule_dict)
 
     def add_subrule(self, **kwargs):
         """Add POSITIVE subrules by taking the kwargs as individual statements (key = value).
@@ -1928,27 +1847,11 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
             except KeyError:
                 pass
 
-    def filter_accept_rows(self, source_row, source_parent):
-        """Sweep rules. """
-        for rule_dict in self.rule_dict_list:
-            result = False
-            for column, value in rule_dict.items():
-                source_index = self.sourceModel().index(source_row, column, source_parent)
-                data = self.sourceModel().data(source_index, self.filterRole())
-                if data is None:
-                    continue
-                if isinstance(value, list):
-                    cond = (data in value)
-                else:
-                    cond = (data == value)
-                if cond:
-                    result = True
-                    # self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
-            if not result:
-                return False
-        return True
-
-    def subfilter_accept_rows(self, source_row, source_parent, skip_source_column=list()):
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Returns true if the item in the row indicated by the given source_row
+        and source_parent should be included in the model; otherwise returns false.
+        All subrules need to pass.
+        """
         for column, value in self.subrule_dict.items():
             if column in skip_source_column:
                 continue
@@ -1960,19 +1863,6 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
                 return False
         return True
 
-    def filterAcceptsRow(self, source_row, source_parent):
-        """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false.
-        All the rules and subrules need to pass.
-        """
-        if self.sourceModel().is_work_in_progress(source_row):
-            return True
-        if not self.filter_accept_rows(source_row, source_parent):
-            return False
-        if not self.subfilter_accept_rows(source_row, source_parent):
-            return False
-        return True
-
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column
         and source_parent should be included in the model; otherwise returns false.
@@ -1980,6 +1870,162 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
         if not self.rejected_column_list:
             return True
         return source_column not in self.rejected_column_list
+
+    def clear_filter(self):
+        """Clear all rules, unbold all bolded items."""
+        self.rejected_column_list = list()
+        # for rule_dict in self.rule_dict_list:
+        #     for source_column in rule_dict:
+        #         for source_row in range(self.sourceModel().rowCount()):
+        #             source_index = self.sourceModel().index(source_row, source_column)
+        #             self.sourceModel().setData(source_index, None, Qt.FontRole)
+        self.rule_dict_list = list()
+        self.subrule_dict = dict()
+
+
+class ObjectParameterProxy(CustomSortFilterProxyModel2):
+    """"""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+        self.object_class_name = None
+        self.object_class_name_column = None
+
+    @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
+    def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
+        super().receive_header_data_changed(orientation, first, last)
+        if self.h:
+            self.object_class_name_column = self.h("object_class_name")
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Accept rows."""
+        result = super().filterAcceptsRow(source_row, source_parent)
+        if self.object_class_name:
+            object_class_name = self.sourceModel()._data[source_row][self.object_class_name_column][self.filter_role]
+            result = result and (object_class_name == self.object_class_name)
+        return result
+
+    def clear_filter(self):
+        """Clear filter."""
+        self.object_class_name = None
+
+
+class ObjectParameterValueProxy(ObjectParameterProxy):
+    """"""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+        self.object_name = None
+        self.object_name_column = None
+
+    @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
+    def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
+        super().receive_header_data_changed(orientation, first, last)
+        if self.h:
+            self.object_name_column = self.h("object_name")
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Accept rows."""
+        result = super().filterAcceptsRow(source_row, source_parent)
+        if self.object_name:
+            object_name = self.sourceModel()._data[source_row][self.object_name_column][self.filter_role]
+            result = result and (object_name == self.object_name)
+        return result
+
+    def clear_filter(self):
+        """Clear filter."""
+        super().clear_filter()
+        self.object_name = None
+
+
+class RelationshipParameterProxy(CustomSortFilterProxyModel2):
+    """"""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+        self.relationship_class_name = None
+        self.relationship_class_name_list = list()
+        self.relationship_class_name_column = None
+        self.object_name = None
+        self.object_name_list = list()
+        self.object_name_columns = list()
+
+    @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
+    def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
+        super().receive_header_data_changed(orientation, first, last)
+        if self.h:
+            self.relationship_class_name_column = self.h("relationship_class_name")
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Accept row."""
+        result = super().filterAcceptsRow(source_row, source_parent)
+        data = self.sourceModel()._data
+        if self.relationship_class_name_list:
+            relationship_class_name = data[source_row][self.relationship_class_name_column][self.filter_role]
+            result = result and (relationship_class_name in self.relationship_class_name_list)
+        elif self.relationship_class_name:
+            relationship_class_name = data[source_row][self.relationship_class_name_column][self.filter_role]
+            result = result and (relationship_class_name == self.relationship_class_name)
+        if self.object_name:
+            object_name_list = list()
+            for j in self.object_name_columns:
+                object_name = data[source_row][j][self.filter_role]
+                if not object_name:
+                    break
+                object_name_list.append(object_name)
+            result = result and (self.object_name in object_name_list)
+        elif self.object_name_list:
+            object_name_list = list()
+            for j in self.object_name_columns:
+                object_name = data[source_row][j][self.filter_role]
+                if not object_name:
+                    break
+                object_name_list.append(object_name)
+            result = result and (self.object_name_list == object_name_list)
+        return result
+
+    def clear_filter(self):
+        """Clear filter."""
+        self.relationship_class_name = None
+        self.relationship_class_name_list = list()
+
+
+class RelationshipParameterValueProxy(RelationshipParameterProxy):
+    """"""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+        self.object_name = None
+        self.object_name_list = list()
+        self.object_name_columns = list()
+
+    @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
+    def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
+        super().receive_header_data_changed(orientation, first, last)
+        if self.h:
+            self.object_name_columns = [self.h(x) for x in self.sourceModel().object_name_header]
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Accept row."""
+        result = super().filterAcceptsRow(source_row, source_parent)
+        data = self.sourceModel()._data
+        object_name_list = list()
+        for j in self.object_name_columns:
+            object_name = data[source_row][j][self.filter_role]
+            if not object_name:
+                break
+            object_name_list.append(object_name)
+        if self.object_name:
+            result = result and (self.object_name in object_name_list)
+        elif self.object_name_list:
+            result = result and (self.object_name_list == object_name_list)
+        return result
+
+    def clear_filter(self):
+        """Clear filter."""
+        super().clear_filter()
+        self.object_name = None
+        self.object_name_list = list()
 
 
 class DatapackageResourcesModel(QStandardItemModel):

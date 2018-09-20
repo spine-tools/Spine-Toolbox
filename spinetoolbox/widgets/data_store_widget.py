@@ -40,8 +40,8 @@ from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParamet
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, CommitDialog
 from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterModel, \
-    RelationshipParameterModel, RelationshipParameterValueModel, CustomSortFilterProxyModel, \
-    ObjectParameterValueProxy
+    RelationshipParameterModel, RelationshipParameterValueModel, \
+    ObjectParameterProxy, ObjectParameterValueProxy, RelationshipParameterProxy, RelationshipParameterValueProxy
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import import_datapackage
 from helpers import busy_effect
@@ -85,14 +85,14 @@ class DataStoreForm(QMainWindow):
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
         self.object_parameter_value_model = ObjectParameterValueModel(self)
-        self.object_parameter_value_proxy = CustomSortFilterProxyModel(self)
+        self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
         self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
-        self.relationship_parameter_value_proxy = CustomSortFilterProxyModel(self)
+        self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
         # Parameter (definition) models
         self.object_parameter_model = ObjectParameterModel(self)
-        self.object_parameter_proxy = CustomSortFilterProxyModel(self)
+        self.object_parameter_proxy = ObjectParameterProxy(self)
         self.relationship_parameter_model = RelationshipParameterModel(self)
-        self.relationship_parameter_proxy = CustomSortFilterProxyModel(self)
+        self.relationship_parameter_proxy = RelationshipParameterProxy(self)
         # Context menus
         self.object_tree_context_menu = None
         self.object_parameter_value_context_menu = None
@@ -171,7 +171,7 @@ class DataStoreForm(QMainWindow):
         self.ui.actionPaste.triggered.connect(self.paste)
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
-        # self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
@@ -362,16 +362,16 @@ class DataStoreForm(QMainWindow):
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
+        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
         self.object_parameter_value_model.init_model()
         self.relationship_parameter_value_model.init_model()
-        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
-        self.object_parameter_model.init_model()
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
-        self.relationship_parameter_model.init_model()
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
+        self.object_parameter_model.init_model()
+        self.relationship_parameter_model.init_model()
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -445,7 +445,7 @@ class DataStoreForm(QMainWindow):
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
-        """Filer parameter value tableViews whenever an item is selected in the treeView"""
+        """Filter parameter value tableViews whenever an item is selected in the treeView"""
         self.object_parameter_value_proxy.clear_filter()
         self.relationship_parameter_value_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
@@ -457,63 +457,45 @@ class DataStoreForm(QMainWindow):
             if selected_type == 'object_class':
                 object_class_name = selected['name']
                 object_class_id = selected['id']
+                # TODO: get his query from other place. Maybe send a signal when relationship classes change?
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-                relationship_class_name = [x.name for x in relationship_class_list]
-                self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
-                # self.object_parameter_value_proxy.object_class_name = object_class_name
-                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
+                relationship_class_name_list = [x.name for x in relationship_class_list]
+                self.object_parameter_value_proxy.object_class_name = object_class_name
+                self.relationship_parameter_value_proxy.relationship_class_name_list = relationship_class_name_list
                 max_object_count = max(
                     [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
             elif selected_type == 'object':
                 object_class_name = parent['name']
                 object_class_id = parent['id']
                 object_name = selected['name']
+                # TODO: get his query from other place. Maybe send a signal when relationship classes change?
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-                relationship_class_name = [x.name for x in relationship_class_list]
-                object_name_header = self.relationship_parameter_value_model.object_name_header
-                object_name_dict = {x: object_name for x in object_name_header}
-                self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
-                self.object_parameter_value_proxy.add_rule(object_name=object_name)
-                #self.object_parameter_value_proxy.object_class_name = object_class_name
-                #self.object_parameter_value_proxy.object_name = object_name
-                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
-                self.relationship_parameter_value_proxy.add_rule(**object_name_dict)
+                relationship_class_name_list = [x.name for x in relationship_class_list]
+                self.object_parameter_value_proxy.object_class_name = object_class_name
+                self.object_parameter_value_proxy.object_name = object_name
+                self.relationship_parameter_value_proxy.relationship_class_name_list = relationship_class_name_list
+                self.relationship_parameter_value_proxy.object_name = object_name
                 max_object_count = max(
                     [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
             elif selected_type == 'relationship_class':
-                selected_object_class_name = grand_parent['name']
                 object_name = parent['name']
                 relationship_class_name = selected['name']
-                object_class_name_list = selected['object_class_name_list'].split(',')
-                object_name_dict = {}
-                object_name_header = self.relationship_parameter_value_model.object_name_header
-                for i, object_class_name in enumerate(object_class_name_list):
-                    if object_class_name == selected_object_class_name:
-                        object_name_dict[object_name_header[i]] = object_name
-                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
-                self.relationship_parameter_value_proxy.add_rule(**object_name_dict)
-                max_object_count = len(object_class_name_list)
+                object_class_id_list = selected['object_class_id_list'].split(',')
+                self.relationship_parameter_value_proxy.relationship_class_name = relationship_class_name
+                self.relationship_parameter_value_proxy.object_name = object_name
+                max_object_count = len(object_class_id_list)
             elif selected_type == 'relationship':
                 relationship_class_name = parent['name']
                 object_name_list = selected['object_name_list'].split(',')
-                self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
-                object_name_header = self.relationship_parameter_value_model.object_name_header
-                for i, x in enumerate(object_name_header):
-                    try:
-                        object_name = object_name_list[i]
-                        kwargs = {x: object_name}
-                        self.relationship_parameter_value_proxy.add_rule(**kwargs)
-                    except IndexError:
-                        break
+                self.relationship_parameter_value_proxy.relationship_class_name = relationship_class_name
+                self.relationship_parameter_value_proxy.object_name_list = object_name_list
                 max_object_count = len(object_name_list)
         if max_object_count:
             object_name_header = self.relationship_parameter_value_model.object_name_header
             for j in range(max_object_count, len(object_name_header)):
                 self.relationship_parameter_value_proxy.reject_column(object_name_header[j])
         self.object_parameter_value_proxy.apply_filter()
-        # self.relationship_parameter_value_proxy.apply_filter()
-        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
+        self.relationship_parameter_value_proxy.apply_filter()
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
@@ -528,27 +510,27 @@ class DataStoreForm(QMainWindow):
         if selected_type == 'object_class':
             object_class_name = selected['name']
             object_class_id = selected['id']
+            # TODO: get his query from other place. Maybe send a signal when relationship classes change?
             relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-            relationship_class_name = [x.name for x in relationship_class_list]
-            self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
-            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
+            relationship_class_name_list = [x.name for x in relationship_class_list]
+            self.object_parameter_proxy.object_class_name = object_class_name
+            self.relationship_parameter_proxy.relationship_class_name_list = relationship_class_name_list
         elif selected_type == 'object':
             object_class_name = parent['name']
             object_class_id = parent['id']
+            # TODO: get his query from other place. Maybe send a signal when relationship classes change?
             relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-            relationship_class_name = [x.name for x in relationship_class_list]
-            self.object_parameter_proxy.add_rule(object_class_name=object_class_name)
-            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
+            relationship_class_name_list = [x.name for x in relationship_class_list]
+            self.object_parameter_proxy.object_class_name = object_class_name
+            self.relationship_parameter_proxy.relationship_class_name_list = relationship_class_name_list
         elif selected_type == 'relationship_class':
             relationship_class_name = selected['name']
-            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
+            self.relationship_parameter_proxy.relationship_class_name = relationship_class_name
         elif selected_type == 'relationship':
             relationship_class_name = parent['name']
-            self.relationship_parameter_proxy.add_rule(relationship_class_name=relationship_class_name)
+            self.relationship_parameter_proxy.relationship_class_name = relationship_class_name
         self.object_parameter_proxy.apply_filter()
         self.relationship_parameter_proxy.apply_filter()
-        self.ui.tableView_object_parameter.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
     @Slot("QObject", name="apply_parameter_model_subfilter")
     def apply_parameter_model_subfilter(self, proxy_model, column, text_list):
