@@ -170,7 +170,7 @@ class DataStoreForm(QMainWindow):
         self.ui.actionPaste.triggered.connect(self.paste)
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
-        # self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
+        self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
         self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
@@ -445,7 +445,6 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
         """Filer parameter value tableViews whenever an item is selected in the treeView"""
-        tic = time.clock()
         self.object_parameter_value_proxy.clear_filter()
         self.relationship_parameter_value_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
@@ -468,13 +467,9 @@ class DataStoreForm(QMainWindow):
                 object_class_id = parent['id']
                 object_name = selected['name']
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-
                 relationship_class_name = [x.name for x in relationship_class_list]
                 object_name_header = self.relationship_parameter_value_model.object_name_header
                 object_name_dict = {x: object_name for x in object_name_header}
-                toc = time.clock()
-                logging.debug("Elapsed = {}".format(toc - tic))
-                return
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
                 self.object_parameter_value_proxy.add_rule(object_name=object_name)
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
@@ -507,8 +502,6 @@ class DataStoreForm(QMainWindow):
                     except IndexError:
                         break
                 max_object_count = len(object_name_list)
-
-        return
         if max_object_count:
             object_name_header = self.relationship_parameter_value_model.object_name_header
             for j in range(max_object_count, len(object_name_header)):
