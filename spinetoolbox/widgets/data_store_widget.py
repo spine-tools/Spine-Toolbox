@@ -40,7 +40,8 @@ from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParamet
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
     AddRelationshipsDialog, CommitDialog
 from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterModel, \
-    RelationshipParameterModel, RelationshipParameterValueModel, CustomSortFilterProxyModel
+    RelationshipParameterModel, RelationshipParameterValueModel, CustomSortFilterProxyModel, \
+    ObjectParameterValueProxy
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import import_datapackage
 from helpers import busy_effect
@@ -360,8 +361,8 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
-        self.object_parameter_value_model.init_model()
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
+        self.object_parameter_value_model.init_model()
         self.relationship_parameter_value_model.init_model()
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
@@ -445,7 +446,6 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
         """Filer parameter value tableViews whenever an item is selected in the treeView"""
-        tic = time.clock()
         self.object_parameter_value_proxy.clear_filter()
         self.relationship_parameter_value_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
@@ -460,6 +460,7 @@ class DataStoreForm(QMainWindow):
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name = [x.name for x in relationship_class_list]
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
+                # self.object_parameter_value_proxy.object_class_name = object_class_name
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
                 max_object_count = max(
                     [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
@@ -468,15 +469,13 @@ class DataStoreForm(QMainWindow):
                 object_class_id = parent['id']
                 object_name = selected['name']
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-
                 relationship_class_name = [x.name for x in relationship_class_list]
                 object_name_header = self.relationship_parameter_value_model.object_name_header
                 object_name_dict = {x: object_name for x in object_name_header}
-                toc = time.clock()
-                logging.debug("Elapsed = {}".format(toc - tic))
-                return
                 self.object_parameter_value_proxy.add_rule(object_class_name=object_class_name)
                 self.object_parameter_value_proxy.add_rule(object_name=object_name)
+                #self.object_parameter_value_proxy.object_class_name = object_class_name
+                #self.object_parameter_value_proxy.object_name = object_name
                 self.relationship_parameter_value_proxy.add_rule(relationship_class_name=relationship_class_name)
                 self.relationship_parameter_value_proxy.add_rule(**object_name_dict)
                 max_object_count = max(
@@ -507,14 +506,12 @@ class DataStoreForm(QMainWindow):
                     except IndexError:
                         break
                 max_object_count = len(object_name_list)
-
-        return
         if max_object_count:
             object_name_header = self.relationship_parameter_value_model.object_name_header
             for j in range(max_object_count, len(object_name_header)):
                 self.relationship_parameter_value_proxy.reject_column(object_name_header[j])
         self.object_parameter_value_proxy.apply_filter()
-        self.relationship_parameter_value_proxy.apply_filter()
+        # self.relationship_parameter_value_proxy.apply_filter()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 

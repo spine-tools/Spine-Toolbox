@@ -30,7 +30,7 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 import os
 from collections import Counter
-from PySide2.QtCore import Qt, Signal, QModelIndex, QAbstractListModel, QAbstractTableModel,\
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel,\
     QSortFilterProxyModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
@@ -1782,6 +1782,63 @@ class RelationshipParameterValueModel(ParameterModel):
                 self._data_store_form.msg.emit(e.msg)
 
 
+class ObjectParameterValueProxy(QSortFilterProxyModel):
+    """"""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+        self._data_store_form = data_store_form
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+        self.object_class_name = None
+        self.object_name = None
+        self.object_class_name_column = None
+        self.object_name_column = None
+        self.filter_role = self.filterRole()
+        self.setDynamicSortFilter(False)
+
+    def setSourceModel(self, source_model):
+        super().setSourceModel(source_model)
+        source_model.headerDataChanged.connect(self.update_column_pointers)
+
+    @Slot("Qt.Orientation", "int", "int", name="update_column_pointers")
+    def update_column_pointers(self, orientation, first, last):
+        if orientation != Qt.Horizontal:
+            return
+        header = self.sourceModel().horizontal_header_labels()
+        self.object_class_name_column = header.index("object_class_name")
+        self.object_name_column = header.index("object_name")
+        print(self.object_class_name_column)
+        print(self.object_name_column)
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Accept rows."""
+        result = True
+        if self.object_class_name:
+            object_class_name = self.sourceModel()._data[source_row][self.object_class_name_column][self.filter_role]
+            result = result and (object_class_name == self.object_class_name)
+        if self.object_name:
+            object_name = self.sourceModel()._data[source_row][self.object_name_column][self.filter_role]
+            result = result and (object_name == self.object_name)
+        return result
+
+    def apply_filter(self):
+        """Trigger filtering."""
+        self.setFilterRegExp("")
+
+    def clear_filter(self):
+        """Clear filter."""
+        self.object_class_name = None
+        self.object_name = None
+
+    def is_work_in_progress(self, row):
+        """Return whether or not row is a work in progress."""
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        source_row = source_index.row()
+        return self.sourceModel().is_work_in_progress(source_row)
+
+
 class CustomSortFilterProxyModel(QSortFilterProxyModel):
     """A custom sort filter proxy model."""
     def __init__(self, data_store_form=None):
@@ -1824,11 +1881,11 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def clear_filter(self):
         """Clear all rules, unbold all bolded items."""
         self.rejected_column_list = list()
-        for rule_dict in self.rule_dict_list:
-            for source_column in rule_dict:
-                for source_row in range(self.sourceModel().rowCount()):
-                    source_index = self.sourceModel().index(source_row, source_column)
-                    self.sourceModel().setData(source_index, None, Qt.FontRole)
+        #for rule_dict in self.rule_dict_list:
+        #    for source_column in rule_dict:
+        #        for source_row in range(self.sourceModel().rowCount()):
+        #            source_index = self.sourceModel().index(source_row, source_column)
+        #            self.sourceModel().setData(source_index, None, Qt.FontRole)
         self.rule_dict_list = list()
         self.subrule_dict = dict()
 
