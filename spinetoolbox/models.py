@@ -26,6 +26,7 @@ Note: These are Spine Toolbox internal data models.
 :date:   23.1.2018
 """
 
+import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 import os
 from collections import Counter
@@ -1024,7 +1025,7 @@ class ObjectTreeModel(QStandardItemModel):
     def __init__(self, data_store_form):
         """Initialize class"""
         super().__init__(data_store_form)
-        self.db_mngr = data_store_form.db_mngr
+        self.db_map = data_store_form.db_map
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
@@ -1053,60 +1054,51 @@ class ObjectTreeModel(QStandardItemModel):
         that builds up the tree.
         """
         self.clear()
+        object_class_list = [x for x in self.db_map.object_class_list()]
+        object_list = [x for x in self.db_map.object_list()]
+        wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
+        wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         root_item = QStandardItem(db_name)
         root_item.setData('root', Qt.UserRole)
-        object_class_list = self.db_mngr.object_class_list()
-        object_list = self.db_mngr.object_list()
-        wide_relationship_class_list = self.db_mngr.wide_relationship_class_list()
-        wide_relationship_list = self.db_mngr.wide_relationship_list()
+        object_class_item_list = list()
         for object_class in object_class_list:
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
-            object_list = self.db_mngr.object_list(class_id=object_class.id)
-            wide_relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class.id)
+            object_item_list = list()
             for object_ in object_list:
                 if object_.class_id != object_class.id:
                     continue
                 object_item = QStandardItem(object_.name)
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole+1)
+                relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
-                    if object_class.id not in wide_relationship_class.object_class_id_list.split(","):
+                    object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
+                    if object_.class_id not in object_class_id_list:
                         continue
                     relationship_class_item = QStandardItem(wide_relationship_class.name)
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole+1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                    wide_relationship_list = self.db_mngr.wide_relationship_list(
-                        class_id=wide_relationship_class.id,
-                        object_id=object_.id)
+                    relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
                         if wide_relationship.class_id != wide_relationship_class.id:
                             continue
-                        if object_.id not in wide_relationship.object_id_list.split(","):
+                        if object_.id not in [int(x) for x in wide_relationship.object_id_list.split(",")]:
                             continue
                         relationship_item = QStandardItem(wide_relationship.name)
                         relationship_item.setData('relationship', Qt.UserRole)
                         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole+1)
                         relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
-                        relationship_class_item.appendRow(relationship_item)
-                    object_item.appendRow(relationship_class_item)
-                object_class_item.appendRow(object_item)
-            root_item.appendRow(object_class_item)
-        self.appendRow(root_item)
-        return root_item
-
-    def _build_tree(self, db_name):
-        """Create root item and object class items. This triggers a recursion
-        that builds up the tree.
-        """
-        self.clear()
-        root_item = QStandardItem(db_name)
-        root_item.setData('root', Qt.UserRole)
-        for object_class in self.db_mngr.object_class_list():
-            object_class_item = self.new_object_class_item(object_class._asdict())
-            root_item.appendRow(object_class_item)
+                        relationship_item_list.append(relationship_item)
+                    relationship_class_item.appendRows(relationship_item_list)
+                    relationship_class_item_list.append(relationship_class_item)
+                object_item.appendRows(relationship_class_item_list)
+                object_item_list.append(object_item)
+            object_class_item.appendRows(object_item_list)
+            object_class_item_list.append(object_class_item)
+        root_item.appendRows(object_class_item_list)
         self.appendRow(root_item)
         return root_item
 
@@ -1119,27 +1111,22 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item = QStandardItem(object_class['name'])
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class, Qt.UserRole+1)
-        object_list = self.db_mngr.object_list(class_id=object_class['id'])
-        wide_relationship_class_list = self.db_mngr.wide_relationship_class_list(object_class_id=object_class['id'])
-        for object_ in object_list:
-            object_item = self.new_object_item(object_._asdict(), wide_relationship_class_list)
-            object_class_item.appendRow(object_item)
         return object_class_item
 
-    def new_object_item(self, object_, wide_relationship_class_list=None):
+    def new_object_item(self, object_):
         """Returns new object item.
 
         Args:
             object_ (dict)
-            wide_relationship_class_list (query)
         """
         object_item = QStandardItem(object_['name'])
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_, Qt.UserRole+1)
-        # create and append relationship class items
-        for wide_relationship_class in wide_relationship_class_list:
+        relationship_class_item_list = list()
+        for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_["class_id"]):
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class._asdict(), object_)
-            object_item.appendRow(relationship_class_item)
+            relationship_class_item_list.append(relationship_class_item)
+        object_item.appendRows(relationship_class_item_list)
         return object_item
 
     def new_relationship_class_item(self, wide_relationship_class, object_):
@@ -1153,13 +1140,6 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData(wide_relationship_class, Qt.UserRole+1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class['object_class_name_list'], Qt.ToolTipRole)
-        # get relationship involving the present object and class in wide format
-        wide_relationship_list = self.db_mngr.wide_relationship_list(
-            class_id=wide_relationship_class['id'],
-            object_id=object_['id'])
-        for wide_relationship in wide_relationship_list:
-            relationship_item = self.new_relationship_item(wide_relationship._asdict())
-            relationship_class_item.appendRow(relationship_item)
         return relationship_class_item
 
     def new_relationship_item(self, wide_relationship):
@@ -1209,12 +1189,11 @@ class ObjectTreeModel(QStandardItemModel):
         if not object_class_item:
             logging.debug("Object class item not found in model. This is probably a bug.")
             return
-        wide_relationship_class_list = self.db_mngr.wide_relationship_class_list(object_['class_id'])
-        object_item = self.new_object_item(object_, wide_relationship_class_list)
+        object_item = self.new_object_item(object_)
         object_class_item.appendRow(object_item)
 
-    def add_relationship_class(self, wide_relationship_class): # TODO
-        """Add proto relationship class."""
+    def add_relationship_class(self, wide_relationship_class):
+        """Add relationship class."""
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
@@ -1316,7 +1295,7 @@ class ParameterModel(MinimalTableModel):
         """Initialize class."""
         super().__init__(data_store_form)
         self._data_store_form = data_store_form
-        self.db_mngr = self._data_store_form.db_mngr
+        self.db_map = self._data_store_form.db_map
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
         self.wip_row_list = list()
         self.rowsInserted.connect(self.rows_inserted)
@@ -1374,6 +1353,20 @@ class ObjectParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
+    def init_model(self):
+        """Initialize model from source database."""
+        old_model_data = self.model_data().copy()
+        # Add new data
+        object_parameter_list = self.db_map.object_parameter_list()
+        header = self.db_map.object_parameter_fields()
+        self.set_horizontal_header_labels(header)
+        model_data = [list(row._asdict().values()) for row in object_parameter_list]
+        # Add old wip rows
+        for row in sorted(self.wip_row_list.copy()):
+            model_data.insert(row, old_model_data[row])
+        self.reset_model(model_data)
+        self.make_columns_fixed('object_class_name', skip_wip=True)
+
     def setData(self, index, value, role=Qt.EditRole):
         """Try an set data in the database first, if it passes, insert it in the model.
         """
@@ -1401,8 +1394,8 @@ class ObjectParameterModel(ParameterModel):
                 for column in range(h('parameter_name')+1, self.columnCount()):
                     kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
                 try:
-                    object_class = self.db_mngr.single_object_class(name=object_class_name).one_or_none()
-                    parameter = self.db_mngr.add_parameter(
+                    object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
+                    parameter = self.db_map.add_parameter(
                         object_class_id=object_class.id, name=parameter_name, **kwargs)
                     self.set_work_in_progress(row, False)
                     self.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
@@ -1424,7 +1417,7 @@ class ObjectParameterModel(ParameterModel):
             if field_name == 'parameter_name':
                 field_name = 'name'
             try:
-                self.db_mngr.update_parameter(parameter_id, field_name, value)
+                self.db_map.update_parameter(parameter_id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1443,6 +1436,20 @@ class RelationshipParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
+    def init_model(self):
+        """Initialize model from source database."""
+        old_model_data = self.model_data().copy()
+        # Add new data
+        relationship_parameter_list = self.db_map.relationship_parameter_list()
+        header = self.db_map.relationship_parameter_fields()
+        self.set_horizontal_header_labels(header)
+        model_data = [list(row._asdict().values()) for row in relationship_parameter_list]
+        # Add old wip rows
+        for row in sorted(self.wip_row_list.copy()):
+            model_data.insert(row, old_model_data[row])
+        self.reset_model(model_data)
+        self.make_columns_fixed('relationship_class_name', 'object_class_name_list', skip_wip=True)
+
     def setData(self, index, value, role=Qt.EditRole):
         """Try an set data in the database first, if it passes, insert it in the model.
         """
@@ -1458,7 +1465,7 @@ class RelationshipParameterModel(ParameterModel):
                 relationship_class_name = value
                 parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
                 # Autocomplete object class name list
-                relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
+                relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
                     one_or_none()
                 if relationship_class:
                     sibling = index.sibling(row, h('object_class_name_list'))
@@ -1476,9 +1483,9 @@ class RelationshipParameterModel(ParameterModel):
                 for column in range(h('parameter_name')+1, self.columnCount()):
                     kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
                 try:
-                    relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
+                    relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
                         one_or_none()
-                    parameter = self.db_mngr.add_parameter(
+                    parameter = self.db_map.add_parameter(
                         relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
                     self.set_work_in_progress(row, False)
                     self.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
@@ -1500,7 +1507,7 @@ class RelationshipParameterModel(ParameterModel):
             if field_name == 'parameter_name':
                 field_name = 'name'
             try:
-                self.db_mngr.update_parameter(parameter_id, field_name, value)
+                self.db_map.update_parameter(parameter_id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1519,6 +1526,21 @@ class ObjectParameterValueModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
+    def init_model(self):
+        """Initialize model from source database."""
+        old_model_data = self.model_data().copy()
+        # Add new data
+        object_parameter_value_list = self.db_map.object_parameter_value_list()
+        header = self.db_map.object_parameter_value_fields()
+        self.set_horizontal_header_labels(header)
+        model_data = [list(row._asdict().values()) for row in object_parameter_value_list]
+        # Add old wip rows
+        for row in sorted(self.wip_row_list.copy()):
+            model_data.insert(row, old_model_data[row])
+        self.reset_model(model_data)
+        self.make_columns_fixed(
+            'object_class_name', 'object_name', 'parameter_name', 'parameter_value_id', skip_wip=True)
+
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
             return False
@@ -1536,14 +1558,14 @@ class ObjectParameterValueModel(ParameterModel):
                 parameter_name = value
             else:
                 return super().setData(index, value, role)
-            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
-            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
+            object_ = self.db_map.single_object(name=object_name).one_or_none()
+            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
             # Try and fill up object_class_name automatically
             object_class = None
             if object_:
-                object_class = self.db_mngr.single_object_class(id=object_.class_id).one_or_none()
+                object_class = self.db_map.single_object_class(id=object_.class_id).one_or_none()
             if parameter:
-                object_class = self.db_mngr.single_object_class(id=parameter.object_class_id).one_or_none()
+                object_class = self.db_map.single_object_class(id=parameter.object_class_id).one_or_none()
             if object_class:
                 super().setData(index.sibling(row, h('object_class_name')), object_class.name, Qt.EditRole)
             # Check if we're ready to put something in the db
@@ -1554,7 +1576,7 @@ class ObjectParameterValueModel(ParameterModel):
                 for column in range(h('parameter_name')+1, self.columnCount()):
                     kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
                 try:
-                    parameter_value = self.db_mngr.add_parameter_value(
+                    parameter_value = self.db_map.add_parameter_value(
                         object_id=object_.id,
                         parameter_id=parameter.id,
                         **kwargs
@@ -1578,7 +1600,7 @@ class ObjectParameterValueModel(ParameterModel):
                 return False
             field_name = header[index.column()]
             try:
-                self.db_mngr.update_parameter_value(parameter_value_id, field_name, value)
+                self.db_map.update_parameter_value(parameter_value_id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter value successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1591,6 +1613,42 @@ class RelationshipParameterValueModel(ParameterModel):
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
+        self.object_name_header = list()
+
+    def init_model(self):
+        """Initialize model from source database."""
+        old_model_data = self.model_data().copy()
+        # Add new data
+        relationship_parameter_value_list = self.db_map.relationship_parameter_value_list()
+        # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
+        header = self.db_map.relationship_parameter_value_fields()
+        relationship_class_list = self.db_map.wide_relationship_class_list()
+        max_dim_count = max(
+            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
+        self.object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count)]
+        object_name_list_index = header.index("object_name_list")
+        header.pop(object_name_list_index)
+        for i, x in enumerate(self.object_name_header):
+            header.insert(object_name_list_index + i, x)
+        self.set_horizontal_header_labels(header)
+        # Compute model data: split single 'object_name_list' value into several 'object_name' values
+        model_data = list()
+        for row in relationship_parameter_value_list:
+            row_values_list = list(row._asdict().values())
+            object_name_list = row_values_list.pop(object_name_list_index).split(',')
+            for i in range(max_dim_count):
+                try:
+                    value = object_name_list[i]
+                except IndexError:
+                    value = None
+                row_values_list.insert(object_name_list_index + i, value)
+            model_data.append(row_values_list)
+        # Add old wip rows
+        for row in sorted(self.wip_row_list.copy()):
+            model_data.insert(row, old_model_data[row])
+        self.reset_model(model_data)
+        self.make_columns_fixed(
+            'relationship_class_name', *self.object_name_header, 'parameter_name', 'parameter_value_id', skip_wip=True)
 
     def relationship_on_the_fly(self, relationship_class, index, value):
         """Return a relationship retrieved or created for the current index."""
@@ -1610,14 +1668,14 @@ class RelationshipParameterValueModel(ParameterModel):
                 object_name = index.sibling(index.row(), j).data(Qt.DisplayRole)
             if not object_name:
                 return None
-            object_ = self.db_mngr.single_object(name=object_name).one_or_none()
+            object_ = self.db_map.single_object(name=object_name).one_or_none()
             if not object_:
                 logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
                 return None
             object_id_list.append(object_.id)
             object_name_list.append(object_name)
         # Try and retrieve an existing relationship
-        relationship = self.db_mngr.single_wide_relationship(
+        relationship = self.db_map.single_wide_relationship(
             class_id=relationship_class.id, object_name_list=",".join(object_name_list)).one_or_none()
         if relationship:
             msg = "Successfully retrieved relationship '{}'.".format(relationship.name)
@@ -1628,13 +1686,13 @@ class RelationshipParameterValueModel(ParameterModel):
         base_relationship_name = relationship_name
         i = 0
         while True:
-            other_relationship = self.db_mngr.single_wide_relationship(name=relationship_name).one_or_none()
+            other_relationship = self.db_map.single_wide_relationship(name=relationship_name).one_or_none()
             if not other_relationship:
                 break
             relationship_name = base_relationship_name + str(i)
             i += 1
         try:
-            relationship = self.db_mngr.add_wide_relationship(
+            relationship = self.db_map.add_wide_relationship(
                 name=relationship_name,
                 object_id_list=object_id_list,
                 class_id=relationship_class.id
@@ -1668,12 +1726,12 @@ class RelationshipParameterValueModel(ParameterModel):
                 parameter_name = value
             else:
                 return super().setData(index, value, role)
-            relationship_class = self.db_mngr.single_wide_relationship_class(name=relationship_class_name).\
+            relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
-            parameter = self.db_mngr.single_parameter(name=parameter_name).one_or_none()
+            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
             # Try and fill up relationship_class_name automatically
             if not relationship_class and parameter:
-                relationship_class = self.db_mngr.single_wide_relationship_class(id=parameter.relationship_class_id).\
+                relationship_class = self.db_map.single_wide_relationship_class(id=parameter.relationship_class_id).\
                     one_or_none()
                 if relationship_class:
                     ind = index.sibling(row, h('relationship_class_name'))
@@ -1687,7 +1745,7 @@ class RelationshipParameterValueModel(ParameterModel):
                 for column in range(h('parameter_name')+1, self.columnCount()):
                     kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
                 try:
-                    parameter_value = self.db_mngr.add_parameter_value(
+                    parameter_value = self.db_map.add_parameter_value(
                         relationship_id=relationship.id,
                         parameter_id=parameter.id,
                         **kwargs
@@ -1716,7 +1774,7 @@ class RelationshipParameterValueModel(ParameterModel):
                 return False
             field_name = header[index.column()]
             try:
-                self.db_mngr.update_parameter_value(parameter_value_id, field_name, value)
+                self.db_map.update_parameter_value(parameter_value_id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter value successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1789,6 +1847,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
     def add_rule(self, **kwargs):
         """Add NEGATIVE rules by joining the kwargs into a 'or' statement.
         Negative rules trigger a violation if not met."""
+
         rule_dict = {}
         for key, value in kwargs.items():
             column = self.h(key)
@@ -1827,7 +1886,7 @@ class CustomSortFilterProxyModel(QSortFilterProxyModel):
                     cond = (data == value)
                 if cond:
                     result = True
-                    self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
+                    # self.sourceModel().setData(source_index, self.bold_font, Qt.FontRole)
             if not result:
                 return False
         return True

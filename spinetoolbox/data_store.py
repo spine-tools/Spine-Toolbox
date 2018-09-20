@@ -32,7 +32,7 @@ from PySide2.QtGui import QDesktopServices, QIcon
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QStyle, QFileIconProvider
 from metaobject import MetaObject
-from spinedatabase_api import DatabaseManager, SpineDBAPIError, create_new_spine_database
+from spinedatabase_api import TempDatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from graphics_items import DataStoreImage
@@ -385,11 +385,11 @@ class DataStore(MetaObject):
         database = reference['database']
         username = reference['username']
         try:
-            db_mngr = DatabaseManager(db_url, username)
+            db_map = TempDatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        data_store_form = DataStoreForm(self, db_mngr, database)
+        data_store_form = DataStoreForm(self, db_map, database)
         data_store_form.show()
 
     @Slot(name="open_directory")
