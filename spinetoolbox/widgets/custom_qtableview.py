@@ -204,10 +204,10 @@ class ParameterTableView(CustomQTableView):
         source_model = model.sourceModel()
         for source_row in range(source_model.rowCount()):
             # Skip values rejected by filter
-            if not model.filter_accept_rows(source_row, QModelIndex()):
+            if not model.filter_accepts_row(source_row, QModelIndex()):
                 continue
             # Skip values rejected by subfilters from *other* columns
-            if not model.subfilter_accept_rows(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
+            if not model.subfilter_accepts_row(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
                 continue
             data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
             if data is None:
