@@ -1783,7 +1783,7 @@ class RelationshipParameterValueModel(ParameterModel):
 
 
 class ParameterProxy(QSortFilterProxyModel):
-    """A custom sort filter proxy model."""
+    """A custom sort filter proxy model which implementes a subfilter mechanism."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -1871,7 +1871,9 @@ class ParameterProxy(QSortFilterProxyModel):
 
     def apply_filter(self):
         """Trigger filtering."""
-        self.setFilterRegExp("")
+        self.layoutAboutToBeChanged.emit()
+        self.invalidateFilter()
+        self.layoutChanged.emit()
         # Italize header in case the subrule is met
         #for column in self.subrule_dict:
         #    self.sourceModel().setHeaderData(column, Qt.Horizontal, self.italic_font, Qt.FontRole)
@@ -1903,14 +1905,20 @@ class ObjectParameterProxy(ParameterProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
-        result = True
+        row_data = self.sourceModel()._data[source_row]
         if self.object_class_name:
-            object_class_name = self.sourceModel()._data[source_row][self.object_class_name_column][self.filter_role]
-            result = result and (object_class_name == self.object_class_name)
-        return result
+            object_class_name = row_data[self.object_class_name_column][self.filter_role]
+            if object_class_name != self.object_class_name:
+                return False
+            row_data[self.object_class_name_column][Qt.FontRole] = self.bold_font
+        return True
 
     def clear_filter(self):
         """Clear filter."""
+        super().clear_filter()
+        data = self.sourceModel()._data
+        for row_data in data:
+            row_data[self.object_class_name_column][Qt.FontRole] = None
         self.object_class_name = None
 
 
@@ -1930,15 +1938,22 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
-        result = super().filter_accepts_row(source_row, source_parent)
+        if not super().filter_accepts_row(source_row, source_parent):
+            return False
+        row_data = self.sourceModel()._data[source_row]
         if self.object_name:
-            object_name = self.sourceModel()._data[source_row][self.object_name_column][self.filter_role]
-            result = result and (object_name == self.object_name)
-        return result
+            object_name = row_data[self.object_name_column][self.filter_role]
+            if object_name != self.object_name:
+                return False
+            row_data[self.object_name_column][Qt.FontRole] = self.bold_font
+        return True
 
     def clear_filter(self):
         """Clear filter."""
         super().clear_filter()
+        data = self.sourceModel()._data
+        for row_data in data:
+            row_data[self.object_name_column][Qt.FontRole] = None
         self.object_name = None
 
 
@@ -1950,9 +1965,6 @@ class RelationshipParameterProxy(ParameterProxy):
         self.relationship_class_name = None
         self.relationship_class_name_list = list()
         self.relationship_class_name_column = None
-        self.object_name = None
-        self.object_name_list = list()
-        self.object_name_columns = list()
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -1962,18 +1974,26 @@ class RelationshipParameterProxy(ParameterProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
-        result = True
-        data = self.sourceModel()._data
+        row_data = self.sourceModel()._data[source_row]
         if self.relationship_class_name_list:
-            relationship_class_name = data[source_row][self.relationship_class_name_column][self.filter_role]
-            result = result and (relationship_class_name in self.relationship_class_name_list)
+            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
+            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
+            if relationship_class_name not in self.relationship_class_name_list:
+                return False
+            row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
         elif self.relationship_class_name:
-            relationship_class_name = data[source_row][self.relationship_class_name_column][self.filter_role]
-            result = result and (relationship_class_name == self.relationship_class_name)
-        return result
+            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
+            if relationship_class_name != self.relationship_class_name:
+                return False
+            row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
+        return True
 
     def clear_filter(self):
         """Clear filter."""
+        super().clear_filter()
+        data = self.sourceModel()._data
+        for row_data in data:
+            row_data[self.relationship_class_name_column][Qt.FontRole] = None
         self.relationship_class_name = None
         self.relationship_class_name_list = list()
 
@@ -1995,23 +2015,39 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
-        result = super().filter_accepts_row(source_row, source_parent)
-        data = self.sourceModel()._data
+        if not super().filter_accepts_row(source_row, source_parent):
+            return False
+        # Determine object_name_list for this row
+        row_data = self.sourceModel()._data[source_row]
         object_name_list = list()
         for j in self.object_name_columns:
-            object_name = data[source_row][j][self.filter_role]
+            object_name = row_data[j][self.filter_role]
             if not object_name:
                 break
             object_name_list.append(object_name)
+        # Now check filter
         if self.object_name:
-            result = result and (self.object_name in object_name_list)
+            found = False
+            for j, object_name in enumerate(object_name_list):
+                if self.object_name == object_name:
+                    row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+                    found = True
+            if not found:
+                return False
         elif self.object_name_list:
-            result = result and (self.object_name_list == object_name_list)
-        return result
+            if self.object_name_list != object_name_list:
+                return False
+            for j in range(len(object_name_list)):
+                row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+        return True
 
     def clear_filter(self):
         """Clear filter."""
         super().clear_filter()
+        data = self.sourceModel()._data
+        for row_data in data:
+            for j in self.object_name_columns:
+                row_data[j][Qt.FontRole] = None
         self.object_name = None
         self.object_name_list = list()
 
