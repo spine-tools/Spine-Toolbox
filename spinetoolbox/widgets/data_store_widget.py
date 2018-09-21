@@ -343,12 +343,21 @@ class DataStoreForm(QMainWindow):
         self.init_models()
 
     def init_models(self):
+        tic = time.clock()
         self.init_object_tree_model()
+        toc = time.clock()
+        logging.debug("Object tree model populated in {} seconds".format(toc - tic))
+        tic = time.clock()
         self.init_parameter_value_models()
+        toc = time.clock()
+        logging.debug("Parameter value models populated in {} seconds".format(toc - tic))
+        tic = time.clock()
         self.init_parameter_models()
+        toc = time.clock()
+        logging.debug("Parameter models populated in {} seconds".format(toc - tic))
         # clear filters
-        self.object_parameter_value_proxy.clear_filter()
-        self.relationship_parameter_value_proxy.clear_filter()
+        # self.object_parameter_value_proxy.clear_filter()
+        # self.relationship_parameter_value_proxy.clear_filter()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""

@@ -907,14 +907,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.endInsertRows()
         return True
 
-    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
-        if not self.insertRows(row, 1, parent):
-            return False
-        for column, value in enumerate(row_data):
-            self.setData(self.index(row, column), value, role)
-        self.row_with_data_inserted.emit(parent, row)
-        return True
-
     def insertColumns(self, column, count, parent=QModelIndex()):
         """Inserts count columns into the model before the given column.
         Items in the new column will be children of the item represented
@@ -1017,6 +1009,14 @@ class MinimalTableModel(QAbstractTableModel):
         bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
         self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
         self.endResetModel()
+
+    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
+        if not self.insertRows(row, 1, parent):
+            return False
+        for column, value in enumerate(row_data):
+            self.setData(self.index(row, column), value, role)
+        self.row_with_data_inserted.emit(parent, row)
+        return True
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1333,18 +1333,20 @@ class ParameterModel(MinimalTableModel):
 
     def make_columns_fixed(self, *column_names, skip_wip=False):
         """Set columns as fixed so they are not editable and painted gray."""
+        self.layoutAboutToBeChanged.emit()
+        header = self.horizontal_header_labels()
+        column_indices = [header.index(name) for name in column_names]
         for row in range(self.rowCount()):
             if skip_wip and row in self.wip_row_list:
                 continue
-            self.make_columns_fixed_for_row(row, *column_names)
+            self.make_columns_fixed_for_row(row, *column_indices)
+        self.layoutChanged.emit()
 
-    def make_columns_fixed_for_row(self, row, *column_names):
-        """Set background role data and flags for row and column names."""
-        for name in column_names:
-            column = self.horizontal_header_labels().index(name)
-            index = self.index(row, column)
-            self.setData(index, self.gray_brush, Qt.BackgroundRole)
-            self.set_flags(index, ~Qt.ItemIsEditable)
+    def make_columns_fixed_for_row(self, row, *column_indices):
+        """Set background role data and flags for row and column indices."""
+        for column in column_indices:
+            self._data[row][column][Qt.BackgroundRole] = self.gray_brush
+            self._flags[row][column] = ~Qt.ItemIsEditable
 
 
 class ObjectParameterModel(ParameterModel):
