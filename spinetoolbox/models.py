@@ -797,6 +797,8 @@ class MinimalTableModel(QAbstractTableModel):
         return False
 
     def index(self, row, column, parent=QModelIndex()):
+        if row is None or column is None:
+            return QModelIndex()
         if self.can_grow:
             last_row = self.rowCount(parent) - 1
             last_column = self.columnCount(parent) - 1
@@ -1297,39 +1299,15 @@ class ParameterModel(MinimalTableModel):
         self._data_store_form = data_store_form
         self.db_map = self._data_store_form.db_map
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
-        self.wip_row_list = list()
-        self.rowsInserted.connect(self.rows_inserted)
-        self.rowsRemoved.connect(self.rows_removed)
-
-    def rows_inserted(self, parent, first, last):
-        """Update work in progress row list."""
-        for i, row in enumerate(self.wip_row_list):
-            if first <= row:
-                self.wip_row_list[i] += 1
-
-    def rows_removed(self, parent, first, last):
-        """Update work in progress row list."""
-        try:
-            self.wip_row_list.remove(first)
-        except ValueError:
-            pass
-        for i, row in enumerate(self.wip_row_list):
-            if first < row:
-                self.wip_row_list[i] -= 1
+        self.id_column = None
 
     def set_work_in_progress(self, row, on):
         """Add row into list of work in progress."""
-        if on and row not in self.wip_row_list:
-            self.wip_row_list.append(row)
-        else:
-            try:
-                self.wip_row_list.remove(row)
-            except ValueError:
-                pass
+        self.setData(self.index(row, self.id_column), on, Qt.UserRole)
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
-        return row in self.wip_row_list
+        return self.data(self.index(row, self.id_column), Qt.UserRole)
 
     def make_columns_fixed(self, *column_names, skip_wip=False):
         """Set columns as fixed so they are not editable and painted gray."""
@@ -1337,7 +1315,7 @@ class ParameterModel(MinimalTableModel):
         header = self.horizontal_header_labels()
         column_indices = [header.index(name) for name in column_names]
         for row in range(self.rowCount()):
-            if skip_wip and row in self.wip_row_list:
+            if skip_wip and self.is_work_in_progress(row):
                 continue
             self.make_columns_fixed_for_row(row, *column_indices)
         self.layoutChanged.emit()
@@ -1348,6 +1326,19 @@ class ParameterModel(MinimalTableModel):
             self._data[row][column][Qt.BackgroundRole] = self.gray_brush
             self._flags[row][column] = ~Qt.ItemIsEditable
 
+    def reset_model(self, model_data, id_column=None):
+        """Reset model."""
+        if not id_column:
+            return
+        wip_row_list = [row for row in range(self.rowCount()) if self.is_work_in_progress(row)]
+        for row in wip_row_list:
+            row_data = self.row_data(row, role=Qt.DisplayRole)
+            model_data.insert(row, row_data)
+        super().reset_model(model_data)
+        self.id_column = id_column
+        for row in wip_row_list:
+            self.set_work_in_progress(row, True)
+
 
 class ObjectParameterModel(ParameterModel):
     """A model to view and edit object parameters in DataStoreForm."""
@@ -1357,16 +1348,11 @@ class ObjectParameterModel(ParameterModel):
 
     def init_model(self):
         """Initialize model from source database."""
-        old_model_data = self.model_data().copy()
-        # Add new data
         object_parameter_list = self.db_map.object_parameter_list()
         header = self.db_map.object_parameter_fields()
         self.set_horizontal_header_labels(header)
         model_data = [list(row._asdict().values()) for row in object_parameter_list]
-        # Add old wip rows
-        for row in sorted(self.wip_row_list.copy()):
-            model_data.insert(row, old_model_data[row])
-        self.reset_model(model_data)
+        self.reset_model(model_data, id_column=header.index('parameter_id'))
         self.make_columns_fixed('object_class_name', skip_wip=True)
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -1400,7 +1386,8 @@ class ObjectParameterModel(ParameterModel):
                     parameter = self.db_map.add_parameter(
                         object_class_id=object_class.id, name=parameter_name, **kwargs)
                     self.set_work_in_progress(row, False)
-                    self.make_columns_fixed_for_row(row, 'object_class_name', 'parameter_id')
+                    column_indices = [h(x) for x in ('object_class_name', 'parameter_id')]
+                    self.make_columns_fixed_for_row(row, *column_indices)
                     super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
                     super().setData(index, value, role)
                     msg = "Successfully added new parameter."
@@ -1440,16 +1427,11 @@ class RelationshipParameterModel(ParameterModel):
 
     def init_model(self):
         """Initialize model from source database."""
-        old_model_data = self.model_data().copy()
-        # Add new data
         relationship_parameter_list = self.db_map.relationship_parameter_list()
         header = self.db_map.relationship_parameter_fields()
         self.set_horizontal_header_labels(header)
         model_data = [list(row._asdict().values()) for row in relationship_parameter_list]
-        # Add old wip rows
-        for row in sorted(self.wip_row_list.copy()):
-            model_data.insert(row, old_model_data[row])
-        self.reset_model(model_data)
+        self.reset_model(model_data, id_column=header.index('parameter_id'))
         self.make_columns_fixed('relationship_class_name', 'object_class_name_list', skip_wip=True)
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -1490,7 +1472,8 @@ class RelationshipParameterModel(ParameterModel):
                     parameter = self.db_map.add_parameter(
                         relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
                     self.set_work_in_progress(row, False)
-                    self.make_columns_fixed_for_row(row, 'relationship_class_name', 'parameter_id')
+                    column_indices = [h(x) for x in ('relationship_class_name', 'parameter_id')]
+                    self.make_columns_fixed_for_row(row, *column_indices)
                     super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
                     super().setData(index, value, role)
                     msg = "Successfully added new parameter."
@@ -1530,18 +1513,12 @@ class ObjectParameterValueModel(ParameterModel):
 
     def init_model(self):
         """Initialize model from source database."""
-        old_model_data = self.model_data().copy()
-        # Add new data
         object_parameter_value_list = self.db_map.object_parameter_value_list()
         header = self.db_map.object_parameter_value_fields()
         self.set_horizontal_header_labels(header)
         model_data = [list(row._asdict().values()) for row in object_parameter_value_list]
-        # Add old wip rows
-        for row in sorted(self.wip_row_list.copy()):
-            model_data.insert(row, old_model_data[row])
-        self.reset_model(model_data)
-        self.make_columns_fixed(
-            'object_class_name', 'object_name', 'parameter_name', 'parameter_value_id', skip_wip=True)
+        self.reset_model(model_data, id_column=header.index('parameter_value_id'))
+        self.make_columns_fixed('object_class_name', 'object_name', 'parameter_name', skip_wip=True)
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
@@ -1584,8 +1561,10 @@ class ObjectParameterValueModel(ParameterModel):
                         **kwargs
                     )
                     self.set_work_in_progress(row, False)
-                    self.make_columns_fixed_for_row(
-                        row, 'object_class_name', 'object_name', 'parameter_name', 'parameter_value_id')
+                    column_indices = list()
+                    for x in ('object_class_name', 'object_name', 'parameter_name', 'parameter_value_id'):
+                        column_indices.append(h(x))
+                    self.make_columns_fixed_for_row(row, *column_indices)
                     super().setData(index, value, role)
                     super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
                     msg = "Successfully added new parameter value."
@@ -1619,8 +1598,6 @@ class RelationshipParameterValueModel(ParameterModel):
 
     def init_model(self):
         """Initialize model from source database."""
-        old_model_data = self.model_data().copy()
-        # Add new data
         relationship_parameter_value_list = self.db_map.relationship_parameter_value_list()
         # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
         header = self.db_map.relationship_parameter_value_fields()
@@ -1645,12 +1622,8 @@ class RelationshipParameterValueModel(ParameterModel):
                     value = None
                 row_values_list.insert(object_name_list_index + i, value)
             model_data.append(row_values_list)
-        # Add old wip rows
-        for row in sorted(self.wip_row_list.copy()):
-            model_data.insert(row, old_model_data[row])
-        self.reset_model(model_data)
-        self.make_columns_fixed(
-            'relationship_class_name', *self.object_name_header, 'parameter_name', 'parameter_value_id', skip_wip=True)
+        self.reset_model(model_data, id_column=header.index('parameter_value_id'))
+        self.make_columns_fixed('relationship_class_name', *self.object_name_header, 'parameter_name', skip_wip=True)
 
     def relationship_on_the_fly(self, relationship_class, index, value):
         """Return a relationship retrieved or created for the current index."""
@@ -1753,13 +1726,12 @@ class RelationshipParameterValueModel(ParameterModel):
                         **kwargs
                     )
                     self.set_work_in_progress(row, False)
-                    self.make_columns_fixed_for_row(
-                        row,
-                        'relationship_class_name',
-                        *self._data_store_form.object_name_header,
-                        'parameter_name',
-                        'parameter_value_id'
-                    )
+                    column_indices = list()
+                    for x in self._data_store_form.object_name_header:
+                        column_indices.append(h(x))
+                    for x in ('relationship_class_name', 'parameter_name', 'parameter_value_id'):
+                        column_indices.append(h(x))
+                    self.make_columns_fixed_for_row(row, *column_indices)
                     super().setData(index, value, role)
                     super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
                     msg = "Successfully added new parameter value."
@@ -1854,14 +1826,20 @@ class ParameterProxy(QSortFilterProxyModel):
         return True
 
     def filter_accepts_row(self, source_row, source_parent):
-        """Override this method in subclasses"""
+        """Override this method in subclasses."""
         return True
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false."""
-        return self.filter_accepts_row(source_row, source_parent) \
-            and self.subfilter_accepts_row(source_row, source_parent)
+        if self.sourceModel().is_work_in_progress(source_row):
+            return True
+        try:
+            return self.filter_accepts_row(source_row, source_parent) \
+                and self.subfilter_accepts_row(source_row, source_parent)
+        except KeyError:
+            # KeyError means the row is brand new, let it pass
+            return True
 
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column

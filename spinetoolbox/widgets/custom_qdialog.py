@@ -157,7 +157,10 @@ class AddObjectClassesDialog(CustomQDialog):
     def accept(self):
         index = self.ui.comboBox.currentIndex()
         if index == 0:
-            display_order = self.object_class_list[0].display_order-1
+            try:
+                display_order = self.object_class_list[0].display_order-1
+            except IndexError:
+                display_order = 0
         else:
             display_order = self.object_class_list[index-1].display_order
         for i in range(self.model.rowCount()):

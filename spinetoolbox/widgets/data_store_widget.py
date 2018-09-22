@@ -355,9 +355,6 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_models()
         toc = time.clock()
         logging.debug("Parameter models populated in {} seconds".format(toc - tic))
-        # clear filters
-        # self.object_parameter_value_proxy.clear_filter()
-        # self.relationship_parameter_value_proxy.clear_filter()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -560,7 +557,7 @@ class DataStoreForm(QMainWindow):
         """
         index = self.ui.treeView_object.indexAt(pos)
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
-        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)#
+        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
         option = self.object_tree_context_menu.get_action()
         if option == "Copy":
             self.ui.treeView_object.copy()
@@ -985,12 +982,6 @@ class DataStoreForm(QMainWindow):
         source_model.removeRows(source_index.row(), 1)
         self.init_parameter_value_models()
 
-    @Slot(name="add_parameter_values")
-    def add_parameter_values(self):
-        """Sweep object treeview selection. For each object and relationship in the selection,
-        add a parameter value row."""
-        selection = self.ui.treeView_object.selectionModel().selection()
-
     @Slot(name="add_object_parameter_values")
     def add_object_parameter_values(self):
         """Sweep object treeview selection.
@@ -1025,7 +1016,6 @@ class DataStoreForm(QMainWindow):
             model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_object.setCurrentIndex(0)
-        self.object_parameter_value_proxy.apply_filter()
 
     @Slot(name="add_relationship_parameter_values")
     def add_relationship_parameter_values(self):
@@ -1070,7 +1060,6 @@ class DataStoreForm(QMainWindow):
             model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
-        self.relationship_parameter_value_proxy.apply_filter()
 
     @Slot(name="add_object_parameters")
     def add_object_parameters(self):
@@ -1091,16 +1080,15 @@ class DataStoreForm(QMainWindow):
                     object_class_name = index.data(Qt.DisplayRole)
                 else:
                     continue
-                model.insertRows(row + i, 1)
                 model.set_work_in_progress(row + i, True)
+                model.insertRows(row + i, 1)
                 model.setData(model.index(row + i, object_class_name_column), object_class_name)
                 some_inserted = True
                 i += 1
         if not some_inserted:
-            model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
+            model.insertRows(row, 1)
         self.ui.tabWidget_object.setCurrentIndex(1)
-        self.object_parameter_proxy.apply_filter()
 
     @Slot(name="add_relationship_parameters")
     def add_relationship_parameters(self):
@@ -1130,7 +1118,6 @@ class DataStoreForm(QMainWindow):
             model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
-        self.relationship_parameter_proxy.apply_filter()
 
     def restore_ui(self):
         """Restore UI state from previous session."""
