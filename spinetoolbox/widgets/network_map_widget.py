@@ -268,7 +268,8 @@ class NetworkMap:
             node_parameter_value_list = list()
             for node_name in self.node_name_list:
                 node = self.mapping.single_object(name=node_name).one_or_none()
-                parameter_value = self.mapping.single_object_parameter_value(parameter_id=parameter.id,
+                parameter_value = self.mapping.single_object_parameter_value(
+                    parameter_id=parameter.id,
                     object_id=node.id).one_or_none()
                 node_parameter_value_list.append(parameter_value.value)
             self.node_parameter_dict[parameter.name] = arr(node_parameter_value_list)
@@ -287,7 +288,8 @@ class NetworkMap:
             conn_parameter_value_list = list()
             for conn_name in self.conn_name_list:
                 conn = self.mapping.single_object(name=conn_name).one_or_none()
-                parameter_value = self.mapping.single_object_parameter_value(parameter_id=parameter.id,
+                parameter_value = self.mapping.single_object_parameter_value(
+                    parameter_id=parameter.id,
                     object_id=conn.id).one_or_none()
                 conn_parameter_value_list.append(parameter_value.value)
             self.conn_parameter_dict[parameter.name] = arr(conn_parameter_value_list)
