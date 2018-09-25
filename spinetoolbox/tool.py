@@ -58,11 +58,12 @@ class Tool(MetaObject):
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.item_category = "Tools"
-        self._widget = ToolSubWindowWidget(self.item_type)
-        self._widget.set_name_label(name)
-        self._widget.make_header_for_input_files()
-        self._widget.make_header_for_output_files()
-        self._widget.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
+        self._widget = self._toolbox
+        # self._widget = ToolSubWindowWidget(self.item_type)
+        # self._widget.set_name_label(name)
+        # self._widget.make_header_for_input_files()
+        # self._widget.make_header_for_output_files()
+        # self._widget.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self._tool_template = None
         self._tool_template_index = None
         self.tool_template_options_popup_menu = None
@@ -88,15 +89,24 @@ class Tool(MetaObject):
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        self._widget.ui.pushButton_stop.setEnabled(False)
-        self.connect_signals()
+        self._widget.ui.pushButton_tool_stop.setEnabled(False)
+        # self.connect_signals()
 
     def connect_signals(self):
         """Connect this tool's signals to slots."""
-        self._widget.ui.pushButton_stop.clicked.connect(self.stop_process)
-        self._widget.ui.pushButton_open_results.clicked.connect(self.open_results)
-        self._widget.ui.pushButton_execute.clicked.connect(self.execute)
+        self._toolbox.msg.emit("Connecting signals of {0}".format(self.name))
+        self._widget.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
+        self._widget.ui.pushButton_tool_results.clicked.connect(self.open_results)
+        self._widget.ui.pushButton_tool_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
+
+    def disconnect_signals(self):
+        """Disconnect signals."""
+        self._toolbox.msg.emit("Disconnecting signals of {0}".format(self.name))
+        self._widget.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process)
+        self._widget.ui.pushButton_tool_results.clicked.disconnect(self.open_results)
+        self._widget.ui.pushButton_tool_execute.clicked.disconnect(self.execute)
+        self._widget.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template)
 
     @Slot(name="open_results")
     def open_results(self):
@@ -128,12 +138,16 @@ class Tool(MetaObject):
         return self._graphics_item
 
     def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
+        """OBSOLETE. Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
     def get_parent(self):
         """Returns the ToolboxUI instance."""
         return self._toolbox
+
+    def update_tab(self):
+        """Update Tool tab with this item's information."""
+        self._toolbox.ui.label_tool_name.setText(self.name)
 
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
@@ -171,26 +185,27 @@ class Tool(MetaObject):
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
-        if not self.tool_template():
-            self._widget.ui.lineEdit_tool_args.setText("")
-            self._widget.populate_input_files_list(None)
-            self._widget.populate_output_files_list(None)
-        else:
-            self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-            self.update_input_files()
-            self.update_output_files()
+        pass
+        # if not self.tool_template():
+        #     self._widget.ui.lineEdit_tool_args.setText("")
+        #     self._widget.populate_input_files_list(None)
+        #     self._widget.populate_output_files_list(None)
+        # else:
+        #     self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+        #     self.update_input_files()
+        #     self.update_output_files()
 
     def update_input_files(self):
         """Show input files in QListView."""
         if not self.tool_template():
             return
-        self._widget.populate_input_files_list(self.tool_template().inputfiles)
+        # self._widget.populate_input_files_list(self.tool_template().inputfiles)
 
     def update_output_files(self):
         """Show output files in QListView."""
         if not self.tool_template():
             return
-        self._widget.populate_output_files_list(self.tool_template().outputfiles)
+        # self._widget.populate_output_files_list(self.tool_template().outputfiles)
 
     def read_tool_def(self, tool_def_file):
         """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""

@@ -372,27 +372,27 @@ class SpineToolboxProject(MetaObject):
     def add_data_store(self, name, description, reference, x=0, y=0):
         """Add data store to project item model."""
         data_store = DataStore(self._toolbox, name, description, reference, x, y)
-        self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
+        # self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Data Stores", name, data_store)
         self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
 
     def add_data_connection(self, name, description, references, x=0, y=0):
         """Add Data Connection to project item model."""
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        self._toolbox.project_refs.append(data_connection)  # Save reference or signals don't stick
+        # self._toolbox.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Data Connections", name, data_connection)
         self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
 
     def add_tool(self, name, description, tool_template, x=0, y=0):
         """Add Tool to project item model."""
         tool = Tool(self._toolbox, name, description, tool_template, x, y)
-        self._toolbox.project_refs.append(tool)  # Save reference or signals don't stick
+        # self._toolbox.project_refs.append(tool)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Tools", name, tool)
         self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
     def add_view(self, name, description, x=0, y=0):
         """Add View to project item model."""
         view = View(self._toolbox, name, description, x, y)
-        self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
+        # self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Views", name, view)
         self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))

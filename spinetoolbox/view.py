@@ -55,17 +55,25 @@ class View(MetaObject):
         self.item_type = "View"
         self.item_category = "Views"
         self.references = list()
-        self._widget = ViewWidget(self, self.item_type)
-        self._widget.set_name_label(name)
-        self._widget.make_header_for_references()
+        self._widget = self._toolbox
+        # self._widget = ViewWidget(self, self.item_type)
+        # self._widget.set_name_label(name)
+        # self._widget.make_header_for_references()
         # Populate data (files) model
         self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        self.connect_signals()
+        # self.connect_signals()
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.treeView_references.doubleClicked.connect(self.open_network_map)
+        self._toolbox.msg.emit("Connecting signals of {0}".format(self.name))
+        self._widget.ui.treeView_view.doubleClicked.connect(self.open_network_map)
         self._widget.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
+
+    def disconnect_signals(self):
+        """Disconnect signals of this item, so that the UI elements can be used again with another item."""
+        self._toolbox.msg.emit("Disconnecting signals of {0}".format(self.name))
+        self._widget.ui.treeView_view.doubleClicked.disconnect(self.open_network_map)
+        self._widget.ui.pushButton_open_network_map.clicked.disconnect(self.open_network_map)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -79,8 +87,12 @@ class View(MetaObject):
         return self._graphics_item
 
     def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
+        """OBSOLETE. Returns the graphical representation (QWidget) of this object."""
         return self._widget
+
+    def update_tab(self):
+        """Update Data Store tab with this item's information."""
+        self._toolbox.ui.label_view_name.setText(self.name)
 
     def find_input_items(self):
         """Find input items of this View.
@@ -106,16 +118,16 @@ class View(MetaObject):
         self.references = [item.reference() for item in input_items if item.reference()]
         if not self.references:
             return
-        self._widget.populate_reference_list(self.references)
+        # self._widget.populate_reference_list(self.references)
 
     @busy_effect
     @Slot("QModelIndex", name="open_network_map")
     def open_network_map(self, index=None):
         """Open reference in Network Map form."""
         if not index:
-            index = self._widget.ui.treeView_references.currentIndex()
+            index = self._widget.ui.treeView_view.currentIndex()
         if not index.isValid():
-            self._toolbox.msg_warning.emit("Nothing to plot. Add connection or reference.")
+            self._toolbox.msg_warning.emit("Nothing to plot in {0}. Add connection or reference.".format(self.name))
             return
         reference = self.references[index.row()]
         db_url = reference['url']

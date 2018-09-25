@@ -28,20 +28,81 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 import os
-from collections import Counter
 from PySide2.QtCore import Qt, Signal, QModelIndex, QAbstractListModel, QAbstractTableModel,\
-    QSortFilterProxyModel
+    QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
 
 
-class ProjectItemModel(QStandardItemModel):
+class ProjectItemModel(QAbstractItemModel):
     """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
-    def __init__(self, toolbox=None):
-        super().__init__()
+    # TODO: Redo everything
+    def __init__(self, toolbox, root):
+        super().__init__(parent=toolbox)
         self._toolbox = toolbox
+        self._root = root
+        self._data_connections = None
+
+    def root(self):
+        return self.root_item
+
+    def is_category(self, index):
+        """Category items are the children of the root item (top-level items).
+        Project items are the children of category items.
+
+        Args:
+            index (QModelIndex): Index of item to check
+
+        Returns:
+            Boolean value depending on whether the item at index is a category item or not.
+        """
+        if index.parent() == self.root():
+            return True
+        return False
+
+    def rowCount(self, parent):
+        """Reimplemented row counter.
+
+        Args:
+            parent (QModelIndex): Index of parent item whose children are counted.
+
+        Returns:
+            Number (int) of children of given parent
+        """
+        if not parent.isValid():
+            # This is top-level. Return number of category items.
+            return 4
+        if self.is_category(parent):
+            # Return the number of items in this category
+            if parent.data(Qt.DisplayRole) == "Data Connections":
+                return len(self.data_connections)
+            elif parent.data(Qt.DisplayRole) == "Data Stores":
+                return len(self.data_stores)
+
+    def columnCount(self):
+        return 1
+
+    def parent(self, index=QModelIndex()):
+        """Reimplemented method."""
+        if not index.isValid():
+            return self.root_item
+        parent_index = index.parent()
+        if not parent_index.isValid():
+            return QModelIndex()
+        else:
+            return self.createIndex(index.parent().row(), 0, parent_index)
+
+    def index(self, row, column, parent=QModelIndex()):
+        """Reimplemented method."""
+        if not parent.isValid():
+            return QModelIndex()
+        child = parent.child(row)
+        if child:
+            return self.createIndex(row, column, child)
+        else:
+            return QModelIndex()
 
     def setData(self, index, value, role=Qt.EditRole):
         """Change name of item in index to value.
@@ -136,7 +197,7 @@ class ProjectItemModel(QStandardItemModel):
         return True
 
     def n_items(self, typ):
-        """Returns the number of items in the project according to type.
+        """Returns the number of items in the project according to category.
 
         Args:
             typ (str): Type of item to count. "all" returns the number of items in project.
@@ -163,8 +224,37 @@ class ProjectItemModel(QStandardItemModel):
                 logging.error("Unknown type: {0}".format(typ))
         return n
 
+    def items(self, item_category):
+        """Returns a list of items in model according to item category.
+
+        Args:
+            item_category (str): Item category. Data Connections, Data Stores, Tools or Views permitted.
+
+        Returns:
+            A list of all items according to category or an empty list if there are no items of this category
+            in the model or an unknown category was given.
+        """
+        category_item = self.find_item(item_category)
+        if not category_item:
+            logging.error("Category item '{0}' not found".format(item_category))
+            return list()
+        # Loop through children of the category item and append them to a list
+        n = category_item.rowCount()
+        item_list = list()
+        for i in range(n):
+            item_list.append(category_item.child(i))
+        return item_list
+
     def new_item_index(self, category):
-        """Get index where a new item is appended according to category."""
+        """Get index where a new item is appended according to category. This is needed for
+        appending to the connection model.
+
+        Args:
+            category (str): Display Role of the parent
+
+        Returns:
+            Number of items according to category
+        """
         if category == "Data Stores":
             # Return number of data stores
             return self.n_items("Data Stores") - 1

@@ -30,7 +30,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QDockWidget
+    QCheckBox, QInputDialog, QDockWidget, QWidget
 from PySide2.QtGui import QStandardItem, QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
@@ -173,7 +173,7 @@ class ToolboxUI(QMainWindow):
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
         # Project TreeView
-        self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
+        # self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
@@ -247,12 +247,14 @@ class ToolboxUI(QMainWindow):
             tool_template_paths (list): List of tool definition file paths used in this project
         """
         self.init_project_item_model()
+        self.ui.treeView_project.selectionModel().currentChanged.connect(self.selected_item_changed)
         self.init_tool_template_model(tool_template_paths)
         self.init_connection_model()
 
     def init_project_item_model(self):
         """Initializes project item model."""
         self.project_item_model = ProjectItemModel(self)
+
         ds_cat_item = QStandardItem("Data Stores")
         dc_cat_item = QStandardItem("Data Connections")
         tool_cat_item = QStandardItem("Tools")
@@ -261,10 +263,10 @@ class ToolboxUI(QMainWindow):
         dc_cat_item.setEditable(False)
         tool_cat_item.setEditable(False)
         view_cat_item.setEditable(False)
-        self.project_item_model.appendRow(ds_cat_item)
-        self.project_item_model.appendRow(dc_cat_item)
-        self.project_item_model.appendRow(tool_cat_item)
-        self.project_item_model.appendRow(view_cat_item)
+        self.project_item_model.root().appendRow(ds_cat_item)
+        self.project_item_model.root().appendRow(dc_cat_item)
+        self.project_item_model.root().appendRow(tool_cat_item)
+        self.project_item_model.root().appendRow(view_cat_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
@@ -486,61 +488,136 @@ class ToolboxUI(QMainWindow):
         self.open_project(self._project.path)
         return
 
-    @Slot("QModelIndex", name="select_item_and_show_info")
-    def select_item_and_show_info(self, index):
-        """Set item selected in scene and show item info in QDockWidget.
+    @Slot("QModelIndex", "QModelIndex", name="selected_item_changed")
+    def selected_item_changed(self, current, previous):
+        """Disconnect signals of previous item, connect signals of current item
+        and update tab of the new item."""
+        if not current.parent().isValid():
+            self.msg.emit("Clicked on category item")
+            return
+        logging.debug("current: {0}".format(current))
+        logging.debug("previous: {0}".format(previous))
+        current_item = self.project_item_model.itemFromIndex(current)
+        if not previous.isValid():
+            previous_item = None
+        else:
+            previous_item = self.project_item_model.itemFromIndex(previous)
+        if previous_item is not None:
+            self.msg.emit("Previous item: {0}".format(previous_item.data(Qt.UserRole).name))
+            # try:
+            #     self.project_refs.remove(previous_item.data(Qt.UserRole))
+            # except ValueError:
+            #     self.msg_error.emit("Item {0} not found in reference list".format(previous_item.data(Qt.UserRole).name))
+            previous_item.data(Qt.UserRole).disconnect_signals()
+            # self.project_refs.append(previous_item)
+        else:
+            self.msg.emit("previous is None ")
+        item = current_item.data(Qt.UserRole)
+        self.msg.emit("Current item: {0}".format(item.name))
+        # try:
+        #     self.project_refs.remove(item)
+        # except ValueError:
+        #     self.msg_error.emit("Item {0} not found in reference list".format(item.name))
+        for ref in self.project_refs:
+            self.msg.emit("ref.name:{0}".format(ref.name))
+            if ref.name == current_item.data(Qt.UserRole).name:
+                ref.connect_signals()
+        item.connect_signals()
+        # self.project_refs.append(item)
+        self.show_info(item)
+
+    def show_info(self, item):
+        """Show information of selected item.
 
         Args:
-            index (QModelIndex): Index of clicked item, if available
+            item (MetaObject): Instance of a project item
         """
-        if not index:
-            return
-        if not index.isValid():
-            logging.error("Index not valid")
-            return
-        else:
-            if index.parent().isValid():
-                item = self.project_item_model.itemFromIndex(index)
-                if not item:
-                    logging.error("Item not found")
-                    return
-                item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
-                # Clear previous selection
-                self.ui.graphicsView.scene().clearSelection()
-                # Set item icon on scene selected.
-                icon = item_data.get_icon()
-                # Select master icon and all of its children are selected as well
-                icon.master().setSelected(True)
-                self.show_info(item_data.name)
-            return
+        # item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
+        # if not item:
+        #     self.msg_error.emit("Item {0} not found".format(name))
+        #     return
 
-    def show_info(self, name):
-        """Show information of selected item. Embed old item widgets into QDockWidget."""
-        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item
-        if not item:
-            logging.error("Item {0} not found".format(name))
-            return
-        item_data = item.data(Qt.UserRole)
-        # Clear QGroupBox layout
-        self.clear_info_area()
+        # item_data = item.data(Qt.UserRole)
+        # Find tab index according to item type
+        for i in range(self.ui.tabWidget_item_info.count()):
+            if self.ui.tabWidget_item_info.tabText(i) == item.item_type:
+                self.ui.tabWidget_item_info.setCurrentIndex(i)
+                break
         # Set QDockWidget title to selected item's type
-        self.ui.dockWidget_item.setWindowTitle("Item Controls: " + item_data.item_type)
-        # Add new item into layout
-        self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
-        # If Data Connection, refresh data files
-        if item_data.item_type in ("Data Connection", "View"):
-            item_data.refresh()
+        self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
+        # Find all items of the same category
+        # items = self.project_item_model.items(item.item_category)
+        # Loop through all items of this type and disconnect signals
+        # for it in items:
+        #     logging.debug("Disconnecting signals of {0}".format(it.data(Qt.UserRole).name))
+        #     it.data(Qt.UserRole).disconnect_signals()
+        # Update widgets in tab according to item information
+        item.update_tab()
+
+        # If Data Connection or View, refresh data files
+        # if item_data.item_type in ("Data Connection", "View"):
+        #     item_data.refresh()
 
     def clear_info_area(self):
-        """Clear QGroupBox inside selected item QDockWidget."""
-        layout = self.ui.groupBox_subwindow.layout()
-        for i in reversed(range(layout.count())):
-            widget_to_remove = layout.itemAt(i).widget()
-            # Remove it from the layout list
-            layout.removeWidget(widget_to_remove)
-            # Remove it from the gui
-            widget_to_remove.setParent(None)
-        self.ui.dockWidget_item.setWindowTitle("Item Controls")
+        """Set empty tab as the current tab in the item info dock widget."""
+        self.ui.tabWidget_item_info.setCurrentIndex(-1)
+        self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+
+    # @Slot("QModelIndex", name="select_item_and_show_info")
+    # def select_item_and_show_info(self, index):
+    #     """Set item selected in scene and show item info in QDockWidget.
+    #
+    #     Args:
+    #         index (QModelIndex): Index of clicked item, if available
+    #     """
+    #     if not index:
+    #         return
+    #     if not index.isValid():
+    #         logging.error("Index not valid")
+    #         return
+    #     else:
+    #         if index.parent().isValid():
+    #             item = self.project_item_model.itemFromIndex(index)
+    #             if not item:
+    #                 logging.error("Item not found")
+    #                 return
+    #             item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
+    #             # Clear previous selection
+    #             self.ui.graphicsView.scene().clearSelection()
+    #             # Set item icon on scene selected.
+    #             icon = item_data.get_icon()
+    #             # Select master icon and all of its children are selected as well
+    #             icon.master().setSelected(True)
+    #             self.show_info(item_data.name)
+    #         return
+
+    # def show_info(self, name):
+    #     """Show information of selected item. Embed old item widgets into QDockWidget."""
+    #     item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item
+    #     if not item:
+    #         logging.error("Item {0} not found".format(name))
+    #         return
+    #     item_data = item.data(Qt.UserRole)
+    #     # Clear QGroupBox layout
+    #     self.clear_info_area()
+    #     # Set QDockWidget title to selected item's type
+    #     self.ui.dockWidget_item.setWindowTitle("Item Controls: " + item_data.item_type)
+    #     # Add new item into layout
+    #     self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
+    #     # If Data Connection or View, refresh data files
+    #     if item_data.item_type in ("Data Connection", "View"):
+    #         item_data.refresh()
+
+    # def clear_info_area(self):
+    #     """Clear QGroupBox inside selected item QDockWidget."""
+    #     layout = self.ui.groupBox_subwindow.layout()
+    #     for i in reversed(range(layout.count())):
+    #         widget_to_remove = layout.itemAt(i).widget()
+    #         # Remove it from the layout list
+    #         layout.removeWidget(widget_to_remove)
+    #         # Remove it from the gui
+    #         widget_to_remove.setParent(None)
+    #     self.ui.dockWidget_item.setWindowTitle("Item Controls")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -772,7 +849,7 @@ class ToolboxUI(QMainWindow):
             data (QObject): Object that is added to model (e.g. DataStore())
         """
         # First, find QStandardItem category item where new child item is added
-        found_items = self.project_item_model.findItems(category, Qt.MatchExactly, column=0)
+        found_items = self.project_item_model.findItems(category, Qt.MatchExactly | Qt.MatchRecursive, column=0)
         if not found_items:
             logging.error("'{0}' category not found in project item model".format(category))
             return False
@@ -784,12 +861,17 @@ class ToolboxUI(QMainWindow):
         if not parent_index.isValid():
             # item_index is a top-level item, we are good
             new_item = QStandardItem(text)
-            new_item.setData(data, role=Qt.UserRole)
             self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
+            # new_item.setData(data, role=Qt.UserRole)
+            # row of new item
+            row = self.project_item_model.n_items(data.item_category)
+            appended_item_index = self.project_item_model.index(row, 0, parent=item_index)
+            self.project_item_model.setData(appended_item_index, data, role=Qt.UserRole)
+            # Get index of the new item
             # Get row and column number (i.e. index) for the connection model. This is to
             # keep the project item model and connection model synchronized.
-            index = self.project_item_model.new_item_index(data.item_category)  # Get index according to item category
-            self.connection_model.append_item(new_item, index)
+            row_in_con_model = self.project_item_model.new_item_index(data.item_category)  # Get row according to item category
+            self.connection_model.append_item(new_item, row_in_con_model)
             self.ui.tableView_connections.resizeColumnsToContents()
             self.ui.treeView_project.expand(item_index)
         return True

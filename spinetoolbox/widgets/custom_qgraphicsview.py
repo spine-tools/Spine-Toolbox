@@ -150,7 +150,8 @@ class CustomQGraphicsView(QGraphicsView):
                 src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                 dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
                 flags = Qt.MatchExactly | Qt.MatchRecursive
-                src_item = self._project_item_model.find_item(src_name, flags).data(Qt.UserRole)
+                src = self._project_item_model.find_item(src_name, flags)
+                src_item= src.data(Qt.UserRole)
                 dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
                 if data == "True":
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
