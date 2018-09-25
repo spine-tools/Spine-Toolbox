@@ -936,7 +936,7 @@ p, li { white-space: pre-wrap; }
                   </size>
                  </property>
                  <property name="pixmap">
-                  <pixmap resource="resources/resources_logos.qrc">:/partner_logos/VTT_RGB.png</pixmap>
+                  <pixmap resource="resources/resources_logos.qrc">:/partner_logos/VTT_logo_2018.png</pixmap>
                  </property>
                  <property name="scaledContents">
                   <bool>true</bool>

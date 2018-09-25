@@ -20,25 +20,21 @@
 """
 Module for data connection class.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   19.12.2017
 """
 
 import os
 import shutil
-import getpass
-import tempfile
 import logging
 from collections import Counter
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from metaobject import MetaObject
-from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
+# from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
-# from widgets.edit_datapackage_keys_widget import EditDatapackageKeysWidget
-# from widgets.custom_menus import DatapackagePopupMenu
 from helpers import create_dir
 from config import APPLICATION_PATH
 from datapackage import Package
@@ -49,21 +45,21 @@ class DataConnection(MetaObject):
     """Data Connection class.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
         references (list): List of file references
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, references, x, y):
+    def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.item_type = "Data Connection"
         self.item_category = "Data Connections"
-        self._widget = DataConnectionWidget(self.item_type)
+        self._widget = DataConnectionWidget(self, self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_references()
         self._widget.make_header_for_data()
@@ -75,17 +71,16 @@ class DataConnection(MetaObject):
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
-        self._graphics_item = DataConnectionImage(self._parent, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = DataConnectionImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
         self.connect_signals()
-        # self.datapackage_popup_menu = DatapackagePopupMenu(self)
         # self._widget.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)
 
     def connect_signals(self):
@@ -116,7 +111,7 @@ class DataConnection(MetaObject):
     def add_file_to_references(self, path):
         """Add filepath to reference list"""
         if path in self.references:
-            self._parent.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
             return
         self.references.append(os.path.abspath(path))
         self._widget.populate_reference_list(self.references)
@@ -125,11 +120,11 @@ class DataConnection(MetaObject):
     def add_file_to_data_dir(self, file_path):
         """Add file to data directory"""
         src_dir, filename = os.path.split(file_path)
-        self._parent.msg.emit("Copying file <b>{0}</b>".format(filename))
+        self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
         try:
             shutil.copy(file_path, self.data_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Copying failed")
+            self._toolbox.msg_error.emit("[OSError] Copying failed")
             return
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
@@ -141,19 +136,19 @@ class DataConnection(MetaObject):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(name="add_references")
     def add_references(self):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileNames(self._parent, "Add file references", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", APPLICATION_PATH, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
         for path in file_paths:
             if path in self.references:
-                self._parent.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
                 continue
             self.references.append(os.path.abspath(path))
         self._widget.populate_reference_list(self.references)
@@ -166,32 +161,32 @@ class DataConnection(MetaObject):
         indexes = self._widget.ui.treeView_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
-            self._parent.msg.emit("All references removed")
+            self._toolbox.msg.emit("All references removed")
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
             for row in rows:
                 self.references.pop(row)
-            self._parent.msg.emit("Selected references removed")
+            self._toolbox.msg.emit("Selected references removed")
         self._widget.populate_reference_list(self.references)
 
     @Slot(name="copy_to_project")
     def copy_to_project(self):
         """Copy files in the file reference list to project and update Data QTreeView."""
         if not self.references:
-            self._parent.msg_warning.emit("No files to copy")
+            self._toolbox.msg_warning.emit("No files to copy")
             return
-        self._parent.msg.emit("Copying files to {0}".format(self.data_dir))
+        self._toolbox.msg.emit("Copying files to {0}".format(self.data_dir))
         for file_path in self.references:
             if not os.path.exists(file_path):
-                self._parent.msg_error.emit("File <b>{0}</b> does not exist".format(file_path))
+                self._toolbox.msg_error.emit("File <b>{0}</b> does not exist".format(file_path))
                 continue
             src_dir, filename = os.path.split(file_path)
-            self._parent.msg.emit("Copying file <b>{0}</b>".format(filename))
+            self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
-                self._parent.msg_error.emit("[OSError] Copying failed")
+                self._toolbox.msg_error.emit("[OSError] Copying failed")
                 continue
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
@@ -210,7 +205,7 @@ class DataConnection(MetaObject):
             # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
-                self._parent.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
+                self._toolbox.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
 
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):
@@ -229,14 +224,14 @@ class DataConnection(MetaObject):
                 # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
                 res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
                 if not res:
-                    self._parent.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
+                    self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
     @Slot(name="call_infer_datapackage")
     def call_infer_datapackage(self, load_resource_data=True):
         """Infer datapackage from CSV files in data directory."""
         data_files = self.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
-            self._parent.msg_error.emit("The folder <b>{0}</b> does not have any CSV files. "
+            self._toolbox.msg_error.emit("The folder <b>{0}</b> does not have any CSV files. "
                                         "Add some and try again".format(self.data_dir))
             return
         self.infer_datapackage()
@@ -244,7 +239,7 @@ class DataConnection(MetaObject):
     def infer_datapackage(self):
         """Infer datapackage from CSV files in data directory and save it."""
         msg = "Inferring datapackage from {}".format(self.data_dir)
-        self._parent.msg.emit(msg)
+        self._toolbox.msg.emit(msg)
         datapackage = CustomPackage(base_path=self.data_dir)
         datapackage.infer(os.path.join(self.data_dir, '*.csv'))
         self.save_datapackage(datapackage)
@@ -260,10 +255,10 @@ class DataConnection(MetaObject):
                 return False
         if datapackage.save(os.path.join(self.data_dir, 'datapackage.json')):
             msg = '"datapackage.json" saved in {}'.format(self.data_dir)
-            self._parent.msg.emit(msg)
+            self._toolbox.msg.emit(msg)
             return True
         msg = 'Failed to save "datapackage.json" in {}'.format(self.data_dir)
-        self._parent.msg_error.emit(msg)
+        self._toolbox.msg_error.emit(msg)
         return False
 
     def load_datapackage(self):
@@ -273,7 +268,7 @@ class DataConnection(MetaObject):
             return None
         datapackage = CustomPackage(file_path)
         msg = "Datapackage loaded from {}".format(file_path)
-        self._parent.msg.emit(msg)
+        self._toolbox.msg.emit(msg)
         return datapackage
 
     def show_spine_datapackage_form(self):
@@ -284,7 +279,7 @@ class DataConnection(MetaObject):
         datapackage = self.load_datapackage()
         if not datapackage:
             return
-        self.spine_datapackage_form = SpineDatapackageWidget(self._parent, self, datapackage)
+        self.spine_datapackage_form = SpineDatapackageWidget(self._toolbox, self, datapackage)
         self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
         self.spine_datapackage_form.show()
 
@@ -317,22 +312,22 @@ class DataConnection(MetaObject):
             return None
         if fname in self.data_files():
             # logging.debug("{0} found in DC {1}".format(fname, self.name))
-            self._parent.msg.emit("\t<b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name))
+            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name))
             path = os.path.join(self.data_dir, fname)
             return path
         for path in self.file_references():  # List of paths including file name
             p, fn = os.path.split(path)
             if fn == fname:
                 # logging.debug("{0} found in DC {1}".format(fname, self.name))
-                self._parent.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
+                self._toolbox.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
                                       .format(fname, self.name))
                 return path
         visited_items.append(self)
-        for input_item in self._parent.connection_model.input_items(self.name):
+        for input_item in self._toolbox.connection_model.input_items(self.name):
             # Find item from project model
-            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
-                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
             item_data = found_item.data(Qt.UserRole)
             if item_data.item_type in ["Data Store", "Data Connection"]:
@@ -362,7 +357,7 @@ class CustomPackage(Package):
         if old in primary_key:
             primary_key_index = primary_key.index(old)
             resource_dict['schema']['primaryKey'][primary_key_index] = new
-        # TODO: the same with foreign keys
+        # TODO: also rename the field in foreign keys
         self.commit()
 
     def primary_keys_data(self):

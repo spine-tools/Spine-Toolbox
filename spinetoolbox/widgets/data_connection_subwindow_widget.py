@@ -20,7 +20,7 @@
 """
 QWidget that is used to display information contained in a Data Connection.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   22.2.2018
 """
 
@@ -33,18 +33,21 @@ from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
 class DataConnectionWidget(QWidget):
-    """Class constructor.
+    """Data Connection subwindow widget. Inherits stylesheet from ToolboxUI,
+    because this widget is inserted into a QDockWidget that
+    inherits the QMainWindow
 
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
     """
-    def __init__(self, item_type):
+    def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
+        self._owner = owner
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of DataConnection objects
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory.
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -53,6 +56,10 @@ class DataConnectionWidget(QWidget):
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
+
+    def owner(self):
+        """Return owner of this window, ie an instance of DataConection."""
+        return self._owner
 
     def set_name_label(self, txt):
         """Set new text for the name label.

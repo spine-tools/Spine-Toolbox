@@ -8,7 +8,8 @@ spinetoolbox
    configuration
    data_connection
    data_store
-   excel_handler
+   datapackage_import_export
+   excel_import_export
    graphics_items
    helpers
    metaobject
@@ -18,7 +19,6 @@ spinetoolbox
    resources_icons_rc
    resources_logos_rc
    setup
-   spinedatabase_api
    spinetoolbox
    test
    tool

@@ -20,7 +20,7 @@
 """
 MetaObject class.
 
-:authors: Erkka Rinne <erkka.rinne@vtt.fi>, Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:authors: E. Rinne (VTT), P. Savolainen (VTT)
 :date:   18.12.2017
 """
 

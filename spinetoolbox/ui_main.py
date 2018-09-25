@@ -20,7 +20,7 @@
 """
 Class for main application GUI functions.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   14.12.2017
 """
 
@@ -30,8 +30,8 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QAction, QInputDialog
-from PySide2.QtGui import QStandardItem, QDesktopServices
+    QCheckBox, QInputDialog, QDockWidget
+from PySide2.QtGui import QStandardItem, QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -43,12 +43,12 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.tool_template_widget import ToolTemplateWidget
-from widgets.checkbox_delegate import CheckBoxDelegate
+from widgets.custom_delegates import CheckBoxDelegate
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SEPARATOR_SS, DOC_INDEX_PATH
+    MAINWINDOW_SS, DOC_INDEX_PATH
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from widgets.julia_repl_widget import JuliaREPLWidget
@@ -96,8 +96,7 @@ class ToolboxUI(QMainWindow):
         self.add_view_form = None
         self.tool_template_form = None
         self.placing_item = ""
-        self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
-        self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
+        self.add_tool_template_popup_menu = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # self.scene_bg = SceneBackground(self)
         # Initialize application
@@ -105,7 +104,7 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
-        self.setStyleSheet(SEPARATOR_SS)
+        self.setStyleSheet(MAINWINDOW_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -170,16 +169,17 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
-        # self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
         # Project TreeView
         self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
-        # self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
-        self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
-        self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
+        self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
+        self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
+        self.ui.toolButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
+        self.ui.toolButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
@@ -213,7 +213,10 @@ class ToolboxUI(QMainWindow):
         window_size = self.qsettings.value("mainWindow/windowSize")
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
+        # noinspection PyArgumentList
+        n_screens_now = len(QGuiApplication.screens())  # number of screens now
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -222,6 +225,19 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
+        if n_screens_now < int(n_screens):
+            # There are less screens available now than on previous application startup
+            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
+            self.move(0, 0)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the main window."""
+        for dock in self.findChildren(QDockWidget):
+            if not dock.isVisible():
+                dock.setVisible(True)
+            if dock.isFloating():
+                dock.setFloating(False)
 
     # noinspection PyMethodMayBeStatic
     def init_models(self, tool_template_paths):
@@ -512,7 +528,7 @@ class ToolboxUI(QMainWindow):
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
-        if item_data.item_type == "Data Connection" or item_data.item_type == "Data Store":
+        if item_data.item_type in ("Data Connection", "View"):
             item_data.refresh()
 
     def clear_info_area(self):
@@ -822,10 +838,13 @@ class ToolboxUI(QMainWindow):
                 return
         item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
-        try:
-            data_dir = item_data.data_dir
-        except AttributeError:
-            logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
+        if item_data.item_type in ("Data Connection", "Data Store"):
+            try:
+                data_dir = item_data.data_dir
+            except AttributeError:
+                logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
+                data_dir = None
+        else:
             data_dir = None
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
@@ -1149,6 +1168,8 @@ class ToolboxUI(QMainWindow):
         d = ind.data(Qt.UserRole)
         if option == "Open directory...":
             d.open_directory()  # Open data_dir of Data Connection or Data Store
+        elif option == "Open treeview...":
+            d.open_treeview()  # Open treeview of Data Store
         elif option == "Execute":
             d.execute()
         elif option == "Results...":
@@ -1252,6 +1273,41 @@ class ToolboxUI(QMainWindow):
                 return False
         return True
 
+    def show_save_project_prompt(self):
+        """Shows the save project message box."""
+        save_at_exit = self._config.get("settings", "save_at_exit")
+        if save_at_exit == "0":
+            # Don't save project and don't show message box
+            logging.debug("Project changes not saved")
+            return
+        elif save_at_exit == "1":  # Default
+            # Show message box
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Save project")
+            msg.setText("Save changes to project?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            chk = chkbox.checkState()
+            if answer == QMessageBox.Yes:
+                self.save_project()
+                if chk == 2:
+                    # Save preference into config file
+                    self._config.set("settings", "save_at_exit", "2")
+            else:
+                if chk == 2:
+                    # Save preference into config file
+                    self._config.set("settings", "save_at_exit", "0")
+        elif save_at_exit == "2":
+            # Save project and don't show message box
+            self.save_project()
+        else:
+            self._config.set("settings", "save_at_exit", "1")
+        return
+
     def closeEvent(self, event=None):
         """Method for handling application exit.
 
@@ -1270,6 +1326,8 @@ class ToolboxUI(QMainWindow):
             self._config.set("settings", "previous_project", "")
         else:
             self._config.set("settings", "previous_project", self._project.path)
+            # Show save project prompt
+            self.show_save_project_prompt()
         self._config.save()
         self.qsettings.setValue("mainWindow/windowSize", self.size())
         self.qsettings.setValue("mainWindow/windowPosition", self.pos())
@@ -1278,6 +1336,9 @@ class ToolboxUI(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
+        # Save number of screens
+        # noinspection PyArgumentList
+        self.qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         if event:
             event.accept()

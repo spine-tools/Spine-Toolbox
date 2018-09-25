@@ -31,7 +31,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(300, 349)
+        Form.resize(316, 349)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -157,7 +157,10 @@ class Ui_Form(object):
 
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
-        Form.setTabOrder(self.comboBox_dialect, self.lineEdit_host)
+        Form.setTabOrder(self.comboBox_dialect, self.comboBox_dsn)
+        Form.setTabOrder(self.comboBox_dsn, self.lineEdit_SQLite_file)
+        Form.setTabOrder(self.lineEdit_SQLite_file, self.pushButton_browse)
+        Form.setTabOrder(self.pushButton_browse, self.lineEdit_host)
         Form.setTabOrder(self.lineEdit_host, self.lineEdit_port)
         Form.setTabOrder(self.lineEdit_port, self.lineEdit_database)
         Form.setTabOrder(self.lineEdit_database, self.lineEdit_username)

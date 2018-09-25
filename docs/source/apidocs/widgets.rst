@@ -28,14 +28,6 @@ widgets.add\_data\_store\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.add\_db\_reference\_widget module
------------------------------------------
-
-.. automodule:: widgets.add_db_reference_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.add\_tool\_widget module
 --------------------------------
 
@@ -52,18 +44,18 @@ widgets.add\_view\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.checkbox\_delegate module
----------------------------------
+widgets.custom\_delegates module
+--------------------------------
 
-.. automodule:: widgets.checkbox_delegate
+.. automodule:: widgets.custom_delegates
     :members:
     :undoc-members:
     :show-inheritance:
 
-widgets.combobox\_delegate module
----------------------------------
+widgets.custom\_editors module
+------------------------------
 
-.. automodule:: widgets.combobox_delegate
+.. automodule:: widgets.custom_editors
     :members:
     :undoc-members:
     :show-inheritance:
@@ -140,14 +132,6 @@ widgets.data\_store\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.edit\_datapackage\_keys\_widget module
-----------------------------------------------
-
-.. automodule:: widgets.edit_datapackage_keys_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.julia\_repl\_widget module
 ----------------------------------
 
@@ -156,10 +140,10 @@ widgets.julia\_repl\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.lineedit\_delegate module
----------------------------------
+widgets.network\_map\_widget module
+-----------------------------------
 
-.. automodule:: widgets.lineedit_delegate
+.. automodule:: widgets.network_map_widget
     :members:
     :undoc-members:
     :show-inheritance:

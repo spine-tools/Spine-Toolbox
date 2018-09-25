@@ -20,7 +20,7 @@
 """
 Module for data store class.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   18.12.2017
 """
 
@@ -28,68 +28,63 @@ import os
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
-from PySide2.QtWidgets import QInputDialog
+from PySide2.QtCore import Slot, QUrl, Qt
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QFileIconProvider
 from metaobject import MetaObject
-from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database, copy_database
+from spinedatabase_api import TempDatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
-from widgets.add_db_reference_widget import AddDbReferenceWidget
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
+from config import SQL_DIALECT_API
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 
 
 class DataStore(MetaObject):
     """Data Store class.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        references (list): List of references (for now it's only database references)
+        reference (dict): Reference to a database
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, references, x, y):
+    def __init__(self, toolbox, name, description, reference, x, y):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
-        self._project = self._parent.project()
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
-        self._widget = DataStoreWidget(self.item_type)
+        self._widget = DataStoreWidget(self, self.item_type)
         self._widget.set_name_label(name)
-        self.data_dir_watcher = QFileSystemWatcher(self)
+        self._widget.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
+        self._widget.ui.comboBox_dialect.setCurrentIndex(-1)
+        # self._widget.ui.toolButton_browse.setIcon(self._widget.style().standardIcon(QStyle.SP_DialogOpenButton))
+        icon_provider = QFileIconProvider()
+        self._widget.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        self.references = references
         try:
             create_dir(self.data_dir)
-            self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating directory {0} failed."
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
-        self.databases = list()  # name of imported databases NOTE: Not in use at the moment
-        # Populate references model
-        self._widget.populate_reference_list(self.references)
-        # Populate data (files) model
-        data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
-        self.add_db_reference_form = None
-        self._graphics_item = DataStoreImage(self._parent, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
-        self._widget.ui.toolButton_plus.setStyleSheet('QToolButton::menu-indicator { image: none; }')
+        self.load_reference(reference)
+        # TODO: try and create reference from first sqlite file in data directory
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.connect(self.show_add_db_reference_form)
-        self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.toolButton_Spine.clicked.connect(self.create_new_spine_database)
-        self._widget.ui.listView_data.doubleClicked.connect(self.open_data_file)
-        self._widget.ui.listView_references.doubleClicked.connect(self.open_reference)
-        self._widget.ui.toolButton_add.clicked.connect(self.import_references)
-        self.data_dir_watcher.directoryChanged.connect(self.refresh)
+        self._widget.ui.pushButton_open_directory.clicked.connect(self.open_directory)
+        self._widget.ui.pushButton_open_treeview.clicked.connect(self.open_treeview)
+        self._widget.ui.toolButton_browse.clicked.connect(self.browse_clicked)
+        self._widget.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
+        self._widget.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -106,6 +101,296 @@ class DataStore(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
+    @Slot(name='browse_clicked')
+    def browse_clicked(self):
+        """Open file browser where user can select the path to an SQLite
+        file that they want to use."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQlite file', self.data_dir, 'SQLite (*.*)')
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        self._widget.ui.lineEdit_SQLite_file.setText(file_path)
+
+    def load_reference(self, reference):
+        """Update ui so it reflects the stored reference after loading a project."""
+        # TODO: now it only handles SQLite references, but should handle all types of reference
+        if not reference:
+            return
+        # Keep compatibility with previous versions where reference was a list
+        if isinstance(reference, list):
+            reference = reference[0]
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            dialect_dbapi = db_url.split('://')[0]
+        except IndexError:
+            self._toolbox.msg_error.emit("Unable to parse stored reference. Please select a new reference.")
+            return
+        try:
+            dialect, dbapi = dialect_dbapi.split('+')
+        except ValueError:
+            dialect = dialect_dbapi
+            dbapi = None
+        if dialect not in SQL_DIALECT_API:
+            self._toolbox.msg_error.emit("Dialect '{}' of stored reference is not supported.".format(dialect))
+            return
+        self._widget.ui.comboBox_dialect.setCurrentText(dialect)
+        if dbapi and SQL_DIALECT_API[dialect] != dbapi:
+            recommended_dbapi = SQL_DIALECT_API[dialect]
+            self._toolbox.msg_warning.emit("The stored reference is using dialect '{0}' with driver '{1}', whereas "
+                                           "'{2}' is the recommended.".format(dialect, dbapi, recommended_dbapi))
+        if dialect == 'sqlite':
+            try:
+                file_path = db_url.split(':///')[1]
+            except IndexError:
+                self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
+                                               "Please select a new one.")
+            self._widget.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
+            self._widget.ui.lineEdit_database.setText(database)
+            self._widget.ui.lineEdit_username.setText(username)
+
+    def enable_mssql(self):
+        """Adjust controls to mssql connection specification."""
+        self._widget.ui.comboBox_dsn.setEnabled(True)
+        self._widget.ui.lineEdit_SQLite_file.setEnabled(False)
+        self._widget.ui.toolButton_browse.setEnabled(False)
+        self._widget.ui.lineEdit_host.setEnabled(False)
+        self._widget.ui.lineEdit_port.setEnabled(False)
+        self._widget.ui.lineEdit_database.setEnabled(False)
+        self._widget.ui.lineEdit_username.setEnabled(True)
+        self._widget.ui.lineEdit_password.setEnabled(True)
+        self._widget.ui.comboBox_dsn.setFocus()
+
+    def enable_sqlite(self):
+        """Adjust controls to sqlite connection specification."""
+        self._widget.ui.comboBox_dsn.setEnabled(False)
+        self._widget.ui.comboBox_dsn.setCurrentIndex(0)
+        self._widget.ui.lineEdit_SQLite_file.setEnabled(True)
+        self._widget.ui.toolButton_browse.setEnabled(True)
+        self._widget.ui.lineEdit_host.setEnabled(False)
+        self._widget.ui.lineEdit_port.setEnabled(False)
+        self._widget.ui.lineEdit_database.setEnabled(False)
+        self._widget.ui.lineEdit_username.setEnabled(False)
+        self._widget.ui.lineEdit_password.setEnabled(False)
+        self._widget.ui.lineEdit_SQLite_file.setFocus()
+
+    def enable_common(self):
+        """Adjust controls to 'common' connection specification."""
+        self._widget.ui.comboBox_dsn.setEnabled(False)
+        self._widget.ui.comboBox_dsn.setCurrentIndex(0)
+        self._widget.ui.lineEdit_SQLite_file.setEnabled(False)
+        self._widget.ui.toolButton_browse.setEnabled(False)
+        self._widget.ui.lineEdit_host.setEnabled(True)
+        self._widget.ui.lineEdit_port.setEnabled(True)
+        self._widget.ui.lineEdit_database.setEnabled(True)
+        self._widget.ui.lineEdit_username.setEnabled(True)
+        self._widget.ui.lineEdit_password.setEnabled(True)
+        self._widget.ui.lineEdit_host.setFocus()
+
+    @Slot("str", name="check_dialect")
+    def check_dialect(self, dialect):
+        """Check if selected dialect is supported. Offer to install DBAPI if not.
+
+        Returns:
+            True if dialect is supported, False if not.
+        """
+        if dialect == 'Select dialect...':
+            return
+        dbapi = SQL_DIALECT_API[dialect]
+        try:
+            if dialect == 'sqlite':
+                create_engine('sqlite://')
+                self.enable_sqlite()
+            elif dialect == 'mssql':
+                import pyodbc
+                dsns = pyodbc.dataSources()
+                # Collect dsns which use the msodbcsql driver
+                mssql_dsns = list()
+                for key,value in dsns.items():
+                    if 'msodbcsql' in value.lower():
+                        mssql_dsns.append(key)
+                if mssql_dsns:
+                    self._widget.ui.comboBox_dsn.clear()
+                    self._widget.ui.comboBox_dsn.addItems(mssql_dsns)
+                    self._widget.ui.comboBox_dsn.setCurrentIndex(-1)
+                    self.enable_mssql()
+                else:
+                    msg = "Please create a SQL Server ODBC Data Source first."
+                    self._toolbox.msg_warning.emit(msg)
+            else:
+                create_engine('{}://username:password@host/database'.format("+".join([dialect, dbapi])))
+                self.enable_common()
+            return True
+        except ModuleNotFoundError:
+            dbapi = SQL_DIALECT_API[dialect]
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Dialect not supported")
+            msg.setText("There is no DBAPI installed for dialect '{0}'. "
+                        "The default one is '{1}'.".format(dialect, dbapi))
+            msg.setInformativeText("Do you want to install it using pip or conda?")
+            pip_button = msg.addButton("pip", QMessageBox.YesRole)
+            conda_button = msg.addButton("conda", QMessageBox.NoRole)
+            cancel_button = msg.addButton("Cancel", QMessageBox.RejectRole)
+            msg.exec_()  # Show message box
+            if msg.clickedButton() == pip_button:
+                if not self.install_dbapi_pip(dbapi):
+                    self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                    return False
+            elif msg.clickedButton() == conda_button:
+                if not self.install_dbapi_conda(dbapi):
+                    self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                    return False
+            else:
+                self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                logging.debug("Cancelled")
+                msg = "Unable to use dialect '{}'.".format(dialect)
+                self._toolbox.msg_error.emit(msg)
+                return False
+            # Check that dialect is not found
+            logging.debug("Checking dialect again")
+            if not self.check_dialect(dialect):
+                self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+
+    @busy_effect
+    def install_dbapi_pip(self, dbapi):
+        """Install DBAPI using pip."""
+        msg = "Installing module '{}' via 'pip'.".format(dbapi)
+        self._toolbox.msg_proc.emit(msg)
+        program = "pip"
+        args = ["install {0}".format(dbapi)]
+        pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
+        pip_install.start_process()
+        if pip_install.wait_for_finished():
+            msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)
+            self._toolbox.msg_success.emit(msg)
+            logging.debug("pip installation succeeded")
+            return True
+        logging.error("Failed to install module '{}' with pip.".format(dbapi))
+        msg = "Failed to install module '{}' with pip.".format(dbapi)
+        self._toolbox.msg_error.emit(msg)
+        return False
+
+    @busy_effect
+    def install_dbapi_conda(self, dbapi):
+        """Install DBAPI using conda. Fails if conda is not installed."""
+        try:
+            import conda.cli
+        except ImportError:
+            logging.debug("Could not find conda. Installing {0} failed.".format(dbapi))
+            msg = "Conda is missing"
+            self._toolbox.msg_error.emit(msg)
+            self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+            return False
+        try:
+            msg = "Installing module '{}' via 'conda'.".format(dbapi)
+            self._toolbox.msg_proc.emit(msg)
+            conda.cli.main('conda', 'install',  '-y', dbapi)
+            msg = "Module '{}' successfully installed via 'conda'.".format(dbapi)
+            self._toolbox.msg_success.emit(msg)
+            logging.debug("conda installation succeeded")
+            return True
+        except Exception as e:
+            logging.exception(e)
+            logging.error("Failed to install module '{}' with conda.".format(dbapi))
+            msg = "Failed to install module '{}' with conda.".format(dbapi)
+            self._toolbox.msg_error.emit(msg)
+            self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+            return False
+
+    def reference(self):
+        """Return a reference from user's choices."""
+        if self._widget.ui.comboBox_dialect.currentIndex() < 0:
+            self._toolbox.msg_warning.emit("Please select dialect first")
+            return None
+        dialect = self._widget.ui.comboBox_dialect.currentText()
+        if dialect == 'mssql':
+            if self._widget.ui.comboBox_dsn.currentIndex() < 0:
+                self._toolbox.msg_warning.emit("Please select DSN first")
+                return None
+            dsn = self._widget.ui.comboBox_dsn.currentText()
+            username = self._widget.ui.lineEdit_username.text()
+            password = self._widget.ui.lineEdit_password.text()
+            url = 'mssql+pyodbc://'
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += '@' + dsn
+            # Set database equal to dsn for creating the reference below
+            database = dsn
+        elif dialect == 'sqlite':
+            sqlite_file = self._widget.ui.lineEdit_SQLite_file.text()
+            url = 'sqlite:///{0}'.format(sqlite_file)
+            # Set database equal to file's basename for creating the reference below
+            database = os.path.basename(sqlite_file)
+            username = getpass.getuser()
+        else:
+            host = self._widget.ui.lineEdit_host.text()
+            if not host:
+                self._toolbox.msg_warning.emit("Host missing")
+                return None
+            database = self._widget.ui.lineEdit_database.text()
+            if not database:
+                self._toolbox.msg_warning.emit("Database missing")
+                return None
+            port = self._widget.ui.lineEdit_port.text()
+            username = self._widget.ui.lineEdit_username.text()
+            password = self._widget.ui.lineEdit_password.text()
+            dbapi = SQL_DIALECT_API[dialect]
+            url = "+".join([dialect, dbapi]) + "://"
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += "@" + host
+            if port:
+                url += ":" + port
+            url += "/" + database
+        engine = create_engine(url)
+        try:
+            engine.connect()
+        except SQLAlchemyError as e:
+            self._toolbox.msg_error.emit("Connection failed: {}".format(e.orig.args))
+            return None
+        if dialect == 'sqlite':
+            # Check integrity SQLite database
+            try:
+                engine.execute('pragma quick_check;')
+            except DatabaseError as e:
+                self._toolbox.msg_error.emit("The file {0} has integrity issues "
+                                             "(not a SQLite database?): {1}".format(database, e.orig.args))
+                return None
+        # Get system's username if none given
+        if not username:
+            username = getpass.getuser()
+        reference = {
+            'database': database,
+            'username': username,
+            'url': url
+        }
+        return reference
+
+    @busy_effect
+    @Slot(name="open_treeview")
+    def open_treeview(self):
+        """Open reference in Data Store form."""
+        reference = self.reference()
+        if not reference:
+            return
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            db_map = TempDatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        data_store_form = DataStoreForm(self, db_map, database)
+        data_store_form.show()
+
     @Slot(name="open_directory")
     def open_directory(self):
         """Open file explorer in this Data Store's data directory."""
@@ -113,139 +398,7 @@ class DataStore(MetaObject):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
-            self._parent.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
-
-    @Slot(name="show_add_db_reference_form")
-    def show_add_db_reference_form(self):
-        """Show the form for querying database connection options."""
-        self.add_db_reference_form = AddDbReferenceWidget(self._parent, self)
-        self.add_db_reference_form.show()
-
-    def add_reference(self, reference):
-        """Add reference to reference list and populate widget's reference list."""
-        self.references.append(reference)
-        self._widget.populate_reference_list(self.references)
-
-    @Slot(name="remove_references")
-    def remove_references(self):
-        """Remove selected references from reference list.
-        Removes all references if nothing is selected.
-        """
-        indexes = self._widget.ui.listView_references.selectedIndexes()
-        if not indexes:  # Nothing selected
-            self.references.clear()
-            self._parent.msg.emit("All references removed")
-        else:
-            rows = [ind.row() for ind in indexes]
-            rows.sort(reverse=True)
-            for row in rows:
-                self.references.pop(row)
-            self._parent.msg.emit("Selected references removed")
-        self._widget.populate_reference_list(self.references)
-
-    @Slot(name="import_references")
-    def import_references(self):
-        """Import data from selected items in reference list into local SQLite file.
-        If no item is selected then import all of them.
-        """
-        if not self.references:
-            self._parent.msg_warning.emit("No data to import")
-            return
-        indexes = self._widget.ui.listView_references.selectedIndexes()
-        if not indexes:  # Nothing selected, import all
-            references_to_import = self.references
-        else:
-            references_to_import = [self.references[ind.row()] for ind in indexes]
-        for reference in references_to_import:
-            try:
-                self.import_reference(reference)
-            except Exception as e:
-                self._parent.msg_error.emit("Import failed: {}".format(e))
-                continue
-        data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
-
-    @busy_effect
-    def import_reference(self, reference):
-        """Import reference database into local SQLite file"""
-        database = reference['database']
-        self._parent.msg.emit("Importing database <b>{0}</b>".format(database))
-        # Source
-        source_url = reference['url']
-        # Destination
-        if source_url.startswith('sqlite'):
-            dest_filename = os.path.join(self.data_dir, database)
-        else:
-            dest_filename = os.path.join(self.data_dir, database + ".sqlite")
-        try:
-            os.remove(dest_filename)
-        except OSError:
-            pass
-        dest_url = "sqlite:///" + dest_filename
-        copy_database(dest_url, source_url)
-        self.databases.append(database)
-
-    @busy_effect
-    @Slot("QModelIndex", name="open_data_file")
-    def open_data_file(self, index):
-        """Open file in Data Store form."""
-        if not index:
-            return
-        if not index.isValid():
-            logging.error("Index not valid")
-            return
-        else:
-            data_file = self.data_files()[index.row()]
-            data_file_path = os.path.join(self.data_dir, data_file)
-            db_url = "sqlite:///" + data_file_path
-            username = getpass.getuser()
-            try:
-                mapping = DatabaseMapping(db_url, username)
-            except SpineDBAPIError as e:
-                self._parent.msg_error.emit(e.msg)
-                return
-            database = data_file
-            data_store_form = DataStoreForm(self, mapping, database)
-            data_store_form.show()
-
-    @busy_effect
-    @Slot("QModelIndex", name="open_reference")
-    def open_reference(self, index):
-        """Open reference in spine data explorer."""
-        if not index:
-            return
-        if not index.isValid():
-            logging.error("Index not valid")
-            return
-        else:
-            reference = self.references[index.row()]
-            db_url = reference['url']
-            database = reference['database']
-            username = reference['username']
-            try:
-                mapping = DatabaseMapping(db_url, username)
-            except SpineDBAPIError as e:
-                self._parent.msg_error.emit(e.msg)
-                return
-            data_store_form = DataStoreForm(self, mapping, database)
-            data_store_form.show()
-
-    def data_references(self):
-        """Returns a list of connection strings that are in this item as references (self.references)."""
-        return self.references
-
-    def data_files(self):
-        """Return a list of files in the data directory."""
-        if not os.path.isdir(self.data_dir):
-            return None
-        return os.listdir(self.data_dir)
-
-    @Slot(name="refresh")
-    def refresh(self):
-        """Refresh data files QTreeView.
-        NOTE: Might lead to performance issues."""
-        d = self.data_files()
-        self._widget.populate_data_list(d)
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     def find_file(self, fname, visited_items):
         """Search for filename in data and return the path if found."""
@@ -253,17 +406,23 @@ class DataStore(MetaObject):
         if self in visited_items:
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
-        if fname in self.data_files():
+        reference = self.reference()
+        dialect = self._widget.ui.comboBox_dialect.currentText()
+        if dialect != "sqlite":
+            return None
+        file_path = self._widget.ui.lineEdit_SQLite_file.text()
+        if not os.path.exists(file_path):
+            return None
+        if fname == os.path.basename(file_path):
             # logging.debug("{0} found in DS {1}".format(fname, self.name))
-            self._parent.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-            path = os.path.join(self.data_dir, fname)
-            return path
+            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
+            return file_path
         visited_items.append(self)
-        for input_item in self._parent.connection_model.input_items(self.name):
+        for input_item in self._toolbox.connection_model.input_items(self.name):
             # Find item from project model
-            found_item = self._parent.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
-                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
             item_data = found_item.data(Qt.UserRole)
             if item_data.item_type in ["Data Store", "Data Connection"]:
@@ -275,7 +434,7 @@ class DataStore(MetaObject):
     @Slot(name="create_new_spine_database")
     def create_new_spine_database(self):
         """Create new (empty) Spine database file in data directory."""
-        answer = QInputDialog.getText(self._parent, "Create fresh Spine database", "Database name:")
+        answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
         database = answer[0]
         if not database:
             return
@@ -286,3 +445,10 @@ class DataStore(MetaObject):
             pass
         url = "sqlite:///" + filename
         create_new_spine_database(url)
+        username = getpass.getuser()
+        reference = {
+            'database': database,
+            'username': username,
+            'url': url
+        }
+        self.load_reference(reference)

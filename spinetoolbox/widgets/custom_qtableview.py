@@ -20,33 +20,130 @@
 """
 Class for a custom QTableView that allows copy-paste, and maybe some other feature we may think of.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   18.5.2018
 """
 
-import logging
-from PySide2.QtWidgets import QTableView, QApplication
-from PySide2.QtCore import Qt, Slot, QItemSelection, QItemSelectionModel
+from PySide2.QtWidgets import QTableView, QApplication, QAction
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
 from PySide2.QtGui import QKeySequence
+from widgets.custom_menus import QOkMenu
+
 
 class CustomQTableView(QTableView):
-    """Custom QTableView class.
+    """Custom QTableView class with copy-paste functionality.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
-        super().__init__(parent)
+        """Initialize the class."""
+        super().__init__(parent=parent)
         # self.editing = False
-        self.clipboard = QApplication.clipboard()
-        self.clipboard_text = self.clipboard.text()
-        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
+        QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
+        self.clipboard_text = QApplication.clipboard().text()
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
-        self.clipboard_text = self.clipboard.text()
+        self.clipboard_text = QApplication.clipboard().text()
+
+    def keyPressEvent(self, event):
+        """Copy and paste to and from clipboard in Excel-like format."""
+        if event.matches(QKeySequence.Copy):
+            if not self.copy():
+                super().keyPressEvent(event)
+        elif event.matches(QKeySequence.Paste):
+            if not self.paste(self.clipboard_text):
+                super().keyPressEvent(event)
+        else:
+            super().keyPressEvent(event)
+
+    def copy(self):
+        """Copy current selection to clipboard in excel format."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        # Take only the first selection in case of multiple selection.
+        first = selection.first()
+        rows = list()
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        for i in range(first.top(), first.bottom()+1):
+            if v_header.isSectionHidden(i):
+                continue
+            row = list()
+            for j in range(first.left(), first.right()+1):
+                if h_header.isSectionHidden(j):
+                    continue
+                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+            rows.append("\t".join(row))
+        content = "\n".join(rows)
+        QApplication.clipboard().setText(content)
+        return True
+
+    def paste(self, text):
+        """Paste data from clipboard."""
+        selection = self.selectionModel().selection()
+        if len(selection.indexes()) > 1:
+            self.paste_on_selection(text)
+        else:
+            self.paste_normal(text)
+
+    def paste_on_selection(self, text):
+        """Paste clipboard data on selection, but not beyond.
+        If data is smaller than selection, repeat data to fit selection."""
+        if not text:
+            return False
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        first = selection.first()
+        data = [line.split('\t') for line in text.split('\n')]
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        for i in range(first.top(), first.bottom()+1):
+            if v_header.isSectionHidden(i):
+                continue
+            for j in range(first.left(), first.right()+1):
+                if h_header.isSectionHidden(j):
+                    continue
+                index = self.model().index(i, j)
+                ii = i % len(data)
+                jj = j % len(data[ii])
+                value = data[ii][jj]
+                self.model().setData(index, value, Qt.EditRole)
+
+    def paste_normal(self, text):
+        """Paste clipboard data, overwritting cells if needed"""
+        if not text:
+            return False
+        data = [line.split('\t') for line in text.split('\n')]
+        top_left_index = self.currentIndex()
+        if not top_left_index.isValid():
+            return False
+        self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
+        v_header = self.verticalHeader()
+        h_header = self.horizontalHeader()
+        row = top_left_index.row()
+        for line in data:
+            if not line:
+                continue
+            if v_header.isSectionHidden(row):
+                row += 1
+            column = top_left_index.column()
+            for value in line:
+                if not value:
+                    continue
+                if h_header.isSectionHidden(column):
+                    column += 1
+                sibling = top_left_index.sibling(row, column)
+                if sibling.flags() & Qt.ItemIsEditable:
+                    self.model().setData(sibling, value, Qt.EditRole)
+                    self.selectionModel().select(sibling, QItemSelectionModel.Select)
+                column += 1
+            row += 1
+        return True
 
     # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
     # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
@@ -62,81 +159,105 @@ class CustomQTableView(QTableView):
     #     self.editing = True
     #     return super().edit(index, trigger, event)
 
-    def keyPressEvent(self, event):
-        """Copy and paste to and from clipboard in Excel-like format."""
-        if event.matches(QKeySequence.Copy):
-            selection = self.selectionModel().selection()
-            if not selection:
-                super().keyPressEvent(event)
-                return
-            # Take only the first selection in case of multiple selection.
-            first = selection.first()
-            content = ""
-            v_header = self.verticalHeader()
-            h_header = self.horizontalHeader()
-            for i in range(first.top(), first.bottom()+1):
-                if v_header.isSectionHidden(i):
-                    continue
-                row = list()
-                for j in range(first.left(), first.right()+1):
-                    if h_header.isSectionHidden(j):
-                        continue
-                    row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
-                content += "\t".join(row)
-                content += "\n"
-            self.clipboard.setText(content)
-        elif event.matches(QKeySequence.Paste):
-            if not self.clipboard_text:
-                super().keyPressEvent(event)
-                return
-            top_left_index = self.currentIndex()
-            if not top_left_index.isValid():
-                super().keyPressEvent(event)
-                return
-            data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
-            self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
-            v_header = self.verticalHeader()
-            h_header = self.horizontalHeader()
-            row = top_left_index.row()
-            for line in data:
-                if v_header.isSectionHidden(row):
-                    row += 1
-                column = top_left_index.column()
-                for value in line:
-                    if h_header.isSectionHidden(column):
-                        column += 1
-                    sibling = top_left_index.sibling(row, column)
-                    if sibling.flags() & Qt.ItemIsEditable:
-                        self.model().setData(sibling, value, Qt.EditRole)
-                        self.selectionModel().select(sibling, QItemSelectionModel.Select)
-                    column += 1
-                row += 1
-        else:
-            super().keyPressEvent(event)
 
-# NOTE: Not in use, we should eliminate it
-# class DataPackageKeyTableView(QTableView):
-#     """Custom QTableView class.
-#
-#     Attributes:
-#         parent (QWidget): The parent of this view
-#     """
-#
-#     def __init__(self, parent):
-#         """Initialize the QGraphicsView."""
-#         super().__init__(parent)
-#         self.setup_combo_items = None
-#
-#     def edit(self, index, trigger=QTableView.AllEditTriggers, event=None):
-#         """Starts editing the item corresponding to the given index if it is editable.
-#         """
-#         if not index.isValid():
-#             return False
-#         column = index.column()
-#         header = self.model().headerData(column)
-#         if header == 'Select': # this column should be editable with only one click
-#             return super().edit(index, trigger, event)
-#         if not trigger & self.editTriggers():
-#             return False
-#         self.setup_combo_items(index)
-#         return super().edit(index, trigger, event)
+class ParameterTableView(CustomQTableView):
+    """Custom QTableView class with autofilter functionality.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
+    filter_triggered = Signal("QObject", name="filter_triggered")
+
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent=parent)
+        self.filter_action_list = list()
+        self.action_all = None
+        self.filter_text = None
+        self.filter_column = None
+
+    def setModel(self, model):
+        """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
+        Otherwise the column is selected when pressing on the header."""
+        super().setModel(model)
+        self.horizontalHeader().sectionPressed.disconnect()
+        self.horizontalHeader().sectionPressed.connect(self.show_filter_menu)
+
+    @Slot(int, name="show_filter_menu")
+    def show_filter_menu(self, logical_index):
+        """Called when user clicks on a horizontal section header.
+        Show the menu to select a filter."""
+        self.filter_column = logical_index
+        model = self.model()
+        filter_menu = QOkMenu(self)
+        self.filter_action_list = list()
+        # Add 'All' action
+        self.action_all = QAction("All", self)
+        self.action_all.setCheckable(True)
+        self.action_all.triggered.connect(self.action_all_triggered)
+        filter_menu.addAction(self.action_all)
+        filter_menu.addSeparator()
+        # Get values from model, after the application of all filters and subfilters from other columns
+        values = list()
+        source_model = model.sourceModel()
+        for source_row in range(source_model.rowCount()):
+            # Skip values rejected by filter
+            if not model.filter_accepts_row(source_row, QModelIndex()):
+                continue
+            # Skip values rejected by subfilters from *other* columns
+            if not model.subfilter_accepts_row(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
+                continue
+            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
+            if data is None:
+                continue
+            values.append(data)
+        # Get values currently filtered in this column
+        try:
+            filtered_values = model.subrule_dict[self.filter_column]
+        except KeyError:
+            filtered_values = list()
+        # Add filter actions
+        self.filter_action_list = list()
+        for i, value in enumerate(sorted(list(set(values)))):
+            action = QAction(str(value), self)
+            action.setCheckable(True)
+            action.triggered.connect(self.update_action_all_checked)
+            filter_menu.addAction(action)
+            self.filter_action_list.append(action)
+            if value in filtered_values:
+                action.setChecked(True)
+            action.trigger()  # Note: this toggles the checked property
+        # 'Ok' action
+        action_ok = QAction("Ok", self)
+        action_ok.triggered.connect(self.update_and_apply_filter)
+        filter_menu.addSeparator()
+        filter_menu.addAction(action_ok)
+        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
+        pos_y = header_pos.y() + self.horizontalHeader().height()
+        filter_menu.exec_(QPoint(pos_x, pos_y))
+
+    @Slot("bool", name="update_action_all_checked")
+    def update_action_all_checked(self, checked=False):
+        """Called when one filter action is triggered.
+        In case they are all checked, check to 'All' action too.
+        """
+        self.action_all.setChecked(all([a.isChecked() for a in self.filter_action_list]))
+
+    @Slot("bool", name="action_all_triggered")
+    def action_all_triggered(self, checked=False):
+        """Check or uncheck all filter actions."""
+        checked = self.action_all.isChecked()
+        for action in self.filter_action_list:
+            action.setChecked(checked)
+
+    @Slot(name="apply_filter")
+    def update_and_apply_filter(self):
+        """Called when user clicks Ok in a filter. Emit `filter_triggered` signal."""
+        filter_text_list = list()
+        for action in self.filter_action_list:
+            if not action.isChecked():
+                filter_text_list.append(action.text())
+        self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)

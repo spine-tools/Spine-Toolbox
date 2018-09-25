@@ -1,5 +1,6 @@
 <RCC>
   <qresource prefix="partner_logos">
+    <file>VTT_logo_2018.png</file>
     <file>Energy_Reform_logo.png</file>
     <file>KU_Leuven_logo.png</file>
     <file>UCD_Dublin_logo.png</file>

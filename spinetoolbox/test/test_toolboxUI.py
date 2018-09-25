@@ -20,7 +20,7 @@
 """
 Unit tests for ToolboxUI class.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   22.8.2018
 """
 

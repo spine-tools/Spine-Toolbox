@@ -18,39 +18,39 @@
 #############################################################################
 
 """
-Classes for custom context menus.
+Classes for custom context menus and pop-up menus.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   9.1.2018
 """
 
 import logging
-from PySide2.QtWidgets import QMenu
-from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction
+from PySide2.QtGui import QIcon
+from PySide2.QtCore import Qt, Signal, Slot
 
 
 class CustomContextMenu(QMenu):
     """Context menu master class for several context menus.
 
     Attributes:
-        parent (ToolboxUI): Parent for menu widget
-        index (QModelIndex): Index of item that requested the context-menu
+        parent (QWidget): Parent for menu widget (ToolboxUI)
     """
-    def __init__(self, parent, index):
+    def __init__(self, parent):
         """Constructor."""
-        super().__init__()
+        super().__init__(parent=parent)
         self._parent = parent
-        self.index = index
         self.option = "None"
 
-    def add_action(self, text, enabled=True):
+    def add_action(self, text, icon=QIcon(), enabled=True):
         """Adds an action to the context menu.
 
         Args:
             text (str): Text description of the action
+            icon (QIcon): Icon for menu item
             enabled (bool): Is action enabled?
         """
-        action = self.addAction(text)
+        action = self.addAction(icon, text)
         action.setEnabled(enabled)
         action.triggered.connect(lambda: self.set_action(text))
 
@@ -68,11 +68,16 @@ class CustomContextMenu(QMenu):
 
 
 class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items both in the QTreeView and in the QGraphicsView."""
+    """Context menu for project items both in the QTreeView and in the QGraphicsView.
 
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             # If no item at index
             return
@@ -83,6 +88,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         if d.item_type == "Data Connection":
             self.add_action("Open directory...")
         elif d.item_type == "Data Store":
+            self.add_action("Open treeview...")
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Execute")
@@ -110,11 +116,17 @@ class ProjectItemContextMenu(CustomContextMenu):
 
 
 class LinkContextMenu(CustomContextMenu):
-    """Context menu class for connection links."""
+    """Context menu class for connection links.
 
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+        parallel_link (Link(QGraphicsPathItem)): Link that is parallel to the one that requested the menu
+    """
     def __init__(self, parent, position, index, parallel_link=None):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             return
         self.add_action("Remove Connection")
@@ -124,11 +136,17 @@ class LinkContextMenu(CustomContextMenu):
 
 
 class ToolTemplateContextMenu(CustomContextMenu):
-    """Context menu class for tool templates."""
+    """Context menu class for Tool templates.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             # If no item at index
             return
@@ -144,94 +162,86 @@ class ToolTemplateContextMenu(CustomContextMenu):
 
 
 class ObjectTreeContextMenu(CustomContextMenu):
-    """Context menu class for Data store form, object tree items."""
+    """Context menu class for object tree items in Data store form.
 
+    Attributes:
+        parent (QWidget): Parent for menu widget (DataStoreForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
+        super().__init__(parent)
         if not index.isValid():
             return
-        if not index.parent().isValid():  # root item
+        plus_object_icon = self._parent.ui.actionAdd_objects.icon()
+        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
+        plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameters.icon()
+        plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameters.icon()
+        item = index.model().itemFromIndex(index)
+        item_type = item.data(Qt.UserRole)
+        self.add_action("Copy")
+        self.addSeparator()
+        if item_type == 'root':
             self.add_action("Add object classes")
-        else:
-            item = index.model().itemFromIndex(index)
-            item_type = item.data(Qt.UserRole)
-            if item_type == 'object_class':
-                self.add_action("Add relationship classes")
-                self.add_action("Add objects")
-                self.addSeparator()
-                self.add_action("Add parameters")
-                self.addSeparator()
-                self.add_action("Rename object class")
-                self.addSeparator()
-                self.add_action("Remove object class")
-            elif item_type == 'object':
-                self.add_action("Add parameter values")
-                self.addSeparator()
-                self.add_action("Rename object")
-                self.addSeparator()
-                self.add_action("Remove object")
-            elif item_type == 'relationship_class':
-                self.add_action("Add relationships")
-                self.addSeparator()
-                self.add_action("Add parameters")
-                self.addSeparator()
-                self.add_action("Rename relationship class")
-                self.addSeparator()
-                self.add_action("Remove relationship class")
-            elif item_type == 'relationship':
-                self.add_action("Expand next")
-                self.addSeparator()
-                self.add_action("Add parameter values")
-                self.addSeparator()
-                self.add_action("Rename relationship")
-                self.addSeparator()
-                self.add_action("Remove relationship")
-        self.exec_(position)
-
-
-class ParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for object parameter value items in Data Store."""
-
-    def __init__(self, parent, position, index):
-        """Class constructor."""
-        super().__init__(parent, index)
-        if not index.isValid():
-            return
-        self.add_action("Remove selected")
+        elif item_type == 'object_class':
+            self.add_action("Add relationship classes", plus_relationship_icon)
+            self.add_action("Add objects", plus_object_icon)
+            self.addSeparator()
+            self.add_action("Add parameters", plus_object_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename object class")
+        elif item_type == 'object':
+            self.add_action("Add parameter values", plus_object_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename object")
+        elif item_type == 'relationship_class':
+            self.add_action("Add relationships", plus_relationship_icon)
+            self.addSeparator()
+            self.add_action("Add parameters", plus_relationship_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename relationship class")
+        elif item_type == 'relationship':
+            self.add_action("Expand next")
+            self.addSeparator()
+            self.add_action("Add parameter values", plus_relationship_parameter_icon)
+            self.addSeparator()
+            self.add_action("Rename relationship")
+        if item_type != 'root':
+            self.addSeparator()
+            self.add_action("Remove selected")
         self.exec_(position)
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object parameter items in Data Store."""
+    """Context menu class for object (relationship) parameter (value) items in Data Store.
 
+    Attributes:
+        parent (QWidget): Parent for menu widget (DataStoreForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent, index)
-        if not index.isValid():
-            return
-        self.add_action("Remove parameter")
-        self.exec_(position)
-
-
-class DescriptorTreeContextMenu(CustomContextMenu):
-    """Context menu class for descriptor treeview in Spine datapackage form."""
-
-    def __init__(self, parent, position, index):
-        """Class constructor."""
-        super().__init__(parent, index)
-        if not index.isValid():
-            return
-        self.add_action("Expand all children")
-        self.add_action("Collapse all children")
+        super().__init__(parent)
+        if index.isValid():
+            self.add_action("Remove selected")
+            self.addSeparator()
+            self.add_action("Copy")
+            self.add_action("Paste")
         self.exec_(position)
 
 
 class CustomPopupMenu(QMenu):
-    """Popup menu master class for several popup menus."""
-    def __init__(self):
+    """Popup menu master class for several popup menus.
+
+    Attributes:
+        parent (QWidget): Parent widget of this pop-up menu
+    """
+    def __init__(self, parent):
         """Class constructor."""
-        super().__init__()
+        super().__init__(parent=parent)
+        self._parent = parent
 
     def add_action(self, text, slot, enabled=True):
         """Adds an action to the popup menu.
@@ -247,39 +257,47 @@ class CustomPopupMenu(QMenu):
 
 
 class AddToolTemplatePopupMenu(CustomPopupMenu):
-    """Popup menu class for add tool template button."""
+    """Popup menu class for add tool template button.
 
+    Attributes:
+        parent (QWidget): parent widget (ToolboxUI)
+    """
     def __init__(self, parent):
         """Class constructor."""
-        super().__init__()
-        self._parent = parent
-        # Show the Tool Template Form (empty)
+        super().__init__(parent)
+        # Open empty Tool Template Form
         self.add_action("New", self._parent.show_tool_template_form)
         # Add an existing Tool template from file to project
         self.add_action("Add existing...", self._parent.open_tool_template)
 
 
 class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
-    """Popup menu class for tool template options button in Tool item."""
+    """Popup menu class for tool template options button in Tool item.
 
-    def __init__(self, parent):
-        super().__init__()
-        self._parent = parent
-        enabled = True if self._parent.tool_template() else False
-        self.add_action("Edit Tool template", self._parent.edit_tool_template, enabled=enabled)
-        self.add_action("Open definition file", self._parent.open_tool_template_file, enabled=enabled)
-        self.add_action("Open main program file", self._parent.open_tool_main_program_file, enabled=enabled)
+    Attributes:
+        parent (QWidget): Parent widget of this menu (ToolboxUI)
+        tool (Tool): Tool item that is associated with the pressed button
+    """
+    def __init__(self, parent, tool):
+        super().__init__(parent)
+        enabled = True if tool.tool_template() else False
+        self.add_action("Edit Tool template", tool.edit_tool_template, enabled=enabled)
+        self.add_action("Open definition file", tool.open_tool_template_file, enabled=enabled)
+        self.add_action("Open main program file", tool.open_tool_main_program_file, enabled=enabled)
         self.addSeparator()
-        self.add_action("New Tool template", self._parent.get_parent().show_tool_template_form)
-        self.add_action("Add Tool template...", self._parent.get_parent().open_tool_template)
+        self.add_action("New Tool template", self._parent.show_tool_template_form)
+        self.add_action("Add Tool template...", self._parent.open_tool_template)
 
 
 class AddIncludesPopupMenu(CustomPopupMenu):
-    """Popup menu class for add includes button in Tool Template widget."""
+    """Popup menu class for add includes button in Tool Template widget.
 
+    Attributes:
+        parent (QWidget): Parent widget (ToolTemplateWidget)
+    """
     def __init__(self, parent):
         """Class constructor."""
-        super().__init__()
+        super().__init__(parent)
         self._parent = parent
         # Open a tool template file
         self.add_action("New file", self._parent.new_include)
@@ -287,12 +305,60 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.add_action("Open file", self._parent.add_includes)
 
 
-# class DatapackagePopupMenu(CustomPopupMenu):
-#     """Popup menu class for datapackage button in Data Connection's subwindow widget."""
-#
-#     def __init__(self, parent):
-#         super().__init__()
-#         self._parent = parent
-#         # Open a tool template file
-#         self.add_action("Edit datapackage keys", self._parent.show_edit_keys_form)
-#         self.add_action("Convert datapackage to Spine", self._parent.show_datapackage2spine_form)
+class QOkMenu(QMenu):
+    """A QMenu that only hides when 'Ok' action is triggered.
+    It allows selecting multiple checkable options.
+
+    Attributes:
+        parent (QWidget): Parent of the QMenu
+    """
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent)
+
+    def mouseReleaseEvent(self, event):
+        """The super implementation triggers the action and closes the menu.
+        Here, we only close the menu if the action is the 'Ok' action.
+        Otherwise we just trigger it.
+        """
+        action = self.activeAction()
+        if action is None:
+            super().mouseReleaseEvent(event)
+            return
+        if action.text() == "Ok":
+            super().mouseReleaseEvent(event)
+            return
+        action.trigger()
+
+
+class QSpinBoxMenu(QMenu):
+    """NOTE: Not in use at the moment.
+    A QMenu with a QSpinBox.
+
+    Attributes:
+        parent (QWidget): Parent of the QMenu
+    """
+
+    data_committed = Signal("int", name="data_committed")
+
+    def __init__(self, parent, value=None, suffix=None, prefix=None):
+        """Initialize the class."""
+        super().__init__(parent)
+        self.spinbox = QSpinBox(self)
+        self.spinbox.setMinimum(1)
+        if value:
+            self.spinbox.setValue(value)
+        if suffix:
+            self.spinbox.setSuffix(suffix)
+        if prefix:
+            self.spinbox.setPrefix(prefix)
+        widget_action = QWidgetAction(self)
+        widget_action.setDefaultWidget(self.spinbox)
+        self.addAction(widget_action)
+        action_ok = self.addAction("Ok")
+        action_ok.triggered.connect(self.commit_data)
+
+    @Slot("bool", name="commit_data")
+    def commit_data(self):
+        """Called when Ok is clicked in the menu."""
+        self.data_committed.emit(self.spinbox.value())

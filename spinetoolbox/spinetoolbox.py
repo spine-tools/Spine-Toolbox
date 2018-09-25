@@ -20,7 +20,7 @@
 """
 Spine Toolbox application main file.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   14.12.2017
 """
 

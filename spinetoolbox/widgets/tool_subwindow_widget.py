@@ -20,7 +20,7 @@
 """
 QWidget that is used to display information contained in a Tool.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   31.1.2018
 """
 
@@ -32,7 +32,7 @@ from config import TOOL_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
 class ToolSubWindowWidget(QWidget):
-    """Class constructor.
+    """Tool subwindow class.
 
     Attributes:
         item_type (str): Internal widget object type (should always be 'Tool')
@@ -43,7 +43,7 @@ class ToolSubWindowWidget(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of Tool objects
         self.input_file_model = QStandardItemModel()
         self.output_file_model = QStandardItemModel()
         self.ui.treeView_input_files.setModel(self.input_file_model)

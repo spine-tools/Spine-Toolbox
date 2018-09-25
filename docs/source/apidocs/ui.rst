@@ -108,18 +108,18 @@ ui.data\_store\_form module
     :undoc-members:
     :show-inheritance:
 
-ui.edit\_datapackage\_keys module
----------------------------------
-
-.. automodule:: ui.edit_datapackage_keys
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ui.mainwindow module
 --------------------
 
 .. automodule:: ui.mainwindow
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.network\_map\_form module
+----------------------------
+
+.. automodule:: ui.network_map_form
     :members:
     :undoc-members:
     :show-inheritance:

@@ -20,14 +20,14 @@
 """
 Classes for custom QTreeView.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   25.4.2018
 """
 
 import os
-import logging
-from PySide2.QtWidgets import QTreeView, QAbstractItemView
-from PySide2.QtCore import Signal, Slot, Qt
+from PySide2.QtWidgets import QTreeView, QApplication
+from PySide2.QtCore import Signal, Slot, Qt, QMimeData, QUrl
+from PySide2.QtGui import QPixmap, QDrag
 
 
 class ObjectTreeView(QTreeView):
@@ -36,12 +36,11 @@ class ObjectTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
-        super().__init__(parent)
+        """Initialize the view."""
+        super().__init__(parent=parent)
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):
@@ -53,6 +52,17 @@ class ObjectTreeView(QTreeView):
             self.editKeyPressed.emit(index)
         return False
 
+    def copy(self):
+        """Copy current selection to clipboard in excel format."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        indexes = selection.indexes()
+        values = [index.data(Qt.DisplayRole) for index in indexes]
+        content = "\n".join(values)
+        QApplication.clipboard().setText(content)
+        return True
+
 
 class ReferencesTreeView(QTreeView):
     """Custom QTreeView class for 'references' in Data Connection subwindow.
@@ -60,12 +70,11 @@ class ReferencesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
-        super().__init__(parent)
+        """Initialize the view."""
+        super().__init__(parent=parent)
 
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
@@ -96,12 +105,13 @@ class DataTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
-        super().__init__(parent)
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self.drag_start_pos = None
+        self.drag_index = None
 
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
@@ -125,6 +135,39 @@ class DataTreeView(QTreeView):
         for url in event.mimeData().urls():
             self.file_dropped.emit(url.toLocalFile())
 
+    def mousePressEvent(self, event):
+        """Register drag start position"""
+        if event.button() == Qt.LeftButton:
+            self.drag_start_pos = event.pos()
+            self.drag_index = self.indexAt(event.pos())
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Start dragging action if needed"""
+        if not event.buttons() & Qt.LeftButton:
+            return
+        if not self.drag_start_pos:
+            return
+        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+        drag = QDrag(self)
+        mimeData = QMimeData()
+        data_dir = self.parent().owner().data_dir
+        filename = self.drag_index.data(Qt.DisplayRole)
+        url = QUrl.fromLocalFile(os.path.join(data_dir, filename))
+        mimeData.setUrls([url])
+        drag.setMimeData(mimeData)
+        icon = self.drag_index.data(Qt.DecorationRole)
+        if icon:
+            pixmap = icon.pixmap(32, 32)
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(pixmap.rect().center())
+        dropAction = drag.exec_()
+
+    def mouseReleaseEvent(self, event):
+        """Forget drag start position"""
+        self.drag_start_pos = None
+
 
 class IncludesTreeView(QTreeView):
     """Custom QTreeView class for 'Includes' in Tool Template form.
@@ -132,12 +175,11 @@ class IncludesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
-        super().__init__(parent)
+        """Initialize the view."""
+        super().__init__(parent=parent)
 
     def dragEnterEvent(self, event):
         """Accept file and folder drops from the filesystem."""

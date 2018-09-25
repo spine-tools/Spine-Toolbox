@@ -63,10 +63,19 @@
       </property>
       <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout_3">
+        <property name="spacing">
+         <number>6</number>
+        </property>
         <item>
          <widget class="QLabel" name="label_object_tree">
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
           <property name="text">
-           <string>&lt;b&gt;Object tree&lt;/b&gt;</string>
+           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Object tree&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
           </property>
          </widget>
         </item>
@@ -83,6 +92,9 @@
           </property>
           <property name="editTriggers">
            <set>QAbstractItemView::EditKeyPressed</set>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::ExtendedSelection</enum>
           </property>
          </widget>
         </item>
@@ -114,6 +126,12 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="font">
+            <font>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
            <property name="contextMenuPolicy">
             <enum>Qt::CustomContextMenu</enum>
            </property>
@@ -121,14 +139,21 @@
             <enum>Qt::LeftToRight</enum>
            </property>
            <property name="tabPosition">
-            <enum>QTabWidget::West</enum>
+            <enum>QTabWidget::North</enum>
            </property>
            <property name="currentIndex">
             <number>0</number>
            </property>
+           <property name="tabBarAutoHide">
+            <bool>false</bool>
+           </property>
            <widget class="QWidget" name="tab_object_parameter_value">
+            <attribute name="icon">
+             <iconset resource="resources/resources_icons.qrc">
+              <normaloff>:/icons/object_parameter_icon.png</normaloff>:/icons/object_parameter_icon.png</iconset>
+            </attribute>
             <attribute name="title">
-             <string>Value</string>
+             <string>Object parameter value</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <property name="spacing">
@@ -147,25 +172,25 @@
               <number>0</number>
              </property>
              <item>
-              <layout class="QVBoxLayout" name="verticalLayout_2">
+              <layout class="QHBoxLayout" name="horizontalLayout">
                <property name="spacing">
                 <number>0</number>
                </property>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout">
+                <layout class="QVBoxLayout" name="verticalLayout_2">
                  <property name="spacing">
                   <number>0</number>
                  </property>
                  <item>
-                  <widget class="QLabel" name="label_object_parameter_value">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>2</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
+                  <widget class="QToolButton" name="toolButton_add_object_parameter_values">
                    <property name="text">
-                    <string>&lt;b&gt;Object parameter&lt;/b&gt;</string>
+                    <string>...</string>
+                   </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
                    </property>
                   </widget>
                  </item>
@@ -174,33 +199,57 @@
                    <property name="text">
                     <string>...</string>
                    </property>
+                   <property name="iconSize">
+                    <size>
+                     <width>16</width>
+                     <height>16</height>
+                    </size>
+                   </property>
+                   <property name="shortcut">
+                    <string>Ctrl+S</string>
+                   </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QToolButton" name="toolButton_add_object_parameter_values">
-                   <property name="text">
-                    <string>...</string>
+                  <spacer name="verticalSpacer_3">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
                    </property>
-                  </widget>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_object_parameter_value">
+                <widget class="ParameterTableView" name="tableView_object_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="font">
+                  <font>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
                  <property name="contextMenuPolicy">
                   <enum>Qt::CustomContextMenu</enum>
+                 </property>
+                 <property name="tabKeyNavigation">
+                  <bool>false</bool>
                  </property>
                  <property name="selectionBehavior">
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -213,6 +262,9 @@
                  </attribute>
                  <attribute name="verticalHeaderHighlightSections">
                   <bool>false</bool>
+                 </attribute>
+                 <attribute name="verticalHeaderMinimumSectionSize">
+                  <number>20</number>
                  </attribute>
                 </widget>
                </item>
@@ -241,29 +293,43 @@
               <number>0</number>
              </property>
              <item>
-              <layout class="QVBoxLayout" name="verticalLayout_5">
+              <layout class="QHBoxLayout" name="horizontalLayout_5">
                <property name="spacing">
                 <number>0</number>
                </property>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_4">
+                <layout class="QVBoxLayout" name="verticalLayout_5">
                  <item>
-                  <widget class="QLabel" name="label_object_parameter">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>2</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
+                  <widget class="QToolButton" name="toolButton_add_object_parameters">
                    <property name="text">
-                    <string>&lt;b&gt;Object parameter&lt;/b&gt;</string>
+                    <string>...</string>
                    </property>
                   </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="toolButton_remove_object_parameters">
+                   <property name="text">
+                    <string>...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="verticalSpacer_4">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_object_parameter">
+                <widget class="ParameterTableView" name="tableView_object_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -273,16 +339,22 @@
                  <property name="contextMenuPolicy">
                   <enum>Qt::CustomContextMenu</enum>
                  </property>
+                 <property name="tabKeyNavigation">
+                  <bool>false</bool>
+                 </property>
                  <property name="selectionBehavior">
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
                  </property>
                  <attribute name="horizontalHeaderHighlightSections">
+                  <bool>false</bool>
+                 </attribute>
+                 <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
                   <bool>false</bool>
                  </attribute>
                  <attribute name="verticalHeaderVisible">
@@ -305,18 +377,28 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="font">
+            <font>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
            <property name="contextMenuPolicy">
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="tabPosition">
-            <enum>QTabWidget::West</enum>
+            <enum>QTabWidget::North</enum>
            </property>
            <property name="currentIndex">
             <number>0</number>
            </property>
            <widget class="QWidget" name="tab_relationship_parameter_value">
+            <attribute name="icon">
+             <iconset resource="resources/resources_icons.qrc">
+              <normaloff>:/icons/relationship_parameter_icon.png</normaloff>:/icons/relationship_parameter_icon.png</iconset>
+            </attribute>
             <attribute name="title">
-             <string>Value</string>
+             <string>Relationship parameter value</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_8">
              <property name="spacing">
@@ -335,19 +417,16 @@
               <number>0</number>
              </property>
              <item>
-              <layout class="QVBoxLayout" name="verticalLayout">
+              <layout class="QHBoxLayout" name="horizontalLayout_2">
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_3">
+                <layout class="QVBoxLayout" name="verticalLayout">
                  <item>
-                  <widget class="QLabel" name="label_relationship_parameter_value">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>2</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
+                  <widget class="QToolButton" name="toolButton_add_relationship_parameter_values">
                    <property name="text">
-                    <string>&lt;b&gt;Relationship parameter&lt;/b&gt;</string>
+                    <string>...</string>
                    </property>
                   </widget>
                  </item>
@@ -359,16 +438,22 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QToolButton" name="toolButton_add_relationship_parameter_values">
-                   <property name="text">
-                    <string>...</string>
+                  <spacer name="verticalSpacer">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
                    </property>
-                  </widget>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_relationship_parameter_value">
+                <widget class="ParameterTableView" name="tableView_relationship_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -378,11 +463,14 @@
                  <property name="contextMenuPolicy">
                   <enum>Qt::CustomContextMenu</enum>
                  </property>
+                 <property name="tabKeyNavigation">
+                  <bool>false</bool>
+                 </property>
                  <property name="selectionBehavior">
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -423,26 +511,43 @@
               <number>0</number>
              </property>
              <item>
-              <layout class="QVBoxLayout" name="verticalLayout_7">
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <layout class="QVBoxLayout" name="verticalLayout_7">
                  <item>
-                  <widget class="QLabel" name="label_relationship_parameter">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>2</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
+                  <widget class="QToolButton" name="toolButton_add_relationship_parameters">
                    <property name="text">
-                    <string>&lt;b&gt;Relationship parameter&lt;/b&gt;</string>
+                    <string>...</string>
                    </property>
                   </widget>
+                 </item>
+                 <item>
+                  <widget class="QToolButton" name="toolButton_remove_relationship_parameters">
+                   <property name="text">
+                    <string>...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="verticalSpacer_2">
+                   <property name="orientation">
+                    <enum>Qt::Vertical</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>20</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="CustomQTableView" name="tableView_relationship_parameter">
+                <widget class="ParameterTableView" name="tableView_relationship_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -452,11 +557,14 @@
                  <property name="contextMenuPolicy">
                   <enum>Qt::CustomContextMenu</enum>
                  </property>
+                 <property name="tabKeyNavigation">
+                  <bool>false</bool>
+                 </property>
                  <property name="selectionBehavior">
                   <enum>QAbstractItemView::SelectItems</enum>
                  </property>
                  <property name="sortingEnabled">
-                  <bool>true</bool>
+                  <bool>false</bool>
                  </property>
                  <property name="wordWrap">
                   <bool>false</bool>
@@ -501,7 +609,6 @@
     <property name="title">
      <string>Session</string>
     </property>
-    <addaction name="separator"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
    </widget>
@@ -518,8 +625,8 @@
     <addaction name="actionAdd_relationships"/>
     <addaction name="separator"/>
     <addaction name="actionAdd_object_parameters"/>
-    <addaction name="actionAdd_relationship_parameters"/>
     <addaction name="actionAdd_object_parameter_values"/>
+    <addaction name="actionAdd_relationship_parameters"/>
     <addaction name="actionAdd_relationship_parameter_values"/>
    </widget>
    <widget class="QMenu" name="menuFile">
@@ -537,6 +644,10 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCommit">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
+   </property>
    <property name="text">
     <string>Commit</string>
    </property>
@@ -545,6 +656,10 @@
    </property>
   </action>
   <action name="actionRollback">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
+   </property>
    <property name="text">
     <string>Rollback</string>
    </property>
@@ -554,13 +669,17 @@
   </action>
   <action name="actionQuit">
    <property name="text">
-    <string>Quit</string>
+    <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Q</string>
+    <string>Esc</string>
    </property>
   </action>
   <action name="actionAdd_object_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add object classes</string>
    </property>
@@ -572,6 +691,10 @@
    </property>
   </action>
   <action name="actionAdd_objects">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add objects</string>
    </property>
@@ -583,6 +706,10 @@
    </property>
   </action>
   <action name="actionAdd_relationship_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add relationship classes</string>
    </property>
@@ -594,6 +721,10 @@
    </property>
   </action>
   <action name="actionAdd_relationships">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
+   </property>
    <property name="text">
     <string>Add relationships</string>
    </property>
@@ -655,21 +786,31 @@
    <property name="text">
     <string>Copy</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
   </action>
   <action name="actionPaste">
    <property name="text">
     <string>Paste</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
   </action>
   <action name="actionAdd_object_parameters">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_object_parameter_icon.png</normaloff>:/icons/plus_object_parameter_icon.png</iconset>
+   </property>
    <property name="text">
-    <string>Add object parameters</string>
+    <string>Add object parameter definitions</string>
    </property>
   </action>
   <action name="actionAdd_object_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_object_parameter_icon.png</normaloff>:/icons/plus_object_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Add object parameter values</string>
@@ -678,21 +819,25 @@
   <action name="actionRemove_object_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove object parameter values</string>
    </property>
   </action>
   <action name="actionAdd_relationship_parameters">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/plus_relationship_parameter_icon.png</normaloff>:/icons/plus_relationship_parameter_icon.png</iconset>
+   </property>
    <property name="text">
-    <string>Add relationship parameters</string>
+    <string>Add relationship parameter definitions</string>
    </property>
   </action>
   <action name="actionAdd_relationship_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+     <normaloff>:/icons/plus_relationship_parameter_icon.png</normaloff>:/icons/plus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Add relationship parameter values</string>
@@ -701,23 +846,41 @@
   <action name="actionRemove_relationship_parameter_values">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
+     <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove relationship parameter values</string>
    </property>
   </action>
+  <action name="actionRemove_object_parameters">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove object parameter definitions</string>
+   </property>
+  </action>
+  <action name="actionRemove_relationship_parameters">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove relationship parameter definitions</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>CustomQTableView</class>
-   <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
-  </customwidget>
   <customwidget>
    <class>ObjectTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ParameterTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -29,7 +29,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>300</width>
+    <width>316</width>
     <height>349</height>
    </rect>
   </property>
@@ -399,6 +399,9 @@
  </widget>
  <tabstops>
   <tabstop>comboBox_dialect</tabstop>
+  <tabstop>comboBox_dsn</tabstop>
+  <tabstop>lineEdit_SQLite_file</tabstop>
+  <tabstop>pushButton_browse</tabstop>
   <tabstop>lineEdit_host</tabstop>
   <tabstop>lineEdit_port</tabstop>
   <tabstop>lineEdit_database</tabstop>

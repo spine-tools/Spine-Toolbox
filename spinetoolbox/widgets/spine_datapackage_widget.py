@@ -21,23 +21,16 @@
 Widget shown to user when opening a 'datapackage.json' file
 in Data Connection item.
 
-:author: Manuel Marin <manuelma@kth.se>
+:author: M. Marin (KTH)
 :date:   7.7.2018
 """
 
-import os
-import shutil
-import logging
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.combobox_delegate import ComboBoxDelegate, CheckableComboBoxDelegate
-from widgets.lineedit_delegate import LineEditDelegate
-from widgets.checkbox_delegate import CheckBoxDelegate
-from widgets.custom_menus import DescriptorTreeContextMenu
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QDialog
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, SIGNAL
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QFont, QFontMetrics
-from helpers import busy_effect
+from widgets.custom_delegates import ResourceNameDelegate, ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
+from PySide2.QtGui import QGuiApplication
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from spinedatabase_api import OBJECT_CLASS_NAMES
 
@@ -47,18 +40,19 @@ class SpineDatapackageWidget(QMainWindow):
     to a Spine database in SQLite.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         data_connection (DataConnection): Data Connection associated to this widget
         datapackage (CustomPackage): Datapackage to load and use
     """
-
     msg = Signal(str, name="msg")
     msg_error = Signal(str, str, str, name="msg_error")
 
-    def __init__(self, parent, data_connection, datapackage):
+    def __init__(self, toolbox, data_connection, datapackage):
         """Initialize class."""
-        super().__init__(flags=Qt.Window)
-        self._parent = parent
+        super().__init__(flags=Qt.Window)  # TODO: Set parent as toolbox here if it makes sense
+        # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
+        # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
+        self._toolbox = toolbox
         self._data_connection = data_connection
         self.object_class_name_list = OBJECT_CLASS_NAMES
         self.datapackage = datapackage
@@ -72,7 +66,7 @@ class SpineDatapackageWidget(QMainWindow):
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox datapackage form")
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
         self.ui.toolButton_insert_foreign_key.setDefaultAction(self.ui.actionInsert_foreign_key)
         self.ui.toolButton_remove_foreign_keys.setDefaultAction(self.ui.actionRemove_foreign_keys)
@@ -81,7 +75,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
-        # Set name of export action
         self.ui.treeView_resources.setModel(self.resources_model)
         self.ui.treeView_fields.setModel(self.fields_model)
         self.ui.treeView_foreign_keys.setModel(self.foreign_keys_model)
@@ -93,6 +86,9 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_resource_data.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.connect_signals()
         self.resources_model.reset_model(self.datapackage)
+        first_index = self.resources_model.index(0, 0)
+        if first_index.isValid():
+            self.ui.treeView_resources.selectionModel().select(first_index, QItemSelectionModel.Select)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -106,48 +102,43 @@ class SpineDatapackageWidget(QMainWindow):
         # Delegates
         # Resource data
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_resource_data)
+        lineedit_delegate.commitData.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Resource name
-        combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_resource_name)
-        self.ui.treeView_resources.setItemDelegateForColumn(0, combobox_delegate)
+        resource_name_delegate = ResourceNameDelegate(self)
+        resource_name_delegate.commitData.connect(self.update_resource_name)
+        self.ui.treeView_resources.setItemDelegateForColumn(0, resource_name_delegate)
         # Field name
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.closeEditor.connect(self.update_field_name)
+        lineedit_delegate.commitData.connect(self.update_field_name)
         self.ui.treeView_fields.setItemDelegateForColumn(0, lineedit_delegate)
         # Primary key
         checkbox_delegate = CheckBoxDelegate(self)
         checkbox_delegate.commit_data.connect(self.update_primary_key)
         self.ui.treeView_fields.setItemDelegateForColumn(2, checkbox_delegate)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
-        # Foreign key fields, ref resource,
-        combobox_delegate = CheckableComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_foreign_key_fields)
-        self.ui.treeView_foreign_keys.setItemDelegateForColumn(0, combobox_delegate)
-        combobox_delegate = ComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_foreign_key_ref_resource)
-        self.ui.treeView_foreign_keys.setItemDelegateForColumn(1, combobox_delegate)
-        combobox_delegate = CheckableComboBoxDelegate(self)
-        combobox_delegate.closeEditor.connect(self.update_foreign_key_ref_fields)
-        self.ui.treeView_foreign_keys.setItemDelegateForColumn(2, combobox_delegate)
+        # Foreign keys
+        foreign_keys_delegate = ForeignKeysDelegate(self)
+        foreign_keys_delegate.commitData.connect(self.update_foreign_keys)
+        self.ui.treeView_foreign_keys.setItemDelegate(foreign_keys_delegate)
         # Selected resource changed
-        self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.filter_resource_data)
+        self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.reset_resource_models)
         # Actions
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         self.ui.actionInsert_foreign_key.triggered.connect(self.insert_foreign_key_row)
         self.ui.actionRemove_foreign_keys.triggered.connect(self.remove_foreign_key_rows)
-        # Rows inserted
-        self.resources_model.rowsInserted.connect(self.setup_new_resource_row)
-        self.foreign_keys_model.rowsInserted.connect(self.setup_new_foreign_key_row)
+        # Rows inserted or Data changed
+        self.resources_model.rowsInserted.connect(self.resources_model_rows_inserted)
+        self.resources_model.dataChanged.connect(self.resources_model_data_changed)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("mainWindow/windowSize")
-        window_pos = self.qsettings.value("mainWindow/windowPosition")
-        splitter_state = self.qsettings.value("mainWindow/splitterState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')
+        window_size = self.qsettings.value("dataPackageWidget/windowSize")
+        window_pos = self.qsettings.value("dataPackageWidget/windowPosition")
+        splitter_state = self.qsettings.value("dataPackageWidget/splitterState")
+        window_maximized = self.qsettings.value("dataPackageWidget/windowMaximized", defaultValue='false')
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -156,6 +147,10 @@ class SpineDatapackageWidget(QMainWindow):
             self.setWindowState(Qt.WindowMaximized)
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < int(n_screens):
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -182,21 +177,18 @@ class SpineDatapackageWidget(QMainWindow):
             msg_box.setInformativeText(info)
         msg_box.exec_()
 
-    @Slot("QModelIndex", "int", "int", name="setup_new_resource_row")
-    def setup_new_resource_row(self, parent, first, last):
-        index = self.resources_model.index(first, 0, parent)
-        self.resources_model.setData(index, self.object_class_name_list, Qt.UserRole)
-        self.check_resource_name(index)
+    @Slot("QModelIndex", "int", "int", name="resources_model_rows_inserted")
+    def resources_model_rows_inserted(self, parent, first, last):
+        self.check_resource_name(first)
 
-    @Slot("QModelIndex", "int", "int", name="setup_new_foreign_key_row")
-    def setup_new_foreign_key_row(self, parent, first, last):
-        index = self.foreign_keys_model.index(first, 0, parent)
-        field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
-        self.foreign_keys_model.setData(index, field_names, Qt.UserRole)
-        resource_names = self.datapackage.resource_names
-        self.foreign_keys_model.setData(index.siblingAtColumn(1), resource_names, Qt.UserRole)
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="resources_model_data_changed")
+    def resources_model_data_changed(self, top_left, bottom_right, roles):
+        if Qt.EditRole not in roles:
+            return
+        self.check_resource_name(top_left.row())
 
-    def check_resource_name(self, index):
+    def check_resource_name(self, row):
+        index = self.resources_model.index(row, 0)
         name = index.data(Qt.DisplayRole)
         if name in self.object_class_name_list:
             self.resources_model.set_name_valid(index, True)
@@ -209,13 +201,13 @@ class SpineDatapackageWidget(QMainWindow):
             self.resource_tables[resource.name] = resource.read(cast=False)
 
     @Slot(name="save_datapackage")
-    def save_datapackage(self):  #TODO: handle zip as well?
+    def save_datapackage(self):  # TODO: handle zip as well?
         """Save datapackage.json to datadir."""
         self._data_connection.save_datapackage(self.datapackage)
 
-    @Slot("QModelIndex", "QModelIndex", name="filter_resource_data")
-    def filter_resource_data(self, selected, deselected):
-        """Filter resource data whenever a new resource is selected."""
+    @Slot("QModelIndex", "QModelIndex", name="reset_resource_models")
+    def reset_resource_models(self, selected, deselected):
+        """Reset resource data and schema models whenever a new resource is selected."""
         try:
             new_selected_resource_name = selected.indexes()[0].data(Qt.DisplayRole)
         except IndexError:
@@ -236,27 +228,26 @@ class SpineDatapackageWidget(QMainWindow):
         self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
-    def update_resource_data(self, editor, hint):
+    @Slot("QWidget", name="update_resource_data")
+    def update_resource_data(self, editor):
         """Update resource data with newly edited data."""
-        index = editor.index
+        index = editor.index()
         new_value = editor.text()
         if not self.resource_data_model.setData(index, new_value, Qt.EditRole):
             return
         self.ui.tableView_resource_data.resizeColumnsToContents()
         self.resource_tables[self.selected_resource_name][index.row()][index.column()] = new_value
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_name")
-    def update_resource_name(self, editor, hint):
+    @Slot("QWidget", name="update_resource_name")
+    def update_resource_name(self, editor):
         """Update resources model and descriptor with new resource name."""
         new_name = editor.currentText()
         if not new_name:
             return
-        index = editor.index
+        index = editor.index()
         old_name = index.data(Qt.DisplayRole)
         if not self.resources_model.setData(index, new_name, Qt.EditRole):
             return
-        self.check_resource_name(index)
         resource_data = self.resource_tables.pop(self.selected_resource_name, None)
         if resource_data is None:
             msg = "Couldn't find key in resource data dict. Something is wrong."
@@ -266,30 +257,32 @@ class SpineDatapackageWidget(QMainWindow):
         self.selected_resource_name = new_name
         self.datapackage.rename_resource(old_name, new_name)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_resource_data")
-    def update_field_name(self, editor, hint):
+    @Slot("QWidget", name="update_field_name")
+    def update_field_name(self, editor):
         """Called when line edit delegate wants to edit field name data.
         Update name in fields_model, resource_data_model's header and datapackage descriptor.
         """
-        index = editor.index
+        index = editor.index()
         new_name = editor.text()
         # Save old name to look up field
         old_name = index.data(Qt.DisplayRole)
         if not self.fields_model.setData(index, new_name, Qt.EditRole):
             return
-        header = self.resource_data_model.header
+        header = self.resource_data_model.horizontal_header_labels()
         section = header.index(old_name)
-        header[section] = new_name
+        self.resource_data_model.setHeaderData(section, Qt.Horizontal, new_name, Qt.EditRole)
         self.ui.tableView_resource_data.resizeColumnsToContents()
         self.datapackage.rename_field(self.selected_resource_name, old_name, new_name)
 
     @Slot("QModelIndex", name="update_primary_key")
     def update_primary_key(self, index):
+        # TODO: Should 'name' be in arguments?
+        # Not sure: the `commit_data` signal from `CheckBoxDelegate` only passes an index
         """Called when checkbox delegate wants to edit primary key data.
         Add or remove primary key field accordingly.
         """
         status = index.data(Qt.EditRole)
-        field_name = index.siblingAtColumn(0).data(Qt.DisplayRole)
+        field_name = index.sibling(index.row(), 0).data(Qt.DisplayRole)
         if status is False:  # Add to primary key
             self.fields_model.setData(index, True, Qt.EditRole)
             self.datapackage.append_to_primary_key(self.selected_resource_name, field_name)
@@ -314,141 +307,11 @@ class SpineDatapackageWidget(QMainWindow):
         for row in reversed(list(row_set)):
             self.foreign_keys_model.removeRows(row, 1)
 
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_fields")
-    def update_foreign_key_fields(self, editor, hint):
-        print('upd fk fields')
-        model = editor.model()
-        for i in range(model.rowCount()):
-            index = model.index(i, 0)
-            print(index.data(Qt.DisplayRole))
-            print(index.data(Qt.CheckStateRole))
-        index = editor.index
-        value = editor.currentText()
+    @Slot("QWidget", name="update_foreign_keys")
+    def update_foreign_keys(self, editor):
+        index = editor.index()
+        value = editor.text()
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
-
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_resource")
-    def update_foreign_key_ref_resource(self, editor, hint):
-        index = editor.index
-        value = editor.currentText()
-        self.foreign_keys_model.setData(index, value, Qt.EditRole)
-
-    @Slot("QWidget", "QAbstractItemDelegate.EndEditHint", name="update_foreign_key_ref_fields")
-    def update_foreign_key_ref_fields(self, editor, hint):
-        index = editor.index
-        value = editor.currentText()
-        self.foreign_keys_model.setData(index, value, Qt.EditRole)
-
-        # Iterate over resources (again) to create relationships
-        #for resource in self.datapackage.resources:
-        #    parent_object_class_name = resource.name
-        #    if parent_object_class_name not in self.object_class_name_list:
-        #        continue
-        #    relationship_class_id_dict = dict()
-        #    child_object_class_id_dict = dict()
-        #    for field in resource.schema.fields:
-        #        # A field whose named starts with the object_class is an index and should be skipped
-        #        if field.name.startswith(parent_object_class_name):
-        #            continue
-        #        # Fields whose name ends with an object class name are foreign keys
-        #        # and used to create relationships
-        #        child_object_class_name = None
-        #        for x in self.object_class_name_list:
-        #            if field.name.endswith(x):
-        #                child_object_class_name = x
-        #                break
-        #        if child_object_class_name:
-        #            relationship_class_name = resource.name + "_" + field.name
-        #            relationship_class_id_dict[field.name] = self.session.query(self.RelationshipClass.id).\
-        #                filter_by(name=relationship_class_name).one().id
-        #            child_object_class_id_dict[field.name] = self.session.query(self.ObjectClass.id).\
-        #                filter_by(name=child_object_class_name).one().id
-        #    for i, row in enumerate(self.resource_tables[resource.name][1:]):
-        #        row_dict = dict(zip(resource.schema.field_names, row))
-        #        if parent_object_class_name in row_dict:
-        #            parent_object_name = row_dict[parent_object_class_name]
-        #        else:
-        #            parent_object_name = parent_object_class_name + str(i)
-        #        parent_object_id = self.session.query(self.Object.id).\
-        #            filter_by(name=parent_object_name).one().id
-        #        for field_name, value in row_dict.items():
-        #            if field_name in relationship_class_id_dict:
-        #                relationship_class_id = relationship_class_id_dict[field_name]
-        #                child_object_name = None
-        #                child_object_ref = value
-        #                child_object_class_id = child_object_class_id_dict[field_name]
-        #                child_object_class_name = self.session.query(self.ObjectClass.name).\
-        #                    filter_by(id=child_object_class_id).one().name
-        #                child_resource = self.datapackage.get_resource(child_object_class_name)
-        #                # Collect index and primary key columns in child resource
-        #                indices = list()
-        #                primary_key = None
-        #                for j, field in enumerate(child_resource.schema.fields):
-        #                    # A field whose named starts with the object_class is an index
-        #                    if field.name.startswith(child_object_class_name):
-        #                        indices.append(j)
-        #                        # A field named exactly as the object_class is the primary key
-        #                        if field.name == child_object_class_name:
-        #                            primary_key = j
-        #                # Look up the child object ref. in the child resource table
-        #                for k, row in enumerate(self.resource_tables[child_resource.name][1:]):
-        #                    if child_object_ref in [row[j] for j in indices]:
-        #                        # Found reference in index values
-        #                        if primary_key is not None:
-        #                            child_object_name = row[primary_key]
-        #                        else:
-        #                            child_object_name = child_object_class_name + str(k)
-        #                        break
-        #                if child_object_name is None:
-        #                    msg = "Couldn't find object ref {} to create relationship for field {}".\
-        #                        format(child_object_ref, field_name)
-        #                    self.ui.statusbar.showMessage(msg, 5000)
-        #                    continue
-        #                child_object_id = self.session.query(self.Object.id).\
-        #                    filter_by(name=child_object_name, class_id=child_object_class_id).one().id
-        #                relationship_name = parent_object_name + field_name + child_object_name
-        #                relationship = self.Relationship(
-        #                    commit_id=1,
-        #                    class_id=relationship_class_id,
-        #                    parent_object_id=parent_object_id,
-        #                    child_object_id=child_object_id,
-        #                    name=relationship_name
-        #                )
-        #                try:
-        #                    self.session.add(relationship)
-        #                    self.session.flush()
-        #                    object_id = object_.id
-        #                except DBAPIError as e:
-        #                    msg = "Failed to insert relationship {0} for object {1} of class {2}: {3}".\
-        #                        format(field_name, parent_object_name, parent_object_class_name, e.orig.args)
-        #                    self.ui.statusbar.showMessage(msg, 5000)
-        #                    self.session.rollback()
-        #                    return False
-
-    @Slot("QPoint", name="show_descriptor_tree_context_menu")
-    def show_descriptor_tree_context_menu(self, pos):
-        """Context menu for descriptor treeview.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        index = self.ui.treeView_descriptor.indexAt(pos)
-        global_pos = self.ui.treeView_descriptor.viewport().mapToGlobal(pos)
-        self.descriptor_tree_context_menu = DescriptorTreeContextMenu(self, global_pos, index)
-        option = self.descriptor_tree_context_menu.get_action()
-        if option == "Expand all children":
-            self.ui.treeView_descriptor.expand(index)
-            if not self.descriptor_model.hasChildren(index):
-                return
-            for i in range(self.descriptor_model.rowCount(index)):
-                child_index = self.descriptor_model.index(i, 0, index)
-                self.ui.treeView_descriptor.expand(child_index)
-        elif option == "Collapse all children":
-            self.ui.treeView_descriptor.collapse(index)
-            if not self.descriptor_model.hasChildren(index):
-                return
-            for i in range(self.descriptor_model.rowCount(index)):
-                child_index = self.descriptor_model.index(i, 0, index)
-                self.ui.treeView_descriptor.collapse(child_index)
 
     def closeEvent(self, event=None):
         """Handle close event.
@@ -457,12 +320,12 @@ class SpineDatapackageWidget(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("mainWindow/splitterState", self.ui.splitter.saveState())
-        self.qsettings.setValue("mainWindow/windowSize", self.size())
-        self.qsettings.setValue("mainWindow/windowPosition", self.pos())
+        self.qsettings.setValue("dataPackageWidget/splitterState", self.ui.splitter.saveState())
+        self.qsettings.setValue("dataPackageWidget/windowSize", self.size())
+        self.qsettings.setValue("dataPackageWidget/windowPosition", self.pos())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("mainWindow/windowMaximized", True)
+            self.qsettings.setValue("dataPackageWidget/windowMaximized", True)
         else:
-            self.qsettings.setValue("mainWindow/windowMaximized", False)
+            self.qsettings.setValue("dataPackageWidget/windowMaximized", False)
         if event:
             event.accept()

@@ -20,7 +20,7 @@
 """
 Widget shown to user when a new project is created.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:authors: P. Savolainen (VTT)
 :date:   10.1.2018
 """
 
@@ -36,12 +36,13 @@ class NewProjectForm(QWidget):
     """Class for a new project widget.
 
     Attributes:
-        parent: Parent widget.
+        toolbox (ToolboxUI): Parent widget.
+        configs (ConfigurationParser): Configurations object
     """
-    def __init__(self, parent, configs):
-        """ Initialize class. """
-        super().__init__(f=Qt.Window)
-        self._parent = parent  # QWidget parent
+    def __init__(self, toolbox, configs):
+        """Initialize class."""
+        super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
+        self._toolbox = toolbox
         self._configs = configs
         # Set up the user interface from Designer.
         self.ui = ui.project_form.Ui_Form()
@@ -105,8 +106,8 @@ class NewProjectForm(QWidget):
         self.close()
 
     def call_create_project(self):
-        """Call parent's method create_project()."""
-        self._parent.create_project(self.name, self.description)
+        """Call ToolboxUI method create_project()."""
+        self._toolbox.create_project(self.name, self.description)
 
     def keyPressEvent(self, e):
         """Close project form when escape key is pressed.

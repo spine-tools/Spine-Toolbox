@@ -34,40 +34,35 @@ CALL pyside2-uic ../spinetoolbox/ui/add_data_store.ui -o ../spinetoolbox/ui/add_
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_data_store.py.o > ..\spinetoolbox\ui\add_data_store.py
 del ..\spinetoolbox\ui\add_data_store.py.o
 
-ECHO building add_db_reference.py
-CALL pyside2-uic ../spinetoolbox/ui/add_db_reference.ui -o ../spinetoolbox/ui/add_db_reference.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_db_reference.py.o > ..\spinetoolbox\ui\add_db_reference.py
-del ..\spinetoolbox\ui\add_db_reference.py.o
-
 ECHO building add_object_classes.py
 CALL pyside2-uic ../spinetoolbox/ui/add_object_classes.ui -o ../spinetoolbox/ui/add_object_classes.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_object_classes.py.o > ..\spinetoolbox\ui\add_object_classes.py
 del ..\spinetoolbox\ui\add_object_classes.py.o
-
-ECHO building add_relationship_classes.py
-CALL pyside2-uic ../spinetoolbox/ui/add_relationship_classes.ui -o ../spinetoolbox/ui/add_relationship_classes.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_relationship_classes.py.o > ..\spinetoolbox\ui\add_relationship_classes.py
-del ..\spinetoolbox\ui\add_relationship_classes.py.o
 
 ECHO building add_objects.py
 CALL pyside2-uic ../spinetoolbox/ui/add_objects.ui -o ../spinetoolbox/ui/add_objects.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_objects.py.o > ..\spinetoolbox\ui\add_objects.py
 del ..\spinetoolbox\ui\add_objects.py.o
 
-ECHO building add_relationships.py
-CALL pyside2-uic ../spinetoolbox/ui/add_relationships.ui -o ../spinetoolbox/ui/add_relationships.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_relationships.py.o > ..\spinetoolbox\ui\add_relationships.py
-del ..\spinetoolbox\ui\add_relationships.py.o
+ECHO building add_parameter_values.py
+CALL pyside2-uic ../spinetoolbox/ui/add_parameter_values.ui -o ../spinetoolbox/ui/add_parameter_values.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameter_values.py.o > ..\spinetoolbox\ui\add_parameter_values.py
+del ..\spinetoolbox\ui\add_parameter_values.py.o
 
 ECHO building add_parameters.py
 CALL pyside2-uic ../spinetoolbox/ui/add_parameters.ui -o ../spinetoolbox/ui/add_parameters.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameters.py.o > ..\spinetoolbox\ui\add_parameters.py
 del ..\spinetoolbox\ui\add_parameters.py.o
 
-ECHO building add_parameter_values.py
-CALL pyside2-uic ../spinetoolbox/ui/add_parameter_values.ui -o ../spinetoolbox/ui/add_parameter_values.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameter_values.py.o > ..\spinetoolbox\ui\add_parameter_values.py
-del ..\spinetoolbox\ui\add_parameter_values.py.o
+ECHO building add_relationship_classes.py
+CALL pyside2-uic ../spinetoolbox/ui/add_relationship_classes.ui -o ../spinetoolbox/ui/add_relationship_classes.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_relationship_classes.py.o > ..\spinetoolbox\ui\add_relationship_classes.py
+del ..\spinetoolbox\ui\add_relationship_classes.py.o
+
+ECHO building add_relationships.py
+CALL pyside2-uic ../spinetoolbox/ui/add_relationships.ui -o ../spinetoolbox/ui/add_relationships.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_relationships.py.o > ..\spinetoolbox\ui\add_relationships.py
+del ..\spinetoolbox\ui\add_relationships.py.o
 
 ECHO building add_tool.py
 CALL pyside2-uic ../spinetoolbox/ui/add_tool.ui -o ../spinetoolbox/ui/add_tool.py.o
@@ -88,6 +83,11 @@ ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
 del ..\spinetoolbox\ui\mainwindow.py.o
+
+ECHO building network_map_form.py
+CALL pyside2-uic ../spinetoolbox/ui/network_map_form.ui -o ../spinetoolbox/ui/network_map_form.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\network_map_form.py.o > ..\spinetoolbox\ui\network_map_form.py
+del ..\spinetoolbox\ui\network_map_form.py.o
 
 ECHO building project_form.py
 CALL pyside2-uic ../spinetoolbox/ui/project_form.ui -o ../spinetoolbox/ui/project_form.py.o
@@ -141,17 +141,17 @@ ECHO --- APPENDING LICENSE TO .UI FILES ---
 CALL append_license_xml ..\spinetoolbox\ui\about.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_data_connection.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_data_store.ui
-CALL append_license_xml ..\spinetoolbox\ui\add_db_reference.ui
-CALL append_license_xml ..\spinetoolbox\ui\add_objects.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_object_classes.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_objects.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_parameter_values.ui
+CALL append_license_xml ..\spinetoolbox\ui\add_parameters.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationship_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationships.ui
-CALL append_license_xml ..\spinetoolbox\ui\add_parameters.ui
-CALL append_license_xml ..\spinetoolbox\ui\add_parameter_values.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
+CALL append_license_xml ..\spinetoolbox\ui\network_map_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
 CALL append_license_xml ..\spinetoolbox\ui\spine_datapackage_form.ui
@@ -165,17 +165,17 @@ ECHO --- APPENDING LICENSE TO AUTOGENERATED .PY FILES ---
 CALL append_license_py ..\spinetoolbox\ui\about.py
 CALL append_license_py ..\spinetoolbox\ui\add_data_connection.py
 CALL append_license_py ..\spinetoolbox\ui\add_data_store.py
-CALL append_license_py ..\spinetoolbox\ui\add_db_reference.py
-CALL append_license_py ..\spinetoolbox\ui\add_objects.py
 CALL append_license_py ..\spinetoolbox\ui\add_object_classes.py
+CALL append_license_py ..\spinetoolbox\ui\add_objects.py
+CALL append_license_py ..\spinetoolbox\ui\add_parameter_values.py
+CALL append_license_py ..\spinetoolbox\ui\add_parameters.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationship_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationships.py
-CALL append_license_py ..\spinetoolbox\ui\add_parameters.py
-CALL append_license_py ..\spinetoolbox\ui\add_parameter_values.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
+CALL append_license_py ..\spinetoolbox\ui\network_map_form.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
 CALL append_license_py ..\spinetoolbox\ui\spine_datapackage_form.py

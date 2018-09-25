@@ -20,12 +20,12 @@
 """
 Classes for drawing graphics items on QGraphicsScene.
 
-:authors: Manuel Marin <manuelma@kth.se>, Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
 
 import logging
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
@@ -35,15 +35,15 @@ from math import atan2, degrees, sin, cos, pi
 
 class SceneBackground(QGraphicsRectItem):
     """Experimental. This should be used to paint the scene background white."""
-    def __init__(self, main):
-        super().__init__(main.ui.graphicsView.scene().sceneRect())
-        self._main = main
+    def __init__(self, toolbox):
+        super().__init__(toolbox.ui.graphicsView.scene().sceneRect())
+        self._toolbox = toolbox
         self.bg_pen = QPen(QColor('blue'))  # QPen is used to draw the item outline
         self.bg_brush = QBrush(QColor(0, 0, 0, 128))  # QBrush is used to fill the item
         self.setPen(self.bg_pen)
         self.setBrush(self.bg_brush)
         self.setZValue(-1)
-        self._main.ui.graphicsView.scene().addItem(self)
+        self._toolbox.ui.graphicsView.scene().addItem(self)
 
     # @Slot("QRectF", name="update_scene_bg")
     # def update_scene_bg(self, rect):
@@ -51,24 +51,24 @@ class SceneBackground(QGraphicsRectItem):
 
     def update_bg(self):
         """Work in progress."""
-        self.setRect(self._main.ui.graphicsView.scene().sceneRect())
+        self.setRect(self._toolbox.ui.graphicsView.scene().sceneRect())
 
 
 class ItemImage(QGraphicsItem):
     """Base class for all Item icons drawn on QGraphicsScene.
 
     Attributes:
-        main (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         x (int): Icon x coordinate
         y (int): Icon y coordinate
         w (int): Width of master icon
         h (int): Height of master icon
         name (str): Item name
     """
-    def __init__(self, main, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
         super().__init__()
-        self._main = main
+        self._toolbox = toolbox
         self.x_coord = x  # x coordinate in the scene (top left corner)
         self.y_coord = y  # y coordinate in the scene (top left corner)
         self.w = w
@@ -90,6 +90,7 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.drag_over = False
 
     def make_data_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -121,6 +122,7 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
+        icon.setAcceptDrops(True)
         return icon
 
     def make_master(self, pen, brush):
@@ -139,6 +141,7 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
+        icon.setAcceptDrops(True)
         return icon
 
     def name(self):
@@ -197,7 +200,7 @@ class ItemImage(QGraphicsItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self._main.ui.graphicsView.scene().clearSelection()
+        self._toolbox.ui.graphicsView.scene().clearSelection()
         self.show_item_info()
 
     def mouse_move_event(self, event):
@@ -208,7 +211,7 @@ class ItemImage(QGraphicsItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         QGraphicsItem.mouseMoveEvent(self._master, event)
-        links = self._main.connection_model.connected_links(self.name())
+        links = self._toolbox.connection_model.connected_links(self.name())
         for link in links:
             link.update_geometry()
         master_rect = self._master.sceneBoundingRect()
@@ -223,6 +226,39 @@ class ItemImage(QGraphicsItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         QGraphicsItem.mouseReleaseEvent(self._master, event)
+
+    def drag_enter_event(self, event):
+        """Drag and drop action enters.
+
+        Args:
+            event (QGraphicsSceneDragDropEvent): Event
+        """
+        event.accept()
+        if self.drag_over:
+            return
+        self.drag_over = True
+        QTimer.singleShot(500, self.select_on_drag_over)
+
+    def drag_leave_event(self, event):
+        """Drag and drop action leaves.
+
+        Args:
+            event (QGraphicsSceneDragDropEvent): Event
+        """
+        event.accept()
+        self.drag_over = False
+
+    def select_on_drag_over(self):
+        """Called when the timer started in drag_enter_event is elapsed.
+        Check if the drag action is still over the item,
+        and show its info in that case.
+        """
+        if not self.drag_over:
+            return
+        self.drag_over = False
+        self._toolbox.ui.graphicsView.scene().clearSelection()
+        self._master.setSelected(True)
+        self.show_item_info()
 
     def connector_mouse_press_event(self, event):
         """Catch connector button click. Starts drawing a link."""
@@ -257,7 +293,7 @@ class ItemImage(QGraphicsItem):
             event (QGraphicsSceneMouseEvent): Mouse event
         """
         self._master.setSelected(True)
-        self._main.show_item_image_context_menu(event.screenPos(), self.name())
+        self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
 
     def key_press_event(self, event):
         """Remove item when pressing delete if it is selected.
@@ -267,17 +303,17 @@ class ItemImage(QGraphicsItem):
         """
         if event.key() == Qt.Key_Delete and self._master.isSelected():
             name = self.name()
-            ind = self._main.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
-            self._main.remove_item(ind, delete_item=True)
+            ind = self._toolbox.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            self._toolbox.remove_item(ind, delete_item=True)
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item in a QDockWidget."""
-        self._main.show_info(self.name())
+        self._toolbox.show_info(self.name())
 
     def draw_link(self):
         """Start or stop drawing a link from or to the center point of the connector button."""
         rect = self.conn_button().sceneBoundingRect()
-        self._main.ui.graphicsView.draw_links(rect, self.name())
+        self._toolbox.ui.graphicsView.draw_links(rect, self.name())
 
     def item_change(self, change, value):
         """Remove name_item when master is removed from scene."""
@@ -293,16 +329,16 @@ class DataConnectionImage(ItemImage):
     individual QGraphicsItems together.
 
     Attributes:
-        main (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         x (int): Icon x coordinate
         y (int): Icon y coordinate
         w (int): Width of master icon
         h (int): Height of master icon
         name (str): Item name
     """
-    def __init__(self, main, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
-        super().__init__(main, x, y, w, h, name)
+        super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
         self.brush = QBrush(QColor(0, 0, 255, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 0, 204, 128))  # QBrush while hovering
@@ -317,12 +353,14 @@ class DataConnectionImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
+        self._master.dragEnterEvent = self.drag_enter_event
+        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
-        self._main.ui.graphicsView.scene().addItem(self._master)
-        self._main.ui.graphicsView.scene().addItem(self.name_item)
+        self._toolbox.ui.graphicsView.scene().addItem(self._master)
+        self._toolbox.ui.graphicsView.scene().addItem(self.name_item)
         # Group the drawn items together by setting the master as the parent of other QGraphicsItems
         # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
@@ -350,6 +388,14 @@ class DataConnectionImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
+
+    def drag_enter_event(self, event):
+        """Calls super class method."""
+        super().drag_enter_event(event)
+
+    def drag_leave_event(self, event):
+        """Calls super class method."""
+        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
@@ -382,16 +428,16 @@ class ToolImage(ItemImage):
     individual QGraphicsItems together.
 
     Attributes:
-        main (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         x (int): Icon x coordinate
         y (int): Icon y coordinate
         w (int): Width of master icon
         h (int): Height of master icon
         name (str): Item name
     """
-    def __init__(self, main, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
-        super().__init__(main, x, y, w, h, name)
+        super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
         self.brush = QBrush(QColor(255, 0, 0, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(204, 0, 0, 128))  # QBrush while hovering
@@ -410,8 +456,8 @@ class ToolImage(ItemImage):
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
-        self._main.ui.graphicsView.scene().addItem(self._master)
-        self._main.ui.graphicsView.scene().addItem(self.name_item)
+        self._toolbox.ui.graphicsView.scene().addItem(self._master)
+        self._toolbox.ui.graphicsView.scene().addItem(self.name_item)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
@@ -511,16 +557,16 @@ class DataStoreImage(ItemImage):
     individual QGraphicsItems together.
 
     Attributes:
-        main (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         x (int): Icon x coordinate
         y (int): Icon y coordinate
         w (int): Width of master icon
         h (int): Height of master icon
         name (str): Item name
     """
-    def __init__(self, main, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
-        super().__init__(main, x, y, w, h, name)
+        super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
         self.brush = QBrush(QColor(0, 255, 255, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 204, 204, 128))  # QBrush while hovering
@@ -535,12 +581,14 @@ class DataStoreImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
+        self._master.dragEnterEvent = self.drag_enter_event
+        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
-        self._main.ui.graphicsView.scene().addItem(self._master)
-        self._main.ui.graphicsView.scene().addItem(self.name_item)
+        self._toolbox.ui.graphicsView.scene().addItem(self._master)
+        self._toolbox.ui.graphicsView.scene().addItem(self.name_item)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
@@ -568,6 +616,14 @@ class DataStoreImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
+
+    def drag_enter_event(self, event):
+        """Calls super class method."""
+        super().drag_enter_event(event)
+
+    def drag_leave_event(self, event):
+        """Calls super class method."""
+        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
@@ -600,16 +656,16 @@ class ViewImage(ItemImage):
     individual QGraphicsItems together.
 
     Attributes:
-        main (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         x (int): Icon x coordinate
         y (int): Icon y coordinate
         w (int): Width of master icon
         h (int): Height of master icon
         name (str): Item name
     """
-    def __init__(self, main, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
-        super().__init__(main, x, y, w, h, name)
+        super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(QColor('black'))  # QPen is used to draw the item outline
         self.brush = QBrush(QColor(0, 255, 0, 160))  # QBrush is used to fill the item
         self.hover_brush = QBrush(QColor(0, 204, 0, 128))  # QBrush while hovering
@@ -624,12 +680,14 @@ class ViewImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
+        self._master.dragEnterEvent = self.drag_enter_event
+        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
         # Add items to scene
-        self._main.ui.graphicsView.scene().addItem(self._master)
-        self._main.ui.graphicsView.scene().addItem(self.name_item)
+        self._toolbox.ui.graphicsView.scene().addItem(self._master)
+        self._toolbox.ui.graphicsView.scene().addItem(self.name_item)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
@@ -657,6 +715,14 @@ class ViewImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
+
+    def drag_enter_event(self, event):
+        """Calls super class method."""
+        super().drag_enter_event(event)
+
+    def drag_leave_event(self, event):
+        """Calls super class method."""
+        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
@@ -687,14 +753,14 @@ class Link(QGraphicsPathItem):
     """An item that represents a connection between project items.
 
     Attributes:
-        qmainwindow (ToolboxUI): main UI class instance
+        toolbox (ToolboxUI): main UI class instance
         src_icon (ItemImage): Source icon
         dst_icon(ItemImage): Destination icon
     """
-    def __init__(self, qmainwindow, src_icon, dst_icon):
+    def __init__(self, toolbox, src_icon, dst_icon):
         """Initializes item."""
         super().__init__()
-        self._qmainwindow = qmainwindow
+        self._toolbox = toolbox
         self.src_icon = src_icon
         self.dst_icon = dst_icon
         self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
@@ -741,9 +807,9 @@ class Link(QGraphicsPathItem):
 
     def find_model_index(self):
         """Find model index from connection model."""
-        row = self._qmainwindow.connection_model.header.index(self.src_icon.name())
-        column = self._qmainwindow.connection_model.header.index(self.dst_icon.name())
-        self.model_index = self._qmainwindow.connection_model.index(row, column)
+        row = self._toolbox.connection_model.header.index(self.src_icon.name())
+        column = self._toolbox.connection_model.header.index(self.dst_icon.name())
+        self.model_index = self._toolbox.connection_model.index(row, column)
 
     def find_parallel_link(self):
         """Find parallel link."""
@@ -784,13 +850,13 @@ class Link(QGraphicsPathItem):
         self.setSelected(True)
         self.find_model_index()
         self.find_parallel_link()
-        self._qmainwindow.show_link_context_menu(e.screenPos(), self)
+        self._toolbox.show_link_context_menu(e.screenPos(), self)
 
     def keyPressEvent(self, event):
         """Remove associated connection if this is selected and delete is pressed."""
         if event.key() == Qt.Key_Delete and self.isSelected():
             self.find_model_index()
-            self._qmainwindow.ui.graphicsView.remove_link(self.model_index)
+            self._toolbox.ui.graphicsView.remove_link(self.model_index)
 
     def update_geometry(self):
         """Update path."""
@@ -857,16 +923,17 @@ class Link(QGraphicsPathItem):
             return value
         return super().itemChange(change, value)
 
+
 class LinkDrawer(QGraphicsPathItem):
     """An item that allows one to draw links between slot buttons in QGraphicsView.
 
     Attributes:
-        qmainwindow (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
     """
-    def __init__(self, qmainwindow):
+    def __init__(self, toolbox):
         """Initializes instance."""
         super().__init__()
-        self._qmainwindow = qmainwindow
+        self._toolbox = toolbox
         self.src = None  # source point
         self.dst = None  # destination point
         self.drawing = False

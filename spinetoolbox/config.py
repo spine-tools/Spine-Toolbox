@@ -20,7 +20,7 @@
 """
 Spine Toolbox default configurations.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   2.1.2018
 """
 
@@ -28,7 +28,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.1"
+SPINE_TOOLBOX_VERSION = "0.1.5"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -81,7 +81,7 @@ OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt', 'o
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 SQL_DIALECT_API = {
-    'mysql': 'mysqlclient',
+    'mysql': 'pymysql',
     'sqlite': 'sqlite3',
     'mssql': 'pyodbc',
     'postgresql': 'psycopg2',
@@ -97,7 +97,8 @@ SETTINGS = {"project_directory": "",
             "datetime": "true",
             "gams_path": "",
             "use_repl": "true",
-            "julia_path": ""}
+            "julia_path": "",
+            "save_at_exit": "1"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \
@@ -137,11 +138,24 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                     "padding: 3px;}"
 
 TEXTBROWSER_SS = "QTextBrowser{background-color: black;}"
-# QDockWidget handle
-SEPARATOR_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
+# ToolboxUI stylesheet. A lot of widgets inherit this sheet.
+MAINWINDOW_SS = "QMainWindow:separator{width: 3px; background-color: lightgray; border: 1px solid white;}" \
+                "QPushButton{border: 1px outset brown; border-radius: 2px; min-width: 70px; min-height: 20px;" \
+                    "background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #d9d9d9, stop: 1 #f2f2f2);}" \
+                "QPushButton:focus{background-color: #f2f2f0; border: 1px outset brown; outline: 1px dotted brown}" \
+                "QPushButton:hover{background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #f2f2f2, stop: 1 #d9d9d9);}" \
+                "QPushButton:pressed{background-color: #f2f2f2;}" \
+                "QToolButton:focus{border: 1px ridge black;}" \
+                "QToolButton::pressed{background-color: #f2f2f2;}" \
+                "QToolButton::menu-indicator{width: 0px;}" \
+                "QCheckBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
+                "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
+                "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
+                "QTextEdit:focus{border-color: black; border-width: 2px; border-style: ridge;}" \
+                "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
 TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
 # Draw border on all QWidgets when in focus
-TT_FOCUS_SS = ":focus {border: 1px groove;}"
+# TT_FOCUS_SS = ":focus {border: 1px groove;}"

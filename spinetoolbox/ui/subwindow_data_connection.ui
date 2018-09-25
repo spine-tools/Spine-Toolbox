@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -139,7 +139,7 @@ color: rgb(255, 255, 255);</string>
        </property>
        <property name="font">
         <font>
-         <pointsize>8</pointsize>
+         <pointsize>10</pointsize>
         </font>
        </property>
        <property name="acceptDrops">
@@ -325,7 +325,7 @@ color: rgb(255, 255, 255);</string>
        </property>
        <property name="font">
         <font>
-         <pointsize>8</pointsize>
+         <pointsize>10</pointsize>
         </font>
        </property>
        <property name="acceptDrops">
@@ -377,6 +377,12 @@ color: rgb(255, 255, 255);</string>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="maximumSize">
           <size>
            <width>120</width>
@@ -400,12 +406,12 @@ color: rgb(255, 255, 255);</string>
  </widget>
  <customwidgets>
   <customwidget>
-   <class>DataTreeView</class>
+   <class>ReferencesTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>ReferencesTreeView</class>
+   <class>DataTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
@@ -415,6 +421,7 @@ color: rgb(255, 255, 255);</string>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
+  <tabstop>toolButton_datapackage</tabstop>
   <tabstop>treeView_data</tabstop>
   <tabstop>pushButton_open</tabstop>
  </tabstops>

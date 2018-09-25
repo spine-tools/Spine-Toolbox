@@ -1,6 +1,5 @@
 ..  Tutorial for Spine Toolbox
-    Author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Manuel Marin <manuelma@kth.se>
-    Date created: 18.6.2018
+    Created: 18.6.2018
 
 .. |ds_icon| image:: ../../spinetoolbox/ui/resources/ds_icon.png
              :width: 24
@@ -23,10 +22,12 @@
 .. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
 
 
-Tutorial
-========
+***************
+Getting Started
+***************
 
-Welcome to the tutorial for Spine Toolbox. This tutorial covers the following topics:
+Welcome to the getting started guide for Spine Toolbox. This section gives an introduction to the user interface,
+and a tutorial on how to get started using the application. The following topics are covered:
 
 .. contents::
    :local:

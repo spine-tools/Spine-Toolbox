@@ -20,14 +20,14 @@
 """
 Class for a custom QGraphicsView for visualizing project items and connections.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   6.2.2018
 """
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
 from PySide2.QtCore import Slot, Qt, QRectF
-from PySide2.QtGui import QColor, QPen, QBrush
+from PySide2.QtGui import QColor, QPen, QBrush, QTransform
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
 
@@ -40,26 +40,26 @@ class CustomQGraphicsView(QGraphicsView):
     """
     def __init__(self, parent):
         """Initialize the QGraphicsView."""
-        super().__init__(parent)
-        self._scene = QGraphicsScene(self)
-        self.setScene(self._scene)
-        self._ui = None
+        super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
+        self._scene = None
+        self._toolbox = None
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
-        self.item_shadow = None
-        self.make_link_drawer()
         self.max_sw_width = 0
         self.max_sw_height = 0
         self.active_subwindow = None
         self.src_widget = None  # source widget when drawing links
         self.dst_widget = None  # destination widget when drawing links
-        self.init_scene()
         self.show()
 
-    def set_ui(self, ui):
+    def set_ui(self, toolbox):
         """Set the main ToolboxUI instance."""
-        self._ui = ui
+        self._toolbox = toolbox
+        self._scene = CustomQGraphicsScene(self, toolbox)
+        self.setScene(self._scene)
+        self.make_link_drawer()
+        self.init_scene()
 
     @Slot("QList", name='scene_changed')
     def scene_changed(self, changed_qrects):
@@ -71,7 +71,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Make a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
         self._scene.changed.disconnect(self.scene_changed)
-        self._scene = QGraphicsScene(self)
+        self._scene = CustomQGraphicsScene(self, self._toolbox)
         self.setScene(self._scene)
         self._scene.addItem(self.link_drawer)
 
@@ -101,7 +101,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     def make_link_drawer(self):
         """Make new LinkDrawer and add it scene. Needed when opening a new project."""
-        self.link_drawer = LinkDrawer(self._ui)
+        self.link_drawer = LinkDrawer(self._toolbox)
         self.scene().addItem(self.link_drawer)
 
     def set_project_item_model(self, model):
@@ -111,31 +111,38 @@ class CustomQGraphicsView(QGraphicsView):
     def set_connection_model(self, model):
         """Set connection model and connect signals."""
         self._connection_model = model
-        # self._connection_model.dataChanged.connect(self.connection_data_changed)
         self._connection_model.rowsAboutToBeRemoved.connect(self.connection_rows_removed)
         self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
     def add_link(self, src_name, dst_name, index):
-        """Draw link between source and sink items on scene and add Link instance to connection model."""
-        # Find items from project model
+        """Draws link between source and sink items on scene and
+        appends connection model. Refreshes View references if needed."""
         flags = Qt.MatchExactly | Qt.MatchRecursive
         src_item = self._project_item_model.find_item(src_name, flags).data(Qt.UserRole)
         dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
-        logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
-        link = Link(self._ui, src_item.get_icon(), dst_item.get_icon())
+        link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
         self.scene().addItem(link)
         self._connection_model.setData(index, link)
+        # Refresh View references
+        if dst_item.item_type == "View":
+            dst_item.view_refresh_signal.emit()
 
     def remove_link(self, index):
-        """Remove link between source and sink items
-        on scene and remove Link instance from connection model."""
+        """Removes link between source and sink items on scene and
+        updates connection model. Refreshes View references if needed."""
         link = self._connection_model.data(index, Qt.UserRole)
         if not link:
             logging.error("Link not found. This should not happen.")
             return False
-        logging.debug("Removing link in ({0},{1})".format(index.row(), index.column()))
+        # Find destination item
+        dst_name = link.dst_icon.name()
+        flags = Qt.MatchExactly | Qt.MatchRecursive
+        dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
+        # Refresh View references
+        if dst_item.item_type == "View":
+            dst_item.view_refresh_signal.emit()
 
     def restore_links(self):
         """Iterate connection model and draw links to all that are 'True'
@@ -153,7 +160,7 @@ class CustomQGraphicsView(QGraphicsView):
                 dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
                 if data == "True":
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
-                    link = Link(self._ui, src_item.get_icon(), dst_item.get_icon())
+                    link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
                     self.scene().addItem(link)
                     self._connection_model.setData(index, link)
                 else:
@@ -200,19 +207,18 @@ class CustomQGraphicsView(QGraphicsView):
             index = self._connection_model.createIndex(row, column)
             if self._connection_model.data(index, Qt.DisplayRole) == "False":
                 self.add_link(self.src_widget, self.dst_widget, index)
-                self._ui.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
-                                  .format(self.src_widget, self.dst_widget))
+                self._toolbox.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
+                                       .format(self.src_widget, self.dst_widget))
             elif self._connection_model.data(index, Qt.DisplayRole) == "True":
-                self._ui.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
-                                  .format(self.src_widget, self.dst_widget))
+                self._toolbox.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
+                                       .format(self.src_widget, self.dst_widget))
             self.emit_connection_information_message()
-
 
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
         if self.src_widget == self.dst_widget:
-            self._ui.msg_warning.emit("\t<b>Not implemented</b>. The functionality for feedback links "
-                                      "is not implemented yet.")
+            self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. The functionality for feedback "
+                                           "links is not implemented yet.")
         else:
             src_item = self._project_item_model.find_item(self.src_widget, Qt.MatchExactly | Qt.MatchRecursive)
             if not src_item:
@@ -225,86 +231,32 @@ class CustomQGraphicsView(QGraphicsView):
                 return
             dst_item_type = dst_item.data(Qt.UserRole).item_type
             if src_item_type == 'Data Connection' and dst_item_type == 'Tool':
-                self._ui.msg.emit("\t-> Input files for <b>{0}</b>'s execution "
-                                  "will be looked up in <b>{1}</b>'s references and data directory.".\
-                                  format(self.dst_widget, self.src_widget))
+                self._toolbox.msg.emit("\t-> Input files for <b>{0}</b>'s execution will be looked "
+                                       "up in <b>{1}</b>'s references and data directory."
+                                       .format(self.dst_widget, self.src_widget))
             elif src_item_type == 'Data Store' and dst_item_type == 'Tool':
-                self._ui.msg.emit("\t-> Input files for <b>{0}</b>'s execution "
-                                  "will be looked up in <b>{1}</b>'s data directory.".\
-                                  format(self.dst_widget, self.src_widget))
+                self._toolbox.msg.emit("\t-> Input files for <b>{0}</b>'s execution will be looked "
+                                       "up in <b>{1}</b>'s data directory."
+                                       .format(self.dst_widget, self.src_widget))
             elif src_item_type == 'Tool' and dst_item_type in ['Data Connection', 'Data Store']:
-                self._ui.msg.emit("\t-> Output files from <b>{0}</b>'s execution "
-                                  "will be copied to <b>{1}</b>'s data directory.".\
-                                  format(self.src_widget, self.dst_widget))
+                self._toolbox.msg.emit("\t-> Output files from <b>{0}</b>'s execution will be passed "
+                                       "as reference to <b>{1}</b>'s data directory."
+                                       .format(self.src_widget, self.dst_widget))
             elif src_item_type in ['Data Connection', 'Data Store']\
                     and dst_item_type in ['Data Connection', 'Data Store']:
-                self._ui.msg.emit("\t-> Input files for a tool's execution "
-                                  "will be looked up in <b>{0}</b> if not found in <b>{1}</b>.".\
-                                  format(self.src_widget, self.dst_widget))
+                self._toolbox.msg.emit("\t-> Input files for a tool's execution will be looked up "
+                                       "in <b>{0}</b> if not found in <b>{1}</b>."
+                                       .format(self.src_widget, self.dst_widget))
+            elif src_item_type == 'Data Store' and dst_item_type == 'View':
+                self._toolbox.msg_warning.emit("\t-> Database references in <b>{0}</b> will be viewed "
+                                               "by <b>{1}</b>."
+                                               .format(self.src_widget, self.dst_widget))
             elif src_item_type == 'Tool' and dst_item_type == 'Tool':
-                self._ui.msg_warning.emit("\t<b>Not implemented</b>. Interaction between two "
-                                          "Tool items is not implemented yet.")
-            elif src_item_type == 'View' or dst_item_type == 'View':
-                self._ui.msg_warning.emit("\t<b>Not implemented</b>. Interaction with View items "
-                                          "is not implemented yet.")
+                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Interaction between Tool "
+                                               "items is not implemented yet.")
             else:
-                self._ui.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
-                                          "is not implemented yet :)")
-
-    def dragLeaveEvent(self, event):
-        """Accept event."""
-        event.accept()
-
-    def dragEnterEvent(self, event):
-        """Only accept drops of DraggableWidget instances (from Add Item toolbar)."""
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            event.ignore()
-        else:
-            event.acceptProposedAction()
-            event.accept()
-
-    def dragMoveEvent(self, event):
-        """Only accept drops of DraggableWidget instances (from Add Item toolbar)"""
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            event.ignore()
-        else:
-            event.acceptProposedAction()
-            event.accept()
-
-    def dropEvent(self, event):
-        """Capture text from event's mimedata and show the appropriate 'Add Item form.'"""
-        if not self._ui.project():
-            self._ui.msg.emit("Create or open a project first")
-            event.ignore()
-            return
-        event.acceptProposedAction()
-        text = event.mimeData().text()
-        pos = self.mapToScene(event.pos())
-        pen = QPen(QColor('white'))
-        x = pos.x() - 35
-        y = pos.y() - 35
-        w = 70
-        h = 70
-        # self.item_shadow = self.scene().addEllipse(0, 0, 70, 70)
-        if text == "Data Store":
-            brush = QBrush(QColor(0, 255, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._ui.show_add_data_store_form(pos.x(), pos.y())
-        elif text == "Data Connection":
-            brush = QBrush(QColor(0, 0, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._ui.show_add_data_connection_form(pos.x(), pos.y())
-        elif text == "Tool":
-            brush = QBrush(QColor(255, 0, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._ui.show_add_tool_form(pos.x(), pos.y())
-        elif text == "View":
-            brush = QBrush(QColor(0, 255, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._ui.show_add_view_form(pos.x(), pos.y())
-        self._scene.addItem(self.item_shadow)
+                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
+                                               "is not implemented yet :)")
 
     def mouseMoveEvent(self, e):
         """Update line end position.
@@ -334,7 +286,7 @@ class CustomQGraphicsView(QGraphicsView):
                 self.link_drawer.drawing = False
                 if e.button() != Qt.LeftButton:
                     return
-                self._ui.msg_warning.emit("Unable to make connection. "
+                self._toolbox.msg_warning.emit("Unable to make connection. "
                                           "Try landing the connection onto a connector button.")
 
     def showEvent(self, event):
@@ -346,3 +298,76 @@ class CustomQGraphicsView(QGraphicsView):
         """Make the scene at least as big as the viewport."""
         super().resizeEvent(event)
         self.resize_scene(recenter=True)
+
+
+class CustomQGraphicsScene(QGraphicsScene):
+    """A scene that handles drag and drop events."""
+
+    def __init__(self, parent, toolbox):
+        """Initialize class."""
+        super().__init__(parent)
+        self._toolbox = toolbox
+        self.item_shadow = None
+
+    def dragLeaveEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            super().dragLeaveEvent(event)
+
+    def dragEnterEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        """Only accept drops when the source is an instance of
+        DraggableWidget (from Add Item toolbar).
+        Capture text from event's mimedata and show the appropriate 'Add Item form.'
+        """
+        source = event.source()
+        if not isinstance(source, DraggableWidget):
+            event.ignore()
+            return
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Create or open a project first")
+            event.ignore()
+            return
+        event.acceptProposedAction()
+        text = event.mimeData().text()
+        pos = event.scenePos()
+        pen = QPen(QColor('white'))
+        x = pos.x() - 35
+        y = pos.y() - 35
+        w = 70
+        h = 70
+        if text == "Data Store":
+            brush = QBrush(QColor(0, 255, 255, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
+            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
+        elif text == "Data Connection":
+            brush = QBrush(QColor(0, 0, 255, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
+            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
+        elif text == "Tool":
+            brush = QBrush(QColor(255, 0, 0, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
+            self._toolbox.show_add_tool_form(pos.x(), pos.y())
+        elif text == "View":
+            brush = QBrush(QColor(0, 255, 0, 160))
+            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
+            self._toolbox.show_add_view_form(pos.x(), pos.y())
+        self.addItem(self.item_shadow)
