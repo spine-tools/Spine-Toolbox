@@ -10,17 +10,24 @@ This section is for upcoming changes. This serves two purposes:
 
 ### Added (for new features)
 In development branches:
-- Advanced copy/pasting support for the Data store form.
+- Advanced copy/pasting and multiple selection support for the Data store form.
 - Import data from Excel files into the Data store form.
 - Export Spine database from the Data store form into an Excel file.
 - Save at exit prompt.
 - Import data from datapackage into the Data store form.
 - Restore Dock Widgets in the main window.
-- Autofilter for parameter tables in Data store form.
+- Parameter tables can be filtered by clicking on their headings in the Data store form.
+- Parameter and parameter values are added and edited directly in the Data store form,
+without need for an additional dialog.
 - On-the-fly creation of necessary relationships when entering parameters in Data store form.
-- View item feature for visualizing networks from a Spine database.
+- View item feature for visualizing networks from a Spine database. A view item can visualize databases
+from all data store items connected to it.
 - Packages numpy, scipy, and matplotlib are now mandatory requirements.
-- Drag and drop files between data connections, data stores, and views.
+- Drag files between data connections. File items can be dragged from the references and data lists.
+Data connection items can be selected by hovering them while dragging a file.
+- datapackage.json files in data connections are now opened with the Spine datapackage form. This is a dedicated
+interface to prepare the datapackage for importing in the Data store form.
+- The Data store form does not lock the database when there are uncommitted changes anymore.
 
 Upcoming:
 - Tool-Tool interface
@@ -37,6 +44,9 @@ Upcoming:
 package from now on.
 - Data Store item can have only one database, not many. When opening a project created with a
 previous version, the first database in the list of saved references will be loaded for each Data Store.
+- In the Data store form, the object tree view presents all relationship classes at the same level,
+regardless of how many object classes are involved. The same applies for relationships and objects.
+- In the Data Store form, the relationship parameter value view now has different columns for each object involved.
 
 ### Deprecated (for soon-to-be removed features)
 
