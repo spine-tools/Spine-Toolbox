@@ -28,14 +28,6 @@ widgets.add\_data\_store\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.add\_db\_reference\_widget module
------------------------------------------
-
-.. automodule:: widgets.add_db_reference_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.add\_tool\_widget module
 --------------------------------
 

@@ -778,7 +778,9 @@ class NetworkMap:
         self.heatmap = hm
 
     def init_plot(self):
-        """ Initialize plot.
+        """Initialize plot.
+
+        Examples:
             fig_size can be:
                 1) [w,h] in inches, the one that limits sets size
                 2) height in inches
