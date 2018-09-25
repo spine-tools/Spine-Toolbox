@@ -19,7 +19,6 @@ spinetoolbox
    resources_icons_rc
    resources_logos_rc
    setup
-   spinedatabase_api
    spinetoolbox
    test
    tool

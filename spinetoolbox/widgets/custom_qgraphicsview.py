@@ -115,18 +115,21 @@ class CustomQGraphicsView(QGraphicsView):
         self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
     def add_link(self, src_name, dst_name, index):
-        """Draws link between source and sink items on scene and adds Link instance to connection model."""
+        """Draws link between source and sink items on scene and
+        appends connection model. Refreshes View references if needed."""
         flags = Qt.MatchExactly | Qt.MatchRecursive
         src_item = self._project_item_model.find_item(src_name, flags).data(Qt.UserRole)
         dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
         link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
         self.scene().addItem(link)
         self._connection_model.setData(index, link)
+        # Refresh View references
+        if dst_item.item_type == "View":
+            dst_item.view_refresh_signal.emit()
 
     def remove_link(self, index):
-        """Removes link between source and sink items
-        on scene and removes Link instance from connection model.
-        Refreshes source or destination items if needed."""
+        """Removes link between source and sink items on scene and
+        updates connection model. Refreshes View references if needed."""
         link = self._connection_model.data(index, Qt.UserRole)
         if not link:
             logging.error("Link not found. This should not happen.")
@@ -248,8 +251,6 @@ class CustomQGraphicsView(QGraphicsView):
                 self._toolbox.msg_warning.emit("\t-> Database references in <b>{0}</b> will be viewed "
                                                "by <b>{1}</b>."
                                                .format(self.src_widget, self.dst_widget))
-                # Emit a signal to View item that refreshes the references
-                dst_item.data(Qt.UserRole).view_refresh_signal.emit()
             elif src_item_type == 'Tool' and dst_item_type == 'Tool':
                 self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Interaction between Tool "
                                                "items is not implemented yet.")
