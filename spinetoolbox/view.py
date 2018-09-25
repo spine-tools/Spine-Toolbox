@@ -28,7 +28,7 @@ import os
 import shutil
 import getpass
 import logging
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, Signal
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError
@@ -47,6 +47,8 @@ class View(MetaObject):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+    view_refresh_signal = Signal(name="view_connected_signal")
+
     def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -66,6 +68,7 @@ class View(MetaObject):
         """Connect this data store's signals to slots."""
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_network_map)
         self._widget.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
+        self.view_refresh_signal.connect(self.refresh)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -104,8 +107,6 @@ class View(MetaObject):
         """Update list of references that this item is viewing."""
         input_items = self.find_input_items()
         self.references = [item.reference() for item in input_items if item.reference()]
-        if not self.references:
-            return
         self._widget.populate_reference_list(self.references)
 
     @busy_effect
@@ -114,9 +115,17 @@ class View(MetaObject):
         """Open reference in Network Map form."""
         if not index:
             index = self._widget.ui.treeView_references.currentIndex()
-        if not index.isValid():
-            self._toolbox.msg_warning.emit("Nothing to plot. Add connection or reference.")
+        if len(self.references) == 0:
+            self._toolbox.msg_warning.emit("No data to plot. Try connecting a Data Store here.")
             return
+        if not index.isValid():
+            # If only one reference available select it automatically
+            if len(self.references) == 1:
+                index = self._widget.ui.treeView_references.model().index(0, 0)
+                self._widget.ui.treeView_references.setCurrentIndex(index)
+            else:
+                self._toolbox.msg_warning.emit("Please select a reference to plot")
+                return
         reference = self.references[index.row()]
         db_url = reference['url']
         database = reference['database']

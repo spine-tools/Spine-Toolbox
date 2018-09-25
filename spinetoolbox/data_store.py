@@ -25,12 +25,11 @@ Module for data store class.
 """
 
 import os
-import shutil
 import getpass
 import logging
-from PySide2.QtGui import QDesktopServices, QIcon
+from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QStyle, QFileIconProvider
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QFileIconProvider
 from metaobject import MetaObject
 from spinedatabase_api import TempDatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
@@ -49,7 +48,7 @@ class DataStore(MetaObject):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        references (dict): Reference to a database
+        reference (dict): Reference to a database
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
