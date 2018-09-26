@@ -4,12 +4,30 @@ All **notable** changes to this project will be documented in this file from v0.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
-This section is for upcoming changes. This serves two purposes:
-1. People can see what changes they might expect in upcoming releases
-2. At release time, Unreleased section changes can be moved into a new release version section
+This section is for upcoming changes.
 
-### Added (for new features)
-In development branches:
+### Added
+Upcoming:
+- Tool-Tool interface
+- Widget for viewing the code of Tool templates
+- Undo-redo functionality for the main view
+- Add metadata to database commits
+- Visualize database commit history
+
+### Fixed
+
+### Changed
+
+### Deprecated
+
+### Removed
+- Connections tab on the main window is useless and should be removed.
+
+### Security
+
+## [0.1.5] - 2018-09-25
+
+### Added
 - Advanced copy/pasting and multiple selection support for the Data store form.
 - Import data from Excel files into the Data store form.
 - Export Spine database from the Data store form into an Excel file.
@@ -29,16 +47,7 @@ Data connection items can be selected by hovering them while dragging a file.
 interface to prepare the datapackage for importing in the Data store form.
 - The Data store form does not lock the database when there are uncommitted changes anymore.
 
-Upcoming:
-- Tool-Tool interface
-- Widget for viewing the code of Tool templates
-- Undo-redo functionality for the main view
-- Add metadata to database commits (v0.3)
-- Visualize database commit history (v0.3)
-
-### Fixed (for bug fixes)
-
-### Changed (for changes in existing functionality)
+### Changed
 - Changed DBAPI package mysqlclient (GPL license, not good) to pymysql (MIT license, good)
 - spinedatabase_api is not included in Spine Toolbox repository anymore. It is a required
 package from now on.
@@ -48,13 +57,7 @@ previous version, the first database in the list of saved references will be loa
 regardless of how many object classes are involved. The same applies for relationships and objects.
 - In the Data Store form, the relationship parameter value view now has different columns for each object involved.
 
-### Deprecated (for soon-to-be removed features)
-
-### Removed (for now removed features)
-- Connections tab on the main window is useless and should be removed.
-
-### Security (in case of vulnerabilities)
-
 ## [0.1] - 2018-08-20
+
 ### Added
 - Basic functionality

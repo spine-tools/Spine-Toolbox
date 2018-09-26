@@ -65,9 +65,6 @@ To update spinedatabase_api run
 
 ### Installing requirements for Anaconda & Miniconda Python (3.5+)
 
-..
-**TODO: This should be updated**
-
 PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge
 channel. Datapackage 1.2.3 is available on the manulero channel.
 You can install all requirements by running
