@@ -90,9 +90,9 @@ SQL_DIALECT_API = {
 
 # Default settings
 SETTINGS = {"project_directory": "",
-            "open_previous_project": "false",
+            "open_previous_project": "true",
             "previous_project": "",
-            "show_exit_prompt": "false",
+            "show_exit_prompt": "true",
             "logging_level": "2",
             "datetime": "true",
             "gams_path": "",
