@@ -135,7 +135,7 @@ class AddObjectClassesDialog(CustomQDialog):
     """
     def __init__(self, parent, db_map):
         super().__init__(parent)
-        self.object_class_list = [x for x in db_map.object_class_list()]
+        self.object_class_list = db_map.object_class_list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.model.set_horizontal_header_labels(['object class name', 'description'])
@@ -157,12 +157,9 @@ class AddObjectClassesDialog(CustomQDialog):
     def accept(self):
         index = self.ui.comboBox.currentIndex()
         if index == 0:
-            try:
-                display_order = self.object_class_list[0].display_order-1
-            except IndexError:
-                display_order = 0
+            display_order = self.object_class_list.first().display_order - 1
         else:
-            display_order = self.object_class_list[index-1].display_order
+            display_order = self.object_class_list.all()[index-1].display_order + 1
         for i in range(self.model.rowCount()):
             name, description = self.model.row_data(i)
             if not name:

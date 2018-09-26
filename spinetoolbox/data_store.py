@@ -31,7 +31,7 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QFileIconProvider
 from metaobject import MetaObject
-from spinedatabase_api import TempDatabaseMapping, SpineDBAPIError, create_new_spine_database
+from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from graphics_items import DataStoreImage
@@ -384,7 +384,7 @@ class DataStore(MetaObject):
         database = reference['database']
         username = reference['username']
         try:
-            db_map = TempDatabaseMapping(db_url, username)
+            db_map = DiffDatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return

@@ -1164,14 +1164,16 @@ class ObjectTreeModel(QStandardItemModel):
         """
         object_class_item = self.new_object_class_item(object_class)
         root_item = self.invisibleRootItem().child(0)
-        row = root_item.rowCount()
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['display_order'] > object_class['display_order']:
+            if visited_object_class['display_order'] >= object_class['display_order']:
                 root_item.insertRow(i, QStandardItem())
                 root_item.setChild(i, 0, object_class_item)
-                break
+                return
+        row = root_item.rowCount()
+        root_item.insertRow(row, QStandardItem())
+        root_item.setChild(row, 0, object_class_item)
 
     def add_object(self, object_):
         """Add object item to the model.
@@ -1338,6 +1340,9 @@ class ParameterModel(MinimalTableModel):
         self.id_column = id_column
         for row in wip_row_list:
             self.set_work_in_progress(row, True)
+
+# TODO: all remove and rename item methods should operate in batch,
+# access the internal data structure directly and emit dataChanged afterwards
 
 
 class ObjectParameterModel(ParameterModel):
@@ -1750,6 +1755,17 @@ class RelationshipParameterValueModel(ParameterModel):
                 index = self.index(row, column)
                 if self.data(index, Qt.DisplayRole) == removed_name:
                     super().removeRows(row, 1)
+
+    def extend_object_name_header(self, max_dim_count):
+        """Extend object name header to fit new max dimension count."""
+        curr_dim_count = len(self.object_name_header)
+        object_name_header_ext = ["object_name_" + str(i+1) for i in range(curr_dim_count, max_dim_count)]
+        if object_name_header_ext:
+            header = self.horizontal_header_labels()
+            section = header.index(self.object_name_header[-1]) + 1
+            self.insertColumns(section, len(object_name_header_ext))
+            self.insert_horizontal_header_labels(section, object_name_header_ext)
+            self.object_name_header.extend(object_name_header_ext)
 
     def relationship_on_the_fly(self, relationship_class, index, value):
         """Return a relationship retrieved or created for the current index."""

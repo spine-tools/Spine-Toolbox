@@ -343,18 +343,9 @@ class DataStoreForm(QMainWindow):
         self.init_models()
 
     def init_models(self):
-        tic = time.clock()
         self.init_object_tree_model()
-        toc = time.clock()
-        logging.debug("Object tree model populated in {} seconds".format(toc - tic))
-        tic = time.clock()
         self.init_parameter_value_models()
-        toc = time.clock()
-        logging.debug("Parameter value models populated in {} seconds".format(toc - tic))
-        tic = time.clock()
         self.init_parameter_models()
-        toc = time.clock()
-        logging.debug("Parameter models populated in {} seconds".format(toc - tic))
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -625,15 +616,14 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="add_object_classes")
     def add_object_classes(self, object_class_args_list):
         """Insert new object classes."""
-        for object_class_args in object_class_args_list:
-            try:
-                object_class = self.db_map.add_object_class(**object_class_args)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            self.object_tree_model.add_object_class(object_class._asdict())
-            msg = "Successfully added new object class '{}'.".format(object_class.name)
+        try:
+            object_classes = self.db_map.add_object_classes(object_class_args_list)
+            for object_class in object_classes:
+                self.object_tree_model.add_object_class(object_class)
+            msg = "Successfully added new object classes {}.".format(", ".join([x['name'] for x in object_classes]))
             self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     @Slot(name="show_add_objects_form")
     def show_add_objects_form(self, class_id=None):
@@ -645,15 +635,14 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="add_objects")
     def add_objects(self, object_args_list):
         """Insert new objects."""
-        for object_args in object_args_list:
-            try:
-                object_ = self.db_map.add_object(**object_args)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            self.object_tree_model.add_object(object_._asdict())
-            msg = "Successfully added new object '{}'.".format(object_.name)
+        try:
+            objects = self.db_map.add_objects(object_args_list)
+            for object_ in objects:
+                self.object_tree_model.add_object(object_)
+            msg = "Successfully added new objects {}.".format(", ".join([x['name'] for x in objects]))
             self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     def show_add_relationship_classes_form(self, object_class_id=None):
         """Show dialog to let user select preferences for new relationship class."""
@@ -664,26 +653,19 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="add_relationship_classes")
     def add_relationship_classes(self, wide_relationship_class_args_list):
         """Insert new relationship classes."""
-        for wide_relationship_class_args in wide_relationship_class_args_list:
-            try:
-                wide_relationship_class = self.db_map.add_wide_relationship_class(**wide_relationship_class_args)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            self.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
-            dim_count = len(wide_relationship_class.object_class_id_list.split(','))
-            object_name_header = self.relationship_parameter_value_model.object_name_header
-            max_dim_count = len(object_name_header)
-            ext_object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count, dim_count)]
-            if ext_object_name_header:
-                header = self.relationship_parameter_value_model.horizontal_header_labels()
-                section = header.index(object_name_header[-1]) + 1
-                self.relationship_parameter_value_model.insertColumns(section, len(ext_object_name_header))
-                self.relationship_parameter_value_model.insert_horizontal_header_labels(
-                    section, ext_object_name_header)
-                object_name_header.extend(ext_object_name_header)
-            msg = "Successfully added new relationship class '{}'.".format(wide_relationship_class.name)
+        try:
+            wide_relationship_classes = self.db_map.add_wide_relationship_classes(wide_relationship_class_args_list)
+            dim_count_list = list()
+            for wide_relationship_class in wide_relationship_classes:
+                self.object_tree_model.add_relationship_class(wide_relationship_class)
+                dim_count_list.append(len(wide_relationship_class["object_class_id_list"].split(',')))
+            max_dim_count = max(dim_count_list)
+            self.relationship_parameter_value_model.extend_object_name_header(max_dim_count)
+            relationship_class_name_list = ", ".join([x['name'] for x in wide_relationship_classes])
+            msg = "Successfully added new relationship classes {}.".format(relationship_class_name_list)
             self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     @Slot(name="show_add_relationships_form")
     def show_add_relationships_form(self, relationship_class_id=None, object_id=None, object_class_id=None):
@@ -701,15 +683,14 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="add_relationships")
     def add_relationships(self, wide_relationship_args_list):
         """Insert new relationships."""
-        for wide_relationship_args in wide_relationship_args_list:
-            try:
-                wide_relationship = self.db_map.add_wide_relationship(**wide_relationship_args)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            self.object_tree_model.add_relationship(wide_relationship._asdict())
-            msg = "Successfully added new relationship '{}'.".format(wide_relationship_args['name'])
+        try:
+            wide_relationships = self.db_map.add_wide_relationships(wide_relationship_args_list)
+            for wide_relationship in wide_relationships:
+                self.object_tree_model.add_relationship(wide_relationship)
+            msg = "Successfully added new relationships {}.".format(", ".join([x['name'] for x in wide_relationships]))
             self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     @busy_effect
     def rename_item(self, renamed_index):
