@@ -30,15 +30,16 @@ import logging
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QFileIconProvider
-from metaobject import MetaObject
+from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
+from metaobject import MetaObject
+from config import SQL_DIALECT_API
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
-from config import SQL_DIALECT_API
-from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError, DatabaseError
+import qsubprocess
 
 
 class DataStore(MetaObject):
@@ -72,7 +73,7 @@ class DataStore(MetaObject):
             create_dir(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                        " Check permissions.".format(self.data_dir))
+                                         " Check permissions.".format(self.data_dir))
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.connect_signals()
         self.load_reference(reference)
@@ -208,7 +209,7 @@ class DataStore(MetaObject):
                 dsns = pyodbc.dataSources()
                 # Collect dsns which use the msodbcsql driver
                 mssql_dsns = list()
-                for key,value in dsns.items():
+                for key, value in dsns.items():
                     if 'msodbcsql' in value.lower():
                         mssql_dsns.append(key)
                 if mssql_dsns:
@@ -257,20 +258,17 @@ class DataStore(MetaObject):
     @busy_effect
     def install_dbapi_pip(self, dbapi):
         """Install DBAPI using pip."""
-        msg = "Installing module '{}' via 'pip'.".format(dbapi)
-        self._toolbox.msg_proc.emit(msg)
+        self._toolbox.msg.emit("Installing module <b>{0}</b> using pip".format(dbapi))
         program = "pip"
-        args = ["install {0}".format(dbapi)]
+        args = list()
+        args.append("install")
+        args.append("{0}".format(dbapi))
         pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
         pip_install.start_process()
         if pip_install.wait_for_finished():
-            msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)
-            self._toolbox.msg_success.emit(msg)
-            logging.debug("pip installation succeeded")
+            self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
             return True
-        logging.error("Failed to install module '{}' with pip.".format(dbapi))
-        msg = "Failed to install module '{}' with pip.".format(dbapi)
-        self._toolbox.msg_error.emit(msg)
+        self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
         return False
 
     @busy_effect
@@ -279,24 +277,17 @@ class DataStore(MetaObject):
         try:
             import conda.cli
         except ImportError:
-            logging.debug("Could not find conda. Installing {0} failed.".format(dbapi))
-            msg = "Conda is missing"
-            self._toolbox.msg_error.emit(msg)
+            self._toolbox.msg_error.emit("Conda not found. Installing {0} failed.".format(dbapi))
             self._widget.ui.comboBox_dialect.setCurrentIndex(0)
             return False
         try:
-            msg = "Installing module '{}' via 'conda'.".format(dbapi)
-            self._toolbox.msg_proc.emit(msg)
+            self._toolbox.msg.emit("Installing module <b>{0}</b> using Conda".format(dbapi))
             conda.cli.main('conda', 'install',  '-y', dbapi)
-            msg = "Module '{}' successfully installed via 'conda'.".format(dbapi)
-            self._toolbox.msg_success.emit(msg)
-            logging.debug("conda installation succeeded")
+            self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
             return True
         except Exception as e:
             logging.exception(e)
-            logging.error("Failed to install module '{}' with conda.".format(dbapi))
-            msg = "Failed to install module '{}' with conda.".format(dbapi)
-            self._toolbox.msg_error.emit(msg)
+            self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             self._widget.ui.comboBox_dialect.setCurrentIndex(0)
             return False
 

@@ -55,7 +55,7 @@ def main(argv):
         return
     # Most dependencies are automatically detected but some need to be manually included.
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
-    # for a bug affecting Windows in cx_Freeze (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
+    # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {"packages": [],
                              "excludes": ["scipy.spatial.cKDTree"],
                              "includes": ["atexit", "idna.idnadata", "pygments.lexers.python",
@@ -68,9 +68,9 @@ def main(argv):
                              "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}
     # This does not show logging messages
-    # base = "Win32GUI" if sys.platform == "win32" else None
+    base = "Win32GUI" if sys.platform == "win32" else None
     # This opens a console that shows also logging messages
-    base = "Console" if sys.platform == "win32" else None
+    # base = "Console" if sys.platform == "win32" else None
     executables = [Executable("spinetoolbox.py", base=base)]
     setup(name="Spine Toolbox",
           version=SPINE_TOOLBOX_VERSION,
