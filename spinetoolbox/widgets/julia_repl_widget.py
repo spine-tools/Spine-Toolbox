@@ -121,8 +121,8 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_manager = None
             self.kernel_client = None
             if self.ijulia_process_succeeded:  # problem is not due to IJulia
-                self._toolbox.msg_warning.emit("\tManual installation of IJulia "
-                                               "may help to solve this issue.")
+                self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
+                                             "Julia is installed properly on your computer.")
                 self.execution_failed_to_start = True
                 self.execution_finished_signal.emit(-9999)
                 return
@@ -195,9 +195,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when IJulia installation/reconfiguration process finishes"""
         print(ret)
         if self.ijulia_process.process_failed:
-            self._toolbox.msg_error.emit("\tIJulia installation/reconfiguration failed.")
-            self._toolbox.msg_warning.emit("\tManual installation of IJulia "
-                                           "may help to solve this issue.")
+            self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
+                                         "Julia is installed properly on your computer.")
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
         else:
