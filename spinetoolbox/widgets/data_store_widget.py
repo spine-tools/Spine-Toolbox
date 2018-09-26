@@ -711,6 +711,7 @@ class DataStoreForm(QMainWindow):
             msg = "Successfully added new relationship '{}'.".format(wide_relationship_args['name'])
             self.msg.emit(msg)
 
+    @busy_effect
     def rename_item(self, renamed_index):
         """Rename item in the database and treeview"""
         renamed_item = self.object_tree_model.itemFromIndex(renamed_index)
@@ -744,8 +745,13 @@ class DataStoreForm(QMainWindow):
             self.msg_error.emit(e.msg)
             return
         self.object_tree_model.rename_item(new_name, curr_name, renamed_type, renamed['id'])
-        self.init_parameter_value_models()
-        self.init_parameter_models()
+        self.object_parameter_model.rename_item(new_name, curr_name, renamed_type)
+        self.object_parameter_value_model.rename_item(new_name, curr_name, renamed_type)
+        self.relationship_parameter_model.rename_item(new_name, curr_name, renamed_type)
+        self.relationship_parameter_value_model.rename_item(new_name, curr_name, renamed_type)
+        current = self.ui.treeView_object.currentIndex()
+        self.filter_parameter_value_models(current, current)
+        self.filter_parameter_models(current, current)
 
     def remove_items(self):
         """Remove all selected items from the object treeview."""
@@ -753,16 +759,16 @@ class DataStoreForm(QMainWindow):
         if not selection:
             return
         for index in reversed(selection.indexes()):
-            self.remove_item(index, refresh_parameter_views=False)
-        self.init_parameter_value_models()
-        self.init_parameter_models()
+            self.remove_item(index)
 
-    def remove_item(self, removed_index, refresh_parameter_views=False):
+    @busy_effect
+    def remove_item(self, removed_index):
         """Remove item from the treeview"""
         removed_item = self.object_tree_model.itemFromIndex(removed_index)
         removed_type = removed_item.data(Qt.UserRole)
         removed = removed_item.data(Qt.UserRole+1)
         removed_id = removed['id']
+        removed_name = removed['name']
         try:
             if removed_type == 'object_class':
                 self.db_map.remove_object_class(id=removed_id)
@@ -783,10 +789,10 @@ class DataStoreForm(QMainWindow):
             self.msg_error.emit(e.msg)
             return
         self.object_tree_model.remove_item(removed_type, removed_id)
-        if not refresh_parameter_views:
-            return
-        self.init_parameter_value_models()
-        self.init_parameter_models()
+        self.object_parameter_model.remove_item(removed_type, removed_name)
+        self.object_parameter_value_model.remove_item(removed_type, removed_name)
+        self.relationship_parameter_model.remove_item(removed_type, removed_name)
+        self.relationship_parameter_value_model.remove_item(removed_type, removed_name)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
@@ -891,7 +897,13 @@ class DataStoreForm(QMainWindow):
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
-        source_model.setData(source_index, new_value)
+        parameter_name_column = source_model.horizontal_header_labels().index('parameter_name')
+        if source_index.column() == parameter_name_column:
+            curr_name = source_index.data(Qt.DisplayRole)
+        if source_model.setData(source_index, new_value) and source_index.column() == parameter_name_column:
+            new_name = source_index.data(Qt.DisplayRole)
+            self.object_parameter_value_model.rename_item(new_name, curr_name, "parameter")
+            self.relationship_parameter_value_model.rename_item(new_name, curr_name, "parameter")
 
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
@@ -906,19 +918,6 @@ class DataStoreForm(QMainWindow):
             proxy_index = self.object_parameter_value_proxy.index(row, 0)
             self.remove_single_parameter_value(proxy_index)
 
-    @Slot(name="remove_object_parameters")
-    def remove_object_parameters(self):
-        selection = self.ui.tableView_object_parameter.selectionModel().selection()
-        row_set = set()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
-        for row in reversed(list(row_set)):
-            proxy_index = self.object_parameter_proxy.index(row, 0)
-            self.remove_single_parameter(proxy_index)
-
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
@@ -931,19 +930,6 @@ class DataStoreForm(QMainWindow):
         for row in reversed(list(row_set)):
             proxy_index = self.relationship_parameter_value_proxy.index(row, 0)
             self.remove_single_parameter_value(proxy_index)
-
-    @Slot(name="remove_relationship_parameters")
-    def remove_relationship_parameters(self):
-        selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
-        row_set = set()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
-        for row in reversed(list(row_set)):
-            proxy_index = self.relationship_parameter_proxy.index(row, 0)
-            self.remove_single_parameter(proxy_index)
 
     def remove_single_parameter_value(self, proxy_index):
         """Remove row from (object or relationship) parameter_value table.
@@ -963,6 +949,32 @@ class DataStoreForm(QMainWindow):
                 return
         source_model.removeRows(source_index.row(), 1)
 
+    @Slot(name="remove_object_parameters")
+    def remove_object_parameters(self):
+        selection = self.ui.tableView_object_parameter.selectionModel().selection()
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom+1))
+        for row in reversed(list(row_set)):
+            proxy_index = self.object_parameter_proxy.index(row, 0)
+            self.remove_single_parameter(proxy_index)
+
+    @Slot(name="remove_relationship_parameters")
+    def remove_relationship_parameters(self):
+        selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom+1))
+        for row in reversed(list(row_set)):
+            proxy_index = self.relationship_parameter_proxy.index(row, 0)
+            self.remove_single_parameter(proxy_index)
+
     def remove_single_parameter(self, proxy_index):
         """Remove row from (object or relationship) parameter table.
         If succesful, also remove row from model"""
@@ -970,8 +982,9 @@ class DataStoreForm(QMainWindow):
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(proxy_index)
         id_column = source_model.horizontal_header_labels().index('parameter_id')
-        sibling = source_index.sibling(source_index.row(), id_column)
-        parameter_id = sibling.data()
+        name_column = source_model.horizontal_header_labels().index('parameter_name')
+        parameter_id = source_index.sibling(source_index.row(), id_column).data()
+        parameter_name = source_index.sibling(source_index.row(), name_column).data()
         # Only attempt to remove parameter from db if it's not a 'work-in-progress'
         if parameter_id:
             try:
@@ -980,7 +993,8 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit(e.msg)
                 return
         source_model.removeRows(source_index.row(), 1)
-        self.init_parameter_value_models()
+        self.object_parameter_value_model.remove_item("parameter", parameter_name)
+        self.relationship_parameter_value_model.remove_item("parameter", parameter_name)
 
     @Slot(name="add_object_parameter_values")
     def add_object_parameter_values(self):
@@ -1016,6 +1030,7 @@ class DataStoreForm(QMainWindow):
             model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_object.setCurrentIndex(0)
+        self.object_parameter_value_proxy.apply_filter()
 
     @Slot(name="add_relationship_parameter_values")
     def add_relationship_parameter_values(self):
@@ -1060,6 +1075,7 @@ class DataStoreForm(QMainWindow):
             model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
+        self.relationship_parameter_value_proxy.apply_filter()
 
     @Slot(name="add_object_parameters")
     def add_object_parameters(self):
@@ -1080,15 +1096,16 @@ class DataStoreForm(QMainWindow):
                     object_class_name = index.data(Qt.DisplayRole)
                 else:
                     continue
-                model.set_work_in_progress(row + i, True)
                 model.insertRows(row + i, 1)
+                model.set_work_in_progress(row + i, True)
                 model.setData(model.index(row + i, object_class_name_column), object_class_name)
                 some_inserted = True
                 i += 1
         if not some_inserted:
-            model.set_work_in_progress(row, True)
             model.insertRows(row, 1)
+            model.set_work_in_progress(row, True)
         self.ui.tabWidget_object.setCurrentIndex(1)
+        self.object_parameter_proxy.apply_filter()
 
     @Slot(name="add_relationship_parameters")
     def add_relationship_parameters(self):
@@ -1118,6 +1135,7 @@ class DataStoreForm(QMainWindow):
             model.insertRows(row, 1)
             model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
+        self.relationship_parameter_proxy.apply_filter()
 
     def restore_ui(self):
         """Restore UI state from previous session."""
