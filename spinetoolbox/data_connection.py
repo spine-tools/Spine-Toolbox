@@ -92,8 +92,9 @@ class DataConnection(MetaObject):
         self._widget.ui.toolButton_datapackage.clicked.connect(self.call_infer_datapackage)
         self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
-        self._widget.ui.treeView_references.file_dropped.connect(self.add_file_to_references)
-        self._widget.ui.treeView_data.file_dropped.connect(self.add_file_to_data_dir)
+        self._widget.ui.treeView_references.files_dropped.connect(self.add_files_to_references)
+        self._widget.ui.treeView_data.files_dropped.connect(self.add_files_to_data_dir)
+        self._graphics_item._master.scene().files_dropped_on_dc.connect(self.receive_files_dropped_on_dc)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def set_icon(self, icon):
@@ -107,25 +108,34 @@ class DataConnection(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot("QString", name="add_file_to_references")
-    def add_file_to_references(self, path):
-        """Add filepath to reference list"""
-        if path in self.references:
-            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
-            return
-        self.references.append(os.path.abspath(path))
+    @Slot("QVariant", name="add_files_to_references")
+    def add_files_to_references(self, paths):
+        """Add filepaths to reference list"""
+        for path in paths:
+            if path in self.references:
+                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                return
+            self.references.append(os.path.abspath(path))
         self._widget.populate_reference_list(self.references)
 
-    @Slot("QString", name="add_file_to_data_dir")
-    def add_file_to_data_dir(self, file_path):
-        """Add file to data directory"""
-        src_dir, filename = os.path.split(file_path)
-        self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
-        try:
-            shutil.copy(file_path, self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit("[OSError] Copying failed")
-            return
+    @Slot("QGraphicsItem", "QVariant", name="receive_files_dropped_on_dc")
+    def receive_files_dropped_on_dc(self, item, file_paths):
+        """Called when files are dropped onto a data connection graphics item.
+        If the item is this Data Connection's graphics item, add the files to data."""
+        if item == self._graphics_item:
+            self.add_files_to_data_dir(file_paths)
+
+    @Slot("QVariant", name="add_files_to_data_dir")
+    def add_files_to_data_dir(self, file_paths):
+        """Add files to data directory"""
+        for file_path in file_paths:
+            src_dir, filename = os.path.split(file_path)
+            self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
+            try:
+                shutil.copy(file_path, self.data_dir)
+            except OSError:
+                self._toolbox.msg_error.emit("[OSError] Copying failed")
+                return
         data_files = self.data_files()
         self._widget.populate_data_list(data_files)
 

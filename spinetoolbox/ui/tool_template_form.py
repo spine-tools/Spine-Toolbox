@@ -31,7 +31,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(600, 734)
+        Form.resize(600, 741)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -94,7 +94,7 @@ class Ui_Form(object):
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.treeView_includes = IncludesTreeView(Form)
+        self.treeView_includes = SourcesTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -106,6 +106,7 @@ class Ui_Form(object):
         self.treeView_includes.setFont(font)
         self.treeView_includes.setAcceptDrops(True)
         self.treeView_includes.setLineWidth(1)
+        self.treeView_includes.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_includes.setObjectName("treeView_includes")
         self.verticalLayout.addWidget(self.treeView_includes)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
@@ -166,6 +167,7 @@ class Ui_Form(object):
         font.setPointSize(10)
         self.treeView_inputfiles.setFont(font)
         self.treeView_inputfiles.setLineWidth(1)
+        self.treeView_inputfiles.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_inputfiles.setObjectName("treeView_inputfiles")
         self.verticalLayout_3.addWidget(self.treeView_inputfiles)
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
@@ -216,6 +218,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_inputfiles_opt.setFont(font)
+        self.treeView_inputfiles_opt.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_inputfiles_opt.setObjectName("treeView_inputfiles_opt")
         self.verticalLayout_4.addWidget(self.treeView_inputfiles_opt)
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
@@ -266,6 +269,7 @@ class Ui_Form(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_outputfiles.setFont(font)
+        self.treeView_outputfiles.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_outputfiles.setObjectName("treeView_outputfiles")
         self.verticalLayout_2.addWidget(self.treeView_outputfiles)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
@@ -383,5 +387,5 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
-from widgets.custom_qtreeview import IncludesTreeView
+from widgets.custom_qtreeview import SourcesTreeView
 import resources_icons_rc

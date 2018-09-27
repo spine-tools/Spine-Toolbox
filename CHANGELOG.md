@@ -42,7 +42,8 @@ without need for an additional dialog.
 from all data store items connected to it.
 - Packages numpy, scipy, and matplotlib are now mandatory requirements.
 - Drag files between data connections. File items can be dragged from the references and data lists.
-Data connection items can be selected by hovering them while dragging a file.
+Data connection items can be selected by hovering them while dragging a file. Dropping files onto a Data Connection
+item copies them to its data directory.
 - datapackage.json files in data connections are now opened with the Spine datapackage form. This is a dedicated
 interface to prepare the datapackage for importing in the Data store form.
 - The Data store form does not lock the database when there are uncommitted changes anymore.

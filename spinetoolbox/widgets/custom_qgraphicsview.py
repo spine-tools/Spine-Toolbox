@@ -26,7 +26,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Slot, Qt, QRectF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF
 from PySide2.QtGui import QColor, QPen, QBrush, QTransform
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
@@ -302,6 +302,7 @@ class CustomQGraphicsView(QGraphicsView):
 
 class CustomQGraphicsScene(QGraphicsScene):
     """A scene that handles drag and drop events."""
+    files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
 
     def __init__(self, parent, toolbox):
         """Initialize class."""
@@ -340,7 +341,7 @@ class CustomQGraphicsScene(QGraphicsScene):
         """
         source = event.source()
         if not isinstance(source, DraggableWidget):
-            event.ignore()
+            super().dropEvent(event)
             return
         if not self._toolbox.project():
             self._toolbox.msg.emit("Create or open a project first")

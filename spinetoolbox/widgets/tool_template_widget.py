@@ -109,8 +109,8 @@ class ToolTemplateWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
-        self.ui.treeView_includes.file_dropped.connect(self.add_single_include)
+        self.ui.toolButton_plus_includes.clicked.connect(self.show_add_includes_dialog)
+        self.ui.treeView_includes.files_dropped.connect(self.add_dropped_includes)
         self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
@@ -199,8 +199,8 @@ class ToolTemplateWidget(QWidget):
         open(file_path, 'w').close()
         self.add_single_include(file_path)
 
-    @Slot(name="add_includes")
-    def add_includes(self):
+    @Slot(name="show_add_includes_dialog")
+    def show_add_includes_dialog(self):
         """Let user select source files for this tool template."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
@@ -212,7 +212,12 @@ class ToolTemplateWidget(QWidget):
             if not self.add_single_include(path):
                 continue
 
-    @Slot("QString", name="add_single_include")
+    @Slot("QVariant", name="add_dropped_includes")
+    def add_dropped_includes(self, file_paths):
+        for path in file_paths:
+            if not self.add_single_include(path):
+                continue
+
     def add_single_include(self, path):
         """Add file path to Includes list."""
         dirname, file_pattern = os.path.split(path)
