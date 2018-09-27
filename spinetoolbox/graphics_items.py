@@ -25,6 +25,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 import logging
+import os
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
@@ -90,7 +91,6 @@ class ItemImage(QGraphicsItem):
         self.connector_button.setAcceptHoverEvents(True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.connector_button.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.drag_over = False
 
     def make_data_master(self, pen, brush):
         """Make a parent of all other QGraphicsItems that
@@ -227,39 +227,6 @@ class ItemImage(QGraphicsItem):
         """
         QGraphicsItem.mouseReleaseEvent(self._master, event)
 
-    def drag_enter_event(self, event):
-        """Drag and drop action enters.
-
-        Args:
-            event (QGraphicsSceneDragDropEvent): Event
-        """
-        event.accept()
-        if self.drag_over:
-            return
-        self.drag_over = True
-        QTimer.singleShot(500, self.select_on_drag_over)
-
-    def drag_leave_event(self, event):
-        """Drag and drop action leaves.
-
-        Args:
-            event (QGraphicsSceneDragDropEvent): Event
-        """
-        event.accept()
-        self.drag_over = False
-
-    def select_on_drag_over(self):
-        """Called when the timer started in drag_enter_event is elapsed.
-        Check if the drag action is still over the item,
-        and show its info in that case.
-        """
-        if not self.drag_over:
-            return
-        self.drag_over = False
-        self._toolbox.ui.graphicsView.scene().clearSelection()
-        self._master.setSelected(True)
-        self.show_item_info()
-
     def connector_mouse_press_event(self, event):
         """Catch connector button click. Starts drawing a link."""
         if not event.button() == Qt.LeftButton:
@@ -344,6 +311,7 @@ class DataConnectionImage(ItemImage):
         self.hover_brush = QBrush(QColor(0, 0, 204, 128))  # QBrush while hovering
         # Draw ellipse
         self._master = self.make_data_master(self.pen, self.brush)
+        self._master.setAcceptDrops(True)
         # Override event handlers
         self._master.mousePressEvent = self.mouse_press_event
         self._master.mouseReleaseEvent = self.mouse_release_event
@@ -355,6 +323,8 @@ class DataConnectionImage(ItemImage):
         self._master.itemChange = self.item_change
         self._master.dragEnterEvent = self.drag_enter_event
         self._master.dragLeaveEvent = self.drag_leave_event
+        self._master.dragMoveEvent = self.drag_move_event
+        self._master.dropEvent = self.drop_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -364,6 +334,7 @@ class DataConnectionImage(ItemImage):
         # Group the drawn items together by setting the master as the parent of other QGraphicsItems
         # self.name_item.setParentItem(self._master)
         self.connector_button.setParentItem(self._master)
+        self.drag_over = False
 
     def make_master(self, pen, brush):
         """Calls super class method."""
@@ -389,14 +360,6 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         super().hover_leave_event(event)
 
-    def drag_enter_event(self, event):
-        """Calls super class method."""
-        super().drag_enter_event(event)
-
-    def drag_leave_event(self, event):
-        """Calls super class method."""
-        super().drag_leave_event(event)
-
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
         super().connector_mouse_press_event(event)
@@ -421,6 +384,57 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         return super().item_change(change, value)
 
+    def drag_enter_event(self, event):
+        """Drag and drop action enters.
+        Accept file drops from the filesystem.
+
+        Args:
+            event (QGraphicsSceneDragDropEvent): Event
+        """
+        urls = event.mimeData().urls()
+        for url in urls:
+            if not url.isLocalFile():
+                event.ignore()
+                return
+            if not os.path.isfile(url.toLocalFile()):
+                event.ignore()
+                return
+        event.accept()
+        event.setDropAction(Qt.CopyAction)
+        if self.drag_over:
+            return
+        self.drag_over = True
+        QTimer.singleShot(500, self.select_on_drag_over)
+
+    def drag_leave_event(self, event):
+        """Drag and drop action leaves.
+
+        Args:
+            event (QGraphicsSceneDragDropEvent): Event
+        """
+        event.accept()
+        self.drag_over = False
+
+    def drag_move_event(self, event):
+        """Accept event."""
+        event.accept()
+
+    def drop_event(self, event):
+        """Emit files_dropped_on_dc signal from scene,
+        with this instance, and a list of files for each dropped url."""
+        self._master.scene().files_dropped_on_dc.emit(self, [url.toLocalFile() for url in event.mimeData().urls()])
+
+    def select_on_drag_over(self):
+        """Called when the timer started in drag_enter_event is elapsed.
+        Select this item if the drag action is still over it.
+        """
+        if not self.drag_over:
+            return
+        self.drag_over = False
+        self._toolbox.ui.graphicsView.scene().clearSelection()
+        self._master.setSelected(True)
+        self.show_item_info()
+
 
 class ToolImage(ItemImage):
     """Tool item that is drawn into QGraphicsScene. NOTE: Make sure
@@ -443,6 +457,7 @@ class ToolImage(ItemImage):
         self.hover_brush = QBrush(QColor(204, 0, 0, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_master(self.pen, self.brush)
+        self._master.setAcceptDrops(False)
         # Override event handlers
         self._master.mousePressEvent = self.mouse_press_event
         self._master.mouseReleaseEvent = self.mouse_release_event
@@ -572,6 +587,7 @@ class DataStoreImage(ItemImage):
         self.hover_brush = QBrush(QColor(0, 204, 204, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_data_master(self.pen, self.brush)
+        self._master.setAcceptDrops(False)
         # Override event handlers
         self._master.mousePressEvent = self.mouse_press_event
         self._master.mouseReleaseEvent = self.mouse_release_event
@@ -581,8 +597,6 @@ class DataStoreImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
-        self._master.dragEnterEvent = self.drag_enter_event
-        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -616,14 +630,6 @@ class DataStoreImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
-
-    def drag_enter_event(self, event):
-        """Calls super class method."""
-        super().drag_enter_event(event)
-
-    def drag_leave_event(self, event):
-        """Calls super class method."""
-        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""
@@ -671,6 +677,7 @@ class ViewImage(ItemImage):
         self.hover_brush = QBrush(QColor(0, 204, 0, 128))  # QBrush while hovering
         # Draw icon
         self._master = self.make_master(self.pen, self.brush)
+        self._master.setAcceptDrops(False)
         # Override event handlers
         self._master.mousePressEvent = self.mouse_press_event
         self._master.mouseReleaseEvent = self.mouse_release_event
@@ -680,8 +687,6 @@ class ViewImage(ItemImage):
         self._master.contextMenuEvent = self.context_menu_event
         self._master.keyPressEvent = self.key_press_event
         self._master.itemChange = self.item_change
-        self._master.dragEnterEvent = self.drag_enter_event
-        self._master.dragLeaveEvent = self.drag_leave_event
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
@@ -715,14 +720,6 @@ class ViewImage(ItemImage):
     def hover_leave_event(self, event):
         """Calls super class method."""
         super().hover_leave_event(event)
-
-    def drag_enter_event(self, event):
-        """Calls super class method."""
-        super().drag_enter_event(event)
-
-    def drag_leave_event(self, event):
-        """Calls super class method."""
-        super().drag_leave_event(event)
 
     def connector_mouse_press_event(self, event):
         """Calls super class method."""

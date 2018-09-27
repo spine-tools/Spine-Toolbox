@@ -210,14 +210,13 @@ class JuliaREPLWidget(RichJupyterWidget):
         Finish execution if message is 'execute_reply'.
 
         Args:
-            msg (dict): Message sent by Julia ekernel.
+            msg (dict): Message sent by Julia kernel.
         """
         # logging.debug("shell message received")
         # logging.debug("id: {}".format(msg['msg_id']))
         # logging.debug("type: {}".format(msg['msg_type']))
         # logging.debug("content: {}".format(msg['content']))
         if self.running and msg['msg_type'] == 'execute_reply':
-            # Kernel sends execute_reply when started, ignore that (execution_count is zero)
             if msg['content']['execution_count'] == 0:
                 self._toolbox.msg.emit("Julia Jupyter kernel successfully started.")
                 return

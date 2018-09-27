@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 #############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
@@ -30,7 +30,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>734</height>
+    <height>741</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -199,7 +199,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="IncludesTreeView" name="treeView_includes">
+          <widget class="SourcesTreeView" name="treeView_includes">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -225,6 +225,9 @@
            </property>
            <property name="lineWidth">
             <number>1</number>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
           </widget>
          </item>
@@ -355,6 +358,9 @@
            <property name="lineWidth">
             <number>1</number>
            </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
           </widget>
          </item>
          <item>
@@ -475,6 +481,9 @@
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
           </widget>
          </item>
          <item>
@@ -594,6 +603,9 @@
            </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
           </widget>
          </item>
@@ -817,7 +829,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>IncludesTreeView</class>
+   <class>SourcesTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>

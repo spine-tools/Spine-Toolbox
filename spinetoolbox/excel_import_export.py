@@ -165,9 +165,9 @@ def get_relationships_and_parameters(db):
                  r.parameter_name, 
                  r.value, r.json] for r in rel_par_value]
     
-    rel_with_par = [r.relationship_name for r in rel_par_value]
+    rel_with_par = set(r.object_name_list for r in rel_par_value)
     rel_without_par = [[rel_class_id_2_name[r.class_id], r.object_name_list, None, None, None]
-                       for r in rel if r.name not in rel_with_par]
+                       for r in rel if r.object_name_list not in rel_with_par]
     
     rel_class_par = [[r.relationship_class_name, None, r.parameter_name, None, None]
                      for r in rel_par]
@@ -1175,7 +1175,7 @@ def export_relationship_class_to_spine_db(db, data):
     rel_classes = [o for o in rel_classes if o[0] not in existing_classes]
 
     object_classes = [o[1] for o in rel_classes]
-    object_classes = [item for sublist in object_classes for item in sublist]
+    object_classes = set(item for sublist in object_classes for item in sublist)
 
     # existing object_classes.
     db_classes = db.object_class_list().\
@@ -1227,11 +1227,12 @@ def export_relationships_to_spine_db(db, data):
     rel_class = set([r.class_name for r in data])
 
     object_classes = [o.object_classes for o in data]
-    object_classes = set([item for sublist in object_classes for item in sublist])
+    object_classes = set(item for sublist in object_classes for item in sublist)
 
     # existing relationship classes
     db_rel_classes = db.relationship_class_list().\
-        filter(db.RelationshipClass.name.in_(rel_class)).all()
+        filter(db.RelationshipClass.name.in_(rel_class)).\
+        order_by(db.RelationshipClass.name, db.RelationshipClass.dimension).all()
 
     # existing objects.
     db_objects = db.object_list().all()
@@ -1340,7 +1341,8 @@ def export_relationships_parameters_to_spine_db(db, data):
 
     # existing relationship classes
     db_rel_classes = db.relationship_class_list().\
-        filter(db.RelationshipClass.name.in_(rel_class)).all()
+        filter(db.RelationshipClass.name.in_(rel_class)).\
+        order_by(db.RelationshipClass.name, db.RelationshipClass.dimension).all()
 
     # pivot db data
     dbRelClass = namedtuple("dbRelClass", ["name", "id", "object_classes"])
@@ -1365,7 +1367,6 @@ def export_relationships_parameters_to_spine_db(db, data):
         # if a parameter with same class exists don't add
         if list(r) in db_parameters:
             continue
-
         valid_relationships_parameters.append({'relationship_class_id': db_rel_class_dict[r[0]].id, 'name': r[1]})
 
     # insert relationship classes
@@ -1403,7 +1404,8 @@ def export_relationships_parameter_value_to_spine_db(db, data):
 
     # existing relationship classes
     db_rel_classes = db.relationship_class_list().\
-    filter(db.RelationshipClass.name.in_(rel_class)).all()
+        filter(db.RelationshipClass.name.in_(rel_class)).\
+        order_by(db.RelationshipClass.name, db.RelationshipClass.dimension).all()
 
     # existing relationships.
     db_relationships = db.wide_relationship_list().all()

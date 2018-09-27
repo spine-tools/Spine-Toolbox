@@ -302,7 +302,7 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         # Open a tool template file
         self.add_action("New file", self._parent.new_include)
         self.addSeparator()
-        self.add_action("Open file", self._parent.add_includes)
+        self.add_action("Open files...", self._parent.show_add_includes_dialog)
 
 
 class QOkMenu(QMenu):
