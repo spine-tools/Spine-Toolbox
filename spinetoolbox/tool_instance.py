@@ -166,7 +166,7 @@ class ToolInstance(QObject):
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
-                                       "Julia is installed properly on your computer.")
+                                             "Julia is installed properly on your computer.")
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]

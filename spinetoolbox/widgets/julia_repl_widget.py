@@ -80,7 +80,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
-                self._toolbox.msg_error.emit("\tCouldn't find Julia kernel for Jupyter.")
+                self._toolbox.msg_error.emit("\tCouldn't find a Julia Jupyter kernel specification.")
                 if self.ijulia_process_succeeded:  # problem is not due to IJulia
                     self.execution_failed_to_start = True
                     self.execution_finished_signal.emit(-9999)
@@ -92,7 +92,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             try:
                 kernel_manager.start_kernel()
             except FileNotFoundError:
-                self._toolbox.msg_error.emit("\tCouldn't find Julia kernel for Jupyter.")
+                self._toolbox.msg_error.emit("\tCouldn't find the specified Julia kernel for Jupyter.")
                 if self.ijulia_process_succeeded:  # problem is not due to IJulia
                     self.execution_failed_to_start = True
                     self.execution_finished_signal.emit(-9999)
@@ -114,9 +114,10 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when kernel dies after a start attempt.
         After 5 deaths, prompt to (re)install IJulia"""
         self.kernel_died_count += 1
-        self._toolbox.msg_error.emit("Failed to start Julia Jupyter kernel ({}/5)".format(self.kernel_died_count))
+        self._toolbox.msg_warning.emit("Failed to start Julia Jupyter kernel "
+                                       "(attempt {} of 5)".format(self.kernel_died_count))
         if self.kernel_died_count == 5:
-            self._toolbox.msg_error.emit("\tFailed to start Julia Jupyter kernel.")
+            self._toolbox.msg_error.emit("\tFailed to start Julia Jupyter kernel in 5 attempts.")
             self.kernel_died_count = None
             self.kernel_manager = None
             self.kernel_client = None
@@ -126,7 +127,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                 self.execution_failed_to_start = True
                 self.execution_finished_signal.emit(-9999)
                 return
-            self.prompt_to_reconfigure_ijulia()
+            self.prompt_to_install_ijulia()
 
     def prompt_to_reconfigure_ijulia(self):
         """Prompt user to reconfigure IJulia via QSubProcess."""
@@ -140,18 +141,17 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.execution_finished_signal.emit(-9999)
             return
         self._toolbox.msg.emit("*** Reconfiguring <b>IJulia</b> ***")
+        self._toolbox.msg_warning.emit("Depending on your system, this process can take a few minutes...")
         julia_dir = self._toolbox._config.get("settings", "julia_path")
         if not julia_dir == '':
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             julia_exe = JULIA_EXECUTABLE
         # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
-        # command = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; Pkg.build("""IJulia""")"'.format(julia_exe)
-        # TODO: This needs testing
         command = "{0}".format(julia_exe)
         args = list()
         args.append("-e")
-        args.append("ENV[ARGS[1]] = ARGS[2]; Pkg.add(ARGS[3])")
+        args.append("ENV[ARGS[1]] = ARGS[2]; Pkg.build(ARGS[3])")
         args.append("JUPYTER")
         args.append("jupyter")
         args.append("IJulia")
@@ -171,14 +171,13 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.execution_finished_signal.emit(-9999)
             return
         self._toolbox.msg.emit("*** Installing <b>IJulia</b> ***")
+        self._toolbox.msg_warning.emit("Depending on your system, this process can take a few minutes...")
         julia_dir = self._toolbox._config.get("settings", "julia_path")
         if not julia_dir == '':
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             julia_exe = JULIA_EXECUTABLE
         # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
-        # command = '{0} -e "ENV["""JUPYTER"""]="""jupyter"""; Pkg.add("""IJulia""")"'.format(julia_exe)
-        # TODO: This needs testing
         command = "{0}".format(julia_exe)
         args = list()
         args.append("-e")
@@ -193,7 +192,6 @@ class JuliaREPLWidget(RichJupyterWidget):
     @Slot(int, name="ijulia_process_finished")
     def ijulia_process_finished(self, ret):
         """Run when IJulia installation/reconfiguration process finishes"""
-        print(ret)
         if self.ijulia_process.process_failed:
             self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
                                          "Julia is installed properly on your computer.")
@@ -221,6 +219,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         if self.running and msg['msg_type'] == 'execute_reply':
             # Kernel sends execute_reply when started, ignore that (execution_count is zero)
             if msg['content']['execution_count'] == 0:
+                self._toolbox.msg.emit("Julia Jupyter kernel successfully started.")
                 return
             if msg['content']['status'] == 'ok':
                 self.execution_finished_signal.emit(0)  # success code
