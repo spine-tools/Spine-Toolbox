@@ -32,7 +32,6 @@ from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from metaobject import MetaObject
-# from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
@@ -72,7 +71,7 @@ class DataConnection(MetaObject):
             self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                        " Check permissions.".format(self.data_dir))
+                                         " Check permissions.".format(self.data_dir))
         # Populate references model
         self._widget.populate_reference_list(self.references)
         # Populate data (files) model
@@ -94,7 +93,7 @@ class DataConnection(MetaObject):
         self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
         self._widget.ui.treeView_references.files_dropped.connect(self.add_files_to_references)
         self._widget.ui.treeView_data.files_dropped.connect(self.add_files_to_data_dir)
-        self._graphics_item._master.scene().files_dropped_on_dc.connect(self.receive_files_dropped_on_dc)
+        self._graphics_item.master().scene().files_dropped_on_dc.connect(self.receive_files_dropped_on_dc)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def set_icon(self, icon):
@@ -108,9 +107,24 @@ class DataConnection(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
+    def add_file_to_references(self, path):
+        """Add a single file path to reference list.
+
+        Args:
+            path (str): Path to file
+        """
+        if path in self.references:
+            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+            return
+        self.references.append(os.path.abspath(path))
+
     @Slot("QVariant", name="add_files_to_references")
     def add_files_to_references(self, paths):
-        """Add filepaths to reference list"""
+        """Add multiple file paths to reference list.
+
+        Args:
+            paths (list): A list of paths to files
+        """
         for path in paths:
             if path in self.references:
                 self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
