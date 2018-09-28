@@ -1,4 +1,4 @@
-#############################################################################
+id#############################################################################
 # Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
 #
 # This file is part of Spine Toolbox.
@@ -1251,8 +1251,9 @@ class ObjectTreeModel(QStandardItemModel):
                 visited_item.setData(visited, Qt.UserRole+1)
                 visited_item.setText(new_name)
 
-    def remove_item(self, removed_type, removed_id):
+    def remove_items(self, removed_type, *removed_ids):
         """Remove all matched items and their orphans."""
+        # TODO: try and remove all rows at once, if possible
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
@@ -1262,17 +1263,17 @@ class ObjectTreeModel(QStandardItemModel):
             # Get visited id
             visited_id = visited['id']
             visited_index = self.indexFromItem(visited_item)
-            if visited_type == removed_type and visited_id == removed_id:
+            if visited_type == removed_type and visited_id in removed_ids:
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
             # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type == 'relationship_class':
                 object_class_id_list = visited['object_class_id_list']
-                if removed_id in [int(x) for x in object_class_id_list.split(',')]:
+                if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
             # When removing an object, also remove relationships that involve it
             if removed_type == 'object' and visited_type == 'relationship':
                 object_id_list = visited['object_id_list']
-                if removed_id in [int(x) for x in object_id_list.split(',')]:
+                if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
 
     def next_relationship_index(self, index):
@@ -1341,9 +1342,8 @@ class ParameterModel(MinimalTableModel):
         for row in wip_row_list:
             self.set_work_in_progress(row, True)
 
-# TODO: all remove and rename item methods should operate in batch,
+# TODO: all rename item methods should operate in batch,
 # access the internal data structure directly and emit dataChanged afterwards
-
 
 class ObjectParameterModel(ParameterModel):
     """A model to view and edit object parameters in DataStoreForm."""
@@ -1357,7 +1357,7 @@ class ObjectParameterModel(ParameterModel):
         header = self.db_map.object_parameter_fields()
         self.set_horizontal_header_labels(header)
         model_data = [list(row._asdict().values()) for row in object_parameter_list]
-        self.reset_model(model_data, id_column=header.index('parameter_id'))
+        self.reset_model(model_data, id_column=header.index('id'))
         self.make_columns_fixed('object_class_name', skip_wip=True)
 
     def rename_item(self, new_name, curr_name, renamed_type):
@@ -1370,18 +1370,18 @@ class ObjectParameterModel(ParameterModel):
             if self.data(index, Qt.DisplayRole) == curr_name:
                 super().setData(index, new_name, Qt.EditRole)
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, removed_names):
         if removed_type != "object_class":
             return
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in reversed(range(self.rowCount())):
             index = self.index(row, column)
-            if self.data(index, Qt.DisplayRole) == removed_name:
+            if self.data(index, Qt.DisplayRole) in removed_names:
                 super().removeRows(row, 1)
 
     def setData(self, index, value, role=Qt.EditRole):
-        """Try an set data in the database first, if it passes, insert it in the model."""
+        """Try and set data in the database first, if it passes, insert it in the model."""
         if not index.isValid():
             return False
         if role != Qt.EditRole:
@@ -1410,9 +1410,9 @@ class ObjectParameterModel(ParameterModel):
                     parameter = self.db_map.add_parameter(
                         object_class_id=object_class.id, name=parameter_name, **kwargs)
                     self.set_work_in_progress(row, False)
-                    column_indices = [h(x) for x in ('object_class_name', 'parameter_id')]
+                    column_indices = [h(x) for x in ('object_class_name', 'id')]
                     self.make_columns_fixed_for_row(row, *column_indices)
-                    super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
+                    super().setData(index.sibling(row, h('id')), parameter.id, Qt.EditRole)
                     super().setData(index, value, role)
                     msg = "Successfully added new parameter."
                     self._data_store_form.msg.emit(msg)
@@ -1423,14 +1423,14 @@ class ObjectParameterModel(ParameterModel):
             else:
                 super().setData(index, value, role)
         else:
-            parameter_id = index.sibling(row, h('parameter_id')).data(Qt.EditRole)
-            if not parameter_id:
+            id = index.sibling(row, h('id')).data(Qt.EditRole)
+            if not id:
                 return False
             field_name = header[index.column()]
             if field_name == 'parameter_name':
                 field_name = 'name'
             try:
-                self.db_map.update_parameter(parameter_id, field_name, value)
+                self.db_map.update_parameter(id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1452,7 +1452,7 @@ class RelationshipParameterModel(ParameterModel):
         header = self.db_map.relationship_parameter_fields()
         self.set_horizontal_header_labels(header)
         model_data = [list(row._asdict().values()) for row in relationship_parameter_list]
-        self.reset_model(model_data, id_column=header.index('parameter_id'))
+        self.reset_model(model_data, id_column=header.index('id'))
         self.make_columns_fixed('relationship_class_name', 'object_class_name_list', skip_wip=True)
 
     def rename_item(self, new_name, curr_name, renamed_type):
@@ -1475,7 +1475,7 @@ class RelationshipParameterModel(ParameterModel):
                         object_class_name_list[i] = new_name
                 super().setData(index, ",".join(object_class_name_list), Qt.EditRole)
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, removed_names):
         if removed_type not in ("relationship_class", "object_class"):
             return
         header_index = self.horizontal_header_labels().index
@@ -1483,7 +1483,7 @@ class RelationshipParameterModel(ParameterModel):
             column = header_index("relationship_class_name")
             for row in reversed(range(self.rowCount())):
                 index = self.index(row, column)
-                if self.data(index, Qt.DisplayRole) == removed_name:
+                if self.data(index, Qt.DisplayRole) in removed_names:
                     super().removeRows(row, 1)
         elif removed_type == "object_class":
             column = header_index("object_class_name_list")
@@ -1491,7 +1491,7 @@ class RelationshipParameterModel(ParameterModel):
                 index = self.index(row, column)
                 object_class_name_list = self.data(index, Qt.DisplayRole).split(",")
                 for object_class_name in object_class_name_list:
-                    if object_class_name == removed_name:
+                    if object_class_name in removed_names:
                         super().removeRows(row, 1)
                         break
 
@@ -1533,9 +1533,9 @@ class RelationshipParameterModel(ParameterModel):
                     parameter = self.db_map.add_parameter(
                         relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
                     self.set_work_in_progress(row, False)
-                    column_indices = [h(x) for x in ('relationship_class_name', 'parameter_id')]
+                    column_indices = [h(x) for x in ('relationship_class_name', 'id')]
                     self.make_columns_fixed_for_row(row, *column_indices)
-                    super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
+                    super().setData(index.sibling(row, h('id')), parameter.id, Qt.EditRole)
                     super().setData(index, value, role)
                     msg = "Successfully added new parameter."
                     self._data_store_form.msg.emit(msg)
@@ -1546,14 +1546,14 @@ class RelationshipParameterModel(ParameterModel):
             else:
                 super().setData(index, value, role)
         else:
-            parameter_id = index.sibling(row, h('parameter_id')).data(Qt.EditRole)
-            if not parameter_id:
+            id = index.sibling(row, h('id')).data(Qt.EditRole)
+            if not id:
                 return False
             field_name = header[index.column()]
             if field_name == 'parameter_name':
                 field_name = 'name'
             try:
-                self.db_map.update_parameter(parameter_id, field_name, value)
+                self.db_map.update_parameter(id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1575,7 +1575,7 @@ class ObjectParameterValueModel(ParameterModel):
         header = self.db_map.object_parameter_value_fields()
         self.set_horizontal_header_labels(header)
         model_data = [list(row._asdict().values()) for row in object_parameter_value_list]
-        self.reset_model(model_data, id_column=header.index('parameter_value_id'))
+        self.reset_model(model_data, id_column=header.index('id'))
         self.make_columns_fixed('object_class_name', 'object_name', 'parameter_name', skip_wip=True)
 
     def rename_item(self, new_name, curr_name, renamed_type):
@@ -1593,7 +1593,7 @@ class ObjectParameterValueModel(ParameterModel):
             if self.data(index, Qt.DisplayRole) == curr_name:
                 super().setData(index, new_name, Qt.EditRole)
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, removed_names):
         if removed_type not in ("object_class", "object", "parameter"):
             return
         header_index = self.horizontal_header_labels().index
@@ -1605,7 +1605,7 @@ class ObjectParameterValueModel(ParameterModel):
             column = header_index("parameter_name")
         for row in reversed(range(self.rowCount())):
             index = self.index(row, column)
-            if self.data(index, Qt.DisplayRole) == removed_name:
+            if self.data(index, Qt.DisplayRole) in removed_names:
                 super().removeRows(row, 1)
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -1650,11 +1650,11 @@ class ObjectParameterValueModel(ParameterModel):
                     )
                     self.set_work_in_progress(row, False)
                     column_indices = list()
-                    for x in ('object_class_name', 'object_name', 'parameter_name', 'parameter_value_id'):
+                    for x in ('object_class_name', 'object_name', 'parameter_name', 'id'):
                         column_indices.append(h(x))
                     self.make_columns_fixed_for_row(row, *column_indices)
                     super().setData(index, value, role)
-                    super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                    super().setData(index.sibling(row, h('id')), parameter_value.id, Qt.EditRole)
                     msg = "Successfully added new parameter value."
                     self._data_store_form.msg.emit(msg)
                     return True
@@ -1664,12 +1664,12 @@ class ObjectParameterValueModel(ParameterModel):
             else:
                 super().setData(index, value, role)
         else:
-            parameter_value_id = index.sibling(row, h('parameter_value_id')).data(Qt.EditRole)
-            if not parameter_value_id:
+            id = index.sibling(row, h('id')).data(Qt.EditRole)
+            if not id:
                 return False
             field_name = header[index.column()]
             try:
-                self.db_map.update_parameter_value(parameter_value_id, field_name, value)
+                self.db_map.update_parameter_value(id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter value successfully updated."
                 self._data_store_form.msg.emit(msg)
@@ -1710,7 +1710,7 @@ class RelationshipParameterValueModel(ParameterModel):
                     value = None
                 row_values_list.insert(object_name_list_index + i, value)
             model_data.append(row_values_list)
-        self.reset_model(model_data, id_column=header.index('parameter_value_id'))
+        self.reset_model(model_data, id_column=header.index('id'))
         self.make_columns_fixed('relationship_class_name', *self.object_name_header, 'parameter_name', skip_wip=True)
 
     def rename_item(self, new_name, curr_name, renamed_type):
@@ -1734,16 +1734,16 @@ class RelationshipParameterValueModel(ParameterModel):
                 if self.data(index, Qt.DisplayRole) == curr_name:
                     super().setData(index, new_name, Qt.EditRole)
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, removed_names):
         if removed_type not in ("relationship_class", "object", "parameter"):
             return
         header_index = self.horizontal_header_labels().index
         if removed_type == "object":
             columns = [header_index(x) for x in self.object_name_header]
-            for row in range(self.rowCount()):
+            for row in reversed(range(self.rowCount())):
                 for column in columns:
                     index = self.index(row, column)
-                    if self.data(index, Qt.DisplayRole) == removed_name:
+                    if self.data(index, Qt.DisplayRole) in removed_names:
                         super().removeRows(row, 1)
                         break
         elif removed_type in ("relationship_class", "parameter"):
@@ -1751,9 +1751,9 @@ class RelationshipParameterValueModel(ParameterModel):
                 column = header_index("relationship_class_name")
             elif removed_type in "parameter":
                 column = header_index("parameter_name")
-            for row in range(self.rowCount()):
+            for row in reversed(range(self.rowCount())):
                 index = self.index(row, column)
-                if self.data(index, Qt.DisplayRole) == removed_name:
+                if self.data(index, Qt.DisplayRole) in removed_names:
                     super().removeRows(row, 1)
 
     def extend_object_name_header(self, max_dim_count):
@@ -1871,11 +1871,11 @@ class RelationshipParameterValueModel(ParameterModel):
                     column_indices = list()
                     for x in self._data_store_form.object_name_header:
                         column_indices.append(h(x))
-                    for x in ('relationship_class_name', 'parameter_name', 'parameter_value_id'):
+                    for x in ('relationship_class_name', 'parameter_name', 'id'):
                         column_indices.append(h(x))
                     self.make_columns_fixed_for_row(row, *column_indices)
                     super().setData(index, value, role)
-                    super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
+                    super().setData(index.sibling(row, h('id')), parameter_value.id, Qt.EditRole)
                     msg = "Successfully added new parameter value."
                     self._data_store_form.msg.emit(msg)
                     return True
@@ -1885,12 +1885,12 @@ class RelationshipParameterValueModel(ParameterModel):
             else:
                 super().setData(index, value, role)
         else:
-            parameter_value_id = index.sibling(row, h('parameter_value_id')).data(Qt.EditRole)
-            if not parameter_value_id:
+            id = index.sibling(row, h('id')).data(Qt.EditRole)
+            if not id:
                 return False
             field_name = header[index.column()]
             try:
-                self.db_map.update_parameter_value(parameter_value_id, field_name, value)
+                self.db_map.update_parameter_value(id, field_name, value)
                 super().setData(index, value, role)
                 msg = "Parameter value successfully updated."
                 self._data_store_form.msg.emit(msg)

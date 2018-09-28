@@ -380,7 +380,7 @@ class DataStoreForm(QMainWindow):
         """Init the object parameter table view."""
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         h = self.object_parameter_value_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_value_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(1)
@@ -390,7 +390,7 @@ class DataStoreForm(QMainWindow):
         """Init the relationship parameter table view."""
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_value_id'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setResizeContentsPrecision(1)
@@ -400,7 +400,7 @@ class DataStoreForm(QMainWindow):
         """Init the object parameter table view."""
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         h = self.object_parameter_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('parameter_id'))
+        self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter.horizontalHeader().setResizeContentsPrecision(1)
@@ -410,7 +410,7 @@ class DataStoreForm(QMainWindow):
         """Init the object parameter table view."""
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         h = self.relationship_parameter_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('parameter_id'))
+        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter.horizontalHeader().setResizeContentsPrecision(1)
@@ -692,7 +692,6 @@ class DataStoreForm(QMainWindow):
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    @busy_effect
     def rename_item(self, renamed_index):
         """Rename item in the database and treeview"""
         renamed_item = self.object_tree_model.itemFromIndex(renamed_index)
@@ -734,46 +733,31 @@ class DataStoreForm(QMainWindow):
         self.filter_parameter_value_models(current, current)
         self.filter_parameter_models(current, current)
 
+    @busy_effect
     def remove_items(self):
         """Remove all selected items from the object treeview."""
         selection = self.ui.treeView_object.selectionModel().selection()
         if not selection:
             return
-        for index in reversed(selection.indexes()):
-            self.remove_item(index)
-
-    @busy_effect
-    def remove_item(self, removed_index):
-        """Remove item from the treeview"""
-        removed_item = self.object_tree_model.itemFromIndex(removed_index)
-        removed_type = removed_item.data(Qt.UserRole)
-        removed = removed_item.data(Qt.UserRole+1)
-        removed_id = removed['id']
-        removed_name = removed['name']
+        removed_id_dict = {}
+        removed_name_dict = {}
+        for index in selection.indexes():
+            removed_type = index.data(Qt.UserRole)
+            removed_item = index.data(Qt.UserRole+1)
+            removed_id_dict.setdefault(removed_type, set()).add(removed_item['id'])
+            removed_name_dict.setdefault(removed_type, set()).add(removed_item['name'])
         try:
-            if removed_type == 'object_class':
-                self.db_map.remove_object_class(id=removed_id)
-                msg = "Successfully removed object class."
-            elif removed_type == 'object':
-                self.db_map.remove_object(id=removed_id)
-                msg = "Successfully removed object."
-            elif removed_type.endswith('relationship_class'):
-                self.db_map.remove_relationship_class(id=removed_id)
-                msg = "Successfully removed relationship class."
-            elif removed_type == 'relationship':
-                self.db_map.remove_relationship(id=removed_id)
-                msg = "Successfully removed relationship."
-            else:
-                return # should never happen
-            self.msg.emit(msg)
+            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})
+            for key, value in removed_id_dict.items():
+                self.object_tree_model.remove_items(key, *value)
+            for key, value in removed_name_dict.items():
+                self.object_parameter_model.remove_items(key, *value)
+                self.object_parameter_value_model.remove_items(key, *value)
+                self.relationship_parameter_model.remove_items(key, *value)
+                self.relationship_parameter_value_model.remove_items(key, *value)
+            self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
-            return
-        self.object_tree_model.remove_item(removed_type, removed_id)
-        self.object_parameter_model.remove_item(removed_type, removed_name)
-        self.object_parameter_value_model.remove_item(removed_type, removed_name)
-        self.relationship_parameter_model.remove_item(removed_type, removed_name)
-        self.relationship_parameter_value_model.remove_item(removed_type, removed_name)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
@@ -889,93 +873,49 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        row_set = set()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
-        for row in reversed(list(row_set)):
-            proxy_index = self.object_parameter_value_proxy.index(row, 0)
-            self.remove_single_parameter_value(proxy_index)
+        self.remove_parameters(selection)
 
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        row_set = set()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
-        for row in reversed(list(row_set)):
-            proxy_index = self.relationship_parameter_value_proxy.index(row, 0)
-            self.remove_single_parameter_value(proxy_index)
-
-    def remove_single_parameter_value(self, proxy_index):
-        """Remove row from (object or relationship) parameter_value table.
-        If successful, also remove row from model"""
-        proxy_model = proxy_index.model()
-        source_model = proxy_model.sourceModel()
-        source_index = proxy_model.mapToSource(proxy_index)
-        id_column = source_model.horizontal_header_labels().index('parameter_value_id')
-        sibling = source_index.sibling(source_index.row(), id_column)
-        parameter_value_id = sibling.data()
-        # Only attempt to remove parameter value from db if it's not a 'work-in-progress'
-        if parameter_value_id:
-            try:
-                self.db_map.remove_parameter_value(parameter_value_id)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                return
-        source_model.removeRows(source_index.row(), 1)
+        self.remove_parameters(selection)
 
     @Slot(name="remove_object_parameters")
     def remove_object_parameters(self):
         selection = self.ui.tableView_object_parameter.selectionModel().selection()
-        row_set = set()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
-        for row in reversed(list(row_set)):
-            proxy_index = self.object_parameter_proxy.index(row, 0)
-            self.remove_single_parameter(proxy_index)
+        self.remove_parameters(selection)
 
     @Slot(name="remove_relationship_parameters")
     def remove_relationship_parameters(self):
         selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
-        row_set = set()
+        self.remove_parameters(selection)
+
+    def remove_parameters(self, selection):
+        indexes = selection.indexes()
+        if not indexes:
+            return
+        proxy_model = indexes[0].model()
+        source_model = proxy_model.sourceModel()
+        proxy_row_set = set()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
-        for row in reversed(list(row_set)):
-            proxy_index = self.relationship_parameter_proxy.index(row, 0)
-            self.remove_single_parameter(proxy_index)
-
-    def remove_single_parameter(self, proxy_index):
-        """Remove row from (object or relationship) parameter table.
-        If succesful, also remove row from model"""
-        proxy_model = proxy_index.model()
-        source_model = proxy_model.sourceModel()
-        source_index = proxy_model.mapToSource(proxy_index)
-        id_column = source_model.horizontal_header_labels().index('parameter_id')
-        name_column = source_model.horizontal_header_labels().index('parameter_name')
-        parameter_id = source_index.sibling(source_index.row(), id_column).data()
-        parameter_name = source_index.sibling(source_index.row(), name_column).data()
-        # Only attempt to remove parameter from db if it's not a 'work-in-progress'
-        if parameter_id:
-            try:
-                self.db_map.remove_parameter(parameter_id)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                return
-        source_model.removeRows(source_index.row(), 1)
-        self.object_parameter_value_model.remove_item("parameter", parameter_name)
-        self.relationship_parameter_value_model.remove_item("parameter", parameter_name)
+            proxy_row_set.update(range(top, bottom+1))
+        source_row_set = {proxy_model.map_row_to_source(r) for r in proxy_row_set}
+        parameter_valued_ids = set()
+        id_column = source_model.horizontal_header_labels().index('id')
+        for source_row in source_row_set:
+            if source_model.is_work_in_progress(source_row):
+                continue
+            source_index = source_model.index(source_row, id_column)
+            parameter_valued_ids.add(source_index.data(Qt.DisplayRole))
+        try:
+            self.db_map.remove_items(parameter_value_ids=parameter_valued_ids)
+            for source_row in reversed(list(source_row_set)):
+                source_model.removeRows(source_row, 1)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     @Slot(name="add_object_parameter_values")
     def add_object_parameter_values(self):
