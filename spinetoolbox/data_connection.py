@@ -107,17 +107,6 @@ class DataConnection(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    def add_file_to_references(self, path):
-        """Add a single file path to reference list.
-
-        Args:
-            path (str): Path to file
-        """
-        if path in self.references:
-            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
-            return
-        self.references.append(os.path.abspath(path))
-
     @Slot("QVariant", name="add_files_to_references")
     def add_files_to_references(self, paths):
         """Add multiple file paths to reference list.

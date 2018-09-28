@@ -47,6 +47,7 @@ class ProjectItemModel(QStandardItemModel):
 
     def setData(self, index, value, role=Qt.EditRole):
         """Change name of item in index to value.
+        # TODO: If the item is a Data Store the reference sqlite path must be updated.
 
         Args:
             index (QModelIndex): Item index

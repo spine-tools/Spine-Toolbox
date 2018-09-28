@@ -63,7 +63,7 @@ def main(argv):
                                           "qtconsole.client", "sqlalchemy.sql.default_comparator",
                                           "sqlalchemy.ext.baked", "numpy.core._methods",
                                           "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
-                                          "scipy.spatial.ckdtree"],
+                                          "scipy.spatial.ckdtree", "pymysql", "pyodbc", "cx_Oracle", "psycopg2"],
                              "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll],
                              "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}

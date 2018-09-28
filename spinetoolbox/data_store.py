@@ -314,6 +314,10 @@ class DataStore(MetaObject):
             database = dsn
         elif dialect == 'sqlite':
             sqlite_file = self._widget.ui.lineEdit_SQLite_file.text()
+            if not os.path.isfile(sqlite_file):
+                self._toolbox.msg_warning.emit("Set a path to an SQLite file or click create fresh Spine "
+                                               "database button")
+                return None
             url = 'sqlite:///{0}'.format(sqlite_file)
             # Set database equal to file's basename for creating the reference below
             database = os.path.basename(sqlite_file)
