@@ -449,7 +449,7 @@ class Tool(MetaObject):
                     self._toolbox.msg_error.emit("\t Output file <b>{0}</b> does not exist".format(src_path))
                     continue
                 if item.item_type == "Data Connection":
-                    item.add_file_to_references(src_path)
+                    item.add_files_to_references([src_path])  # Give path in a list
                     n_created_refs += 1
                 elif item.item_type == "Data Store":
                     reference = {

@@ -7,12 +7,6 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 This section is for upcoming changes.
 
 ### Added
-Upcoming:
-- Tool-Tool interface
-- Widget for viewing the code of Tool templates
-- Undo-redo functionality for the main view
-- Add metadata to database commits
-- Visualize database commit history
 
 ### Fixed
 
@@ -21,11 +15,11 @@ Upcoming:
 ### Deprecated
 
 ### Removed
-- Connections tab on the main window is useless and should be removed.
+- Connections tab on the main window is useless and will be removed.
 
 ### Security
 
-## [0.1.5] - 2018-09-25
+## [0.1.5] - 2018-09-28
 
 ### Added
 - Advanced copy/pasting and multiple selection support for the Data store form.

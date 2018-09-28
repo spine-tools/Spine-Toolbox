@@ -68,9 +68,9 @@ def main(argv):
                              "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}
     # This does not show logging messages
-    base = "Win32GUI" if sys.platform == "win32" else None
+    # base = "Win32GUI" if sys.platform == "win32" else None
     # This opens a console that shows also logging messages
-    # base = "Console" if sys.platform == "win32" else None
+    base = "Console" if sys.platform == "win32" else None
     executables = [Executable("spinetoolbox.py", base=base)]
     setup(name="Spine Toolbox",
           version=SPINE_TOOLBOX_VERSION,
