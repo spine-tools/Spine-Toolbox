@@ -287,8 +287,8 @@ class DataStoreForm(QMainWindow):
                 logging.debug(insert_log)
                 logging.debug(error_log)
                 self.init_models()
-            except:
-                self.msg_error.emit("Unable to import Excel file")
+            except SpineDBAPIError as e:
+                self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
 
     @Slot(name="export_file")
     def export_file(self):
@@ -901,17 +901,17 @@ class DataStoreForm(QMainWindow):
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            proxy_row_set.update(range(top, bottom+1))
+            proxy_row_set.update(range(top, bottom + 1))
         source_row_set = {proxy_model.map_row_to_source(r) for r in proxy_row_set}
-        parameter_valued_ids = set()
+        parameter_value_ids = set()
         id_column = source_model.horizontal_header_labels().index('id')
         for source_row in source_row_set:
             if source_model.is_work_in_progress(source_row):
                 continue
             source_index = source_model.index(source_row, id_column)
-            parameter_valued_ids.add(source_index.data(Qt.DisplayRole))
+            parameter_value_ids.add(source_index.data(Qt.DisplayRole))
         try:
-            self.db_map.remove_items(parameter_value_ids=parameter_valued_ids)
+            self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
             for source_row in reversed(list(source_row_set)):
                 source_model.removeRows(source_row, 1)
         except SpineDBAPIError as e:

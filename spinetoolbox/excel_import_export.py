@@ -52,7 +52,7 @@ def import_xlsx_to_db(db, filepath):
         filepath (str): str with filepath to excel file to read from
 
     Returns:
-        (List, List) Returns two lists, first contains all imported data, 
+        (List, List) Returns two lists, first contains all imported data,
         second one contains error information on all failed writes
     """
 
@@ -65,31 +65,31 @@ def import_xlsx_to_db(db, filepath):
     insert_log_temp, error_log_temp = export_object_classes_to_spine_db(db, obj_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_object_parameters_spine_db(db, obj_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_object_to_spine_db(db, obj_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_object_parameter_values(db, obj_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_relationship_class_to_spine_db(db, rel_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_relationships_parameters_to_spine_db(db, rel_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_relationships_to_spine_db(db, rel_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
-    
+
     insert_log_temp, error_log_temp = export_relationships_parameter_value_to_spine_db(db, rel_data)
     insert_log = insert_log + insert_log_temp
     error_log = error_log + error_log_temp
@@ -106,7 +106,7 @@ def get_objects_and_parameters(db):
     Returns:
         (List, List) First list contains parameter data, second one json data
     """
-    
+
     # get all objects
     obj = db.object_list().add_column(db.ObjectClass.name.label('class_name')).\
         filter(db.ObjectClass.id == db.Object.class_id).all()
@@ -117,8 +117,8 @@ def get_objects_and_parameters(db):
     # get all parameter values
     pval = db.session.query(
                             db.ObjectClass.name,
-                            db.Object.name, 
-                            db.Parameter.name,  
+                            db.Object.name,
+                            db.Parameter.name,
                             db.ParameterValue.value,
                             db.ParameterValue.json).\
                         filter(db.ParameterValue.object_id == db.Object.id,
@@ -152,35 +152,35 @@ def get_relationships_and_parameters(db):
     Returns:
         (List, List) First list contains parameter data, second one json data
     """
-    
+
     rel_class = db.wide_relationship_class_list().all()
     rel = db.wide_relationship_list().all()
     rel_par = db.relationship_parameter_list().all()
     rel_par_value = db.relationship_parameter_value_list().all()
-    
+
     rel_class_id_2_name = {rc.id: rc.name for rc in rel_class}
-    
-    out_data = [[r.relationship_class_name, 
-                 r.object_name_list, 
-                 r.parameter_name, 
+
+    out_data = [[r.relationship_class_name,
+                 r.object_name_list,
+                 r.parameter_name,
                  r.value, r.json] for r in rel_par_value]
-    
+
     rel_with_par = set(r.object_name_list for r in rel_par_value)
     rel_without_par = [[rel_class_id_2_name[r.class_id], r.object_name_list, None, None, None]
                        for r in rel if r.object_name_list not in rel_with_par]
-    
+
     rel_class_par = [[r.relationship_class_name, None, r.parameter_name, None, None]
                      for r in rel_par]
-    
+
     rel_class_with_par = [r.relationship_class_name for r in rel_par]
     rel_class_without_par = [[r.name, None, None, None, None]
                              for r in rel_class if r.name not in rel_class_with_par]
-    
+
     rel_data = out_data + rel_without_par + rel_class_par + rel_class_without_par
-    
+
     rel_par = [v[:-1] for v in rel_data]
     rel_json = [v[:-2] + [v[4]] for v in rel_data if v[4] is not None]
-    
+
     return rel_par, rel_json, rel_class
 
 
@@ -196,7 +196,7 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
         value_col (Int): index to column containg value to value_name_col
 
     Returns:
-        (List[namedtuple]): List of namedtuples whit fields given by headers 
+        (List[namedtuple]): List of namedtuples whit fields given by headers
         and unqiue names in value_name_col column
     """
 
@@ -235,7 +235,7 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
             else:
                 value_list.append(None)
         data_list_out.append(PivotedData._make(k+value_list))
-        
+
     return data_list_out
 
 
@@ -250,7 +250,7 @@ def stack_list_of_tuples(data, headers, key_cols, value_cols):
         value_cols (List[Int]): List of index for columns containing values to stack
 
     Returns:
-        (List[namedtuple]): List of namedtuples whit fields given by headers 
+        (List[namedtuple]): List of namedtuples whit fields given by headers
         and 'parameter' and 'value' which contains stacked values
     """
 
@@ -261,7 +261,7 @@ def stack_list_of_tuples(data, headers, key_cols, value_cols):
 
     NewDataTuple = namedtuple("Data", new_tuple_names)
     # TODO: Comment needed
-    # takes unstacked data and duplicates columns in key_cols and then zips 
+    # takes unstacked data and duplicates columns in key_cols and then zips
     # them with values in value_cols
     new_data_list = [list(
           map(NewDataTuple._make,
@@ -288,7 +288,7 @@ def unpack_json_parameters(data, json_index):
         if json_index == 0:
             key_cols = [list(data_row[json_index+1:])]*len(json_data)
         else:
-            key_cols = [list(data_row[:json_index]) + 
+            key_cols = [list(data_row[:json_index]) +
                         list(data_row[json_index+1:])]*len(json_data)
 
         out_data += [a + [b] + [c] for a, b, c in
@@ -298,7 +298,7 @@ def unpack_json_parameters(data, json_index):
 
 
 def pack_json_parameters(data, key_cols, value_col, index_col=None):
-    
+
     out_data = []
     # group by keys cols
     keyfunc = lambda x: [x[k] for k in key_cols]
@@ -326,7 +326,7 @@ def get_unstacked_relationships(db):
         and the second one with json values
     """
     data, data_json, rel_class = get_relationships_and_parameters(db)
-    
+
     class_2_obj_list = {rc.name: rc.object_class_name_list.split(',') for rc in rel_class}
 
     keyfunc = lambda x: x[0]
@@ -616,9 +616,9 @@ def read_spine_xlsx(filepath):
 
 
 def merge_spine_xlsx_data(data):
-    """Merge data from different sheets with same object class or 
+    """Merge data from different sheets with same object class or
     relationship class.
-    
+
     Args:
         data (List(SheetData)): list of SheetData
 
@@ -665,8 +665,8 @@ def merge_spine_xlsx_data(data):
             else:
                 objects = list(set(objects))
 
-            new_data.append(SheetData(sheet_name=sheet_name, 
-                                      class_name=class_name, 
+            new_data.append(SheetData(sheet_name=sheet_name,
+                                      class_name=class_name,
                                       object_classes=object_classes,
                                       parameters=parameters,
                                       parameter_values=parameter_values,
@@ -678,7 +678,7 @@ def merge_spine_xlsx_data(data):
 
 def validate_sheet(ws):
     """Checks if supplied sheet is a valid import sheet for spine.
-    
+
     Args:
         ws (openpyxl.workbook.worksheet): worksheet to validate
 
@@ -722,7 +722,7 @@ def validate_sheet(ws):
 
 def read_json_sheet(ws, sheet_type):
     """Reads a sheet containg json array data for objects and relationships
-    
+
     Args:
         ws (openpyxl.workbook.worksheet): worksheet to read from
         sheet_type (str): str with value "relationship" or "object" telling if sheet is a relationship or object sheet
@@ -776,14 +776,14 @@ def read_json_sheet(ws, sheet_type):
                     json_vals.append(cell.value)
 
         if json_vals and parameter and None not in obj_path:
-            # save values if there is json data, a parameter name 
+            # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
             unique_parameters.append(parameter[0])
             packed_json = json.dumps(json_vals)
             json_data.append(Data._make(["json"] + obj_path+parameter+[packed_json]))
 
-    return SheetData(sheet_name=ws.title, 
-                     class_name=class_name, 
+    return SheetData(sheet_name=ws.title,
+                     class_name=class_name,
                      object_classes=object_classes,
                      parameters=list(set(unique_parameters)),
                      parameter_values=json_data,
@@ -793,7 +793,7 @@ def read_json_sheet(ws, sheet_type):
 
 def read_parameter_sheet(ws):
     """Reads a sheet containg parameter data for objects and relationships
-    
+
     Args:
         ws (openpyxl.workbook.worksheet): worksheet to read from
 
@@ -847,8 +847,8 @@ def read_parameter_sheet(ws):
         objects = [item for sublist in objects for item in sublist]
 
     return SheetData(sheet_name=ws.title,
-                     class_name=class_name, 
-                     object_classes=object_classes, 
+                     class_name=class_name,
+                     object_classes=object_classes,
                      parameters=parameters,
                      parameter_values=data_parameter,
                      objects=objects,
@@ -935,7 +935,7 @@ def export_object_parameters_spine_db(db, data):
         (List, List) Tuple of two lists, first one a list of successful inserts.
         Second one a list of failed inserts.
     """
-    parameters = [[[object_list.class_name, p] for p in object_list.parameters] 
+    parameters = [[[object_list.class_name, p] for p in object_list.parameters]
                   for object_list in data]
     parameters = [item for sublist in parameters for item in sublist]
     object_classes = set([c[0] for c in parameters])
@@ -947,7 +947,7 @@ def export_object_parameters_spine_db(db, data):
 
     # check if the parameters object class exists in db.
     error_log = [["object_parameter", p[1],
-                  "object_class '{}' did not exist in database".format(p[0])] 
+                  "object_class '{}' did not exist in database".format(p[0])]
                 for p in parameters if p[0] not in obj_class_name_2_id.keys()]
 
     parameters = [[obj_class_name_2_id[p[0]], p[0], p[1]] for p in parameters
@@ -956,7 +956,7 @@ def export_object_parameters_spine_db(db, data):
     # existing parameters in database
     db_parameters = db.object_parameter_list().\
         filter(db.Parameter.name.in_([p[2] for p in parameters])).all()
-    db_parameters = [[d.object_class_name, d.parameter_name] 
+    db_parameters = [[d.object_class_name, d.parameter_name]
                      for d in db_parameters]
 
     # remove already existing parameters
@@ -986,21 +986,21 @@ def export_object_to_spine_db(db, data):
         (List, List) Tuple of two lists, first one a list of successful inserts.
         Second one a list of failed inserts.
     """
-    objects = [[[object_list.class_name, o] for o in object_list.objects] 
+    objects = [[[object_list.class_name, o] for o in object_list.objects]
                for object_list in data]
     objects = [item for sublist in objects for item in sublist]
     object_classes = set([c[0] for c in objects])
-    
+
     # existing object_classes.
     db_classes = db.object_class_list().filter(db.ObjectClass.name.in_(object_classes)).all()
     obj_class_name_2_id = {o.name: o.id for o in db_classes}
 
     # remove objects where the object_class does not exist in db.
     error_log = [["object", o[1],
-                  "object_class '{}' did not exist in database".format(o[0])] 
+                  "object_class '{}' did not exist in database".format(o[0])]
                  for o in objects if o[0] not in obj_class_name_2_id.keys()]
 
-    objects = [[obj_class_name_2_id[o[0]], o[0], o[1]] for o in objects 
+    objects = [[obj_class_name_2_id[o[0]], o[0], o[1]] for o in objects
                if o[0] in obj_class_name_2_id.keys()]
 
     # existsing objects
@@ -1034,7 +1034,7 @@ def export_object_parameter_values(db, data):
         (List, List) Tuple of two lists, first one a list of successful inserts.
         Second one a list of failed inserts.
     """
-    parameter_values = [[[object_list.class_name, p] for p in object_list.parameter_values] 
+    parameter_values = [[[object_list.class_name, p] for p in object_list.parameter_values]
                         for object_list in data]
     parameter_values = [item for sublist in parameter_values for item in sublist]
     parameters = set([c[1].parameter for c in parameter_values])
@@ -1048,17 +1048,17 @@ def export_object_parameter_values(db, data):
     db_parameters = db.parameter_list().\
         filter(db.Parameter.name.in_(parameters)).all()
     parameter_name_2_id = {o.name: o.id for o in db_parameters}
-    
+
     # existing object_classes.
     db_classes = db.object_class_list().\
         filter(db.ObjectClass.name.in_(object_classes)).all()
     obj_class_name_2_id = {o.name: o.id for o in db_classes}
-    
+
     # existing values
     db_parameter_values = db.object_parameter_value_list().all()
     db_parameter_values_dict = {'_'.join([d.object_class_name,
                                           d.object_name,
-                                          d.parameter_name]): d 
+                                          d.parameter_name]): d
                                 for d in db_parameter_values}
 
     object_class_parameter = [[dp.object_class_id, dp.id] for dp in db_parameters]
@@ -1107,7 +1107,7 @@ def export_object_parameter_values(db, data):
             if str(p[1].value) != compare_with:
                 # parameter value is different from db
                 new_p = ParVal(db_parameter_values_dict[key].parameter_value_id,
-                               obj_id, par_id, p[1].parameter, p[1].value, key, 
+                               obj_id, par_id, p[1].parameter, p[1].value, key,
                                p[1].parameter_type)
                 update_parameters.append(new_p)
         else:
@@ -1125,8 +1125,8 @@ def export_object_parameter_values(db, data):
                                   "parameter object class did not match parameter object class in database"])
                 continue
 
-            insert_parameters.append(ParVal(None, obj_id, par_id, 
-                                            p[1].parameter, p[1].value, 
+            insert_parameters.append(ParVal(None, obj_id, par_id,
+                                            p[1].parameter, p[1].value,
                                             key, p[1].parameter_type))
 
     # update parameter values
@@ -1134,7 +1134,7 @@ def export_object_parameter_values(db, data):
     for p in update_parameters:
         try:
             db.update_parameter_value(id=p.id,
-                                      field_name=p.parameter_type, 
+                                      field_name=p.parameter_type,
                                       new_value=p.value)
             import_log.append(["object_parameter_value_update", p.key])
         except SpineDBAPIError as e:
@@ -1187,7 +1187,7 @@ def export_relationship_class_to_spine_db(db, data):
     valid_rel_classes = []
     for r in rel_classes:
         if set(r[1]).issubset(obj_class_name_2_id.keys()):
-            rd = {'name': r[0], 
+            rd = {'name': r[0],
                   'object_class_id_list': [obj_class_name_2_id[o] for o in r[1]]}
             valid_rel_classes.append(rd)
         else:
@@ -1246,7 +1246,7 @@ def export_relationships_to_spine_db(db, data):
 
     # existing relationships.
     db_relationships = db.wide_relationship_list().all()
-    db_relationships = [[r.class_id, r.object_name_list] 
+    db_relationships = [[r.class_id, r.object_name_list]
                         for r in db_relationships]
 
     # pivot db data
@@ -1305,8 +1305,8 @@ def export_relationships_to_spine_db(db, data):
                               "objects does not match object class for relationship class in db"])
             continue
 
-        valid_relationships.append({'name': key, 
-                                    'class_id': db_rel_class.id, 
+        valid_relationships.append({'name': key,
+                                    'class_id': db_rel_class.id,
                                     'object_id_list': r_ids,
                                     'key': key})
 
@@ -1319,7 +1319,7 @@ def export_relationships_to_spine_db(db, data):
         except SpineDBAPIError as e:
             error_log.append(["relationship", r['key'], e.msg])
             continue
-    
+
     return import_log, error_log
 
 
@@ -1393,7 +1393,7 @@ def export_relationships_parameter_value_to_spine_db(db, data):
         (List, List) Tuple of two lists, first one a list of successful inserts.
         Second one a list of failed inserts.
     """
-    
+
     rels = [list(zip([o.class_name]*len(o.parameter_values),
                      [o.object_classes]*len(o.parameter_values),
                      o.parameter_values)) for o in data]
@@ -1414,7 +1414,7 @@ def export_relationships_parameter_value_to_spine_db(db, data):
 
     # existing values
     db_rel_par = db.relationship_parameter_value_list().all()
-    db_rel_par = {','.join([p.relationship_class_name, p.object_name_list, p.parameter_name]): 
+    db_rel_par = {','.join([p.relationship_class_name, p.object_name_list, p.parameter_name]):
                   p for p in db_rel_par}
 
     # pivot db data
@@ -1428,8 +1428,8 @@ def export_relationships_parameter_value_to_spine_db(db, data):
 
     # existing relationship parameters.
     db_parameters = db.relationship_parameter_list().all()
-    db_parameters = {p.parameter_name: (p.relationship_class_name, 
-                                        p.parameter_id) for p in db_parameters}
+    db_parameters = {p.parameter_name: (p.relationship_class_name,
+                                        p.id) for p in db_parameters}
 
     error_log = []
     update_par = []
@@ -1475,16 +1475,16 @@ def export_relationships_parameter_value_to_spine_db(db, data):
                 compare_with = str(db_rel_par[class_name_obj_name_list_par_str].value)
             else:
                 compare_with = db_rel_par[class_name_obj_name_list_par_str].json
-            
+
             if value != compare_with:
                 # parameter does not match existing value, update value
-                update_par.append([{'id': db_rel_par[class_name_obj_name_list_par_str].parameter_value_id, 
-                                    'field_name': r[2].parameter_type, 
+                update_par.append([{'id': db_rel_par[class_name_obj_name_list_par_str].parameter_value_id,
+                                    'field_name': r[2].parameter_type,
                                     'new_value': value}, key])
         else:
             # parameter value does not exist, insert new
-            insert_par.append([{'parameter_id': par_id, 
-                                'relationship_id': rel_id, 
+            insert_par.append([{'parameter_id': par_id,
+                                'relationship_id': rel_id,
                                 r[2].parameter_type: value,
                                 }, key])
 

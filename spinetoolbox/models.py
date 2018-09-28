@@ -1370,7 +1370,7 @@ class ObjectParameterModel(ParameterModel):
             if self.data(index, Qt.DisplayRole) == curr_name:
                 super().setData(index, new_name, Qt.EditRole)
 
-    def remove_items(self, removed_type, removed_names):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type != "object_class":
             return
         header_index = self.horizontal_header_labels().index
@@ -1475,7 +1475,7 @@ class RelationshipParameterModel(ParameterModel):
                         object_class_name_list[i] = new_name
                 super().setData(index, ",".join(object_class_name_list), Qt.EditRole)
 
-    def remove_items(self, removed_type, removed_names):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object_class"):
             return
         header_index = self.horizontal_header_labels().index
@@ -1593,7 +1593,7 @@ class ObjectParameterValueModel(ParameterModel):
             if self.data(index, Qt.DisplayRole) == curr_name:
                 super().setData(index, new_name, Qt.EditRole)
 
-    def remove_items(self, removed_type, removed_names):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("object_class", "object", "parameter"):
             return
         header_index = self.horizontal_header_labels().index
@@ -1691,7 +1691,7 @@ class RelationshipParameterValueModel(ParameterModel):
         header = self.db_map.relationship_parameter_value_fields()
         relationship_class_list = self.db_map.wide_relationship_class_list()
         max_dim_count = max(
-            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
+            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
         self.object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count)]
         object_name_list_index = header.index("object_name_list")
         header.pop(object_name_list_index)
@@ -1734,7 +1734,7 @@ class RelationshipParameterValueModel(ParameterModel):
                 if self.data(index, Qt.DisplayRole) == curr_name:
                     super().setData(index, new_name, Qt.EditRole)
 
-    def remove_items(self, removed_type, removed_names):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object", "parameter"):
             return
         header_index = self.horizontal_header_labels().index
