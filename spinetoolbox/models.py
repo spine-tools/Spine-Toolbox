@@ -1105,69 +1105,48 @@ class ObjectTreeModel(QStandardItemModel):
         return root_item
 
     def new_object_class_item(self, object_class):
-        """Returns new object class item.
-
-        Args:
-            object_class (dict)
-        """
-        object_class_item = QStandardItem(object_class['name'])
+        """Returns new object class item."""
+        object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
-        object_class_item.setData(object_class, Qt.UserRole+1)
+        object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
         return object_class_item
 
     def new_object_item(self, object_):
-        """Returns new object item.
-
-        Args:
-            object_ (dict)
-        """
-        object_item = QStandardItem(object_['name'])
+        """Returns new object item."""
+        object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
-        object_item.setData(object_, Qt.UserRole+1)
+        object_item.setData(object_._asdict(), Qt.UserRole+1)
         relationship_class_item_list = list()
-        for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_["class_id"]):
-            relationship_class_item = self.new_relationship_class_item(wide_relationship_class._asdict(), object_)
+        for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
+            relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
             relationship_class_item_list.append(relationship_class_item)
         object_item.appendRows(relationship_class_item_list)
         return object_item
 
     def new_relationship_class_item(self, wide_relationship_class, object_):
-        """Returns new relationship class item.
-
-        Args:
-            wide_relationship_class (dict): relationship class in wide format
-            object_ (dict): object which is the parent item in the tree
-        """
-        relationship_class_item = QStandardItem(wide_relationship_class['name'])
-        relationship_class_item.setData(wide_relationship_class, Qt.UserRole+1)
+        """Returns new relationship class item."""
+        relationship_class_item = QStandardItem(wide_relationship_class.name)
+        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole+1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
-        relationship_class_item.setData(wide_relationship_class['object_class_name_list'], Qt.ToolTipRole)
+        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
         return relationship_class_item
 
     def new_relationship_item(self, wide_relationship):
-        """Returns new relationship item.
-
-        Args:
-            wide_relationship (dict)
-        """
-        relationship_item = QStandardItem(wide_relationship['name'])
+        """Returns new relationship item."""
+        relationship_item = QStandardItem(wide_relationship.name)
         relationship_item.setData('relationship', Qt.UserRole)
-        relationship_item.setData(wide_relationship, Qt.UserRole+1)
-        relationship_item.setData(wide_relationship['object_name_list'], Qt.ToolTipRole)
+        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole+1)
+        relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
         return relationship_item
 
     def add_object_class(self, object_class):
-        """Add object class item to the model.
-
-        Args:
-            object_class (dict)
-        """
+        """Add object class item to the model."""
         object_class_item = self.new_object_class_item(object_class)
         root_item = self.invisibleRootItem().child(0)
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['display_order'] >= object_class['display_order']:
+            if visited_object_class['display_order'] >= object_class.display_order:
                 root_item.insertRow(i, QStandardItem())
                 root_item.setChild(i, 0, object_class_item)
                 return
@@ -1176,18 +1155,14 @@ class ObjectTreeModel(QStandardItemModel):
         root_item.setChild(row, 0, object_class_item)
 
     def add_object(self, object_):
-        """Add object item to the model.
-
-        Args:
-            object_ (dict)
-        """
+        """Add object item to the model."""
         # find object class item among the children of the root
         root_item = self.invisibleRootItem().child(0)
         object_class_item = None
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['id'] == object_['class_id']:
+            if visited_object_class['id'] == object_.class_id:
                 object_class_item = visited_object_class_item
                 break
         if not object_class_item:
@@ -1206,7 +1181,7 @@ class ObjectTreeModel(QStandardItemModel):
             if not visited_type == 'object':
                 continue
             visited_object = visited_item.data(Qt.UserRole+1)
-            object_class_id_list = wide_relationship_class['object_class_id_list']
+            object_class_id_list = wide_relationship_class.object_class_id_list
             if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
@@ -1215,11 +1190,7 @@ class ObjectTreeModel(QStandardItemModel):
             # TODO: Add mirror proto relationship class?
 
     def add_relationship(self, wide_relationship):
-        """Add relationship item to model.
-
-        Args:
-            wide_relationship (dict): the relationship to add
-        """
+        """Add relationship item to model."""
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
@@ -1228,10 +1199,10 @@ class ObjectTreeModel(QStandardItemModel):
             if not visited_type == 'relationship_class':
                 continue
             visited_relationship_class = visited_item.data(Qt.UserRole+1)
-            if not visited_relationship_class['id'] == wide_relationship['class_id']:
+            if not visited_relationship_class['id'] == wide_relationship.class_id:
                 continue
             visited_object = visited_item.parent().data(Qt.UserRole+1)
-            object_id_list = wide_relationship['object_id_list']
+            object_id_list = wide_relationship.object_id_list
             if visited_object['id'] not in [int(x) for x in object_id_list.split(',')]:
                 continue
             relationship_item = self.new_relationship_item(wide_relationship)
@@ -1421,7 +1392,7 @@ class ObjectParameterModel(ParameterModel):
                     self._data_store_form.msg_error.emit(e.msg)
                     return False
             else:
-                super().setData(index, value, role)
+                return super().setData(index, value, role)
         else:
             id = index.sibling(row, h('id')).data(Qt.EditRole)
             if not id:
@@ -1528,6 +1499,7 @@ class RelationshipParameterModel(ParameterModel):
                 for column in range(h('parameter_name')+1, self.columnCount()):
                     kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
                 try:
+                    # FIXME: why redefining relationship_class here?
                     relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
                         one_or_none()
                     parameter = self.db_map.add_parameter(
@@ -1544,7 +1516,7 @@ class RelationshipParameterModel(ParameterModel):
                     self._data_store_form.msg_error.emit(e.msg)
                     return False
             else:
-                super().setData(index, value, role)
+                return super().setData(index, value, role)
         else:
             id = index.sibling(row, h('id')).data(Qt.EditRole)
             if not id:
@@ -1662,7 +1634,7 @@ class ObjectParameterValueModel(ParameterModel):
                     self._data_store_form.msg_error.emit(e.msg)
                     return False
             else:
-                super().setData(index, value, role)
+                return super().setData(index, value, role)
         else:
             id = index.sibling(row, h('id')).data(Qt.EditRole)
             if not id:
@@ -1814,7 +1786,7 @@ class RelationshipParameterValueModel(ParameterModel):
                 object_id_list=object_id_list,
                 class_id=relationship_class.id
             )
-            self._data_store_form.object_tree_model.add_relationship(relationship._asdict())
+            self._data_store_form.object_tree_model.add_relationship(relationship)
             msg = "Successfully added new relationship '{}'.".format(relationship.name)
             self._data_store_form.msg.emit(msg)
             return relationship
@@ -1869,7 +1841,7 @@ class RelationshipParameterValueModel(ParameterModel):
                     )
                     self.set_work_in_progress(row, False)
                     column_indices = list()
-                    for x in self._data_store_form.object_name_header:
+                    for x in self.object_name_header:
                         column_indices.append(h(x))
                     for x in ('relationship_class_name', 'parameter_name', 'id'):
                         column_indices.append(h(x))
@@ -1883,7 +1855,7 @@ class RelationshipParameterValueModel(ParameterModel):
                     self._data_store_form.msg_error.emit(e.msg)
                     return False
             else:
-                super().setData(index, value, role)
+                return super().setData(index, value, role)
         else:
             id = index.sibling(row, h('id')).data(Qt.EditRole)
             if not id:

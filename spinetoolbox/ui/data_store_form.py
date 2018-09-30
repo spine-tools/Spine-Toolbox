@@ -368,8 +368,11 @@ class Ui_MainWindow(object):
         self.actionRemove_relationship_parameters = QtWidgets.QAction(MainWindow)
         self.actionRemove_relationship_parameters.setIcon(icon10)
         self.actionRemove_relationship_parameters.setObjectName("actionRemove_relationship_parameters")
+        self.actionRefresh = QtWidgets.QAction(MainWindow)
+        self.actionRefresh.setObjectName("actionRefresh")
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
+        self.menuSession.addAction(self.actionRefresh)
         self.menuEdit.addAction(self.actionCopy)
         self.menuEdit.addAction(self.actionPaste)
         self.menuEdit.addSeparator()
@@ -455,6 +458,8 @@ class Ui_MainWindow(object):
         self.actionRemove_relationship_parameter_values.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameter values", None, -1))
         self.actionRemove_object_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object parameter definitions", None, -1))
         self.actionRemove_relationship_parameters.setText(QtWidgets.QApplication.translate("MainWindow", "Remove relationship parameter definitions", None, -1))
+        self.actionRefresh.setText(QtWidgets.QApplication.translate("MainWindow", "Refresh", None, -1))
+        self.actionRefresh.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+Return", None, -1))
 
 from widgets.custom_qtableview import ParameterTableView
 from widgets.custom_qtreeview import ObjectTreeView

@@ -149,10 +149,11 @@ class DataStoreForm(QMainWindow):
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
         # Menu commands
-        self.ui.actionImport.triggered.connect(self.import_file)
-        self.ui.actionExport.triggered.connect(self.export_file)
+        self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
+        self.ui.actionExport.triggered.connect(self.show_export_file_dialog)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
+        self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
@@ -222,6 +223,7 @@ class DataStoreForm(QMainWindow):
         Args:
             msg (str): String to show in QMessageBox
         """
+        QApplication.restoreOverrideCursor()
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Critical)
         msg_box.setWindowTitle("Operation failed")
@@ -264,14 +266,19 @@ class DataStoreForm(QMainWindow):
         on |= self.ui.tableView_relationship_parameter_value.hasFocus()
         self.ui.actionPaste.setEnabled(on)
 
-    @Slot(name="import_file")
-    def import_file(self):
-        """Import data from file into current database."""
+    @Slot(name="show_import_file_dialog")
+    def show_import_file_dialog(self):
+        """Show dialog to allow user to select a file to import."""
         answer = QFileDialog.getOpenFileName(
             self, "Select file to import", self._data_store.project().project_dir, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
+        self.import_file(file_path)
+
+    @busy_effect
+    def import_file(self, file_path):
+        """Import data from file into current database."""
         if file_path.lower().endswith('datapackage.json'):
             try:
                 import_datapackage(self, file_path)
@@ -290,13 +297,18 @@ class DataStoreForm(QMainWindow):
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
 
-    @Slot(name="export_file")
-    def export_file(self):
-        """export data from database into file."""
+    @Slot(name="show_export_file_dialog")
+    def show_export_file_dialog(self):
+        """Show dialog to allow user to select a file to export."""
         answer = QFileDialog.getSaveFileName(self, "Export to file", self._data_store.project().project_dir, "*.xlsx")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
+        self.export_file(file_path)
+
+    @busy_effect
+    def export_file(self, file_path):
+        """Export data from database into file."""
         if file_path.lower().endswith('datapackage.json'):
             pass
         elif file_path.lower().endswith('xlsx'):
@@ -339,6 +351,12 @@ class DataStoreForm(QMainWindow):
             self.msg_error.emit(e.msg)
             return
         msg = "All changes since last commit rolled back successfully."
+        self.msg.emit(msg)
+        self.init_models()
+
+    @Slot(name="refresh_session")
+    def refresh_session(self):
+        msg = "Session refreshed."
         self.msg.emit(msg)
         self.init_models()
 
@@ -617,10 +635,10 @@ class DataStoreForm(QMainWindow):
     def add_object_classes(self, object_class_args_list):
         """Insert new object classes."""
         try:
-            object_classes = self.db_map.add_object_classes(object_class_args_list)
+            object_classes = self.db_map.add_object_classes(*object_class_args_list)
             for object_class in object_classes:
                 self.object_tree_model.add_object_class(object_class)
-            msg = "Successfully added new object classes {}.".format(", ".join([x['name'] for x in object_classes]))
+            msg = "Successfully added new object classes {}.".format(", ".join([x.name for x in object_classes]))
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -636,10 +654,10 @@ class DataStoreForm(QMainWindow):
     def add_objects(self, object_args_list):
         """Insert new objects."""
         try:
-            objects = self.db_map.add_objects(object_args_list)
+            objects = self.db_map.add_objects(*object_args_list)
             for object_ in objects:
                 self.object_tree_model.add_object(object_)
-            msg = "Successfully added new objects {}.".format(", ".join([x['name'] for x in objects]))
+            msg = "Successfully added new objects {}.".format(", ".join([x.name for x in objects]))
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -654,14 +672,14 @@ class DataStoreForm(QMainWindow):
     def add_relationship_classes(self, wide_relationship_class_args_list):
         """Insert new relationship classes."""
         try:
-            wide_relationship_classes = self.db_map.add_wide_relationship_classes(wide_relationship_class_args_list)
+            wide_relationship_classes = self.db_map.add_wide_relationship_classes(*wide_relationship_class_args_list)
             dim_count_list = list()
             for wide_relationship_class in wide_relationship_classes:
                 self.object_tree_model.add_relationship_class(wide_relationship_class)
-                dim_count_list.append(len(wide_relationship_class["object_class_id_list"].split(',')))
+                dim_count_list.append(len(wide_relationship_class.object_class_id_list.split(',')))
             max_dim_count = max(dim_count_list)
             self.relationship_parameter_value_model.extend_object_name_header(max_dim_count)
-            relationship_class_name_list = ", ".join([x['name'] for x in wide_relationship_classes])
+            relationship_class_name_list = ", ".join([x.name for x in wide_relationship_classes])
             msg = "Successfully added new relationship classes {}.".format(relationship_class_name_list)
             self.msg.emit(msg)
         except SpineDBAPIError as e:
@@ -684,10 +702,10 @@ class DataStoreForm(QMainWindow):
     def add_relationships(self, wide_relationship_args_list):
         """Insert new relationships."""
         try:
-            wide_relationships = self.db_map.add_wide_relationships(wide_relationship_args_list)
+            wide_relationships = self.db_map.add_wide_relationships(*wide_relationship_args_list)
             for wide_relationship in wide_relationships:
                 self.object_tree_model.add_relationship(wide_relationship)
-            msg = "Successfully added new relationships {}.".format(", ".join([x['name'] for x in wide_relationships]))
+            msg = "Successfully added new relationships {}.".format(", ".join([x.name for x in wide_relationships]))
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)

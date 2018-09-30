@@ -611,6 +611,7 @@
     </property>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
+    <addaction name="actionRefresh"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -868,6 +869,14 @@
    </property>
    <property name="text">
     <string>Remove relationship parameter definitions</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Refresh</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Return</string>
    </property>
   </action>
  </widget>

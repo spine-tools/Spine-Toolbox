@@ -31,7 +31,7 @@ NOTE: Where is this syntax error? We better fix it, since CustomQDialog is inher
 import logging
 from copy import deepcopy
 from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
-    QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QStyle
+    QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QStyle, QAction, QApplication
 from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from config import STATUSBAR_SS
@@ -555,8 +555,12 @@ class CommitDialog(QDialog):
         form.setContentsMargins(0, 0, 0, 0)
         inner_layout = QVBoxLayout()
         inner_layout.setContentsMargins(4, 4, 4, 4)
+        self.actionAccept = QAction(self)
+        self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
+        self.actionAccept.triggered.connect(self.save_and_accept)
         self.commit_msg_edit = QPlainTextEdit(self)
         self.commit_msg_edit.setPlaceholderText('Commit message')
+        self.commit_msg_edit.addAction(self.actionAccept)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box = QDialogButtonBox()
         button_box.addButton(QDialogButtonBox.Cancel)
