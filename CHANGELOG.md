@@ -41,6 +41,7 @@ item copies them to its data directory.
 - datapackage.json files in data connections are now opened with the Spine datapackage form. This is a dedicated
 interface to prepare the datapackage for importing in the Data store form.
 - The Data store form does not lock the database when there are uncommitted changes anymore.
+- New option to refresh the Data store form and get latest changes from the database.
 
 ### Changed
 - Changed DBAPI package mysqlclient (GPL license, not good) to pymysql (MIT license, good)
