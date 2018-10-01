@@ -60,6 +60,7 @@ class DataStore(MetaObject):
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
+        self.data_store_treeview = None
         self._widget = DataStoreWidget(self, self.item_type)
         self._widget.set_name_label(name)
         self._widget.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
@@ -317,6 +318,9 @@ class DataStore(MetaObject):
             if not sqlite_file:
                 self._toolbox.msg_warning.emit("Path to SQLite file missing")
                 return None
+            if not os.path.isfile(sqlite_file):
+                self._toolbox.msg_warning.emit("The file '{}' does not exist.".format(os.path.basename(sqlite_file)))
+                return None
             url = 'sqlite:///{0}'.format(sqlite_file)
             # Set database equal to file's basename for creating the reference below
             database = os.path.basename(sqlite_file)
@@ -371,6 +375,9 @@ class DataStore(MetaObject):
     @Slot(name="open_treeview")
     def open_treeview(self):
         """Open reference in Data Store form."""
+        if self.data_store_treeview:
+            self.data_store_treeview.raise_()
+            return
         reference = self.reference()
         if not reference:
             return
@@ -382,8 +389,13 @@ class DataStore(MetaObject):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        data_store_form = DataStoreForm(self, db_map, database)
-        data_store_form.show()
+        self.data_store_treeview = DataStoreForm(self, db_map, database)
+        self.data_store_treeview.destroyed.connect(self.data_store_treeview_destroyed)
+        self.data_store_treeview.show()
+
+    @Slot(name="data_store_treeview_destroyed")
+    def data_store_treeview_destroyed(self):
+        self.data_store_treeview = None
 
     @Slot(name="open_directory")
     def open_directory(self):
@@ -433,6 +445,12 @@ class DataStore(MetaObject):
         if not database:
             return
         filename = os.path.join(self.data_dir, database + ".sqlite")
+        if os.path.isfile(filename):
+            msg = ('<b>Replacing file "{}" in "{}"</b>. '
+                   'Are you sure?').format(database + ".sqlite", os.path.basename(self.data_dir))
+            answer = QMessageBox.question(None, 'Replace file', msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                return
         try:
             os.remove(filename)
         except OSError:

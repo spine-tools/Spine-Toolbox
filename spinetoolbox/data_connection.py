@@ -270,7 +270,7 @@ class DataConnection(MetaObject):
 
     def save_datapackage(self, datapackage):
         """Write datapackage to file 'datapackage.json' in data directory."""
-        if os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
+        if os.path.isfile(os.path.join(self.data_dir, "datapackage.json")):
             msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. '
                    'Are you sure?').format(os.path.basename(self.data_dir))
             # noinspection PyCallByClass, PyTypeChecker

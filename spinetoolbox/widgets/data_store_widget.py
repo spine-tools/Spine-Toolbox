@@ -183,13 +183,13 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
         # Parameter table editors
         self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
-            connect(self.update_parameter_value_in_model)
+            connect(self.update_parameter_value)
         self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
-            connect(self.update_parameter_value_in_model)
+            connect(self.update_parameter_value)
         self.ui.tableView_object_parameter.itemDelegate().commitData.\
-            connect(self.update_parameter_in_model)
+            connect(self.update_parameter)
         self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
-            connect(self.update_parameter_in_model)
+            connect(self.update_parameter)
         # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -998,8 +998,8 @@ class DataStoreForm(QMainWindow):
         self.ui.tabWidget_relationship.setCurrentIndex(1)
         self.relationship_parameter_proxy.apply_filter()
 
-    @Slot("QWidget", name="update_parameter_value_in_model")
-    def update_parameter_value_in_model(self, editor):
+    @Slot("QWidget", name="update_parameter_value")
+    def update_parameter_value(self, editor):
         """Update (object or relationship) parameter_value table with newly edited data."""
         new_value = editor.text()
         if not new_value:
@@ -1010,8 +1010,8 @@ class DataStoreForm(QMainWindow):
         source_index = proxy_model.mapToSource(index)
         source_model.setData(source_index, new_value)
 
-    @Slot("QWidget", name="update_parameter_in_model")
-    def update_parameter_in_model(self, editor):
+    @Slot("QWidget", name="update_parameter")
+    def update_parameter(self, editor):
         """Update parameter (object or relationship) with newly edited data.
         """
         new_value = editor.text()
@@ -1163,6 +1163,8 @@ class DataStoreForm(QMainWindow):
             self.qsettings.setValue("dataStoreWidget/windowMaximized", True)
         else:
             self.qsettings.setValue("dataStoreWidget/windowMaximized", False)
+        if self.db_map.has_pending_changes():
+            pass
         self.db_map.close()
         if event:
             event.accept()

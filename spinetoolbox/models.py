@@ -1012,14 +1012,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
         self.endResetModel()
 
-    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
-        if not self.insertRows(row, 1, parent):
-            return False
-        for column, value in enumerate(row_data):
-            self.setData(self.index(row, column), value, role)
-        self.row_with_data_inserted.emit(parent, row)
-        return True
-
 
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview."""
@@ -1277,11 +1269,13 @@ class ParameterModel(MinimalTableModel):
 
     def set_work_in_progress(self, row, on):
         """Add row into list of work in progress."""
-        super().setData(self.index(row, self.id_column), on, Qt.UserRole)
+        # super().setData(self.index(row, self.id_column), on, Qt.UserRole)
+        self._data[row][self.id_column][Qt.UserRole] = on
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
-        return self.data(self.index(row, self.id_column), Qt.UserRole)
+        # return self.data(self.index(row, self.id_column), Qt.UserRole)
+        return self._data[row][self.id_column][Qt.UserRole]
 
     def make_columns_fixed(self, *column_names, skip_wip=False):
         """Set columns as fixed so they are not editable and painted gray."""
@@ -1310,12 +1304,12 @@ class ParameterModel(MinimalTableModel):
             model_data.insert(row, row_data)
         super().reset_model(model_data)
         self.id_column = id_column
-        for row in wip_row_list:
-            self.set_work_in_progress(row, True)
+        for row in range(self.rowCount()):
+            self.set_work_in_progress(row, row in wip_row_list)
+
 
 # TODO: all rename item methods should operate in batch,
 # access the internal data structure directly and emit dataChanged afterwards
-
 class ObjectParameterModel(ParameterModel):
     """A model to view and edit object parameters in DataStoreForm."""
     def __init__(self, data_store_form=None):
@@ -1946,9 +1940,9 @@ class ParameterProxy(QSortFilterProxyModel):
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false."""
-        if self.sourceModel().is_work_in_progress(source_row):
-            return True
         try:
+            if self.sourceModel().is_work_in_progress(source_row):
+                return True
             return self.filter_accepts_row(source_row, source_parent) \
                 and self.subfilter_accepts_row(source_row, source_parent)
         except KeyError:
