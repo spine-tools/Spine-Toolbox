@@ -1305,7 +1305,7 @@ def export_relationships_to_spine_db(db, data):
                               "objects does not match object class for relationship class in db"])
             continue
 
-        valid_relationships.append({'name': key,
+        valid_relationships.append({'name': db_rel_class.name + "_" + key,
                                     'class_id': db_rel_class.id,
                                     'object_id_list': r_ids,
                                     'key': key})
