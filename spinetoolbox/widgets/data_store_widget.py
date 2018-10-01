@@ -1032,7 +1032,14 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        parameter_value_ids, source_row_set = self.removed_parameter_ids(selection)
+        source_row_set = self.source_row_set(selection)
+        parameter_value_ids = set()
+        id_column = self.object_parameter_value_model.horizontal_header_labels().index("id")
+        for source_row in source_row_set:
+            if self.object_parameter_value_model.is_work_in_progress(source_row):
+                continue
+            source_index = self.object_parameter_value_model.index(source_row, id_column)
+            parameter_value_ids.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
             for source_row in reversed(list(source_row_set)):
@@ -1043,7 +1050,14 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        parameter_value_ids, source_row_set = self.removed_parameter_ids(selection)
+        source_row_set = self.source_row_set(selection)
+        parameter_value_ids = set()
+        id_column = self.relationship_parameter_value_model.horizontal_header_labels().index("id")
+        for source_row in source_row_set:
+            if self.relationship_parameter_value_model.is_work_in_progress(source_row):
+                continue
+            source_index = self.relationship_parameter_value_model.index(source_row, id_column)
+            parameter_value_ids.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
             for source_row in reversed(list(source_row_set)):
@@ -1054,14 +1068,21 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_object_parameters")
     def remove_object_parameters(self):
         selection = self.ui.tableView_object_parameter.selectionModel().selection()
-        parameter_ids, source_row_set = self.removed_parameter_ids(selection)
+        source_row_set = self.source_row_set(selection)
+        parameter_ids = set()
+        parameter_names = set()
+        id_column = self.object_parameter_model.horizontal_header_labels().index("id")
+        name_column = self.object_parameter_model.horizontal_header_labels().index("parameter_name")
+        for source_row in source_row_set:
+            if self.object_parameter_model.is_work_in_progress(source_row):
+                continue
+            source_index = self.object_parameter_model.index(source_row, id_column)
+            parameter_ids.add(source_index.data(Qt.DisplayRole))
+            source_index = self.object_parameter_model.index(source_row, name_column)
+            parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            parameter_names = set()
-            name_column = self.object_parameter_model.horizontal_header_labels().index("parameter_name")
             for source_row in reversed(list(source_row_set)):
-                source_index = self.object_parameter_model.index(source_row, name_column)
-                parameter_names.add(source_index.data(Qt.DisplayRole))
                 self.object_parameter_model.removeRows(source_row, 1)
             self.object_parameter_value_model.remove_items("parameter", *parameter_names)
         except SpineDBAPIError as e:
@@ -1070,27 +1091,34 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_relationship_parameters")
     def remove_relationship_parameters(self):
         selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
-        parameter_ids, source_row_set = self.removed_parameter_ids(selection)
+        source_row_set = self.source_row_set(selection)
+        parameter_ids = set()
+        parameter_names = set()
+        id_column = self.relationship_parameter_model.horizontal_header_labels().index("id")
+        name_column = self.relationship_parameter_model.horizontal_header_labels().index("parameter_name")
+        for source_row in source_row_set:
+            if self.relationship_parameter_model.is_work_in_progress(source_row):
+                continue
+            source_index = self.relationship_parameter_model.index(source_row, id_column)
+            parameter_ids.add(source_index.data(Qt.DisplayRole))
+            source_index = self.relationship_parameter_model.index(source_row, name_column)
+            parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            parameter_names = set()
-            name_column = self.relationship_parameter_model.horizontal_header_labels().index("parameter_name")
             for source_row in reversed(list(source_row_set)):
-                source_index = self.relationship_parameter_model.index(source_row, name_column)
-                parameter_names.add(source_index.data(Qt.DisplayRole))
                 self.relationship_parameter_model.removeRows(source_row, 1)
             self.relationship_parameter_value_model.remove_items("parameter", *parameter_names)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    def removed_parameter_ids(self, selection):
-        """A set of ids and corresponding rows to be removed from one of the four models:
+    def source_row_set(self, selection):
+        """A set of source rows corresponding to the selection of proxy indexes:
         object_parameter_model, relationship_parameter_model,
         object_parameter_value_model, relationship_parameter_value_model
         """
         indexes = selection.indexes()
         if not indexes:
-            return
+            return {}
         proxy_model = indexes[0].model()
         source_model = proxy_model.sourceModel()
         proxy_row_set = set()
@@ -1099,15 +1127,7 @@ class DataStoreForm(QMainWindow):
             top = current.top()
             bottom = current.bottom()
             proxy_row_set.update(range(top, bottom + 1))
-        source_row_set = {proxy_model.map_row_to_source(r) for r in proxy_row_set}
-        ids = set()
-        id_column = source_model.horizontal_header_labels().index('id')
-        for source_row in source_row_set:
-            if source_model.is_work_in_progress(source_row):
-                continue
-            source_index = source_model.index(source_row, id_column)
-            ids.add(source_index.data(Qt.DisplayRole))
-        return ids, source_row_set
+        return {proxy_model.map_row_to_source(r) for r in proxy_row_set}
 
     def restore_ui(self):
         """Restore UI state from previous session."""

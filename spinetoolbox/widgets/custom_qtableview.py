@@ -96,7 +96,7 @@ class CustomQTableView(QTableView):
         if not text:
             return False
         selection = self.selectionModel().selection()
-        if not selection:
+        if selection.isEmpty():
             return False
         first = selection.first()
         data = [line.split('\t') for line in text.split('\n')]
@@ -109,10 +109,11 @@ class CustomQTableView(QTableView):
                 if h_header.isSectionHidden(j):
                     continue
                 index = self.model().index(i, j)
-                ii = i % len(data)
-                jj = j % len(data[ii])
-                value = data[ii][jj]
-                self.model().setData(index, value, Qt.EditRole)
+                if index.flags() & Qt.ItemIsEditable:
+                    ii = (first.top() - i) % len(data)
+                    jj = (first.left() - j) % len(data[ii])
+                    value = data[ii][jj]
+                    self.model().setData(index, value, Qt.EditRole)
 
     def paste_normal(self, text):
         """Paste clipboard data, overwritting cells if needed"""

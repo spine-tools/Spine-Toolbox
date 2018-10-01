@@ -559,7 +559,7 @@ class CommitDialog(QDialog):
         self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
         self.actionAccept.triggered.connect(self.save_and_accept)
         self.commit_msg_edit = QPlainTextEdit(self)
-        self.commit_msg_edit.setPlaceholderText('Commit message')
+        self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
         self.commit_msg_edit.addAction(self.actionAccept)
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box = QDialogButtonBox()
