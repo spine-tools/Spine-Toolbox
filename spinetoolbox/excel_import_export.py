@@ -909,17 +909,15 @@ def export_object_classes_to_spine_db(db, data):
     existing_classes = db.object_class_list().all()
 
     # filter classes that don't already exist in db
-    new_classes = [o for o in obj_classes if o not in [e.name for e in existing_classes]]
+    new_classes = [{"name": o} for o in obj_classes if o not in [e.name for e in existing_classes]]
 
     error_log = []
     import_log = []
-    for nc in new_classes:
-        try:
-            db.add_object_class(name=nc)
-            import_log.append(["object_class", nc])
-        except SpineDBAPIError as e:
-            error_log.append(["object_class", nc, e.msg])
-            continue
+    try:
+        db.add_object_classes(*new_classes)
+        import_log = import_log + [["object_class", nc["name"]] for nc in new_classes]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["object_class", nc["name"], e.msg] for nc in new_classes]
     return import_log, error_log
 
 
@@ -960,16 +958,14 @@ def export_object_parameters_spine_db(db, data):
                      for d in db_parameters]
 
     # remove already existing parameters
-    parameters = [p for p in parameters if [p[1], p[2]] not in db_parameters]
+    parameters = [{"name": p[2], "object_class_id": p[0]} for p in parameters if [p[1], p[2]] not in db_parameters]
 
     import_log = []
-    for p in parameters:
-        try:
-            db.add_parameter(name=p[2], object_class_id=p[0])
-            import_log.append(["object_parameter", p[2]])
-        except SpineDBAPIError as e:
-            error_log.append(["object_parameter", p[2], e.msg])
-            continue
+    try:
+        db.add_parameters(*parameters)
+        import_log = import_log + [["object_parameter", p["name"]] for p in parameters]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["object_parameter", p["name"], e.msg] for p in parameters]
 
     return import_log, error_log
 
@@ -1008,17 +1004,15 @@ def export_object_to_spine_db(db, data):
     db_objects = [[d.class_id, d.name] for d in db_objects]
 
     # remove already existing objects
-    objects = [o for o in objects if [o[0], o[2]] not in db_objects]
+    objects = [{"name": o[2], "class_id": o[0]} for o in objects if [o[0], o[2]] not in db_objects]
 
     # export to db
     import_log = []
-    for o in objects:
-        try:
-            db.add_object(name=o[2], class_id=o[0])
-            import_log.append(["object", o[2]])
-        except SpineDBAPIError as e:
-            error_log.append(["object", o[2], e.msg])
-            continue
+    try:
+        db.add_objects(*objects)
+        import_log = import_log + [["object", o["name"]] for o in objects]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["object", o["name"], e.msg] for o in objects]
 
     return import_log, error_log
 
@@ -1061,8 +1055,8 @@ def export_object_parameter_values(db, data):
                                           d.parameter_name]): d
                                 for d in db_parameter_values}
 
-    object_class_parameter = [[dp.object_class_id, dp.id] for dp in db_parameters]
-    object_class_object = [[dp.class_id, dp.id] for dp in db_objects]
+    object_class_parameter = set((dp.object_class_id, dp.id) for dp in db_parameters)
+    object_class_object = set((dp.class_id, dp.id) for dp in db_objects)
 
     error_log = []
     update_parameters = []
@@ -1113,21 +1107,20 @@ def export_object_parameter_values(db, data):
         else:
             # parameter value doesn't exists
             # check if object_class for parameter matches db
-            if [obj_class_id, obj_id] not in object_class_object:
+            if (obj_class_id, obj_id) not in object_class_object:
                 error_log.append(["object_parameter_value",
                                   p[1].parameter,
                                   "parameter object did not match object class in database"])
                 continue
             # check if object_class for parameter matches db
-            if [obj_class_id, par_id] not in object_class_parameter:
+            if (obj_class_id, par_id) not in object_class_parameter:
                 error_log.append(["object_parameter_value",
                                   p[1].parameter,
                                   "parameter object class did not match parameter object class in database"])
                 continue
-
-            insert_parameters.append(ParVal(None, obj_id, par_id,
-                                            p[1].parameter, p[1].value,
-                                            key, p[1].parameter_type))
+            insert_parameters.append({"object_id": obj_id,
+                                      "parameter_id": par_id,
+                                      p[1].parameter_type: p[1].value})
 
     # update parameter values
     import_log = []
@@ -1142,16 +1135,11 @@ def export_object_parameter_values(db, data):
             continue
 
     # insert new parameter values
-    for p in insert_parameters:
-        try:
-            input_args = {"object_id": p.object_id,
-                          "parameter_id": p.parameter_id,
-                          p.parameter_type: p.value}
-            db.add_parameter_value(**input_args)
-            import_log.append(["object_parameter_value_insert", p.key])
-        except SpineDBAPIError as e:
-            error_log.append(["object_parameter_value", p.key, e.msg])
-            continue
+    try:
+        db.add_parameter_values(*insert_parameters)
+        import_log = import_log + [["object_parameter_value_insert", p["parameter_id"]] for p in insert_parameters]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["object_parameter_value", p["parameter_id"], e.msg] for p in insert_parameters]
 
     return import_log, error_log
 
@@ -1196,13 +1184,11 @@ def export_relationship_class_to_spine_db(db, data):
 
     # insert relationship classes
     import_log = []
-    for r in valid_rel_classes:
-        try:
-            db.add_wide_relationship_class(**r)
-            import_log.append(["relationship_class", r['name']])
-        except SpineDBAPIError as e:
-            error_log.append(["relationship_class", r['name'], e.msg])
-            continue
+    try:
+        db.add_wide_relationship_classes(*valid_rel_classes)
+        import_log = import_log + [["relationship_class", r['name']]  for r in valid_rel_classes]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["relationship_class", r['name'], e.msg] for r in valid_rel_classes]
 
     return import_log, error_log
 
@@ -1307,18 +1293,15 @@ def export_relationships_to_spine_db(db, data):
 
         valid_relationships.append({'name': db_rel_class.name + "_" + key,
                                     'class_id': db_rel_class.id,
-                                    'object_id_list': r_ids,
-                                    'key': key})
+                                    'object_id_list': r_ids})
 
     # insert relationship classes
     import_log = []
-    for r in valid_relationships:
-        try:
-            db.add_wide_relationship(**r)
-            import_log.append(["relationship", r['key']])
-        except SpineDBAPIError as e:
-            error_log.append(["relationship", r['key'], e.msg])
-            continue
+    try:
+        db.add_wide_relationships(*valid_relationships)
+        import_log = import_log + [["relationship", r['name']] for r in valid_relationships]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["relationship", r['name'], e.msg] for r in valid_relationships]
 
     return import_log, error_log
 
@@ -1371,13 +1354,11 @@ def export_relationships_parameters_to_spine_db(db, data):
 
     # insert relationship classes
     import_log = []
-    for r in valid_relationships_parameters:
-        try:
-            db.add_parameter(**r)
-            import_log.append(["relationship_parameter", r['name']])
-        except SpineDBAPIError as e:
-            error_log.append(["relationship_parameter", r['name'], e.msg])
-            continue
+    try:
+        db.add_parameters(*valid_relationships_parameters)
+        import_log = import_log + [["relationship_parameter", r['name']] for r in valid_relationships_parameters]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["relationship_parameter", r['name'], e.msg] for r in valid_relationships_parameters]
 
     return import_log, error_log
 
@@ -1490,13 +1471,11 @@ def export_relationships_parameter_value_to_spine_db(db, data):
 
     # insert relationship classes
     import_log = []
-    for r in insert_par:
-        try:
-            db.add_parameter_value(**r[0])
-            import_log.append(["relationship_parameter_value", r[1]])
-        except SpineDBAPIError as e:
-            error_log.append(["relationship_parameter_value", r[1], e.msg])
-            continue
+    try:
+        db.add_parameter_values(*[p[0] for p in insert_par])
+        import_log = import_log + [["relationship_parameter_value", r[1]] for r in insert_par]
+    except SpineDBAPIError as e:
+        error_log = error_log + [["relationship_parameter_value", r[1], e.msg] for r in insert_par]
 
     # update parameters
     for r in update_par:
