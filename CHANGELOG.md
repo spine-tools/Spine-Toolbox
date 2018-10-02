@@ -9,7 +9,8 @@ This section is for upcoming changes.
 ### Added
 - New option to refresh the Data store form and get latest changes from the database.
 - Several performance enhancements in Data store form (accessing internal data more efficiently,
-optimizing queries to the database.) 
+optimizing queries to the database.)
+- Now the Data store form offers to commit pending changes at exit.
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
