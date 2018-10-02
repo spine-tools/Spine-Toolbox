@@ -28,7 +28,7 @@ import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
-    QMessageBox, QFileDialog, QApplication
+    QMessageBox, QCheckBox, QFileDialog, QApplication
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ui.data_store_form import Ui_MainWindow
@@ -1149,6 +1149,43 @@ class DataStoreForm(QMainWindow):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
+    def show_commit_session_prompt(self):
+        """Shows the commit session message box."""
+        # TODO: Read setting from config file
+        commit_at_exit = "1"
+        if commit_at_exit == "0":
+            # Don't commit session and don't show message box
+            logging.debug("Session changes not committed")
+            return
+        elif commit_at_exit == "1":  # Default
+            # Show message box
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Commit session")
+            msg.setText("Commit changes to session?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            chk = chkbox.checkState()
+            if answer == QMessageBox.Yes:
+                self.show_commit_session_dialog()
+                if chk == 2:
+                    # TODO: Save preference into config file
+                    pass
+            else:
+                if chk == 2:
+                    # TODO: Save preference into config file
+                    pass
+        elif commit_at_exit == "2":
+            # Commit session and don't show message box
+            self.show_commit_session_dialog()
+        else:
+            # TODO: Set default setting
+            pass
+        return
+
     def closeEvent(self, event=None):
         """Handle close window.
 
@@ -1164,7 +1201,7 @@ class DataStoreForm(QMainWindow):
         else:
             self.qsettings.setValue("dataStoreWidget/windowMaximized", False)
         if self.db_map.has_pending_changes():
-            pass
+            self.show_commit_session_prompt()
         self.db_map.close()
         if event:
             event.accept()
