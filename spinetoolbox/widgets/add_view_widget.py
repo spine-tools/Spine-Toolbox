@@ -110,7 +110,7 @@ class AddViewWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_view(self.name, self.description, self._x, self._y)
+        self._project.add_view(self.name, self.description, self._x, self._y, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

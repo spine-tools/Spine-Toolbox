@@ -46,6 +46,7 @@ class SpineToolboxProject(MetaObject):
         toolbox (ToolboxUI): toolbox of this project
         name (str): Project name
         description (str): Project description
+        configs (ConfigurationParser): Application settings
         work_dir (str): Project work directory
         ext (str): Project save file extension(.proj)
     """
@@ -67,13 +68,13 @@ class SpineToolboxProject(MetaObject):
             create_dir(self.project_dir)
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating project directory {0} failed."
-                                        " Check permissions.".format(self.project_dir))
+                                         " Check permissions.".format(self.project_dir))
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating work directory {0} failed."
-                                        " Check permissions.".format(self.work_dir))
+                                         " Check permissions.".format(self.work_dir))
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -216,7 +217,7 @@ class SpineToolboxProject(MetaObject):
                         # Save references
                         item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
                     elif child_data.item_type == "Data Store":
-                        item_dict[top_level_item_txt][name]["reference"] = child_data.reference()
+                        item_dict[top_level_item_txt][name]["reference"] = child_data.save_reference()
                     elif child_data.item_type == "View":
                         pass
                     else:
@@ -291,8 +292,8 @@ class SpineToolboxProject(MetaObject):
             # Clarifications for user
             if not tool_name == "" and not tool_template:
                 self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                                            "it was not found. Add it to Tool templates and reopen "
-                                            "project.".format(name, tool_name))
+                                             "it was not found. Add it to Tool templates and reopen "
+                                             "project.".format(name, tool_name))
             try:
                 x = tools[name]["x"]
                 y = tools[name]["y"]
@@ -356,7 +357,7 @@ class SpineToolboxProject(MetaObject):
             _tooltype = definition['tooltype'].lower()
         except KeyError:
             self._toolbox.msg_error.emit("No type of tool defined in tool definition file. Should be "
-                                        "GAMS, Julia or executable")
+                                         "GAMS, Julia or executable")
             return None
         if _tooltype == "gams":
             return GAMSTool.load(self._toolbox, path, definition)
@@ -369,30 +370,82 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, reference, x=0, y=0):
-        """Add data store to project item model."""
+    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False):
+        """Adds a Data Store to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            reference (dict): Information on referenced database
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
         data_store = DataStore(self._toolbox, name, description, reference, x, y)
         self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Data Stores", name, data_store)
         self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(data_store)
 
-    def add_data_connection(self, name, description, references, x=0, y=0):
-        """Add Data Connection to project item model."""
+    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False):
+        """Adds a Data Connection to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            references (list(str)): List of file paths
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
         self._toolbox.project_refs.append(data_connection)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Data Connections", name, data_connection)
         self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(data_connection)
 
-    def add_tool(self, name, description, tool_template, x=0, y=0):
-        """Add Tool to project item model."""
+    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False):
+        """Adds a Tool to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            tool_template (ToolTemplate): Tool template of this tool
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
         tool = Tool(self._toolbox, name, description, tool_template, x, y)
         self._toolbox.project_refs.append(tool)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Tools", name, tool)
         self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(tool)
 
-    def add_view(self, name, description, x=0, y=0):
-        """Add View to project item model."""
+    def add_view(self, name, description, x=0, y=0, set_selected=False):
+        """Adds a View to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
         view = View(self._toolbox, name, description, x, y)
         self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
         self._toolbox.add_item_to_model("Views", name, view)
         self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(view)
+
+    def set_item_selected(self, item):
+        """Sets item selected and shows its info screen.
+
+        Args:
+            item (QMetaObject): Project item to select
+        """
+        item.get_icon().master().setSelected(True)
+        self._toolbox.show_info(item.name)

@@ -137,7 +137,7 @@ class AddToolWidget(QWidget):
             selected_tool = None
         else:
             selected_tool = self._toolbox.tool_template_model.tool_template(selected_row)
-        self._project.add_tool(self.name, self.description, selected_tool, self._x, self._y)
+        self._project.add_tool(self.name, self.description, selected_tool, self._x, self._y, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
