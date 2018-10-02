@@ -24,10 +24,6 @@ Module for view class.
 :date:   14.07.2018
 """
 
-import os
-import shutil
-import getpass
-import logging
 from PySide2.QtCore import Qt, Slot, Signal
 from metaobject import MetaObject
 from widgets.view_subwindow_widget import ViewWidget
