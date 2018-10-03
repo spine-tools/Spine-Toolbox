@@ -1559,24 +1559,30 @@ class ObjectParameterModel(ParameterModel):
     def items_to_add(self, indexes):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
         items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
         object_class_name_column = header.index('object_class_name')
         parameter_name_column = header.index('parameter_name')
-        for index in indexes:
-            row = index.row()
+        # Query db and build ad-hoc dicts
+        object_class_dict = {x.name: x.id for x in self.db_map.object_class_list()}
+        for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
-            object_class_name = index.sibling(row, object_class_name_column).data(Qt.DisplayRole)
-            object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
-            parameter_name = index.sibling(row, parameter_name_column).data(Qt.DisplayRole)
-            if object_class and parameter_name:
+            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            if not parameter_name:
+                continue
+            try:
+                object_class_id = object_class_dict[object_class_name]
                 item = {
-                    "object_class_id": object_class.id,
+                    "object_class_id": object_class_id,
                     "name": parameter_name
                 }
                 for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
                 items_to_add[row] = item
+            except KeyError:
+                pass
         return items_to_add
 
 
@@ -1635,31 +1641,41 @@ class RelationshipParameterModel(ParameterModel):
     def items_to_add(self, indexes):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
         items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
         relationship_class_name_column = header.index('relationship_class_name')
         parameter_name_column = header.index('parameter_name')
         object_class_name_list_column = header.index('object_class_name_list')
-        for index in indexes:
-            row = index.row()
+        # Query db and build ad-hoc dicts
+        relationship_class_dict = {x.name: {'id': x.id, 'object_class_name_list': x.object_class_name_list}
+                                   for x in self.db_map.wide_relationship_class_list()}
+        for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
-            relationship_class_name = index.sibling(row, relationship_class_name_column).data(Qt.DisplayRole)
-            relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            object_class_name_list = index.sibling(row, object_class_name_list_column).data(Qt.DisplayRole)
-            parameter_name = index.sibling(row, parameter_name_column).data(Qt.DisplayRole)
+            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
+            object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             # Autoset the object_class_name_list if possible and needed
-            if relationship_class and not object_class_name_list:
-                self._data[row][object_class_name_list_column][Qt.EditRole] = relationship_class.object_class_name_list
-                self._data[row][object_class_name_list_column][Qt.DisplayRole] = relationship_class.object_class_name_list
-            if relationship_class and parameter_name:
+            if relationship_class_name and not object_class_name_list:
+                try:
+                    object_class_name_list = relationship_class_dict[relationship_class_name]['object_class_name_list']
+                    self._data[row][object_class_name_list_column][Qt.EditRole] = object_class_name_list
+                    self._data[row][object_class_name_list_column][Qt.DisplayRole] = object_class_name_list
+                except KeyError:
+                    pass
+            if not parameter_name:
+                continue
+            try:
+                relationship_class_id = relationship_class_dict[relationship_class_name]['id']
                 item = {
-                    "relationship_class_id": relationship_class.id,
+                    "relationship_class_id": relationship_class_id,
                     "name": parameter_name
                 }
                 for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
                 items_to_add[row] = item
+            except KeyError:
+                pass
         return items_to_add
 
 
@@ -1709,34 +1725,49 @@ class ObjectParameterValueModel(ParameterValueModel):
     def items_to_add(self, indexes):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
         items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
+        object_class_name_column = header.index('object_class_name')
         object_name_column = header.index('object_name')
         parameter_name_column = header.index('parameter_name')
-        object_class_name_column = header.index('object_class_name')
-        for index in indexes:
-            row = index.row()
+        # Query db and build ad-hoc dicts
+        object_class_lookup_dict = {x.id: x.name for x in self.db_map.object_class_list()}
+        object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self.db_map.object_list()}
+        parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
+                          for x in self.db_map.parameter_list()}
+        for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
-            object_name = index.sibling(row, object_name_column).data(Qt.DisplayRole)
-            object_ = self.db_map.single_object(name=object_name).one_or_none()
-            object_class_name = index.sibling(row, object_class_name_column).data(Qt.DisplayRole)
-            parameter_name = index.sibling(row, parameter_name_column).data(Qt.DisplayRole)
-            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
+            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
+            object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             # Autoset the object_class_name if possible and needed
-            if (object_ or parameter) and not object_class_name:
-                object_class_id = object_.class_id if object_ else parameter.object_class_id
-                object_class = self.db_map.single_object_class(id=object_class_id).one_or_none()
-                if object_class:
-                    self._data[row][object_class_name_column][Qt.EditRole] = object_class.name
-                    self._data[row][object_class_name_column][Qt.DisplayRole] = object_class.name
-            if object_ and parameter:
+            if (object_name or parameter_name) and not object_class_name:
+                try:
+                    object_class_id = object_dict[object_name]['class_id']
+                except KeyError:
+                    try:
+                        object_class_id = parameter_dict[parameter_name]['object_class_id']
+                    except KeyError:
+                        object_class_id = None
+                try:
+                    object_class_name = object_class_lookup_dict[object_class_id]
+                    self._data[row][object_class_name_column][Qt.EditRole] = object_class_name
+                    self._data[row][object_class_name_column][Qt.DisplayRole] = object_class_name
+                except KeyError:
+                    pass
+            try:
+                object_id = object_dict[object_name]['id']
+                parameter_id = parameter_dict[parameter_name]['id']
                 item = {
-                    "object_id": object_.id,
-                    "parameter_id": parameter.id
+                    "object_id": object_id,
+                    "parameter_id": parameter_id
                 }
                 for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
                 items_to_add[row] = item
+            except KeyError:
+                pass
         return items_to_add
 
 
@@ -1857,56 +1888,68 @@ class RelationshipParameterValueModel(ParameterValueModel):
         """
         relationships_on_the_fly = dict()
         relationships_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
         relationship_class_name_column = header.index('relationship_class_name')
         object_name_1_column = header.index('object_name_1')
         parameter_name_column = header.index('parameter_name')
-        for index in indexes:
-            row = index.row()
+        # Query db and build ad-hoc dicts
+        relationship_class_lookup_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}
+        relationship_class_dict = {x.name: {'id': x.id, 'object_class_id_list': x.object_class_id_list}
+                                   for x in self.db_map.wide_relationship_class_list()}
+        parameter_dict = {x.name: {'id': x.id, 'relationship_class_id': x.object_class_id}
+                          for x in self.db_map.parameter_list()}
+        relationship_dict = {x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
+                             for x in self.db_map.wide_relationship_list()}
+        object_dict = {x.name: x.id for x in self.db_map.object_list()}
+        for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
-            relationship_class_name = index.sibling(row, relationship_class_name_column).data(Qt.DisplayRole)
-            parameter_name = index.sibling(row, parameter_name_column).data(Qt.DisplayRole)
-            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
+            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             # Autoset the relationship_class_name if possible and needed
-            if parameter and not relationship_class_name:
-                relationship_class = self.db_map.single_wide_relationship_class(
-                    id=parameter.relationship_class_id).one_or_none()
-                if relationship_class:
-                    relationship_class_name = relationship_class.name
-                    self._data[row][relationship_class_name_column][Qt.EditRole] = relationship_class_name
-                    self._data[row][relationship_class_name_column][Qt.DisplayRole] = relationship_class_name
-            relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            if not relationship_class:
+            if parameter_name and not relationship_class_name:
+                try:
+                    relationship_class_id = parameter_dict[parameter_name]['relationship_class_id']
+                    try:
+                        relationship_class_name = relationship_class_lookup_dict[relationship_class_id]
+                        self._data[row][relationship_class_name_column][Qt.EditRole] = relationship_class_name
+                        self._data[row][relationship_class_name_column][Qt.DisplayRole] = relationship_class_name
+                    except KeyError:
+                        pass
+                except KeyError:
+                    pass
+            try:
+                relationship_class = relationship_class_dict[relationship_class_name]
+            except KeyError:
                 continue
             object_id_list = list()
             object_name_list = list()
-            object_class_count = len(relationship_class.object_class_id_list.split(','))
+            object_class_count = len(relationship_class['object_class_id_list'].split(','))
             for j in range(object_name_1_column, object_name_1_column + object_class_count):
-                object_name = index.sibling(row, j).data(Qt.DisplayRole)
-                if not object_name:
+                object_name = self.index(row, j).data(Qt.DisplayRole)
+                try:
+                    object_id = object_dict[object_name]
+                    object_id_list.append(object_id)
+                    object_name_list.append(object_name)
+                except KeyError:
                     break
-                object_ = self.db_map.single_object(name=object_name).one_or_none()
-                if not object_:
-                    logging.debug("Couldn't find object '{}'.".format(object_name))
-                    break
-                object_id_list.append(object_.id)
-                object_name_list.append(object_name)
             if len(object_id_list) < object_class_count or len(object_name_list) < object_class_count:
                 continue
-            relationship = self.db_map.single_wide_relationship(
-                class_id=relationship_class.id, object_name_list=",".join(object_name_list)).one_or_none()
-            if relationship:
-                relationships_on_the_fly[row] = relationship
+            try:
+                value = (relationship_class['id'], object_id_list)
+                index = list(relationship_dict.values()).index(value)
+                relationship_id = list(relationship_dict.keys())[index]
+                relationships_on_the_fly[row] = relationship_id
                 continue
-            relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
-            relationship = {
-                "name": relationship_name,
-                "object_id_list": object_id_list,
-                "class_id": relationship_class.id
-            }
-            relationships_to_add[row] = relationship
+            except IndexError:
+                relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
+                relationship = {
+                    "name": relationship_name,
+                    "object_id_list": object_id_list,
+                    "class_id": relationship_class['id']
+                }
+                relationships_to_add[row] = relationship
         relationships_on_the_fly.update(self.new_relationships(relationships_to_add))
         return relationships_on_the_fly
 
@@ -1920,33 +1963,34 @@ class RelationshipParameterValueModel(ParameterValueModel):
             relationships = self.db_map.add_wide_relationships(*items)
             msg = "Successfully added new relationships on the fly."
             self._data_store_form.msg.emit(msg)
-            return dict(zip(rows, relationships))
+            return dict(zip(rows, [x.id for x in relationships]))
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
 
     def items_to_add(self, indexes, relationships_on_the_fly):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
         items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
         parameter_name_column = header.index('parameter_name')
-        for index in indexes:
-            row = index.row()
+        # Query db and build ad-hoc dicts
+        parameter_dict = {x.name: x.id for x in self.db_map.parameter_list()}
+        for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
             try:
-                relationship = relationships_on_the_fly[row]
-            except KeyError:
-                relationship = None
-            parameter_name = index.sibling(row, parameter_name_column).data(Qt.DisplayRole)
-            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
-            if relationship and parameter:
+                relationship_id = relationships_on_the_fly[row]
+                parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+                parameter_id = parameter_dict[parameter_name]
                 item = {
-                    "relationship_id": relationship.id,
-                    "parameter_id": parameter.id
+                    "relationship_id": relationship_id,
+                    "parameter_id": parameter_id
                 }
                 for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
                 items_to_add[row] = item
+            except KeyError:
+                pass
         return items_to_add
 
 
