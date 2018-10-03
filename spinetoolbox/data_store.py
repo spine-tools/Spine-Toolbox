@@ -448,7 +448,7 @@ class DataStore(MetaObject):
         if os.path.isfile(filename):
             msg = ('<b>Replacing file "{}" in "{}"</b>. '
                    'Are you sure?').format(database + ".sqlite", os.path.basename(self.data_dir))
-            answer = QMessageBox.question(None, 'Replace file', msg, QMessageBox.Yes, QMessageBox.No)
+            answer = QMessageBox.question(self._toolbox, 'Replace file', msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return
         try:

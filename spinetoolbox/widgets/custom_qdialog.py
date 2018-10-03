@@ -111,7 +111,7 @@ class CustomQDialog(QDialog):
     def data_committed(self, editor):
         """Update 'object x' field with data from combobox editor."""
         data = editor.text()
-        if not data:
+        if data is None:
             return
         index = editor.index()
         self.model.setData(index, data, Qt.EditRole)
@@ -217,11 +217,19 @@ class AddObjectsDialog(CustomQDialog):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
-        h = self.model.horizontal_header_labels().index
-        if top_left.column() == h('object class name'):
-            self.model.setData(top_left, self.object_icon, Qt.DecorationRole)
+        object_class_name_column = self.model.horizontal_header_labels().index('object class name')
+        top = top_left.row()
+        left = top_left.column()
+        bottom = bottom_right.row()
+        right = bottom_right.column()
+        for row in range(top, bottom + 1):
+            for column in range(left, right + 1):
+                if column != object_class_name_column:
+                    continue
+                index = self.model.index(row, column)
+                self.model.setData(index, self.object_icon, Qt.DecorationRole)
 
     def accept(self):
         for i in range(self.model.rowCount()):
@@ -314,12 +322,20 @@ class AddRelationshipClassesDialog(CustomQDialog):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
-        h = self.model.horizontal_header_labels().index
-        if top_left.column() != h('relationship class name'):
-            self.model.setData(top_left, self.object_icon, Qt.DecorationRole)
-            self.compose_relationship_class_name(top_left.row())
+        relationship_class_name_column = self.model.horizontal_header_labels().index('relationship class name')
+        top = top_left.row()
+        left = top_left.column()
+        bottom = bottom_right.row()
+        right = bottom_right.column()
+        for row in range(top, bottom + 1):
+            for column in range(left, right + 1):
+                if column == relationship_class_name_column:
+                    continue
+                index = self.model.index(row, column)
+                self.model.setData(index, self.object_icon, Qt.DecorationRole)
+                self.compose_relationship_class_name(row)
 
     def compose_relationship_class_name(self, row):
         """Compose relationship class name automatically."""
@@ -493,12 +509,20 @@ class AddRelationshipsDialog(CustomQDialog):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
-        if roles[0] != Qt.EditRole:
+        if Qt.EditRole not in roles:
             return
-        h = self.model.horizontal_header_labels().index
-        if top_left.column() != h('relationship name'):
-            self.model.setData(top_left, self.object_icon, Qt.DecorationRole)
-            self.compose_relationship_name(top_left.row())
+        relationship_name_column = self.model.horizontal_header_labels().index('relationship name')
+        top = top_left.row()
+        left = top_left.column()
+        bottom = bottom_right.row()
+        right = bottom_right.column()
+        for row in range(top, bottom + 1):
+            for column in range(left, right + 1):
+                if column == relationship_name_column:
+                    continue
+                index = self.model.index(row, column)
+                self.model.setData(index, self.object_icon, Qt.DecorationRole)
+                self.compose_relationship_name(row)
 
     def compose_relationship_name(self, row):
         """Compose relationship name automatically."""

@@ -183,13 +183,13 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
         # Parameter table editors
         self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
-            connect(self.update_parameter_value)
+            connect(self.set_parameter_value_data)
         self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
-            connect(self.update_parameter_value)
+            connect(self.set_parameter_value_data)
         self.ui.tableView_object_parameter.itemDelegate().commitData.\
-            connect(self.update_parameter)
+            connect(self.set_parameter_data)
         self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
-            connect(self.update_parameter)
+            connect(self.set_parameter_data)
         # Context menu requested
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
@@ -882,14 +882,12 @@ class DataStoreForm(QMainWindow):
                 else:
                     continue
                 model.insertRows(row + i, 1)
-                model.set_work_in_progress(row + i, True)
                 model.setData(model.index(row + i, object_class_name_column), object_class_name)
                 model.setData(model.index(row + i, object_name_column), object_name)
                 some_inserted = True
                 i += 1
         if not some_inserted:
             model.insertRows(row, 1)
-            model.set_work_in_progress(row, True)
         self.ui.tabWidget_object.setCurrentIndex(0)
         self.object_parameter_value_proxy.apply_filter()
 
@@ -926,7 +924,6 @@ class DataStoreForm(QMainWindow):
                 else:
                     continue
                 model.insertRows(row + i, 1)
-                model.set_work_in_progress(row + i, True)
                 model.setData(model.index(row + i, relationship_class_name_column), relationship_class_name)
                 for j, object_name in enumerate(object_name_list):
                     model.setData(model.index(row + i, object_name_1_column + j), object_name)
@@ -934,7 +931,6 @@ class DataStoreForm(QMainWindow):
                 i += 1
         if not some_inserted:
             model.insertRows(row, 1)
-            model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
         self.relationship_parameter_value_proxy.apply_filter()
 
@@ -958,13 +954,11 @@ class DataStoreForm(QMainWindow):
                 else:
                     continue
                 model.insertRows(row + i, 1)
-                model.set_work_in_progress(row + i, True)
                 model.setData(model.index(row + i, object_class_name_column), object_class_name)
                 some_inserted = True
                 i += 1
         if not some_inserted:
             model.insertRows(row, 1)
-            model.set_work_in_progress(row, True)
         self.ui.tabWidget_object.setCurrentIndex(1)
         self.object_parameter_proxy.apply_filter()
 
@@ -988,21 +982,19 @@ class DataStoreForm(QMainWindow):
                 else:
                     continue
                 model.insertRows(row + i, 1)
-                model.set_work_in_progress(row + i, True)
                 model.setData(model.index(row + i, relationship_class_name_column), relationship_class_name)
                 some_inserted = True
                 i += 1
         if not some_inserted:
             model.insertRows(row, 1)
-            model.set_work_in_progress(row, True)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
         self.relationship_parameter_proxy.apply_filter()
 
-    @Slot("QWidget", name="update_parameter_value")
-    def update_parameter_value(self, editor):
+    @Slot("QWidget", name="set_parameter_value_data")
+    def set_parameter_value_data(self, editor):
         """Update (object or relationship) parameter_value table with newly edited data."""
         new_value = editor.text()
-        if not new_value:
+        if new_value is None:
             return
         index = editor.index()
         proxy_model = index.model()
@@ -1010,10 +1002,9 @@ class DataStoreForm(QMainWindow):
         source_index = proxy_model.mapToSource(index)
         source_model.setData(source_index, new_value)
 
-    @Slot("QWidget", name="update_parameter")
-    def update_parameter(self, editor):
-        """Update parameter (object or relationship) with newly edited data.
-        """
+    @Slot("QWidget", name="set_parameter_data")
+    def set_parameter_data(self, editor):
+        """Update parameter (object or relationship) with newly edited data."""
         new_value = editor.text()
         if not new_value:
             return
@@ -1161,8 +1152,9 @@ class DataStoreForm(QMainWindow):
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit session")
-            msg.setText("Commit changes to session?")
+            msg.setWindowTitle("Commit pending changes")
+            msg.setText("The current session has uncommitted changes.")
+            msg.setInformativeText("Do you want to commit them now?")
             msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")

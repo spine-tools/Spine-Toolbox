@@ -76,7 +76,9 @@ class CustomQTableView(QTableView):
             for j in range(first.left(), first.right()+1):
                 if h_header.isSectionHidden(j):
                     continue
-                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+                data = self.model().index(i, j).data(Qt.DisplayRole)
+                str_data = str(data) if data else ""
+                row.append(str_data)
             rows.append("\t".join(row))
         content = "\n".join(rows)
         QApplication.clipboard().setText(content)
@@ -113,7 +115,10 @@ class CustomQTableView(QTableView):
                     ii = (first.top() - i) % len(data)
                     jj = (first.left() - j) % len(data[ii])
                     value = data[ii][jj]
-                    self.model().setData(index, value, Qt.EditRole)
+                    indexes.append(index)
+                    values.append(value)
+        self.model().batch_set_data(indexes, values)
+        return True
 
     def paste_normal(self, text):
         """Paste clipboard data, overwritting cells if needed"""
@@ -127,6 +132,8 @@ class CustomQTableView(QTableView):
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
         row = top_left_index.row()
+        indexes = list()
+        values = list()
         for line in data:
             if not line:
                 continue
@@ -135,15 +142,18 @@ class CustomQTableView(QTableView):
             column = top_left_index.column()
             for value in line:
                 if not value:
+                    column += 1
                     continue
                 if h_header.isSectionHidden(column):
                     column += 1
-                sibling = top_left_index.sibling(row, column)
-                if sibling.flags() & Qt.ItemIsEditable:
-                    self.model().setData(sibling, value, Qt.EditRole)
-                    self.selectionModel().select(sibling, QItemSelectionModel.Select)
+                index = top_left_index.sibling(row, column)
+                if index.flags() & Qt.ItemIsEditable:
+                    indexes.append(index)
+                    values.append(value)
+                    self.selectionModel().select(index, QItemSelectionModel.Select)
                 column += 1
             row += 1
+        self.model().batch_set_data(indexes, values)
         return True
 
     # TODO: This below was intended to improve navigation while setting edit trigger on current changed.

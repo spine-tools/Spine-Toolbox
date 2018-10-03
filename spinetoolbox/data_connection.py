@@ -274,7 +274,8 @@ class DataConnection(MetaObject):
             msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. '
                    'Are you sure?').format(os.path.basename(self.data_dir))
             # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(None, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
+            answer = QMessageBox.question(
+                self._toolbox, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return False
         if datapackage.save(os.path.join(self.data_dir, 'datapackage.json')):
