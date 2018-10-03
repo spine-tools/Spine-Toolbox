@@ -1142,11 +1142,10 @@ class DataStoreForm(QMainWindow):
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
-        # TODO: Read setting from config file
-        commit_at_exit = "1"
+        config = self._data_store._toolbox._config
+        commit_at_exit = config.get("settings", "commit_at_exit")
         if commit_at_exit == "0":
             # Don't commit session and don't show message box
-            logging.debug("Session changes not committed")
             return
         elif commit_at_exit == "1":  # Default
             # Show message box
@@ -1164,18 +1163,17 @@ class DataStoreForm(QMainWindow):
             if answer == QMessageBox.Yes:
                 self.show_commit_session_dialog()
                 if chk == 2:
-                    # TODO: Save preference into config file
-                    pass
+                    # Save preference into config file
+                    config.set("settings", "commit_at_exit", "2")
             else:
                 if chk == 2:
-                    # TODO: Save preference into config file
-                    pass
+                    # Save preference into config file
+                    config.set("settings", "commit_at_exit", "0")
         elif commit_at_exit == "2":
             # Commit session and don't show message box
             self.show_commit_session_dialog()
         else:
-            # TODO: Set default setting
-            pass
+            config.set("settings", "commit_at_exit", "1")
         return
 
     def closeEvent(self, event=None):

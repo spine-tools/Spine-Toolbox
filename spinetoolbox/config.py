@@ -98,7 +98,8 @@ SETTINGS = {"project_directory": "",
             "gams_path": "",
             "use_repl": "true",
             "julia_path": "",
-            "save_at_exit": "1"}
+            "save_at_exit": "1",
+            "commit_at_exit": "1"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \

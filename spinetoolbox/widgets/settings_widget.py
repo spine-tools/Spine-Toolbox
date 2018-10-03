@@ -127,6 +127,7 @@ class SettingsWidget(QWidget):
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
+        commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
         logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
@@ -145,6 +146,14 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
         else:  # default
             self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+        if commit_at_exit == "0":  # Not needed but makes the code more readable.
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
+        elif commit_at_exit == "1":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        elif commit_at_exit == "2":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+        else:  # default
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         if logging_level == "2":
             self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
         else:
@@ -175,6 +184,7 @@ class SettingsWidget(QWidget):
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
+        g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
@@ -197,6 +207,7 @@ class SettingsWidget(QWidget):
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "save_at_exit", f)
+        self._configs.set("settings", "commit_at_exit", g)
         self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)
