@@ -113,10 +113,6 @@ class Tool(MetaObject):
 
     @Slot(name="stop_process")
     def stop_process(self):
-        try:
-            self.instance.instance_finished_signal.disconnect(self.execution_finished)
-        except Exception as e:
-            logging.exception("Exception {0} caught in Tool stop_process()".format(e))
         self.instance.terminate_instance()
         self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 

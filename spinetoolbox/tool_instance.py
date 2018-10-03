@@ -251,15 +251,6 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        try:
-            self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)
-        except AttributeError:
-            pass
-        try:
-            self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)
-            self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)
-        except AttributeError:
-            pass
         self.tool_process.terminate_process()
 
     def remove(self):
