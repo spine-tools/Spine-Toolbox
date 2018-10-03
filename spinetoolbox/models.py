@@ -1889,7 +1889,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
                     break
                 object_ = self.db_map.single_object(name=object_name).one_or_none()
                 if not object_:
-                    logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
+                    logging.debug("Couldn't find object '{}'.".format(object_name))
                     break
                 object_id_list.append(object_.id)
                 object_name_list.append(object_name)

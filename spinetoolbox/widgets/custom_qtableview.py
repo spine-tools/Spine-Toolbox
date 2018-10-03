@@ -104,16 +104,18 @@ class CustomQTableView(QTableView):
         data = [line.split('\t') for line in text.split('\n')]
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
-        for i in range(first.top(), first.bottom()+1):
+        indexes = list()
+        values = list()
+        for i in range(first.top(), first.bottom() + 1):
             if v_header.isSectionHidden(i):
                 continue
-            for j in range(first.left(), first.right()+1):
+            for j in range(first.left(), first.right() + 1):
                 if h_header.isSectionHidden(j):
                     continue
                 index = self.model().index(i, j)
                 if index.flags() & Qt.ItemIsEditable:
-                    ii = (first.top() - i) % len(data)
-                    jj = (first.left() - j) % len(data[ii])
+                    ii = (i - first.top()) % len(data)
+                    jj = (j - first.left()) % len(data[ii])
                     value = data[ii][jj]
                     indexes.append(index)
                     values.append(value)
