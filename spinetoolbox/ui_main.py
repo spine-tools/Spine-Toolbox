@@ -142,7 +142,7 @@ class ToolboxUI(QMainWindow):
         """
         if level == '2':
             logging.getLogger().setLevel(level=logging.DEBUG)
-            logging.debug("Logging level: All messages")
+            # logging.debug("Logging level: All messages")
         else:
             logging.debug("Logging level: Error messages only")
             logging.getLogger().setLevel(level=logging.ERROR)
@@ -385,10 +385,9 @@ class ToolboxUI(QMainWindow):
                 return False
         if not os.path.isfile(load_path):
             self.msg_error.emit("File <b>{0}</b> not found".format(load_path))
-            logging.debug("File not found: {0}".format(load_path))
             return False
         if not load_path.lower().endswith('.proj'):
-            logging.debug("File name has unsupported extension. Only .proj files supported")
+            self.msg_error.emit("Selected file has unsupported extension. Only .proj files are supported")
             return False
         # Load project from JSON file
         try:
@@ -396,10 +395,10 @@ class ToolboxUI(QMainWindow):
                 try:
                     dicts = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    logging.exception("Failed to load file:{0}".format(load_path))
+                    self.msg_error.emit("Error in file <b>{0}</b>. Not valid JSON. {0}".format(load_path))
                     return False
         except OSError:
-            logging.exception("Could not load project from file {0}".format(load_path))
+            self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
             return False
         # Initialize UI
         self.clear_ui()
@@ -502,7 +501,7 @@ class ToolboxUI(QMainWindow):
             if index.parent().isValid():
                 item = self.project_item_model.itemFromIndex(index)
                 if not item:
-                    logging.error("Item not found")
+                    self.msg_error.emit("Something is wrong. Item not found in index:{0}".format(index))
                     return
                 item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
                 # Clear previous selection
@@ -515,10 +514,14 @@ class ToolboxUI(QMainWindow):
             return
 
     def show_info(self, name):
-        """Show information of selected item. Embed old item widgets into QDockWidget."""
-        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item
+        """Show information of selected item. Embed old item widgets into QDockWidget.
+
+        Args:
+            name (str): Name of project
+        """
+        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
         if not item:
-            logging.error("Item {0} not found".format(name))
+            self.msg_error.emit("Something is wrong. Item {0} not found".format(name))
             return
         item_data = item.data(Qt.UserRole)
         # Clear QGroupBox layout
@@ -598,7 +601,6 @@ class ToolboxUI(QMainWindow):
                     tools.append(def_file)
                 project_dict['tool_templates'] = tools
             except KeyError:
-                logging.debug("Adding tool_templates keyword to project file")
                 project_dict['tool_templates'] = [def_file]
             # Save dictionaries back to project save file
             dicts['project'] = project_dict
@@ -617,7 +619,6 @@ class ToolboxUI(QMainWindow):
             return
         self.msg_success.emit("Tool template <b>{0}</b> successfully updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
-        logging.debug("Reattaching Tool template {}".format(tool_template.name))
         # Find the updated tool template from ToolTemplateModel
         template = self.tool_template_model.find_tool_template(tool_template.name)
         if not template:
@@ -655,7 +656,6 @@ class ToolboxUI(QMainWindow):
             try:
                 tool_template_paths = project_dict['tool_templates']
             except KeyError:
-                logging.debug("tool_templates keyword not found in project file")
                 self.msg_warning.emit("No Tool templates in project")
                 return
             self.init_tool_template_model(tool_template_paths)
@@ -929,7 +929,6 @@ class ToolboxUI(QMainWindow):
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
-        logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(tool_template_url))
             self.msg_error.emit("Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
@@ -1278,7 +1277,6 @@ class ToolboxUI(QMainWindow):
         save_at_exit = self._config.get("settings", "save_at_exit")
         if save_at_exit == "0":
             # Don't save project and don't show message box
-            logging.debug("Project changes not saved")
             return
         elif save_at_exit == "1":  # Default
             # Show message box
@@ -1320,7 +1318,6 @@ class ToolboxUI(QMainWindow):
             if event:
                 event.ignore()
             return
-        logging.debug("Bye bye")
         # Save current project (if enabled in settings)
         if not self._project:
             self._config.set("settings", "previous_project", "")
