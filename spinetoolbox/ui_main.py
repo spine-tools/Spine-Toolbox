@@ -253,7 +253,7 @@ class ToolboxUI(QMainWindow):
 
     def init_project_item_model(self):
         """Initializes project item model."""
-        self.project_item_model = ProjectItemModel(self)
+        self.project_item_model = ProjectItemModel(self, root=QModelIndex())
 
         ds_cat_item = QStandardItem("Data Stores")
         dc_cat_item = QStandardItem("Data Connections")
