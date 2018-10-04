@@ -60,6 +60,11 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.execution_failed_to_start = False
         self.starting = False
         self.normal_cursor = self._control.viewport().cursor()
+        # Set logging level for jupyter module loggers
+        traitlets_logger = logging.getLogger("traitlets")
+        asyncio_logger = logging.getLogger("asyncio")
+        traitlets_logger.setLevel(level=logging.ERROR)
+        asyncio_logger.setLevel(level=logging.ERROR)
 
     def find_julia_kernel(self):
         """Return the name of the most recent julia kernel available
@@ -274,8 +279,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Shut down the jupyter kernel."""
         if not self.kernel_client:
             return
-        logging.debug('Shutting down kernel...')
-        self._toolbox.msg_proc.emit("Shutting down Julia REPL...")
+        self._toolbox.msg.emit("Shutting down Julia REPL...")
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 
@@ -312,7 +316,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         menu.exec_(self._control.mapToGlobal(pos))
 
     def enterEvent(self, event):
-        """Set busy cursor during REPL (re)starts"""
+        """Set busy cursor during REPL (re)starts."""
         if self.starting:
             self._control.viewport().setCursor(Qt.BusyCursor)
 
