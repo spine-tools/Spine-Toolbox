@@ -185,28 +185,26 @@ class ObjectTreeContextMenu(CustomContextMenu):
         if item_type == 'root':
             self.add_action("Add object classes")
         elif item_type == 'object_class':
+            self.add_action("Edit object classes")
+            self.addSeparator()
             self.add_action("Add relationship classes", plus_relationship_icon)
             self.add_action("Add objects", plus_object_icon)
-            self.addSeparator()
             self.add_action("Add parameters", plus_object_parameter_icon)
-            self.addSeparator()
-            self.add_action("Rename object class")
         elif item_type == 'object':
+            self.add_action("Edit objects")
+            self.addSeparator()
             self.add_action("Add parameter values", plus_object_parameter_icon)
-            self.addSeparator()
-            self.add_action("Rename object")
         elif item_type == 'relationship_class':
+            self.add_action("Edit relationship classes")
+            self.addSeparator()
             self.add_action("Add relationships", plus_relationship_icon)
-            self.addSeparator()
             self.add_action("Add parameters", plus_relationship_parameter_icon)
-            self.addSeparator()
-            self.add_action("Rename relationship class")
         elif item_type == 'relationship':
             self.add_action("Expand next")
             self.addSeparator()
-            self.add_action("Add parameter values", plus_relationship_parameter_icon)
+            self.add_action("Edit relationships")
             self.addSeparator()
-            self.add_action("Rename relationship")
+            self.add_action("Add parameter values", plus_relationship_parameter_icon)
         if item_type != 'root':
             self.addSeparator()
             self.add_action("Remove selected")

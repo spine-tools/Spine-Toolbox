@@ -22,8 +22,8 @@ Various QDialogs to add items to Database in DataStoreForm,
 and a QDialog that can be programmatically populated with many options.
 Originally intended to be used within DataStoreForm
 
-TODO: CustomQDialog has a syntax error, so it does not even work.
-NOTE: Where is this syntax error? We better fix it, since CustomQDialog is inherited by all other AddStuffDialogs
+TODO: AddItemsDialog has a syntax error, so it does not even work.
+NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inherited by all other AddStuffDialogs
 :author: M. Marin (KTH)
 :date:   13.5.2018
 """
@@ -44,10 +44,11 @@ import ui.add_relationship_classes
 import ui.add_relationships
 import ui.add_parameters
 import ui.add_parameter_values
+import ui.edit_data_items
 
 
-class CustomQDialog(QDialog):
-    """A dialog with options to insert and remove rows from a tableview.
+class AddItemsDialog(QDialog):
+    """A dialog to query user's preferences for new object classes.
 
     Attributes:
         parent (DataStoreForm): data store widget
@@ -83,16 +84,16 @@ class CustomQDialog(QDialog):
 
     def resize_tableview(self):
         table_width = self.font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        for j in range(self.ui.tableView.horizontalHeader().count()-1):
+        for j in range(self.ui.tableView.horizontalHeader().count() - 1):
             table_width += self.ui.tableView.horizontalHeader().sectionSize(j)
-        section = self.ui.tableView.horizontalHeader().count()-1
+        section = self.ui.tableView.horizontalHeader().count() - 1
         table_width += min(250, self.ui.tableView.horizontalHeader().sectionSize(section))
         self.ui.tableView.setMinimumWidth(table_width)
 
     @Slot(name="insert_row")
     def insert_row(self, row=False):
         if row is False:
-            row = self.ui.tableView.currentIndex().row()+1
+            row = self.ui.tableView.currentIndex().row() + 1
         self.model.insertRows(row, 1)
 
     @Slot(name="remove_rows")
@@ -103,7 +104,7 @@ class CustomQDialog(QDialog):
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_set.update(range(top, bottom+1))
+            row_set.update(range(top, bottom + 1))
         for row in reversed(list(row_set)):
             self.model.removeRows(row, 1)
 
@@ -126,7 +127,7 @@ class CustomQDialog(QDialog):
         super().accept()
 
 
-class AddObjectClassesDialog(CustomQDialog):
+class AddObjectClassesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
@@ -150,8 +151,8 @@ class AddObjectClassesDialog(CustomQDialog):
         self.resize_tableview()
 
     def resize_tableview(self):
-        self.ui.tableView.horizontalHeader().resizeSection(0, 200)  # name
-        self.ui.tableView.horizontalHeader().resizeSection(1, 300)  # description
+        self.ui.tableView.horizontalHeader().resizeSection(0, 150)  # name
+        self.ui.tableView.horizontalHeader().resizeSection(1, 200)  # description
         super().resize_tableview()
 
     def accept(self):
@@ -159,7 +160,7 @@ class AddObjectClassesDialog(CustomQDialog):
         if index == 0:
             display_order = self.object_class_list.first().display_order - 1
         else:
-            display_order = self.object_class_list.all()[index-1].display_order + 1
+            display_order = self.object_class_list.all()[index - 1].display_order + 1
         for i in range(self.model.rowCount()):
             name, description = self.model.row_data(i)
             if not name:
@@ -173,7 +174,7 @@ class AddObjectClassesDialog(CustomQDialog):
         super().accept()
 
 
-class AddObjectsDialog(CustomQDialog):
+class AddObjectsDialog(AddItemsDialog):
     """A dialog to query user's preferences for new objects.
 
     Attributes:
@@ -206,8 +207,8 @@ class AddObjectsDialog(CustomQDialog):
             [self.font_metric.width(x.name) for x in self.db_map.object_class_list()], default=0)
         class_width = max(object_class_width, header.sectionSize(0))
         header.resizeSection(0, self.icon_width + class_width)
-        header.resizeSection(1, 200)
-        header.resizeSection(2, 300)
+        header.resizeSection(1, 150)
+        header.resizeSection(2, 200)
         super().resize_tableview()
 
     @Slot("QModelIndex", "int", "int", name="setup_new_row")
@@ -248,7 +249,7 @@ class AddObjectsDialog(CustomQDialog):
         super().accept()
 
 
-class AddRelationshipClassesDialog(CustomQDialog):
+class AddRelationshipClassesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes.
 
     Attributes:
@@ -375,7 +376,7 @@ class AddRelationshipClassesDialog(CustomQDialog):
         super().accept()
 
 
-class AddRelationshipsDialog(CustomQDialog):
+class AddRelationshipsDialog(AddItemsDialog):
     """A dialog to query user's preferences for new relationships.
 
     Attributes:
@@ -396,7 +397,6 @@ class AddRelationshipsDialog(CustomQDialog):
         self.object_class_id = object_class_id
         self.default_object_column = None
         self.default_object_name = None
-        self.object_class_id_list = None
         self.set_default_object_name()
         self.setup_ui(ui.add_relationships.Ui_Dialog())
         self.ui.toolButton_insert_row.setEnabled(False)
@@ -440,13 +440,14 @@ class AddRelationshipsDialog(CustomQDialog):
         font_metric = QFontMetrics(QFont("", 0))
         icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
         name_width = 0
-        for section, object_class_id in enumerate(self.object_class_id_list):
+        object_class_id_list = [int(x) for x in self.relationship_class.object_class_id_list.split(',')]
+        for section, object_class_id in enumerate(object_class_id_list):
             object_list = self.db_map.object_list(class_id=object_class_id)
             object_width = max([font_metric.width(x.name) for x in object_list], default=0)
             section_width = max(icon_width + object_width, header.sectionSize(section))
             header.resizeSection(section, section_width)
             name_width += object_width
-        section = header.count()-1
+        section = header.count() - 1
         section_width = max(name_width, header.sectionSize(section))
         header.resizeSection(section, section_width)
         super().resize_tableview()
@@ -464,16 +465,8 @@ class AddRelationshipsDialog(CustomQDialog):
         """
         if not self.relationship_class:
             return
-        object_class_id_list = self.relationship_class.object_class_id_list
-        self.object_class_id_list = [int(x) for x in object_class_id_list.split(',')]
-        header = list()
-        for object_class_id in self.object_class_id_list:
-            object_class = self.db_map.single_object_class(id=object_class_id).one_or_none()
-            if not object_class:
-                logging.debug("Couldn't find object class, probably a bug.")
-                return
-            header.append("{} name".format(object_class.name))
-        header.append('relationship name')
+        object_class_name_list = self.relationship_class.object_class_name_list.split(',')
+        header = [*[x + " name" for x in object_class_name_list], 'relationship name']
         self.model.set_horizontal_header_labels(header)
         self.model.clear()
         self.reset_default_object_column()
@@ -539,13 +532,13 @@ class AddRelationshipsDialog(CustomQDialog):
     def accept(self):
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
-            row = self.model.row_data(i)
-            relationship_name = row[name_column]
+            row_data = self.model.row_data(i)
+            relationship_name = row_data[name_column]
             if not relationship_name:
                 continue
             object_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
-                object_name = row[column]
+                object_name = row_data[column]
                 if not object_name:
                     continue
                 object_ = self.db_map.single_object(name=object_name).one_or_none()
@@ -555,6 +548,305 @@ class AddRelationshipsDialog(CustomQDialog):
             if len(object_id_list) < 2:
                 continue
             wide_relationship_args = {
+                'name': relationship_name,
+                'object_id_list': object_id_list,
+                'class_id': self.relationship_class.id
+            }
+            self.args_list.append(wide_relationship_args)
+        super().accept()
+
+
+class EditItemsDialog(QDialog):
+    """A dialog to query user's preferences for updating items.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+    """
+    edit_confirmed = Signal("QVariant", "QVariant", name="edit_confirmed")
+
+    def __init__(self, parent, orig_args_list):
+        super().__init__(parent)
+        self.ui = None
+        self.model = MinimalTableModel(self)
+        self.orig_args_list = orig_args_list
+        self.args_list = list()
+        self.font_metric = QFontMetrics(QFont("", 0))
+        self.setAttribute(Qt.WA_DeleteOnClose)
+
+    def setup_ui(self):
+        self.ui = ui.edit_data_items.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.ui.tableView.setModel(self.model)
+        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+
+    def resize_tableview(self):
+        table_width = self.font_metric.width('9999') + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        for j in range(self.ui.tableView.horizontalHeader().count() - 1):
+            table_width += self.ui.tableView.horizontalHeader().sectionSize(j)
+        section = self.ui.tableView.horizontalHeader().count() - 1
+        table_width += min(200, self.ui.tableView.horizontalHeader().sectionSize(section))
+        self.ui.tableView.setMinimumWidth(table_width)
+
+    def accept(self):
+        """Emit update_confirmed signal"""
+        self.edit_confirmed.emit(self.args_list, self.orig_args_list)
+        super().accept()
+
+
+class EditObjectClassesDialog(EditItemsDialog):
+    """A dialog to query user's preferences for updating object classes.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        db_map (DatabaseMapping): database handle from `spinedatabase_api`
+        object_class_args_list (list): list of dictionaries corresponding to object classes to edit/update
+    """
+    def __init__(self, parent, db_map, object_class_args_list):
+        super().__init__(parent, object_class_args_list)
+        self.setup_ui()
+        self.setWindowTitle("Edit object classes")
+        self.model.set_horizontal_header_labels(['object class name', 'description'])
+        self.orig_data = list()
+        self.id_list = list()
+        for object_class_args in object_class_args_list:
+            try:
+                self.id_list.append(object_class_args["id"])
+            except KeyError:
+                continue
+            try:
+                name = object_class_args["name"]
+            except KeyError:
+                continue
+            try:
+                description = object_class_args["description"]
+            except KeyError:
+                description = None
+            row_data = [name, description]
+            self.orig_data.append(row_data)
+        self.model.reset_model(self.orig_data)
+        self.resize_tableview()
+
+    def resize_tableview(self):
+        header = self.ui.tableView.horizontalHeader()
+        header.resizeSection(0, 150)
+        header.resizeSection(1, 200)
+        super().resize_tableview()
+
+    def accept(self):
+        """Setup args_list and call accept on the super class."""
+        for i in range(self.model.rowCount()):
+            id = self.id_list[i]
+            name, description = self.model.row_data(i)
+            if not name:
+                continue
+            orig_name, orig_description = self.orig_data[i]
+            if name == orig_name and description == orig_description:
+                continue
+            object_class_args = {
+                'id': id,
+                'name': name,
+                'description': description
+            }
+            self.args_list.append(object_class_args)
+        super().accept()
+
+
+class EditObjectsDialog(EditItemsDialog):
+    """A dialog to query user's preferences for updating objects.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        db_map (DatabaseMapping): database handle from `spinedatabase_api`
+        object_args_list (list): list of dictionaries corresponding to objects to edit/update
+    """
+    def __init__(self, parent, db_map, object_args_list):
+        super().__init__(parent, object_args_list)
+        self.setup_ui()
+        self.setWindowTitle("Edit objects")
+        self.model.set_horizontal_header_labels(['object name', 'description'])
+        self.orig_data = list()
+        self.id_list = list()
+        for object_args in object_args_list:
+            try:
+                self.id_list.append(object_args["id"])
+            except KeyError:
+                continue
+            try:
+                name = object_args["name"]
+            except KeyError:
+                continue
+            try:
+                description = object_args["description"]
+            except KeyError:
+                description = None
+            row_data = [name, description]
+            self.orig_data.append(row_data)
+        self.model.reset_model(self.orig_data)
+        self.resize_tableview()
+
+    def resize_tableview(self):
+        header = self.ui.tableView.horizontalHeader()
+        header.resizeSection(0, 150)
+        header.resizeSection(1, 200)
+        super().resize_tableview()
+
+    def accept(self):
+        """Setup args_list and call accept on the super class."""
+        for i in range(self.model.rowCount()):
+            id = self.id_list[i]
+            name, description = self.model.row_data(i)
+            if not name:
+                continue
+            orig_name, orig_description = self.orig_data[i]
+            if name == orig_name and description == orig_description:
+                continue
+            object_args = {
+                'id': id,
+                'name': name,
+                'description': description
+            }
+            self.args_list.append(object_args)
+        super().accept()
+
+
+class EditRelationshipClassesDialog(EditItemsDialog):
+    """A dialog to query user's preferences for updating relationship classes.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        db_map (DatabaseMapping): database handle from `spinedatabase_api`
+        relationship_class_args_list (list): list of dictionaries corresponding to relationship classes to edit/update
+    """
+    def __init__(self, parent, db_map, relationship_class_args_list):
+        super().__init__(parent, relationship_class_args_list)
+        self.setup_ui()
+        self.setWindowTitle("Edit relationship classes")
+        self.model.set_horizontal_header_labels(['relationship class name'])
+        self.orig_data = list()
+        self.id_list = list()
+        for relationship_class_args in relationship_class_args_list:
+            try:
+                self.id_list.append(relationship_class_args["id"])
+            except KeyError:
+                continue
+            try:
+                name = relationship_class_args["name"]
+            except KeyError:
+                continue
+            row_data = [name]
+            self.orig_data.append(row_data)
+        self.model.reset_model(self.orig_data)
+        self.resize_tableview()
+
+    def resize_tableview(self):
+        self.ui.tableView.resizeColumnsToContents()
+        header = self.ui.tableView.horizontalHeader()
+        header.resizeSection(0, 200)
+        super().resize_tableview()
+
+    def accept(self):
+        """Setup args_list and call accept on the super class."""
+        for i in range(self.model.rowCount()):
+            id = self.id_list[i]
+            name = self.model.row_data(i)[0]
+            if not name:
+                continue
+            orig_name = self.orig_data[i][0]
+            if name == orig_name:
+                continue
+            relationship_class_args = {
+                'id': id,
+                'name': name
+            }
+            self.args_list.append(relationship_class_args)
+        super().accept()
+
+
+class EditRelationshipsDialog(EditItemsDialog):
+    """A dialog to query user's preferences for updating relationships.
+
+    Attributes:
+        parent (DataStoreForm): data store widget
+        db_map (DatabaseMapping): database handle from `spinedatabase_api`
+        relationship_args_list (list): list of dictionaries corresponding to relationships to edit/update
+        relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
+    """
+    def __init__(self, parent, db_map, relationship_args_list, relationship_class):
+        super().__init__(parent, relationship_args_list)
+        self.relationship_class = relationship_class
+        self.db_map = db_map
+        self.setup_ui()
+        self.setWindowTitle("Edit relationships")
+        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
+        object_class_name_list = relationship_class.object_class_name_list.split(",")
+        self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
+        self.orig_data = list()
+        self.orig_object_id_lists = list()
+        self.id_list = list()
+        for relationship_args in relationship_args_list:
+            try:
+                self.id_list.append(relationship_args["id"])
+            except KeyError:
+                continue
+            try:
+                object_name_list = relationship_args["object_name_list"].split(',')
+                object_id_list = [int(x) for x in relationship_args["object_id_list"].split(',')]
+                name = relationship_args["name"]
+            except KeyError:
+                continue
+            row_data = [*object_name_list, name]
+            self.orig_data.append(row_data)
+            self.orig_object_id_lists.append(object_id_list)
+        self.model.reset_model(self.orig_data)
+        for row in range(self.model.rowCount()):
+            for column in range(self.model.columnCount() - 1):
+                index = self.model.index(row, column)
+                self.model.setData(index, self.object_icon, Qt.DecorationRole)
+        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
+        self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
+        self.resize_tableview()
+
+    @Slot("QWidget", name='data_committed')
+    def data_committed(self, editor):
+        """Update 'object x' field with data from combobox editor."""
+        data = editor.text()
+        if data is None:
+            return
+        index = editor.index()
+        self.model.setData(index, data, Qt.EditRole)
+
+    def resize_tableview(self):
+        self.ui.tableView.resizeColumnsToContents()
+        header = self.ui.tableView.horizontalHeader()
+        super().resize_tableview()
+
+    def accept(self):
+        """Setup args_list and call accept on the super class."""
+        name_column = self.model.columnCount() - 1
+        for i in range(self.model.rowCount()):
+            id = self.id_list[i]
+            orig_object_id_list = self.orig_object_id_lists[i]
+            row_data = self.model.row_data(i)
+            orig_row_data = self.orig_data[i]
+            relationship_name = row_data[name_column]
+            orig_relationship_name = orig_row_data[name_column]
+            if not relationship_name:
+                continue
+            object_id_list = list()
+            for column in range(name_column):  # Leave 'name' column outside
+                object_name = row_data[column]
+                if not object_name:
+                    continue
+                object_ = self.db_map.single_object(name=object_name).one_or_none()
+                if not object_:
+                    continue
+                object_id_list.append(object_.id)
+            if len(object_id_list) < 2:
+                continue
+            if orig_object_id_list == object_id_list:
+                continue
+            wide_relationship_args = {
+                'id': id,
                 'name': relationship_name,
                 'object_id_list': object_id_list,
                 'class_id': self.relationship_class.id

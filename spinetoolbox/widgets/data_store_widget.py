@@ -37,8 +37,11 @@ from spinedatabase_api import SpineDBAPIError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDelegate
-from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, AddRelationshipClassesDialog, \
-    AddRelationshipsDialog, CommitDialog
+from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
+    AddRelationshipClassesDialog, AddRelationshipsDialog, \
+    EditObjectClassesDialog, EditObjectsDialog, \
+    EditRelationshipClassesDialog, EditRelationshipsDialog, \
+    CommitDialog
 from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterModel, \
     RelationshipParameterModel, RelationshipParameterValueModel, \
     ObjectParameterProxy, ObjectParameterValueProxy, RelationshipParameterProxy, RelationshipParameterValueProxy
@@ -173,7 +176,7 @@ class DataStoreForm(QMainWindow):
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
-        self.ui.treeView_object.editKeyPressed.connect(self.rename_item)
+        # self.ui.treeView_object.editKeyPressed.connect(self.edit_item) # TODO: Connect this better
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
         # Horizontal header subfilter
@@ -578,12 +581,18 @@ class DataStoreForm(QMainWindow):
             self.call_show_add_relationship_classes_form(index)
         elif option == "Add relationships":
             self.call_show_add_relationships_form(index)
+        elif option == "Edit object classes":
+            self.show_edit_object_classes_form()
+        elif option == "Edit objects":
+            self.show_edit_objects_form()
+        elif option == "Edit relationship classes":
+            self.show_edit_relationship_classes_form()
+        elif option == "Edit relationships":
+            self.show_edit_relationships_form()
         elif option == "Expand next":
             self.expand_next(index)
-        elif option.startswith("Rename"):
-            self.rename_item(index)
         elif option.startswith("Remove selected"):
-            self.remove_items()
+            self.remove_object_tree_items()
         elif option == "Add parameters":
             self.call_add_parameters(index)
         elif option == "Add parameter values":
@@ -638,7 +647,7 @@ class DataStoreForm(QMainWindow):
             object_classes = self.db_map.add_object_classes(*object_class_args_list)
             for object_class in object_classes:
                 self.object_tree_model.add_object_class(object_class)
-            msg = "Successfully added new object classes {}.".format(", ".join([x.name for x in object_classes]))
+            msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -657,7 +666,7 @@ class DataStoreForm(QMainWindow):
             objects = self.db_map.add_objects(*object_args_list)
             for object_ in objects:
                 self.object_tree_model.add_object(object_)
-            msg = "Successfully added new objects {}.".format(", ".join([x.name for x in objects]))
+            msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -679,8 +688,8 @@ class DataStoreForm(QMainWindow):
                 dim_count_list.append(len(wide_relationship_class.object_class_id_list.split(',')))
             max_dim_count = max(dim_count_list)
             self.relationship_parameter_value_model.extend_object_name_header(max_dim_count)
-            relationship_class_name_list = ", ".join([x.name for x in wide_relationship_classes])
-            msg = "Successfully added new relationship classes {}.".format(relationship_class_name_list)
+            relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+            msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -705,61 +714,174 @@ class DataStoreForm(QMainWindow):
             wide_relationships = self.db_map.add_wide_relationships(*wide_relationship_args_list)
             for wide_relationship in wide_relationships:
                 self.object_tree_model.add_relationship(wide_relationship)
-            msg = "Successfully added new relationships {}.".format(", ".join([x.name for x in wide_relationships]))
+            relationship_name_list = "', '".join([x.name for x in wide_relationships])
+            msg = "Successfully added new relationships '{}'.".format(relationship_name_list)
             self.msg.emit(msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    def rename_item(self, renamed_index):
-        """Rename item in the database and treeview"""
-        renamed_item = self.object_tree_model.itemFromIndex(renamed_index)
-        curr_name = renamed_item.text()
-        answer = QInputDialog.getText(
-            self, "Rename item", "Enter new name:", QLineEdit.Normal, curr_name)
-        new_name = answer[0]
-        if not new_name: # cancel clicked
+    def show_edit_object_classes_form(self):
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
             return
-        if new_name == curr_name: # nothing to do here
-            return
-        renamed_type = renamed_item.data(Qt.UserRole)
-        renamed = renamed_item.data(Qt.UserRole+1)
-        try:
-            if renamed_type == 'object_class':
-                object_class = self.db_map.rename_object_class(renamed['id'], new_name)
-                msg = "Successfully renamed object class to '{}'.".format(object_class.name)
-            elif renamed_type == 'object':
-                object_ = self.db_map.rename_object(renamed['id'], new_name)
-                msg = "Successfully renamed object to '{}'.".format(object_.name)
-            elif renamed_type == 'relationship_class':
-                relationship_class = self.db_map.rename_relationship_class(renamed['id'], new_name)
-                msg = "Successfully renamed relationship class to '{}'.".format(relationship_class.name)
-            elif renamed_type == 'relationship':
-                relationship = self.db_map.rename_relationship(renamed['id'], new_name)
-                msg = "Successfully renamed relationship to '{}'.".format(relationship.name)
-            else:
-                return # should never happen
-            self.msg.emit(msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-            return
-        self.object_tree_model.rename_item(new_name, curr_name, renamed_type, renamed['id'])
-        self.object_parameter_model.rename_item(new_name, curr_name, renamed_type)
-        self.object_parameter_value_model.rename_item(new_name, curr_name, renamed_type)
-        self.relationship_parameter_model.rename_item(new_name, curr_name, renamed_type)
-        self.relationship_parameter_value_model.rename_item(new_name, curr_name, renamed_type)
-        current = self.ui.treeView_object.currentIndex()
-        self.filter_parameter_value_models(current, current)
-        self.filter_parameter_models(current, current)
+        object_class_args_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "object_class":
+                continue
+            object_class_args_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditObjectClassesDialog(self, self.db_map, object_class_args_list)
+        dialog.edit_confirmed.connect(self.update_object_classes)
+        dialog.show()
 
     @busy_effect
-    def remove_items(self):
+    @Slot("QVariant", "QVariant", name="update_object_classes")
+    def update_object_classes(self, new_kwargs_list, orig_kwargs_list):
+        """Update object classes."""
+        try:
+            object_classes = self.db_map.update_object_classes(*new_kwargs_list)
+            self.object_tree_model.update_items('object_class', object_classes)
+            new_names = list()
+            curr_names = list()
+            for object_class in object_classes:
+                try:
+                    curr_name = next(x for x in orig_kwargs_list if x["id"] == object_class.id)["name"]
+                    curr_names.append(curr_name)
+                    new_names.append(object_class.name)
+                except StopIteration:
+                    continue
+            self.rename_items_in_tables('object_class', new_names, curr_names)
+            msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+
+    def show_edit_objects_form(self):
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        object_args_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "object":
+                continue
+            object_args_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditObjectsDialog(self, self.db_map, object_args_list)
+        dialog.edit_confirmed.connect(self.update_objects)
+        dialog.show()
+
+    @busy_effect
+    @Slot("QVariant", name="update_objects")
+    def update_objects(self, new_kwargs_list, orig_kwargs_list):
+        """Update objects."""
+        try:
+            objects = self.db_map.update_objects(*new_kwargs_list)
+            self.object_tree_model.update_items('object', objects)
+            new_names = list()
+            curr_names = list()
+            for object_ in objects:
+                try:
+                    curr_name = next(x for x in orig_kwargs_list if x["id"] == object_.id)["name"]
+                    curr_names.append(curr_name)
+                    new_names.append(object_.name)
+                except StopIteration:
+                    continue
+            self.rename_items_in_tables('object', new_names, curr_names)
+            msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+
+    def show_edit_relationship_classes_form(self):
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        relationship_class_args_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "relationship_class":
+                continue
+            relationship_class_args_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipClassesDialog(self, self.db_map, relationship_class_args_list)
+        dialog.edit_confirmed.connect(self.update_relationship_classes)
+        dialog.show()
+
+    @busy_effect
+    @Slot("QVariant", name="update_relationship_classes")
+    def update_relationship_classes(self, new_kwargs_list, orig_kwargs_list):
+        """Update object classes."""
+        try:
+            wide_relationship_classes = self.db_map.update_wide_relationship_classes(*new_kwargs_list)
+            self.object_tree_model.update_items('relationship_class', wide_relationship_classes)
+            new_names = list()
+            curr_names = list()
+            for wide_relationship_class in wide_relationship_classes:
+                try:
+                    curr_name = next(x for x in orig_kwargs_list if x["id"] == wide_relationship_class.id)["name"]
+                    curr_names.append(curr_name)
+                    new_names.append(wide_relationship_class.name)
+                except StopIteration:
+                    continue
+            self.rename_items_in_tables('relationship_class', new_names, curr_names)
+            relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+            msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+
+    def show_edit_relationships_form(self):
+        current = self.ui.treeView_object.currentIndex()
+        if current.data(Qt.UserRole) != "relationship":
+            return
+        class_id = current.data(Qt.UserRole + 1)['class_id']
+        wide_relationship_class = self.db_map.single_wide_relationship_class(id=class_id).one_or_none()
+        if not wide_relationship_class:
+            return
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        relationship_args_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "relationship":
+                continue
+            # Only edit relationships of the same class as the one in current index, for now...
+            if index.data(Qt.UserRole + 1)['class_id'] != class_id:
+                continue
+            relationship_args_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipsDialog(self, self.db_map, relationship_args_list, wide_relationship_class)
+        dialog.edit_confirmed.connect(self.update_relationships)
+        dialog.show()
+
+    @busy_effect
+    @Slot("QVariant", name="update_relationships")
+    def update_relationships(self, new_kwargs_list, orig_kwargs_list):
+        """Update object classes."""
+        try:
+            wide_relationships = self.db_map.update_wide_relationships(*new_kwargs_list)
+            self.object_tree_model.update_relationships(wide_relationships)
+            # NOTE: we don't need to call rename_items_in_tables here, for now
+            relationship_name_list = "', '".join([x.name for x in wide_relationships])
+            msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
+            self.msg.emit(msg)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+
+    def rename_items_in_tables(self, renamed_type, new_names, curr_names):
+        """Rename items in parameter and parameter value models."""
+        self.object_parameter_model.rename_items(renamed_type, new_names, curr_names)
+        self.object_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
+        self.relationship_parameter_model.rename_items(renamed_type, new_names, curr_names)
+        self.relationship_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
+        current = self.ui.treeView_object.currentIndex()
+        self.filter_parameter_models(current, current)
+        self.filter_parameter_value_models(current, current)
+
+    @busy_effect
+    def remove_object_tree_items(self):
         """Remove all selected items from the object treeview."""
-        selection = self.ui.treeView_object.selectionModel().selection()
-        if not selection:
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
             return
         removed_id_dict = {}
         removed_name_dict = {}
-        for index in selection.indexes():
+        for index in indexes:
             removed_type = index.data(Qt.UserRole)
             removed_item = index.data(Qt.UserRole+1)
             removed_id_dict.setdefault(removed_type, set()).add(removed_item['id'])
@@ -1017,8 +1139,8 @@ class DataStoreForm(QMainWindow):
             curr_name = source_index.data(Qt.DisplayRole)
         if source_model.setData(source_index, new_value) and source_index.column() == parameter_name_column:
             new_name = source_index.data(Qt.DisplayRole)
-            self.object_parameter_value_model.rename_item(new_name, curr_name, "parameter")
-            self.relationship_parameter_value_model.rename_item(new_name, curr_name, "parameter")
+            self.object_parameter_value_model.rename_items("parameter", [new_name], [curr_name])
+            self.relationship_parameter_value_model.rename_items("parameter", [new_name], [curr_name])
 
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):

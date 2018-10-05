@@ -79,6 +79,11 @@ CALL pyside2-uic ../spinetoolbox/ui/data_store_form.ui -o ../spinetoolbox/ui/dat
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\data_store_form.py.o > ..\spinetoolbox\ui\data_store_form.py
 del ..\spinetoolbox\ui\data_store_form.py.o
 
+ECHO building data_store_form.py
+CALL pyside2-uic ../spinetoolbox/ui/edit_data_items.ui -o ../spinetoolbox/ui/edit_data_items.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\edit_data_items.py.o > ..\spinetoolbox\ui\edit_data_items.py
+del ..\spinetoolbox\ui\edit_data_items.py.o
+
 ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
@@ -150,6 +155,7 @@ CALL append_license_xml ..\spinetoolbox\ui\add_relationships.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
+CALL append_license_xml ..\spinetoolbox\ui\edit_data_items.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\network_map_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
@@ -174,6 +180,7 @@ CALL append_license_py ..\spinetoolbox\ui\add_relationships.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
+CALL append_license_py ..\spinetoolbox\ui\edit_data_items.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\network_map_form.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py

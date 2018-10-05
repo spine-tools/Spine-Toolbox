@@ -1073,14 +1073,14 @@ class ObjectTreeModel(QStandardItemModel):
         for object_class in object_class_list:
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
-            object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
+            object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_item_list = list()
             for object_ in object_list:
                 if object_.class_id != object_class.id:
                     continue
                 object_item = QStandardItem(object_.name)
                 object_item.setData('object', Qt.UserRole)
-                object_item.setData(object_._asdict(), Qt.UserRole+1)
+                object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1088,7 +1088,7 @@ class ObjectTreeModel(QStandardItemModel):
                         continue
                     relationship_class_item = QStandardItem(wide_relationship_class.name)
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
-                    relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole+1)
+                    relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
@@ -1098,7 +1098,7 @@ class ObjectTreeModel(QStandardItemModel):
                             continue
                         relationship_item = QStandardItem(wide_relationship.name)
                         relationship_item.setData('relationship', Qt.UserRole)
-                        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole+1)
+                        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
                         relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
@@ -1115,14 +1115,14 @@ class ObjectTreeModel(QStandardItemModel):
         """Returns new object class item."""
         object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
-        object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
+        object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
         return object_class_item
 
     def new_object_item(self, object_):
         """Returns new object item."""
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
-        object_item.setData(object_._asdict(), Qt.UserRole+1)
+        object_item.setData(object_._asdict(), Qt.UserRole + 1)
         relationship_class_item_list = list()
         for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
@@ -1133,7 +1133,7 @@ class ObjectTreeModel(QStandardItemModel):
     def new_relationship_class_item(self, wide_relationship_class, object_):
         """Returns new relationship class item."""
         relationship_class_item = QStandardItem(wide_relationship_class.name)
-        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole+1)
+        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
         return relationship_class_item
@@ -1142,7 +1142,7 @@ class ObjectTreeModel(QStandardItemModel):
         """Returns new relationship item."""
         relationship_item = QStandardItem(wide_relationship.name)
         relationship_item.setData('relationship', Qt.UserRole)
-        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole+1)
+        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
         relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
         return relationship_item
 
@@ -1152,7 +1152,7 @@ class ObjectTreeModel(QStandardItemModel):
         root_item = self.invisibleRootItem().child(0)
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
+            visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
             if visited_object_class['display_order'] >= object_class.display_order:
                 root_item.insertRow(i, QStandardItem())
                 root_item.setChild(i, 0, object_class_item)
@@ -1168,7 +1168,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item = None
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
+            visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
             if visited_object_class['id'] == object_.class_id:
                 object_class_item = visited_object_class_item
                 break
@@ -1183,11 +1183,9 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'root':
-                continue
             if not visited_type == 'object':
                 continue
-            visited_object = visited_item.data(Qt.UserRole+1)
+            visited_object = visited_item.data(Qt.UserRole + 1)
             object_class_id_list = wide_relationship_class.object_class_id_list
             if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
@@ -1201,33 +1199,65 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'root':
-                continue
             if not visited_type == 'relationship_class':
                 continue
-            visited_relationship_class = visited_item.data(Qt.UserRole+1)
+            visited_relationship_class = visited_item.data(Qt.UserRole + 1)
             if not visited_relationship_class['id'] == wide_relationship.class_id:
                 continue
-            visited_object = visited_item.parent().data(Qt.UserRole+1)
+            visited_object = visited_item.parent().data(Qt.UserRole + 1)
             object_id_list = wide_relationship.object_id_list
             if visited_object['id'] not in [int(x) for x in object_id_list.split(',')]:
                 continue
             relationship_item = self.new_relationship_item(wide_relationship)
             visited_item.appendRow(relationship_item)
 
-    def rename_item(self, new_name, curr_name, renamed_type, renamed_id):
-        """Rename all matched items."""
-        items = self.findItems(curr_name, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+    def update_items(self, updated_type, updated_items):
+        """Update object classes, objects, or relationship classes in the model.
+        NOTE: Updating these do not require moving rows, just updating model item roles.
+        """
+        if updated_type == 'relationship':
+            return
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'root':
+            if visited_type != updated_type:
                 continue
-            visited = visited_item.data(Qt.UserRole+1)
-            visited_id = visited['id']
-            if visited_type == renamed_type and visited_id == renamed_id:
-                visited['name'] = new_name
-                visited_item.setData(visited, Qt.UserRole+1)
-                visited_item.setText(new_name)
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                updated_item = updated_items_dict[visited_id]
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                visited_item.setText(updated_item.name)
+            except KeyError:
+                continue
+
+    def update_relationships(self, updated_items):
+        """Update relationships in the model.
+        NOTE: This may require moving rows if the object path has changed."""
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
+        items_to_add = set()
+        for visited_item in reversed(items):
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != "relationship":
+                continue
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                updated_item = updated_items_dict[visited_id]
+                visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
+                updated_object_id_list = updated_item.object_id_list
+                # Handle changes in object path
+                if visited_object_id_list != updated_object_id_list:
+                    visited_index = self.indexFromItem(visited_item)
+                    self.removeRows(visited_index.row(), 1, visited_index.parent())
+                    items_to_add.add(updated_item)
+                else:
+                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                    visited_item.setText(updated_item.name)
+            except KeyError:
+                continue
+        for item in items_to_add:
+            self.add_relationship(item)
 
     def remove_items(self, removed_type, *removed_ids):
         """Remove all matched items and their orphans."""
@@ -1235,7 +1265,7 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
-            visited = visited_item.data(Qt.UserRole+1)
+            visited = visited_item.data(Qt.UserRole + 1)
             if visited_type == 'root':
                 continue
             # Get visited id
@@ -1258,7 +1288,7 @@ class ObjectTreeModel(QStandardItemModel):
         """Find and return next ocurrence of relationship item."""
         if index.data(Qt.UserRole) != 'relationship':
             return None
-        relationship = index.data(Qt.UserRole+1)
+        relationship = index.data(Qt.UserRole + 1)
         items = self.findItems(relationship['name'], Qt.MatchExactly | Qt.MatchRecursive, column=0)
         position = None
         for i, item in enumerate(items):
@@ -1345,7 +1375,7 @@ class DataStoreTableModel(MinimalTableModel):
         self.batch_set_wip_data(wip_indexes, wip_data)
         self.batch_update_data(non_wip_indexes, non_wip_data)
         # TODO: This below assumes some nice ordering in the indexes list. Can we do better?
-        # Maybe just emit data changed for the entire model??
+        # Maybe just emit data changed for the entire model?? emit layoutChanged?
         self.dataChanged.emit(indexes[0], indexes[-1], [Qt.EditRole, Qt.DisplayRole])
 
     def batch_set_wip_data(self, indexes, data):
@@ -1412,7 +1442,7 @@ class ParameterModel(DataStoreTableModel):
             return
         if len(indexes) != len(values):
             return
-        items_to_update = list()
+        items_to_update = dict()
         header = self.horizontal_header_labels()
         id_column = header.index('id')
         for k, index in enumerate(indexes):
@@ -1425,9 +1455,9 @@ class ParameterModel(DataStoreTableModel):
             field_name = header[index.column()]
             if field_name == 'parameter_name':
                 field_name = 'name'
-            item = {"id": id, "field_name": field_name, "new_value": values[k]}
-            items_to_update.append(item)
-        return items_to_update
+            item = {"id": id, field_name: values[k]}
+            items_to_update.setdefault(id, dict()).update(item)
+        return list(items_to_update.values())
 
     def add_items_to_db(self, items_to_add):
         """Add items to database and make columns fixed if successful."""
@@ -1452,9 +1482,7 @@ class ParameterModel(DataStoreTableModel):
         if not items_to_update:
             return False
         try:
-            # TODO: Make it batch rather than one by one, but this requires updating database_api
-            for item in items_to_update:
-                self.db_map.update_parameter(**item)
+            self.db_map.update_parameters(*items_to_update)
             msg = "Parameters successfully updated."
             self._data_store_form.msg.emit(msg)
             return True
@@ -1476,7 +1504,7 @@ class ParameterValueModel(DataStoreTableModel):
             return
         if len(indexes) != len(values):
             return
-        items_to_update = list()
+        items_to_update = dict()
         header = self.horizontal_header_labels()
         id_column = header.index('id')
         for k, index in enumerate(indexes):
@@ -1487,9 +1515,9 @@ class ParameterValueModel(DataStoreTableModel):
             if not id:
                 continue
             field_name = header[index.column()]
-            item = {"id": id, "field_name": field_name, "new_value": values[k]}
-            items_to_update.append(item)
-        return items_to_update
+            item = {"id": id, field_name: values[k]}
+            items_to_update.setdefault(id, dict()).update(item)
+        return list(items_to_update.values())
 
     def add_items_to_db(self, items_to_add):
         """Add parameter values to database and make columns fixed if successful."""
@@ -1509,12 +1537,11 @@ class ParameterValueModel(DataStoreTableModel):
             self._data_store_form.msg_error.emit(e.msg)
 
     def update_items_in_db(self, items_to_update):
-        """Update parameter values in database and make columns fixed if successful."""
+        """Try and update parameter values in database."""
         if not items_to_update:
             return False
         try:
-            for item in items_to_update:
-                self.db_map.update_parameter_value(**item)
+            self.db_map.update_parameter_values(*items_to_update)
             msg = "Parameter values successfully updated."
             self._data_store_form.msg.emit(msg)
             return True
@@ -1537,15 +1564,20 @@ class ObjectParameterModel(ParameterModel):
         model_data = [list(row._asdict().values()) for row in object_parameter_list]
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name'])
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type != "object_class":
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in range(self.rowCount()):
-            if self._data[row][column][Qt.DisplayRole] == curr_name:
+            try:
+                curr_name = self._data[row][column][Qt.DisplayRole]
+                new_name = names_dict[curr_name]
                 self._data[row][column][Qt.EditRole] = new_name
                 self._data[row][column][Qt.DisplayRole] = new_name
+            except KeyError:
+                continue
 
     def remove_items(self, removed_type, *removed_names):
         if removed_type != "object_class":
@@ -1600,23 +1632,30 @@ class RelationshipParameterModel(ParameterModel):
         model_data = [list(row._asdict().values()) for row in relationship_parameter_list]
         self.reset_model(model_data, fixed_column_names=['id', 'relationship_class_name', 'object_class_name_list'])
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object_class"):
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "relationship_class":
             column = header_index("relationship_class_name")
             for row in range(self.rowCount()):
-                if self._data[row][column][Qt.DisplayRole] == curr_name:
+                try:
+                    curr_name = self._data[row][column][Qt.DisplayRole]
+                    new_name = names_dict[curr_name]
                     self._data[row][column][Qt.EditRole] = new_name
                     self._data[row][column][Qt.DisplayRole] = new_name
+                except KeyError:
+                    continue
         elif renamed_type == "object_class":
             column = header_index("object_class_name_list")
             for row in range(self.rowCount()):
                 object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
                 for i, object_class_name in enumerate(object_class_name_list):
-                    if object_class_name == curr_name:
-                        object_class_name_list[i] = new_name
+                    try:
+                        object_class_name_list[i] = names_dict[object_class_name]
+                    except KeyError:
+                        continue
                 self._data[row][column][Qt.EditRole] = ",".join(object_class_name_list)
                 self._data[row][column][Qt.DisplayRole] = ",".join(object_class_name_list)
 
@@ -1693,9 +1732,10 @@ class ObjectParameterValueModel(ParameterValueModel):
         model_data = [list(row._asdict().values()) for row in object_parameter_value_list]
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("object_class", "object", "parameter"):
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object_class":
             column = header_index("object_class_name")
@@ -1704,9 +1744,13 @@ class ObjectParameterValueModel(ParameterValueModel):
         elif renamed_type == "parameter":
             column = header_index("parameter_name")
         for row in range(self.rowCount()):
-            if self._data[row][column][Qt.DisplayRole] == curr_name:
+            try:
+                curr_name = self._data[row][column][Qt.DisplayRole]
+                new_name = names_dict[curr_name]
                 self._data[row][column][Qt.EditRole] = new_name
                 self._data[row][column][Qt.DisplayRole] = new_name
+            except KeyError:
+                continue
 
     def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("object_class", "object", "parameter"):
@@ -1807,26 +1851,35 @@ class RelationshipParameterValueModel(ParameterValueModel):
         fixed_column_names = ['id', 'relationship_class_name', *self.object_name_header, 'parameter_name']
         self.reset_model(model_data, fixed_column_names=fixed_column_names)
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object", "parameter"):
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object":
             columns = [header_index(x) for x in self.object_name_header]
             for row in range(self.rowCount()):
                 for column in columns:
-                    if self._data[row][column][Qt.EditRole] == curr_name:
+                    try:
+                        curr_name = self._data[row][column][Qt.DisplayRole]
+                        new_name = names_dict[curr_name]
                         self._data[row][column][Qt.EditRole] = new_name
                         self._data[row][column][Qt.DisplayRole] = new_name
+                    except KeyError:
+                        continue
         elif renamed_type in ("relationship_class", "parameter"):
             if renamed_type in "relationship_class":
                 column = header_index("relationship_class_name")
             elif renamed_type in "parameter":
                 column = header_index("parameter_name")
             for row in range(self.rowCount()):
-                if self._data[row][column][Qt.DisplayRole] == curr_name:
+                try:
+                    curr_name = self._data[row][column][Qt.DisplayRole]
+                    new_name = names_dict[curr_name]
                     self._data[row][column][Qt.EditRole] = new_name
                     self._data[row][column][Qt.DisplayRole] = new_name
+                except KeyError:
+                    continue
 
     def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object", "parameter"):

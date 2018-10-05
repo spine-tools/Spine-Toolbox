@@ -11,6 +11,7 @@ This section is for upcoming changes.
 - Several performance enhancements in Data store form (accessing internal data more efficiently,
 optimizing queries to the database.)
 - Now the Data store form offers to commit pending changes at exit.
+- Better support for batch operations in Data store form.
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
