@@ -254,11 +254,11 @@ class ToolboxUI(QMainWindow):
 
     def init_project_item_model(self):
         """Initializes project item model."""
-        root_item = ProjectItem("root", "", is_root=True, is_category=False)
-        ds_category = ProjectItem("Data Stores", "", is_root=False, is_category=True)
-        dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
-        tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
-        view_category = ProjectItem("Views", "", is_root=False, is_category=True)
+        root_item = ProjectItem("root", "", category="root", is_category=False)
+        ds_category = ProjectItem("Data Stores", "", category="", is_category=True)
+        dc_category = ProjectItem("Data Connections", "", category="", is_category=True)
+        tool_category = ProjectItem("Tools", "", category="", is_category=True)
+        view_category = ProjectItem("Views", "", category="", is_category=True)
 
         self.project_item_model = ProjectItemModel(self, root=root_item)
         self.project_item_model.insert_item(ds_category, 0, root_item)

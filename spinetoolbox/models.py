@@ -61,7 +61,7 @@ class ProjectItemModel(QAbstractItemModel):
     #         return True
     #     return False
 
-    def rowCount(self, parent):
+    def rowCount(self, parent=QModelIndex()):
         """Reimplemented row count.
 
         Args:
@@ -70,19 +70,21 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             Number (int) of children of given parent
         """
-        logging.debug("rowCount")
         if not parent.isValid():
-            # This is top-level. Return number of category items.
-            return 4
-        if self.is_category(parent):
-            # Return the number of items in this category
+            # This is the root item. Return number of category items.
+            n_cat_items = self.root().child_count()
+            logging.debug("rowCount: n_cat items: {0}".format(n_cat_items))
+            return self.root().child_count()
+        elif parent.internalPointer() == self.root():
+            logging.debug("rowCount: parent is root")
+            return parent.internalPointer().child_count()
+        elif parent.internalPointer().is_category:
+            logging.debug("rowCount: parent is category {0}".format(parent))
+            return parent.internalPointer().child_count()
+        else:
+            return 0
 
-            if parent.data(Qt.DisplayRole) == "Data Connections":
-                return len(self.data_connections)
-            elif parent.data(Qt.DisplayRole) == "Data Stores":
-                return len(self.data_stores)
-
-    def columnCount(self):
+    def columnCount(self, parent=QModelIndex()):
         """Returns model column count."""
         return 1
 
@@ -92,30 +94,53 @@ class ProjectItemModel(QAbstractItemModel):
         Args:
             index (QModelIndex): Flags of item at this index.
         """
-        if not self.is_category(index):
+        if not index.internalPointer().is_category:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
         else:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def parent(self, index=QModelIndex()):
         """Reimplemented method."""
-        if not index.isValid():
-            return self.root()
-        parent_index = index.parent()
-        if not parent_index.isValid():
+        item = self.project_item(index)
+        parent_item = item.parent()
+        if not parent_item:
+            logging.debug("no parent")
             return QModelIndex()
-        else:
-            return self.createIndex(index.parent().row(), 0, parent_index)
+        if parent_item == self.root():
+            logging.debug("parent is root")
+            return QModelIndex()
+        logging.debug("Parent is a category item")
+        return self.createIndex(parent_item.row(), 0, parent_item)
+
+        # setup = self.get_setup(index)
+        # parent_setup = setup.parent()
+        # if not parent_setup:
+        #     return QModelIndex()
+        # if parent_setup == self._root_setup:
+        #     return QModelIndex()
+        # return self.createIndex(parent_setup.row(), 0, parent_setup)
 
     def index(self, row, column, parent=QModelIndex()):
         """Reimplemented method."""
-        if not parent.isValid():
+        if row < 0 or row >= self.rowCount(parent):
             return QModelIndex()
-        child = parent.child(row)
-        if child:
-            return self.createIndex(row, column, child)
+        if column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        parent_item = self.project_item(parent)
+        child = parent_item.child(row)
+        if not child:
+            return QModelIndex()
         else:
-            return QModelIndex()
+            return self.createIndex(row, column, child)
+
+        # if row < 0 or row >= self.rowCount(parent) or column < 0 or column >= self.columnCount(parent):
+        #     return QModelIndex()
+        # parent_setup = self.get_setup(parent)
+        # child_setup = parent_setup.child(row)
+        # if child_setup:
+        #     return self.createIndex(row, column, child_setup)
+        # else:
+        #     return QModelIndex()
 
     def data(self, index, role=None):
         """Returns data in the given index according to requested role.
@@ -132,11 +157,28 @@ class ProjectItemModel(QAbstractItemModel):
         project_item = index.internalPointer()
         # Return DisplayRole
         if role == Qt.DisplayRole:
-            if index.column() == 0:
-                # Show project item name
-                return project_item.name
+            return project_item.name
         else:
             return None
+
+    def project_item(self, index):
+        """Returns project item at given index.
+
+        Args:
+            index (QModelIndex): Index of project item
+
+        Returns:
+            Item at given index or root project item if index is not valid
+        """
+        if not index.isValid():
+            return self.root()
+        return index.internalPointer()
+
+        # if index.isValid():
+        #     setup = index.internalPointer()
+        #     if setup:
+        #         return setup
+        # return self.root()
 
     def insert_item(self, item, row, parent_item):
         """Add new item to model.
