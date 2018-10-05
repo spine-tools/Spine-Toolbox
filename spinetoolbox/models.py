@@ -40,30 +40,29 @@ class ProjectItemModel(QAbstractItemModel):
     """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
     # TODO: Redo everything
     def __init__(self, toolbox, root):
-        super().__init__(parent=toolbox)
+        super().__init__()
         self._toolbox = toolbox
         self._root = root
-        self._data_connections = None
 
     def root(self):
-        return self.root_item
+        return self._root
 
-    def is_category(self, index):
-        """Category items are the children of the root item (top-level items).
-        Project items are the children of category items.
-
-        Args:
-            index (QModelIndex): Index of item to check
-
-        Returns:
-            Boolean value depending on whether the item at index is a category item or not.
-        """
-        if index.parent() == self.root():
-            return True
-        return False
+    # def is_category(self, index):
+    #     """Category items are the children of the root item (top-level items).
+    #     Project items are the children of category items.
+    #
+    #     Args:
+    #         index (QModelIndex): Index of item to check
+    #
+    #     Returns:
+    #         Boolean value depending on whether the item at index is a category item or not.
+    #     """
+    #     if index.parent() == self.root():
+    #         return True
+    #     return False
 
     def rowCount(self, parent):
-        """Reimplemented row counter.
+        """Reimplemented row count.
 
         Args:
             parent (QModelIndex): Index of parent item whose children are counted.
@@ -71,23 +70,37 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             Number (int) of children of given parent
         """
+        logging.debug("rowCount")
         if not parent.isValid():
             # This is top-level. Return number of category items.
             return 4
         if self.is_category(parent):
             # Return the number of items in this category
+
             if parent.data(Qt.DisplayRole) == "Data Connections":
                 return len(self.data_connections)
             elif parent.data(Qt.DisplayRole) == "Data Stores":
                 return len(self.data_stores)
 
     def columnCount(self):
+        """Returns model column count."""
         return 1
+
+    def flags(self, index):
+        """Returns flags for the item at given index
+
+        Args:
+            index (QModelIndex): Flags of item at this index.
+        """
+        if not self.is_category(index):
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+        else:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def parent(self, index=QModelIndex()):
         """Reimplemented method."""
         if not index.isValid():
-            return self.root_item
+            return self.root()
         parent_index = index.parent()
         if not parent_index.isValid():
             return QModelIndex()
@@ -103,6 +116,49 @@ class ProjectItemModel(QAbstractItemModel):
             return self.createIndex(row, column, child)
         else:
             return QModelIndex()
+
+    def data(self, index, role=None):
+        """Returns data in the given index according to requested role.
+
+        Args:
+            index (QModelIndex): Index to query
+            role (int): Role to return
+
+        Returns:
+            Data depending on role.
+        """
+        if not index.isValid():
+            return None
+        project_item = index.internalPointer()
+        # Return DisplayRole
+        if role == Qt.DisplayRole:
+            if index.column() == 0:
+                # Show project item name
+                return project_item.name
+        else:
+            return None
+
+    def insert_item(self, item, row, parent_item):
+        """Add new item to model.
+
+        Args:
+            item (ProjectItem): Project item to add to model
+            row (int): Row where new item is added
+            parent_item (ProjectItem): Parent project item
+
+        Returns:
+            True if successful, False otherwise
+        """
+        if item.is_category:
+            self.beginInsertRows(QModelIndex(), row, row)
+            retval = parent_item.add_child(item)
+            self.endInsertRows()
+        else:
+            # parent_index = self.index(row, 0, parent_item)
+            # TODO: Implement this
+            logging.debug("Item '{0}' is not a category item".format(item.name))
+            retval = False
+        return retval
 
     def setData(self, index, value, role=Qt.EditRole):
         """Change name of item in index to value.

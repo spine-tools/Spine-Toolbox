@@ -29,7 +29,7 @@ import os
 import json
 import shutil
 import getpass
-from metaobject import MetaObject
+from project_item import ProjectItem
 from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
@@ -40,7 +40,7 @@ from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
 
 
-class Tool(MetaObject):
+class Tool(ProjectItem):
     """Tool class.
 
     Attributes:

@@ -31,7 +31,7 @@ import logging
 from PySide2.QtGui import QDesktopServices, QIcon
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QStyle
-from metaobject import MetaObject
+from project_item import ProjectItem
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
@@ -43,7 +43,7 @@ from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
 
 
-class DataStore(MetaObject):
+class DataStore(ProjectItem):
     """Data Store class.
 
     Attributes:

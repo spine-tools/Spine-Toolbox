@@ -31,7 +31,7 @@ from collections import Counter
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtWidgets import QFileDialog, QMessageBox
-from metaobject import MetaObject
+from project_item import ProjectItem
 # from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
 from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
@@ -41,7 +41,7 @@ from datapackage import Package
 from graphics_items import DataConnectionImage
 
 
-class DataConnection(MetaObject):
+class DataConnection(ProjectItem):
     """Data Connection class.
 
     Attributes:

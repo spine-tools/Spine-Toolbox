@@ -29,7 +29,7 @@ import shutil
 import getpass
 import logging
 from PySide2.QtCore import Qt, Slot
-from metaobject import MetaObject
+from project_item import ProjectItem
 from widgets.view_subwindow_widget import ViewWidget
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 from widgets.network_map_widget import NetworkMapForm
@@ -37,7 +37,7 @@ from graphics_items import ViewImage
 from helpers import busy_effect
 
 
-class View(MetaObject):
+class View(ProjectItem):
     """View class.
 
     Attributes:

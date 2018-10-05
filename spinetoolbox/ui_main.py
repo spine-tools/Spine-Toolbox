@@ -44,6 +44,7 @@ from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
+from widgets.julia_repl_widget import JuliaREPLWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -51,7 +52,7 @@ from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBA
     MAINWINDOW_SS, DOC_INDEX_PATH
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
-from widgets.julia_repl_widget import JuliaREPLWidget
+from project_item import ProjectItem
 
 
 class ToolboxUI(QMainWindow):
@@ -253,20 +254,30 @@ class ToolboxUI(QMainWindow):
 
     def init_project_item_model(self):
         """Initializes project item model."""
-        self.project_item_model = ProjectItemModel(self, root=QModelIndex())
+        root_item = ProjectItem("root", "", is_root=True, is_category=False)
+        ds_category = ProjectItem("Data Stores", "", is_root=False, is_category=True)
+        dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
+        tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
+        view_category = ProjectItem("Views", "", is_root=False, is_category=True)
 
-        ds_cat_item = QStandardItem("Data Stores")
-        dc_cat_item = QStandardItem("Data Connections")
-        tool_cat_item = QStandardItem("Tools")
-        view_cat_item = QStandardItem("Views")
-        ds_cat_item.setEditable(False)
-        dc_cat_item.setEditable(False)
-        tool_cat_item.setEditable(False)
-        view_cat_item.setEditable(False)
-        self.project_item_model.root().appendRow(ds_cat_item)
-        self.project_item_model.root().appendRow(dc_cat_item)
-        self.project_item_model.root().appendRow(tool_cat_item)
-        self.project_item_model.root().appendRow(view_cat_item)
+        self.project_item_model = ProjectItemModel(self, root=root_item)
+        self.project_item_model.insert_item(ds_category, 0, root_item)
+        self.project_item_model.insert_item(dc_category, 1, root_item)
+        self.project_item_model.insert_item(tool_category, 2, root_item)
+        self.project_item_model.insert_item(view_category, 3, root_item)
+
+        # ds_cat_item = QStandardItem("Data Stores")
+        # dc_cat_item = QStandardItem("Data Connections")
+        # tool_cat_item = QStandardItem("Tools")
+        # view_cat_item = QStandardItem("Views")
+        # ds_cat_item.setEditable(False)
+        # dc_cat_item.setEditable(False)
+        # tool_cat_item.setEditable(False)
+        # view_cat_item.setEditable(False)
+        # self.project_item_model.root().appendRow(ds_cat_item)
+        # self.project_item_model.root().appendRow(dc_cat_item)
+        # self.project_item_model.root().appendRow(tool_cat_item)
+        # self.project_item_model.root().appendRow(view_cat_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
