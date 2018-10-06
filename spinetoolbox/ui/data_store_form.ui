@@ -226,7 +226,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_object_parameter_value">
+                <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -329,7 +329,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_object_parameter">
+                <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -453,7 +453,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_relationship_parameter_value">
+                <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -547,7 +547,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_relationship_parameter">
+                <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -887,7 +887,7 @@
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>ParameterTableView</class>
+   <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

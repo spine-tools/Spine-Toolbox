@@ -42,8 +42,6 @@ import ui.add_object_classes
 import ui.add_objects
 import ui.add_relationship_classes
 import ui.add_relationships
-import ui.add_parameters
-import ui.add_parameter_values
 import ui.edit_data_items
 
 

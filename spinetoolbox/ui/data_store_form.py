@@ -119,7 +119,7 @@ class Ui_MainWindow(object):
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
-        self.tableView_object_parameter_value = ParameterTableView(self.tab_object_parameter_value)
+        self.tableView_object_parameter_value = AutoFilterCopyPasteTableView(self.tab_object_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -164,7 +164,7 @@ class Ui_MainWindow(object):
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_5.addItem(spacerItem1)
         self.horizontalLayout_5.addLayout(self.verticalLayout_5)
-        self.tableView_object_parameter = ParameterTableView(self.tab_object_parameter)
+        self.tableView_object_parameter = AutoFilterCopyPasteTableView(self.tab_object_parameter)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -216,7 +216,7 @@ class Ui_MainWindow(object):
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
         self.horizontalLayout_2.addLayout(self.verticalLayout)
-        self.tableView_relationship_parameter_value = ParameterTableView(self.tab_relationship_parameter_value)
+        self.tableView_relationship_parameter_value = AutoFilterCopyPasteTableView(self.tab_relationship_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -256,7 +256,7 @@ class Ui_MainWindow(object):
         spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_7.addItem(spacerItem3)
         self.horizontalLayout_3.addLayout(self.verticalLayout_7)
-        self.tableView_relationship_parameter = ParameterTableView(self.tab_relationship_parameter)
+        self.tableView_relationship_parameter = AutoFilterCopyPasteTableView(self.tab_relationship_parameter)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -461,6 +461,6 @@ class Ui_MainWindow(object):
         self.actionRefresh.setText(QtWidgets.QApplication.translate("MainWindow", "Refresh", None, -1))
         self.actionRefresh.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+Return", None, -1))
 
-from widgets.custom_qtableview import ParameterTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

@@ -180,10 +180,10 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
         # Horizontal header subfilter
-        self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_parameter_model_subfilter)
-        self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_parameter_model_subfilter)
-        self.ui.tableView_object_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
-        self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_parameter_model_subfilter)
+        self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
+        self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
+        self.ui.tableView_object_parameter.filter_changed.connect(self.apply_autofilter)
+        self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_autofilter)
         # Parameter table editors
         self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
             connect(self.set_parameter_value_data)
@@ -464,100 +464,99 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_value_models(self, current, previous):
         """Filter parameter value tableViews whenever an item is selected in the treeView"""
-        self.object_parameter_value_proxy.clear_filter()
-        self.relationship_parameter_value_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
-        max_object_count = None
-        if not selected_type == 'root':
-            selected = current.data(Qt.UserRole+1)
-            parent = current.parent().data(Qt.UserRole+1)
-            grand_parent = current.parent().parent().data(Qt.UserRole+1)
+        if selected_type == 'root':
+            self.object_parameter_value_proxy.set_object_class_name(None)
+            self.object_parameter_value_proxy.set_object_name(None)
+            self.relationship_parameter_value_proxy.set_relationship_class_name_list(None)
+            self.relationship_parameter_value_proxy.set_object_name_list(None)
+        else:
+            selected = current.data(Qt.UserRole + 1)
+            parent = current.parent().data(Qt.UserRole + 1)
             if selected_type == 'object_class':
                 object_class_name = selected['name']
                 object_class_id = selected['id']
-                # TODO: get his query from other place. Maybe send a signal when relationship classes change?
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name_list = [x.name for x in relationship_class_list]
-                self.object_parameter_value_proxy.object_class_name = object_class_name
-                self.relationship_parameter_value_proxy.relationship_class_name_list = relationship_class_name_list
-                max_object_count = max(
-                    [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
+                self.object_parameter_value_proxy.set_object_class_name(object_class_name)
+                self.object_parameter_value_proxy.set_object_name(None)
+                self.relationship_parameter_value_proxy.set_relationship_class_name_list(relationship_class_name_list)
+                self.relationship_parameter_value_proxy.set_object_name_list(None)
             elif selected_type == 'object':
                 object_class_name = parent['name']
                 object_class_id = parent['id']
                 object_name = selected['name']
-                # TODO: get his query from other place. Maybe send a signal when relationship classes change?
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name_list = [x.name for x in relationship_class_list]
-                self.object_parameter_value_proxy.object_class_name = object_class_name
-                self.object_parameter_value_proxy.object_name = object_name
-                self.relationship_parameter_value_proxy.relationship_class_name_list = relationship_class_name_list
-                self.relationship_parameter_value_proxy.object_name = object_name
-                max_object_count = max(
-                    [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
+                self.object_parameter_value_proxy.set_object_class_name(object_class_name)
+                self.object_parameter_value_proxy.set_object_name(object_name)
+                self.relationship_parameter_value_proxy.set_relationship_class_name_list(relationship_class_name_list)
+                self.relationship_parameter_value_proxy.set_object_name_list([object_name])
             elif selected_type == 'relationship_class':
                 object_name = parent['name']
                 relationship_class_name = selected['name']
                 object_class_id_list = selected['object_class_id_list'].split(',')
-                self.relationship_parameter_value_proxy.relationship_class_name = relationship_class_name
-                self.relationship_parameter_value_proxy.object_name = object_name
-                max_object_count = len(object_class_id_list)
+                self.relationship_parameter_value_proxy.set_relationship_class_name_list([relationship_class_name])
+                self.relationship_parameter_value_proxy.set_object_name_list([object_name])
             elif selected_type == 'relationship':
                 relationship_class_name = parent['name']
                 object_name_list = selected['object_name_list'].split(',')
-                self.relationship_parameter_value_proxy.relationship_class_name = relationship_class_name
-                self.relationship_parameter_value_proxy.object_name_list = object_name_list
-                max_object_count = len(object_name_list)
-        if max_object_count:
-            object_name_header = self.relationship_parameter_value_model.object_name_header
-            for j in range(max_object_count, len(object_name_header)):
-                self.relationship_parameter_value_proxy.reject_column(object_name_header[j])
+                self.relationship_parameter_value_proxy.set_relationship_class_name_list([relationship_class_name])
+                self.relationship_parameter_value_proxy.set_object_name_list(object_name_list)
         self.object_parameter_value_proxy.apply_filter()
         self.relationship_parameter_value_proxy.apply_filter()
+        # Show/hide object name columns in relationship parameter value view
+        max_object_count = len(self.relationship_parameter_value_model.object_name_header)
+        object_count = self.relationship_parameter_value_proxy.object_count
+        print(object_count)
+        if not object_count:
+            object_count = max_object_count
+        header = self.relationship_parameter_value_model.horizontal_header_labels()
+        object_name_1_column = header.index("object_name_1")
+        for column in range(object_name_1_column, object_name_1_column + object_count):
+            self.ui.tableView_relationship_parameter_value.horizontalHeader().showSection(column)
+        for column in range(object_name_1_column + object_count, object_name_1_column + max_object_count):
+            self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(column)
 
     @Slot("QModelIndex", "QModelIndex", name="filter_parameter_models")
     def filter_parameter_models(self, current, previous):
         """Filter parameter tableViews whenever an item is selected in the treeView"""
-        self.object_parameter_proxy.clear_filter()
-        self.relationship_parameter_proxy.clear_filter()
         selected_type = current.data(Qt.UserRole)
-        if not selected_type:
-            return
-        selected = current.data(Qt.UserRole+1)
-        parent = current.parent().data(Qt.UserRole+1)
-        if selected_type == 'object_class':
-            object_class_name = selected['name']
-            object_class_id = selected['id']
-            # TODO: get his query from other place. Maybe send a signal when relationship classes change?
-            relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-            relationship_class_name_list = [x.name for x in relationship_class_list]
-            self.object_parameter_proxy.object_class_name = object_class_name
-            self.relationship_parameter_proxy.relationship_class_name_list = relationship_class_name_list
-        elif selected_type == 'object':
-            object_class_name = parent['name']
-            object_class_id = parent['id']
-            # TODO: get his query from other place. Maybe send a signal when relationship classes change?
-            relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-            relationship_class_name_list = [x.name for x in relationship_class_list]
-            self.object_parameter_proxy.object_class_name = object_class_name
-            self.relationship_parameter_proxy.relationship_class_name_list = relationship_class_name_list
-        elif selected_type == 'relationship_class':
-            relationship_class_name = selected['name']
-            self.relationship_parameter_proxy.relationship_class_name = relationship_class_name
-        elif selected_type == 'relationship':
-            relationship_class_name = parent['name']
-            self.relationship_parameter_proxy.relationship_class_name = relationship_class_name
+        if selected_type == 'root':
+            self.object_parameter_proxy.set_object_class_name(None)
+            self.relationship_parameter_proxy.set_relationship_class_name_list(None)
+        else:
+            selected = current.data(Qt.UserRole + 1)
+            parent = current.parent().data(Qt.UserRole + 1)
+            if selected_type == 'object_class':
+                object_class_name = selected['name']
+                object_class_id = selected['id']
+                relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
+                relationship_class_name_list = [x.name for x in relationship_class_list]
+                self.object_parameter_proxy.set_object_class_name(object_class_name)
+                self.relationship_parameter_proxy.set_relationship_class_name_list(relationship_class_name_list)
+            elif selected_type == 'object':
+                object_class_name = parent['name']
+                object_class_id = parent['id']
+                relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
+                relationship_class_name_list = [x.name for x in relationship_class_list]
+                self.object_parameter_proxy.set_object_class_name(object_class_name)
+                self.relationship_parameter_proxy.set_relationship_class_name_list(relationship_class_name_list)
+            elif selected_type == 'relationship_class':
+                relationship_class_name = selected['name']
+                self.relationship_parameter_proxy.set_relationship_class_name_list([relationship_class_name])
+            elif selected_type == 'relationship':
+                relationship_class_name = parent['name']
+                self.relationship_parameter_proxy.set_relationship_class_name_list([relationship_class_name])
         self.object_parameter_proxy.apply_filter()
         self.relationship_parameter_proxy.apply_filter()
 
-    @Slot("QObject", name="apply_parameter_model_subfilter")
-    def apply_parameter_model_subfilter(self, proxy_model, column, text_list):
+    @Slot("QObject", "int", "QStringList", name="apply_autofilter")
+    def apply_autofilter(self, proxy_model, column, text_list):
         """Called when the tableview wants to trigger the subfilter."""
         header = proxy_model.sourceModel().horizontal_header_labels()
-        proxy_model.remove_subrule(header[column])
-        if text_list:
-            kwargs = {header[column]: text_list}
-            proxy_model.add_subrule(**kwargs)
+        kwargs = {header[column]: text_list}
+        proxy_model.add_rule(**kwargs)
         proxy_model.apply_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
@@ -603,17 +602,17 @@ class DataStoreForm(QMainWindow):
         self.object_tree_context_menu = None
 
     def call_show_add_objects_form(self, index):
-        class_id = index.data(Qt.UserRole+1)['id']
+        class_id = index.data(Qt.UserRole + 1)['id']
         self.show_add_objects_form(class_id=class_id)
 
     def call_show_add_relationship_classes_form(self, index):
-        object_class_id = index.data(Qt.UserRole+1)['id']
+        object_class_id = index.data(Qt.UserRole + 1)['id']
         self.show_add_relationship_classes_form(object_class_id=object_class_id)
 
     def call_show_add_relationships_form(self, index):
-        relationship_class = index.data(Qt.UserRole+1)
-        object_ = index.parent().data(Qt.UserRole+1)
-        object_class = index.parent().parent().data(Qt.UserRole+1)
+        relationship_class = index.data(Qt.UserRole + 1)
+        object_ = index.parent().data(Qt.UserRole + 1)
+        object_class = index.parent().parent().data(Qt.UserRole + 1)
         self.show_add_relationships_form(
             relationship_class_id=relationship_class['id'],
             object_id=object_['id'],
@@ -883,7 +882,7 @@ class DataStoreForm(QMainWindow):
         removed_name_dict = {}
         for index in indexes:
             removed_type = index.data(Qt.UserRole)
-            removed_item = index.data(Qt.UserRole+1)
+            removed_item = index.data(Qt.UserRole + 1)
             removed_id_dict.setdefault(removed_type, set()).add(removed_item['id'])
             removed_name_dict.setdefault(removed_type, set()).add(removed_item['name'])
         try:
@@ -1033,7 +1032,7 @@ class DataStoreForm(QMainWindow):
                     selected_object_class_name = index.parent().parent().data(Qt.DisplayRole)
                     object_name = index.parent().data(Qt.DisplayRole)
                     relationship_class_name = index.data(Qt.DisplayRole)
-                    object_class_name_list = index.data(Qt.UserRole+1)["object_class_name_list"].split(",")
+                    object_class_name_list = index.data(Qt.UserRole + 1)["object_class_name_list"].split(",")
                     object_name_list = list()
                     for object_class_name in object_class_name_list:
                         if object_class_name == selected_object_class_name:
@@ -1042,7 +1041,7 @@ class DataStoreForm(QMainWindow):
                             object_name_list.append(None)
                 elif index.data(Qt.UserRole) == 'relationship':
                     relationship_class_name = index.parent().data(Qt.DisplayRole)
-                    object_name_list = index.data(Qt.UserRole+1)["object_name_list"].split(",")
+                    object_name_list = index.data(Qt.UserRole + 1)["object_name_list"].split(",")
                 else:
                     continue
                 model.insertRows(row + i, 1)
@@ -1073,6 +1072,8 @@ class DataStoreForm(QMainWindow):
             for index in selection.indexes():
                 if index.data(Qt.UserRole) == 'object_class':
                     object_class_name = index.data(Qt.DisplayRole)
+                elif index.data(Qt.UserRole) == 'object':
+                    object_class_name = index.parent().data(Qt.DisplayRole)
                 else:
                     continue
                 model.insertRows(row + i, 1)
@@ -1101,6 +1102,8 @@ class DataStoreForm(QMainWindow):
             for index in selection.indexes():
                 if index.data(Qt.UserRole) == 'relationship_class':
                     relationship_class_name = index.data(Qt.DisplayRole)
+                elif index.data(Qt.UserRole) == 'relationship':
+                    relationship_class_name = index.parent().data(Qt.DisplayRole)
                 else:
                     continue
                 model.insertRows(row + i, 1)

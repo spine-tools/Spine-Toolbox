@@ -33,7 +33,7 @@ class Ui_Dialog(object):
         Dialog.resize(363, 312)
         self.verticalLayout = QtWidgets.QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.tableView = CustomQTableView(Dialog)
+        self.tableView = CopyPasteTableView(Dialog)
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.DoubleClicked|QtWidgets.QAbstractItemView.EditKeyPressed)
         self.tableView.setTabKeyNavigation(False)
         self.tableView.setObjectName("tableView")
@@ -71,5 +71,5 @@ class Ui_Dialog(object):
         self.actionRemove_rows.setToolTip(QtWidgets.QApplication.translate("Dialog", "<html><head/><body><p>Remove selected rows <span style=\" font-weight:600;\">(Ctrl+Del)</span></p></body></html>", None, -1))
         self.actionRemove_rows.setShortcut(QtWidgets.QApplication.translate("Dialog", "Ctrl+Del", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView
+from widgets.custom_qtableview import CopyPasteTableView
 import resources_icons_rc

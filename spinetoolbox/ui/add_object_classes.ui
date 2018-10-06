@@ -66,7 +66,7 @@
     </layout>
    </item>
    <item>
-    <widget class="CustomQTableView" name="tableView">
+    <widget class="CopyPasteTableView" name="tableView">
      <property name="editTriggers">
       <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::DoubleClicked|QAbstractItemView::EditKeyPressed</set>
      </property>
@@ -128,7 +128,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CustomQTableView</class>
+   <class>CopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

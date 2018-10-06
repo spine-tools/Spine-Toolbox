@@ -78,7 +78,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setContentsMargins(1, 1, 1, 1)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.tableView_resource_data = CustomQTableView(self.tab_data)
+        self.tableView_resource_data = CopyPasteTableView(self.tab_data)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -178,7 +178,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.tabWidget_resources.setCurrentIndex(0)
-        self.tabWidget_data_schema.setCurrentIndex(1)
+        self.tabWidget_data_schema.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -212,5 +212,5 @@ class Ui_MainWindow(object):
         self.actionRemove_foreign_keys.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Remove selected foreign keys.", None, -1))
         self.actionInsert_foreign_key.setText(QtWidgets.QApplication.translate("MainWindow", "Insert foreign key", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView
+from widgets.custom_qtableview import CopyPasteTableView
 import resources_icons_rc

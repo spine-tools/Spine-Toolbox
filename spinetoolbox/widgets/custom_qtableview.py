@@ -30,7 +30,7 @@ from PySide2.QtGui import QKeySequence
 from widgets.custom_menus import QOkMenu
 
 
-class CustomQTableView(QTableView):
+class CopyPasteTableView(QTableView):
     """Custom QTableView class with copy-paste functionality.
 
     Attributes:
@@ -173,7 +173,7 @@ class CustomQTableView(QTableView):
     #     return super().edit(index, trigger, event)
 
 
-class ParameterTableView(CustomQTableView):
+class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 
     Attributes:
@@ -181,7 +181,6 @@ class ParameterTableView(CustomQTableView):
     """
 
     filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
-    filter_triggered = Signal("QObject", name="filter_triggered")
 
     def __init__(self, parent):
         """Initialize the class."""
@@ -212,25 +211,7 @@ class ParameterTableView(CustomQTableView):
         self.action_all.triggered.connect(self.action_all_triggered)
         filter_menu.addAction(self.action_all)
         filter_menu.addSeparator()
-        # Get values from model, after the application of all filters and subfilters from other columns
-        values = list()
-        source_model = model.sourceModel()
-        for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter
-            if not model.filter_accepts_row(source_row, QModelIndex()):
-                continue
-            # Skip values rejected by subfilters from *other* columns
-            if not model.subfilter_accepts_row(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
-                continue
-            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
-            if data is None:
-                continue
-            values.append(data)
-        # Get values currently filtered in this column
-        try:
-            filtered_values = model.subrule_dict[self.filter_column]
-        except KeyError:
-            filtered_values = list()
+        values, filtered_values = model.autofilter_values(self.filter_column)
         # Add filter actions
         self.filter_action_list = list()
         for i, value in enumerate(sorted(list(set(values)))):
@@ -266,9 +247,9 @@ class ParameterTableView(CustomQTableView):
         for action in self.filter_action_list:
             action.setChecked(checked)
 
-    @Slot(name="apply_filter")
+    @Slot(name="update_and_apply_filter")
     def update_and_apply_filter(self):
-        """Called when user clicks Ok in a filter. Emit `filter_triggered` signal."""
+        """Called when user clicks Ok in a filter. Emit `filter_changed` signal."""
         filter_text_list = list()
         for action in self.filter_action_list:
             if not action.isChecked():
