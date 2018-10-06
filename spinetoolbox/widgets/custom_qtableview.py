@@ -37,6 +37,8 @@ class CopyPasteTableView(QTableView):
         parent (QWidget): The parent of this view
     """
 
+    focus_gained = Signal(name="focus_gained")
+
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
@@ -47,6 +49,10 @@ class CopyPasteTableView(QTableView):
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
         self.clipboard_text = QApplication.clipboard().text()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.focus_gained.emit()
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -77,7 +83,7 @@ class CopyPasteTableView(QTableView):
                 if h_header.isSectionHidden(j):
                     continue
                 data = self.model().index(i, j).data(Qt.DisplayRole)
-                str_data = str(data) if data else ""
+                str_data = str(data) if data is not None else ""
                 row.append(str_data)
             rows.append("\t".join(row))
         content = "\n".join(rows)

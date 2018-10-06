@@ -36,11 +36,17 @@ class ObjectTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-    editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
+    
+    edit_key_pressed = Signal("QModelIndex", name="edit_key_pressed")
+    focus_gained = Signal(name="focus_gained")
 
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.focus_gained.emit()
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):
@@ -49,7 +55,7 @@ class ObjectTreeView(QTreeView):
         for edition.
         """
         if trigger == QTreeView.EditKeyPressed:
-            self.editKeyPressed.emit(index)
+            self.edit_key_pressed.emit(index)
         return False
 
     def copy(self):

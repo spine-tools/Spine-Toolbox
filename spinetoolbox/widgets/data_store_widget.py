@@ -73,8 +73,8 @@ class DataStoreForm(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.ui.actionCopy.setIcon(QIcon.fromTheme("edit-copy"))
-        self.ui.actionPaste.setIcon(QIcon.fromTheme("edit-paste"))
+        # self.ui.actionCopy.setIcon(QIcon.fromTheme("edit-copy"))
+        # self.ui.actionPaste.setIcon(QIcon.fromTheme("edit-paste"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
@@ -105,6 +105,7 @@ class DataStoreForm(QMainWindow):
         # Others
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
+        self.focus_widget = None
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         # init models and views
         self.init_models()
@@ -166,6 +167,10 @@ class DataStoreForm(QMainWindow):
         self.ui.actionAdd_relationship_parameter_values.triggered.connect(self.add_relationship_parameter_values)
         self.ui.actionAdd_object_parameters.triggered.connect(self.add_object_parameters)
         self.ui.actionAdd_relationship_parameters.triggered.connect(self.add_relationship_parameters)
+        self.ui.actionEdit_object_classes.triggered.connect(self.show_edit_object_classes_form)
+        self.ui.actionEdit_objects.triggered.connect(self.show_edit_objects_form)
+        self.ui.actionEdit_relationship_classes.triggered.connect(self.show_edit_relationship_classes_form)
+        self.ui.actionEdit_relationships.triggered.connect(self.show_edit_relationships_form)
         self.ui.actionRemove_object_parameters.triggered.connect(self.remove_object_parameters)
         self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
         self.ui.actionRemove_relationship_parameters.triggered.connect(self.remove_relationship_parameters)
@@ -176,36 +181,42 @@ class DataStoreForm(QMainWindow):
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_value_models)
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.filter_parameter_models)
-        # self.ui.treeView_object.editKeyPressed.connect(self.edit_item) # TODO: Connect this better
+        self.ui.treeView_object.focus_gained.connect(self.set_focus_widget)
+        # self.ui.treeView_object.edit_key_pressed.connect(self.edit_item) # TODO: Connect this better
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
-        # Horizontal header subfilter
-        self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
-        self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
+        # Autofilter parameter tables
         self.ui.tableView_object_parameter.filter_changed.connect(self.apply_autofilter)
+        self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_autofilter)
-        # Parameter table editors
-        self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
-            connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
-            connect(self.set_parameter_value_data)
+        self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
+        # Parameter tables delegate commit data
         self.ui.tableView_object_parameter.itemDelegate().commitData.\
             connect(self.set_parameter_data)
+        self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
+            connect(self.set_parameter_value_data)
         self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
             connect(self.set_parameter_data)
-        # Context menu requested
-        self.ui.tableView_object_parameter_value.customContextMenuRequested.\
-            connect(self.show_object_parameter_value_context_menu)
-        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
-            connect(self.show_relationship_parameter_value_context_menu)
+        self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
+            connect(self.set_parameter_value_data)
+        # Parameter tables gain focus
+        self.ui.tableView_object_parameter.focus_gained.connect(self.set_focus_widget)
+        self.ui.tableView_object_parameter_value.focus_gained.connect(self.set_focus_widget)
+        self.ui.tableView_relationship_parameter.focus_gained.connect(self.set_focus_widget)
+        self.ui.tableView_relationship_parameter_value.focus_gained.connect(self.set_focus_widget)
+        # Parameter tables context menu requested
         self.ui.tableView_object_parameter.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
+        self.ui.tableView_object_parameter_value.customContextMenuRequested.\
+            connect(self.show_object_parameter_value_context_menu)
         self.ui.tableView_relationship_parameter.customContextMenuRequested.\
             connect(self.show_relationship_parameter_context_menu)
+        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
+            connect(self.show_relationship_parameter_value_context_menu)
         # Clipboard data changed
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
         # Edit menu about to show
-        self.ui.menuEdit.aboutToShow.connect(self.set_paste_enabled)
+        self.ui.menuEdit.aboutToShow.connect(self.receive_menu_edit_about_to_show)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
 
@@ -238,36 +249,59 @@ class DataStoreForm(QMainWindow):
         """Store data from clipboard."""
         self.clipboard_text = self.clipboard.text()
 
+    @Slot(name="set_focus_widget")
+    def set_focus_widget(self):
+        self.focus_widget = self.focusWidget()
+
     @Slot(name="copy")
     def copy(self):
         """Copy data to clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.copy()
-        except AttributeError as err:
-            self.msg.emit("Cannot copy from widget ({0}): {1}".format(focus_widget.objectName(), err))
+        if self.focus_widget:
+            self.focus_widget.copy()
 
     @Slot(name="paste")
     def paste(self):
         """Paste data from clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.paste(self.clipboard_text)
-        except AttributeError as err:
-            self.msg.emit("Cannot paste to widget ({0}): {1}".format(focus_widget.objectName(), err))
+        if self.focus_widget:
+            self.focus_widget.paste(self.clipboard_text)
 
-    @Slot(name="set_paste_enabled")
-    def set_paste_enabled(self):
+    @Slot(name="receive_menu_edit_about_to_show")
+    def receive_menu_edit_about_to_show(self):
         """Called when Edit menu is about to show.
-        Enable or disable paste options depending on wheter or not
-        the focus is on one of the parameter tables.
+        Adjust copy paste options depending on which widget has the focus.
+        Enable/disable options to edit object tree items depending on selection.
         """
-        on = False
-        on |= self.ui.tableView_object_parameter.hasFocus()
-        on |= self.ui.tableView_relationship_parameter.hasFocus()
-        on |= self.ui.tableView_object_parameter_value.hasFocus()
-        on |= self.ui.tableView_relationship_parameter_value.hasFocus()
-        self.ui.actionPaste.setEnabled(on)
+        # Copy paste actions
+        self.ui.actionCopy.setEnabled(True)
+        self.ui.actionPaste.setEnabled(True)
+        if self.focus_widget == self.ui.treeView_object:
+            self.ui.actionCopy.setText("Copy from object tree")
+            self.ui.actionPaste.setText("Paste")
+            self.ui.actionPaste.setEnabled(False)
+        elif self.focus_widget == self.ui.tableView_object_parameter:
+            self.ui.actionCopy.setText("Copy from object parameter definition")
+            self.ui.actionPaste.setText("Paste to object parameter definition")
+        elif self.focus_widget == self.ui.tableView_object_parameter_value:
+            self.ui.actionCopy.setText("Copy from object parameter value")
+            self.ui.actionPaste.setText("Paste to object parameter value")
+        elif self.focus_widget == self.ui.tableView_relationship_parameter:
+            self.ui.actionCopy.setText("Copy from relationship parameter definition")
+            self.ui.actionPaste.setText("Paste to relationship parameter definition")
+        elif self.focus_widget == self.ui.tableView_relationship_parameter_value:
+            self.ui.actionCopy.setText("Copy from relationship parameter value")
+            self.ui.actionPaste.setText("Paste to relationship parameter value")
+        else:
+            self.ui.actionCopy.setText("Copy")
+            self.ui.actionPaste.setText("Paste")
+            self.ui.actionCopy.setEnabled(False)
+            self.ui.actionPaste.setEnabled(False)
+        # Edit object tree item actions
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        item_types = {x.data(Qt.UserRole) for x in indexes}
+        self.ui.actionEdit_object_classes.setEnabled('object_class' in item_types)
+        self.ui.actionEdit_objects.setEnabled('object' in item_types)
+        self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
+        self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
 
     @Slot(name="show_import_file_dialog")
     def show_import_file_dialog(self):
@@ -508,7 +542,6 @@ class DataStoreForm(QMainWindow):
         # Show/hide object name columns in relationship parameter value view
         max_object_count = len(self.relationship_parameter_value_model.object_name_header)
         object_count = self.relationship_parameter_value_proxy.object_count
-        print(object_count)
         if not object_count:
             object_count = max_object_count
         header = self.relationship_parameter_value_model.horizontal_header_labels()
@@ -592,7 +625,7 @@ class DataStoreForm(QMainWindow):
             self.expand_next(index)
         elif option.startswith("Remove selected"):
             self.remove_object_tree_items()
-        elif option == "Add parameters":
+        elif option == "Add parameter definitions":
             self.call_add_parameters(index)
         elif option == "Add parameter values":
             self.call_add_parameter_values(index)
@@ -907,7 +940,8 @@ class DataStoreForm(QMainWindow):
         """
         index = self.ui.tableView_object_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
-        self.object_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
+        remove_icon = self.ui.actionRemove_object_parameter_values.icon()
+        self.object_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
         option = self.object_parameter_value_context_menu.get_action()
         if option == "Remove selected":
             self.remove_object_parameter_values()
@@ -927,7 +961,8 @@ class DataStoreForm(QMainWindow):
         """
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
+        remove_icon = self.ui.actionRemove_relationship_parameter_values.icon()
+        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
         option = self.relationship_parameter_value_context_menu.get_action()
         if option == "Remove selected":
             self.remove_relationship_parameter_values()
@@ -947,7 +982,8 @@ class DataStoreForm(QMainWindow):
         """
         index = self.ui.tableView_object_parameter.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter.viewport().mapToGlobal(pos)
-        self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
+        remove_icon = self.ui.actionRemove_object_parameters.icon()
+        self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
         option = self.object_parameter_context_menu.get_action()
         if option == "Remove selected":
             self.remove_object_parameters()
@@ -967,7 +1003,8 @@ class DataStoreForm(QMainWindow):
         """
         index = self.ui.tableView_relationship_parameter.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter.viewport().mapToGlobal(pos)
-        self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
+        remove_icon = self.ui.actionRemove_relationship_parameters.icon()
+        self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
         option = self.relationship_parameter_context_menu.get_action()
         if option == "Remove selected":
             self.remove_relationship_parameters()

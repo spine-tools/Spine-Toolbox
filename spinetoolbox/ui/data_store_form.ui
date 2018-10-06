@@ -629,6 +629,11 @@
     <addaction name="actionAdd_object_parameter_values"/>
     <addaction name="actionAdd_relationship_parameters"/>
     <addaction name="actionAdd_relationship_parameter_values"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_object_classes"/>
+    <addaction name="actionEdit_objects"/>
+    <addaction name="actionEdit_relationship_classes"/>
+    <addaction name="actionEdit_relationships"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -771,6 +776,10 @@
    </property>
   </action>
   <action name="actionExport">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/export.png</normaloff>:/icons/export.png</iconset>
+   </property>
    <property name="text">
     <string>Export</string>
    </property>
@@ -784,6 +793,10 @@
    </property>
   </action>
   <action name="actionCopy">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
+   </property>
    <property name="text">
     <string>Copy</string>
    </property>
@@ -792,6 +805,10 @@
    </property>
   </action>
   <action name="actionPaste">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/paste.png</normaloff>:/icons/paste.png</iconset>
+   </property>
    <property name="text">
     <string>Paste</string>
    </property>
@@ -872,11 +889,51 @@
    </property>
   </action>
   <action name="actionRefresh">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
+   </property>
    <property name="text">
     <string>Refresh</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Return</string>
+   </property>
+  </action>
+  <action name="actionEdit_object_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit object classes</string>
+   </property>
+  </action>
+  <action name="actionEdit_relationship_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit relationship classes</string>
+   </property>
+  </action>
+  <action name="actionEdit_objects">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit objects</string>
+   </property>
+  </action>
+  <action name="actionEdit_relationships">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit relationships</string>
    </property>
   </action>
  </widget>

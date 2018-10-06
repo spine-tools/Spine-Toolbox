@@ -178,31 +178,34 @@ class ObjectTreeContextMenu(CustomContextMenu):
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameters.icon()
         plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameters.icon()
+        edit_object_icon = self._parent.ui.actionEdit_objects.icon()
+        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
+        copy_icon = self._parent.ui.actionCopy.icon()
         item = index.model().itemFromIndex(index)
         item_type = item.data(Qt.UserRole)
-        self.add_action("Copy")
+        self.add_action("Copy", copy_icon)
         self.addSeparator()
         if item_type == 'root':
             self.add_action("Add object classes")
         elif item_type == 'object_class':
-            self.add_action("Edit object classes")
+            self.add_action("Edit object classes", edit_object_icon)
             self.addSeparator()
             self.add_action("Add relationship classes", plus_relationship_icon)
             self.add_action("Add objects", plus_object_icon)
-            self.add_action("Add parameters", plus_object_parameter_icon)
+            self.add_action("Add parameter definitions", plus_object_parameter_icon)
         elif item_type == 'object':
-            self.add_action("Edit objects")
+            self.add_action("Edit objects", edit_object_icon)
             self.addSeparator()
             self.add_action("Add parameter values", plus_object_parameter_icon)
         elif item_type == 'relationship_class':
-            self.add_action("Edit relationship classes")
+            self.add_action("Edit relationship classes", edit_relationship_icon)
             self.addSeparator()
             self.add_action("Add relationships", plus_relationship_icon)
-            self.add_action("Add parameters", plus_relationship_parameter_icon)
+            self.add_action("Add parameter definitions", plus_relationship_parameter_icon)
         elif item_type == 'relationship':
             self.add_action("Expand next")
             self.addSeparator()
-            self.add_action("Edit relationships")
+            self.add_action("Edit relationships", edit_relationship_icon)
             self.addSeparator()
             self.add_action("Add parameter values", plus_relationship_parameter_icon)
         if item_type != 'root':
@@ -219,14 +222,17 @@ class ParameterContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
-    def __init__(self, parent, position, index):
+    def __init__(self, parent, position, index, remove_icon):
         """Class constructor."""
         super().__init__(parent)
-        if index.isValid():
-            self.add_action("Remove selected")
-            self.addSeparator()
-            self.add_action("Copy")
-            self.add_action("Paste")
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        paste_icon = self._parent.ui.actionPaste.icon()
+        self.add_action("Copy", copy_icon)
+        self.add_action("Paste", paste_icon)
+        self.addSeparator()
+        self.add_action("Remove selected", remove_icon)
         self.exec_(position)
 
 

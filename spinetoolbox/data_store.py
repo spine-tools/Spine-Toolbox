@@ -86,7 +86,7 @@ class DataStore(MetaObject):
         self._widget.ui.pushButton_open_treeview.clicked.connect(self.open_treeview)
         self._widget.ui.toolButton_browse.clicked.connect(self.browse_clicked)
         self._widget.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
-        self._widget.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
+        self._widget.ui.pushButton_spine.clicked.connect(self.create_new_spine_database)
 
     def project(self):
         """Returns current project or None if no project open."""

@@ -4,9 +4,15 @@
   </qresource>
   <qresource prefix="icons">
     <file>minus_object_icon.png</file>
+    <file>edit_object_icon.png</file>
+    <file>refresh.png</file>
+    <file>edit_relationship_icon.png</file>
+    <file>paste.png</file>
+    <file>copy.png</file>
     <file>minus_relationship_icon.png</file>
     <file>minus_object_parameter_icon.png</file>
     <file>minus_relationship_parameter_icon.png</file>
+    <file>export.png</file>
     <file>object_parameter_icon.png</file>
     <file>relationship_parameter_icon.png</file>
     <file>Spine_db_ref_icon.png</file>
