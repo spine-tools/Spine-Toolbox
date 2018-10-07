@@ -687,6 +687,10 @@
    </property>
   </action>
   <action name="actionQuit">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
+   </property>
    <property name="text">
     <string>Close</string>
    </property>
