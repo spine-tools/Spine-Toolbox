@@ -872,6 +872,7 @@ class CommitDialog(QDialog):
         self.actionAccept = QAction(self)
         self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
         self.actionAccept.triggered.connect(self.accept)
+        self.actionAccept.setEnabled(False)
         self.commit_msg_edit = QPlainTextEdit(self)
         self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
         self.commit_msg_edit.addAction(self.actionAccept)
@@ -893,4 +894,6 @@ class CommitDialog(QDialog):
         """Called when text changes in the commit msg text edit.
         Enable/disable commit button accordingly."""
         self.commit_msg = self.commit_msg_edit.toPlainText()
-        self.commit_button.setEnabled(self.commit_msg.strip() != "")
+        cond = self.commit_msg.strip() != ""
+        self.commit_button.setEnabled(cond)
+        self.actionAccept.setEnabled(cond)
