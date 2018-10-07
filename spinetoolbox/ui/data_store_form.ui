@@ -609,9 +609,9 @@
     <property name="title">
      <string>Session</string>
     </property>
+    <addaction name="actionRefresh"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
-    <addaction name="actionRefresh"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -657,6 +657,9 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCommit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
@@ -669,6 +672,9 @@
    </property>
   </action>
   <action name="actionRollback">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
@@ -800,6 +806,9 @@
    </property>
   </action>
   <action name="actionCopy">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
@@ -812,6 +821,9 @@
    </property>
   </action>
   <action name="actionPaste">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/paste.png</normaloff>:/icons/paste.png</iconset>

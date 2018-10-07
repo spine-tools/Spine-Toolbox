@@ -1472,6 +1472,7 @@ class ParameterModel(DataStoreTableModel):
             for i, parameter in enumerate(parameters):
                 self._data[rows[i]][id_column][Qt.EditRole] = parameter.id  # NOTE: DisplayRole not in use
             self.make_columns_fixed_for_rows(*rows)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
             self._data_store_form.msg.emit(msg)
         except SpineDBAPIError as e:
@@ -1483,6 +1484,7 @@ class ParameterModel(DataStoreTableModel):
             return False
         try:
             self.db_map.update_parameters(*items_to_update)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameters successfully updated."
             self._data_store_form.msg.emit(msg)
             return True
@@ -1531,6 +1533,7 @@ class ParameterValueModel(DataStoreTableModel):
             for i, parameter_value in enumerate(parameter_values):
                 self._data[rows[i]][id_column][Qt.EditRole] = parameter_value.id
             self.make_columns_fixed_for_rows(*rows)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
             self._data_store_form.msg.emit(msg)
         except SpineDBAPIError as e:
@@ -1542,6 +1545,7 @@ class ParameterValueModel(DataStoreTableModel):
             return False
         try:
             self.db_map.update_parameter_values(*items_to_update)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameter values successfully updated."
             self._data_store_form.msg.emit(msg)
             return True

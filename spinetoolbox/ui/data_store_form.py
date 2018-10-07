@@ -292,11 +292,13 @@ class Ui_MainWindow(object):
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
         self.actionCommit = QtWidgets.QAction(MainWindow)
+        self.actionCommit.setEnabled(False)
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap(":/icons/ok.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCommit.setIcon(icon2)
         self.actionCommit.setObjectName("actionCommit")
         self.actionRollback = QtWidgets.QAction(MainWindow)
+        self.actionRollback.setEnabled(False)
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/nok.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRollback.setIcon(icon3)
@@ -336,11 +338,13 @@ class Ui_MainWindow(object):
         self.actionConnect = QtWidgets.QAction(MainWindow)
         self.actionConnect.setObjectName("actionConnect")
         self.actionCopy = QtWidgets.QAction(MainWindow)
+        self.actionCopy.setEnabled(False)
         icon8 = QtGui.QIcon()
         icon8.addPixmap(QtGui.QPixmap(":/icons/copy.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCopy.setIcon(icon8)
         self.actionCopy.setObjectName("actionCopy")
         self.actionPaste = QtWidgets.QAction(MainWindow)
+        self.actionPaste.setEnabled(False)
         icon9 = QtGui.QIcon()
         icon9.addPixmap(QtGui.QPixmap(":/icons/paste.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionPaste.setIcon(icon9)
@@ -407,9 +411,9 @@ class Ui_MainWindow(object):
         icon17.addPixmap(QtGui.QPixmap(":/icons/minus_object_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRemove_object_tree_items.setIcon(icon17)
         self.actionRemove_object_tree_items.setObjectName("actionRemove_object_tree_items")
+        self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
-        self.menuSession.addAction(self.actionRefresh)
         self.menuEdit.addAction(self.actionCopy)
         self.menuEdit.addAction(self.actionPaste)
         self.menuEdit.addSeparator()
@@ -515,6 +519,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc
