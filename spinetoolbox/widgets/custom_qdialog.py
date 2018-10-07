@@ -871,32 +871,26 @@ class CommitDialog(QDialog):
         inner_layout.setContentsMargins(4, 4, 4, 4)
         self.actionAccept = QAction(self)
         self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
-        self.actionAccept.triggered.connect(self.save_and_accept)
+        self.actionAccept.triggered.connect(self.accept)
         self.commit_msg_edit = QPlainTextEdit(self)
         self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
         self.commit_msg_edit.addAction(self.actionAccept)
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box = QDialogButtonBox()
         button_box.addButton(QDialogButtonBox.Cancel)
-        button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
-        button_box.accepted.connect(self.save_and_accept)
+        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
+        button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         inner_layout.addWidget(self.commit_msg_edit)
         inner_layout.addWidget(button_box)
         # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
         form.addLayout(inner_layout)
-        form.addWidget(self.statusbar)
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.commit_msg_edit.textChanged.connect(self.receive_text_changed)
+        self.receive_text_changed()
 
-    @Slot(name="save_and_accept")
-    def save_and_accept(self):
-        """Check if everything is ok and accept"""
+    @Slot(name="receive_text_changed")
+    def receive_text_changed(self):
+        """Called when text changes in the commit msg text edit.
+        Enable/disable commit button accordingly."""
         self.commit_msg = self.commit_msg_edit.toPlainText()
-        if not self.commit_msg:
-            self.statusbar.showMessage("Please enter a commit message.", 3000)
-            return
-        self.accept()
+        self.commit_button.setEnabled(self.commit_msg.strip() != "")

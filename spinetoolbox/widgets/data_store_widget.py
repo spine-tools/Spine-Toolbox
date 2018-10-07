@@ -73,8 +73,6 @@ class DataStoreForm(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        # self.ui.actionCopy.setIcon(QIcon.fromTheme("edit-copy"))
-        # self.ui.actionPaste.setIcon(QIcon.fromTheme("edit-paste"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
@@ -171,6 +169,7 @@ class DataStoreForm(QMainWindow):
         self.ui.actionEdit_objects.triggered.connect(self.show_edit_objects_form)
         self.ui.actionEdit_relationship_classes.triggered.connect(self.show_edit_relationship_classes_form)
         self.ui.actionEdit_relationships.triggered.connect(self.show_edit_relationships_form)
+        self.ui.actionRemove_object_tree_items.triggered.connect(self.remove_object_tree_items)
         self.ui.actionRemove_object_parameters.triggered.connect(self.remove_object_parameters)
         self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
         self.ui.actionRemove_relationship_parameters.triggered.connect(self.remove_relationship_parameters)
@@ -204,6 +203,18 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.focus_gained.connect(self.set_focus_widget)
         self.ui.tableView_relationship_parameter.focus_gained.connect(self.set_focus_widget)
         self.ui.tableView_relationship_parameter_value.focus_gained.connect(self.set_focus_widget)
+        # Parameter tables selection changes
+        self.ui.tableView_object_parameter.selectionModel().selectionChanged.\
+            connect(self.receive_object_parameter_selection_changed)
+        self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.\
+            connect(self.receive_object_parameter_value_selection_changed)
+        self.ui.tableView_relationship_parameter.selectionModel().selectionChanged.\
+            connect(self.receive_relationship_parameter_selection_changed)
+        self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
+            connect(self.receive_relationship_parameter_value_selection_changed)
+        # Parameter tabwidgets current changed
+        self.ui.tabWidget_object.currentChanged.connect(self.receive_object_parameter_tab_changed)
+        self.ui.tabWidget_relationship.currentChanged.connect(self.receive_relationship_parameter_tab_changed)
         # Parameter tables context menu requested
         self.ui.tableView_object_parameter.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
@@ -265,11 +276,46 @@ class DataStoreForm(QMainWindow):
         if self.focus_widget:
             self.focus_widget.paste(self.clipboard_text)
 
+    @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_selection_changed")
+    def receive_object_parameter_selection_changed(self, selected, deselected):
+        index = self.ui.tabWidget_object.currentIndex()
+        self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selected.isEmpty())
+
+    @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_value_selection_changed")
+    def receive_object_parameter_value_selection_changed(self, selected, deselected):
+        index = self.ui.tabWidget_object.currentIndex()
+        self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+
+    @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_selection_changed")
+    def receive_relationship_parameter_selection_changed(self, selected, deselected):
+        index = self.ui.tabWidget_relationship.currentIndex()
+        self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selected.isEmpty())
+
+    @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_value_selection_changed")
+    def receive_relationship_parameter_value_selection_changed(self, selected, deselected):
+        index = self.ui.tabWidget_relationship.currentIndex()
+        self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+
+    @Slot("int", name="receive_object_parameter_tab_changed")
+    def receive_object_parameter_tab_changed(self, index):
+        selected = self.ui.tableView_object_parameter.selectionModel().selection()
+        self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selected.isEmpty())
+        selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
+        self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+
+    @Slot("int", name="receive_relationship_parameter_tab_changed")
+    def receive_relationship_parameter_tab_changed(self, index):
+        selected = self.ui.tableView_relationship_parameter.selectionModel().selection()
+        self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selected.isEmpty())
+        selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
+        self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+
     @Slot(name="receive_menu_edit_about_to_show")
     def receive_menu_edit_about_to_show(self):
         """Called when Edit menu is about to show.
         Adjust copy paste options depending on which widget has the focus.
         Enable/disable options to edit object tree items depending on selection.
+        Enable/disable options to remove stuff depending on selection.
         """
         # Copy paste actions
         self.ui.actionCopy.setEnabled(True)
@@ -302,6 +348,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionEdit_objects.setEnabled('object' in item_types)
         self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
         self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
+        # Remove object tree items action
+        self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
 
     @Slot(name="show_import_file_dialog")
     def show_import_file_dialog(self):
@@ -1314,8 +1362,8 @@ class DataStoreForm(QMainWindow):
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Commit pending changes")
-            msg.setText("The current session has uncommitted changes.")
-            msg.setInformativeText("Do you want to commit them now?")
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setInformativeText("WARNING: All uncommitted changes will be lost.")
             msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")

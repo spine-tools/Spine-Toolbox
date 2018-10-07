@@ -634,6 +634,13 @@
     <addaction name="actionEdit_objects"/>
     <addaction name="actionEdit_relationship_classes"/>
     <addaction name="actionEdit_relationships"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove_object_tree_items"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove_object_parameters"/>
+    <addaction name="actionRemove_object_parameter_values"/>
+    <addaction name="actionRemove_relationship_parameters"/>
+    <addaction name="actionRemove_relationship_parameter_values"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -835,6 +842,9 @@
    </property>
   </action>
   <action name="actionRemove_object_parameter_values">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
@@ -862,6 +872,9 @@
    </property>
   </action>
   <action name="actionRemove_relationship_parameter_values">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
@@ -871,6 +884,9 @@
    </property>
   </action>
   <action name="actionRemove_object_parameters">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
@@ -880,6 +896,9 @@
    </property>
   </action>
   <action name="actionRemove_relationship_parameters">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
@@ -934,6 +953,15 @@
    </property>
    <property name="text">
     <string>Edit relationships</string>
+   </property>
+  </action>
+  <action name="actionRemove_object_tree_items">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/minus_object_icon.png</normaloff>:/icons/minus_object_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove object tree items</string>
    </property>
   </action>
  </widget>
