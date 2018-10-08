@@ -1332,8 +1332,10 @@ class ObjectTreeModel(QStandardItemModel):
         """Find and return next ocurrence of relationship item."""
         if index.data(Qt.UserRole) != 'relationship':
             return None
-        relationship = index.data(Qt.UserRole + 1)
-        items = self.findItems(relationship['name'], Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        object_name_list = index.data(Qt.DisplayRole)
+        class_id = index.data(Qt.UserRole + 1)["class_id"]
+        items = [item for item in self.findItems(object_name_list, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+                 if item.data(Qt.UserRole + 1)["class_id"] == class_id]
         position = None
         for i, item in enumerate(items):
             if index == self.indexFromItem(item):
@@ -1341,7 +1343,7 @@ class ObjectTreeModel(QStandardItemModel):
                 break
         if position is None:
             return None
-        position = (position+1) % len(items)
+        position = (position + 1) % len(items)
         return self.indexFromItem(items[position])
 
 
@@ -1878,7 +1880,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
         relationship_class_list = self.db_map.wide_relationship_class_list()
         max_dim_count = max(
             [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
-        self.object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count)]
+        self.object_name_header = ["object_name_" + str(i + 1) for i in range(max_dim_count)]
         object_name_list_index = header.index("object_name_list")
         header.pop(object_name_list_index)
         for i, x in enumerate(self.object_name_header):
@@ -1952,7 +1954,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
     def extend_object_name_header(self, max_dim_count):
         """Extend object name header to fit new max dimension count."""
         curr_dim_count = len(self.object_name_header)
-        object_name_header_ext = ["object_name_" + str(i+1) for i in range(curr_dim_count, max_dim_count)]
+        object_name_header_ext = ["object_name_" + str(i + 1) for i in range(curr_dim_count, max_dim_count)]
         if object_name_header_ext:
             header = self.horizontal_header_labels()
             section = header.index(self.object_name_header[-1]) + 1
