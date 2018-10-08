@@ -1096,10 +1096,9 @@ class ObjectTreeModel(QStandardItemModel):
                             continue
                         if object_.id not in [int(x) for x in wide_relationship.object_id_list.split(",")]:
                             continue
-                        relationship_item = QStandardItem(wide_relationship.name)
+                        relationship_item = QStandardItem(wide_relationship.object_name_list)
                         relationship_item.setData('relationship', Qt.UserRole)
                         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-                        relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
                     relationship_class_item_list.append(relationship_class_item)
@@ -1140,10 +1139,9 @@ class ObjectTreeModel(QStandardItemModel):
 
     def new_relationship_item(self, wide_relationship):
         """Returns new relationship item."""
-        relationship_item = QStandardItem(wide_relationship.name)
+        relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-        relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
         return relationship_item
 
     def add_object_class(self, object_class):
@@ -1211,17 +1209,63 @@ class ObjectTreeModel(QStandardItemModel):
             relationship_item = self.new_relationship_item(wide_relationship)
             visited_item.appendRow(relationship_item)
 
-    def update_items(self, updated_type, updated_items):
-        """Update object classes, objects, or relationship classes in the model.
-        NOTE: Updating these do not require moving rows, just updating model item roles.
-        """
-        if updated_type == 'relationship':
-            return
+    def update_object_classes(self, updated_items):
+        """Update object classes in the model."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type != updated_type:
+            if visited_type != 'object_class':
+                continue
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                updated_item = updated_items_dict[visited_id]
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                visited_item.setText(updated_item.name)
+            except KeyError:
+                continue
+
+    def update_objects(self, updated_items):
+        """Update object in the model.
+        This of course means updating the object name in relationship items.
+        """
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type == 'object':
+                visited_id = visited_item.data(Qt.UserRole + 1)['id']
+                try:
+                    updated_item = updated_items_dict[visited_id]
+                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                    visited_item.setText(updated_item.name)
+                except KeyError:
+                    continue
+            elif visited_type == 'relationship':
+                relationship = visited_item.data(Qt.UserRole + 1)
+                object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
+                object_name_list = relationship['object_name_list'].split(",")
+                found = False
+                for i, id in enumerate(object_id_list):
+                    try:
+                        updated_item = updated_items_dict[id]
+                        object_name_list[i] = updated_item.name
+                        found = True
+                    except KeyError:
+                        continue
+                if found:
+                    str_object_name_list = ",".join(object_name_list)
+                    relationship['object_name_list'] = str_object_name_list
+                    visited_item.setText(str_object_name_list)
+                    visited_item.setData(relationship, Qt.UserRole + 1)
+
+    def update_relationship_classes(self, updated_items):
+        """Update relationship classes in the model."""
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship_class':
                 continue
             visited_id = visited_item.data(Qt.UserRole + 1)['id']
             try:
@@ -1233,7 +1277,7 @@ class ObjectTreeModel(QStandardItemModel):
 
     def update_relationships(self, updated_items):
         """Update relationships in the model.
-        NOTE: This may require moving rows if the object path has changed."""
+        This may require moving rows if the objects in the relationship have changed."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
         items_to_add = set()
@@ -1252,8 +1296,8 @@ class ObjectTreeModel(QStandardItemModel):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
                     items_to_add.add(updated_item)
                 else:
+                    visited_item.setText(updated_item.object_name_list)
                     visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-                    visited_item.setText(updated_item.name)
             except KeyError:
                 continue
         for item in items_to_add:

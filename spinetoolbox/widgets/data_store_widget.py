@@ -103,7 +103,7 @@ class DataStoreForm(QMainWindow):
         # Others
         self.clipboard = QApplication.clipboard()
         self.clipboard_text = self.clipboard.text()
-        self.focus_widget = None
+        self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         # init models and views
         self.init_models()
@@ -296,6 +296,10 @@ class DataStoreForm(QMainWindow):
     @Slot("int", name="receive_object_parameter_tab_changed")
     def receive_object_parameter_tab_changed(self, index):
         """Enable/disable the option to remove rows."""
+        if index == 0:
+            self.filter_object_parameter_value(self.ui.treeView_object.currentIndex())
+        else:
+            self.filter_object_parameter(self.ui.treeView_object.currentIndex())
         selected = self.ui.tableView_object_parameter.selectionModel().selection()
         self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
@@ -304,6 +308,10 @@ class DataStoreForm(QMainWindow):
     @Slot("int", name="receive_relationship_parameter_tab_changed")
     def receive_relationship_parameter_tab_changed(self, index):
         """Enable/disable the option to remove rows."""
+        if index == 0:
+            self.filter_relationship_parameter_value(self.ui.treeView_object.currentIndex())
+        else:
+            self.filter_relationship_parameter(self.ui.treeView_object.currentIndex())
         selected = self.ui.tableView_relationship_parameter.selectionModel().selection()
         self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
@@ -331,26 +339,30 @@ class DataStoreForm(QMainWindow):
             if not self.ui.tableView_object_parameter.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from object parameter definition")
                 self.ui.actionCopy.setEnabled(True)
-            self.ui.actionPaste.setText("Paste to object parameter definition")
-            self.ui.actionPaste.setEnabled(True)
+            if self.clipboard_text:
+                self.ui.actionPaste.setText("Paste to object parameter definition")
+                self.ui.actionPaste.setEnabled(True)
         elif self.focus_widget == self.ui.tableView_object_parameter_value:
             if not self.ui.tableView_object_parameter_value.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from object parameter value")
                 self.ui.actionCopy.setEnabled(True)
-            self.ui.actionPaste.setText("Paste to object parameter value")
-            self.ui.actionPaste.setEnabled(True)
+            if self.clipboard_text:
+                self.ui.actionPaste.setText("Paste to object parameter value")
+                self.ui.actionPaste.setEnabled(True)
         elif self.focus_widget == self.ui.tableView_relationship_parameter:
             if not self.ui.tableView_relationship_parameter.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from relationship parameter definition")
                 self.ui.actionCopy.setEnabled(True)
-            self.ui.actionPaste.setText("Paste to relationship parameter definition")
-            self.ui.actionPaste.setEnabled(True)
+            if self.clipboard_text:
+                self.ui.actionPaste.setText("Paste to relationship parameter definition")
+                self.ui.actionPaste.setEnabled(True)
         elif self.focus_widget == self.ui.tableView_relationship_parameter_value:
             if not self.ui.tableView_relationship_parameter_value.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from relationship parameter value")
                 self.ui.actionCopy.setEnabled(True)
-            self.ui.actionPaste.setText("Paste to relationship parameter value")
-            self.ui.actionPaste.setEnabled(True)
+            if self.clipboard_text:
+                self.ui.actionPaste.setText("Paste to relationship parameter value")
+                self.ui.actionPaste.setEnabled(True)
         # Edit object tree item actions
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         item_types = {x.data(Qt.UserRole) for x in indexes}
@@ -874,7 +886,7 @@ class DataStoreForm(QMainWindow):
         """Update object classes."""
         try:
             object_classes = self.db_map.update_object_classes(*new_kwargs_list)
-            self.object_tree_model.update_items('object_class', object_classes)
+            self.object_tree_model.update_object_classes(object_classes)
             new_names = list()
             curr_names = list()
             for object_class in object_classes:
@@ -910,7 +922,7 @@ class DataStoreForm(QMainWindow):
         """Update objects."""
         try:
             objects = self.db_map.update_objects(*new_kwargs_list)
-            self.object_tree_model.update_items('object', objects)
+            self.object_tree_model.update_objects(objects)
             new_names = list()
             curr_names = list()
             for object_ in objects:
@@ -946,7 +958,7 @@ class DataStoreForm(QMainWindow):
         """Update object classes."""
         try:
             wide_relationship_classes = self.db_map.update_wide_relationship_classes(*new_kwargs_list)
-            self.object_tree_model.update_items('relationship_class', wide_relationship_classes)
+            self.object_tree_model.update_relationship_classes(wide_relationship_classes)
             new_names = list()
             curr_names = list()
             for wide_relationship_class in wide_relationship_classes:
