@@ -34,6 +34,7 @@ from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit,
     QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QStyle, QAction, QApplication
 from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from config import STATUSBAR_SS
 from models import MinimalTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
@@ -51,14 +52,12 @@ class AddItemsDialog(QDialog):
     Attributes:
         parent (DataStoreForm): data store widget
     """
-    confirmed = Signal("QVariant", name="confirmed")
-
     def __init__(self, parent):
         super().__init__(parent)
+        self._parent = parent
         self.ui = None
         self.model = MinimalTableModel(self)
         self.model.can_grow = True
-        self.args_list = list()
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         self.icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
@@ -117,12 +116,8 @@ class AddItemsDialog(QDialog):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
+        """Reimplement this method in subclasses to handle changes in model data."""
         pass
-
-    def accept(self):
-        """Emit confirmed signal"""
-        self.confirmed.emit(self.args_list)
-        super().accept()
 
 
 class AddObjectClassesDialog(AddItemsDialog):
@@ -130,11 +125,10 @@ class AddObjectClassesDialog(AddItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
     """
-    def __init__(self, parent, db_map):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.object_class_list = db_map.object_class_list()
+        self.object_class_list = self._parent.db_map.object_class_list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.model.set_horizontal_header_labels(['object class name', 'description'])
@@ -154,6 +148,8 @@ class AddObjectClassesDialog(AddItemsDialog):
         super().resize_tableview()
 
     def accept(self):
+        """Collect info from dialog and try to add items."""
+        kwargs_list = list()
         index = self.ui.comboBox.currentIndex()
         if index == 0:
             display_order = self.object_class_list.first().display_order - 1
@@ -163,13 +159,20 @@ class AddObjectClassesDialog(AddItemsDialog):
             name, description = self.model.row_data(i)
             if not name:
                 continue
-            object_class_args = {
+            kwargs = {
                 'name': name,
                 'description': description,
                 'display_order': display_order
             }
-            self.args_list.append(object_class_args)
-        super().accept()
+            kwargs_list.append(kwargs)
+        try:
+            object_classes = self._parent.db_map.add_object_classes(*kwargs_list)
+            self._parent.add_object_classes(object_classes)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class AddObjectsDialog(AddItemsDialog):
@@ -177,13 +180,11 @@ class AddObjectsDialog(AddItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
         class_id (int): default object class id
     """
-    def __init__(self, parent, db_map, class_id=None):
+    def __init__(self, parent, class_id=None):
         super().__init__(parent)
-        self.db_map = db_map
-        default_class = db_map.single_object_class(id=class_id).one_or_none()
+        default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
@@ -202,7 +203,7 @@ class AddObjectsDialog(AddItemsDialog):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
         object_class_width = max(
-            [self.font_metric.width(x.name) for x in self.db_map.object_class_list()], default=0)
+            [self.font_metric.width(x.name) for x in self._parent.db_map.object_class_list()], default=0)
         class_width = max(object_class_width, header.sectionSize(0))
         header.resizeSection(0, self.icon_width + class_width)
         header.resizeSection(1, 150)
@@ -231,20 +232,29 @@ class AddObjectsDialog(AddItemsDialog):
                 self.model.setData(index, self.object_icon, Qt.DecorationRole)
 
     def accept(self):
+        """Collect info from dialog and try to add items."""
+        kwargs_list = list()
         for i in range(self.model.rowCount()):
             class_name, name, description = self.model.row_data(i)
             if not class_name or not name:
                 continue
-            class_ = self.db_map.single_object_class(name=class_name).one_or_none()
+            class_ = self._parent.db_map.single_object_class(name=class_name).one_or_none()
             if not class_:
                 continue
-            object_args = {
+            kwargs = {
                 'class_id': class_.id,
                 'name': name,
                 'description': description
             }
-            self.args_list.append(object_args)
-        super().accept()
+            kwargs_list.append(kwargs)
+        try:
+            objects = self._parent.db_map.add_objects(*kwargs_list)
+            self._parent.add_objects(objects)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class AddRelationshipClassesDialog(AddItemsDialog):
@@ -252,16 +262,14 @@ class AddRelationshipClassesDialog(AddItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
         object_class_one_id (int): default object class id to put in dimension '1'
     """
-    def __init__(self, parent, db_map, object_class_one_id=None):
+    def __init__(self, parent, object_class_one_id=None):
         super().__init__(parent)
-        self.db_map = db_map
         self.number_of_dimensions = 2
         self.object_class_one_name = None
         if object_class_one_id:
-            object_class_one = db_map.single_object_class(id=object_class_one_id).one_or_none()
+            object_class_one = self._parent.db_map.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
         self.model.set_horizontal_header_labels(
@@ -281,7 +289,8 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     def resize_tableview(self):
         self.ui.tableView.resizeColumnsToContents()
         header = self.ui.tableView.horizontalHeader()
-        object_class_width = max([self.font_metric.width(x.name) for x in self.db_map.object_class_list()], default=0)
+        object_class_width = max(
+            [self.font_metric.width(x.name) for x in self._parent.db_map.object_class_list()], default=0)
         for column in range(self.number_of_dimensions):
             header.resizeSection(column, self.icon_width + object_class_width)
             header.resizeSection(column, self.icon_width + object_class_width)
@@ -349,6 +358,8 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         self.model.setData(index.sibling(row, name_column), relationship_class_name, Qt.EditRole)
 
     def accept(self):
+        """Collect info from dialog and try to add items."""
+        wide_kwargs_list = list()
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
             row = self.model.row_data(i)
@@ -360,18 +371,25 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 object_class_name = row[column]
                 if not object_class_name:
                     continue
-                object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
+                object_class = self._parent.db_map.single_object_class(name=object_class_name).one_or_none()
                 if not object_class:
                     continue
                 object_class_id_list.append(object_class.id)
             if len(object_class_id_list) < 2:
                 continue
-            wide_relationship_class_args = {
+            wide_kwargs = {
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
             }
-            self.args_list.append(wide_relationship_class_args)
-        super().accept()
+            wide_kwargs_list.append(wide_kwargs)
+        try:
+            wide_relationship_classes = self._parent.db_map.add_wide_relationship_classes(*wide_kwargs_list)
+            self._parent.add_relationship_classes(wide_relationship_classes)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class AddRelationshipsDialog(AddItemsDialog):
@@ -379,16 +397,14 @@ class AddRelationshipsDialog(AddItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
         relationship_class_id (int): default relationship class id
         object_id (int): default object id
         object_class_id (int): default object class id
     """
-    def __init__(self, parent, db_map, relationship_class_id=None, object_id=None, object_class_id=None):
+    def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None):
         super().__init__(parent)
-        self.db_map = db_map
         self.relationship_class_list = \
-            [x for x in db_map.wide_relationship_class_list(object_class_id=object_class_id)]
+            [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
         self.relationship_class = None
         self.relationship_class_id = relationship_class_id
         self.object_id = object_id
@@ -416,7 +432,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         relationship_class_name_list = [x.name for x in self.relationship_class_list]
         self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
         self.ui.comboBox_relationship_class.setCurrentIndex(-1)
-        self.relationship_class = self.db_map.\
+        self.relationship_class = self._parent.db_map.\
             single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
         if not self.relationship_class:
             return
@@ -440,7 +456,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         name_width = 0
         object_class_id_list = [int(x) for x in self.relationship_class.object_class_id_list.split(',')]
         for section, object_class_id in enumerate(object_class_id_list):
-            object_list = self.db_map.object_list(class_id=object_class_id)
+            object_list = self._parent.db_map.object_list(class_id=object_class_id)
             object_width = max([font_metric.width(x.name) for x in object_list], default=0)
             section_width = max(icon_width + object_width, header.sectionSize(section))
             header.resizeSection(section, section_width)
@@ -476,7 +492,7 @@ class AddRelationshipsDialog(AddItemsDialog):
     def set_default_object_name(self):
         if not self.object_id:
             return
-        object_ = self.db_map.single_object(id=self.object_id).one_or_none()
+        object_ = self._parent.db_map.single_object(id=self.object_id).one_or_none()
         if not object_:
             return
         self.default_object_name = object_.name
@@ -528,6 +544,8 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.model.setData(index.sibling(row, name_column), relationship_name, Qt.EditRole)
 
     def accept(self):
+        """Collect info from dialog and try to add items."""
+        wide_kwargs_list = list()
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
@@ -539,19 +557,26 @@ class AddRelationshipsDialog(AddItemsDialog):
                 object_name = row_data[column]
                 if not object_name:
                     continue
-                object_ = self.db_map.single_object(name=object_name).one_or_none()
+                object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
                 if not object_:
                     continue
                 object_id_list.append(object_.id)
             if len(object_id_list) < 2:
                 continue
-            wide_relationship_args = {
+            wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
                 'class_id': self.relationship_class.id
             }
-            self.args_list.append(wide_relationship_args)
-        super().accept()
+            wide_kwargs_list.append(wide_kwargs)
+        try:
+            wide_relationships = self._parent.db_map.add_wide_relationships(*wide_kwargs_list)
+            self._parent.add_relationships(wide_relationships)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class EditItemsDialog(QDialog):
@@ -559,15 +584,14 @@ class EditItemsDialog(QDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
+        orig_kwargs_list (list): orignal key word arguments
     """
-    edit_confirmed = Signal("QVariant", "QVariant", name="edit_confirmed")
-
-    def __init__(self, parent, orig_args_list):
+    def __init__(self, parent, orig_kwargs_list):
         super().__init__(parent)
+        self._parent = parent
+        self.orig_kwargs_list = orig_kwargs_list
         self.ui = None
         self.model = MinimalTableModel(self)
-        self.orig_args_list = orig_args_list
-        self.args_list = list()
         self.font_metric = QFontMetrics(QFont("", 0))
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -585,38 +609,32 @@ class EditItemsDialog(QDialog):
         table_width += min(200, self.ui.tableView.horizontalHeader().sectionSize(section))
         self.ui.tableView.setMinimumWidth(table_width)
 
-    def accept(self):
-        """Emit update_confirmed signal"""
-        self.edit_confirmed.emit(self.args_list, self.orig_args_list)
-        super().accept()
-
 
 class EditObjectClassesDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
-        object_class_args_list (list): list of dictionaries corresponding to object classes to edit/update
+        orig_kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
     """
-    def __init__(self, parent, db_map, object_class_args_list):
-        super().__init__(parent, object_class_args_list)
+    def __init__(self, parent, orig_kwargs_list):
+        super().__init__(parent, orig_kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit object classes")
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.orig_data = list()
         self.id_list = list()
-        for object_class_args in object_class_args_list:
+        for kwargs in orig_kwargs_list:
             try:
-                self.id_list.append(object_class_args["id"])
+                self.id_list.append(kwargs["id"])
             except KeyError:
                 continue
             try:
-                name = object_class_args["name"]
+                name = kwargs["name"]
             except KeyError:
                 continue
             try:
-                description = object_class_args["description"]
+                description = kwargs["description"]
             except KeyError:
                 description = None
             row_data = [name, description]
@@ -631,7 +649,8 @@ class EditObjectClassesDialog(EditItemsDialog):
         super().resize_tableview()
 
     def accept(self):
-        """Setup args_list and call accept on the super class."""
+        """Collect info from dialog and try to update items."""
+        kwargs_list = list()
         for i in range(self.model.rowCount()):
             id = self.id_list[i]
             name, description = self.model.row_data(i)
@@ -640,13 +659,18 @@ class EditObjectClassesDialog(EditItemsDialog):
             orig_name, orig_description = self.orig_data[i]
             if name == orig_name and description == orig_description:
                 continue
-            object_class_args = {
+            kwargs = {
                 'id': id,
                 'name': name,
                 'description': description
             }
-            self.args_list.append(object_class_args)
-        super().accept()
+            kwargs_list.append(kwargs)
+        try:
+            object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
+            self._parent.update_object_classes(object_classes, self.orig_kwargs_list)
+            super().accept()
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class EditObjectsDialog(EditItemsDialog):
@@ -654,27 +678,26 @@ class EditObjectsDialog(EditItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
-        object_args_list (list): list of dictionaries corresponding to objects to edit/update
+        orig_kwargs_list (list): list of dictionaries corresponding to objects to edit/update
     """
-    def __init__(self, parent, db_map, object_args_list):
-        super().__init__(parent, object_args_list)
+    def __init__(self, parent, orig_kwargs_list):
+        super().__init__(parent, orig_kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit objects")
         self.model.set_horizontal_header_labels(['object name', 'description'])
         self.orig_data = list()
         self.id_list = list()
-        for object_args in object_args_list:
+        for kwargs in orig_kwargs_list:
             try:
-                self.id_list.append(object_args["id"])
+                self.id_list.append(kwargs["id"])
             except KeyError:
                 continue
             try:
-                name = object_args["name"]
+                name = kwargs["name"]
             except KeyError:
                 continue
             try:
-                description = object_args["description"]
+                description = kwargs["description"]
             except KeyError:
                 description = None
             row_data = [name, description]
@@ -689,7 +712,8 @@ class EditObjectsDialog(EditItemsDialog):
         super().resize_tableview()
 
     def accept(self):
-        """Setup args_list and call accept on the super class."""
+        """Collect info from dialog and try to update items."""
+        kwargs_list = list()
         for i in range(self.model.rowCount()):
             id = self.id_list[i]
             name, description = self.model.row_data(i)
@@ -698,13 +722,18 @@ class EditObjectsDialog(EditItemsDialog):
             orig_name, orig_description = self.orig_data[i]
             if name == orig_name and description == orig_description:
                 continue
-            object_args = {
+            kwargs = {
                 'id': id,
                 'name': name,
                 'description': description
             }
-            self.args_list.append(object_args)
-        super().accept()
+            kwargs_list.append(kwargs)
+        try:
+            objects = self._parent.db_map.update_objects(*kwargs_list)
+            self._parent.update_objects(objects, self.orig_kwargs_list)
+            super().accept()
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class EditRelationshipClassesDialog(EditItemsDialog):
@@ -712,23 +741,22 @@ class EditRelationshipClassesDialog(EditItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
-        relationship_class_args_list (list): list of dictionaries corresponding to relationship classes to edit/update
+        orig_kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
     """
-    def __init__(self, parent, db_map, relationship_class_args_list):
-        super().__init__(parent, relationship_class_args_list)
+    def __init__(self, parent, orig_kwargs_list):
+        super().__init__(parent, orig_kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit relationship classes")
         self.model.set_horizontal_header_labels(['relationship class name'])
         self.orig_data = list()
         self.id_list = list()
-        for relationship_class_args in relationship_class_args_list:
+        for kwargs in orig_kwargs_list:
             try:
-                self.id_list.append(relationship_class_args["id"])
+                self.id_list.append(kwargs["id"])
             except KeyError:
                 continue
             try:
-                name = relationship_class_args["name"]
+                name = kwargs["name"]
             except KeyError:
                 continue
             row_data = [name]
@@ -743,7 +771,8 @@ class EditRelationshipClassesDialog(EditItemsDialog):
         super().resize_tableview()
 
     def accept(self):
-        """Setup args_list and call accept on the super class."""
+        """Collect info from dialog and try to update items."""
+        kwargs_list = list()
         for i in range(self.model.rowCount()):
             id = self.id_list[i]
             name = self.model.row_data(i)[0]
@@ -752,12 +781,17 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             orig_name = self.orig_data[i][0]
             if name == orig_name:
                 continue
-            relationship_class_args = {
+            kwargs = {
                 'id': id,
                 'name': name
             }
-            self.args_list.append(relationship_class_args)
-        super().accept()
+            kwargs_list.append(kwargs)
+        try:
+            wide_relationship_classes = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
+            self._parent.update_relationship_classes(wide_relationship_classes, self.orig_kwargs_list)
+            super().accept()
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class EditRelationshipsDialog(EditItemsDialog):
@@ -765,14 +799,11 @@ class EditRelationshipsDialog(EditItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map (DatabaseMapping): database handle from `spinedatabase_api`
-        relationship_args_list (list): list of dictionaries corresponding to relationships to edit/update
+        orig_kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
         relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
     """
-    def __init__(self, parent, db_map, relationship_args_list, relationship_class):
-        super().__init__(parent, relationship_args_list)
-        self.relationship_class = relationship_class
-        self.db_map = db_map
+    def __init__(self, parent, orig_kwargs_list, relationship_class):
+        super().__init__(parent, orig_kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit relationships")
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
@@ -781,15 +812,15 @@ class EditRelationshipsDialog(EditItemsDialog):
         self.orig_data = list()
         self.orig_object_id_lists = list()
         self.id_list = list()
-        for relationship_args in relationship_args_list:
+        for kwargs in orig_kwargs_list:
             try:
-                self.id_list.append(relationship_args["id"])
+                self.id_list.append(kwargs["id"])
             except KeyError:
                 continue
             try:
-                object_name_list = relationship_args["object_name_list"].split(',')
-                object_id_list = [int(x) for x in relationship_args["object_id_list"].split(',')]
-                name = relationship_args["name"]
+                object_name_list = kwargs["object_name_list"].split(',')
+                object_id_list = [int(x) for x in kwargs["object_id_list"].split(',')]
+                name = kwargs["name"]
             except KeyError:
                 continue
             row_data = [*object_name_list, name]
@@ -819,7 +850,8 @@ class EditRelationshipsDialog(EditItemsDialog):
         super().resize_tableview()
 
     def accept(self):
-        """Setup args_list and call accept on the super class."""
+        """Collect info from dialog and try to update items."""
+        kwargs_list = list()
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
             id = self.id_list[i]
@@ -835,7 +867,7 @@ class EditRelationshipsDialog(EditItemsDialog):
                 object_name = row_data[column]
                 if not object_name:
                     continue
-                object_ = self.db_map.single_object(name=object_name).one_or_none()
+                object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
                 if not object_:
                     continue
                 object_id_list.append(object_.id)
@@ -843,14 +875,18 @@ class EditRelationshipsDialog(EditItemsDialog):
                 continue
             if orig_object_id_list == object_id_list:
                 continue
-            wide_relationship_args = {
+            kwargs = {
                 'id': id,
                 'name': relationship_name,
-                'object_id_list': object_id_list,
-                'class_id': self.relationship_class.id
+                'object_id_list': object_id_list
             }
-            self.args_list.append(wide_relationship_args)
-        super().accept()
+            kwargs_list.append(kwargs)
+        try:
+            wide_relationships = self._parent.db_map.update_wide_relationships(*kwargs_list)
+            self._parent.update_relationships(wide_relationships, self.orig_kwargs_list)
+            super().accept()
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
 
 class CommitDialog(QDialog):

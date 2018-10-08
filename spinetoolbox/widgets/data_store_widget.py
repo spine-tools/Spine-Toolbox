@@ -781,101 +781,68 @@ class DataStoreForm(QMainWindow):
     @Slot(name="show_add_object_classes_form")
     def show_add_object_classes_form(self):
         """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self, self.db_map)
-        dialog.confirmed.connect(self.add_object_classes)
+        dialog = AddObjectClassesDialog(self)
         dialog.show()
 
-    @Slot("QVariant", name="add_object_classes")
-    def add_object_classes(self, object_class_args_list):
+    def add_object_classes(self, object_classes):
         """Insert new object classes."""
-        try:
-            object_classes = self.db_map.add_object_classes(*object_class_args_list)
-            for object_class in object_classes:
-                self.object_tree_model.add_object_class(object_class)
-            self.set_commit_rollback_actions_enabled(True)
-            msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
-            self.msg.emit(msg)
-        except SpineIntegrityError as e:
-            self.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        for object_class in object_classes:
+            self.object_tree_model.add_object_class(object_class)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
+        self.msg.emit(msg)
 
     @Slot(name="show_add_objects_form")
     def show_add_objects_form(self, class_id=None):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, self.db_map, class_id=class_id)
-        dialog.confirmed.connect(self.add_objects)
+        dialog = AddObjectsDialog(self, class_id=class_id)
         dialog.show()
 
-    @Slot("QVariant", name="add_objects")
-    def add_objects(self, object_args_list):
+    def add_objects(self, objects):
         """Insert new objects."""
-        try:
-            objects = self.db_map.add_objects(*object_args_list)
-            for object_ in objects:
-                self.object_tree_model.add_object(object_)
-            self.set_commit_rollback_actions_enabled(True)
-            msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
-            self.msg.emit(msg)
-        except SpineIntegrityError as e:
-            self.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        for object_ in objects:
+            self.object_tree_model.add_object(object_)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
+        self.msg.emit(msg)
 
     def show_add_relationship_classes_form(self, object_class_id=None):
         """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, self.db_map, object_class_one_id=object_class_id)
-        dialog.confirmed.connect(self.add_relationship_classes)
+        dialog = AddRelationshipClassesDialog(self, object_class_one_id=object_class_id)
         dialog.show()
 
-    @Slot("QVariant", name="add_relationship_classes")
-    def add_relationship_classes(self, wide_relationship_class_args_list):
+    def add_relationship_classes(self, wide_relationship_classes):
         """Insert new relationship classes."""
-        try:
-            wide_relationship_classes = self.db_map.add_wide_relationship_classes(*wide_relationship_class_args_list)
-            dim_count_list = list()
-            for wide_relationship_class in wide_relationship_classes:
-                self.object_tree_model.add_relationship_class(wide_relationship_class)
-                dim_count_list.append(len(wide_relationship_class.object_class_id_list.split(',')))
-            max_dim_count = max(dim_count_list)
-            self.relationship_parameter_value_model.extend_object_name_header(max_dim_count)
-            self.set_commit_rollback_actions_enabled(True)
-            relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-            msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
-            self.msg.emit(msg)
-        except SpineIntegrityError as e:
-            self.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        dim_count_list = list()
+        for wide_relationship_class in wide_relationship_classes:
+            self.object_tree_model.add_relationship_class(wide_relationship_class)
+            dim_count_list.append(len(wide_relationship_class.object_class_id_list.split(',')))
+        max_dim_count = max(dim_count_list)
+        self.relationship_parameter_value_model.extend_object_name_header(max_dim_count)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
+        self.msg.emit(msg)
 
     @Slot(name="show_add_relationships_form")
     def show_add_relationships_form(self, relationship_class_id=None, object_id=None, object_class_id=None):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
-            self.db_map,
             relationship_class_id=relationship_class_id,
             object_id=object_id,
             object_class_id=object_class_id
         )
-        dialog.confirmed.connect(self.add_relationships)
         dialog.show()
 
-    @Slot("QVariant", name="add_relationships")
-    def add_relationships(self, wide_relationship_args_list):
+    def add_relationships(self, wide_relationships):
         """Insert new relationships."""
-        try:
-            wide_relationships = self.db_map.add_wide_relationships(*wide_relationship_args_list)
-            for wide_relationship in wide_relationships:
-                self.object_tree_model.add_relationship(wide_relationship)
-            self.set_commit_rollback_actions_enabled(True)
-            relationship_name_list = "', '".join([x.name for x in wide_relationships])
-            msg = "Successfully added new relationships '{}'.".format(relationship_name_list)
-            self.msg.emit(msg)
-        except SpineIntegrityError as e:
-            self.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        for wide_relationship in wide_relationships:
+            self.object_tree_model.add_relationship(wide_relationship)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_name_list = "', '".join([x.name for x in wide_relationships])
+        msg = "Successfully added new relationships '{}'.".format(relationship_name_list)
+        self.msg.emit(msg)
 
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.
@@ -896,110 +863,92 @@ class DataStoreForm(QMainWindow):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
-        object_class_args_list = list()
+        kwargs_list = list()
         for index in indexes:
             if index.data(Qt.UserRole) != "object_class":
                 continue
-            object_class_args_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditObjectClassesDialog(self, self.db_map, object_class_args_list)
-        dialog.edit_confirmed.connect(self.update_object_classes)
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditObjectClassesDialog(self, kwargs_list)
         dialog.show()
 
     @busy_effect
-    @Slot("QVariant", "QVariant", name="update_object_classes")
-    def update_object_classes(self, new_kwargs_list, orig_kwargs_list):
+    def update_object_classes(self, object_classes, orig_kwargs_list):
         """Update object classes."""
-        try:
-            object_classes = self.db_map.update_object_classes(*new_kwargs_list)
-            self.object_tree_model.update_object_classes(object_classes)
-            new_names = list()
-            curr_names = list()
-            for object_class in object_classes:
-                try:
-                    curr_name = next(x for x in orig_kwargs_list if x["id"] == object_class.id)["name"]
-                    curr_names.append(curr_name)
-                    new_names.append(object_class.name)
-                except StopIteration:
-                    continue
-            self.rename_items_in_tables('object_class', new_names, curr_names)
-            self.set_commit_rollback_actions_enabled(True)
-            msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
-            self.msg.emit(msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        self.object_tree_model.update_object_classes(object_classes)
+        new_names = list()
+        curr_names = list()
+        for object_class in object_classes:
+            try:
+                curr_name = next(x for x in orig_kwargs_list if x["id"] == object_class.id)["name"]
+                curr_names.append(curr_name)
+                new_names.append(object_class.name)
+            except StopIteration:
+                continue
+        self.rename_items_in_tables('object_class', new_names, curr_names)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
+        self.msg.emit(msg)
 
     def show_edit_objects_form(self):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
-        object_args_list = list()
+        kwargs_list = list()
         for index in indexes:
             if index.data(Qt.UserRole) != "object":
                 continue
-            object_args_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditObjectsDialog(self, self.db_map, object_args_list)
-        dialog.edit_confirmed.connect(self.update_objects)
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditObjectsDialog(self, kwargs_list)
         dialog.show()
 
     @busy_effect
-    @Slot("QVariant", name="update_objects")
-    def update_objects(self, new_kwargs_list, orig_kwargs_list):
+    def update_objects(self, objects, orig_kwargs_list):
         """Update objects."""
-        try:
-            objects = self.db_map.update_objects(*new_kwargs_list)
-            self.object_tree_model.update_objects(objects)
-            new_names = list()
-            curr_names = list()
-            for object_ in objects:
-                try:
-                    curr_name = next(x for x in orig_kwargs_list if x["id"] == object_.id)["name"]
-                    curr_names.append(curr_name)
-                    new_names.append(object_.name)
-                except StopIteration:
-                    continue
-            self.rename_items_in_tables('object', new_names, curr_names)
-            self.set_commit_rollback_actions_enabled(True)
-            msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
-            self.msg.emit(msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        self.object_tree_model.update_objects(objects)
+        new_names = list()
+        curr_names = list()
+        for object_ in objects:
+            try:
+                curr_name = next(x for x in orig_kwargs_list if x["id"] == object_.id)["name"]
+                curr_names.append(curr_name)
+                new_names.append(object_.name)
+            except StopIteration:
+                continue
+        self.rename_items_in_tables('object', new_names, curr_names)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
+        self.msg.emit(msg)
 
     def show_edit_relationship_classes_form(self):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
-        relationship_class_args_list = list()
+        kwargs_list = list()
         for index in indexes:
             if index.data(Qt.UserRole) != "relationship_class":
                 continue
-            relationship_class_args_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipClassesDialog(self, self.db_map, relationship_class_args_list)
-        dialog.edit_confirmed.connect(self.update_relationship_classes)
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipClassesDialog(self, kwargs_list)
         dialog.show()
 
     @busy_effect
-    @Slot("QVariant", name="update_relationship_classes")
-    def update_relationship_classes(self, new_kwargs_list, orig_kwargs_list):
+    def update_relationship_classes(self, wide_relationship_classes, orig_kwargs_list):
         """Update object classes."""
-        try:
-            wide_relationship_classes = self.db_map.update_wide_relationship_classes(*new_kwargs_list)
-            self.object_tree_model.update_relationship_classes(wide_relationship_classes)
-            new_names = list()
-            curr_names = list()
-            for wide_relationship_class in wide_relationship_classes:
-                try:
-                    curr_name = next(x for x in orig_kwargs_list if x["id"] == wide_relationship_class.id)["name"]
-                    curr_names.append(curr_name)
-                    new_names.append(wide_relationship_class.name)
-                except StopIteration:
-                    continue
-            self.rename_items_in_tables('relationship_class', new_names, curr_names)
-            self.set_commit_rollback_actions_enabled(True)
-            relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-            msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
-            self.msg.emit(msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        self.object_tree_model.update_relationship_classes(wide_relationship_classes)
+        new_names = list()
+        curr_names = list()
+        for wide_relationship_class in wide_relationship_classes:
+            try:
+                curr_name = next(x for x in orig_kwargs_list if x["id"] == wide_relationship_class.id)["name"]
+                curr_names.append(curr_name)
+                new_names.append(wide_relationship_class.name)
+            except StopIteration:
+                continue
+        self.rename_items_in_tables('relationship_class', new_names, curr_names)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
+        self.msg.emit(msg)
 
     def show_edit_relationships_form(self):
         current = self.ui.treeView_object.currentIndex()
@@ -1012,32 +961,26 @@ class DataStoreForm(QMainWindow):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
-        relationship_args_list = list()
+        kwargs_list = list()
         for index in indexes:
             if index.data(Qt.UserRole) != "relationship":
                 continue
             # Only edit relationships of the same class as the one in current index, for now...
             if index.data(Qt.UserRole + 1)['class_id'] != class_id:
                 continue
-            relationship_args_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipsDialog(self, self.db_map, relationship_args_list, wide_relationship_class)
-        dialog.edit_confirmed.connect(self.update_relationships)
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipsDialog(self, kwargs_list, wide_relationship_class)
         dialog.show()
 
     @busy_effect
-    @Slot("QVariant", name="update_relationships")
-    def update_relationships(self, new_kwargs_list, orig_kwargs_list):
+    def update_relationships(self, wide_relationships, orig_kwargs_list):
         """Update object classes."""
-        try:
-            wide_relationships = self.db_map.update_wide_relationships(*new_kwargs_list)
-            self.object_tree_model.update_relationships(wide_relationships)
-            # NOTE: we don't need to call rename_items_in_tables here, for now
-            self.set_commit_rollback_actions_enabled(True)
-            relationship_name_list = "', '".join([x.name for x in wide_relationships])
-            msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
-            self.msg.emit(msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        self.object_tree_model.update_relationships(wide_relationships)
+        # NOTE: we don't need to call rename_items_in_tables here, for now
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_name_list = "', '".join([x.name for x in wide_relationships])
+        msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
+        self.msg.emit(msg)
 
     def rename_items_in_tables(self, renamed_type, new_names, curr_names):
         """Rename items in parameter and parameter value models."""

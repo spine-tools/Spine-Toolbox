@@ -13,10 +13,14 @@ optimizing queries to the database.)
 - Now the Data store form offers to commit pending changes at exit.
 - Better support for batch operations in Data store form.
 - Data store form can be fully operated by using the keyboard.
+- New options to edit items in the object tree view, including changing the objects involved in a relationship.
+- The dialogs to add/edit tree view items are not closed in case there's an error in the user choices.
+In this way you can correct your work and try again.
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
 second one.
+-
 
 ### Changed
 
@@ -58,7 +62,8 @@ package from now on.
 previous version, the first database in the list of saved references will be loaded for each Data Store.
 - In the Data store form, the object tree view presents all relationship classes at the same level,
 regardless of how many object classes are involved. The same applies for relationships and objects.
-- In the Data Store form, the relationship parameter value view now has different columns for each object involved.
+- In the Data Store form, the relationship parameter value view now has different columns for each object
+in the relationship.
 
 ## [0.1] - 2018-08-20
 
