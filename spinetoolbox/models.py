@@ -1054,7 +1054,7 @@ class ObjectTreeModel(QStandardItemModel):
             item_type = index.data(Qt.UserRole)
             if item_type.startswith('object'):
                 return self.object_icon
-            else:
+            elif item_type.startswith('relationship'):
                 return self.relationship_icon
         return super().data(index, role)
 
@@ -1456,13 +1456,14 @@ class DataStoreTableModel(MinimalTableModel):
 
     def make_columns_fixed_for_rows(self, *rows):
         """Set fixed columns as not editable and paint them gray."""
-        self.layoutAboutToBeChanged.emit()
         header = self.horizontal_header_labels()
         for row in rows:
             for column in self.fixed_columns:
                 self._data[row][column][Qt.BackgroundRole] = self.gray_brush
                 self._flags[row][column] = ~Qt.ItemIsEditable
-        self.layoutChanged.emit()
+        top_left = self.index(rows[0], self.fixed_columns[0])
+        bottom_right = self.index(rows[-1], self.fixed_columns[-1])
+        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
 
     def reset_model(self, model_data, fixed_column_names=list()):
         """Reset model while keeping the work in progress rows."""
