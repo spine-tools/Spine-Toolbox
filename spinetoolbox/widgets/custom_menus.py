@@ -183,31 +183,31 @@ class ObjectTreeContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         item = index.model().itemFromIndex(index)
         item_type = item.data(Qt.UserRole)
-        self.add_action("Copy", copy_icon)
+        self.add_action("Copy text", copy_icon)
         self.addSeparator()
         if item_type == 'root':
-            self.add_action("Add object classes")
+            self.add_action("Add object classes", plus_object_icon)
         elif item_type == 'object_class':
-            self.add_action("Edit object classes", edit_object_icon)
-            self.addSeparator()
             self.add_action("Add relationship classes", plus_relationship_icon)
             self.add_action("Add objects", plus_object_icon)
             self.add_action("Add parameter definitions", plus_object_parameter_icon)
+            self.addSeparator()
+            self.add_action("Edit object classes", edit_object_icon)
         elif item_type == 'object':
-            self.add_action("Edit objects", edit_object_icon)
-            self.addSeparator()
             self.add_action("Add parameter values", plus_object_parameter_icon)
-        elif item_type == 'relationship_class':
-            self.add_action("Edit relationship classes", edit_relationship_icon)
             self.addSeparator()
+            self.add_action("Edit objects", edit_object_icon)
+        elif item_type == 'relationship_class':
             self.add_action("Add relationships", plus_relationship_icon)
             self.add_action("Add parameter definitions", plus_relationship_parameter_icon)
+            self.addSeparator()
+            self.add_action("Edit relationship classes", edit_relationship_icon)
         elif item_type == 'relationship':
-            self.add_action("Expand next")
+            self.add_action("Add parameter values", plus_relationship_parameter_icon)
             self.addSeparator()
             self.add_action("Edit relationships", edit_relationship_icon)
             self.addSeparator()
-            self.add_action("Add parameter values", plus_relationship_parameter_icon)
+            self.add_action("Expand next")
         if item_type != 'root':
             self.addSeparator()
             self.add_action("Remove selected")

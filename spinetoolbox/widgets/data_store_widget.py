@@ -179,7 +179,7 @@ class DataStoreForm(QMainWindow):
         self.ui.actionPaste.triggered.connect(self.paste)
         # Object tree
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.receive_object_tree_current_changed)
-        # self.ui.treeView_object.edit_key_pressed.connect(self.edit_item) # TODO: Connect this better
+        self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
         # Autofilter parameter tables
@@ -592,54 +592,54 @@ class DataStoreForm(QMainWindow):
 
     def filter_object_parameter_value(self, tree_index):
         """Filter object parameter value model."""
-        selected_type = tree_index.data(Qt.UserRole)
-        if selected_type == 'root':
+        current_type = tree_index.data(Qt.UserRole)
+        if current_type == 'root':
             self.object_parameter_value_proxy.set_object_class_name(None)
             self.object_parameter_value_proxy.set_object_name(None)
         else:
-            selected = tree_index.data(Qt.UserRole + 1)
+            current = tree_index.data(Qt.UserRole + 1)
             parent = tree_index.parent().data(Qt.UserRole + 1)
-            if selected_type == 'object_class':
-                object_class_name = selected['name']
+            if current_type == 'object_class':
+                object_class_name = current['name']
                 self.object_parameter_value_proxy.set_object_class_name(object_class_name)
                 self.object_parameter_value_proxy.set_object_name(None)
-            elif selected_type == 'object':
+            elif current_type == 'object':
                 object_class_name = parent['name']
-                object_name = selected['name']
+                object_name = current['name']
                 self.object_parameter_value_proxy.set_object_class_name(object_class_name)
                 self.object_parameter_value_proxy.set_object_name(object_name)
         self.object_parameter_value_proxy.apply_filter()
 
     def filter_relationship_parameter_value(self, tree_index):
         """Filter relationship parameter value model."""
-        selected_type = tree_index.data(Qt.UserRole)
-        if selected_type == 'root':
+        current_type = tree_index.data(Qt.UserRole)
+        if current_type == 'root':
             self.relationship_parameter_value_proxy.set_relationship_class_name_list(None)
             self.relationship_parameter_value_proxy.set_object_name_list(None)
         else:
-            selected = tree_index.data(Qt.UserRole + 1)
+            current = tree_index.data(Qt.UserRole + 1)
             parent = tree_index.parent().data(Qt.UserRole + 1)
-            if selected_type == 'object_class':
-                object_class_id = selected['id']
+            if current_type == 'object_class':
+                object_class_id = current['id']
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name_list = [x.name for x in relationship_class_list]
                 self.relationship_parameter_value_proxy.set_relationship_class_name_list(relationship_class_name_list)
                 self.relationship_parameter_value_proxy.set_object_name_list(None)
-            elif selected_type == 'object':
+            elif current_type == 'object':
                 object_class_id = parent['id']
-                object_name = selected['name']
+                object_name = current['name']
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name_list = [x.name for x in relationship_class_list]
                 self.relationship_parameter_value_proxy.set_relationship_class_name_list(relationship_class_name_list)
                 self.relationship_parameter_value_proxy.set_object_name_list([object_name])
-            elif selected_type == 'relationship_class':
+            elif current_type == 'relationship_class':
                 object_name = parent['name']
-                relationship_class_name = selected['name']
+                relationship_class_name = current['name']
                 self.relationship_parameter_value_proxy.set_relationship_class_name_list([relationship_class_name])
                 self.relationship_parameter_value_proxy.set_object_name_list([object_name])
-            elif selected_type == 'relationship':
+            elif current_type == 'relationship':
                 relationship_class_name = parent['name']
-                object_name_list = selected['object_name_list'].split(',')
+                object_name_list = current['object_name_list'].split(',')
                 self.relationship_parameter_value_proxy.set_relationship_class_name_list([relationship_class_name])
                 self.relationship_parameter_value_proxy.set_object_name_list(object_name_list)
         self.relationship_parameter_value_proxy.apply_filter()
@@ -657,42 +657,42 @@ class DataStoreForm(QMainWindow):
 
     def filter_object_parameter(self, tree_index):
         """Filter object parameter model."""
-        selected_type = tree_index.data(Qt.UserRole)
-        if selected_type == 'root':
+        current_type = tree_index.data(Qt.UserRole)
+        if current_type == 'root':
             self.object_parameter_proxy.set_object_class_name(None)
         else:
-            selected = tree_index.data(Qt.UserRole + 1)
+            current = tree_index.data(Qt.UserRole + 1)
             parent = tree_index.parent().data(Qt.UserRole + 1)
-            if selected_type == 'object_class':
-                object_class_name = selected['name']
+            if current_type == 'object_class':
+                object_class_name = current['name']
                 self.object_parameter_proxy.set_object_class_name(object_class_name)
-            elif selected_type == 'object':
+            elif current_type == 'object':
                 object_class_name = parent['name']
                 self.object_parameter_proxy.set_object_class_name(object_class_name)
         self.object_parameter_proxy.apply_filter()
 
     def filter_relationship_parameter(self, tree_index):
         """Filter relationship parameter model"""
-        selected_type = tree_index.data(Qt.UserRole)
-        if selected_type == 'root':
+        current_type = tree_index.data(Qt.UserRole)
+        if current_type == 'root':
             self.relationship_parameter_proxy.set_relationship_class_name_list(None)
         else:
-            selected = tree_index.data(Qt.UserRole + 1)
+            current = tree_index.data(Qt.UserRole + 1)
             parent = tree_index.parent().data(Qt.UserRole + 1)
-            if selected_type == 'object_class':
-                object_class_id = selected['id']
+            if current_type == 'object_class':
+                object_class_id = current['id']
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name_list = [x.name for x in relationship_class_list]
                 self.relationship_parameter_proxy.set_relationship_class_name_list(relationship_class_name_list)
-            elif selected_type == 'object':
+            elif current_type == 'object':
                 object_class_id = parent['id']
                 relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_class_id)
                 relationship_class_name_list = [x.name for x in relationship_class_list]
                 self.relationship_parameter_proxy.set_relationship_class_name_list(relationship_class_name_list)
-            elif selected_type == 'relationship_class':
-                relationship_class_name = selected['name']
+            elif current_type == 'relationship_class':
+                relationship_class_name = current['name']
                 self.relationship_parameter_proxy.set_relationship_class_name_list([relationship_class_name])
-            elif selected_type == 'relationship':
+            elif current_type == 'relationship':
                 relationship_class_name = parent['name']
                 self.relationship_parameter_proxy.set_relationship_class_name_list([relationship_class_name])
         self.relationship_parameter_proxy.apply_filter()
@@ -876,6 +876,21 @@ class DataStoreForm(QMainWindow):
             self.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
+
+    def edit_object_tree_items(self):
+        """Called when F2 is pressed while the object tree has focus.
+        Call the appropriate method to show the edit form,
+        depending on the current index."""
+        current = self.ui.treeView_object.currentIndex()
+        current_type = current.data(Qt.UserRole)
+        if current_type == 'object_class':
+            self.show_edit_object_classes_form()
+        elif current_type == 'object':
+            self.show_edit_objects_form()
+        elif current_type == 'relationship_class':
+            self.show_edit_relationship_classes_form()
+        elif current_type == 'relationship':
+            self.show_edit_relationships_form()
 
     def show_edit_object_classes_form(self):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
