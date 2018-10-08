@@ -33,7 +33,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
-from spinedatabase_api import SpineDBAPIError
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDelegate
@@ -402,6 +402,8 @@ class DataStoreForm(QMainWindow):
                 logging.debug(insert_log)
                 logging.debug(error_log)
                 self.init_models()
+            except SpineIntegrityError as e:
+                self.msg_error.emit(e.msg)
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
 
@@ -793,6 +795,8 @@ class DataStoreForm(QMainWindow):
             self.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
             self.msg.emit(msg)
+        except SpineIntegrityError as e:
+            self.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -813,6 +817,8 @@ class DataStoreForm(QMainWindow):
             self.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
             self.msg.emit(msg)
+        except SpineIntegrityError as e:
+            self.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -837,6 +843,8 @@ class DataStoreForm(QMainWindow):
             relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
             msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
             self.msg.emit(msg)
+        except SpineIntegrityError as e:
+            self.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -864,6 +872,8 @@ class DataStoreForm(QMainWindow):
             relationship_name_list = "', '".join([x.name for x in wide_relationships])
             msg = "Successfully added new relationships '{}'.".format(relationship_name_list)
             self.msg.emit(msg)
+        except SpineIntegrityError as e:
+            self.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 

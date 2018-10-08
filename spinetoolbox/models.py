@@ -36,7 +36,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIco
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
-from spinedatabase_api import SpineDBAPIError
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
 class ProjectItemModel(QStandardItemModel):
@@ -1521,6 +1521,8 @@ class ParameterModel(DataStoreTableModel):
             self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
             self._data_store_form.msg.emit(msg)
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
 
@@ -1582,6 +1584,8 @@ class ParameterValueModel(DataStoreTableModel):
             self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
             self._data_store_form.msg.emit(msg)
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
 
@@ -2067,6 +2071,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
             msg = "Successfully added new relationships on the fly."
             self._data_store_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
 
