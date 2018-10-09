@@ -211,6 +211,9 @@ class ObjectTreeContextMenu(CustomContextMenu):
         if item_type != 'root':
             self.addSeparator()
             self.add_action("Remove selected")
+        self.addSeparator()
+        self.add_action("Fully expand")
+        self.add_action("Fully collapse")
         self.exec_(position)
 
 

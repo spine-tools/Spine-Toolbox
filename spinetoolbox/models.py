@@ -1004,6 +1004,29 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
+    def batch_remove_rows(self, row_set, parent=QModelIndex()):
+        """Removes a set of rows under parent.
+
+        Args:
+            row_set (set): Set of integer row numbers to remove
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if rows were removed successfully, False otherwise
+        """
+        if any([row < 0 or row > self.rowCount() for row in row_set]):
+            return False
+        first = min([row for row in row_set], default=0)
+        last = max([row for row in row_set], default=0)
+        if last <= first:
+            return False
+        self.beginRemoveRows(parent, first, last)
+        for row in reversed(list(row_set)):
+            removed_data_row = self._data.pop(row)
+            removed_flags_data_row = self._flags.pop(row)
+        self.endRemoveRows()
+        return True
+
     def reset_model(self, new_data=None):
         """Reset model."""
         self.beginResetModel()
@@ -1057,6 +1080,34 @@ class ObjectTreeModel(QStandardItemModel):
             elif item_type.startswith('relationship'):
                 return self.relationship_icon
         return super().data(index, role)
+
+    def sweep_to_leaves(self, index, call=None):
+        """Visit the given index and all its descendants, and apply call on each."""
+        current = index
+        back_to_parent = False
+        while True:
+            if call:
+                call(current)
+            if not back_to_parent:
+                # Try and visit first child
+                next_ = self.index(0, 0, current)
+                if next_.isValid():
+                    back_to_parent = False
+                    current = next_
+                    continue
+            # Try and visit next sibling
+            next_ = current.sibling(current.row() + 1, 0)
+            if next_.isValid():
+                back_to_parent = False
+                current = next_
+                continue
+            # Go back to parent
+            next_ = self.parent(current)
+            if next_ != index:
+                back_to_parent = True
+                current = next_
+                continue
+            break
 
     def build_tree(self, db_name):
         """Create root item and object class items. This triggers a recursion
@@ -1461,9 +1512,12 @@ class DataStoreTableModel(MinimalTableModel):
             for column in self.fixed_columns:
                 self._data[row][column][Qt.BackgroundRole] = self.gray_brush
                 self._flags[row][column] = ~Qt.ItemIsEditable
-        top_left = self.index(rows[0], self.fixed_columns[0])
-        bottom_right = self.index(rows[-1], self.fixed_columns[-1])
-        self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+        try:
+            top_left = self.index(rows[0], self.fixed_columns[0])
+            bottom_right = self.index(rows[-1], self.fixed_columns[-1])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+        except IndexError:
+            pass
 
     def reset_model(self, model_data, fixed_column_names=list()):
         """Reset model while keeping the work in progress rows."""

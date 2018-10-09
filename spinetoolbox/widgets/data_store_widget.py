@@ -259,15 +259,19 @@ class DataStoreForm(QMainWindow):
     def copy(self):
         """Copy data to clipboard."""
         focus_widget = self.focusWidget()
-        if focus_widget:
+        try:
             focus_widget.copy()
+        except AttributeError:
+            pass
 
     @Slot(name="paste")
     def paste(self):
         """Paste data from clipboard."""
         focus_widget = self.focusWidget()
-        if focus_widget:
+        try:
             focus_widget.paste(self.clipboard_text)
+        except AttributeError:
+            pass
 
     @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_selection_changed")
     def receive_object_parameter_selection_changed(self, selected, deselected):
@@ -555,7 +559,7 @@ class DataStoreForm(QMainWindow):
 
     @Slot("QModelIndex", name="expand_next_leaf")
     def expand_next_leaf(self, index):
-        """Check if index corresponds to a relationship and expand next."""
+        """If index corresponds to a relationship, then expand the next ocurrence of it."""
         if not index.isValid():
             return # just to be safe
         clicked_type = index.data(Qt.UserRole)
@@ -742,6 +746,10 @@ class DataStoreForm(QMainWindow):
             self.call_add_parameters(index)
         elif option == "Add parameter values":
             self.call_add_parameter_values(index)
+        elif option == "Fully expand":
+            self.object_tree_model.sweep_to_leaves(index, call=self.ui.treeView_object.expand)
+        elif option == "Fully collapse":
+            self.object_tree_model.sweep_to_leaves(index, call=self.ui.treeView_object.collapse)
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
@@ -1113,27 +1121,33 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_value_model
         proxy_index = self.ui.tableView_object_parameter_value.currentIndex()
         index = self.object_parameter_value_proxy.mapToSource(proxy_index)
-        row = index.row()+1
-        selection = self.ui.treeView_object.selectionModel().selection()
+        row = index.row() + 1
+        tree_selection = self.ui.treeView_object.selectionModel().selection()
         some_inserted = False
-        if selection:
+        if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
             object_name_column = model.horizontal_header_labels().index('object_name')
+            row_column_tuples = list()
+            data = list()
             i = 0
-            for index in selection.indexes():
-                if index.data(Qt.UserRole) == 'object_class':
-                    object_class_name = index.data(Qt.DisplayRole)
+            for tree_index in tree_selection.indexes():
+                if tree_index.data(Qt.UserRole) == 'object_class':
+                    object_class_name = tree_index.data(Qt.DisplayRole)
                     object_name = None
-                elif index.data(Qt.UserRole) == 'object':
-                    object_class_name = index.parent().data(Qt.DisplayRole)
-                    object_name = index.data(Qt.DisplayRole)
+                elif tree_index.data(Qt.UserRole) == 'object':
+                    object_class_name = tree_index.parent().data(Qt.DisplayRole)
+                    object_name = tree_index.data(Qt.DisplayRole)
                 else:
                     continue
-                model.insertRows(row + i, 1)
-                model.setData(model.index(row + i, object_class_name_column), object_class_name)
-                model.setData(model.index(row + i, object_name_column), object_name)
-                some_inserted = True
+                row_column_tuples.append((row + i, object_class_name_column))
+                row_column_tuples.append((row + i, object_name_column))
+                data.extend([object_class_name, object_name])
                 i += 1
+            if i > 0:
+                some_inserted = True
+                model.insertRows(row, i)
+                indexes = [model.index(row, column) for row, column in row_column_tuples]
+                model.batch_set_data(indexes, data)
         if not some_inserted:
             model.insertRows(row, 1)
         self.ui.tabWidget_object.setCurrentIndex(0)
@@ -1147,36 +1161,43 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_value_model
         proxy_index = self.ui.tableView_relationship_parameter_value.currentIndex()
         index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
-        row = index.row()+1
-        selection = self.ui.treeView_object.selectionModel().selection()
+        row = index.row() + 1
+        tree_selection = self.ui.treeView_object.selectionModel().selection()
         some_inserted = False
-        if selection:
+        if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
             object_name_1_column = model.horizontal_header_labels().index('object_name_1')
+            row_column_tuples = list()
+            data = list()
             i = 0
-            for index in selection.indexes():
-                if index.data(Qt.UserRole) == 'relationship_class':
-                    selected_object_class_name = index.parent().parent().data(Qt.DisplayRole)
-                    object_name = index.parent().data(Qt.DisplayRole)
-                    relationship_class_name = index.data(Qt.DisplayRole)
-                    object_class_name_list = index.data(Qt.UserRole + 1)["object_class_name_list"].split(",")
+            for tree_index in tree_selection.indexes():
+                if tree_index.data(Qt.UserRole) == 'relationship_class':
+                    selected_object_class_name = tree_index.parent().parent().data(Qt.DisplayRole)
+                    object_name = tree_index.parent().data(Qt.DisplayRole)
+                    relationship_class_name = tree_index.data(Qt.DisplayRole)
+                    object_class_name_list = tree_index.data(Qt.UserRole + 1)["object_class_name_list"].split(",")
                     object_name_list = list()
                     for object_class_name in object_class_name_list:
                         if object_class_name == selected_object_class_name:
                             object_name_list.append(object_name)
                         else:
                             object_name_list.append(None)
-                elif index.data(Qt.UserRole) == 'relationship':
-                    relationship_class_name = index.parent().data(Qt.DisplayRole)
-                    object_name_list = index.data(Qt.UserRole + 1)["object_name_list"].split(",")
+                elif tree_index.data(Qt.UserRole) == 'relationship':
+                    relationship_class_name = tree_index.parent().data(Qt.DisplayRole)
+                    object_name_list = tree_index.data(Qt.UserRole + 1)["object_name_list"].split(",")
                 else:
                     continue
-                model.insertRows(row + i, 1)
-                model.setData(model.index(row + i, relationship_class_name_column), relationship_class_name)
+                row_column_tuples.append((row + i, relationship_class_name_column))
+                data.append(relationship_class_name)
                 for j, object_name in enumerate(object_name_list):
-                    model.setData(model.index(row + i, object_name_1_column + j), object_name)
-                some_inserted = True
+                    row_column_tuples.append((row + i, object_name_1_column + j))
+                    data.append(object_name)
                 i += 1
+            if i > 0:
+                some_inserted = True
+                model.insertRows(row, i)
+                indexes = [model.index(row, column) for row, column in row_column_tuples]
+                model.batch_set_data(indexes, data)
         if not some_inserted:
             model.insertRows(row, 1)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
@@ -1190,23 +1211,29 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_model
         proxy_index = self.ui.tableView_object_parameter.currentIndex()
         index = self.object_parameter_proxy.mapToSource(proxy_index)
-        row = index.row()+1
-        selection = self.ui.treeView_object.selectionModel().selection()
+        row = index.row() + 1
+        tree_selection = self.ui.treeView_object.selectionModel().selection()
         some_inserted = False
-        if selection:
+        if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
+            row_column_tuples = list()
+            data = list()
             i = 0
-            for index in selection.indexes():
-                if index.data(Qt.UserRole) == 'object_class':
-                    object_class_name = index.data(Qt.DisplayRole)
-                elif index.data(Qt.UserRole) == 'object':
-                    object_class_name = index.parent().data(Qt.DisplayRole)
+            for tree_index in tree_selection.indexes():
+                if tree_index.data(Qt.UserRole) == 'object_class':
+                    object_class_name = tree_index.data(Qt.DisplayRole)
+                elif tree_index.data(Qt.UserRole) == 'object':
+                    object_class_name = tree_index.parent().data(Qt.DisplayRole)
                 else:
                     continue
-                model.insertRows(row + i, 1)
-                model.setData(model.index(row + i, object_class_name_column), object_class_name)
-                some_inserted = True
+                row_column_tuples.append((row + i, object_class_name_column))
+                data.append(object_class_name)
                 i += 1
+            if i > 0:
+                some_inserted = True
+                model.insertRows(row, i)
+                indexes = [model.index(row, column) for row, column in row_column_tuples]
+                model.batch_set_data(indexes, data)
         if not some_inserted:
             model.insertRows(row, 1)
         self.ui.tabWidget_object.setCurrentIndex(1)
@@ -1220,23 +1247,29 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_model
         proxy_index = self.ui.tableView_relationship_parameter.currentIndex()
         index = self.relationship_parameter_proxy.mapToSource(proxy_index)
-        row = index.row()+1
-        selection = self.ui.treeView_object.selectionModel().selection()
+        row = index.row() + 1
+        tree_selection = self.ui.treeView_object.selectionModel().selection()
         some_inserted = False
-        if selection:
+        if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
+            row_column_tuples = list()
+            data = list()
             i = 0
-            for index in selection.indexes():
-                if index.data(Qt.UserRole) == 'relationship_class':
-                    relationship_class_name = index.data(Qt.DisplayRole)
-                elif index.data(Qt.UserRole) == 'relationship':
-                    relationship_class_name = index.parent().data(Qt.DisplayRole)
+            for tree_index in tree_selection.indexes():
+                if tree_index.data(Qt.UserRole) == 'relationship_class':
+                    relationship_class_name = tree_index.data(Qt.DisplayRole)
+                elif tree_index.data(Qt.UserRole) == 'relationship':
+                    relationship_class_name = tree_index.parent().data(Qt.DisplayRole)
                 else:
                     continue
-                model.insertRows(row + i, 1)
-                model.setData(model.index(row + i, relationship_class_name_column), relationship_class_name)
-                some_inserted = True
+                row_column_tuples.append((row + i, relationship_class_name_column))
+                data.append(relationship_class_name)
                 i += 1
+            if i > 0:
+                some_inserted = True
+                model.insertRows(row, i)
+                indexes = [model.index(row, column) for row, column in row_column_tuples]
+                model.batch_set_data(indexes, data)
         if not some_inserted:
             model.insertRows(row, 1)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
@@ -1285,8 +1318,7 @@ class DataStoreForm(QMainWindow):
             parameter_value_ids.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            for source_row in reversed(list(source_row_set)):
-                self.object_parameter_value_model.removeRows(source_row, 1)
+            self.object_parameter_value_model.batch_remove_rows(source_row_set)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter vales.")
         except SpineDBAPIError as e:
@@ -1305,8 +1337,7 @@ class DataStoreForm(QMainWindow):
             parameter_value_ids.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            for source_row in reversed(list(source_row_set)):
-                self.relationship_parameter_value_model.removeRows(source_row, 1)
+            self.relationship_parameter_value_model.batch_remove_rows(source_row_set)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter vales.")
         except SpineDBAPIError as e:
@@ -1329,8 +1360,7 @@ class DataStoreForm(QMainWindow):
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            for source_row in reversed(list(source_row_set)):
-                self.object_parameter_model.removeRows(source_row, 1)
+            self.object_parameter_model.batch_remove_rows(source_row_set)
             self.object_parameter_value_model.remove_items("parameter", *parameter_names)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
@@ -1354,8 +1384,7 @@ class DataStoreForm(QMainWindow):
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            for source_row in reversed(list(source_row_set)):
-                self.relationship_parameter_model.removeRows(source_row, 1)
+            self.relationship_parameter_model.batch_remove_rows(source_row_set)
             self.relationship_parameter_value_model.remove_items("parameter", *parameter_names)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
