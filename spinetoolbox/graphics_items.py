@@ -303,14 +303,14 @@ class ItemImage(QGraphicsItem):
         """
         if event.key() == Qt.Key_Delete and self._master.isSelected():
             name = self.name()
-            ind = self._toolbox.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            ind = self._toolbox.project_item_model.find_item(name)
             self._toolbox.remove_item(ind, delete_item=True)
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item."""
         # Find item index from project_item_model
         name = self.name()
-        ind = self._toolbox.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+        ind = self._toolbox.project_item_model.find_item(name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
         # self._toolbox.show_info(self.name())
 

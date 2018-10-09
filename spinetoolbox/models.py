@@ -198,24 +198,13 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             True if successful, False otherwise
         """
-        if not parent.isValid():  # Insert category item under root
-            row = self.rowCount()  # parent.child_count()
-            logging.debug("Inserting a category item on row:{0}".format(row))
-            self.beginInsertRows(QModelIndex(), row, row)
-            retval = self.root().add_child(item)
-            self.endInsertRows()
-            return retval
-        elif parent.internalPointer().is_category:  # Insert new item under category
-            # Insert as the last item
-            row = self.rowCount(parent)  # parent.child_count()
-            logging.debug("Inserting a project item on row:{0}".format(row))
-            self.beginInsertRows(parent, row, row)
-            retval = parent.internalPointer().add_child(item)
-            self.endInsertRows()
-            return retval
-        else:
-            logging.error("insert_item() fail. parent_item is not root or category")
-            return False
+        parent_item = self.project_item(parent)
+        row = self.rowCount(parent)  # parent.child_count()
+        logging.debug("Inserting item on row:{0} under parent:{1}".format(row, parent_item.name))
+        self.beginInsertRows(parent, row, row)
+        retval = parent_item.add_child(item)
+        self.endInsertRows()
+        return retval
 
     def remove_item(self, item, parent=QModelIndex()):
         """Remove item from model.
@@ -227,7 +216,12 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             bool: True if item removed successfully, False if item removing failed
         """
-        pass
+        parent_item = self.project_item(parent)
+        row = item.row()
+        self.beginRemoveRows(parent, row, row)
+        retval = parent_item.remove_child(row)
+        self.endRemoveRows()
+        return retval
 
     def setData(self, index, value, role=Qt.EditRole):
         # TODO: Test this. Should this emit dataChanged signal at some point?
@@ -333,6 +327,10 @@ class ProjectItemModel(QAbstractItemModel):
         """Return the number of all project items in the model excluding category items and root."""
         return len(self.items())
 
+    def return_item_names(self):
+        """Returns the names of all items in a list."""
+        return [item.name for item in self.items()]
+
     def new_item_index(self, category):
         """Get index where a new item is appended according to category. This is needed for
         appending the connection model.
@@ -377,19 +375,6 @@ class ProjectItemModel(QAbstractItemModel):
             if item.short_name == short_name:
                 return True
         return False
-
-    # def return_item_names(self):
-    #     # TODO: Obsolete?
-    #     """Returns the names of all items in a list."""
-    #     item_names = list()
-    #     top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
-    #     for top_level_item in top_level_items:
-    #         if top_level_item.hasChildren():
-    #             n_children = top_level_item.rowCount()
-    #             for i in range(n_children):
-    #                 child = top_level_item.child(i, 0)
-    #                 item_names.append(child.data(Qt.DisplayRole))
-    #     return item_names
 
 
 class ToolTemplateModel(QAbstractListModel):

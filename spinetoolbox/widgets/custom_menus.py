@@ -84,7 +84,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         if not index.parent().isValid():
             # If index is at a category item
             return
-        d = index.data(Qt.UserRole)
+        d = self._parent.project_item_model.project_item(index)
         if d.item_type == "Data Connection":
             self.add_action("Open directory...")
         elif d.item_type == "Data Store":

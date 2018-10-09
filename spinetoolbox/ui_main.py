@@ -487,34 +487,22 @@ class ToolboxUI(QMainWindow):
             return
         logging.debug("current: {0}".format(current))
         logging.debug("previous: {0}".format(previous))
-        current_item = self.project_item_model.itemFromIndex(current)
-        if not previous.isValid():
-            previous_item = None
+        current_item = self.project_item_model.project_item(current)
+        if not previous:
+            self.msg.emit("previous item was None")
+        elif not previous.isValid():
+            self.msg.emit("previous item was root")
         else:
-            previous_item = self.project_item_model.itemFromIndex(previous)
-        if previous_item is not None:
-            self.msg.emit("Previous item: {0}".format(previous_item.data(Qt.UserRole).name))
-            # try:
-            #     self.project_refs.remove(previous_item.data(Qt.UserRole))
-            # except ValueError:
-            #     self.msg_error.emit("Item {0} not found in reference list".format(previous_item.data(Qt.UserRole).name))
-            previous_item.data(Qt.UserRole).disconnect_signals()
-            # self.project_refs.append(previous_item)
-        else:
-            self.msg.emit("previous is None ")
-        item = current_item.data(Qt.UserRole)
-        self.msg.emit("Current item: {0}".format(item.name))
-        # try:
-        #     self.project_refs.remove(item)
-        # except ValueError:
-        #     self.msg_error.emit("Item {0} not found in reference list".format(item.name))
-        for ref in self.project_refs:
-            self.msg.emit("ref.name:{0}".format(ref.name))
-            if ref.name == current_item.data(Qt.UserRole).name:
-                ref.connect_signals()
-        item.connect_signals()
-        # self.project_refs.append(item)
-        self.show_info(item)
+            previous_item = self.project_item_model.project_item(previous)
+            if not previous_item.is_category:
+                self.msg.emit("Previous item: {0}".format(previous_item.name))
+                previous_item.disconnect_signals()
+            else:
+                self.msg.emit("previous item was a category item")
+        # item = current_item.data(Qt.UserRole)
+        self.msg.emit("Current item: {0}".format(current_item.name))
+        current_item.connect_signals()
+        self.show_info(current_item)
 
     def show_info(self, item):
         """Show information of selected item.
@@ -830,42 +818,6 @@ class ToolboxUI(QMainWindow):
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool template removed successfully")
 
-    # def add_item_to_model(self, category, text, data):
-    #     """Add item to project model.
-    #
-    #     Args:
-    #         category (str): Project category (e.g. Data Stores)
-    #         text (str): Display role for the new item
-    #         data (QObject): Object that is added to model (e.g. DataStore())
-    #     """
-    #     # First, find QStandardItem category item where new child item is added
-    #     found_items = self.project_item_model.findItems(category, Qt.MatchExactly | Qt.MatchRecursive, column=0)
-    #     if not found_items:
-    #         logging.error("'{0}' category not found in project item model".format(category))
-    #         return False
-    #     if len(found_items) > 1:
-    #         logging.error("More than one '{0}' category found in project item model".format(category))
-    #         return False
-    #     item_index = found_items[0].index()
-    #     parent_index = item_index.parent()
-    #     if not parent_index.isValid():
-    #         # item_index is a top-level item, we are good
-    #         new_item = QStandardItem(text)
-    #         self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
-    #         # new_item.setData(data, role=Qt.UserRole)
-    #         # row of new item
-    #         row = self.project_item_model.n_items(data.item_category)
-    #         appended_item_index = self.project_item_model.index(row, 0, parent=item_index)
-    #         self.project_item_model.setData(appended_item_index, data, role=Qt.UserRole)
-    #         # Get index of the new item
-    #         # Get row and column number (i.e. index) for the connection model. This is to
-    #         # keep the project item model and connection model synchronized.
-    #         row_in_con_model = self.project_item_model.new_item_index(data.item_category)
-    #         self.connection_model.append_item(new_item, row_in_con_model)
-    #         self.ui.tableView_connections.resizeColumnsToContents()
-    #         self.ui.treeView_project.expand(item_index)
-    #     return True
-
     @Slot(name="remove_all_items")
     def remove_all_items(self):
         """Slot for Remove All button."""
@@ -882,7 +834,8 @@ class ToolboxUI(QMainWindow):
         if n == 0:
             return
         for name in item_names:
-            ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            logging.debug("Removing item {0}".format(name))
+            ind = self.project_item_model.find_item(name)
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
 
@@ -900,7 +853,8 @@ class ToolboxUI(QMainWindow):
             delete_item (bool): If set to True, deletes the directories and data associated with the item
             check_dialog (bool): If True, shows 'Are you sure?' message box
         """
-        name = ind.data(Qt.UserRole).name
+        project_item = self.project_item_model.project_item(ind)
+        name = project_item.name
         if check_dialog:
             msg = "Are you sure? Item's data will be deleted from you project.\n\n" \
                   "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
@@ -908,32 +862,28 @@ class ToolboxUI(QMainWindow):
             answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return
-        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-        item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
-        if item_data.item_type in ("Data Connection", "Data Store"):
+        # item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
+        # item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
+        if project_item.item_type in ("Data Connection", "Data Store"):
             try:
-                data_dir = item_data.data_dir
+                data_dir = project_item.data_dir
             except AttributeError:
                 logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
                 data_dir = None
         else:
             data_dir = None
         # Remove item icon (QGraphicsItems) from scene
-        self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
-        item_data.set_icon(None)
-        item_data.deleteLater()
-        # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
-        if not self.connection_model.remove_item(item):
-            self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
+        self.ui.graphicsView.scene().removeItem(project_item.get_icon().master())
+        project_item.set_icon(None)
+        project_item.deleteLater()
+
+        # TODO: Remove item from connection model. This also removes Link QGraphicsItems associated to this item
+        # if not self.connection_model.remove_item(item):
+        #     self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
+
         # Remove item from project model
-        if not self.project_item_model.removeRow(ind.row(), ind.parent()):
-            self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(item_data.name))
-        # Remove item data from reference list
-        try:
-            self.project_refs.remove(item_data)  # Note: remove() removes only the first occurrence in the list
-        except ValueError:
-            self.msg_error.emit("Item '{0}' not found in reference list".format(item_data))
-            return
+        if not self.project_item_model.remove_item(project_item, parent=ind.parent()):
+            self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
@@ -1225,7 +1175,7 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             name (str): The name of the concerned item
         """
-        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item
+        ind = self.project_item_model.find_item(name)
         self.show_project_item_context_menu(pos, ind)
 
     def show_project_item_context_menu(self, pos, ind):
@@ -1237,7 +1187,7 @@ class ToolboxUI(QMainWindow):
         """
         self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
         option = self.project_item_context_menu.get_action()
-        d = ind.data(Qt.UserRole)
+        d = self.project_item_model.project_item(ind)
         if option == "Open directory...":
             d.open_directory()  # Open data_dir of Data Connection or Data Store
         elif option == "Open treeview...":
