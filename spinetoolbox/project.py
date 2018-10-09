@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Spine Toolbox project class.
@@ -372,27 +364,27 @@ class SpineToolboxProject(MetaObject):
     def add_data_store(self, name, description, reference, x=0, y=0):
         """Add data store to project item model."""
         data_store = DataStore(self._toolbox, name, description, reference, x, y)
-        # self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Data Stores", name, data_store)
+        ds_category = self._toolbox.project_item_model.find_category("Data Stores")
+        self._toolbox.project_item_model.insert_item(data_store, ds_category)
         self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
 
     def add_data_connection(self, name, description, references, x=0, y=0):
         """Add Data Connection to project item model."""
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        # self._toolbox.project_refs.append(data_connection)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Data Connections", name, data_connection)
+        dc_category = self._toolbox.project_item_model.find_category("Data Connections")
+        self._toolbox.project_item_model.insert_item(data_connection, dc_category)
         self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
 
     def add_tool(self, name, description, tool_template, x=0, y=0):
         """Add Tool to project item model."""
         tool = Tool(self._toolbox, name, description, tool_template, x, y)
-        # self._toolbox.project_refs.append(tool)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Tools", name, tool)
+        tool_category = self._toolbox.project_item_model.find_category("Tools")
+        self._toolbox.project_item_model.insert_item(tool, tool_category)
         self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
     def add_view(self, name, description, x=0, y=0):
         """Add View to project item model."""
         view = View(self._toolbox, name, description, x, y)
-        # self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Views", name, view)
+        view_category = self._toolbox.project_item_model.find_category("Views")
+        self._toolbox.project_item_model.insert_item(view, view_category)
         self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))

@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Classes for handling models in PySide2's model/view framework.
@@ -37,49 +29,34 @@ from helpers import rename_dir
 
 
 class ProjectItemModel(QAbstractItemModel):
-    """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
-    # TODO: Redo everything
+    """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views.
+
+    Attributes:
+        toolbox (ToolboxUI): QMainWindow instance
+        root (ProjectItem): Root item for the project item tree
+    """
     def __init__(self, toolbox, root):
+        """Class constructor."""
         super().__init__()
         self._toolbox = toolbox
         self._root = root
 
     def root(self):
+        """Returns root project item."""
         return self._root
 
-    # def is_category(self, index):
-    #     """Category items are the children of the root item (top-level items).
-    #     Project items are the children of category items.
-    #
-    #     Args:
-    #         index (QModelIndex): Index of item to check
-    #
-    #     Returns:
-    #         Boolean value depending on whether the item at index is a category item or not.
-    #     """
-    #     if index.parent() == self.root():
-    #         return True
-    #     return False
-
     def rowCount(self, parent=QModelIndex()):
-        """Reimplemented row count.
+        """Reimplemented rowCount method.
 
         Args:
             parent (QModelIndex): Index of parent item whose children are counted.
 
         Returns:
-            Number (int) of children of given parent
+            int: Number of children of given parent
         """
-        if not parent.isValid():
-            # This is the root item. Return number of category items.
-            n_cat_items = self.root().child_count()
-            logging.debug("rowCount: n_cat items: {0}".format(n_cat_items))
+        if not parent.isValid():  # Number of category items (children of root)
             return self.root().child_count()
-        elif parent.internalPointer() == self.root():
-            logging.debug("rowCount: parent is root")
-            return parent.internalPointer().child_count()
-        elif parent.internalPointer().is_category:
-            logging.debug("rowCount: parent is category {0}".format(parent))
+        elif parent.internalPointer().is_category:  # Number of project items in the category
             return parent.internalPointer().child_count()
         else:
             return 0
@@ -100,28 +77,34 @@ class ProjectItemModel(QAbstractItemModel):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def parent(self, index=QModelIndex()):
-        """Reimplemented method."""
+        """Returns index of the parent of given index.
+
+        Args:
+            index (QModelIndex): Index of item whose parent is returned
+
+        Returns:
+            QModelIndex: Index of parent item
+        """
         item = self.project_item(index)
         parent_item = item.parent()
         if not parent_item:
-            logging.debug("no parent")
             return QModelIndex()
         if parent_item == self.root():
-            logging.debug("parent is root")
             return QModelIndex()
-        logging.debug("Parent is a category item")
+        # logging.debug("parent_item: {0}".format(parent_item.name))
         return self.createIndex(parent_item.row(), 0, parent_item)
 
-        # setup = self.get_setup(index)
-        # parent_setup = setup.parent()
-        # if not parent_setup:
-        #     return QModelIndex()
-        # if parent_setup == self._root_setup:
-        #     return QModelIndex()
-        # return self.createIndex(parent_setup.row(), 0, parent_setup)
-
     def index(self, row, column, parent=QModelIndex()):
-        """Reimplemented method."""
+        """Returns index of item with given row, column, and parent.
+
+        Args:
+            row (int): Item row
+            column (int): Item column
+            parent (QModelIndex): Parent item index
+
+        Returns:
+            QModelIndex: Item index
+        """
         if row < 0 or row >= self.rowCount(parent):
             return QModelIndex()
         if column < 0 or column >= self.columnCount(parent):
@@ -132,15 +115,6 @@ class ProjectItemModel(QAbstractItemModel):
             return QModelIndex()
         else:
             return self.createIndex(row, column, child)
-
-        # if row < 0 or row >= self.rowCount(parent) or column < 0 or column >= self.columnCount(parent):
-        #     return QModelIndex()
-        # parent_setup = self.get_setup(parent)
-        # child_setup = parent_setup.child(row)
-        # if child_setup:
-        #     return self.createIndex(row, column, child_setup)
-        # else:
-        #     return QModelIndex()
 
     def data(self, index, role=None):
         """Returns data in the given index according to requested role.
@@ -155,7 +129,6 @@ class ProjectItemModel(QAbstractItemModel):
         if not index.isValid():
             return None
         project_item = index.internalPointer()
-        # Return DisplayRole
         if role == Qt.DisplayRole:
             return project_item.name
         else:
@@ -168,41 +141,96 @@ class ProjectItemModel(QAbstractItemModel):
             index (QModelIndex): Index of project item
 
         Returns:
-            Item at given index or root project item if index is not valid
+            ProjectItem: Item at given index or root project item if index is not valid
         """
         if not index.isValid():
             return self.root()
         return index.internalPointer()
 
-        # if index.isValid():
-        #     setup = index.internalPointer()
-        #     if setup:
-        #         return setup
-        # return self.root()
+    def find_category(self, category_name):
+        """Returns the index of the given category name.
 
-    def insert_item(self, item, row, parent_item):
-        """Add new item to model.
+        Args:
+            category_name (str): Name of category item to find
+
+        Returns:
+             QModelIndex of a category item or None if it was not found
+        """
+        category_names = [category.name for category in self.root().children()]
+        # logging.debug("Category names:{0}".format(category_names))
+        try:
+            row = category_names.index(category_name)
+        except ValueError:
+            logging.error("Category name {0} not found in {1}".format(category_name, category_names))
+            return None
+        return self.index(row, 0, QModelIndex())
+
+    def find_item(self, name):
+        """Returns the QModelIndex of the project item with the given name
+
+        Args:
+            name (str): The searched project item (long) name
+
+        Returns:
+            QModelIndex of a project item with the given name or None if not found
+        """
+        for category in self.root().children():
+            # logging.debug("Looking for {0} in category {1}".format(name, category.name))
+            category_index = self.find_category(category.name)
+            start_index = self.index(0, 0, category_index)
+            matching_index = self.match(start_index, Qt.DisplayRole, name,
+                                        1, Qt.MatchFixedString | Qt.MatchRecursive)
+            if len(matching_index) == 0:
+                pass  # no match in this category
+            elif len(matching_index) == 1:
+                logging.debug("Found item:{0}".format(matching_index[0].internalPointer().name))
+                return matching_index[0]
+        return None
+
+    def insert_item(self, item, parent=QModelIndex()):
+        """Add new item to model. Fails if parent_item is not a category item or root item.
+        Inserts new item as the last item.
 
         Args:
             item (ProjectItem): Project item to add to model
-            row (int): Row where new item is added
-            parent_item (ProjectItem): Parent project item
+            parent (QModelIndex): Parent project item
 
         Returns:
             True if successful, False otherwise
         """
-        if item.is_category:
+        if not parent.isValid():  # Insert category item under root
+            row = self.rowCount()  # parent.child_count()
+            logging.debug("Inserting a category item on row:{0}".format(row))
             self.beginInsertRows(QModelIndex(), row, row)
-            retval = parent_item.add_child(item)
+            retval = self.root().add_child(item)
             self.endInsertRows()
+            return retval
+        elif parent.internalPointer().is_category:  # Insert new item under category
+            # Insert as the last item
+            row = self.rowCount(parent)  # parent.child_count()
+            logging.debug("Inserting a project item on row:{0}".format(row))
+            self.beginInsertRows(parent, row, row)
+            retval = parent.internalPointer().add_child(item)
+            self.endInsertRows()
+            return retval
         else:
-            # parent_index = self.index(row, 0, parent_item)
-            # TODO: Implement this
-            logging.debug("Item '{0}' is not a category item".format(item.name))
-            retval = False
-        return retval
+            logging.error("insert_item() fail. parent_item is not root or category")
+            return False
+
+    def remove_item(self, item, parent=QModelIndex()):
+        """Remove item from model.
+
+        Args:
+            item (ProjectItem): Project item to remove
+            parent (QModelIndex): Parent of item that is to be removed
+
+        Returns:
+            bool: True if item removed successfully, False if item removing failed
+        """
+        pass
 
     def setData(self, index, value, role=Qt.EditRole):
+        # TODO: Test this. Should this emit dataChanged signal at some point?
         """Change name of item in index to value.
 
         Args:
@@ -215,7 +243,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         if not role == Qt.EditRole:
             return super().setData(index, value, role)
-        item = self.data(index, Qt.UserRole)
+        item = index.internalPointer()
         old_name = item.name
         if value.strip() == '' or value == old_name:
             return False
@@ -226,8 +254,7 @@ class ProjectItemModel(QAbstractItemModel):
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
             return False
         # Check if project item with the same name already exists
-        taken_names = self.return_item_names()
-        if value in taken_names:
+        if self.find_item(value):
             msg = "Project item <b>{0}</b> already exists".format(value)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
@@ -235,13 +262,11 @@ class ProjectItemModel(QAbstractItemModel):
         # Check that no existing project item short name matches the new item's short name.
         # This is to prevent two project items from using the same folder.
         new_short_name = value.lower().replace(' ', '_')
-        for taken_name in taken_names:
-            taken_short_name = taken_name.lower().replace(' ', '_')
-            if new_short_name == taken_short_name:
-                msg = "Project item using directory <b>{0}</b> already exists".format(taken_short_name)
-                # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-                QMessageBox.information(self._toolbox, "Invalid name", msg)
-                return False
+        if self._toolbox.project_item_model.short_name_reserved(new_short_name):
+            msg = "Project item using directory <b>{0}</b> already exists".format(new_short_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Invalid name", msg)
+            return False
         # Get old data dir which will be renamed
         try:
             old_data_dir = item.data_dir  # Full path
@@ -256,21 +281,7 @@ class ProjectItemModel(QAbstractItemModel):
         # Rename item project directory
         if not rename_dir(self._toolbox, old_data_dir, new_data_dir):
             return False
-        # Find item from project refs list
-        project_refs = self._toolbox.project_refs
-        item_ref = None
-        for ref in project_refs:
-            if ref.name == old_name:
-                ref_index = project_refs.index(ref)
-                item_ref = project_refs.pop(ref_index)
-                break
-        # Change name for item in project ref list
-        item_ref.set_name(value)
-        self._toolbox.project_refs.append(item_ref)
-        # Update DisplayRole of the QStardardItem in Project QTreeView
-        q_item = self.find_item(old_name, Qt.MatchExactly | Qt.MatchRecursive)
-        q_item.setData(value, Qt.DisplayRole)
-        # Rename project item contained in the QStandardItem
+        # Rename project item
         item.set_name(value)
         # Update project item directory variable
         item.data_dir = new_data_dir
@@ -294,58 +305,37 @@ class ProjectItemModel(QAbstractItemModel):
         self._toolbox.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
         return True
 
-    def n_items(self, typ):
-        """Returns the number of items in the project according to category.
+    def items(self, category_name=None):
+        """Returns a list of items in model according to category name. If no category name given,
+        returns all items in a list.
 
         Args:
-            typ (str): Type of item to count. "all" returns the number of items in project.
-        """
-        n = 0
-        top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if typ == "all":
-                if top_level_item.hasChildren():
-                    n = n + top_level_item.rowCount()
-            elif typ == "Data Stores":
-                if top_level_item.data(Qt.DisplayRole) == "Data Stores":
-                    n = top_level_item.rowCount()
-            elif typ == "Data Connections":
-                if top_level_item.data(Qt.DisplayRole) == "Data Connections":
-                    n = top_level_item.rowCount()
-            elif typ == "Tools":
-                if top_level_item.data(Qt.DisplayRole) == "Tools":
-                    n = top_level_item.rowCount()
-            elif typ == "Views":
-                if top_level_item.data(Qt.DisplayRole) == "Views":
-                    n = top_level_item.rowCount()
-            else:
-                logging.error("Unknown type: {0}".format(typ))
-        return n
-
-    def items(self, item_category):
-        """Returns a list of items in model according to item category.
-
-        Args:
-            item_category (str): Item category. Data Connections, Data Stores, Tools or Views permitted.
+            category_name (str): Item category. Data Connections, Data Stores, Tools or Views permitted.
 
         Returns:
-            A list of all items according to category or an empty list if there are no items of this category
-            in the model or an unknown category was given.
+            :obj:'list' of :obj:'ProjectItem': Depending on category_name argument, returns all items or only
+            items according to category. An empty list is returned if there are no items in the given category
+            or if an unknown category name was given.
         """
-        category_item = self.find_item(item_category)
-        if not category_item:
-            logging.error("Category item '{0}' not found".format(item_category))
-            return list()
-        # Loop through children of the category item and append them to a list
-        n = category_item.rowCount()
-        item_list = list()
-        for i in range(n):
-            item_list.append(category_item.child(i))
-        return item_list
+        if not category_name:
+            items = list()
+            for category in self.root().children():
+                items += category.children()
+            return items
+        else:
+            category_item = self.find_category(category_name)
+            if not category_item:
+                logging.error("Category item '{0}' not found".format(category_name))
+                return list()
+            return category_item.internalPointer().children()
+
+    def n_items(self):
+        """Return the number of all project items in the model excluding category items and root."""
+        return len(self.items())
 
     def new_item_index(self, category):
         """Get index where a new item is appended according to category. This is needed for
-        appending to the connection model.
+        appending the connection model.
 
         Args:
             category (str): Display Role of the parent
@@ -353,53 +343,53 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             Number of items according to category
         """
+        n_data_stores = self.rowCount(self.find_category("Data Stores"))
+        n_data_connections = self.rowCount(self.find_category("Data Connections"))
+        n_tools = self.rowCount(self.find_category("Tools"))
+        n_views = self.rowCount(self.find_category("Views"))
         if category == "Data Stores":
             # Return number of data stores
-            return self.n_items("Data Stores") - 1
+            return n_data_stores - 1
         elif category == "Data Connections":
             # Return number of data stores + data connections - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") - 1
+            return n_data_stores + n_data_connections - 1
         elif category == "Tools":
             # Return number of data stores + data connections + tools - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") + self.n_items("Tools") - 1
+            return n_data_stores + n_data_connections + n_tools - 1
         elif category == "Views":
             # Return total number of items - 1
-            return self.n_items("all") - 1
+            return self.n_items() - 1
         else:
             logging.error("Unknown category:{0}".format(category))
             return 0
 
-    def find_item(self, name, match_flags=Qt.MatchExactly):
-        """Find item by name in project model (column 0)
+    def short_name_reserved(self, short_name):
+        """Check if folder name derived from the name of the given item is in use.
 
         Args:
-            name (str): Item name to find
-            match_flags (QFlags): Or combination of Qt.MatchFlag types. Use Qt.MatchExactly | Qt.MatchRecursive
-                to find project items by name.
+            short_name (str): Item short name
 
         Returns:
-            Matching QStandardItem or None if item not found or more than one item with the same name found.
+            bool: True if short name is taken, False if it is available.
         """
-        found_items = self.findItems(name, match_flags, column=0)
-        if len(found_items) == 0:
-            # logging.debug("Item '{0}' not found in project model".format(name))
-            return None
-        if len(found_items) > 1:
-            logging.error("More than one item with name '{0}' found".format(name))
-            return None
-        return found_items[0]
+        project_items = self.items()
+        for item in project_items:
+            if item.short_name == short_name:
+                return True
+        return False
 
-    def return_item_names(self):
-        """Returns the names of all items in a list."""
-        item_names = list()
-        top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    child = top_level_item.child(i, 0)
-                    item_names.append(child.data(Qt.DisplayRole))
-        return item_names
+    # def return_item_names(self):
+    #     # TODO: Obsolete?
+    #     """Returns the names of all items in a list."""
+    #     item_names = list()
+    #     top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
+    #     for top_level_item in top_level_items:
+    #         if top_level_item.hasChildren():
+    #             n_children = top_level_item.rowCount()
+    #             for i in range(n_children):
+    #                 child = top_level_item.child(i, 0)
+    #                 item_names.append(child.data(Qt.DisplayRole))
+    #     return item_names
 
 
 class ToolTemplateModel(QAbstractListModel):

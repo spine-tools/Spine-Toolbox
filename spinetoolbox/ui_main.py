@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Class for main application GUI functions.
@@ -98,7 +90,7 @@ class ToolboxUI(QMainWindow):
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
-        self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
+        # self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -253,31 +245,18 @@ class ToolboxUI(QMainWindow):
         self.init_connection_model()
 
     def init_project_item_model(self):
-        """Initializes project item model."""
-        root_item = ProjectItem("root", "", category="root", is_category=False)
-        ds_category = ProjectItem("Data Stores", "", category="", is_category=True)
-        dc_category = ProjectItem("Data Connections", "", category="", is_category=True)
-        tool_category = ProjectItem("Tools", "", category="", is_category=True)
-        view_category = ProjectItem("Views", "", category="", is_category=True)
-
+        """Initializes project item model. Create root and category items and
+        add them to the model."""
+        root_item = ProjectItem("root", "", is_root=True, is_category=False)
+        ds_category = ProjectItem("Data Stores", "", is_root=False, is_category=True)
+        dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
+        tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
+        view_category = ProjectItem("Views", "", is_root=False, is_category=True)
         self.project_item_model = ProjectItemModel(self, root=root_item)
-        self.project_item_model.insert_item(ds_category, 0, root_item)
-        self.project_item_model.insert_item(dc_category, 1, root_item)
-        self.project_item_model.insert_item(tool_category, 2, root_item)
-        self.project_item_model.insert_item(view_category, 3, root_item)
-
-        # ds_cat_item = QStandardItem("Data Stores")
-        # dc_cat_item = QStandardItem("Data Connections")
-        # tool_cat_item = QStandardItem("Tools")
-        # view_cat_item = QStandardItem("Views")
-        # ds_cat_item.setEditable(False)
-        # dc_cat_item.setEditable(False)
-        # tool_cat_item.setEditable(False)
-        # view_cat_item.setEditable(False)
-        # self.project_item_model.root().appendRow(ds_cat_item)
-        # self.project_item_model.root().appendRow(dc_cat_item)
-        # self.project_item_model.root().appendRow(tool_cat_item)
-        # self.project_item_model.root().appendRow(view_cat_item)
+        self.project_item_model.insert_item(ds_category)
+        self.project_item_model.insert_item(dc_category)
+        self.project_item_model.insert_item(tool_category)
+        self.project_item_model.insert_item(view_category)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
@@ -851,41 +830,41 @@ class ToolboxUI(QMainWindow):
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool template removed successfully")
 
-    def add_item_to_model(self, category, text, data):
-        """Add item to project model.
-
-        Args:
-            category (str): Project category (e.g. Data Stores)
-            text (str): Display role for the new item
-            data (QObject): Object that is added to model (e.g. DataStore())
-        """
-        # First, find QStandardItem category item where new child item is added
-        found_items = self.project_item_model.findItems(category, Qt.MatchExactly | Qt.MatchRecursive, column=0)
-        if not found_items:
-            logging.error("'{0}' category not found in project item model".format(category))
-            return False
-        if len(found_items) > 1:
-            logging.error("More than one '{0}' category found in project item model".format(category))
-            return False
-        item_index = found_items[0].index()
-        parent_index = item_index.parent()
-        if not parent_index.isValid():
-            # item_index is a top-level item, we are good
-            new_item = QStandardItem(text)
-            self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
-            # new_item.setData(data, role=Qt.UserRole)
-            # row of new item
-            row = self.project_item_model.n_items(data.item_category)
-            appended_item_index = self.project_item_model.index(row, 0, parent=item_index)
-            self.project_item_model.setData(appended_item_index, data, role=Qt.UserRole)
-            # Get index of the new item
-            # Get row and column number (i.e. index) for the connection model. This is to
-            # keep the project item model and connection model synchronized.
-            row_in_con_model = self.project_item_model.new_item_index(data.item_category)  # Get row according to item category
-            self.connection_model.append_item(new_item, row_in_con_model)
-            self.ui.tableView_connections.resizeColumnsToContents()
-            self.ui.treeView_project.expand(item_index)
-        return True
+    # def add_item_to_model(self, category, text, data):
+    #     """Add item to project model.
+    #
+    #     Args:
+    #         category (str): Project category (e.g. Data Stores)
+    #         text (str): Display role for the new item
+    #         data (QObject): Object that is added to model (e.g. DataStore())
+    #     """
+    #     # First, find QStandardItem category item where new child item is added
+    #     found_items = self.project_item_model.findItems(category, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+    #     if not found_items:
+    #         logging.error("'{0}' category not found in project item model".format(category))
+    #         return False
+    #     if len(found_items) > 1:
+    #         logging.error("More than one '{0}' category found in project item model".format(category))
+    #         return False
+    #     item_index = found_items[0].index()
+    #     parent_index = item_index.parent()
+    #     if not parent_index.isValid():
+    #         # item_index is a top-level item, we are good
+    #         new_item = QStandardItem(text)
+    #         self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
+    #         # new_item.setData(data, role=Qt.UserRole)
+    #         # row of new item
+    #         row = self.project_item_model.n_items(data.item_category)
+    #         appended_item_index = self.project_item_model.index(row, 0, parent=item_index)
+    #         self.project_item_model.setData(appended_item_index, data, role=Qt.UserRole)
+    #         # Get index of the new item
+    #         # Get row and column number (i.e. index) for the connection model. This is to
+    #         # keep the project item model and connection model synchronized.
+    #         row_in_con_model = self.project_item_model.new_item_index(data.item_category)
+    #         self.connection_model.append_item(new_item, row_in_con_model)
+    #         self.ui.tableView_connections.resizeColumnsToContents()
+    #         self.ui.treeView_project.expand(item_index)
+    #     return True
 
     @Slot(name="remove_all_items")
     def remove_all_items(self):
