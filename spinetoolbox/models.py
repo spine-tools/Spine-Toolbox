@@ -1537,8 +1537,11 @@ class ParameterModel(DataStoreTableModel):
             msg = "Parameters successfully updated."
             self._data_store_form.msg.emit(msg)
             return True
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg.emit(e.msg)
+            self._data_store_form.msg_error.emit(e.msg)
             return False
 
 
@@ -1600,8 +1603,11 @@ class ParameterValueModel(DataStoreTableModel):
             msg = "Parameter values successfully updated."
             self._data_store_form.msg.emit(msg)
             return True
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg.emit(e.msg)
+            self._data_store_form.msg_error.emit(e.msg)
             return False
 
 

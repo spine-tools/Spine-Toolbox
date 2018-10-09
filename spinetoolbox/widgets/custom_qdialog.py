@@ -873,7 +873,7 @@ class EditRelationshipsDialog(EditItemsDialog):
                 object_id_list.append(object_.id)
             if len(object_id_list) < 2:
                 continue
-            if orig_object_id_list == object_id_list:
+            if orig_relationship_name == relationship_name and orig_object_id_list == object_id_list:
                 continue
             kwargs = {
                 'id': id,
@@ -886,7 +886,7 @@ class EditRelationshipsDialog(EditItemsDialog):
             self._parent.update_relationships(wide_relationships, self.orig_kwargs_list)
             super().accept()
         except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            self._parent.msg_error.emit(e.msg)
 
 
 class CommitDialog(QDialog):

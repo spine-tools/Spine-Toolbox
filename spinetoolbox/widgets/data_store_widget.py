@@ -140,10 +140,10 @@ class DataStoreForm(QMainWindow):
 
     def setup_delegates(self):
         """Set delegates for tables."""
-        self.ui.tableView_object_parameter_value.setItemDelegate(ObjectParameterValueDelegate(self))
-        self.ui.tableView_relationship_parameter_value.setItemDelegate(RelationshipParameterValueDelegate(self))
         self.ui.tableView_object_parameter.setItemDelegate(ObjectParameterDelegate(self))
+        self.ui.tableView_object_parameter_value.setItemDelegate(ObjectParameterValueDelegate(self))
         self.ui.tableView_relationship_parameter.setItemDelegate(RelationshipParameterDelegate(self))
+        self.ui.tableView_relationship_parameter_value.setItemDelegate(RelationshipParameterValueDelegate(self))
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -188,13 +188,13 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
         # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter.itemDelegate().commitData.\
+        self.ui.tableView_object_parameter.itemDelegate().closeEditor.\
             connect(self.set_parameter_data)
-        self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
+        self.ui.tableView_object_parameter_value.itemDelegate().closeEditor.\
             connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
+        self.ui.tableView_relationship_parameter.itemDelegate().closeEditor.\
             connect(self.set_parameter_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
+        self.ui.tableView_relationship_parameter_value.itemDelegate().closeEditor.\
             connect(self.set_parameter_value_data)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter.selectionModel().selectionChanged.\
