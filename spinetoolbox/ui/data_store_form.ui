@@ -793,6 +793,9 @@
    </property>
   </action>
   <action name="actionExport">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/export.png</normaloff>:/icons/export.png</iconset>

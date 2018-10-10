@@ -493,11 +493,12 @@ class DataStoreForm(QMainWindow):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        root_item = self.object_tree_model.build_tree(self.database)
+        self.object_tree_model.build_tree(self.database)
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
         # setup object tree view
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_object.header().hide()
-        self.ui.treeView_object.expand(root_item.index())
+        self.ui.treeView_object.expand(self.object_tree_model.root_item.index())
         self.ui.treeView_object.resizeColumnToContents(0)
 
     def init_parameter_value_models(self):
@@ -800,6 +801,7 @@ class DataStoreForm(QMainWindow):
         for object_class in object_classes:
             self.object_tree_model.add_object_class(object_class)
         self.set_commit_rollback_actions_enabled(True)
+        self.ui.actionExport.setEnabled(True)
         msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
 
@@ -1012,22 +1014,22 @@ class DataStoreForm(QMainWindow):
         if not indexes:
             return
         removed_id_dict = {}
-        removed_name_dict = {}
         for index in indexes:
             removed_type = index.data(Qt.UserRole)
-            removed_item = index.data(Qt.UserRole + 1)
-            removed_id_dict.setdefault(removed_type, set()).add(removed_item['id'])
-            removed_name_dict.setdefault(removed_type, set()).add(removed_item['name'])
+            removed_id = index.data(Qt.UserRole + 1)['id']
+            removed_id_dict.setdefault(removed_type, set()).add(removed_id)
         try:
             self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})
+            removed_name_dict = {}
             for key, value in removed_id_dict.items():
-                self.object_tree_model.remove_items(key, *value)
+                removed_name_dict.update(self.object_tree_model.remove_items(key, *value))
             for key, value in removed_name_dict.items():
                 self.object_parameter_model.remove_items(key, *value)
                 self.object_parameter_value_model.remove_items(key, *value)
                 self.relationship_parameter_model.remove_items(key, *value)
                 self.relationship_parameter_value_model.remove_items(key, *value)
             self.set_commit_rollback_actions_enabled(True)
+            self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
             self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)

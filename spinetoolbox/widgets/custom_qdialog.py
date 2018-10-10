@@ -152,7 +152,10 @@ class AddObjectClassesDialog(AddItemsDialog):
         kwargs_list = list()
         index = self.ui.comboBox.currentIndex()
         if index == 0:
-            display_order = self.object_class_list.first().display_order - 1
+            try:
+                display_order = self.object_class_list.first().display_order - 1
+            except AttributeError:
+                display_order = 1
         else:
             display_order = self.object_class_list.all()[index - 1].display_order + 1
         for i in range(self.model.rowCount()):

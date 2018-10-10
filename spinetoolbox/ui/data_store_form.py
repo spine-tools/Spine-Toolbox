@@ -334,6 +334,7 @@ class Ui_MainWindow(object):
         self.actionImport.setIcon(icon7)
         self.actionImport.setObjectName("actionImport")
         self.actionExport = QtWidgets.QAction(MainWindow)
+        self.actionExport.setEnabled(False)
         icon8 = QtGui.QIcon()
         icon8.addPixmap(QtGui.QPixmap(":/icons/export.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionExport.setIcon(icon8)

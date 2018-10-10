@@ -1059,6 +1059,7 @@ class ObjectTreeModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(data_store_form)
         self.db_map = data_store_form.db_map
+        self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
@@ -1121,8 +1122,8 @@ class ObjectTreeModel(QStandardItemModel):
         object_list = [x for x in self.db_map.object_list()]
         wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
-        root_item = QStandardItem(db_name)
-        root_item.setData('root', Qt.UserRole)
+        self.root_item = QStandardItem(db_name)
+        self.root_item.setData('root', Qt.UserRole)
         object_class_item_list = list()
         for object_class in object_class_list:
             object_class_item = QStandardItem(object_class.name)
@@ -1160,9 +1161,8 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item_list.append(object_item)
             object_class_item.appendRows(object_item_list)
             object_class_item_list.append(object_class_item)
-        root_item.appendRows(object_class_item_list)
-        self.appendRow(root_item)
-        return root_item
+        self.root_item.appendRows(object_class_item_list)
+        self.appendRow(self.root_item)
 
     def new_object_class_item(self, object_class):
         """Returns new object class item."""
@@ -1360,6 +1360,7 @@ class ObjectTreeModel(QStandardItemModel):
     def remove_items(self, removed_type, *removed_ids):
         """Remove all matched items and their orphans."""
         # TODO: try and remove all rows at once, if possible
+        removed_name_dict = dict()
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
@@ -1371,16 +1372,20 @@ class ObjectTreeModel(QStandardItemModel):
             visited_index = self.indexFromItem(visited_item)
             if visited_type == removed_type and visited_id in removed_ids:
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
+                removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
             # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type == 'relationship_class':
                 object_class_id_list = visited['object_class_id_list']
                 if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
+                    removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
             # When removing an object, also remove relationships that involve it
             if removed_type == 'object' and visited_type == 'relationship':
                 object_id_list = visited['object_id_list']
                 if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
+                    removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
+        return removed_name_dict
 
     def next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
