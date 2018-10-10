@@ -178,42 +178,36 @@ class SpineToolboxProject(MetaObject):
         project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
         n = 0
-        # Traverse all items in project model
-        top_level_items = self._toolbox.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            top_level_item_txt = top_level_item.data(Qt.DisplayRole)
-            # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
-            item_dict[top_level_item_txt] = dict()
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    n += 1
-                    child = top_level_item.child(i, 0)
-                    child_data = child.data(Qt.UserRole)
-                    name = child_data.name
-                    # logging.debug("{0}".format(child.data(Qt.DisplayRole)))
-                    item_dict[top_level_item_txt][name] = dict()
-                    item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
-                    item_dict[top_level_item_txt][name]["description"] = child_data.description
-                    x = child_data.get_icon().master().sceneBoundingRect().center().x()
-                    y = child_data.get_icon().master().sceneBoundingRect().center().y()
-                    item_dict[top_level_item_txt][name]["x"] = x
-                    item_dict[top_level_item_txt][name]["y"] = y
-                    if child_data.item_type == "Tool":
-                        if not child_data.tool_template():
-                            item_dict[top_level_item_txt][name]["tool"] = ""
-                        else:
-                            item_dict[top_level_item_txt][name]["tool"] = child_data.tool_template().name
-                    elif child_data.item_type == "Data Connection":
-                        # Save references
-                        item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
-                    elif child_data.item_type == "Data Store":
-                        item_dict[top_level_item_txt][name]["reference"] = child_data.reference()
-                    elif child_data.item_type == "View":
-                        pass
+        # Traverse all items in project model by category
+        category_names = [category_item.name for category_item in self._toolbox.project_item_model.root().children()]
+        for category in category_names:
+            items = self._toolbox.project_item_model.items(category)
+            item_dict[category] = dict()
+            for item in items:
+                # Save generic things common for all project items
+                name = item.name
+                item_dict[category][name] = dict()
+                item_dict[category][name]["short name"] = item.short_name
+                item_dict[category][name]["description"] = item.description
+                x = item.get_icon().master().sceneBoundingRect().center().x()
+                y = item.get_icon().master().sceneBoundingRect().center().y()
+                item_dict[category][name]["x"] = x
+                item_dict[category][name]["y"] = y
+                # Save item type specific things
+                if item.item_type == "Data Store":
+                    item_dict[category][name]["reference"] = item.reference()
+                elif item.item_type == "Data Connection":
+                    item_dict[category][name]["references"] = item.file_references()
+                elif item.item_type == "Tool":
+                    if not item.tool_template():
+                        item_dict[category][name]["tool"] = ""
                     else:
-                        logging.error("Unrecognized item type: {0}".format(child_data.item_type))
-        # Save project stuff
+                        item_dict[category][name]["tool"] = item.tool_template().name
+                elif item.item_type == "View":
+                    pass
+                else:
+                    logging.error("Unrecognized item type: {0}".format(item.item_type))
+        # Save project to file
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
         # Write into JSON file
@@ -283,8 +277,8 @@ class SpineToolboxProject(MetaObject):
             # Clarifications for user
             if not tool_name == "" and not tool_template:
                 self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                                            "it was not found. Add it to Tool templates and reopen "
-                                            "project.".format(name, tool_name))
+                                             "it was not found. Add it to Tool templates and reopen "
+                                             "project.".format(name, tool_name))
             try:
                 x = tools[name]["x"]
                 y = tools[name]["y"]
@@ -363,28 +357,45 @@ class SpineToolboxProject(MetaObject):
 
     def add_data_store(self, name, description, reference, x=0, y=0):
         """Add data store to project item model."""
+        category = "Data Stores"
         data_store = DataStore(self._toolbox, name, description, reference, x, y)
-        ds_category = self._toolbox.project_item_model.find_category("Data Stores")
+        ds_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(data_store, ds_category)
+        # Append connection model
+        self.append_connection_model(name, category)
         self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
 
     def add_data_connection(self, name, description, references, x=0, y=0):
         """Add Data Connection to project item model."""
+        category = "Data Connections"
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        dc_category = self._toolbox.project_item_model.find_category("Data Connections")
+        dc_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(data_connection, dc_category)
+        # Append connection model
+        self.append_connection_model(name, category)
         self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
 
     def add_tool(self, name, description, tool_template, x=0, y=0):
         """Add Tool to project item model."""
+        category = "Tools"
         tool = Tool(self._toolbox, name, description, tool_template, x, y)
-        tool_category = self._toolbox.project_item_model.find_category("Tools")
+        tool_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(tool, tool_category)
+        # Append connection model
+        self.append_connection_model(name, category)
         self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
 
     def add_view(self, name, description, x=0, y=0):
         """Add View to project item model."""
+        category = "Views"
         view = View(self._toolbox, name, description, x, y)
-        view_category = self._toolbox.project_item_model.find_category("Views")
+        view_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(view, view_category)
+        # Append connection model
+        self.append_connection_model(name, category)
         self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
+
+    def append_connection_model(self, item_name, category):
+        """Add new item to connection model to keep project and connection model synchronized."""
+        row_in_con_model = self._toolbox.project_item_model.new_item_index(category)
+        self._toolbox.connection_model.append_item(item_name, row_in_con_model)

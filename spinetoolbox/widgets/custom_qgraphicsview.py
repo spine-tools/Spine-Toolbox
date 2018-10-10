@@ -30,7 +30,6 @@ from PySide2.QtCore import Slot, Qt, QRectF
 from PySide2.QtGui import QColor, QPen, QBrush, QTransform
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
-from widgets.custom_qtreeview import DataTreeView
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -112,16 +111,15 @@ class CustomQGraphicsView(QGraphicsView):
     def set_connection_model(self, model):
         """Set connection model and connect signals."""
         self._connection_model = model
-        # self._connection_model.dataChanged.connect(self.connection_data_changed)
         self._connection_model.rowsAboutToBeRemoved.connect(self.connection_rows_removed)
         self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
     def add_link(self, src_name, dst_name, index):
         """Draw link between source and sink items on scene and add Link instance to connection model."""
-        # Find items from project model
-        flags = Qt.MatchExactly | Qt.MatchRecursive
-        src_item = self._project_item_model.find_item(src_name, flags).data(Qt.UserRole)
-        dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
+        src_item_index = self._project_item_model.find_item(src_name)
+        dst_item_index = self._project_item_model.find_item(dst_name)
+        src_item = self._project_item_model.project_item(src_item_index)
+        dst_item = self._project_item_model.project_item(dst_item_index)
         logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
         link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
         self.scene().addItem(link)
@@ -149,10 +147,10 @@ class CustomQGraphicsView(QGraphicsView):
                 data = self._connection_model.data(index, Qt.DisplayRole)  # NOTE: data DisplayRole returns a string
                 src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                 dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                flags = Qt.MatchExactly | Qt.MatchRecursive
-                src = self._project_item_model.find_item(src_name, flags)
-                src_item= src.data(Qt.UserRole)
-                dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
+                src = self._project_item_model.find_item(src_name)
+                src_item = self._project_item_model.project_item(src)
+                dst = self._project_item_model.find_item(dst_name)
+                dst_item = self._project_item_model.project_item(dst)
                 if data == "True":
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
                     link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
@@ -203,55 +201,54 @@ class CustomQGraphicsView(QGraphicsView):
             if self._connection_model.data(index, Qt.DisplayRole) == "False":
                 self.add_link(self.src_widget, self.dst_widget, index)
                 self._toolbox.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
-                                  .format(self.src_widget, self.dst_widget))
+                                       .format(self.src_widget, self.dst_widget))
             elif self._connection_model.data(index, Qt.DisplayRole) == "True":
                 self._toolbox.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
-                                  .format(self.src_widget, self.dst_widget))
+                                       .format(self.src_widget, self.dst_widget))
             self.emit_connection_information_message()
 
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
         if self.src_widget == self.dst_widget:
-            self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. The functionality for feedback links "
-                                      "is not implemented yet.")
+            self._toolbox.msg_warning.emit("<b>Not implemented</b>. The functionality for feedback links "
+                                           "is not implemented yet.")
         else:
-            src_item = self._project_item_model.find_item(self.src_widget, Qt.MatchExactly | Qt.MatchRecursive)
-            if not src_item:
+            src_index = self._project_item_model.find_item(self.src_widget)
+            if not src_index:
+                logging.error("Item {0} not found".format(self.src_widget))
+                return
+            dst_index = self._project_item_model.find_item(self.dst_widget)
+            if not dst_index:
                 logging.error("Item {0} not found".format(self.dst_widget))
                 return
-            src_item_type = src_item.data(Qt.UserRole).item_type
-            dst_item = self._project_item_model.find_item(self.dst_widget, Qt.MatchExactly | Qt.MatchRecursive)
-            if not dst_item:
-                logging.error("Item {0} not found".format(self.dst_widget))
-                return
-            dst_item_type = dst_item.data(Qt.UserRole).item_type
-            if src_item_type == 'Data Connection' and dst_item_type == 'Tool':
-                self._toolbox.msg.emit("\t-> Input files for <b>{0}</b>'s execution "
-                                  "will be looked up in <b>{1}</b>'s references and data directory.".\
-                                  format(self.dst_widget, self.src_widget))
-            elif src_item_type == 'Data Store' and dst_item_type == 'Tool':
-                self._toolbox.msg.emit("\t-> Input files for <b>{0}</b>'s execution "
-                                  "will be looked up in <b>{1}</b>'s data directory.".\
-                                  format(self.dst_widget, self.src_widget))
-            elif src_item_type == 'Tool' and dst_item_type in ['Data Connection', 'Data Store']:
-                self._toolbox.msg.emit("\t-> Output files from <b>{0}</b>'s execution "
-                                  "will be passed as reference to <b>{1}</b>'s data directory.".\
-                                  format(self.src_widget, self.dst_widget))
-            elif src_item_type in ['Data Connection', 'Data Store']\
-                    and dst_item_type in ['Data Connection', 'Data Store']:
-                self._toolbox.msg.emit("\t-> Input files for a tool's execution "
-                                  "will be looked up in <b>{0}</b> if not found in <b>{1}</b>.".\
-                                  format(self.src_widget, self.dst_widget))
-            elif src_item_type == 'Data Store' and dst_item_type == 'View':
-                self._toolbox.msg_warning.emit("\t-> Database references in <b>{0}</b> will be "
-                                               "viewed by <b>{1}</b>.".\
-                                               format(self.src_widget, self.dst_widget))
-            elif src_item_type == 'Tool' and dst_item_type == 'Tool':
-                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Interaction between two "
-                                          "Tool items is not implemented yet.")
+            src_item_type = self._project_item_model.project_item(src_index).item_type
+            dst_item_type = self._project_item_model.project_item(dst_index).item_type
+            if src_item_type == "Data Connection" and dst_item_type == "Tool":
+                self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
+                                       "will be looked up in <b>{1}</b>'s references and data directory."
+                                       .format(self.dst_widget, self.src_widget))
+            elif src_item_type == "Data Store" and dst_item_type == "Tool":
+                self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
+                                       "will be looked up in <b>{1}</b>'s data directory."
+                                       .format(self.dst_widget, self.src_widget))
+            elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
+                self._toolbox.msg.emit("-> Output files from <b>{0}</b>'s execution "
+                                       "will be passed as reference to <b>{1}</b>'s data directory."
+                                       .format(self.src_widget, self.dst_widget))
+            elif src_item_type in ["Data Connection", "Data Store"] \
+                    and dst_item_type in ["Data Connection", "Data Store"]:
+                self._toolbox.msg.emit("-> Input files for a tool's execution "
+                                       "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
+                                       .format(self.src_widget, self.dst_widget))
+            elif src_item_type == "Data Store" and dst_item_type == "View":
+                self._toolbox.msg_warning.emit("-> Database references in <b>{0}</b> will be viewed by <b>{1}</b>."
+                                               .format(self.src_widget, self.dst_widget))
+            elif src_item_type == "Tool" and dst_item_type == "Tool":
+                self._toolbox.msg_warning.emit("<b>Not implemented</b>. Interaction between two "
+                                               "Tool items is not implemented yet.")
             else:
-                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
-                                          "is not implemented yet :)")
+                self._toolbox.msg_warning.emit("<b>Not implemented</b>. Whatever you are trying to do "
+                                               "is not implemented yet :)")
 
     def mouseMoveEvent(self, e):
         """Update line end position.

@@ -22,8 +22,8 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QDockWidget, QWidget
-from PySide2.QtGui import QStandardItem, QDesktopServices, QGuiApplication
+    QCheckBox, QInputDialog, QDockWidget
+from PySide2.QtGui import QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -90,7 +90,6 @@ class ToolboxUI(QMainWindow):
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
-        # self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -328,7 +327,7 @@ class ToolboxUI(QMainWindow):
             if n == 0:
                 return
             for name in item_names:
-                ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+                ind = self.project_item_model.find_item(name)
                 self.remove_item(ind)
             self.msg.emit("All {0} items removed from project".format(n))
         # Clear widget info from QDockWidget
@@ -525,7 +524,7 @@ class ToolboxUI(QMainWindow):
 
     def clear_info_area(self):
         """Set empty tab as the current tab in the item info dock widget."""
-        self.ui.tabWidget_item_info.setCurrentIndex(-1)
+        self.ui.tabWidget_item_info.setCurrentIndex(4)  # TODO: Find index of 'No Selection' tab
         self.ui.dockWidget_item.setWindowTitle("Nothing selected")
 
     @Slot(name="open_tool_template")
@@ -807,11 +806,9 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.scene().removeItem(project_item.get_icon().master())
         project_item.set_icon(None)
         project_item.deleteLater()
-
-        # TODO: Remove item from connection model. This also removes Link QGraphicsItems associated to this item
-        # if not self.connection_model.remove_item(item):
-        #     self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
-
+        # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
+        if not self.connection_model.remove_item(project_item.name):
+            self.msg_error.emit("Removing item {0} from connection model failed".format(project_item.name))
         # Remove item from project model
         if not self.project_item_model.remove_item(project_item, parent=ind.parent()):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
@@ -927,11 +924,11 @@ class ToolboxUI(QMainWindow):
     @Slot("QModelIndex", name="connection_data_changed")
     def connection_data_changed(self, index):
         """Called when checkbox delegate wants to edit connection data. Add or remove Link instance accordingly."""
-        model = self.connection_model
-        d = model.data(index, Qt.DisplayRole)  # Current status
+        # model = self.connection_model
+        d = self.connection_model.data(index, Qt.DisplayRole)  # Current status
         if d == "False":  # Add link
-            src_name = model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
-            dst_name = model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
+            src_name = self.connection_model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
+            dst_name = self.connection_model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
             self.ui.graphicsView.add_link(src_name, dst_name, index)
         else:  # Remove link
             self.ui.graphicsView.remove_link(index)

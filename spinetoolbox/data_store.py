@@ -75,7 +75,7 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                         " Check permissions.".format(self.data_dir))
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        self.connect_signals()
+        # self.connect_signals()
         self.load_reference(reference)
         # TODO: try and create reference from first sqlite file in data directory
 

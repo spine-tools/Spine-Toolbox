@@ -739,21 +739,21 @@ class ConnectionModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def append_item(self, item, index):
-        """Embiggen connections table for a new item.
+    def append_item(self, name, index):
+        """Embiggen connections table by a new item.
 
         Args:
-            item (QStandardItem): New item
+            name (str): New item name
             index (int): Table row and column where the new item is appended
 
         Returns:
             True if successful, False otherwise
         """
-        item_name = item.data(Qt.UserRole).name
-        # logging.debug("Appending item {0} on row and column: {1}".format(item_name, index))
+        # item_name = item.name
+        logging.debug("Appending item {0} on row and column: {1}".format(name, index))
         # logging.debug("Appending {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
-        self.header.insert(index, item_name)
+        self.header.insert(index, name)
         if not self.insertRows(index, 1, parent=QModelIndex()):
             return False
         if not self.insertColumns(index, 1, parent=QModelIndex()):
@@ -762,20 +762,19 @@ class ConnectionModel(QAbstractTableModel):
         #               .format(self.rowCount(), self.columnCount(), self.connections))
         return True
 
-    def remove_item(self, item):
+    def remove_item(self, name):
         """Remove project item from connections table.
 
         Args:
-            item: Removed item
+            name (str): Name of removed item
 
         Returns:
             True if successful, False otherwise
         """
-        item_name = item.data(Qt.UserRole).name
         try:
-            item_index = self.header.index(item_name)
+            item_index = self.header.index(name)
         except ValueError:
-            logging.error("{0} not found in connection table header list".format(item_name))
+            logging.error("{0} not found in connection table header list".format(name))
             return False
         # logging.debug("Removing {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
@@ -783,9 +782,9 @@ class ConnectionModel(QAbstractTableModel):
             return False
         if not self.removeColumns(item_index, 1, parent=QModelIndex()):
             return False
-        self.header.remove(item_name)
-        # logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
-        #               .format(self.rowCount(), self.columnCount(), self.connections))
+        self.header.remove(name)
+        logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
+                      .format(self.rowCount(), self.columnCount(), self.connections))
         return True
 
     def output_items(self, name):
