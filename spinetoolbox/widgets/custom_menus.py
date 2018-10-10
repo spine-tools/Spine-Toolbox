@@ -174,16 +174,26 @@ class ObjectTreeContextMenu(CustomContextMenu):
         super().__init__(parent)
         if not index.isValid():
             return
+        copy_icon = self._parent.ui.actionCopy.icon()
         plus_object_icon = self._parent.ui.actionAdd_objects.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameters.icon()
         plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameters.icon()
         edit_object_icon = self._parent.ui.actionEdit_objects.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        copy_icon = self._parent.ui.actionCopy.icon()
+        minus_object_icon = self._parent.ui.actionRemove_object_tree_items.icon()
+        fully_expand_icon = self._parent.fully_expand_icon
+        fully_collapse_icon = self._parent.fully_collapse_icon
+        find_next_icon = self._parent.find_next_icon
         item = index.model().itemFromIndex(index)
         item_type = item.data(Qt.UserRole)
         self.add_action("Copy text", copy_icon)
+        self.addSeparator()
+        if index.model().hasChildren(index):
+            self.add_action("Fully expand", fully_expand_icon)
+            self.add_action("Fully collapse", fully_collapse_icon)
+        if item_type == 'relationship':
+            self.add_action("Find next", find_next_icon)
         self.addSeparator()
         if item_type == 'root':
             self.add_action("Add object classes", plus_object_icon)
@@ -206,14 +216,9 @@ class ObjectTreeContextMenu(CustomContextMenu):
             self.add_action("Add parameter values", plus_relationship_parameter_icon)
             self.addSeparator()
             self.add_action("Edit relationships", edit_relationship_icon)
-            self.addSeparator()
-            self.add_action("Expand next")
         if item_type != 'root':
             self.addSeparator()
-            self.add_action("Remove selected")
-        self.addSeparator()
-        self.add_action("Fully expand")
-        self.add_action("Fully collapse")
+            self.add_action("Remove selected", minus_object_icon)
         self.exec_(position)
 
 

@@ -164,20 +164,6 @@ class CopyPasteTableView(QTableView):
         self.model().batch_set_data(indexes, values)
         return True
 
-    # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
-    # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
-    # def moveCursor(self, cursor_action, modifiers):
-    #     """Don't move to next index if the self.editing flag is set.
-    #     """
-    #     if self.editing and cursor_action == self.CursorAction.MoveNext:
-    #         self.editing = False
-    #         return self.currentIndex()
-    #     return super().moveCursor(cursor_action, modifiers)
-
-    # def edit(self, index, trigger, event):
-    #     self.editing = True
-    #     return super().edit(index, trigger, event)
-
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
@@ -220,7 +206,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         values, filtered_values = model.autofilter_values(self.filter_column)
         # Add filter actions
         self.filter_action_list = list()
-        for i, value in enumerate(sorted(list(set(values)))):
+        for i, value in enumerate(sorted(list(values))):
             action = QAction(str(value), self)
             action.setCheckable(True)
             action.triggered.connect(self.update_action_all_checked)

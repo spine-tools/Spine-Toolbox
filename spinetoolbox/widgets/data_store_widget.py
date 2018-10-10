@@ -30,7 +30,7 @@ import logging
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
     QMessageBox, QCheckBox, QFileDialog, QApplication
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap
 from ui.data_store_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
@@ -105,6 +105,9 @@ class DataStoreForm(QMainWindow):
         self.clipboard_text = self.clipboard.text()
         self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
+        self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
+        self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         # init models and views
         self.init_models()
         self.init_views()
@@ -181,7 +184,7 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.selectionModel().currentChanged.connect(self.receive_object_tree_current_changed)
         self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
-        self.ui.treeView_object.doubleClicked.connect(self.expand_next_leaf)
+        self.ui.treeView_object.doubleClicked.connect(self.find_next_leaf)
         # Autofilter parameter tables
         self.ui.tableView_object_parameter.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
@@ -557,8 +560,8 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.horizontalHeader().setResizeContentsPrecision(1)
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
-    @Slot("QModelIndex", name="expand_next_leaf")
-    def expand_next_leaf(self, index):
+    @Slot("QModelIndex", name="find_next_leaf")
+    def find_next_leaf(self, index):
         """If index corresponds to a relationship, then expand the next ocurrence of it."""
         if not index.isValid():
             return # just to be safe
@@ -570,9 +573,9 @@ class DataStoreForm(QMainWindow):
         clicked_item = index.model().itemFromIndex(index)
         if clicked_item.hasChildren():
             return
-        self.expand_next(index)
+        self.find_next(index)
 
-    def expand_next(self, index):
+    def find_next(self, index):
         """Expand next occurrence of a relationship."""
         next_index = self.object_tree_model.next_relationship_index(index)
         if not next_index:
@@ -738,8 +741,8 @@ class DataStoreForm(QMainWindow):
             self.show_edit_relationship_classes_form()
         elif option == "Edit relationships":
             self.show_edit_relationships_form()
-        elif option == "Expand next":
-            self.expand_next(index)
+        elif option == "Find next":
+            self.find_next(index)
         elif option.startswith("Remove selected"):
             self.remove_object_tree_items()
         elif option == "Add parameter definitions":
@@ -747,9 +750,9 @@ class DataStoreForm(QMainWindow):
         elif option == "Add parameter values":
             self.call_add_parameter_values(index)
         elif option == "Fully expand":
-            self.object_tree_model.sweep_to_leaves(index, call=self.ui.treeView_object.expand)
+            self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.expand)
         elif option == "Fully collapse":
-            self.object_tree_model.sweep_to_leaves(index, call=self.ui.treeView_object.collapse)
+            self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.collapse)
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()

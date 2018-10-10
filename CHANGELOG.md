@@ -16,6 +16,9 @@ optimizing queries to the database.)
 - New options to edit items in the object tree view, including changing the objects involved in a relationship.
 - The dialogs to add/edit tree view items are not closed in case there's an error in the user choices.
 In this way you can correct your work and try again.
+- Now it's possible to interrupt a tool's execution by pressing the stop button.
+- New context menu options to fully expand and collapse object tree items in the Data store form.
+- The autofilter in the Data store form now can also filter work in progress rows.
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a

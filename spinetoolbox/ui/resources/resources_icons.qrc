@@ -10,6 +10,9 @@
     <file>edit_relationship_icon.png</file>
     <file>paste.png</file>
     <file>copy.png</file>
+    <file>fully_expand.png</file>
+    <file>fully_collapse.png</file>
+    <file>find_next.png</file>
     <file>minus_relationship_icon.png</file>
     <file>minus_object_parameter_icon.png</file>
     <file>minus_relationship_parameter_icon.png</file>

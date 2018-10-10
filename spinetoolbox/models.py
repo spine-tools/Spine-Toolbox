@@ -959,7 +959,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if row < 0 or row > self.rowCount():
+        if row < 0 or row >= self.rowCount():
             return False
         if not count == 1:
             logging.error("Remove 1 row at a time")
@@ -981,7 +981,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if columns were removed successfully, False otherwise
         """
-        if column < 0 or column > self.columnCount():
+        if column < 0 or column >= self.columnCount():
             return False
         if not count == 1:
             logging.error("Remove 1 column at a time")
@@ -1014,11 +1014,12 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if any([row < 0 or row > self.rowCount() for row in row_set]):
+        try:
+            first = min(row_set)
+            last = max(row_set)
+        except ValueError:
             return False
-        first = min([row for row in row_set], default=0)
-        last = max([row for row in row_set], default=0)
-        if last <= first:
+        if first < 0 or last >= self.rowCount():
             return False
         self.beginRemoveRows(parent, first, last)
         for row in reversed(list(row_set)):
@@ -1081,10 +1082,12 @@ class ObjectTreeModel(QStandardItemModel):
                 return self.relationship_icon
         return super().data(index, role)
 
-    def sweep_to_leaves(self, index, call=None):
-        """Visit the given index and all its descendants, and apply call on each."""
+    def forward_sweep(self, index, call=None):
+        """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if not self.hasChildren(index):
+            return
         current = index
-        back_to_parent = False
+        back_to_parent = False  # True if moving back to the parent index
         while True:
             if call:
                 call(current)
@@ -2176,7 +2179,6 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.italic_font.setItalic(True)
         self.rule_dict = dict()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
-        self.filter_role = self.filterRole()
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
 
     def setSourceModel(self, source_model):
@@ -2201,24 +2203,29 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
     def autofilter_values(self, column):
         """Return values for the autofilter menu of `column`."""
-        values = list()
+        values = set()
         source_model = self.sourceModel()
+        data = source_model._data
         for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter
-            if not self.filter_accepts_row(source_row, QModelIndex()):
+            # Skip values rejected by filter if rwo it's not wip
+            if not source_model.is_work_in_progress(source_row) \
+                    and not self.filter_accepts_row(source_row, QModelIndex()):
                 continue
             # Skip values rejected by autofilters from *other* columns
             if not self.autofilter_accepts_row(source_row, QModelIndex(), skip_source_column=[column]):
                 continue
-            data = source_model.index(source_row, column).data(Qt.DisplayRole)
-            if data is None:
-                continue
-            values.append(data)
+            try:
+                value = data[source_row][column][Qt.DisplayRole]
+            except KeyError:
+                value = ""
+            if value is None:
+                value = ""
+            values.add(value)
         # Get values currently filtered in this column
         try:
             filtered_values = self.rule_dict[column]
         except KeyError:
-            filtered_values = list()
+            filtered_values = set()
         return values, filtered_values
 
     def add_rule(self, **kwargs):
@@ -2241,28 +2248,28 @@ class AutoFilterProxy(QSortFilterProxyModel):
         for source_column, value in self.rule_dict.items():
             if source_column in skip_source_column:
                 continue
-            data = self.sourceModel()._data[source_row][source_column][self.filter_role]
-            if data is None:
-                return False
+            try:
+                data = self.sourceModel()._data[source_row][source_column][self.filterRole()]
+            except KeyError:
+                data = ""
+            if data == None:
+                data = ""
             if data in value:
                 return False
         return True
 
     def filter_accepts_row(self, source_row, source_parent):
-        """Override this method in subclasses."""
+        """Reimplement this method in subclasses."""
         return True
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false."""
-        try:
-            if self.sourceModel().is_work_in_progress(source_row):
-                return True
-        except KeyError:
-            # NOTE: KeyError means the row is brand new, let it pass
+        if not self.autofilter_accepts_row(source_row, source_parent):
+            return False
+        if self.sourceModel().is_work_in_progress(source_row):
             return True
-        return self.filter_accepts_row(source_row, source_parent) \
-            and self.autofilter_accepts_row(source_row, source_parent)
+        return self.filter_accepts_row(source_row, source_parent)
 
     def apply_filter(self):
         """Trigger filtering."""
@@ -2299,7 +2306,10 @@ class ObjectParameterProxy(AutoFilterProxy):
         """Accept rows."""
         row_data = self.sourceModel()._data[source_row]
         if self.object_class_name is not None:
-            object_class_name = row_data[self.object_class_name_column][self.filter_role]
+            try:
+                object_class_name = row_data[self.object_class_name_column][self.filterRole()]
+            except KeyError:
+                object_class_name = None
             if object_class_name != self.object_class_name:
                 return False
             row_data[self.object_class_name_column][Qt.FontRole] = self.bold_font
@@ -2339,7 +2349,10 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
             return False
         row_data = self.sourceModel()._data[source_row]
         if self.object_name is not None:
-            object_name = row_data[self.object_name_column][self.filter_role]
+            try:
+                object_name = row_data[self.object_name_column][self.filterRole()]
+            except KeyError:
+                object_name = None
             if object_name != self.object_name:
                 return False
             row_data[self.object_name_column][Qt.FontRole] = self.bold_font
@@ -2377,7 +2390,10 @@ class RelationshipParameterProxy(AutoFilterProxy):
         """Accept row."""
         row_data = self.sourceModel()._data[source_row]
         if self.relationship_class_name_list is not None:
-            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
+            try:
+                relationship_class_name = row_data[self.relationship_class_name_column][self.filterRole()]
+            except KeyError:
+                relationship_class_name = None
             if relationship_class_name not in self.relationship_class_name_list:
                 return False
             row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
@@ -2420,7 +2436,10 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
         row_data = self.sourceModel()._data[source_row]
         object_name_list = list()
         for j in self.object_name_columns:
-            object_name = row_data[j][self.filter_role]
+            try:
+                object_name = row_data[j][self.filterRole()]
+            except KeyError:
+                break
             if not object_name:
                 break
             object_name_list.append(object_name)
