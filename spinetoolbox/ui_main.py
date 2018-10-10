@@ -483,24 +483,24 @@ class ToolboxUI(QMainWindow):
         """Disconnect signals of previous item, connect signals of current item
         and update tab of the new item."""
         if not current.parent().isValid():
-            self.msg.emit("Clicked on category item")
+            # self.msg.emit("Clicked on category item")
             return
-        logging.debug("current: {0}".format(current))
-        logging.debug("previous: {0}".format(previous))
         current_item = self.project_item_model.project_item(current)
         if not previous:
-            self.msg.emit("previous item was None")
+            # self.msg.emit("previous item was None")
+            pass
         elif not previous.isValid():
-            self.msg.emit("previous item was root")
+            # self.msg.emit("previous item was root")
+            pass
         else:
             previous_item = self.project_item_model.project_item(previous)
             if not previous_item.is_category:
-                self.msg.emit("Previous item: {0}".format(previous_item.name))
+                self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
                 previous_item.disconnect_signals()
             else:
-                self.msg.emit("previous item was a category item")
-        # item = current_item.data(Qt.UserRole)
-        self.msg.emit("Current item: {0}".format(current_item.name))
+                # self.msg.emit("previous item was a category item")
+                pass
+        self.msg.emit("Connecting signals of {0}".format(current_item.name))
         current_item.connect_signals()
         self.show_info(current_item)
 
@@ -508,14 +508,8 @@ class ToolboxUI(QMainWindow):
         """Show information of selected item.
 
         Args:
-            item (MetaObject): Instance of a project item
+            item (ProjectItem): Instance of a project item
         """
-        # item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
-        # if not item:
-        #     self.msg_error.emit("Item {0} not found".format(name))
-        #     return
-
-        # item_data = item.data(Qt.UserRole)
         # Find tab index according to item type
         for i in range(self.ui.tabWidget_item_info.count()):
             if self.ui.tabWidget_item_info.tabText(i) == item.item_type:
@@ -523,15 +517,8 @@ class ToolboxUI(QMainWindow):
                 break
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
-        # Find all items of the same category
-        # items = self.project_item_model.items(item.item_category)
-        # Loop through all items of this type and disconnect signals
-        # for it in items:
-        #     logging.debug("Disconnecting signals of {0}".format(it.data(Qt.UserRole).name))
-        #     it.data(Qt.UserRole).disconnect_signals()
         # Update widgets in tab according to item information
         item.update_tab()
-
         # If Data Connection or View, refresh data files
         # if item_data.item_type in ("Data Connection", "View"):
         #     item_data.refresh()
@@ -540,62 +527,6 @@ class ToolboxUI(QMainWindow):
         """Set empty tab as the current tab in the item info dock widget."""
         self.ui.tabWidget_item_info.setCurrentIndex(-1)
         self.ui.dockWidget_item.setWindowTitle("Nothing selected")
-
-    # @Slot("QModelIndex", name="select_item_and_show_info")
-    # def select_item_and_show_info(self, index):
-    #     """Set item selected in scene and show item info in QDockWidget.
-    #
-    #     Args:
-    #         index (QModelIndex): Index of clicked item, if available
-    #     """
-    #     if not index:
-    #         return
-    #     if not index.isValid():
-    #         logging.error("Index not valid")
-    #         return
-    #     else:
-    #         if index.parent().isValid():
-    #             item = self.project_item_model.itemFromIndex(index)
-    #             if not item:
-    #                 logging.error("Item not found")
-    #                 return
-    #             item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
-    #             # Clear previous selection
-    #             self.ui.graphicsView.scene().clearSelection()
-    #             # Set item icon on scene selected.
-    #             icon = item_data.get_icon()
-    #             # Select master icon and all of its children are selected as well
-    #             icon.master().setSelected(True)
-    #             self.show_info(item_data.name)
-    #         return
-
-    # def show_info(self, name):
-    #     """Show information of selected item. Embed old item widgets into QDockWidget."""
-    #     item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item
-    #     if not item:
-    #         logging.error("Item {0} not found".format(name))
-    #         return
-    #     item_data = item.data(Qt.UserRole)
-    #     # Clear QGroupBox layout
-    #     self.clear_info_area()
-    #     # Set QDockWidget title to selected item's type
-    #     self.ui.dockWidget_item.setWindowTitle("Item Controls: " + item_data.item_type)
-    #     # Add new item into layout
-    #     self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
-    #     # If Data Connection or View, refresh data files
-    #     if item_data.item_type in ("Data Connection", "View"):
-    #         item_data.refresh()
-
-    # def clear_info_area(self):
-    #     """Clear QGroupBox inside selected item QDockWidget."""
-    #     layout = self.ui.groupBox_subwindow.layout()
-    #     for i in reversed(range(layout.count())):
-    #         widget_to_remove = layout.itemAt(i).widget()
-    #         # Remove it from the layout list
-    #         layout.removeWidget(widget_to_remove)
-    #         # Remove it from the gui
-    #         widget_to_remove.setParent(None)
-    #     self.ui.dockWidget_item.setWindowTitle("Item Controls")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):

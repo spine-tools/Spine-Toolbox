@@ -65,15 +65,17 @@ class View(ProjectItem):
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._toolbox.msg.emit("Connecting signals of {0}".format(self.name))
         self._widget.ui.treeView_view.doubleClicked.connect(self.open_network_map)
         self._widget.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
 
     def disconnect_signals(self):
         """Disconnect signals of this item, so that the UI elements can be used again with another item."""
-        self._toolbox.msg.emit("Disconnecting signals of {0}".format(self.name))
-        self._widget.ui.treeView_view.doubleClicked.disconnect(self.open_network_map)
-        self._widget.ui.pushButton_open_network_map.clicked.disconnect(self.open_network_map)
+        retvals = list()
+        retvals.append(self._widget.ui.treeView_view.doubleClicked.disconnect(self.open_network_map))
+        retvals.append(self._widget.ui.pushButton_open_network_map.clicked.disconnect(self.open_network_map))
+        if not all(retvals):
+            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
+                                         .format(self.name, retvals))
 
     def project(self):
         """Returns current project or None if no project open."""

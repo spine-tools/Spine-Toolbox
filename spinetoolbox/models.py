@@ -183,7 +183,7 @@ class ProjectItemModel(QAbstractItemModel):
             if len(matching_index) == 0:
                 pass  # no match in this category
             elif len(matching_index) == 1:
-                logging.debug("Found item:{0}".format(matching_index[0].internalPointer().name))
+                # logging.debug("Found item:{0}".format(matching_index[0].internalPointer().name))
                 return matching_index[0]
         return None
 

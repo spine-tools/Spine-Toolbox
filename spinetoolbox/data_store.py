@@ -61,6 +61,7 @@ class DataStore(ProjectItem):
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self.item_category = "Data Stores"
+        self._widget = self._toolbox
         # self._widget = DataStoreWidget(self, self.item_type)
         # self._widget.set_name_label(name)
         # self._widget.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
@@ -80,12 +81,26 @@ class DataStore(ProjectItem):
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        pass
-        # self._widget.ui.pushButton_open_directory.clicked.connect(self.open_directory)
-        # self._widget.ui.pushButton_open_treeview.clicked.connect(self.open_treeview)
-        # self._widget.ui.toolButton_browse.clicked.connect(self.browse_clicked)
-        # self._widget.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
-        # self._widget.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
+        self._widget.ui.pushButton_ds_open_directory.clicked.connect(self.open_directory)
+        self._widget.ui.pushButton_ds_open_treeview.clicked.connect(self.open_treeview)
+        self._widget.ui.toolButton_browse.clicked.connect(self.browse_clicked)
+        self._widget.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
+        self._widget.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
+
+    def disconnect_signals(self):
+        """Disconnect this data store's signals."""
+        retvals = list()
+        try:
+            retvals.append(self._widget.ui.pushButton_ds_open_directory.clicked.disconnect())
+            retvals.append(self._widget.ui.pushButton_ds_open_treeview.clicked.disconnect())
+            retvals.append(self._widget.ui.toolButton_browse.clicked.disconnect())
+            retvals.append(self._widget.ui.comboBox_dialect.currentTextChanged.disconnect())
+            retvals.append(self._widget.ui.toolButton_spine.clicked.disconnect())
+        except RuntimeError:
+            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
+        if not all(retvals):
+            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
+                                         .format(self.name, retvals))
 
     def project(self):
         """Returns current project or None if no project open."""

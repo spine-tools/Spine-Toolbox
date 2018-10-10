@@ -94,7 +94,6 @@ class Tool(ProjectItem):
 
     def connect_signals(self):
         """Connect this tool's signals to slots."""
-        self._toolbox.msg.emit("Connecting signals of {0}".format(self.name))
         self._widget.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
         self._widget.ui.pushButton_tool_results.clicked.connect(self.open_results)
         self._widget.ui.pushButton_tool_execute.clicked.connect(self.execute)
@@ -102,11 +101,14 @@ class Tool(ProjectItem):
 
     def disconnect_signals(self):
         """Disconnect signals."""
-        self._toolbox.msg.emit("Disconnecting signals of {0}".format(self.name))
-        self._widget.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process)
-        self._widget.ui.pushButton_tool_results.clicked.disconnect(self.open_results)
-        self._widget.ui.pushButton_tool_execute.clicked.disconnect(self.execute)
-        self._widget.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template)
+        retvals = list()
+        retvals.append(self._widget.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process))
+        retvals.append(self._widget.ui.pushButton_tool_results.clicked.disconnect(self.open_results))
+        retvals.append(self._widget.ui.pushButton_tool_execute.clicked.disconnect(self.execute))
+        retvals.append(self._widget.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template))
+        if not all(retvals):
+            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
+                                         .format(self.name, retvals))
 
     @Slot(name="open_results")
     def open_results(self):

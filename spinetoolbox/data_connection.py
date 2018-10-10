@@ -77,7 +77,6 @@ class DataConnection(ProjectItem):
 
     def connect_signals(self):
         """Connect this data connection's signals to slots."""
-        self._toolbox.msg.emit("Connecting signals of {0}".format(self.name))
         self._widget.ui.pushButton_dc_open.clicked.connect(self.open_directory)
         self._widget.ui.toolButton_plus.clicked.connect(self.add_references)
         self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
@@ -91,17 +90,37 @@ class DataConnection(ProjectItem):
 
     def disconnect_signals(self):
         """Disconnect signals of this item so that UI elements can be used again with another item."""
-        self._toolbox.msg.emit("Disconnecting signals of {0}".format(self.name))
-        self._widget.ui.pushButton_dc_open.clicked.disconnect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.disconnect(self.add_references)
-        self._widget.ui.toolButton_minus.clicked.disconnect(self.remove_references)
-        self._widget.ui.toolButton_add.clicked.disconnect(self.copy_to_project)
-        self._widget.ui.toolButton_datapackage.clicked.disconnect(self.call_infer_datapackage)
-        self._widget.ui.treeView_dc_references.doubleClicked.disconnect(self.open_reference)
-        self._widget.ui.treeView_dc_data.doubleClicked.disconnect(self.open_data_file)
-        self._widget.ui.treeView_dc_references.file_dropped.disconnect(self.add_file_to_references)
-        self._widget.ui.treeView_dc_data.file_dropped.disconnect(self.add_file_to_data_dir)
-        self.data_dir_watcher.directoryChanged.disconnect(self.refresh)
+        retvals = list()  # This should be all True if every signal was disconnected successfully
+        try:
+            retvals.append(self._widget.ui.pushButton_dc_open.clicked.disconnect())
+            retvals.append(self._widget.ui.toolButton_plus.clicked.disconnect())
+            retvals.append(self._widget.ui.toolButton_minus.clicked.disconnect())
+            retvals.append(self._widget.ui.toolButton_add.clicked.disconnect())
+            retvals.append(self._widget.ui.toolButton_datapackage.clicked.disconnect())
+            retvals.append(self._widget.ui.treeView_dc_references.doubleClicked.disconnect())
+            retvals.append(self._widget.ui.treeView_dc_data.doubleClicked.disconnect())
+            retvals.append(self._widget.ui.treeView_dc_references.file_dropped.disconnect())
+            retvals.append(self._widget.ui.treeView_dc_data.file_dropped.disconnect())
+            retvals.append(self.data_dir_watcher.directoryChanged.disconnect())
+        except RuntimeError:
+            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
+        if not all(retvals):
+            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
+                                         .format(self.name, retvals))
+        # These do not work for some reason
+        # try:
+        #     self._widget.ui.pushButton_dc_open.clicked.disconnect(self.open_directory)
+        #     self._widget.ui.toolButton_plus.clicked.disconnect(self.add_references)
+        #     self._widget.ui.toolButton_minus.clicked.disconnect(self.remove_references)
+        #     self._widget.ui.toolButton_add.clicked.disconnect(self.copy_to_project)
+        #     self._widget.ui.toolButton_datapackage.clicked.disconnect(self.call_infer_datapackage)
+        #     self._widget.ui.treeView_dc_references.doubleClicked.disconnect(self.open_reference)
+        #     self._widget.ui.treeView_dc_data.doubleClicked.disconnect(self.open_data_file)
+        #     self._widget.ui.treeView_dc_references.file_dropped.disconnect(self.add_file_to_references)
+        #     self._widget.ui.treeView_dc_data.file_dropped.disconnect(self.add_file_to_data_dir)
+        #     self.data_dir_watcher.directoryChanged.disconnect(self.refresh)
+        # except RuntimeError:
+        #     self._toolbox.msg_warning.emit("Runtime error")
 
     def set_icon(self, icon):
         self._graphics_item = icon
