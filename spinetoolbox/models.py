@@ -2012,7 +2012,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
             columns = [header_index(x) for x in self.object_name_header]
             for row in reversed(range(self.rowCount())):
                 for column in columns:
-                    if self._data[row][column][Qt.DisplayRole] in removed_names:
+                    if self._data[row][column][Qt.DisplayRole] in removed_names:  # TODO: handle KeyError here
                         super().removeRows(row, 1)
                         break
         elif removed_type in ("relationship_class", "parameter"):
@@ -2299,7 +2299,6 @@ class ObjectParameterProxy(AutoFilterProxy):
         super().__init__(data_store_form)
         self.object_class_name = None
         self.object_class_name_column = None
-        self.bold_object_class_name_rows = set()
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -2318,7 +2317,6 @@ class ObjectParameterProxy(AutoFilterProxy):
             if object_class_name != self.object_class_name:
                 return False
             row_data[self.object_class_name_column][Qt.FontRole] = self.bold_font
-            self.bold_object_class_name_rows.add(source_row)
         return True
 
     def set_object_class_name(self, name):
@@ -2327,10 +2325,8 @@ class ObjectParameterProxy(AutoFilterProxy):
         self.object_class_name = name
         self.filter_is_valid = False
         self.clear_autofilter()
-        data = self.sourceModel()._data
-        for row in self.bold_object_class_name_rows:
-            data[row][self.object_class_name_column][Qt.FontRole] = None
-        self.bold_object_class_name_rows = set()
+        for row_data in self.sourceModel()._data:
+            row_data[self.object_class_name_column][Qt.FontRole] = None
 
 
 class ObjectParameterValueProxy(ObjectParameterProxy):
@@ -2340,7 +2336,6 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
         super().__init__(data_store_form)
         self.object_name = None
         self.object_name_column = None
-        self.bold_object_name_rows = set()
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -2361,7 +2356,6 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
             if object_name != self.object_name:
                 return False
             row_data[self.object_name_column][Qt.FontRole] = self.bold_font
-            self.bold_object_name_rows.add(source_row)
         return True
 
     def set_object_name(self, name):
@@ -2370,10 +2364,8 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
         self.object_name = name
         self.filter_is_valid = False
         self.clear_autofilter()
-        data = self.sourceModel()._data
-        for row in self.bold_object_name_rows:
-            data[row][self.object_name_column][Qt.FontRole] = None
-        self.bold_object_name_rows = set()
+        for row_data in self.sourceModel()._data:
+            row_data[self.object_name_column][Qt.FontRole] = None
 
 
 class RelationshipParameterProxy(AutoFilterProxy):
@@ -2383,7 +2375,6 @@ class RelationshipParameterProxy(AutoFilterProxy):
         super().__init__(data_store_form)
         self.relationship_class_name_list = None
         self.relationship_class_name_column = None
-        self.bold_relationship_class_name_rows = set()
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -2402,7 +2393,6 @@ class RelationshipParameterProxy(AutoFilterProxy):
             if relationship_class_name not in self.relationship_class_name_list:
                 return False
             row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
-            self.bold_relationship_class_name_rows.add(source_row)
         return True
 
     def set_relationship_class_name_list(self, name_list):
@@ -2411,10 +2401,8 @@ class RelationshipParameterProxy(AutoFilterProxy):
         self.relationship_class_name_list = name_list
         self.filter_is_valid = False
         self.clear_autofilter()
-        data = self.sourceModel()._data
-        for row in self.bold_relationship_class_name_rows:
-            data[row][self.relationship_class_name_column][Qt.FontRole] = None
-        self.bold_relationship_class_name_rows = set()
+        for row_data in self.sourceModel()._data:
+            row_data[self.relationship_class_name_column][Qt.FontRole] = None
 
 
 class RelationshipParameterValueProxy(RelationshipParameterProxy):
@@ -2424,7 +2412,6 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
         super().__init__(data_store_form)
         self.object_name_list = None
         self.object_name_columns = list()
-        self.bold_object_name_list_rows = set()
         self.object_count = 0
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -2455,7 +2442,6 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                 for j, object_name in enumerate(object_name_list):
                     if self.object_name_list[0] == object_name:
                         row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
-                        self.bold_object_name_list_rows.add(source_row)
                         found = True
                 if not found:
                     return False
@@ -2464,7 +2450,6 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                     return False
                 for j in range(len(object_name_list)):
                     row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
-                self.bold_object_name_list_rows.add(source_row)
         # If this row passes, update the object count
         self.object_count = max(self.object_count, len(object_name_list))
         return True
@@ -2476,11 +2461,9 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
         self.object_name_list = name_list
         self.filter_is_valid = False
         self.clear_autofilter()
-        data = self.sourceModel()._data
-        for row in self.bold_object_name_list_rows:
+        for row_data in self.sourceModel()._data:
             for j in self.object_name_columns:
-                data[row][j][Qt.FontRole] = None
-        self.bold_object_name_list_rows = set()
+                row_data[j][Qt.FontRole] = None
 
 
 class DatapackageResourcesModel(QStandardItemModel):

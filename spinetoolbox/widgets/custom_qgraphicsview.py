@@ -240,7 +240,7 @@ class CustomQGraphicsView(QGraphicsView):
                                        .format(self.dst_widget, self.src_widget))
             elif src_item_type == 'Tool' and dst_item_type in ['Data Connection', 'Data Store']:
                 self._toolbox.msg.emit("\t-> Output files from <b>{0}</b>'s execution will be passed "
-                                       "as reference to <b>{1}</b>'s data directory."
+                                       "as reference to <b>{1}</b>."
                                        .format(self.src_widget, self.dst_widget))
             elif src_item_type in ['Data Connection', 'Data Store']\
                     and dst_item_type in ['Data Connection', 'Data Store']:

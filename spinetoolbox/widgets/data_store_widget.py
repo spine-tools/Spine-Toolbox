@@ -751,13 +751,21 @@ class DataStoreForm(QMainWindow):
         elif option == "Add parameter values":
             self.call_add_parameter_values(index)
         elif option == "Fully expand":
-            self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.expand)
+            self.fully_expand_selection()
         elif option == "Fully collapse":
-            self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.collapse)
+            self.fully_collapse_selection()
         else:  # No option selected
             pass
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
+
+    def fully_expand_selection(self):
+        for index in self.ui.treeView_object.selectionModel().selectedIndexes():
+            self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.expand)
+
+    def fully_collapse_selection(self):
+        for index in self.ui.treeView_object.selectionModel().selectedIndexes():
+            self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.collapse)
 
     def call_show_add_objects_form(self, index):
         class_id = index.data(Qt.UserRole + 1)['id']
