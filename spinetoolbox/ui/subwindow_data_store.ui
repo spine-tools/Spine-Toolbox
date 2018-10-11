@@ -447,7 +447,7 @@ color: rgb(255, 255, 255);</string>
        <item row="4" column="1" colspan="2">
         <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QLineEdit" name="lineEdit_SQLite_file">
+          <widget class="CustomQLineEdit" name="lineEdit_SQLite_file">
            <property name="enabled">
             <bool>false</bool>
            </property>
@@ -671,6 +671,13 @@ color: rgb(255, 255, 255);</string>
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CustomQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>widgets/custom_qlineedit.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>comboBox_dialect</tabstop>
   <tabstop>comboBox_dsn</tabstop>

@@ -223,7 +223,7 @@ class Ui_Form(object):
         self.gridLayout.addWidget(self.label_dialect, 1, 0, 1, 1)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.lineEdit_SQLite_file = QtWidgets.QLineEdit(Form)
+        self.lineEdit_SQLite_file = CustomQLineEdit(Form)
         self.lineEdit_SQLite_file.setEnabled(False)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -357,4 +357,5 @@ class Ui_Form(object):
         self.pushButton_open_directory.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
         self.pushButton_open_directory.setText(QtWidgets.QApplication.translate("Form", "Open directory...", None, -1))
 
+from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc

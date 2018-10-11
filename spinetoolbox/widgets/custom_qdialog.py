@@ -18,9 +18,7 @@
 #############################################################################
 
 """
-Various QDialogs to add items to Database in DataStoreForm,
-and a QDialog that can be programmatically populated with many options.
-Originally intended to be used within DataStoreForm
+Classes for custom QDialogs to add and edit database items.
 
 TODO: AddItemsDialog has a syntax error, so it does not even work.
 NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inherited by all other AddStuffDialogs
