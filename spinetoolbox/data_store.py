@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Module for data store class.
@@ -50,7 +42,7 @@ class DataStore(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        references (dict): Reference to a database
+        reference (dict): Reference to a database
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
@@ -60,47 +52,91 @@ class DataStore(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
-        self.item_category = "Data Stores"
-        self._widget = self._toolbox
+        # Instance variables for saving selections in shared widgets
+        self.selected_dialect = -1
+        self.selected_dsn = -1
+        self.selected_sqlite_file = ""
+        self.selected_host = ""
+        self.selected_port = ""
+        self.selected_db = ""
+        self.selected_username = ""
+        self.selected_password = ""
         # self._widget = DataStoreWidget(self, self.item_type)
-        # self._widget.set_name_label(name)
-        # self._widget.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
-        # self._widget.ui.comboBox_dialect.setCurrentIndex(-1)
-        # self._widget.ui.toolButton_browse.setIcon(self._widget.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self._toolbox.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
+        # self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
+        # self._toolbox.ui.toolButton_browse.setIcon(self._toolbox.style().standardIcon(QStyle.SP_DialogOpenButton))
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                        " Check permissions.".format(self.data_dir))
+                                         " Check permissions.".format(self.data_dir))
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        # self.connect_signals()
         self.load_reference(reference)
         # TODO: try and create reference from first sqlite file in data directory
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
-        self._widget.ui.pushButton_ds_open_directory.clicked.connect(self.open_directory)
-        self._widget.ui.pushButton_ds_open_treeview.clicked.connect(self.open_treeview)
-        self._widget.ui.toolButton_browse.clicked.connect(self.browse_clicked)
-        self._widget.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
-        self._widget.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
+        self.restore_selections()  # Do this before connecting signals or funny things happen
+        self._toolbox.ui.pushButton_ds_open_directory.clicked.connect(self.open_directory)
+        self._toolbox.ui.pushButton_ds_open_treeview.clicked.connect(self.open_treeview)
+        self._toolbox.ui.toolButton_browse.clicked.connect(self.browse_clicked)
+        self._toolbox.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
+        self._toolbox.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
 
     def disconnect_signals(self):
         """Disconnect this data store's signals."""
-        retvals = list()
-        try:
-            retvals.append(self._widget.ui.pushButton_ds_open_directory.clicked.disconnect())
-            retvals.append(self._widget.ui.pushButton_ds_open_treeview.clicked.disconnect())
-            retvals.append(self._widget.ui.toolButton_browse.clicked.disconnect())
-            retvals.append(self._widget.ui.comboBox_dialect.currentTextChanged.disconnect())
-            retvals.append(self._widget.ui.toolButton_spine.clicked.disconnect())
-        except RuntimeError:
-            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
-        if not all(retvals):
+        self.save_selections()
+        signals = list()
+        retvals = dict()
+        signals.append(self._toolbox.ui.pushButton_ds_open_directory.clicked)
+        signals.append(self._toolbox.ui.pushButton_ds_open_treeview.clicked)
+        signals.append(self._toolbox.ui.toolButton_browse.clicked)
+        signals.append(self._toolbox.ui.comboBox_dialect.currentTextChanged)
+        signals.append(self._toolbox.ui.toolButton_spine.clicked)
+        # Do this in all project item if this works fine and the actual signal can be printed in plain english
+        for i in range(len(signals)):
+            try:
+                retvals[signals[i]] = signals[i].disconnect()
+            except RuntimeError:
+                self._toolbox.msg_error.emit("RuntimeError disconnecting signal {0}".format(signals[i]))
+        if not all(retvals.values()):
+            logging.error("{0} retvals:{1}".format(self.name, retvals))
             self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
                                          .format(self.name, retvals))
+
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        self.selected_dialect = self._toolbox.ui.comboBox_dialect.currentIndex()
+        self.selected_dsn = self._toolbox.ui.comboBox_dsn.currentIndex()
+        self.selected_sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
+        self.selected_host = self._toolbox.ui.lineEdit_host.text()
+        self.selected_port = self._toolbox.ui.lineEdit_port.text()
+        self.selected_db = self._toolbox.ui.lineEdit_database.text()
+        self.selected_username = self._toolbox.ui.lineEdit_username.text()
+        self.selected_password = self._toolbox.ui.lineEdit_password.text()
+
+    def restore_selections(self):
+        """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.comboBox_dialect.setCurrentIndex(self.selected_dialect)
+        # Set widgets enabled/disabled according to selected dialect
+        dialect = self._toolbox.ui.comboBox_dialect.currentText()
+        if dialect == "":
+            self.enable_no_dialect()
+        elif dialect == "sqlite":
+            self.enable_sqlite()
+        elif dialect == "mssql":
+            self.enable_mssql()
+        else:
+            self.enable_common()
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(self.selected_dsn)
+        self._toolbox.ui.lineEdit_SQLite_file.setText(self.selected_sqlite_file)
+        self._toolbox.ui.lineEdit_host.setText(self.selected_host)
+        self._toolbox.ui.lineEdit_port.setText(self.selected_port)
+        self._toolbox.ui.lineEdit_database.setText(self.selected_db)
+        self._toolbox.ui.lineEdit_username.setText(self.selected_username)
+        self._toolbox.ui.lineEdit_password.setText(self.selected_password)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -130,7 +166,7 @@ class DataStore(ProjectItem):
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
-        # self._widget.ui.lineEdit_SQLite_file.setText(file_path)
+        self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
 
     def load_reference(self, reference):
         """Update ui so it reflects the stored reference after loading a project."""
@@ -156,7 +192,7 @@ class DataStore(ProjectItem):
         if dialect not in SQL_DIALECT_API:
             self._toolbox.msg_error.emit("Dialect '{}' of stored reference is not supported.".format(dialect))
             return
-        # self._widget.ui.comboBox_dialect.setCurrentText(dialect)
+        self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
         if dbapi and SQL_DIALECT_API[dialect] != dbapi:
             recommended_dbapi = SQL_DIALECT_API[dialect]
             self._toolbox.msg_warning.emit("The stored reference is using dialect '{0}' with driver '{1}', whereas "
@@ -167,50 +203,60 @@ class DataStore(ProjectItem):
             except IndexError:
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
-            # self._widget.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
-            # self._widget.ui.lineEdit_database.setText(database)
-            # self._widget.ui.lineEdit_username.setText(username)
+            self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
+            self._toolbox.ui.lineEdit_database.setText(database)
+            self._toolbox.ui.lineEdit_username.setText(username)
+
+    def enable_no_dialect(self):
+        """Adjust widget enabled status to default when no dialect is selected."""
+        self._toolbox.ui.comboBox_dialect.setEnabled(True)
+        self._toolbox.ui.comboBox_dsn.setEnabled(False)
+        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
+        self._toolbox.ui.toolButton_browse.setEnabled(False)
+        self._toolbox.ui.lineEdit_host.setEnabled(False)
+        self._toolbox.ui.lineEdit_port.setEnabled(False)
+        self._toolbox.ui.lineEdit_database.setEnabled(False)
+        self._toolbox.ui.lineEdit_username.setEnabled(False)
+        self._toolbox.ui.lineEdit_password.setEnabled(False)
+        self._toolbox.ui.comboBox_dialect.setFocus()
 
     def enable_mssql(self):
         """Adjust controls to mssql connection specification."""
-        pass
-        # self._widget.ui.comboBox_dsn.setEnabled(True)
-        # self._widget.ui.lineEdit_SQLite_file.setEnabled(False)
-        # self._widget.ui.toolButton_browse.setEnabled(False)
-        # self._widget.ui.lineEdit_host.setEnabled(False)
-        # self._widget.ui.lineEdit_port.setEnabled(False)
-        # self._widget.ui.lineEdit_database.setEnabled(False)
-        # self._widget.ui.lineEdit_username.setEnabled(True)
-        # self._widget.ui.lineEdit_password.setEnabled(True)
-        # self._widget.ui.comboBox_dsn.setFocus()
+        self._toolbox.ui.comboBox_dsn.setEnabled(True)
+        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
+        self._toolbox.ui.toolButton_browse.setEnabled(False)
+        self._toolbox.ui.lineEdit_host.setEnabled(False)
+        self._toolbox.ui.lineEdit_port.setEnabled(False)
+        self._toolbox.ui.lineEdit_database.setEnabled(False)
+        self._toolbox.ui.lineEdit_username.setEnabled(True)
+        self._toolbox.ui.lineEdit_password.setEnabled(True)
+        self._toolbox.ui.comboBox_dsn.setFocus()
 
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
-        pass
-        # self._widget.ui.comboBox_dsn.setEnabled(False)
-        # self._widget.ui.comboBox_dsn.setCurrentIndex(0)
-        # self._widget.ui.lineEdit_SQLite_file.setEnabled(True)
-        # self._widget.ui.toolButton_browse.setEnabled(True)
-        # self._widget.ui.lineEdit_host.setEnabled(False)
-        # self._widget.ui.lineEdit_port.setEnabled(False)
-        # self._widget.ui.lineEdit_database.setEnabled(False)
-        # self._widget.ui.lineEdit_username.setEnabled(False)
-        # self._widget.ui.lineEdit_password.setEnabled(False)
-        # self._widget.ui.lineEdit_SQLite_file.setFocus()
+        self._toolbox.ui.comboBox_dsn.setEnabled(False)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(0)
+        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(True)
+        self._toolbox.ui.toolButton_browse.setEnabled(True)
+        self._toolbox.ui.lineEdit_host.setEnabled(False)
+        self._toolbox.ui.lineEdit_port.setEnabled(False)
+        self._toolbox.ui.lineEdit_database.setEnabled(False)
+        self._toolbox.ui.lineEdit_username.setEnabled(False)
+        self._toolbox.ui.lineEdit_password.setEnabled(False)
+        self._toolbox.ui.lineEdit_SQLite_file.setFocus()
 
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
-        pass
-        # self._widget.ui.comboBox_dsn.setEnabled(False)
-        # self._widget.ui.comboBox_dsn.setCurrentIndex(0)
-        # self._widget.ui.lineEdit_SQLite_file.setEnabled(False)
-        # self._widget.ui.toolButton_browse.setEnabled(False)
-        # self._widget.ui.lineEdit_host.setEnabled(True)
-        # self._widget.ui.lineEdit_port.setEnabled(True)
-        # self._widget.ui.lineEdit_database.setEnabled(True)
-        # self._widget.ui.lineEdit_username.setEnabled(True)
-        # self._widget.ui.lineEdit_password.setEnabled(True)
-        # self._widget.ui.lineEdit_host.setFocus()
+        self._toolbox.ui.comboBox_dsn.setEnabled(False)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(0)
+        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
+        self._toolbox.ui.toolButton_browse.setEnabled(False)
+        self._toolbox.ui.lineEdit_host.setEnabled(True)
+        self._toolbox.ui.lineEdit_port.setEnabled(True)
+        self._toolbox.ui.lineEdit_database.setEnabled(True)
+        self._toolbox.ui.lineEdit_username.setEnabled(True)
+        self._toolbox.ui.lineEdit_password.setEnabled(True)
+        self._toolbox.ui.lineEdit_host.setFocus()
 
     @Slot("str", name="check_dialect")
     def check_dialect(self, dialect):
@@ -219,7 +265,7 @@ class DataStore(ProjectItem):
         Returns:
             True if dialect is supported, False if not.
         """
-        if dialect == 'Select dialect...':
+        if dialect == "":  # TODO: Set text when index is -1 to 'Select dialect...'
             return
         dbapi = SQL_DIALECT_API[dialect]
         try:
@@ -235,9 +281,9 @@ class DataStore(ProjectItem):
                     if 'msodbcsql' in value.lower():
                         mssql_dsns.append(key)
                 if mssql_dsns:
-                    # self._widget.ui.comboBox_dsn.clear()
-                    # self._widget.ui.comboBox_dsn.addItems(mssql_dsns)
-                    # self._widget.ui.comboBox_dsn.setCurrentIndex(-1)
+                    self._toolbox.ui.comboBox_dsn.clear()
+                    self._toolbox.ui.comboBox_dsn.addItems(mssql_dsns)
+                    self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
                     self.enable_mssql()
                 else:
                     msg = "Please create a SQL Server ODBC Data Source first."
@@ -260,14 +306,14 @@ class DataStore(ProjectItem):
             msg.exec_()  # Show message box
             if msg.clickedButton() == pip_button:
                 if not self.install_dbapi_pip(dbapi):
-                    self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
                     return False
             elif msg.clickedButton() == conda_button:
                 if not self.install_dbapi_conda(dbapi):
-                    self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
                     return False
             else:
-                # self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
                 logging.debug("Cancelled")
                 msg = "Unable to use dialect '{}'.".format(dialect)
                 self._toolbox.msg_error.emit(msg)
@@ -275,8 +321,7 @@ class DataStore(ProjectItem):
             # Check that dialect is not found
             logging.debug("Checking dialect again")
             if not self.check_dialect(dialect):
-                pass
-                # self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+                self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
 
     @busy_effect
     def install_dbapi_pip(self, dbapi):
@@ -306,7 +351,7 @@ class DataStore(ProjectItem):
             logging.debug("Could not find conda. Installing {0} failed.".format(dbapi))
             msg = "Conda is missing"
             self._toolbox.msg_error.emit(msg)
-            # self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+            self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
         try:
             msg = "Installing module '{}' via 'conda'.".format(dbapi)
@@ -321,22 +366,22 @@ class DataStore(ProjectItem):
             logging.error("Failed to install module '{}' with conda.".format(dbapi))
             msg = "Failed to install module '{}' with conda.".format(dbapi)
             self._toolbox.msg_error.emit(msg)
-            # self._widget.ui.comboBox_dialect.setCurrentIndex(0)
+            self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
 
     def reference(self):
         """Return a reference from user's choices."""
-        if self._widget.ui.comboBox_dialect.currentIndex() < 0:
+        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return None
-        dialect = self._widget.ui.comboBox_dialect.currentText()
+        dialect = self._toolbox.ui.comboBox_dialect.currentText()
         if dialect == 'mssql':
-            if self._widget.ui.comboBox_dsn.currentIndex() < 0:
+            if self._toolbox.ui.comboBox_dsn.currentIndex() < 0:
                 self._toolbox.msg_warning.emit("Please select DSN first")
                 return None
-            dsn = self._widget.ui.comboBox_dsn.currentText()
-            username = self._widget.ui.lineEdit_username.text()
-            password = self._widget.ui.lineEdit_password.text()
+            dsn = self._toolbox.ui.comboBox_dsn.currentText()
+            username = self._toolbox.ui.lineEdit_username.text()
+            password = self._toolbox.ui.lineEdit_password.text()
             url = 'mssql+pyodbc://'
             if username:
                 url += username
@@ -346,23 +391,23 @@ class DataStore(ProjectItem):
             # Set database equal to dsn for creating the reference below
             database = dsn
         elif dialect == 'sqlite':
-            sqlite_file = self._widget.ui.lineEdit_SQLite_file.text()
+            sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
             url = 'sqlite:///{0}'.format(sqlite_file)
             # Set database equal to file's basename for creating the reference below
             database = os.path.basename(sqlite_file)
             username = getpass.getuser()
         else:
-            host = self._widget.ui.lineEdit_host.text()
+            host = self._toolbox.ui.lineEdit_host.text()
             if not host:
                 self._toolbox.msg_warning.emit("Host missing")
                 return None
-            database = self._widget.ui.lineEdit_database.text()
+            database = self._toolbox.ui.lineEdit_database.text()
             if not database:
                 self._toolbox.msg_warning.emit("Database missing")
                 return None
-            port = self._widget.ui.lineEdit_port.text()
-            username = self._widget.ui.lineEdit_username.text()
-            password = self._widget.ui.lineEdit_password.text()
+            port = self._toolbox.ui.lineEdit_port.text()
+            username = self._toolbox.ui.lineEdit_username.text()
+            password = self._toolbox.ui.lineEdit_password.text()
             dbapi = SQL_DIALECT_API[dialect]
             url = "+".join([dialect, dbapi]) + "://"
             if username:
@@ -431,10 +476,10 @@ class DataStore(ProjectItem):
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
         reference = self.reference()
-        dialect = self._widget.ui.comboBox_dialect.currentText()
+        dialect = self._toolbox.ui.comboBox_dialect.currentText()
         if dialect != "sqlite":
             return None
-        file_path = self._widget.ui.lineEdit_SQLite_file.text()
+        file_path = self._toolbox.ui.lineEdit_SQLite_file.text()
         if not os.path.exists(file_path):
             return None
         if fname == os.path.basename(file_path):

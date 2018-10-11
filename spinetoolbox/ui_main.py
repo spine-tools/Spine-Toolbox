@@ -22,7 +22,7 @@ import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QDockWidget
+    QCheckBox, QInputDialog, QDockWidget, QStyle
 from PySide2.QtGui import QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
@@ -41,7 +41,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH
+    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -110,6 +110,7 @@ class ToolboxUI(QMainWindow):
         self.connect_signals()
         self.init_project()
         self.restore_ui()
+        self.init_shared_widgets()
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
@@ -199,6 +200,12 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
             logging.error("Loading project file '{0}' failed".format(project_file_path))
         return
+
+    def init_shared_widgets(self):
+        """Initialize widgets that are shared among all ProjectItems of the same type."""
+        self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
+        self.ui.comboBox_dialect.setCurrentIndex(-1)
+        self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -481,25 +488,45 @@ class ToolboxUI(QMainWindow):
     def selected_item_changed(self, current, previous):
         """Disconnect signals of previous item, connect signals of current item
         and update tab of the new item."""
-        if not current.parent().isValid():
-            # self.msg.emit("Clicked on category item")
+        for selected_item in self.ui.graphicsView.scene().selectedItems():
+            selected_item.setSelected(False)  # Clear QGraphicsItem selections
+        if not current.isValid():  # Current item is root
+            self.msg_error.emit("Current selected item is the root item. This should not happen.")
+            return
+        if not current.parent().isValid():  # Current is category
+            if not previous:  # Previous is None
+                self.msg.emit("Current is category. Previous is None")
+                return
+            elif not previous.isValid():  # Previous is root
+                self.msg.emit("Current is category. Previous is root")
+                return
+            elif not previous.parent().isValid():  # Previous is category
+                self.msg.emit("Current is category. Previous is category")
+                return
+            else:  # Previous is a ProjectItem -> disconnect
+                self.msg.emit("Current is category. Previous is ProjectItem")
+                previous_item = self.project_item_model.project_item(previous)
+                self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
+                # Deselect previous item's QGraphicsItem
+                previous_item.get_icon().master().setSelected(False)
+                previous_item.disconnect_signals()
             return
         current_item = self.project_item_model.project_item(current)
         if not previous:
-            # self.msg.emit("previous item was None")
-            pass
+            pass  # Previous item was None
         elif not previous.isValid():
-            # self.msg.emit("previous item was root")
-            pass
+            pass  # Previous item was root
+        elif not previous.parent().isValid():
+            pass  # Previous item was a category
         else:
             previous_item = self.project_item_model.project_item(previous)
-            if not previous_item.is_category:
-                self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
-                previous_item.disconnect_signals()
-            else:
-                # self.msg.emit("previous item was a category item")
-                pass
+            self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
+            # Deselect previous item's QGraphicsItem
+            previous_item.get_icon().master().setSelected(False)
+            previous_item.disconnect_signals()
         self.msg.emit("Connecting signals of {0}".format(current_item.name))
+        # Set current item QGraphicsItem selected as well
+        current_item.get_icon().master().setSelected(True)
         current_item.connect_signals()
         self.show_info(current_item)
 
