@@ -16,7 +16,6 @@ Functions to import and export from excel to spine database.
 :date:   21.8.2018
 """
 
-# TODO: Remove blank lines inside functions
 # TODO: Add docstrings to all functions
 # TODO: PEP8: Do not use bare except. Too broad exception clause
 

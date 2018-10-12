@@ -200,7 +200,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         parent_item = self.project_item(parent)
         row = self.rowCount(parent)  # parent.child_count()
-        logging.debug("Inserting item on row:{0} under parent:{1}".format(row, parent_item.name))
+        # logging.debug("Inserting item on row:{0} under parent:{1}".format(row, parent_item.name))
         self.beginInsertRows(parent, row, row)
         retval = parent_item.add_child(item)
         self.endInsertRows()
@@ -750,7 +750,7 @@ class ConnectionModel(QAbstractTableModel):
             True if successful, False otherwise
         """
         # item_name = item.name
-        logging.debug("Appending item {0} on row and column: {1}".format(name, index))
+        # logging.debug("Appending item {0} on row and column: {1}".format(name, index))
         # logging.debug("Appending {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
         self.header.insert(index, name)
@@ -783,8 +783,8 @@ class ConnectionModel(QAbstractTableModel):
         if not self.removeColumns(item_index, 1, parent=QModelIndex()):
             return False
         self.header.remove(name)
-        logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
-                      .format(self.rowCount(), self.columnCount(), self.connections))
+        # logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
+        #               .format(self.rowCount(), self.columnCount(), self.connections))
         return True
 
     def output_items(self, name):
@@ -1022,7 +1022,7 @@ class MinimalTableModel(QAbstractTableModel):
         try:
             return self._data[index.row()][index.column()][role]
         except IndexError:
-            logging.debug(index)
+            logging.error(index)
             return None
         except KeyError:
             return None
@@ -1358,7 +1358,7 @@ class ObjectTreeModel(QStandardItemModel):
                 object_class_item = visited_object_class_item
                 break
         if not object_class_item:
-            logging.debug("Object class item not found in model. This is probably a bug.")
+            logging.error("Object class item not found in model. This is probably a bug.")
             return
         wide_relationship_class_list = self.mapping.wide_relationship_class_list(object_['class_id'])
         object_item = self.new_object_item(object_, wide_relationship_class_list)

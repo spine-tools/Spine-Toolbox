@@ -17,12 +17,11 @@ Module for data store class.
 """
 
 import os
-import shutil
 import getpass
 import logging
-from PySide2.QtGui import QDesktopServices, QIcon
+from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QStyle
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
@@ -62,9 +61,6 @@ class DataStore(ProjectItem):
         self.selected_username = ""
         self.selected_password = ""
         # self._widget = DataStoreWidget(self, self.item_type)
-        # self._toolbox.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
-        # self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-        # self._toolbox.ui.toolButton_browse.setIcon(self._toolbox.style().standardIcon(QStyle.SP_DialogOpenButton))
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -88,6 +84,7 @@ class DataStore(ProjectItem):
     def disconnect_signals(self):
         """Disconnect this data store's signals."""
         self.save_selections()
+        ret = True
         signals = list()
         retvals = dict()
         signals.append(self._toolbox.ui.pushButton_ds_open_directory.clicked)
@@ -101,10 +98,13 @@ class DataStore(ProjectItem):
                 retvals[signals[i]] = signals[i].disconnect()
             except RuntimeError:
                 self._toolbox.msg_error.emit("RuntimeError disconnecting signal {0}".format(signals[i]))
+                ret = False
         if not all(retvals.values()):
             logging.error("{0} retvals:{1}".format(self.name, retvals))
             self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
                                          .format(self.name, retvals))
+            ret = False
+        return ret
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -218,7 +218,6 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(False)
         self._toolbox.ui.lineEdit_username.setEnabled(False)
         self._toolbox.ui.lineEdit_password.setEnabled(False)
-        self._toolbox.ui.comboBox_dialect.setFocus()
 
     def enable_mssql(self):
         """Adjust controls to mssql connection specification."""
@@ -230,7 +229,6 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(False)
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
-        self._toolbox.ui.comboBox_dsn.setFocus()
 
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
@@ -243,7 +241,6 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(False)
         self._toolbox.ui.lineEdit_username.setEnabled(False)
         self._toolbox.ui.lineEdit_password.setEnabled(False)
-        self._toolbox.ui.lineEdit_SQLite_file.setFocus()
 
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
@@ -256,7 +253,6 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(True)
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
-        self._toolbox.ui.lineEdit_host.setFocus()
 
     @Slot("str", name="check_dialect")
     def check_dialect(self, dialect):

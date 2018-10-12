@@ -92,14 +92,21 @@ class Tool(ProjectItem):
 
     def disconnect_signals(self):
         """Disconnect signals."""
+        ret = True
         retvals = list()
-        retvals.append(self._widget.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process))
-        retvals.append(self._widget.ui.pushButton_tool_results.clicked.disconnect(self.open_results))
-        retvals.append(self._widget.ui.pushButton_tool_execute.clicked.disconnect(self.execute))
-        retvals.append(self._widget.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template))
+        try:
+            retvals.append(self._widget.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process))
+            retvals.append(self._widget.ui.pushButton_tool_results.clicked.disconnect(self.open_results))
+            retvals.append(self._widget.ui.pushButton_tool_execute.clicked.disconnect(self.execute))
+            retvals.append(self._widget.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template))
+        except RuntimeError:
+            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
+            ret = False
         if not all(retvals):
             self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
                                          .format(self.name, retvals))
+            ret = False
+        return ret
 
     @Slot(name="open_results")
     def open_results(self):
@@ -360,11 +367,12 @@ class Tool(ProjectItem):
         for input_item in self._toolbox.connection_model.input_items(self.name):
             # self._toolbox.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
             # Find item from project model
-            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item_index = self._toolbox.project_item_model.find_item(input_item)
+            found_item = self._toolbox.project_item_model.project_item(found_item_index)
             if not found_item:
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 return path
-            item_data = found_item.data(Qt.UserRole)
+            item_data = found_item
             # Find file from parent Data Stores and Data Connections
             if item_data.item_type in ["Data Store", "Data Connection"]:
                 visited_items = list()

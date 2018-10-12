@@ -61,12 +61,19 @@ class View(ProjectItem):
 
     def disconnect_signals(self):
         """Disconnect signals of this item, so that the UI elements can be used again with another item."""
+        ret = True
         retvals = list()
-        retvals.append(self._widget.ui.treeView_view.doubleClicked.disconnect(self.open_network_map))
-        retvals.append(self._widget.ui.pushButton_open_network_map.clicked.disconnect(self.open_network_map))
+        try:
+            retvals.append(self._widget.ui.treeView_view.doubleClicked.disconnect(self.open_network_map))
+            retvals.append(self._widget.ui.pushButton_open_network_map.clicked.disconnect(self.open_network_map))
+        except RuntimeError:
+            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
+            ret = False
         if not all(retvals):
             self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
                                          .format(self.name, retvals))
+            ret = False
+        return ret
 
     def project(self):
         """Returns current project or None if no project open."""

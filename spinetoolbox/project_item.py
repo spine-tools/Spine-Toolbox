@@ -113,7 +113,6 @@ class ProjectItem(MetaObject):
         """
         if row < 0 or row > len(self._children):
             return False
-        logging.debug("Removing child of {0} on row:{1}".format(self.name, row))
         child = self._children.pop(row)
         child._parent = None
         return True
