@@ -87,6 +87,7 @@ class DataStore(MetaObject):
         self._widget.ui.toolButton_browse.clicked.connect(self.browse_clicked)
         self._widget.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
         self._widget.ui.pushButton_spine.clicked.connect(self.create_new_spine_database)
+        self._widget.ui.lineEdit_SQLite_file.file_dropped.connect(self.set_path_to_sqlite_file)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -112,6 +113,11 @@ class DataStore(MetaObject):
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
+        self._widget.ui.lineEdit_SQLite_file.setText(file_path)
+
+    @Slot("QString", name="set_path_to_sqlite_file")
+    def set_path_to_sqlite_file(self, file_path):
+        """Set path to SQLite file."""
         self._widget.ui.lineEdit_SQLite_file.setText(file_path)
 
     def load_reference(self, reference):

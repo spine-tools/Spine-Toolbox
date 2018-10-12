@@ -19,6 +19,7 @@ In this way you can correct your work and try again.
 - Now it's possible to interrupt a tool's execution by pressing the stop button.
 - New context menu options to fully expand and collapse object tree items in the Data store form.
 - The autofilter in the Data store form now can also filter work in progress rows.
+- In the Data store item controls, the path to the Sqlite file can be specified by dropping a file.
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
