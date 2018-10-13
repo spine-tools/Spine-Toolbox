@@ -783,7 +783,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+     <normaloff>:/icons/import_ds.png</normaloff>:/icons/import_ds.png</iconset>
    </property>
    <property name="text">
     <string>Import</string>
@@ -798,7 +798,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/export.png</normaloff>:/icons/export.png</iconset>
+     <normaloff>:/icons/export_ds.png</normaloff>:/icons/export_ds.png</iconset>
    </property>
    <property name="text">
     <string>Export</string>

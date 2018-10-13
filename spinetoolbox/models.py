@@ -1062,6 +1062,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
 
@@ -1081,6 +1082,8 @@ class ObjectTreeModel(QStandardItemModel):
                 return self.object_icon
             elif item_type.startswith('relationship'):
                 return self.relationship_icon
+            elif item_type == 'root':
+                return self.spine_icon
         return super().data(index, role)
 
     def forward_sweep(self, index, call=None):

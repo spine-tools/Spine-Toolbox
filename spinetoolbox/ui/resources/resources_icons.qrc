@@ -4,7 +4,9 @@
   </qresource>
   <qresource prefix="icons">
     <file>minus_object_icon.png</file>
+    <file>import_ds.png</file>
     <file>close.png</file>
+    <file>export_ds.png</file>
     <file>edit_object_icon.png</file>
     <file>refresh.png</file>
     <file>edit_relationship_icon.png</file>
