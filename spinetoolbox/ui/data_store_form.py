@@ -330,13 +330,13 @@ class Ui_MainWindow(object):
         self.actionAdd_parameter_values.setObjectName("actionAdd_parameter_values")
         self.actionImport = QtWidgets.QAction(MainWindow)
         icon7 = QtGui.QIcon()
-        icon7.addPixmap(QtGui.QPixmap(":/icons/import.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon7.addPixmap(QtGui.QPixmap(":/icons/import_ds.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionImport.setIcon(icon7)
         self.actionImport.setObjectName("actionImport")
         self.actionExport = QtWidgets.QAction(MainWindow)
         self.actionExport.setEnabled(False)
         icon8 = QtGui.QIcon()
-        icon8.addPixmap(QtGui.QPixmap(":/icons/export.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon8.addPixmap(QtGui.QPixmap(":/icons/export_ds.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionExport.setIcon(icon8)
         self.actionExport.setObjectName("actionExport")
         self.actionConnect = QtWidgets.QAction(MainWindow)
@@ -523,6 +523,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

@@ -46,6 +46,7 @@ from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterMo
     RelationshipParameterModel, RelationshipParameterValueModel, \
     ObjectParameterProxy, ObjectParameterValueProxy, RelationshipParameterProxy, RelationshipParameterValueProxy
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
+from spinedatabase_api import copy_database
 from datapackage_import_export import import_datapackage
 from helpers import busy_effect
 
@@ -153,7 +154,7 @@ class DataStoreForm(QMainWindow):
         # Event log signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
-        # Menu commands
+        # Menu actions
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.show_export_file_dialog)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
@@ -417,29 +418,37 @@ class DataStoreForm(QMainWindow):
     @Slot(name="show_export_file_dialog")
     def show_export_file_dialog(self):
         """Show dialog to allow user to select a file to export."""
-        answer = QFileDialog.getSaveFileName(self, "Export to file", self._data_store.project().project_dir, "*.xlsx")
+        answer = QFileDialog.getSaveFileName(self,
+                                             "Export to file",
+                                             self._data_store.project().project_dir,
+                                             "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
-        self.export_file(file_path)
+        if answer[1].startswith("SQlite"):
+            self.export_to_sqlite(file_path)
+        elif answer[1].startswith("Excel"):
+            self.export_to_excel(file_path)
 
     @busy_effect
-    def export_file(self, file_path):
-        """Export data from database into file."""
-        if file_path.lower().endswith('datapackage.json'):
-            pass
-        elif file_path.lower().endswith('xlsx'):
-            filename = os.path.split(file_path)[1]
-            try:
-                export_spine_database_to_xlsx(self.db_map, file_path)
-                self.msg.emit("Excel file successfully exported.")
-            except PermissionError:
-                self.msg_error.emit("Unable to export to file <b>{0}</b>.<br/>"
-                                    "Close the file in Excel and try again.".format(filename))
-            except OSError:
-                self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
-        else:
-            self.msg_error.emit("Unsupported file format")
+    def export_to_excel(self, file_path):
+        """Export data from database into Excel file."""
+        filename = os.path.split(file_path)[1]
+        try:
+            export_spine_database_to_xlsx(self.db_map, file_path)
+            self.msg.emit("Excel file successfully exported.")
+        except PermissionError:
+            self.msg_error.emit("Unable to export to file <b>{0}</b>.<br/>"
+                                "Close the file in Excel and try again.".format(filename))
+        except OSError:
+            self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
+
+    @busy_effect
+    def export_to_sqlite(self, file_path):
+        """Export data from database into SQlite file."""
+        dst_url = 'sqlite:///{0}'.format(file_path)
+        copy_database(dst_url, self.db_map.db_url)
+        self.msg.emit("SQlite file successfully exported.")
 
     def set_commit_rollback_actions_enabled(self, on):
         self.ui.actionCommit.setEnabled(on)

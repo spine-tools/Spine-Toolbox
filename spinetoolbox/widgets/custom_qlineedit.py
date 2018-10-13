@@ -38,7 +38,6 @@ class CustomQLineEdit(QLineEdit):
 
     def __init__(self, parent):
         super().__init__(parent)
-        print(parent)
 
     def dragEnterEvent(self, event):
         """Accept a single file drop from the filesystem."""
