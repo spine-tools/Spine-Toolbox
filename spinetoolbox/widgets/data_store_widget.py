@@ -446,6 +446,11 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def export_to_sqlite(self, file_path):
         """Export data from database into SQlite file."""
+        # Remove file if exists (at this point, the user has confirmed they want to overwrite)
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         dst_url = 'sqlite:///{0}'.format(file_path)
         copy_database(dst_url, self.db_map.db_url)
         self.msg.emit("SQlite file successfully exported.")

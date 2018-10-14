@@ -1337,7 +1337,7 @@ class ObjectTreeModel(QStandardItemModel):
         This may require moving rows if the objects in the relationship have changed."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
-        items_to_add = set()
+        ids_to_add = set()
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != "relationship":
@@ -1351,14 +1351,14 @@ class ObjectTreeModel(QStandardItemModel):
                 if visited_object_id_list != updated_object_id_list:
                     visited_index = self.indexFromItem(visited_item)
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
-                    items_to_add.add(updated_item)
+                    ids_to_add.add(visited_id)
                 else:
                     visited_item.setText(updated_item.object_name_list)
                     visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
             except KeyError:
                 continue
-        for item in items_to_add:
-            self.add_relationship(item)
+        for id in ids_to_add:
+            self.add_relationship(updated_items_dict[id])
 
     def remove_items(self, removed_type, *removed_ids):
         """Remove all matched items and their orphans."""
