@@ -20,6 +20,6 @@
 """
 Init file for ui package. Intentionally empty.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   3.1.2018
 """

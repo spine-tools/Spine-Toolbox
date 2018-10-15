@@ -20,7 +20,7 @@
 """
 Class for a custom QTextBrowser to add options to context menu.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   6.2.2018
 """
 
@@ -28,11 +28,14 @@ from PySide2.QtWidgets import QTextBrowser, QAction
 
 
 class CustomQTextBrowser(QTextBrowser):
-    """Custom QTextBrowser class."""
+    """Custom QTextBrowser class.
 
+    Attributes:
+        parent (QWidget): Parent widget
+    """
     def __init__(self, parent):
-        super().__init__()
-        self._parent = parent
+        super().__init__(parent=parent)
+        # self._parent = parent  # Is this needed?
 
     def contextMenuEvent(self, event):
         """Reimplemented method to add a clear action into the default context menu.

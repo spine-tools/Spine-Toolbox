@@ -20,11 +20,10 @@
 """
 Widget shown to user when a new View is created.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   19.1.2017
 """
 
-import logging
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
 import ui.add_view
@@ -36,14 +35,17 @@ class AddViewWidget(QWidget):
     """A widget to query user's preferences for a new item.
 
     Attributes:
-        parent (ToolboxUI): Parent widget
-        project (SpineToolboxProject): Project for the new item
+        toolbox (ToolboxUI): Parent widget
+        x (int): X coordinate of new item
+        y (int): Y coordinate of new item
     """
-    def __init__(self, parent, project):
+    def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(f=Qt.Window)
-        self._parent = parent
-        self._project = project
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
+        self._toolbox = toolbox
+        self._x = x
+        self._y = y
+        self._project = self._toolbox.project()
         #  Set up the user interface from Designer.
         self.ui = ui.add_view.Ui_Form()
         self.ui.setupUi(self)
@@ -84,19 +86,21 @@ class AddViewWidget(QWidget):
         """Check that given item name is valid and add it to project."""
         self.name = self.ui.lineEdit_name.text()
         self.description = self.ui.lineEdit_description.text()
+        if not self.name:  # No name given
+            self.statusbar.showMessage("Name missing", 3000)
+            return
         # Check for invalid characters for a folder name
         if any((True for x in self.name if x in INVALID_CHARS)):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._toolbox.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
-            logging.error("Item with same name already in project")
             return
         # Check that short name (folder) is not reserved
         short_name = self.name.lower().replace(' ', '_')
-        if short_name_reserved(short_name, self._parent.project_item_model):
+        if short_name_reserved(short_name, self._toolbox.project_item_model):
             msg = "Item using folder '{0}' already exists".format(short_name)
             self.statusbar.showMessage(msg, 3000)
             return
@@ -106,7 +110,7 @@ class AddViewWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_view(self.name, self.description)
+        self._project.add_view(self.name, self.description, self._x, self._y, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
@@ -116,6 +120,8 @@ class AddViewWidget(QWidget):
         """
         if e.key() == Qt.Key_Escape:
             self.close()
+        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
+            self.ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -125,3 +131,8 @@ class AddViewWidget(QWidget):
         """
         if event:
             event.accept()
+            scene = self._toolbox.ui.graphicsView.scene()
+            item_shadow = scene.item_shadow
+            if item_shadow:
+                scene.removeItem(item_shadow)
+                scene.item_shadow = None

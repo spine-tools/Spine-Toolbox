@@ -20,7 +20,7 @@
 """
 Spine Toolbox application main file.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   14.12.2017
 """
 
@@ -36,6 +36,7 @@ def main(argv):
     Args:
         argv (list): Command line arguments
     """
+
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')

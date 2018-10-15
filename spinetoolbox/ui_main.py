@@ -20,7 +20,7 @@
 """
 Class for main application GUI functions.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   14.12.2017
 """
 
@@ -29,13 +29,13 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, QCheckBox, QAction
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QDesktopServices
+from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
+    QCheckBox, QInputDialog, QDockWidget
+from PySide2.QtGui import QStandardItem, QDesktopServices, QGuiApplication
 from ui.mainwindow import Ui_MainWindow
-from widgets.data_store_widget import DataStoreWidget
 from widgets.about_widget import AboutWidget
-from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, LinkContextMenu, \
-    addToolTemplatePopupMenu
+from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
+    LinkContextMenu, AddToolTemplatePopupMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -43,13 +43,15 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.tool_template_widget import ToolTemplateWidget
+from widgets.custom_delegates import CheckBoxDelegate
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    SPLITTER_SS, SEPARATOR_SS
-from helpers import project_dir, get_datetime, erase_dir, blocking_updates
-from models import ToolTemplateModel, ConnectionModel
+    MAINWINDOW_SS, DOC_INDEX_PATH
+from helpers import project_dir, get_datetime, erase_dir, busy_effect
+from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
+from widgets.julia_repl_widget import JuliaREPLWidget
 
 
 class ToolboxUI(QMainWindow):
@@ -71,6 +73,7 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.graphicsView.set_ui(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
@@ -81,18 +84,19 @@ class ToolboxUI(QMainWindow):
         # Widget and form references
         self.settings_form = None
         self.about_form = None
-        self.data_store_form = None
+        self.data_store_form = None  # OBSOLETE?
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
-        self.tool_template_context_menu = None
         self.link_context_menu = None
-        self.add_tool_template_popup_menu = None
+        self.process_output_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
         self.add_tool_form = None
         self.add_view_form = None
         self.tool_template_form = None
+        self.placing_item = ""
+        self.add_tool_template_popup_menu = None
         self.project_refs = list()  # TODO: Find out why these are needed in addition with project_item_model
         # self.scene_bg = SceneBackground(self)
         # Initialize application
@@ -100,23 +104,29 @@ class ToolboxUI(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
-        self.ui.splitter.setStyleSheet(SPLITTER_SS)
-        self.setStyleSheet(SEPARATOR_SS)
+        self.setStyleSheet(MAINWINDOW_SS)
         # Make and initialize toolbars
-        self.item_toolbar = widgets.toolbars.make_item_toolbar(self)
+        self.item_toolbar = widgets.toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
-        # Make keyboard shortcuts
-        self.test1_action = QAction(self)
-        self.test1_action.setShortcut("F5")
-        self.addAction(self.test1_action)
-        self.test2_action = QAction(self)
-        self.test2_action.setShortcut("F6")
-        self.addAction(self.test2_action)
-        self.init_conf()  # Load settings to memory
+        # Make julia REPL
+        self.julia_repl = JuliaREPLWidget(self)
+        self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
+        # Add toggleview actions
+        self.add_toggle_view_actions()
+        self.init_conf()
         self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
         self.init_project()
         self.restore_ui()
+
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -128,11 +138,11 @@ class ToolboxUI(QMainWindow):
         """Control application debug message verbosity.
 
         Args:
-            level (str): '0': Error messages only, '2': All messages
+            level (str): '2' shows all messages, not '2' shows only error messages
         """
         if level == '2':
             logging.getLogger().setLevel(level=logging.DEBUG)
-            logging.debug("Logging level: All messages")
+            # logging.debug("Logging level: All messages")
         else:
             logging.debug("Logging level: Error messages only")
             logging.getLogger().setLevel(level=logging.ERROR)
@@ -153,36 +163,30 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
-        self.ui.actionData_Store.triggered.connect(self.open_data_store_view)
         self.ui.actionAdd_Data_Store.triggered.connect(self.show_add_data_store_form)
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
-        self.ui.actionAdd_Item_Toolbar.triggered.connect(lambda: self.item_toolbar.show())
-        self.ui.actionEvent_Log.triggered.connect(lambda: self.ui.dockWidget_eventlog.show())
-        self.ui.actionSubprocess_Output.triggered.connect(lambda: self.ui.dockWidget_process_output.show())
-        self.ui.actionSelected_Item.triggered.connect(lambda: self.ui.dockWidget_item.show())
+        self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
-        # Keyboard shortcut actions
-        # noinspection PyUnresolvedReferences
-        self.test1_action.triggered.connect(self.test1)
-        # noinspection PyUnresolvedReferences
-        self.test2_action.triggered.connect(self.test2)
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
-        # self.ui.graphicsView.subWindowActivated.connect(self.update_details_frame)
         # Project TreeView
         self.ui.treeView_project.clicked.connect(self.select_item_and_show_info)
-        # self.ui.treeView_project.doubleClicked.connect(self.show_subwindow)
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Tools ListView
-        self.add_tool_template_popup_menu = addToolTemplatePopupMenu(self)
-        self.ui.pushButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
-        self.ui.pushButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
-        self.ui.pushButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
+        self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
+        self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
+        self.ui.toolButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
+        self.ui.toolButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+
+    def project(self):
+        """Returns current project or None if no project open."""
+        return self._project
 
     @Slot(name="init_project")
     def init_project(self):
@@ -199,7 +203,6 @@ class ToolboxUI(QMainWindow):
             msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
             self.ui.statusbar.showMessage(msg, 10000)
             return
-        self.msg.emit("Loading project from previous session")
         if not self.open_project(project_file_path):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
             logging.error("Loading project file '{0}' failed".format(project_file_path))
@@ -210,8 +213,10 @@ class ToolboxUI(QMainWindow):
         window_size = self.qsettings.value("mainWindow/windowSize")
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns string
-        splitter_state = self.qsettings.value("mainWindow/splitterState")
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
+        # noinspection PyArgumentList
+        n_screens_now = len(QGuiApplication.screens())  # number of screens now
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -220,8 +225,19 @@ class ToolboxUI(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
-        if splitter_state:
-            self.ui.splitter.restoreState(splitter_state)
+        if n_screens_now < int(n_screens):
+            # There are less screens available now than on previous application startup
+            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
+            self.move(0, 0)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the main window."""
+        for dock in self.findChildren(QDockWidget):
+            if not dock.isVisible():
+                dock.setVisible(True)
+            if dock.isFloating():
+                dock.setFloating(False)
 
     # noinspection PyMethodMayBeStatic
     def init_models(self, tool_template_paths):
@@ -230,16 +246,28 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_template_paths (list): List of tool definition file paths used in this project
         """
-        self.project_item_model = QStandardItemModel()
-        self.project_item_model.setHorizontalHeaderItem(0, QStandardItem("Contents"))
-        self.project_item_model.appendRow(QStandardItem("Data Stores"))
-        self.project_item_model.appendRow(QStandardItem("Data Connections"))
-        self.project_item_model.appendRow(QStandardItem("Tools"))
-        self.project_item_model.appendRow(QStandardItem("Views"))
-        self.ui.treeView_project.setModel(self.project_item_model)
-        self.ui.graphicsView.setProjectItemModel(self.project_item_model)
+        self.init_project_item_model()
         self.init_tool_template_model(tool_template_paths)
         self.init_connection_model()
+
+    def init_project_item_model(self):
+        """Initializes project item model."""
+        self.project_item_model = ProjectItemModel(self)
+        ds_cat_item = QStandardItem("Data Stores")
+        dc_cat_item = QStandardItem("Data Connections")
+        tool_cat_item = QStandardItem("Tools")
+        view_cat_item = QStandardItem("Views")
+        ds_cat_item.setEditable(False)
+        dc_cat_item.setEditable(False)
+        tool_cat_item.setEditable(False)
+        view_cat_item.setEditable(False)
+        self.project_item_model.appendRow(ds_cat_item)
+        self.project_item_model.appendRow(dc_cat_item)
+        self.project_item_model.appendRow(tool_cat_item)
+        self.project_item_model.appendRow(view_cat_item)
+        self.ui.treeView_project.setModel(self.project_item_model)
+        self.ui.treeView_project.header().hide()
+        self.ui.graphicsView.set_project_item_model(self.project_item_model)
 
     def init_tool_template_model(self, tool_template_paths):
         """Initializes Tool template model.
@@ -296,44 +324,26 @@ class ToolboxUI(QMainWindow):
         """Initializes a model representing connections between project items."""
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.graphicsView.setConnectionModel(self.connection_model)
-        # Reconnect ConnectionModel and QTableView. Make sure that signals are connected only once.
-        n_connected = self.ui.tableView_connections.receivers(SIGNAL("clicked(QModelIndex)"))  # nr of receivers
-        if n_connected == 0:
-            # logging.debug("Connecting clicked signal for QTableView")
-            self.ui.tableView_connections.clicked.connect(self.connection_clicked)
-        elif n_connected > 1:
-            # Check that this never gets over 1
-            logging.error("Number of receivers for tableView_connections clicked signal is now:{0}".format(n_connected))
-        else:
-            pass  # signal already connected
-
-    @Slot("QModelIndex", name="connection_clicked")
-    def connection_clicked(self, index):
-        """Toggle boolean value in the connection model.
-
-        Args:
-            index (QModelIndex): Clicked index
-        """
-        if not index.isValid():
-            return
-        #logging.debug("index {0}:{1} clicked".format(index.row(), index.column()))
-        self.connection_model.setData(index, "value", Qt.EditRole)  # value not used
+        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
+        self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
+        self.ui.graphicsView.set_connection_model(self.connection_model)
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
-        item_names = self.return_item_names()
-        n = len(item_names)
-        if n == 0:
-            return
+        if self.project_item_model:
+            item_names = self.project_item_model.return_item_names()
+            n = len(item_names)
+            if n == 0:
+                return
+            for name in item_names:
+                ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+                self.remove_item(ind)
+            self.msg.emit("All {0} items removed from project".format(n))
         # Clear widget info from QDockWidget
         self.clear_info_area()
-        for name in item_names:
-            ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
-            self.remove_item(ind)
         self._project = None
         self.tool_template_model = None
-        self.msg.emit("All {0} items removed from project".format(n))
+        self.ui.graphicsView.make_new_scene()
 
     @Slot(name="new_project")
     def new_project(self):
@@ -350,7 +360,7 @@ class ToolboxUI(QMainWindow):
         """
         self.clear_ui()
         self._project = None
-        self._project = SpineToolboxProject(self, name, description, self._config, ext='.proj')
+        self._project = SpineToolboxProject(self, name, description, self._config)
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.textBrowser_eventlog.clear()
@@ -369,17 +379,15 @@ class ToolboxUI(QMainWindow):
         connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            func = blocking_updates(self.ui.graphicsView, QFileDialog.getOpenFileName)
-            answer = func(self, 'Open project', project_dir(self._config), 'Projects (*.proj)')
+            answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config), 'Projects (*.proj)')
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False
         if not os.path.isfile(load_path):
             self.msg_error.emit("File <b>{0}</b> not found".format(load_path))
-            logging.debug("File not found: {0}".format(load_path))
             return False
         if not load_path.lower().endswith('.proj'):
-            logging.debug("File name has unsupported extension. Only .proj files supported")
+            self.msg_error.emit("Selected file has unsupported extension. Only .proj files are supported")
             return False
         # Load project from JSON file
         try:
@@ -387,10 +395,10 @@ class ToolboxUI(QMainWindow):
                 try:
                     dicts = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    logging.exception("Failed to load file:{0}".format(load_path))
+                    self.msg_error.emit("Error in file <b>{0}</b>. Not valid JSON. {0}".format(load_path))
                     return False
         except OSError:
-            logging.exception("Could not load project from file {0}".format(load_path))
+            self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
             return False
         # Initialize UI
         self.clear_ui()
@@ -398,6 +406,10 @@ class ToolboxUI(QMainWindow):
         project_dict = dicts['project']
         proj_name = project_dict['name']
         proj_desc = project_dict['description']
+        try:
+            work_dir = project_dict['work_dir']
+        except KeyError:
+            work_dir = ""
         try:
             tool_template_paths = project_dict['tool_templates']
         except KeyError:
@@ -416,9 +428,12 @@ class ToolboxUI(QMainWindow):
         # self.ui.graphicsView.reset_scene()
         # self.ui.graphicsView.setSceneRect(QRectF())  # TODO: This should setSceneRect to 0 but does nothing
         # Create project
-        self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config)
+        self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config, work_dir)
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
+        # Clear QTextBrowsers
+        self.ui.textBrowser_eventlog.clear()
+        self.ui.textBrowser_process_output.clear()
         # Populate project model with items read from JSON file
         self.init_models(tool_template_paths)
         if not self._project.load(dicts['objects']):
@@ -428,6 +443,9 @@ class ToolboxUI(QMainWindow):
         # Restore connections
         self.msg.emit("Restoring connections...")
         self.connection_model.reset_model(connections)
+        self.ui.tableView_connections.resizeColumnsToContents()
+        self.ui.graphicsView.restore_links()
+        self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -447,26 +465,24 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="save_project_as")
     def save_project_as(self):
-        """Save current project on a new name and activate it."""
-        # noinspection PyCallByClass
-        func = blocking_updates(self.ui.graphicsView, QFileDialog.getSaveFileName)
-        dir_path = func(self, 'Save project', project_dir(self._config), 'Project (*.proj)')
-        file_path = dir_path[0]
-        if file_path == '':  # Cancel button clicked
-            return
-        file_name = os.path.split(file_path)[-1]
-        if not file_name.lower().endswith('.proj'):
-            self.msg_warning.emit("Only *.proj files supported")
-            logging.debug("Only *.proj files supported")
-            return
+        """Ask user for a new project name and save. Creates a duplicate of the open project."""
         if not self._project:
-            self.new_project()
+            self.msg.emit("No project open")
+        msg = "This creates a copy of the current project. <br/><br/>New name:"
+        # noinspection PyCallByClass
+        answer = QInputDialog.getText(self, "New project name", msg, text=self._project.name,
+                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        if not answer[1]:  # answer[str, bool]
+            return
         else:
-            # Update project file name
-            self._project.change_filename(file_name)
-            # TODO: Make a new project with the given name and switch references of all items for the new project.
-            # Save open project into new file
-            self.save_project()
+            name = answer[0]
+        # Check if name is valid and copy project tree under a new name
+        if not self._project.rename_project(name):
+            return
+        # Save project into new file
+        self.save_project()
+        # Load project
+        self.open_project(self._project.path)
         return
 
     @Slot("QModelIndex", name="select_item_and_show_info")
@@ -485,7 +501,7 @@ class ToolboxUI(QMainWindow):
             if index.parent().isValid():
                 item = self.project_item_model.itemFromIndex(index)
                 if not item:
-                    logging.error("Item not found")
+                    self.msg_error.emit("Something is wrong. Item not found in index:{0}".format(index))
                     return
                 item_data = item.data(Qt.UserRole)  # This is e.g. DataStore object
                 # Clear previous selection
@@ -497,91 +513,29 @@ class ToolboxUI(QMainWindow):
                 self.show_info(item_data.name)
             return
 
-    # @Slot("QModelIndex", name="show_subwindow")
-    # def show_subwindow(self, index):
-    #     """Show double-clicked item subwindow if it was hidden.
-    #     Sets both QMdiSubWindow and its internal widget visible.
-    #
-    #     Args:
-    #         index (QModelIndex): Index of clicked item, if available
-    #     """
-    #     if not index:
-    #         return
-    #     if not index.isValid():
-    #         logging.error("Index not valid")
-    #         return
-    #     else:
-    #         if index.parent().isValid():
-    #             item_data = self.project_item_model.itemFromIndex(index).data(Qt.UserRole)  # e.g. DataStore object
-    #             internal_widget = item_data.get_widget()  # QWidget of e.g. DataStore object
-    #             internal_widget.show()
-    #         return
-
-    @Slot(name="test1")
-    def test1(self):
-        sub_windows = self.ui.graphicsView.subWindowList()
-        self.msg.emit("Number of subwindows: {0}".format(len(sub_windows)))
-        logging.debug("Total number of items: {0}".format(self.n_items("all")))
-        logging.debug("Number of Data Stores: {0}".format(self.n_items("Data Stores")))
-        logging.debug("Number of Data Connections: {0}".format(self.n_items("Data Connections")))
-        logging.debug("Number of Tools: {0}".format(self.n_items("Tools")))
-        logging.debug("Number of Views: {0}".format(self.n_items("Views")))
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    child = top_level_item.child(i, 0)
-                    self.msg.emit("{0}".format(child.data(Qt.DisplayRole)))
-
-    @Slot(name="test2")
-    def test2(self):
-        logging.debug("Items on scene:{0}".format(len(self.ui.graphicsView.scene().items())))
-        # for item in self.ui.graphicsView.scene().items():
-        #     logging.debug(item)
-        scene_size = self.ui.graphicsView.scene().sceneRect()
-        logging.debug("sceneRect:{0}".format(scene_size))
-        mouse_item = self.ui.graphicsView.scene().mouseGrabberItem()
-        # logging.debug("mouse grabber item:{0}".format(mouse_item))
-        # self.ui.graphicsView.scene().addItem(self.dc)
-        return
-        # for subwindow in self.ui.graphicsView.subWindowList():
-        #     w = subwindow.widget()  # SubWindowWidget
-        #     w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-        #     # w_parent = w.parent()  # QMdiSubWindow == subwindow
-        #     # w_owner = w.owner()  # item name
-        #     if w_type == "Tool":
-        #         self.msg.emit("Found Tool {0}".format(w.owner()))
-        #         # Find item in project model
-        #         size_hint = subwindow.sizeHint()
-        #         min_size = subwindow.minimumSize()
-        #         min_size_hint = subwindow.minimumSizeHint()
-        #         size_policy = subwindow.sizePolicy()
-        #         logging.debug("sizeHint:{0} minSize:{1} minSizeHint:{2} sizePolicy:{3}"
-        #                       .format(size_hint, min_size, min_size_hint, size_policy))
-        #         item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-        #         tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
-        #         if tool.tool_template() is not None:
-        #             self.msg.emit("Tool template of this Tool:{0}".format(tool.tool_template().name))
-
     def show_info(self, name):
-        """Show information of selected item. Embed old item widgets into QDockWidget."""
-        item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # Find item from project model
+        """Show information of selected item. Embed old item widgets into QDockWidget.
+
+        Args:
+            name (str): Name of project
+        """
+        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
         if not item:
-            logging.error("Item {0} not found".format(name))
+            self.msg_error.emit("Something is wrong. Item {0} not found".format(name))
             return
         item_data = item.data(Qt.UserRole)
         # Clear QGroupBox layout
         self.clear_info_area()
+        # Set QDockWidget title to selected item's type
+        self.ui.dockWidget_item.setWindowTitle("Item Controls: " + item_data.item_type)
         # Add new item into layout
         self.ui.groupBox_subwindow.layout().addWidget(item_data.get_widget())
         # If Data Connection, refresh data files
-        if item_data.item_type == "Data Connection":
+        if item_data.item_type in ("Data Connection", "View"):
             item_data.refresh()
 
     def clear_info_area(self):
-        """Clear SubWindowArea QDockWidget."""
+        """Clear QGroupBox inside selected item QDockWidget."""
         layout = self.ui.groupBox_subwindow.layout()
         for i in reversed(range(layout.count())):
             widget_to_remove = layout.itemAt(i).widget()
@@ -589,70 +543,45 @@ class ToolboxUI(QMainWindow):
             layout.removeWidget(widget_to_remove)
             # Remove it from the gui
             widget_to_remove.setParent(None)
-
-    # @Slot("QMdiSubWindow", name="update_details_frame")
-    # def update_details_frame(self, window):
-    #     """OBSOLETE: Update labels on main window according to the currently selected QMdiSubWindow.
-    #
-    #     Args:
-    #         window (QMdiSubWindow): Active sub-window
-    #     """
-    #     if window is not None:
-    #         w = window.widget()  # SubWindowWidget
-    #         obj_type = w.objectName()
-    #         name = w.owner()
-    #         # self.ui.lineEdit_type.setText(obj_type)
-    #         # self.ui.lineEdit_name.setText(name)
-    #         # Find object data from model. Note: Finds child items only if Qt.MatchRecursive is set.
-    #         selected_item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)
-    #         if not selected_item:
-    #             logging.error("Item {0} not found".format(name))
-    #             return
-    #         item_data = selected_item.data(Qt.UserRole)
-    #         if item_data.item_type == "Data Connection":
-    #             # logging.debug("DC selected")
-    #             item_data.refresh()
-    #         # matching_item_data = selected_item.data(Qt.UserRole)
-    #     else:
-    #         pass
-    #         # self.ui.lineEdit_type.setText("")
-    #         # self.ui.lineEdit_name.setText("")
+        self.ui.dockWidget_item.setWindowTitle("Item Controls")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
-        """Open a file dialog so that the user can select an existant tool template .json file.
-        Continue loading the tool template into the Project if succesfull.
+        """Open a file dialog so the user can select an existing tool template .json file.
+        Continue loading the tool template into the Project if successful.
         """
         if not self._project:
             self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        func = blocking_updates(self.ui.graphicsView, QFileDialog.getOpenFileName)
-        answer = func(self, 'Select tool template file',
-                      os.path.join(project_dir(self._config), os.path.pardir),
-                      'JSON (*.json)')
+        answer = QFileDialog.getOpenFileName(self, 'Select tool template file',
+                                             os.path.join(project_dir(self._config), os.path.pardir),
+                                             'JSON (*.json)')
         if answer[0] == '':  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
         # Load tool definition
-        tool = self._project.load_tool_template_from_file(def_file)
-        if not tool:
+        tool_template = self._project.load_tool_template_from_file(def_file)
+        if not tool_template:
             self.msg_error.emit("Adding Tool template failed".format(def_file))
             return
-        if self.tool_template_model.find_tool_template(tool.name):
+        if self.tool_template_model.find_tool_template(tool_template.name):
             # Tool template already added to project
-            self.msg_warning.emit("Tool template <b>{0}</b> already in project".format(tool.name))
+            self.msg_warning.emit("Tool template <b>{0}</b> already in project".format(tool_template.name))
             return
-        # Add definition file path into tool
-        tool.set_def_path(def_file)
-        self.add_tool_template(tool)
+        # Add definition file path into tool tool template
+        tool_template.set_def_path(def_file)
+        self.add_tool_template(tool_template)
 
-    def add_tool_template(self, tool):
-        """Add a ToolTemplate instance to project, which then can be added to a Tool item."""
-        # Get definition file path
-        def_file = tool.get_def_path()
-        # Insert tool into model
-        self.tool_template_model.insertRow(tool)
+    def add_tool_template(self, tool_template):
+        """Add a ToolTemplate instance to project, which then can be added to a Tool item.
+        Add tool template definition file path into project file (.proj)
+
+        tool_template (ToolTemplate): Tool template that is added to project
+        """
+        def_file = tool_template.get_def_path()  # Definition file path (.json)
+        # Insert tool template into model
+        self.tool_template_model.insertRow(tool_template)
         # Save Tool def file path to project file
         project_file = self._project.path  # Path to project file
         if project_file.lower().endswith('.proj'):
@@ -672,29 +601,38 @@ class ToolboxUI(QMainWindow):
                     tools.append(def_file)
                 project_dict['tool_templates'] = tools
             except KeyError:
-                logging.debug("Adding tool_templates keyword to project file")
                 project_dict['tool_templates'] = [def_file]
             # Save dictionaries back to project save file
             dicts['project'] = project_dict
             dicts['objects'] = objects_dict
             with open(project_file, 'w') as fp:
                 json.dump(dicts, fp, indent=4)
-            self.msg_success.emit("Tool template <b>{0}</b> added to project".format(tool.name))
+            self.msg_success.emit("Tool template <b>{0}</b> added to project".format(tool_template.name))
         else:
             self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
             return
 
-    def update_tool_template(self, row, tool):
-        """Update a ToolTemplate instance in the project.
-        """
-        # Insert tool into model
-        index = self.tool_template_model.createIndex(row, 0)
-        self.tool_template_model.removeRow(row)
-        self.tool_template_model.insertRow(tool, row)
-        self.msg_success.emit("Tool template <b>{0}</b> updated".format(tool.name))
+    def update_tool_template(self, row, tool_template):
+        """Update a ToolTemplate instance in the project."""
+        if not self.tool_template_model.update_tool_template(tool_template, row):
+            self.msg_error.emit("Unable to update Tool template <b>{0}</b>".format(tool_template.name))
+            return
+        self.msg_success.emit("Tool template <b>{0}</b> successfully updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
-        logging.debug("Reattaching tool template {}".format(tool.name))
-        self.reattach_tool_templates(tool.name)
+        # Find the updated tool template from ToolTemplateModel
+        template = self.tool_template_model.find_tool_template(tool_template.name)
+        if not template:
+            self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(tool_template.name))
+            return
+        tools = self.project_item_model.find_item('Tools')
+        n_tool_items = tools.rowCount()
+        for i in range(n_tool_items):
+            tool = tools.child(i, 0).data(Qt.UserRole)
+            if not tool.tool_template():
+                continue
+            elif tool.tool_template().name == tool_template.name:
+                tool.set_tool_template(template)
+                self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
 
     @Slot(name="refresh_tool_templates")
     def refresh_tool_templates(self):
@@ -718,7 +656,6 @@ class ToolboxUI(QMainWindow):
             try:
                 tool_template_paths = project_dict['tool_templates']
             except KeyError:
-                logging.debug("tool_templates keyword not found in project file")
                 self.msg_warning.emit("No Tool templates in project")
                 return
             self.init_tool_template_model(tool_template_paths)
@@ -732,29 +669,27 @@ class ToolboxUI(QMainWindow):
         """Reattach tool templates that may have changed.
 
         Args:
-        tool_template_name (str): if None, reattach all tool templates in project.
+            tool_template_name (str): if None, reattach all tool templates in project.
             If a name is given, only reattach that one
         """
-        for subwindow in self.ui.graphicsView.subWindowList():
-            w = subwindow.widget()  # SubWindowWidget
-            w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-            if w_type == "Tool":
-                # Find item in project model
-                item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-                tool = item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
-                if tool.tool_template() is not None:
-                    # Get old tool template name
-                    old_t_name = tool.tool_template().name
-                    if not tool_template_name or old_t_name == tool_template_name:
-                        # Find the same tool template from ToolTemplateModel
-                        new_template = self.tool_template_model.find_tool_template(old_t_name)
-                        if not new_template:
-                            self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
-                            tool.set_tool_template(None)
-                            continue
-                        tool.set_tool_template(new_template)
-                        self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>"
-                                      .format(new_template.name, tool.name))
+        tools = self.project_item_model.find_item("Tools")
+        n_tool_items = tools.rowCount()
+        for i in range(n_tool_items):
+            tool_item = tools.child(i, 0)
+            tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
+            if tool.tool_template() is not None:
+                # Get old tool template name
+                old_t_name = tool.tool_template().name
+                if not tool_template_name or old_t_name == tool_template_name:
+                    # Find the same tool template from ToolTemplateModel
+                    new_template = self.tool_template_model.find_tool_template(old_t_name)
+                    if not new_template:
+                        self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
+                        tool.set_tool_template(None)
+                        continue
+                    tool.set_tool_template(new_template)
+                    self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>"
+                                  .format(new_template.name, tool.name))
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
@@ -772,7 +707,7 @@ class ToolboxUI(QMainWindow):
             return
         if index.row() == 0:
             # Do not remove No Tool option
-            self.msg.emit("<b>No Tool</b> cannot be removed")
+            self.msg.emit("<b>No Tool template</b> cannot be removed")
             return
         self.remove_tool_template(index)
 
@@ -806,7 +741,7 @@ class ToolboxUI(QMainWindow):
         project_dict = dicts['project']
         object_dict = dicts['objects']
         if not self.tool_template_model.removeRow(index.row()):
-            self.msg_error.emit("Error in removing Tool <b>{0}</b>".format(sel_tool.name))
+            self.msg_error.emit("Error in removing Tool template <b>{0}</b>".format(sel_tool.name))
             return
         try:
             tools = project_dict['tool_templates']
@@ -818,7 +753,7 @@ class ToolboxUI(QMainWindow):
                                 .format(project_file))
             return
         except ValueError:
-            self.msg_error.emit("This is odd. Tool definition file path <b>{0}</b> not found "
+            self.msg_error.emit("This is odd. Tool template definition file path <b>{0}</b> not found "
                                 "in project file <b>{1}</b>".format(tool_def_path, project_file))
             return
         # Save dictionaries back to JSON file
@@ -826,18 +761,6 @@ class ToolboxUI(QMainWindow):
         dicts['objects'] = object_dict
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
-        # Remove tool template also from Tools that use it
-        for subwindow in self.ui.graphicsView.subWindowList():
-            w = subwindow.widget()  # SubWindowWidget
-            w_type = w.objectName()  # Tool, Data Store, Data Connection, or View
-            if w_type == "Tool":
-                # Find item in project model
-                item = self.find_item(w.owner(), Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-                tool = item.data(Qt.UserRole)  # Tool instance that is saved into QStandardItem data
-                if tool.tool_template() is not None:
-                    if tool.tool_template().name == sel_tool.name:
-                        tool.set_tool_template(None)
-                        self.msg.emit("Removed {0} from Tool <b>{1}</b>".format(sel_tool.name, tool.name))
         self.msg_success.emit("Tool template removed successfully")
 
     def add_item_to_model(self, category, text, data):
@@ -851,22 +774,23 @@ class ToolboxUI(QMainWindow):
         # First, find QStandardItem category item where new child item is added
         found_items = self.project_item_model.findItems(category, Qt.MatchExactly, column=0)
         if not found_items:
-            logging.error("'{0}' item not found in project item model".format(category))
+            logging.error("'{0}' category not found in project item model".format(category))
             return False
         if len(found_items) > 1:
-            logging.error("More than one '{0}' items found in project item model".format(category))
+            logging.error("More than one '{0}' category found in project item model".format(category))
             return False
         item_index = found_items[0].index()
         parent_index = item_index.parent()
         if not parent_index.isValid():
-            # Parent index is not valid if item has no parent
+            # item_index is a top-level item, we are good
             new_item = QStandardItem(text)
             new_item.setData(data, role=Qt.UserRole)
             self.project_item_model.itemFromIndex(item_index).appendRow(new_item)
             # Get row and column number (i.e. index) for the connection model. This is to
             # keep the project item model and connection model synchronized.
-            index = self.new_item_index(data.item_category)  # Get index according to item category
+            index = self.project_item_model.new_item_index(data.item_category)  # Get index according to item category
             self.connection_model.append_item(new_item, index)
+            self.ui.tableView_connections.resizeColumnsToContents()
             self.ui.treeView_project.expand(item_index)
         return True
 
@@ -881,16 +805,16 @@ class ToolboxUI(QMainWindow):
         answer = QMessageBox.question(self, 'Removing all items', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             return
-        item_names = self.return_item_names()
+        item_names = self.project_item_model.return_item_names()
         n = len(item_names)
         if n == 0:
             return
         for name in item_names:
-            ind = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
 
-    def remove_item(self, ind, delete_item=False):
+    def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.
         To remove all items in project, loop all indices through this method.
         This method is used in both opening and creating a new project as
@@ -901,17 +825,31 @@ class ToolboxUI(QMainWindow):
 
         Args:
             ind (QModelIndex): Index of removed item in project model
-            delete_item: If set to True, deletes the directories and data associated with the item
+            delete_item (bool): If set to True, deletes the directories and data associated with the item
+            check_dialog (bool): If True, shows 'Are you sure?' message box
         """
-        name = ind.data(Qt.UserRole).get_widget().owner()
-        item = self.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
+        name = ind.data(Qt.UserRole).name
+        if check_dialog:
+            msg = "Are you sure? Item's data will be deleted from you project.\n\n" \
+                  "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            # noinspection PyCallByClass, PyTypeChecker
+            answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                return
+        item = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
         item_data = item.data(Qt.UserRole)  # Object that is contained in the QStandardItem (e.g. DataStore)
-        data_dir = None
-        if item_data.item_type == "Data Connection":
-            data_dir = item_data.data_dir
+        if item_data.item_type in ("Data Connection", "Data Store"):
+            try:
+                data_dir = item_data.data_dir
+            except AttributeError:
+                logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
+                data_dir = None
+        else:
+            data_dir = None
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(item_data.get_icon().master())
         item_data.set_icon(None)
+        item_data.deleteLater()
         # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
         if not self.connection_model.remove_item(item):
             self.msg_error.emit("Removing item {0} from connection model failed".format(item_data.name))
@@ -936,88 +874,9 @@ class ToolboxUI(QMainWindow):
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
                     return
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
+        # Clear item info area
+        self.clear_info_area()
         return
-
-    def find_item(self, name, match_flags=Qt.MatchExactly):
-        """Find item by name in project model (column 0)
-
-        Args:
-            name (str): Item name to find
-            match_flags (QFlags): Or combination of Qt.MatchFlag types
-
-        Returns:
-            Matching QStandardItem or None if item not found or more than one item with the same name found.
-        """
-        found_items = self.project_item_model.findItems(name, match_flags, column=0)
-        if len(found_items) == 0:
-            # logging.debug("Item '{0}' not found in project model".format(name))
-            return None
-        if len(found_items) > 1:
-            logging.error("More than one item with name '{0}' found".format(name))
-            return None
-        return found_items[0]
-
-    def n_items(self, typ):
-        """Returns the number of items in the project according to type.
-
-        Args:
-            typ (str): Type of item to count. "all" returns the number of items in project.
-        """
-        n = 0
-        if not self.project_item_model:
-            return n
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if typ == "all":
-                if top_level_item.hasChildren():
-                    n = n + top_level_item.rowCount()
-            elif typ == "Data Stores":
-                if top_level_item.data(Qt.DisplayRole) == "Data Stores":
-                    n = top_level_item.rowCount()
-            elif typ == "Data Connections":
-                if top_level_item.data(Qt.DisplayRole) == "Data Connections":
-                    n = top_level_item.rowCount()
-            elif typ == "Tools":
-                if top_level_item.data(Qt.DisplayRole) == "Tools":
-                    n = top_level_item.rowCount()
-            elif typ == "Views":
-                if top_level_item.data(Qt.DisplayRole) == "Views":
-                    n = top_level_item.rowCount()
-            else:
-                logging.error("Unknown type: {0}".format(typ))
-        return n
-
-    def new_item_index(self, category):
-        """Get index where a new item is appended according to category."""
-        if category == "Data Stores":
-            # Return number of data stores
-            return self.n_items("Data Stores") - 1
-        elif category == "Data Connections":
-            # Return number of data stores + data connections - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") - 1
-        elif category == "Tools":
-            # Return number of data stores + data connections + tools - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") + self.n_items("Tools") - 1
-        elif category == "Views":
-            # Return total number of items - 1
-            return self.n_items("all") - 1
-        else:
-            logging.error("Unknown category:{0}".format(category))
-            return 0
-
-    def return_item_names(self):
-        """Returns the names of all items in a list."""
-        item_names = list()
-        if not self.project_item_model:
-            return item_names
-        top_level_items = self.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    child = top_level_item.child(i, 0)
-                    item_names.append(child.data(Qt.DisplayRole))
-        return item_names
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):
@@ -1039,13 +898,15 @@ class ToolboxUI(QMainWindow):
         Args:
             index (QModelIndex): Index of the item (from double-click or contex menu signal)
         """
+        if not index.isValid():
+            return
         if index.row() == 0:
             return  # Don't do anything if No Tool option is double-clicked
         tool_template = self.tool_template_model.tool_template(index.row())
-
         # Show the template in the Tool Template Form
         self.show_tool_template_form(tool_template)
 
+    @busy_effect
     @Slot("QModelIndex", name='open_tool_template_file')
     def open_tool_template_file(self, index):
         """Open the Tool template definition file in the default (.json) text-editor.
@@ -1053,28 +914,30 @@ class ToolboxUI(QMainWindow):
         Args:
             index (QModelIndex): Index of the item
         """
+        if not index.isValid():
+            return
         tool_template = self.tool_template_model.tool_template(index.row())
-        file_path = tool_template.def_file_path
+        file_path = tool_template.get_def_path()
         # Check if file exists first. openUrl may return True if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for {0}".format(file_path))
-            self.msg_error.emit("Tool definition file <b>{0}</b> not found."
+            self.msg_error.emit("Tool template definition file <b>{0}</b> not found."
                                 .format(file_path))
             return
         tool_template_url = "file:///" + file_path
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
-        logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(tool_template_url))
-            self.msg_error.emit("Unable to open Tool template file {0}. Make sure that <b>.json</b> "
+            self.msg_error.emit("Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
                                 "files are associated with a text editor. For example on Windows "
                                 "10, go to Control Panel -> Default Programs to do this."
                                 .format(file_path))
         return
 
+    @busy_effect
     @Slot("QModelIndex", name='open_tool_main_program_file')
     def open_tool_main_program_file(self, index):
         """Open the tool template's main program file in the default editor.
@@ -1082,9 +945,11 @@ class ToolboxUI(QMainWindow):
         Args:
             index (QModelIndex): Index of the item
         """
+        if not index.isValid():
+            return
         tool = self.tool_template_model.tool_template(index.row())
         file_path = os.path.join(tool.path, tool.includes[0])
-        # Check if file exists first. openUrl may return True if file doesn't exist
+        # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for {0}".format(file_path))
@@ -1105,27 +970,17 @@ class ToolboxUI(QMainWindow):
                                 .format(filename, file_extension))
         return
 
-    @Slot("QModelIndex", name='open_tool_main_program_file')
-    def open_tool_main_program_file(self, index):
-        """Open the tool template's main program file in the default editor.
-
-        Args:
-            index (QModelIndex): Index of the item
-        """
-        tool = self.tool_template_model.tool_template(index.row())
-        main_program_url = "file:///" + os.path.join(tool.path, tool.includes[0])
-        # Open Tool template definition file in editor
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
-        if not res:
-            logging.error("Failed to open editor for {0}".format(main_program_url))
-            filename, file_extension = os.path.splitext(main_program_url)
-            self.msg_error.emit("Unable to open Tool template main program file {0}. "
-                                "Make sure that <b>{1}</b> "
-                                "files are associated with an editor. For example on Windows "
-                                "10, go to Control Panel -> Default Programs to do this."
-                                .format(tool.includes[0], file_extension))
-        return
+    @Slot("QModelIndex", name="connection_data_changed")
+    def connection_data_changed(self, index):
+        """Called when checkbox delegate wants to edit connection data. Add or remove Link instance accordingly."""
+        model = self.connection_model
+        d = model.data(index, Qt.DisplayRole)  # Current status
+        if d == "False":  # Add link
+            src_name = model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
+            dst_name = model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
+            self.ui.graphicsView.add_link(src_name, dst_name, index)
+        else:  # Remove link
+            self.ui.graphicsView.remove_link(index)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -1209,40 +1064,40 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot(name="show_add_data_store_form")
-    def show_add_data_store_form(self):
+    @Slot("float", "float", name="show_add_data_store_form")
+    def show_add_data_store_form(self, x=0, y=0):
         """Show add data store widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_store_form = AddDataStoreWidget(self, self._project)
+        self.add_data_store_form = AddDataStoreWidget(self, x, y)
         self.add_data_store_form.show()
 
-    @Slot(name="show_add_data_connection_form")
-    def show_add_data_connection_form(self):
+    @Slot("float", "float", name="show_add_data_connection_form")
+    def show_add_data_connection_form(self, x=0, y=0):
         """Show add data connection widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_data_connection_form = AddDataConnectionWidget(self, self._project)
+        self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
         self.add_data_connection_form.show()
 
-    @Slot(name="show_add_tool_form")
-    def show_add_tool_form(self):
+    @Slot("float", "float", name="show_add_tool_form")
+    def show_add_tool_form(self, x=0, y=0):
         """Show add tool widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_tool_form = AddToolWidget(self, self._project)
+        self.add_tool_form = AddToolWidget(self, x, y)
         self.add_tool_form.show()
 
-    @Slot(name="show_add_view_form")
-    def show_add_view_form(self):
+    @Slot("float", "float", name="show_add_view_form")
+    def show_add_view_form(self, x=0, y=0):
         """Show add view widget."""
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.add_view_form = AddViewWidget(self, self._project)
+        self.add_view_form = AddViewWidget(self, x, y)
         self.add_view_form.show()
 
     @Slot(name="show_tool_template_form")
@@ -1251,13 +1106,13 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Create or open a project first")
             return
-        self.tool_template_form = ToolTemplateWidget(self, self._project, tool_template)
+        self.tool_template_form = ToolTemplateWidget(self, tool_template)
         self.tool_template_form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):
         """Show Settings widget."""
-        self.settings_form = SettingsWidget(self, self._config, self._project)
+        self.settings_form = SettingsWidget(self, self._config)
         self.settings_form.show()
 
     @Slot(name="show_about")
@@ -1266,28 +1121,103 @@ class ToolboxUI(QMainWindow):
         self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
         self.about_form.show()
 
-    @Slot(name="open_data_store_view")
-    def open_data_store_view(self):
-        self.data_store_form = DataStoreWidget(self)
-        self.data_store_form.show()
+    @Slot(name="show_user_guide")
+    def show_user_guide(self):
+        """Open Spine Toolbox documentation index page in browser."""
+        index_url = "file:///" + DOC_INDEX_PATH
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        if not res:
+            logging.error("Failed to open editor for {0}".format(index_url))
+            # filename, file_extension = os.path.splitext(index_path)
+            self.msg_error.emit("Unable to open file <b>{0}</b>".format(DOC_INDEX_PATH))
+        return
 
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):
-        """Context menu for project items.
+        """Context menu for project items listed in the project QTreeView.
 
         Args:
             pos (QPoint): Mouse position
         """
         ind = self.ui.treeView_project.indexAt(pos)
         global_pos = self.ui.treeView_project.viewport().mapToGlobal(pos)
-        self.project_item_context_menu = ProjectItemContextMenu(self, global_pos, ind)
+        self.show_project_item_context_menu(global_pos, ind)
+
+    @Slot("QPoint", str, name="show_item_image_context_menu")
+    def show_item_image_context_menu(self, pos, name):
+        """Context menu for project item images on the QGraphicsView.
+
+        Args:
+            pos (QPoint): Mouse position
+            name (str): The name of the concerned item
+        """
+        ind = self.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()  # Find item
+        self.show_project_item_context_menu(pos, ind)
+
+    def show_project_item_context_menu(self, pos, ind):
+        """Create and show project item context menu.
+
+        Args:
+            pos (QPoint): Mouse position
+            ind (QModelIndex): Index of concerned item
+        """
+        self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
         option = self.project_item_context_menu.get_action()
-        if option == "Remove Item":
-            self.remove_item(ind, delete_item=True)
+        d = ind.data(Qt.UserRole)
+        if option == "Open directory...":
+            d.open_directory()  # Open data_dir of Data Connection or Data Store
+        elif option == "Open treeview...":
+            d.open_treeview()  # Open treeview of Data Store
+        elif option == "Execute":
+            d.execute()
+        elif option == "Results...":
+            d.open_results()
+        elif option == "Stop":
+            # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
+            if not d.get_icon().wheel.isVisible():
+                self.msg.emit("Tool <b>{0}</b> is not running".format(d.name))
+            else:
+                d.stop_process()  # Proceed with stopping
+        elif option == "Edit Tool template":
+            d.edit_tool_template()
+        elif option == "Open main program file":
+            d.open_tool_main_program_file()
+        elif option == "Rename":
+            # noinspection PyCallByClass
+            answer = QInputDialog.getText(self, "Rename Item", "New name:", text=d.name,
+                                          flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+            # answer[str, bool]
+            if not answer[1]:
+                pass
+            else:
+                new_name = answer[0]
+                self.project_item_model.setData(ind, new_name)
+        elif option == "Remove Item":
+            self.remove_item(ind, delete_item=True, check_dialog=True)
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
+
+    def show_link_context_menu(self, pos, link):
+        """Context menu for connection links.
+
+        Args:
+            pos (QPoint): Mouse position
+            link (Link(QGraphicsPathItem)): The concerned link
+        """
+        self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
+        option = self.link_context_menu.get_action()
+        if option == "Remove Connection":
+            self.ui.graphicsView.remove_link(link.model_index)
+            return
+        elif option == "Send to bottom":
+            link.send_to_bottom()
+        else:  # No option selected
+            pass
+        self.link_context_menu.deleteLater()
+        self.link_context_menu = None
 
     @Slot("QPoint", name="show_tool_template_context_menu")
     def show_tool_template_context_menu(self, pos):
@@ -1300,39 +1230,18 @@ class ToolboxUI(QMainWindow):
         global_pos = self.ui.listView_tool_templates.viewport().mapToGlobal(pos)
         self.tool_template_context_menu = ToolTemplateContextMenu(self, global_pos, ind)
         option = self.tool_template_context_menu.get_action()
-        if option == "Open":
+        if option == "Edit Tool template":
             self.edit_tool_template(ind)
-        elif option == "Open in external editor":
+        elif option == "Open descriptor file":
             self.open_tool_template_file(ind)
-        elif option == "Open main program":
+        elif option == "Open main program file":
             self.open_tool_main_program_file(ind)
-        elif option == "Remove":
+        elif option == "Remove Tool template":
             self.remove_tool_template(ind)
         else:  # No option selected
             pass
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
-
-    def show_link_context_menu(self, pos, src_item_name, dst_item_name):
-        """Context menu for connection links.
-
-        Args:
-            pos (QPoint): Mouse position
-            src_item_name (QGraphicsItem): The item this link originates from
-            dst_item_name (QGraphicsItem): The item this link lands on
-        """
-        row = self.connection_model.header.index(src_item_name)
-        column = self.connection_model.header.index(dst_item_name)
-        ind = self.connection_model.index(row, column)
-        self.link_context_menu = LinkContextMenu(self, pos, ind)
-        option = self.link_context_menu.get_action()
-        if option == "Remove":
-            self.connection_clicked(ind)
-            return
-        else:  # No option selected
-            pass
-        self.link_context_menu.deleteLater()
-        self.link_context_menu = None
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.
@@ -1363,6 +1272,40 @@ class ToolboxUI(QMainWindow):
                 return False
         return True
 
+    def show_save_project_prompt(self):
+        """Shows the save project message box."""
+        save_at_exit = self._config.get("settings", "save_at_exit")
+        if save_at_exit == "0":
+            # Don't save project and don't show message box
+            return
+        elif save_at_exit == "1":  # Default
+            # Show message box
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Save project")
+            msg.setText("Save changes to project?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            chk = chkbox.checkState()
+            if answer == QMessageBox.Yes:
+                self.save_project()
+                if chk == 2:
+                    # Save preference into config file
+                    self._config.set("settings", "save_at_exit", "2")
+            else:
+                if chk == 2:
+                    # Save preference into config file
+                    self._config.set("settings", "save_at_exit", "0")
+        elif save_at_exit == "2":
+            # Save project and don't show message box
+            self.save_project()
+        else:
+            self._config.set("settings", "save_at_exit", "1")
+        return
+
     def closeEvent(self, event=None):
         """Method for handling application exit.
 
@@ -1375,14 +1318,14 @@ class ToolboxUI(QMainWindow):
             if event:
                 event.ignore()
             return
-        logging.debug("Bye bye")
         # Save current project (if enabled in settings)
         if not self._project:
             self._config.set("settings", "previous_project", "")
         else:
             self._config.set("settings", "previous_project", self._project.path)
+            # Show save project prompt
+            self.show_save_project_prompt()
         self._config.save()
-        self.qsettings.setValue("mainWindow/splitterState", self.ui.splitter.saveState())
         self.qsettings.setValue("mainWindow/windowSize", self.size())
         self.qsettings.setValue("mainWindow/windowPosition", self.pos())
         self.qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
@@ -1390,6 +1333,10 @@ class ToolboxUI(QMainWindow):
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:
             self.qsettings.setValue("mainWindow/windowMaximized", False)
+        # Save number of screens
+        # noinspection PyArgumentList
+        self.qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
+        self.julia_repl.shutdown_jupyter_kernel()
         if event:
             event.accept()
         # noinspection PyArgumentList

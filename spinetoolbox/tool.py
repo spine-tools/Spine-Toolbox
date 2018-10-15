@@ -20,7 +20,7 @@
 """
 Tool class.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   19.12.2017
 """
 
@@ -28,60 +28,93 @@ import logging
 import os
 import json
 import shutil
+import getpass
 from metaobject import MetaObject
 from widgets.tool_subwindow_widget import ToolSubWindowWidget
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtGui import QDesktopServices
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
 from graphics_items import ToolImage
+from widgets.custom_menus import ToolTemplateOptionsPopupMenu
+from helpers import create_dir
 
 
 class Tool(MetaObject):
     """Tool class.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        project (SpineToolboxProject): Project
         tool_template (ToolTemplate): Template for this Tool
+        x (int): Initial X coordinate of item icon
+        y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, parent, name, description, project, tool_template, x, y):
+    def __init__(self, toolbox, name, description, tool_template, x, y):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
+        self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.item_category = "Tools"
-        self._project = project
-        self._widget = ToolSubWindowWidget(name, self.item_type)
+        self._widget = ToolSubWindowWidget(self.item_type)
         self._widget.set_name_label(name)
         self._widget.make_header_for_input_files()
         self._widget.make_header_for_output_files()
-        self._widget.ui.comboBox_tool.setModel(self._parent.tool_template_model)
+        self._widget.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self._tool_template = None
+        self._tool_template_index = None
+        self.tool_template_options_popup_menu = None
         self.set_tool_template(tool_template)
         # Set correct row selected in the comboBox
         if not tool_template:
             r = 0
         else:
-            r = self._parent.tool_template_model.tool_template_row(tool_template.name)
+            r = self._toolbox.tool_template_model.tool_template_row(tool_template.name)
             if r == -1:
                 logging.error("error in tool_template_row() method")
                 r = 0
         self._widget.ui.comboBox_tool.setCurrentIndex(r)
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        # Directory where results are saved
-        self.output_dir = os.path.join(self._project.project_dir, TOOL_OUTPUT_DIR, self.short_name)
-        self._graphics_item = ToolImage(self._parent, x, y, w=70, h=70, name=self.name)
+        # Create Tool project directory
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
+                                         " Check permissions.".format(self.data_dir))
+        # Make directory for results
+        self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+        self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
+        self._widget.ui.pushButton_stop.setEnabled(False)
         self.connect_signals()
 
     def connect_signals(self):
         """Connect this tool's signals to slots."""
-        self._widget.ui.pushButton_details.clicked.connect(self.show_details)
-        self._widget.ui.pushButton_connections.clicked.connect(self.show_connections)
+        self._widget.ui.pushButton_stop.clicked.connect(self.stop_process)
+        self._widget.ui.pushButton_open_results.clicked.connect(self.open_results)
         self._widget.ui.pushButton_execute.clicked.connect(self.execute)
         self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
+
+    @Slot(name="open_results")
+    def open_results(self):
+        """Open output directory in file browser."""
+        if not os.path.exists(self.output_dir):
+            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no results. "
+                                           "Click Execute to generate them.".format(self.name))
+            return
+        url = "file:///" + self.output_dir
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
+
+    @Slot(name="stop_process")
+    def stop_process(self):
+        self.instance.terminate_instance()
+        self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -94,36 +127,21 @@ class Tool(MetaObject):
         """Returns the graphical representation (QWidget) of this object."""
         return self._widget
 
-    @Slot(name='show_details')
-    def show_details(self):
-        """Details button clicked."""
-        if not self.tool_template():
-            self._parent.msg_warning.emit("No Tool Template")
-            return
-        definition = self.read_tool_def(self.tool_template().get_def_path())
-        if not definition:
-            return
-        self._parent.msg.emit("Tool template file contents:\n{0}"
-                              .format(json.dumps(definition, sort_keys=True, indent=4)))
+    def get_parent(self):
+        """Returns the ToolboxUI instance."""
+        return self._toolbox
 
-    @Slot(name="show_connections")
-    def show_connections(self):
-        """Show connections of this Tool."""
-        inputs = self._parent.connection_model.input_items(self.name)
-        outputs = self._parent.connection_model.output_items(self.name)
-        self._parent.msg.emit("<br/><b>{0}</b>".format(self.name))
-        self._parent.msg.emit("Input items")
-        if not inputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in inputs:
-                self._parent.msg_warning.emit("{0}".format(item))
-        self._parent.msg.emit("Output items")
-        if not outputs:
-            self._parent.msg_warning.emit("None")
-        else:
-            for item in outputs:
-                self._parent.msg_warning.emit("{0}".format(item))
+    @Slot(name="edit_tool_template")
+    def edit_tool_template(self):
+        self._toolbox.edit_tool_template(self._tool_template_index)
+
+    @Slot(name="open_tool_template_file")
+    def open_tool_template_file(self):
+        self._toolbox.open_tool_template_file(self._tool_template_index)
+
+    @Slot(name="open_tool_main_program_file")
+    def open_tool_main_program_file(self):
+        self._toolbox.open_tool_main_program_file(self._tool_template_index)
 
     def tool_template(self):
         """Returns Tool template."""
@@ -139,17 +157,21 @@ class Tool(MetaObject):
             ToolTemplate or None if no Tool Template set for this Tool.
         """
         self._tool_template = tool_template
+        if tool_template:
+            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
+        else:
+            self._tool_template_index = None
         self.update_tool_ui()
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
+        self._widget.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
         if not self.tool_template():
-            # self._widget.ui.comboBox_tool.setCurrentText("")
             self._widget.ui.lineEdit_tool_args.setText("")
             self._widget.populate_input_files_list(None)
             self._widget.populate_output_files_list(None)
         else:
-            # self._widget.ui.comboBox_tool.setCurrentText(self.tool_template().name)
             self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.update_input_files()
             self.update_output_files()
@@ -158,44 +180,26 @@ class Tool(MetaObject):
         """Show input files in QListView."""
         if not self.tool_template():
             return
-        def_path = self.tool_template().get_def_path()
-        definition = self.read_tool_def(def_path)
-        if not definition:
-            return
-        try:
-            input_files = definition["inputfiles"]
-        except KeyError:
-            logging.error("Key 'inputfiles' not found in file {0}".format(def_path))
-            return
-        self._widget.populate_input_files_list(input_files)
+        self._widget.populate_input_files_list(self.tool_template().inputfiles)
 
     def update_output_files(self):
         """Show output files in QListView."""
         if not self.tool_template():
             return
-        def_path = self.tool_template().get_def_path()
-        definition = self.read_tool_def(def_path)
-        if not definition:
-            return
-        try:
-            output_files = definition["outputfiles"]
-        except KeyError:
-            logging.error("Key 'outputfiles' not found in file {0}".format(def_path))
-            return
-        self._widget.populate_output_files_list(output_files)
+        self._widget.populate_output_files_list(self.tool_template().outputfiles)
 
     def read_tool_def(self, tool_def_file):
-        """Return tool template definition file contents or None if operation failed."""
+        """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
         try:
             with open(tool_def_file, 'r') as fp:
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._parent.msg_error.emit("Tool definition file not valid")
+                    self._toolbox.msg_error.emit("Tool template definition file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(tool_def_file))
+            self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(tool_def_file))
             return None
         return definition
 
@@ -203,35 +207,107 @@ class Tool(MetaObject):
     def execute(self):
         """Execute button clicked."""
         if not self.tool_template():
-            self._parent.msg_warning.emit("No Tool to execute")
+            self._toolbox.msg_warning.emit("No Tool template attached to Tool <b>{0}</b>".format(self.name))
             return
-        self._parent.msg.emit("")
-        self._parent.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("----------------------------")
+        self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("----------------------------")
+        self._toolbox.msg.emit("")
         try:
-            self.instance = ToolInstance(self.tool_template(), self._parent, self.output_dir, self._project)
+            self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
         except OSError as e:
-            self._parent.msg_error.emit("Tool instance creation failed. {0}".format(e))
+            self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
             return
         # Find required input files for ToolInstance (if any)
         if self._widget.input_file_model.rowCount() > 0:
-            self._parent.msg.emit("*** Searching for required input files ***")
+            self._toolbox.msg.emit("*** Checking Tool template requirements ***")
             # Abort if there are no input items connected to this Tool
-            inputs = self._parent.connection_model.input_items(self.name)
+            inputs = self._toolbox.connection_model.input_items(self.name)
             if not inputs:
-                self._parent.msg_error.emit("This Tool has no input connections. Required input files not found.")
+                self._toolbox.msg_error.emit("This Tool has no input connections. Cannot find required input files.")
                 return
-            file_copy_paths = self.find_input_files()
-            if not file_copy_paths:
-                self._parent.msg_error.emit("Tool execution aborted")
-                return
-            self._parent.msg.emit("*** Copying input files to work directory ***")
-            # Copy input files to ToolInstance work directory
-            if not self.copy_input_files(file_copy_paths):
-                self._parent.msg_error.emit("Tool execution aborted")
-                return
+            n_dirs, n_files = self.count_files_and_dirs()
+            # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
+            if n_dirs > 0:
+                self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
+                if not self.create_dirs_to_work():
+                    # Creating directories failed -> abort
+                    self._toolbox.msg_error.emit("Creating directories to work failed. Tool execution aborted")
+                    return
+            else:  # just for testing
+                # logging.debug("No directories to create")
+                pass
+            if n_files > 0:
+                self._toolbox.msg.emit("*** Searching for required input files ***")
+                file_copy_paths = self.find_input_files()
+                if not file_copy_paths:
+                    self._toolbox.msg_error.emit("Input files not found. Tool execution aborted.")
+                    return
+                self._toolbox.msg.emit("*** Copying input files to work directory ***")
+                # Copy input files to ToolInstance work directory
+                if not self.copy_input_files(file_copy_paths):
+                    self._toolbox.msg_error.emit("Unable to copy input files to work directory. "
+                                                 "Tool execution aborted.")
+                    return
+            else:  # just for testing
+                # logging.debug("No input files to copy")
+                pass
+        self._widget.ui.pushButton_stop.setEnabled(True)
+        self._widget.ui.pushButton_execute.setEnabled(False)
+        self._graphics_item.start_wheel_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
+
+    def count_files_and_dirs(self):
+        """Count the number of files and directories in required input files model.
+        TODO: Change name of 'required input files' because it can contain dir names too.
+
+        Returns:
+            Tuple containing the number of required files and directories.
+        """
+        n_dir = 0
+        n_file = 0
+        for i in range(self._widget.input_file_model.rowCount()):
+            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Check if this a directory or a file
+            path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                n_dir += 1
+            else:
+                # It's a file
+                n_file += 1
+        return n_dir, n_file
+
+    def create_dirs_to_work(self):
+        """Iterate items in required input files and check
+        if there are any directories to create. Create found
+        directories directly to instance work folder.
+
+        Returns:
+            Boolean variable depending on success
+        """
+        for i in range(self._widget.input_file_model.rowCount()):
+            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Check if this a directory or a file
+            path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                # logging.debug("path {0} should be created to work folder".format(path))
+                path_to_create = os.path.join(self.instance.basedir, path)
+                try:
+                    create_dir(path_to_create)
+                except OSError:
+                    self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
+                                                 " Check permissions.".format(path_to_create))
+                    return False
+                self._toolbox.msg.emit("\tDirectory <b>{0}</b> created".format(path_to_create))
+            else:
+                # It's a file -> skip
+                pass
+        return True
 
     def find_input_files(self):
         """Iterate files in required input files model and find them from connected items.
@@ -244,9 +320,12 @@ class Tool(MetaObject):
             req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Just get the filename if there is a path attached to the file
             path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                continue
             found_file = self.find_file(filename)
             if not found_file:
-                self._parent.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
+                self._toolbox.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
                 return None
             else:
                 # file_paths.append(found_file)
@@ -255,8 +334,8 @@ class Tool(MetaObject):
 
     def find_file(self, fname):
         """Find required input file for this Tool Instance. Search file from Data
-        Connection items that are input items for the Tool that instantiates this
-        ToolInstance.
+        Connection or Data Store items that are input items for this Tool. These in turn
+        will search on their own input items and stop when an infinite recursion is detected.
 
         Args:
             fname (str): File name (no path)
@@ -264,35 +343,22 @@ class Tool(MetaObject):
         Returns:
             Path to file or None if it was not found.
         """
-        # TODO: Loop through all input items but beware of feedback loops and infinite loops
         path = None
-        # Find file only from immediate parent items
-        for input_item in self._parent.connection_model.input_items(self.name):
-            # self._parent.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
+        # Find file from immediate parent items
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            # self._toolbox.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
             # Find item from project model
-            found_item = self._parent.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
+            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
             if not found_item:
-                self._parent.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 return path
             item_data = found_item.data(Qt.UserRole)
-            # Find file from parent Data Connections
-            if item_data.item_type == "Data Connection":
-                # Search in Data Connection data directory
-                dc_files = item_data.data_files()  # List of file names (no path)
-                if fname in dc_files:
-                    self._parent.msg.emit("\t<b>{0}</b> found in DC <b>{1}</b>".format(fname, item_data.name))
-                    path = os.path.join(item_data.data_dir, fname)
+            # Find file from parent Data Stores and Data Connections
+            if item_data.item_type in ["Data Store", "Data Connection"]:
+                visited_items = list()
+                path = item_data.find_file(fname, visited_items)
+                if path is not None:
                     break
-                # Search in Data Connection references
-                else:
-                    refs = item_data.file_references()  # List of paths including file name
-                    for ref in refs:
-                        p, fn = os.path.split(ref)
-                        if fn == fname:
-                            self._parent.msg.emit("\tReference for <b>{0}</b> found in DC <b>{1}</b>"
-                                                  .format(fname, item_data.name))
-                            path = ref
-                            break
             elif item_data.item_type == "Tool":
                 # TODO: Find file from output files of parent Tools
                 pass
@@ -302,92 +368,159 @@ class Tool(MetaObject):
         """Copy files from given paths to the directories in work directory, where the Tool requires them to be.
 
         Args:
-            paths (dict): Key is path to required file, value is the path to where the file is located.
+            paths (dict): Key is path to required file, value is path to source file.
 
         Returns:
             Boolean variable depending on operation success
         """
         n_copied_files = 0
-        for dst_folder, src_path in paths.items():
-            # Join work directory path to dst folder
-            dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst_folder))
-            fname = os.path.split(src_path)[1]
-            self._parent.msg.emit("\tCopying <b>{0}</b>".format(fname))
+        for dst, src_path in paths.items():
             if not os.path.exists(src_path):
-                self._parent.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                self._toolbox.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
                 return False
+            # Join work directory path to dst (dst is the filename including possible subfolders, e.g. 'input/f.csv')
+            dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst))
+            # Create subdirectories to work if necessary
+            dst_subdir, fname = os.path.split(dst)
+            if not dst_subdir:
+                # No subdirectories to create
+                self._toolbox.msg.emit("\tCopying <b>{0}</b> -> work directory".format(fname))
+            else:
+                # Create subdirectory structure to work (Skip if already done in create_dirs_to_work() method)
+                work_subdir_path = os.path.abspath(os.path.join(self.instance.basedir, dst_subdir))
+                if not os.path.exists(work_subdir_path):
+                    try:
+                        create_dir(work_subdir_path)
+                    except OSError:
+                        self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
+                                                     .format(work_subdir_path))
+                        return False
+                    self._toolbox.msg.emit("\tCopying <b>{0}</b> -> work subdirectory <b>{1}</b>"
+                                           .format(fname, dst_subdir))
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
             except OSError as e:
                 logging.error(e)
-                self._parent.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
-                                            .format(src_path, dst_path))
+                self._toolbox.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
+                                             .format(src_path, dst_path))
                 return False
-        self._parent.msg.emit("\tCopied <b>{0}</b> file(s)".format(n_copied_files))
+        self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
         return True
+
+    def find_output_items(self):
+        """Find output items of this Tool.
+
+        Returns:
+            List of Data Store and Data Connection items.
+        """
+        item_list = list()
+        for output_item in self._toolbox.connection_model.output_items(self.name):
+            found_item = self._toolbox.project_item_model.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
+            if not found_item:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(output_item))
+                continue
+            item_data = found_item.data(Qt.UserRole)
+            item_list.append(item_data)
+        return item_list
+
+    def create_refs_to_output_files(self, output_items):
+        """Create refs to Tool output files in all child Data Connections and Data Stores.
+        In case of Data Store only one reference is created (to the first file in the list)
+
+        Args:
+            output_items (list): Destination items for output files.
+        """
+        for item in output_items:
+            n_created_refs = 0
+            # NOTE: We need to take the basename here since the tool instance saves
+            # the output files *without* the 'subfolder' part in the output folder
+            for output_file in [os.path.basename(x) for x in self._tool_template.outputfiles]:
+                self._toolbox.msg.emit("*** Creating reference to Tool <b>{0}</b>'s output file {1} "
+                                       "in {2} <b>{3}</b> ***"
+                                       .format(self.name, output_file, item.item_type, item.name))
+                # NOTE: output files are saved
+                src_path = os.path.join(self.instance.output_dir, output_file)
+                if not os.path.exists(src_path):
+                    self._toolbox.msg_error.emit("\t Output file <b>{0}</b> does not exist".format(src_path))
+                    continue
+                if item.item_type == "Data Connection":
+                    item.add_files_to_references([src_path])  # Give path in a list
+                    n_created_refs += 1
+                elif item.item_type == "Data Store":
+                    reference = {
+                        'url': 'sqlite:///{0}'.format(src_path),
+                        'database': output_file,
+                        'username': getpass.getuser()
+                    }
+                    item.load_reference(reference)
+                    self._toolbox.msg.emit("\tCreated <b>1</b> reference")
+                    break
+                else:
+                    self._toolbox.msg_warning.emit("\t<b>Not implemented</b>")
+                    break
+            if item.item_type == "Data Connection":
+                self._toolbox.msg.emit("\tCreated <b>{0}</b> reference(s)".format(n_created_refs))
 
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
         """Tool execution finished."""
+        self._widget.ui.pushButton_stop.setEnabled(False)
+        self._widget.ui.pushButton_execute.setEnabled(True)
+        self._graphics_item.stop_wheel_animation()
+        # Disconnect instance finished signal
+        self.instance.instance_finished_signal.disconnect(self.execution_finished)
         if return_code == 0:
-            self._parent.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.tool_template().name))
+            # copy output files to data directories of connected items
+            output_items = self.find_output_items()
+            if output_items:
+                # self._toolbox.msg.emit("Creating references to Tool output files in connected items")
+                self.create_refs_to_output_files(output_items)
+            self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
         else:
-            self._parent.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.tool_template().name))
+            self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
         type specific initialization should happen (whether instance is GAMS or Julia Model)."""
         if self.tool_template().tooltype == "gams":
-            gams_path = self._parent._config.get("settings", "gams_path")
+            gams_path = self._toolbox._config.get("settings", "gams_path")
             if not gams_path == '':
                 gams_exe = os.path.join(gams_path, GAMS_EXECUTABLE)
             else:
                 gams_exe = GAMS_EXECUTABLE
-            main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-            command = '{} "{}" Curdir="{}" logoption=3'\
-                .format(gams_exe, self.tool_template().main_prgm, main_dir)
-            # Append Tool specific command line arguments to command (if present and implemented)
-            self.instance.command = self.append_cmdline_args(command)
+            self.instance.program = gams_exe
+            self.instance.args.append(self.tool_template().main_prgm)
+            self.instance.args.append("curDir=")
+            self.instance.args.append("{0}".format(self.instance.basedir))
+            self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
+            self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
-            use_repl = self._parent._config.getboolean("settings", "use_repl")
+            # Prepare prompt command "julia script.jl"
+            julia_dir = self._toolbox._config.get("settings", "julia_path")
+            if not julia_dir == '':
+                julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+            else:
+                julia_exe = JULIA_EXECUTABLE
+            work_dir = self.instance.basedir
+            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
+            self.instance.program = julia_exe
+            self.instance.args.append(script_path)
+            self.append_instance_args()
+            use_repl = self._toolbox._config.getboolean("settings", "use_repl")
             if use_repl:
-                # Run scripts in Julia REPL
-                main_dir = self.instance.basedir  # TODO: Is main_dir needed?
-                mod_main_dir = main_dir.__repr__().strip("'")
-                self.instance.command = r'cd("{}");'\
-                    r'try include("{}"); info("repl_succ")'\
-                    r'catch e; info(e); info("repl_err") end{}'\
-                    .format(mod_main_dir, self.tool_template().main_prgm, "\n")
-            else:
-                # Run scripts with command "julia script.jl"
-                julia_dir = self._parent._config.get("settings", "julia_path")
-                if not julia_dir == '':
-                    julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
-                else:
-                    julia_exe = JULIA_EXECUTABLE
-                work_dir = self.instance.basedir
-                script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-                cmnd = '{0} {1}'.format(julia_exe, script_path)
-                # Append Tool specific command line arguments to command
-                self.instance.command = self.append_cmdline_args(cmnd)
-                return
+                # Prepare Julia REPL command
+                # TODO: See if this can be simplified
+                mod_work_dir = work_dir.__repr__().strip("'")
+                self.instance.julia_repl_command = r'cd("{}");'\
+                    r'include("{}")'.format(mod_work_dir, self.tool_template().main_prgm)
 
-    def append_cmdline_args(self, command):
-        """Append command line arguments to a command.
-
-        Args:
-            command (str): Command that starts processing the Tool in a subprocess
-        """
-        if (self.extra_cmdline_args is not None) and (not self.extra_cmdline_args == ''):
-            if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
-                command += ' ' + self.tool_template().cmdline_args + ' ' + self.extra_cmdline_args
-            else:
-                command += ' ' + self.extra_cmdline_args
-        else:
-            if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
-                command += ' ' + self.tool_template().cmdline_args
-        return command
+    def append_instance_args(self):
+        """Append Tool template command line args into instance args list."""
+        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
+        if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
+            # Tool template cmdline args is a space delimited string. Add them to a list.
+            self.instance.args += self.tool_template().cmdline_args.split(" ")
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
@@ -400,5 +533,5 @@ class Tool(MetaObject):
             new_tool = None
         else:
             # Find ToolTemplate from model according to row
-            new_tool = self._parent.tool_template_model.tool_template(row)
+            new_tool = self._toolbox.tool_template_model.tool_template(row)
         self.set_tool_template(new_tool)

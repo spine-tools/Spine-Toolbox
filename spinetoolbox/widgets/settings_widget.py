@@ -20,39 +20,38 @@
 """
 Widget for controlling user settings.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   17.1.2018
 """
 
-import logging
 import os
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
 from PySide2.QtCore import Slot, Qt
 import ui.settings
-from config import DEFAULT_PROJECT_DIR, STATUSBAR_SS, SETTINGS_SS, \
-    GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
-from helpers import blocking_updates
+from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, STATUSBAR_SS, \
+    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class SettingsWidget(QWidget):
     """ A widget to change user's preferred settings.
 
     Attributes:
-        parent (QObject): Parent widget.
+        toolbox (ToolboxUI): Parent widget.
         configs (ConfigurationParser): Configuration object
     """
-    def __init__(self, parent, configs, project):
+    def __init__(self, toolbox, configs):
         """ Initialize class. """
-        super().__init__(f=Qt.Window)
-        self._parent = parent  # QWidget parent
-        self._configs = configs
-        self._project = project
-        # Set up the user interface from Designer.
+        super().__init__(parent=toolbox, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
+        # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self._toolbox = toolbox  # QWidget parent
+        self._configs = configs
+        self._project = self._toolbox.project()
+        self.orig_work_dir = ""  # Work dir when this widget was opened
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)
@@ -73,14 +72,14 @@ class SettingsWidget(QWidget):
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.pushButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.pushButton_browse_julia.clicked.connect(self.browse_julia_path)
+        self.ui.pushButton_browse_work.clicked.connect(self.browse_work_path)
 
     @Slot(name="browse_gams_path")
     def browse_gams_path(self):
         """Open file browser where user can select the directory of
         GAMS that the user wants to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getExistingDirectory)
-        answer = func(self, 'Select GAMS Directory', os.path.abspath('C:\\'))
+        answer = QFileDialog.getExistingDirectory(self, 'Select GAMS Directory', os.path.abspath('C:\\'))
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
@@ -99,8 +98,7 @@ class SettingsWidget(QWidget):
     def browse_julia_path(self):
         """Open file browser where user can select the path to wanted Julia version."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        func = blocking_updates(self._parent.ui.graphicsView, QFileDialog.getExistingDirectory)
-        answer = func(self, 'Select Julia Directory', os.path.abspath('C:\\'))
+        answer = QFileDialog.getExistingDirectory(self, 'Select Julia Directory', os.path.abspath('C:\\'))
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
@@ -114,21 +112,49 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_julia_path.setText(selected_path)
         return
 
+    @Slot(name="browse_work_path")
+    def browse_work_path(self):
+        """Open file browser where user can select the path to wanted work directory."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, 'Select work directory', os.path.abspath('C:\\'))
+        if answer == '':  # Cancel button clicked
+            return
+        selected_path = os.path.abspath(answer)
+        self.ui.lineEdit_work_dir.setText(selected_path)
+
     def read_settings(self):
         """Read current settings from config object and update UI to show them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
+        save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
+        commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
         logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
         use_repl = self._configs.getboolean("settings", "use_repl")
-        julia_path =self._configs.get("settings", "julia_path")
+        julia_path = self._configs.get("settings", "julia_path")
         if open_previous_project:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
-        if logging_level == '2':
+        if save_at_exit == "0":  # Not needed but makes the code more readable.
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
+        elif save_at_exit == "1":
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+        elif save_at_exit == "2":
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
+        else:  # default
+            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
+        if commit_at_exit == "0":  # Not needed but makes the code more readable.
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
+        elif commit_at_exit == "1":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        elif commit_at_exit == "2":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+        else:  # default
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        if logging_level == "2":
             self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
         else:
             self.ui.checkBox_debug_messages.setCheckState(Qt.Unchecked)
@@ -144,15 +170,21 @@ class SettingsWidget(QWidget):
 
     def read_project_settings(self):
         """Read project settings from config object and update settings widgets accordingly."""
+        work_dir = DEFAULT_WORK_DIR
         if self._project:
             self.ui.lineEdit_project_name.setText(self._project.name)
             self.ui.textEdit_project_description.setText(self._project.description)
+            work_dir = self._project.work_dir
+        self.ui.lineEdit_work_dir.setText(work_dir)
+        self.orig_work_dir = work_dir
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
         """Get selections and save them to conf file."""
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
+        f = str(int(self.ui.checkBox_save_at_exit.checkState()))
+        g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         c = str(int(self.ui.checkBox_debug_messages.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
@@ -174,13 +206,15 @@ class SettingsWidget(QWidget):
         # Write to config object
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
+        self._configs.set("settings", "save_at_exit", f)
+        self._configs.set("settings", "commit_at_exit", g)
         self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)
         # Set logging level
-        self._parent.set_debug_level(c)
+        self._toolbox.set_debug_level(c)
         # Update project settings
         self.update_project_settings()
         self._configs.save()
@@ -191,13 +225,24 @@ class SettingsWidget(QWidget):
         if not self._project:
             return
         save = False
+        if not self.ui.lineEdit_work_dir.text():
+            work_dir = DEFAULT_WORK_DIR
+        else:
+            work_dir = self.ui.lineEdit_work_dir.text()
+        # Check if work directory was changed
+        if not self.orig_work_dir == work_dir:
+            if not self._project.change_work_dir(work_dir):
+                self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
+                                            .format(work_dir))
+            else:
+                save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():
             # Set new project description
             self._project.set_description(self.ui.textEdit_project_description.toPlainText())
             save = True
         if save:
-            logging.debug("Project settings changed. Saving project.")
-            self._parent.save_project()
+            self._toolbox.msg.emit("Project settings changed. Saving project...")
+            self._toolbox.save_project()
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.

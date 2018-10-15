@@ -20,7 +20,7 @@
 """
 Module to handle running tools in a QProcess.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   1.2.2018
 """
 
@@ -32,41 +32,30 @@ class QSubProcess(QObject):
     """Class to handle starting, running, and finishing PySide2 QProcesses."""
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
-    repl_finished_signal = Signal(int, name="repl_finished_signal")
 
-    def __init__(self, ui, command):
+    def __init__(self, toolbox, program=None, args=None):
         """Class constructor.
 
         Args:
-            ui (ToolboxUI): Instance of Main UI class.
-            command: Run command
+            toolbox (ToolboxUI): Instance of Main UI class.
+            program (str): Path to program to run in the subprocess (e.g. julia.exe)
+            args (list): List of argument for the program (e.g. path to script file)
         """
         super().__init__()
-        self._ui = ui
-        self._command = command
+        self._toolbox = toolbox
+        self._program = program
+        self._args = args
         self.process_failed = False
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
-
-    def start_if_not_running(self, workdir=None):
-        """Start a QProcess if is not running.
-
-        Args:
-            workdir (str): Path to work directory
-        """
-        if self._process is None:
-            self._process = QProcess(self)
-            self.start_process(workdir=workdir)
-        elif self._process.state() != QProcess.Running:
-            self.start_process(workdir=workdir)
 
     # noinspection PyUnresolvedReferences
     def start_process(self, workdir=None):
         """Start the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Path to work directory
+            workdir (str): Directory for the script (at least with Julia this is a must)
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
@@ -76,31 +65,31 @@ class QSubProcess(QObject):
         self._process.finished.connect(self.process_finished)
         self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
         self._process.stateChanged.connect(self.on_state_changed)
-        self._process.start(self._command)
+        self._toolbox.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
+        self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(self._args))
+        self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
             self._process.deleteLater()
             self._process = None
             self.subprocess_finished_signal.emit(0)
 
-    def write_on_process(self, command):
-        """Writes a command on a running process
+    def wait_for_finished(self, msecs=30000):
+        """Wait for subprocess to finish.
 
-        Args:
-            command (str): command to write
-
-        Returns:
-            False if QProcess is None (failed to start), else True
+        Return:
+            True if process finished successfully, False otherwise
         """
         if not self._process:
             return False
-        self._process.write(command)
-        return True
+        if self.process_failed or self.process_failed_to_start:
+            return False
+        return self._process.waitForFinished(msecs)
 
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
-        self._ui.msg.emit("\tSubprocess started...")
+        self._toolbox.msg.emit("\tSubprocess started...")
 
     @Slot("QProcess::ProcessState", name="on_state_changed")
     def on_state_changed(self, new_state):
@@ -142,7 +131,7 @@ class QSubProcess(QObject):
 
     def terminate_process(self):
         """Shutdown simulation in a QProcess."""
-        # self._ui.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
+        # self._toolbox.msg.emit("<br/>Stopping process nr. {0}".format(self._process.processId()))
         logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
                       .format(self._process.processId(), self._process.state(), self._process.error()))
         self._user_stopped = True
@@ -163,10 +152,10 @@ class QSubProcess(QObject):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             logging.error("QProcess CrashExit")
-            self._ui.msg_error("\tSubprocess crashed")
+            self._toolbox.msg_error.emit("\tSubprocess crashed")
             self.process_failed = True
         elif exit_status == QProcess.NormalExit:
-            self._ui.msg.emit("\tSubprocess finished")
+            self._toolbox.msg.emit("\tSubprocess finished")
             logging.debug("QProcess NormalExit")
         else:
             logging.error("Unknown exit from QProcess '{0}'".format(exit_status))
@@ -176,9 +165,9 @@ class QSubProcess(QObject):
         if not self._user_stopped:
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
             if out is not None:
-                self._ui.msg_proc.emit(out.strip())
+                self._toolbox.msg_proc.emit(out.strip())
         else:
-            self._ui.msg.emit("*** Terminating subprocess ***")
+            self._toolbox.msg.emit("*** Terminating subprocess ***")
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
@@ -188,14 +177,10 @@ class QSubProcess(QObject):
     def on_ready_stdout(self):
         """Emit data from stdout."""
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
-        self._ui.msg_proc.emit(out.strip())
+        self._toolbox.msg_proc.emit(out.strip())
 
     @Slot(name="on_ready_stderr")
     def on_ready_stderr(self):
         """Emit data from stderr."""
         out = str(self._process.readAllStandardError().data(), "utf-8")
-        self._ui.msg_proc_error.emit(out.strip())
-        if out.strip().endswith("repl_succ"):
-            self.repl_finished_signal.emit(0)
-        elif out.strip().endswith("repl_err"):
-            self.repl_finished_signal.emit(-9999)
+        self._toolbox.msg_proc_error.emit(out.strip())

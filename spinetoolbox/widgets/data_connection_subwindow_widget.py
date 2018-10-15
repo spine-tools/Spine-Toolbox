@@ -20,12 +20,12 @@
 """
 QWidget that is used to display information contained in a Data Connection.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   22.2.2018
 """
 
 import logging
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt
 from ui.subwindow_data_connection import Ui_Form
@@ -33,7 +33,9 @@ from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
 class DataConnectionWidget(QWidget):
-    """Class constructor.
+    """Data Connection subwindow widget. Inherits stylesheet from ToolboxUI,
+    because this widget is inserted into a QDockWidget that
+    inherits the QMainWindow
 
     Attributes:
         item_type (str): Internal widget object type (should always be 'Data Connection')
@@ -41,29 +43,22 @@ class DataConnectionWidget(QWidget):
     def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
+        self._owner = owner
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'DC 1')
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of DataConnection objects
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory.
+        self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
         self.ui.treeView_references.setModel(self.reference_model)
         self.ui.treeView_data.setModel(self.data_model)
         self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
 
-    def set_owner(self, owner):
-        """Set owner of this SubWindowWidget.
-
-        Args:
-            owner (str): New owner
-        """
-        self._owner = owner
-
     def owner(self):
-        """Return owner of this SubWindowWidget."""
+        """Return owner of this window, ie an instance of DataConection."""
         return self._owner
 
     def set_name_label(self, txt):
@@ -106,6 +101,7 @@ class DataConnectionWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(item, Qt.ToolTipRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):
@@ -118,6 +114,8 @@ class DataConnectionWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                if item == 'datapackage.json':
+                    qitem.setData(self.datapackage_icon, Qt.DecorationRole)
                 self.data_model.appendRow(qitem)
 
     def closeEvent(self, event):

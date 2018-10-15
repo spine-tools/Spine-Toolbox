@@ -20,7 +20,7 @@
 """
 Tool template classes.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Erkka Rinne <erkka.rinne@vtt.fi>
+:authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   24.1.2018
 """
 
@@ -35,22 +35,22 @@ class ToolTemplate(MetaObject):
     """Super class for various tool templates.
 
     Attributes:
-        parent (ToolBoxUI): QMainWindow instance
+        toolbox (ToolBoxUI): QMainWindow instance
         name (str): Name of the tool
         description (str): Short description of the tool
         path (str): Path to tool
-        includes (str): List of files belonging to the tool template (relative to 'path')
+        includes (str): List of files belonging to the tool template (relative to 'path')  # TODO: Change to src_files
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, toolbox, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
+        self._toolbox = toolbox
         self.tooltype = tooltype
         if not os.path.exists(path):
             pass
@@ -84,23 +84,6 @@ class ToolTemplate(MetaObject):
     def get_def_path(self):
         """Returns tool definition file path."""
         return self.def_file_path
-
-    def append_cmdline_args(self, command, extra_cmdline_args):
-        """Append command line arguments to a command.
-
-        Args:
-            command (str): Tool command
-            extra_cmdline_args (str): Extra command line arguments
-        """
-        if (extra_cmdline_args is not None) and (not extra_cmdline_args == ''):
-            if (self.cmdline_args is not None) and (not self.cmdline_args == ''):
-                command += ' ' + self.cmdline_args + ' ' + extra_cmdline_args
-            else:
-                command += ' ' + extra_cmdline_args
-        else:
-            if (self.cmdline_args is not None) and (not self.cmdline_args == ''):
-                command += ' ' + self.cmdline_args
-        return command
 
     @staticmethod
     def check_definition(ui, data):
@@ -143,20 +126,19 @@ class GAMSTool(ToolTemplate):
         name (str): GAMS Tool name
         description (str): GAMS Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path')
-                     First file in the list is the main GAMS program.
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main GAMS program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
-
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, toolbox, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, tooltype, path, includes,
-                         inputfiles, inputfiles_opt, outputfiles,
+        super().__init__(toolbox, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         # Add .lst file to list of output files
@@ -203,21 +185,21 @@ class GAMSTool(ToolTemplate):
             logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
 
     @staticmethod
-    def load(parent, path, data):
+    def load(toolbox, path, data):
         """Create a GAMSTool according to a tool definition.
 
         Args:
-            parent (ToolboxUI): QMainWindow instance
+            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
 
         Returns:
             GAMSTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = GAMSTool.check_definition(parent, data)
+        kwargs = GAMSTool.check_definition(toolbox, data)
         if kwargs is not None:
             # Return an executable model instance
-            return GAMSTool(parent=parent, path=path, **kwargs)
+            return GAMSTool(toolbox=toolbox, path=path, **kwargs)
         else:
             return None
 
@@ -229,20 +211,19 @@ class JuliaTool(ToolTemplate):
         name (str): Julia Tool name
         description (str): Julia Tool description
         path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path')
-                     First file in the list is the main Julia program.
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main Julia program.
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
     """
-
-    def __init__(self, parent, name, description, tooltype, path, includes,
-                 inputfiles=None, inputfiles_opt=None,
+    def __init__(self, toolbox, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
                  outputfiles=None, cmdline_args=None):
         """Class constructor."""
-        super().__init__(parent, name, description, tooltype, path, includes,
-                         inputfiles, inputfiles_opt, outputfiles,
+        super().__init__(toolbox, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
                          cmdline_args)
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
@@ -265,20 +246,20 @@ class JuliaTool(ToolTemplate):
         pass
 
     @staticmethod
-    def load(parent, path, data):
+    def load(toolbox, path, data):
         """Create a JuliaTool according to a tool definition.
 
         Args:
-            parent (ToolboxUI): QMainWindow instance
+            toolbox (ToolboxUI): QMainWindow instance
             path (str): Base path to tool files
             data (dict): Dictionary of tool definitions
 
         Returns:
             JuliaTool instance or None if there was a problem in the tool definition file.
         """
-        kwargs = JuliaTool.check_definition(parent, data)
+        kwargs = JuliaTool.check_definition(toolbox, data)
         if kwargs is not None:
             # Return an executable model instance
-            return JuliaTool(parent=parent, path=path, **kwargs)
+            return JuliaTool(toolbox=toolbox, path=path, **kwargs)
         else:
             return None

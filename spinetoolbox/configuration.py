@@ -20,7 +20,7 @@
 """
 Module for handling Spine Toolbox configuration files.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   10.1.2018
 """
 

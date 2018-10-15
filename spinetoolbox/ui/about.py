@@ -19,7 +19,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/about.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/about.ui',
+# licensing of '../spinetoolbox/ui/about.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -337,7 +338,7 @@ class Ui_Form(object):
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.label_5 = QtWidgets.QLabel(self.widget_4)
         self.label_5.setMaximumSize(QtCore.QSize(140, 39))
-        self.label_5.setPixmap(QtGui.QPixmap(":/partner_logos/VTT_RGB.png"))
+        self.label_5.setPixmap(QtGui.QPixmap(":/partner_logos/VTT_logo_2018.png"))
         self.label_5.setScaledContents(True)
         self.label_5.setAlignment(QtCore.Qt.AlignCenter)
         self.label_5.setObjectName("label_5")

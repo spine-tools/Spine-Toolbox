@@ -20,42 +20,40 @@
 """
 QWidget that is used to display information contained in a View.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi
+:author: P. Savolainen (VTT)
 :date:   25.4.2018
 """
 
 import logging
+from PySide2.QtGui import QStandardItemModel, QStandardItem, QIcon, QPixmap
+from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QWidget
 from ui.subwindow_view import Ui_Form
+from config import DC_TREEVIEW_HEADER_SS, HEADER_POINTSIZE
 
 
 class ViewWidget(QWidget):
-    """Class constructor.
+    """View subwindow class.
 
     Attributes:
-        owner (str): Name of the item that owns this widget
         item_type (str): Internal widget object type (should always be 'View')
     """
     def __init__(self, owner, item_type):
         """ Initialize class."""
         super().__init__()
+        self._owner = owner
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.setObjectName(item_type)  # This is set also in setupUi(). Maybe do this only in Qt Designer.
-        self._owner = owner  # Name of object that owns this object (e.g. 'View 1')
+        self.setObjectName(item_type)  # TODO: Remove. item_type is an instance variable of View objects
+        self.reference_model = QStandardItemModel()  # References to databases
+        self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
+        self.ui.treeView_references.setModel(self.reference_model)
+        self.ui.treeView_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.label_name.setFocus()
 
-    def set_owner(self, owner):
-        """Set owner of this widget.
-
-        Args:
-            owner (str): New owner
-        """
-        self._owner = owner
-
     def owner(self):
-        """Returns owner of this widget."""
+        """Return owner of this window, ie an instance of View."""
         return self._owner
 
     def set_name_label(self, txt):
@@ -70,29 +68,28 @@ class ViewWidget(QWidget):
         """Return name label text."""
         return self.ui.label_name.text()
 
-    def set_type_label(self, txt):
-        """Set new text for the type label.
+    def make_header_for_references(self):
+        """Add header to files model. I.e. External Data Connection files."""
+        h = QStandardItem("References")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.reference_model.setHorizontalHeaderItem(0, h)
 
-        Args:
-            txt (str): Text to display in the QLabel
+    def populate_reference_list(self, items):
+        """List file references in QTreeView.
+        If items is None or empty list, model is cleared.
         """
-        self.ui.label_type.setText(txt)
-
-    def type_label(self):
-        """Return type label text."""
-        return self.ui.label_type.text()
-
-    def set_data_label(self, txt):
-        """Set new text for the data label.
-
-        Args:
-            txt (str): Text to display in the QLabel
-        """
-        self.ui.label_data.setText(txt)
-
-    def data_label(self):
-        """Return data label text."""
-        return self.ui.label_data.text()
+        self.reference_model.clear()
+        self.make_header_for_references()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item['database'])
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(item['url'], Qt.ToolTipRole)
+                qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
+                self.reference_model.appendRow(qitem)
 
     def closeEvent(self, event):
         """Hide widget and is proxy instead of closing them.

@@ -3,8 +3,36 @@
     <file>Spine_symbol.png</file>
   </qresource>
   <qresource prefix="icons">
-    <file>dc_add.png</file>
+    <file>minus_object_icon.png</file>
+    <file>import_ds.png</file>
+    <file>close.png</file>
+    <file>export_ds.png</file>
+    <file>edit_object_icon.png</file>
+    <file>refresh.png</file>
+    <file>edit_relationship_icon.png</file>
+    <file>paste.png</file>
+    <file>copy.png</file>
+    <file>fully_expand.png</file>
+    <file>fully_collapse.png</file>
+    <file>find_next.png</file>
+    <file>minus_relationship_icon.png</file>
+    <file>minus_object_parameter_icon.png</file>
+    <file>minus_relationship_parameter_icon.png</file>
+    <file>export.png</file>
+    <file>object_parameter_icon.png</file>
+    <file>relationship_parameter_icon.png</file>
+    <file>Spine_db_ref_icon.png</file>
+    <file>plus_object_icon.png</file>
+    <file>plus_relationship_icon.png</file>
+    <file>plus_object_parameter_icon.png</file>
+    <file>plus_relationship_parameter_icon.png</file>
+    <file>Spine_db_icon.png</file>
+    <file>import.png</file>
+    <file>wheel.png</file>
     <file>datapkg.png</file>
+    <file>tool_options.png</file>
+    <file>ok.png</file>
+    <file>nok.png</file>
     <file>keys.png</file>
     <file>plus.png</file>
     <file>minus.png</file>
@@ -16,5 +44,7 @@
     <file>dc_icon.png</file>
     <file>tool_icon.png</file>
     <file>view_icon.png</file>
+    <file>object_icon.png</file>
+    <file>relationship_icon.png</file>
   </qresource>
 </RCC>

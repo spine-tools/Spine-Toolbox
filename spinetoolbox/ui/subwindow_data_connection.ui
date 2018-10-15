@@ -73,13 +73,13 @@
    <item>
     <layout class="QVBoxLayout" name="verticalLayout_2">
      <property name="spacing">
-      <number>2</number>
+      <number>4</number>
      </property>
      <property name="leftMargin">
       <number>4</number>
      </property>
      <property name="topMargin">
-      <number>4</number>
+      <number>0</number>
      </property>
      <property name="rightMargin">
       <number>4</number>
@@ -88,56 +88,49 @@
       <number>4</number>
      </property>
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout">
-       <property name="spacing">
-        <number>0</number>
+      <widget class="QLabel" name="label_name">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <item>
-        <widget class="QLabel" name="label_name">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>18</height>
-          </size>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>16777215</width>
-           <height>18</height>
-          </size>
-         </property>
-         <property name="font">
-          <font>
-           <pointsize>10</pointsize>
-           <weight>75</weight>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">background-color: rgb(0, 0, 255);
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>18</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>18</height>
+        </size>
+       </property>
+       <property name="font">
+        <font>
+         <pointsize>10</pointsize>
+         <weight>75</weight>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(0, 0, 255);
 color: rgb(255, 255, 255);</string>
-         </property>
-         <property name="text">
-          <string>Name</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-         <property name="wordWrap">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
+       </property>
+       <property name="text">
+        <string>Name</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView_references">
+      <widget class="ReferencesTreeView" name="treeView_references">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -146,8 +139,14 @@ color: rgb(255, 255, 255);</string>
        </property>
        <property name="font">
         <font>
-         <pointsize>8</pointsize>
+         <pointsize>10</pointsize>
         </font>
+       </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Drag-and-drop files here, they will be added as references.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -169,7 +168,7 @@ color: rgb(255, 255, 255);</string>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <property name="spacing">
-        <number>1</number>
+        <number>4</number>
        </property>
        <property name="leftMargin">
         <number>0</number>
@@ -271,7 +270,7 @@ color: rgb(255, 255, 255);</string>
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/icons/dc_add.png</normaloff>:/icons/dc_add.png</iconset>
+           <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
          </property>
         </widget>
        </item>
@@ -289,7 +288,7 @@ color: rgb(255, 255, 255);</string>
         </spacer>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton_datapkg">
+        <widget class="QToolButton" name="toolButton_datapackage">
          <property name="enabled">
           <bool>true</bool>
          </property>
@@ -300,7 +299,7 @@ color: rgb(255, 255, 255);</string>
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Generate datapackage.json file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create datapackage from CSV files in directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
           <string/>
@@ -309,35 +308,15 @@ color: rgb(255, 255, 255);</string>
           <iconset resource="resources/resources_icons.qrc">
            <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QToolButton" name="toolButton_datapkg_keys">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="maximumSize">
-          <size>
-           <width>20</width>
-           <height>20</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Edit datapackage's keys.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/icons/keys.png</normaloff>:/icons/keys.png</iconset>
+         <property name="popupMode">
+          <enum>QToolButton::InstantPopup</enum>
          </property>
         </widget>
        </item>
       </layout>
      </item>
      <item>
-      <widget class="QTreeView" name="treeView_data">
+      <widget class="DataTreeView" name="treeView_data">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>0</horstretch>
@@ -346,8 +325,14 @@ color: rgb(255, 255, 255);</string>
        </property>
        <property name="font">
         <font>
-         <pointsize>8</pointsize>
+         <pointsize>10</pointsize>
         </font>
+       </property>
+       <property name="acceptDrops">
+        <bool>true</bool>
+       </property>
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Drag-and-drop files here, they will be copied to the data directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
@@ -372,22 +357,6 @@ color: rgb(255, 255, 255);</string>
         <number>6</number>
        </property>
        <item>
-        <widget class="QPushButton" name="pushButton_open">
-         <property name="maximumSize">
-          <size>
-           <width>75</width>
-           <height>23</height>
-          </size>
-         </property>
-         <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Connection directory in File Explorer&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-         </property>
-         <property name="text">
-          <string>Open</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer name="horizontalSpacer_2">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -401,18 +370,30 @@ color: rgb(255, 255, 255);</string>
         </spacer>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_connections">
+        <widget class="QPushButton" name="pushButton_open">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="maximumSize">
           <size>
-           <width>75</width>
+           <width>120</width>
            <height>23</height>
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Show connections&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Connection directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
-          <string>Conn.</string>
+          <string>Open directory...</string>
          </property>
         </widget>
        </item>
@@ -423,14 +404,26 @@ color: rgb(255, 255, 255);</string>
   </layout>
   <zorder></zorder>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ReferencesTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>DataTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
   <tabstop>treeView_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
+  <tabstop>toolButton_datapackage</tabstop>
   <tabstop>treeView_data</tabstop>
   <tabstop>pushButton_open</tabstop>
-  <tabstop>pushButton_connections</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

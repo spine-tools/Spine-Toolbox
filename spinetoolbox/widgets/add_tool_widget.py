@@ -20,11 +20,10 @@
 """
 Widget shown to user when a new Tool is created.
 
-:author: Pekka Savolainen <pekka.t.savolainen@vtt.fi>
+:author: P. Savolainen (VTT)
 :date:   19.1.2017
 """
 
-import logging
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
 import ui.add_tool
@@ -33,17 +32,20 @@ from helpers import short_name_reserved
 
 
 class AddToolWidget(QWidget):
-    """A widget to query user's preferences for a new item.
+    """A widget that queries user's preferences for a new item.
 
     Attributes:
-        parent (ToolboxUI): Parent widget
-        project(SpineToolboxProject): Project where to add the new Tool
+        toolbox (ToolboxUI): Parent widget
+        x (int): X coordinate of new item
+        y (int): Y coordinate of new item
     """
-    def __init__(self, parent, project):
+    def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(f=Qt.Window)
-        self._parent = parent
-        self._project = project
+        super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
+        self._toolbox = toolbox
+        self._x = x
+        self._y = y
+        self._project = self._toolbox.project()
         #  Set up the user interface from Designer.
         self.ui = ui.add_tool.Ui_Form()
         self.ui.setupUi(self)
@@ -57,7 +59,7 @@ class AddToolWidget(QWidget):
         self.name = ''
         self.description = ''
         # Init
-        self.ui.comboBox_tool.setModel(self._parent.tool_template_model)
+        self.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self.ui.lineEdit_name.setFocus()
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
@@ -81,7 +83,7 @@ class AddToolWidget(QWidget):
             # No Tool selected
             self.ui.lineEdit_tool_args.setText("")
             return
-        selected_tool = self._parent.tool_template_model.tool_template(row)
+        selected_tool = self._toolbox.tool_template_model.tool_template(row)
         args = selected_tool.cmdline_args
         if not args:
             # Tool cmdline_args is None if the line does not exist in Tool definition file
@@ -114,13 +116,13 @@ class AddToolWidget(QWidget):
             self.statusbar.showMessage("Name not valid for a folder name", 3000)
             return
         # Check that name is not reserved
-        if self._parent.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
+        if self._toolbox.project_item_model.find_item(self.name, Qt.MatchExactly | Qt.MatchRecursive):
             msg = "Item '{0}' already exists".format(self.name)
             self.statusbar.showMessage(msg, 3000)
             return
         # Check that short name (folder) is not reserved
         short_name = self.name.lower().replace(' ', '_')
-        if short_name_reserved(short_name, self._parent.project_item_model):
+        if short_name_reserved(short_name, self._toolbox.project_item_model):
             msg = "Item using folder '{0}' already exists".format(short_name)
             self.statusbar.showMessage(msg, 3000)
             return
@@ -134,8 +136,8 @@ class AddToolWidget(QWidget):
         if selected_row == 0:
             selected_tool = None
         else:
-            selected_tool = self._parent.tool_template_model.tool_template(selected_row)
-        self._project.add_tool(self.name, self.description, selected_tool)
+            selected_tool = self._toolbox.tool_template_model.tool_template(selected_row)
+        self._project.add_tool(self.name, self.description, selected_tool, self._x, self._y, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
@@ -145,6 +147,8 @@ class AddToolWidget(QWidget):
         """
         if e.key() == Qt.Key_Escape:
             self.close()
+        elif e.key() == Qt.Key_Enter or e.key() == Qt.Key_Return:
+            self.ok_clicked()
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -154,3 +158,8 @@ class AddToolWidget(QWidget):
         """
         if event:
             event.accept()
+            scene = self._toolbox.ui.graphicsView.scene()
+            item_shadow = scene.item_shadow
+            if item_shadow:
+                scene.removeItem(item_shadow)
+                scene.item_shadow = None

@@ -20,7 +20,7 @@
 """
 Spine Toolbox project class.
 
-:authors: Pekka Savolainen <pekka.t.savolainen@vtt.fi>, Erkka Rinne <erkka.rinne@vtt.fi>
+:authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   10.1.2018
 """
 
@@ -28,58 +28,65 @@ import os
 import logging
 import json
 from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir
+from helpers import project_dir, create_dir, copy_dir
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
 from tool_templates import GAMSTool, JuliaTool
-from config import DEFAULT_WORK_DIR, JULIA_EXECUTABLE
-import qsubprocess
+from config import DEFAULT_WORK_DIR, INVALID_CHARS
 
 
 class SpineToolboxProject(MetaObject):
     """Class for Spine Toolbox projects.
 
     Attributes:
-        parent(ToolboxUI): Parent of this project
-        name(str): Project name
-        description(str): Project description
-        ext(str): Project save file extension(.proj)
+        toolbox (ToolboxUI): toolbox of this project
+        name (str): Project name
+        description (str): Project description
+        configs (ConfigurationParser): Application settings
+        work_dir (str): Project work directory
+        ext (str): Project save file extension(.proj)
     """
-    def __init__(self, parent, name, description, configs, ext='.proj'):
+    def __init__(self, toolbox, name, description, configs, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = parent
+        self._toolbox = toolbox
         self._configs = configs
         self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
-        self.work_dir = DEFAULT_WORK_DIR
+        if not work_dir:
+            self.work_dir = DEFAULT_WORK_DIR
+        else:
+            self.work_dir = work_dir
         self.filename = self.short_name + ext
         self.path = os.path.join(project_dir(self._configs), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
-        self.project_contents = dict()
-        self.julia_subprocess = None  # Contains Julia REPL instance
         # Make project directory
         try:
             create_dir(self.project_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating project directory {0} failed."
-                                        " Check permissions.".format(self.project_dir))
+            self._toolbox.msg_error.emit("[OSError] Creating project directory {0} failed."
+                                         " Check permissions.".format(self.project_dir))
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
-            self._parent.msg_error.emit("[OSError] Creating work directory {0} failed."
-                                        " Check permissions.".format(self.work_dir))
+            self._toolbox.msg_error.emit("[OSError] Creating work directory {0} failed."
+                                         " Check permissions.".format(self.work_dir))
 
-    def set_name(self, name):
-        """Change project name. Calls superclass method.
+    def change_name(self, name):
+        """Changes project name and updates project dir and save file name.
 
         Args:
-            name (str): Project name
+            name (str): Project (long) name
         """
         super().set_name(name)
+        # Update project dir instance variable
+        self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
+        # Update file name and path
+        self.change_filename(self.short_name + ".proj")
 
     def set_description(self, desc):
         """Change project description. Calls superclass method.
@@ -95,9 +102,67 @@ class SpineToolboxProject(MetaObject):
         Args:
             new_filename (str): Filename used in saving the project. No full path. Example 'project.proj'
         """
-        # TODO: Add check that file extension is supported (.proj)
         self.filename = new_filename
         self.path = os.path.join(project_dir(self._configs), self.filename)
+
+    def change_work_dir(self, new_work_path):
+        """Change project work directory.
+
+        Args:
+            new_work_path (str): Absolute path to new work directory
+        """
+        if not new_work_path:
+            self.work_dir = DEFAULT_WORK_DIR
+            return False
+        if not create_dir(new_work_path):
+            return False
+        self.work_dir = new_work_path
+        return True
+
+    def rename_project(self, name):
+        """Save project under a new name. Used with File->Save As... menu command.
+        Checks if given project name is valid.
+
+        Args:
+            name (str): New (long) name for project
+        """
+        # Check for illegal characters
+        if name.strip() == '' or name.lower() == self.name.lower():
+            logging.error("Given name is empty or same as the current name")
+            return False
+        # Check if new short name is the same as the current one
+        new_short_name = name.lower().replace(" ", "_")
+        if new_short_name == self.short_name:
+            msg = "<b>{0}</b> project directory already taken.".format(new_short_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Try again", msg)
+            return False
+        # Check that new name is legal
+        if any(True for x in name if x in INVALID_CHARS):
+            msg = "<b>{0}</b> contains invalid characters.".format(name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Invalid characters", msg)
+            return False
+        # Check that the new project name directory is not taken
+        projects_path = project_dir(self._configs)  # Path to directory where project files (.proj) are
+        new_project_dir = os.path.join(projects_path, new_short_name)  # New project directory
+        taken_dirs = list()
+        dir_contents = [os.path.join(projects_path, x) for x in os.listdir(projects_path)]
+        for path in dir_contents:
+            if os.path.isdir(path):
+                taken_dirs.append(os.path.split(path)[1])
+        if new_short_name in taken_dirs:
+            msg = "Project directory <b>{0}</b> already exists.".format(new_project_dir)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Try again", msg)
+            return False
+        # Copy project directory to new project directory
+        if not copy_dir(self._toolbox, self.project_dir, new_project_dir):
+            self._toolbox.msg_error.emit("Copying project directory failed")
+            return False
+        # Change name
+        self.change_name(name)
+        return True
 
     def save(self, tool_def_paths):
         """Collect project information and objects
@@ -111,16 +176,19 @@ class SpineToolboxProject(MetaObject):
         project_dict = dict()  # Dictionary for storing project info
         project_dict['name'] = self.name
         project_dict['description'] = self.description
+        project_dict['work_dir'] = self.work_dir
         project_dict['tool_templates'] = tool_def_paths
-        project_dict['connections'] = self._parent.connection_model.get_connections()
-        project_dict["scene_x"] = self._parent.ui.graphicsView.scene().sceneRect().x()
-        project_dict["scene_y"] = self._parent.ui.graphicsView.scene().sceneRect().y()
-        project_dict["scene_w"] = self._parent.ui.graphicsView.scene().sceneRect().width()
-        project_dict["scene_h"] = self._parent.ui.graphicsView.scene().sceneRect().height()
+        connection_table = self._toolbox.connection_model.get_connections()
+        bool_con_table = [[False if not j else True for j in connection_table[i]] for i in range(len(connection_table))]
+        project_dict['connections'] = bool_con_table
+        project_dict["scene_x"] = self._toolbox.ui.graphicsView.scene().sceneRect().x()
+        project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
+        project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
+        project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
         n = 0
         # Traverse all items in project model
-        top_level_items = self._parent.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
+        top_level_items = self._toolbox.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
         for top_level_item in top_level_items:
             top_level_item_txt = top_level_item.data(Qt.DisplayRole)
             # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
@@ -136,8 +204,10 @@ class SpineToolboxProject(MetaObject):
                     item_dict[top_level_item_txt][name] = dict()
                     item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
                     item_dict[top_level_item_txt][name]["description"] = child_data.description
-                    item_dict[top_level_item_txt][name]["x"] = child_data.get_icon().master().sceneBoundingRect().x()
-                    item_dict[top_level_item_txt][name]["y"] = child_data.get_icon().master().sceneBoundingRect().y()
+                    x = child_data.get_icon().master().sceneBoundingRect().center().x()
+                    y = child_data.get_icon().master().sceneBoundingRect().center().y()
+                    item_dict[top_level_item_txt][name]["x"] = x
+                    item_dict[top_level_item_txt][name]["y"] = y
                     if child_data.item_type == "Tool":
                         if not child_data.tool_template():
                             item_dict[top_level_item_txt][name]["tool"] = ""
@@ -147,9 +217,9 @@ class SpineToolboxProject(MetaObject):
                         # Save references
                         item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
                     elif child_data.item_type == "Data Store":
-                        item_dict[top_level_item_txt][name]["references"] = child_data.data_references()
+                        item_dict[top_level_item_txt][name]["reference"] = child_data.save_reference()
                     elif child_data.item_type == "View":
-                        item_dict[top_level_item_txt][name]["data"] = child_data.get_data()
+                        pass
                     else:
                         logging.error("Unrecognized item type: {0}".format(child_data.item_type))
         # Save project stuff
@@ -173,23 +243,29 @@ class SpineToolboxProject(MetaObject):
         tools = item_dict['Tools']
         views = item_dict['Views']
         n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
-        self._parent.msg.emit("Loading project items...")
+        self._toolbox.msg.emit("Loading project items...")
         # Recreate Data Stores
         for name in data_stores.keys():
             short_name = data_stores[name]['short name']
             desc = data_stores[name]['description']
             try:
-                refs = data_stores[name]["references"]
+                ref = data_stores[name]["reference"]
             except KeyError:
-                refs = list()
+                # Keep compatibility with previous version where a list of references was stored
+                try:
+                    ref = data_stores[name]["references"][0]
+                except KeyError:
+                    ref = None
+                except IndexError:
+                    ref = None
             try:
                 x = data_stores[name]["x"]
                 y = data_stores[name]["y"]
             except KeyError:
                 x = 0
                 y = 0
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, refs))
-            self.add_data_store(name, desc, refs, x, y)
+            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
+            self.add_data_store(name, desc, ref, x, y)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
@@ -212,12 +288,12 @@ class SpineToolboxProject(MetaObject):
             desc = tools[name]['description']
             tool_name = tools[name]['tool']
             # Find tool template from model
-            tool_template = self._parent.tool_template_model.find_tool_template(tool_name)
+            tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
             # Clarifications for user
             if not tool_name == "" and not tool_template:
-                self._parent.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                                            "it was not found. Add it to Tool templates and reopen "
-                                            "project.".format(name, tool_name))
+                self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                                             "it was not found. Add it to Tool templates and reopen "
+                                             "project.".format(name, tool_name))
             try:
                 x = tools[name]["x"]
                 y = tools[name]["y"]
@@ -230,25 +306,20 @@ class SpineToolboxProject(MetaObject):
             short_name = views[name]['short name']
             desc = views[name]['description']
             try:
-                data = views[name]['data']
-            except KeyError:
-                logging.error("'data' keyword not found in View {0}".format(name))
-                data = ''
-            try:
                 x = views[name]["x"]
                 y = views[name]["y"]
             except KeyError:
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, data, x, y)
+            self.add_view(name, desc, x, y)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
         """Create a Tool template according to a tool definition file.
 
         Args:
-            jsonfile (str): Path of the tool definition file
+            jsonfile (str): Path of the tool template definition file
 
         Returns:
             Instance of a subclass if Tool
@@ -258,11 +329,11 @@ class SpineToolboxProject(MetaObject):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._parent.msg_error.emit("Tool definition file not valid")
+                    self._toolbox.msg_error.emit("Tool template definition file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._parent.msg_error.emit("Tool definition file <b>{0}</b> not found".format(jsonfile))
+            self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
             return None
         # Infer path to the main program
         try:
@@ -285,49 +356,96 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition['tooltype'].lower()
         except KeyError:
-            self._parent.msg_error.emit("No type of tool defined in tool definition file. Should be "
-                                        "GAMS, Julia or executable")
+            self._toolbox.msg_error.emit("No type of tool defined in tool definition file. Should be "
+                                         "GAMS, Julia or executable")
             return None
         if _tooltype == "gams":
-            return GAMSTool.load(self._parent, path, definition)
+            return GAMSTool.load(self._toolbox, path, definition)
         elif _tooltype == "julia":
-            if not self.julia_subprocess:
-                # TODO: This is so that Julia REPL stays open between executions. Check for a better place for this.
-                julia_path = self._parent._config.get("settings", "julia_path")
-                if not julia_path == '':
-                    julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
-                else:
-                    julia_exe_path = JULIA_EXECUTABLE
-                self.julia_subprocess = qsubprocess.QSubProcess(self._parent, julia_exe_path)
-            return JuliaTool.load(self._parent, path, definition)
+            return JuliaTool.load(self._toolbox, path, definition)
         elif _tooltype == 'executable':
-            self._parent.msg_warning.emit("Executable tools not supported yet")
+            self._toolbox.msg_warning.emit("Executable tools not supported yet")
             return None
         else:
-            self._parent.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
+            self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, references, x=0, y=0):
-        """Add data store to project item model."""
-        data_store = DataStore(self._parent, name, description, self, references, x, y)
-        self._parent.project_refs.append(data_store)  # Save reference or signals don't stick
-        self._parent.add_item_to_model("Data Stores", name, data_store)
+    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False):
+        """Adds a Data Store to project item model.
 
-    def add_data_connection(self, name, description, references, x=0, y=0):
-        """Add Data Connection to project item model."""
-        data_connection = DataConnection(self._parent, name, description, self, references, x, y)
-        self._parent.project_refs.append(data_connection)  # Save reference or signals don't stick
-        self._parent.add_item_to_model("Data Connections", name, data_connection)
+        Args:
+            name (str): Name
+            description (str): Description of item
+            reference (dict): Information on referenced database
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
+        data_store = DataStore(self._toolbox, name, description, reference, x, y)
+        self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
+        self._toolbox.add_item_to_model("Data Stores", name, data_store)
+        self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(data_store)
 
-    def add_tool(self, name, description, tool_template, x=0, y=0):
-        """Add Tool to project item model."""
-        tool = Tool(self._parent, name, description, self, tool_template, x, y)
-        self._parent.project_refs.append(tool)  # Save reference or signals don't stick
-        self._parent.add_item_to_model("Tools", name, tool)
+    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False):
+        """Adds a Data Connection to project item model.
 
-    def add_view(self, name, description, data="View data", x=0, y=0):
-        """Add View to project item model."""
-        view = View(self._parent, name, description, self, x, y)
-        view.set_data(data)
-        self._parent.project_refs.append(view)  # Save reference or signals don't stick
-        self._parent.add_item_to_model("Views", name, view)
+        Args:
+            name (str): Name
+            description (str): Description of item
+            references (list(str)): List of file paths
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
+        data_connection = DataConnection(self._toolbox, name, description, references, x, y)
+        self._toolbox.project_refs.append(data_connection)  # Save reference or signals don't stick
+        self._toolbox.add_item_to_model("Data Connections", name, data_connection)
+        self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(data_connection)
+
+    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False):
+        """Adds a Tool to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            tool_template (ToolTemplate): Tool template of this tool
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
+        tool = Tool(self._toolbox, name, description, tool_template, x, y)
+        self._toolbox.project_refs.append(tool)  # Save reference or signals don't stick
+        self._toolbox.add_item_to_model("Tools", name, tool)
+        self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(tool)
+
+    def add_view(self, name, description, x=0, y=0, set_selected=False):
+        """Adds a View to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+        """
+        view = View(self._toolbox, name, description, x, y)
+        self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
+        self._toolbox.add_item_to_model("Views", name, view)
+        self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(view)
+
+    def set_item_selected(self, item):
+        """Sets item selected and shows its info screen.
+
+        Args:
+            item (QMetaObject): Project item to select
+        """
+        item.get_icon().master().setSelected(True)
+        self._toolbox.show_info(item.name)
