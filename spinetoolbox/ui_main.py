@@ -41,7 +41,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS
+    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -107,8 +107,6 @@ class ToolboxUI(QMainWindow):
         self.tabbar_action = QAction()
         self.tabbar_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.addAction(self.tabbar_action)
-        # Initialize widgets that are shared among many project items
-        self.init_shared_widgets()
         # Hide tabBar in the project item info QTabBar
         self.ui.tabWidget_item_info.tabBar().hide()
         # Add toggleview actions
@@ -117,6 +115,8 @@ class ToolboxUI(QMainWindow):
         self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
         self.init_project()
+        # Initialize widgets that are shared among many project items
+        self.init_shared_widgets()
         self.restore_ui()
 
     def add_toggle_view_actions(self):
@@ -228,6 +228,11 @@ class ToolboxUI(QMainWindow):
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        # Tools
+        self.ui.pushButton_tool_stop.setEnabled(False)
+        self.ui.comboBox_tool.setModel(self.tool_template_model)
+        self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

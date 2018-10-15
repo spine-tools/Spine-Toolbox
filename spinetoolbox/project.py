@@ -451,4 +451,4 @@ class SpineToolboxProject(MetaObject):
             item (ProjectItem): Project item to select
         """
         item.get_icon().master().setSelected(True)
-        self._toolbox.show_info(item.name)
+        self._toolbox.show_info(item)

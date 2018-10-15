@@ -22,11 +22,11 @@ import json
 import shutil
 import getpass
 from project_item import ProjectItem
-from widgets.tool_subwindow_widget import ToolSubWindowWidget
+# from widgets.tool_subwindow_widget import ToolSubWindowWidget
 from PySide2.QtCore import Slot, Qt, QUrl
-from PySide2.QtGui import QDesktopServices
+from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
+from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
 from graphics_items import ToolImage
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
@@ -49,25 +49,20 @@ class Tool(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Tool"
-        self._widget = self._toolbox
         # self._widget = ToolSubWindowWidget(self.item_type)
-        # self._widget.set_name_label(name)
         # self._widget.make_header_for_input_files()
         # self._widget.make_header_for_output_files()
         # self._widget.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
+        self.input_file_model = QStandardItemModel()
+        self.populate_input_files_list(None)
+        self.output_file_model = QStandardItemModel()
+        self.populate_output_files_list(None)
         self._tool_template = None
         self._tool_template_index = None
-        self.tool_template_options_popup_menu = None
         self.set_tool_template(tool_template)
-        # Set correct row selected in the comboBox
-        if not tool_template:
-            r = 0
-        else:
-            r = self._toolbox.tool_template_model.tool_template_row(tool_template.name)
-            if r == -1:
-                logging.error("error in tool_template_row() method")
-                r = 0
-        self._widget.ui.comboBox_tool.setCurrentIndex(r)
+        # Get row where Tool template is in the model
+        # self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
+        self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         # Create Tool project directory
@@ -80,25 +75,26 @@ class Tool(ProjectItem):
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        self._widget.ui.pushButton_tool_stop.setEnabled(False)
         # self.connect_signals()
 
     def connect_signals(self):
         """Connect this tool's signals to slots."""
-        self._widget.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
-        self._widget.ui.pushButton_tool_results.clicked.connect(self.open_results)
-        self._widget.ui.pushButton_tool_execute.clicked.connect(self.execute)
-        self._widget.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
+        self.restore_selections()
+        self._toolbox.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
+        self._toolbox.ui.pushButton_tool_results.clicked.connect(self.open_results)
+        self._toolbox.ui.pushButton_tool_execute.clicked.connect(self.execute)
+        self._toolbox.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
 
     def disconnect_signals(self):
         """Disconnect signals."""
+        self.save_selections()
         ret = True
         retvals = list()
         try:
-            retvals.append(self._widget.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process))
-            retvals.append(self._widget.ui.pushButton_tool_results.clicked.disconnect(self.open_results))
-            retvals.append(self._widget.ui.pushButton_tool_execute.clicked.disconnect(self.execute))
-            retvals.append(self._widget.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template))
+            retvals.append(self._toolbox.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process))
+            retvals.append(self._toolbox.ui.pushButton_tool_results.clicked.disconnect(self.open_results))
+            retvals.append(self._toolbox.ui.pushButton_tool_execute.clicked.disconnect(self.execute))
+            retvals.append(self._toolbox.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template))
         except RuntimeError:
             self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
             ret = False
@@ -107,6 +103,31 @@ class Tool(ProjectItem):
                                          .format(self.name, retvals))
             ret = False
         return ret
+
+    def restore_selections(self):
+        self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
+        self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
+        if not self._tool_template_index:
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
+        else:
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool template model
+        # tool_template = self._toolbox.tool_template_model.tool_template(self.tool_template_row)
+        # self.set_tool_template(tool_template)
+        # # Set correct row selected in the comboBox
+        # if not tool_template:
+        #     r = 0
+        # else:
+        #     r = self._toolbox.tool_template_model.tool_template_row(tool_template.name)
+        #     if r == -1:
+        #         logging.error("error in tool_template_row() method")
+        #         r = 0
+
+    def save_selections(self):
+        if not self._tool_template:
+            self._tool_template_index = None
+        else:
+            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        # self.set_tool_template(self._toolbox.tool_template_model.tool_template(selected_row))
 
     @Slot(name="open_results")
     def open_results(self):
@@ -177,31 +198,32 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         self.update_tool_ui()
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._widget.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details."""
-        pass
-        # if not self.tool_template():
-        #     self._widget.ui.lineEdit_tool_args.setText("")
-        #     self._widget.populate_input_files_list(None)
-        #     self._widget.populate_output_files_list(None)
-        # else:
-        #     self._widget.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-        #     self.update_input_files()
-        #     self.update_output_files()
-
-    def update_input_files(self):
-        """Show input files in QListView."""
         if not self.tool_template():
-            return
-        # self._widget.populate_input_files_list(self.tool_template().inputfiles)
+            self._toolbox.ui.lineEdit_tool_args.setText("")
+            self.populate_input_files_list(None)
+            self.populate_output_files_list(None)
+        else:
+            self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self.populate_input_files_list(self.tool_template().inputfiles)
+            self.populate_output_files_list(self.tool_template().outputfiles)
+            # self.update_input_files()
+            # self.update_output_files()
 
-    def update_output_files(self):
-        """Show output files in QListView."""
-        if not self.tool_template():
-            return
-        # self._widget.populate_output_files_list(self.tool_template().outputfiles)
+    # def update_input_files(self):
+    #     """Show input files in QListView."""
+    #     if not self.tool_template():
+    #         return
+    #     self.populate_input_files_list(self.tool_template().inputfiles)
+    #
+    # def update_output_files(self):
+    #     """Show output files in QListView."""
+    #     if not self.tool_template():
+    #         return
+    #     self.populate_output_files_list(self.tool_template().outputfiles)
 
     def read_tool_def(self, tool_def_file):
         """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
@@ -235,7 +257,7 @@ class Tool(ProjectItem):
             self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
             return
         # Find required input files for ToolInstance (if any)
-        if self._widget.input_file_model.rowCount() > 0:
+        if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool template requirements ***")
             # Abort if there are no input items connected to this Tool
             inputs = self._toolbox.connection_model.input_items(self.name)
@@ -268,8 +290,8 @@ class Tool(ProjectItem):
             else:  # just for testing
                 # logging.debug("No input files to copy")
                 pass
-        self._widget.ui.pushButton_stop.setEnabled(True)
-        self._widget.ui.pushButton_execute.setEnabled(False)
+        self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
+        self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
         self._graphics_item.start_wheel_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
@@ -284,8 +306,8 @@ class Tool(ProjectItem):
         """
         n_dir = 0
         n_file = 0
-        for i in range(self._widget.input_file_model.rowCount()):
-            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+        for i in range(self.input_file_model.rowCount()):
+            req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Check if this a directory or a file
             path, filename = os.path.split(req_file_path)
             if not filename:
@@ -304,8 +326,8 @@ class Tool(ProjectItem):
         Returns:
             Boolean variable depending on success
         """
-        for i in range(self._widget.input_file_model.rowCount()):
-            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+        for i in range(self.input_file_model.rowCount()):
+            req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Check if this a directory or a file
             path, filename = os.path.split(req_file_path)
             if not filename:
@@ -331,8 +353,8 @@ class Tool(ProjectItem):
             Dictionary of paths where required files are found or None if some file was not found.
         """
         file_paths = dict()
-        for i in range(self._widget.input_file_model.rowCount()):
-            req_file_path = self._widget.input_file_model.item(i, 0).data(Qt.DisplayRole)
+        for i in range(self.input_file_model.rowCount()):
+            req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Just get the filename if there is a path attached to the file
             path, filename = os.path.split(req_file_path)
             if not filename:
@@ -432,11 +454,11 @@ class Tool(ProjectItem):
         """
         item_list = list()
         for output_item in self._toolbox.connection_model.output_items(self.name):
-            found_item = self._toolbox.project_item_model.find_item(output_item, Qt.MatchExactly | Qt.MatchRecursive)
-            if not found_item:
+            found_index = self._toolbox.project_item_model.find_item(output_item)
+            if not found_index:
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(output_item))
                 continue
-            item_data = found_item.data(Qt.UserRole)
+            item_data = self._toolbox.project_item_model.project_item(found_index)
             item_list.append(item_data)
         return item_list
 
@@ -481,8 +503,8 @@ class Tool(ProjectItem):
     @Slot(int, name="execution_finished")
     def execution_finished(self, return_code):
         """Tool execution finished."""
-        self._widget.ui.pushButton_stop.setEnabled(False)
-        self._widget.ui.pushButton_execute.setEnabled(True)
+        self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
+        self._toolbox.ui.pushButton_tool_execute.setEnabled(True)
         self._graphics_item.stop_wheel_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execution_finished)
@@ -551,3 +573,43 @@ class Tool(ProjectItem):
             # Find ToolTemplate from model according to row
             new_tool = self._toolbox.tool_template_model.tool_template(row)
         self.set_tool_template(new_tool)
+
+    def make_header_for_input_files(self):
+        """Add header to input files model."""
+        h = QStandardItem("Input files")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.input_file_model.setHorizontalHeaderItem(0, h)
+
+    def make_header_for_output_files(self):
+        """Add header to output files model."""
+        h = QStandardItem("Output files")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.output_file_model.setHorizontalHeaderItem(0, h)
+
+    def populate_input_files_list(self, items):
+        """Add required Tool input files into a model.
+        If items is None or an empty list, model is cleared."""
+        self.input_file_model.clear()
+        self.make_header_for_input_files()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                self.input_file_model.appendRow(qitem)
+
+    def populate_output_files_list(self, items):
+        """Add Tool output files into a model.
+         If items is None or an empty list, model is cleared."""
+        self.output_file_model.clear()
+        self.make_header_for_output_files()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                self.output_file_model.appendRow(qitem)

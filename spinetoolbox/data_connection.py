@@ -53,12 +53,11 @@ class DataConnection(ProjectItem):
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
-        self.make_header_for_references()
-        self.make_header_for_data()
+        # self.add_reference_header()
+        # self.add_data_header()
         self.data_dir_watcher = QFileSystemWatcher(self)
         # Make directory for Data Connection
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        self.references = references
         try:
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
@@ -66,10 +65,11 @@ class DataConnection(ProjectItem):
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
         # Populate references model
+        self.references = references
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
-        # self.populate_data_list(data_files)
+        self.populate_data_list(data_files)
         self._graphics_item = DataConnectionImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
         # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
@@ -399,18 +399,18 @@ class DataConnection(ProjectItem):
         visited_items.append(self)
         for input_item in self._toolbox.connection_model.input_items(self.name):
             # Find item from project model
-            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
-            if not found_item:
+            found_index = self._toolbox.project_item_model.find_item(input_item)
+            if not found_index:
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
-            item_data = found_item.data(Qt.UserRole)
-            if item_data.item_type in ["Data Store", "Data Connection"]:
-                path = item_data.find_file(fname, visited_items)
+            item = self._toolbox.project_item_model.project_item(found_index)
+            if item.item_type in ["Data Store", "Data Connection"]:
+                path = item.find_file(fname, visited_items)
                 if path is not None:
                     return path
         return None
 
-    def make_header_for_references(self):
+    def add_reference_header(self):
         """Add header to files model. I.e. External Data Connection files."""
         h = QStandardItem("References")
         # Decrease font size
@@ -419,7 +419,7 @@ class DataConnection(ProjectItem):
         h.setFont(font)
         self.reference_model.setHorizontalHeaderItem(0, h)
 
-    def make_header_for_data(self):
+    def add_data_header(self):
         """Add header to data model. I.e. Internal Data Connection files."""
         h = QStandardItem("Data")
         # Decrease font size
@@ -433,7 +433,7 @@ class DataConnection(ProjectItem):
         If items is None or empty list, model is cleared.
         """
         self.reference_model.clear()
-        self.make_header_for_references()
+        self.add_reference_header()
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -446,7 +446,7 @@ class DataConnection(ProjectItem):
         If items is None or empty list, model is cleared.
         """
         self.data_model.clear()
-        self.make_header_for_data()
+        self.add_data_header()
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)

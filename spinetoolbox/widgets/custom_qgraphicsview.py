@@ -130,8 +130,7 @@ class CustomQGraphicsView(QGraphicsView):
             return False
         # Find destination item
         dst_name = link.dst_icon.name()
-        flags = Qt.MatchExactly | Qt.MatchRecursive
-        dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
+        dst_item = self._project_item_model.project_item(self._project_item_model.find_item(dst_name))
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
         # Refresh View references
