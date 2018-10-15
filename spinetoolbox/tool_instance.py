@@ -130,7 +130,7 @@ class ToolInstance(QObject):
         self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)  # Disconnect after exec.
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
-                self._toolbox.msg_error.emit("\tUnable to start Julia REPL")
+                self._toolbox.msg_warning.emit("\tThe execution will proceed without the Julia REPL.")
                 self._toolbox.msg.emit("*** Running Tool template <b>{0}</b> without REPL ***"
                                  .format(self.tool_template.name))
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
@@ -158,7 +158,7 @@ class ToolInstance(QObject):
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
-                                       "Julia is installed properly on your computer.")
+                                             "Julia is installed properly on your computer.")
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -243,15 +243,6 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        try:
-            self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)
-        except AttributeError:
-            pass
-        try:
-            self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)
-            self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)
-        except AttributeError:
-            pass
         self.tool_process.terminate_process()
 
     def remove(self):

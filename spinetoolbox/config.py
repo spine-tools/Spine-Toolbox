@@ -20,7 +20,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.1"
+SPINE_TOOLBOX_VERSION = "0.1.6"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -82,15 +82,16 @@ SQL_DIALECT_API = {
 
 # Default settings
 SETTINGS = {"project_directory": "",
-            "open_previous_project": "false",
+            "open_previous_project": "true",
             "previous_project": "",
-            "show_exit_prompt": "false",
+            "show_exit_prompt": "true",
             "logging_level": "2",
             "datetime": "true",
             "gams_path": "",
             "use_repl": "true",
             "julia_path": "",
-            "save_at_exit": "1"}
+            "save_at_exit": "1",
+            "commit_at_exit": "1"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \

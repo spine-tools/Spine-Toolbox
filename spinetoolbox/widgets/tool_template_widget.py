@@ -29,7 +29,6 @@ from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
     APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import busy_effect
 from widgets.custom_menus import AddIncludesPopupMenu
-import logging
 
 
 class ToolTemplateWidget(QWidget):
@@ -101,8 +100,8 @@ class ToolTemplateWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.toolButton_plus_includes.clicked.connect(self.add_includes)
-        self.ui.treeView_includes.file_dropped.connect(self.add_single_include)
+        self.ui.toolButton_plus_includes.clicked.connect(self.show_add_includes_dialog)
+        self.ui.treeView_includes.files_dropped.connect(self.add_dropped_includes)
         self.ui.treeView_includes.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
@@ -191,8 +190,8 @@ class ToolTemplateWidget(QWidget):
         open(file_path, 'w').close()
         self.add_single_include(file_path)
 
-    @Slot(name="add_includes")
-    def add_includes(self):
+    @Slot(name="show_add_includes_dialog")
+    def show_add_includes_dialog(self):
         """Let user select source files for this tool template."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = self.includes_main_path if self.includes_main_path else APPLICATION_PATH
@@ -204,7 +203,12 @@ class ToolTemplateWidget(QWidget):
             if not self.add_single_include(path):
                 continue
 
-    @Slot("QString", name="add_single_include")
+    @Slot("QVariant", name="add_dropped_includes")
+    def add_dropped_includes(self, file_paths):
+        for path in file_paths:
+            if not self.add_single_include(path):
+                continue
+
     def add_single_include(self, path):
         """Add file path to Includes list."""
         dirname, file_pattern = os.path.split(path)
@@ -236,7 +240,7 @@ class ToolTemplateWidget(QWidget):
         if not index:
             return
         if not index.isValid():
-            logging.error("Index not valid")
+            self._toolbox.msg_error.emit("Selected index not valid")
             return
         else:
             includes_file = self.includes_model.itemFromIndex(index).text()
@@ -425,7 +429,7 @@ class ToolTemplateWidget(QWidget):
             tool.set_def_path(def_file)
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
                 return True
-            logging.debug("Updating definition for tool template '{}'".format(tool.name))
+            # logging.debug("Updating definition for tool template '{}'".format(tool.name))
             self._toolbox.update_tool_template(row, tool)
         else:
             answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
@@ -444,9 +448,8 @@ class ToolTemplateWidget(QWidget):
                 json.dump(self.definition, fp, indent=4)
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)
-                logging.exception("Saving JSON file failed.")
+                self._toolbox.msg_error.emit("Saving JSON file failed")
                 return False
-        logging.debug("Tool template added or updated.")
         return True
 
     def keyPressEvent(self, e):

@@ -22,12 +22,14 @@ from PySide2.QtGui import QKeySequence
 from widgets.custom_menus import QOkMenu
 
 
-class CustomQTableView(QTableView):
+class CopyPasteTableView(QTableView):
     """Custom QTableView class with copy-paste functionality.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
+
+    focus_gained = Signal(name="focus_gained")
 
     def __init__(self, parent):
         """Initialize the class."""
@@ -39,6 +41,10 @@ class CustomQTableView(QTableView):
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
         self.clipboard_text = QApplication.clipboard().text()
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.focus_gained.emit()
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -68,22 +74,21 @@ class CustomQTableView(QTableView):
             for j in range(first.left(), first.right()+1):
                 if h_header.isSectionHidden(j):
                     continue
-                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+                data = self.model().index(i, j).data(Qt.DisplayRole)
+                str_data = str(data) if data is not None else ""
+                row.append(str_data)
             rows.append("\t".join(row))
         content = "\n".join(rows)
         QApplication.clipboard().setText(content)
         return True
 
-    def paste(self, text, into_new_rows=False):
+    def paste(self, text):
         """Paste data from clipboard."""
-        if into_new_rows:
-            self.paste_normal(text, into_new_rows=True)
+        selection = self.selectionModel().selection()
+        if len(selection.indexes()) > 1:
+            self.paste_on_selection(text)
         else:
-            selection = self.selectionModel().selection()
-            if len(selection.indexes()) > 1:
-                self.paste_on_selection(text)
-            else:
-                self.paste_normal(text, into_new_rows=False)
+            self.paste_normal(text)
 
     def paste_on_selection(self, text):
         """Paste clipboard data on selection, but not beyond.
@@ -91,25 +96,31 @@ class CustomQTableView(QTableView):
         if not text:
             return False
         selection = self.selectionModel().selection()
-        if not selection:
+        if selection.isEmpty():
             return False
         first = selection.first()
         data = [line.split('\t') for line in text.split('\n')]
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
-        for i in range(first.top(), first.bottom()+1):
+        indexes = list()
+        values = list()
+        for i in range(first.top(), first.bottom() + 1):
             if v_header.isSectionHidden(i):
                 continue
-            for j in range(first.left(), first.right()+1):
+            for j in range(first.left(), first.right() + 1):
                 if h_header.isSectionHidden(j):
                     continue
                 index = self.model().index(i, j)
-                ii = i % len(data)
-                jj = j % len(data[ii])
-                value = data[ii][jj]
-                self.model().setData(index, value, Qt.EditRole)
+                if index.flags() & Qt.ItemIsEditable:
+                    ii = (i - first.top()) % len(data)
+                    jj = (j - first.left()) % len(data[ii])
+                    value = data[ii][jj]
+                    indexes.append(index)
+                    values.append(value)
+        self.model().batch_set_data(indexes, values)
+        return True
 
-    def paste_normal(self, text, into_new_rows=False):
+    def paste_normal(self, text):
         """Paste clipboard data, overwritting cells if needed"""
         if not text:
             return False
@@ -121,43 +132,32 @@ class CustomQTableView(QTableView):
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
         row = top_left_index.row()
+        indexes = list()
+        values = list()
         for line in data:
             if not line:
                 continue
             if v_header.isSectionHidden(row):
                 row += 1
-            if into_new_rows:
-                self.model().insertRows(row, 1)
             column = top_left_index.column()
             for value in line:
                 if not value:
+                    column += 1
                     continue
                 if h_header.isSectionHidden(column):
                     column += 1
-                sibling = top_left_index.sibling(row, column)
-                if sibling.flags() & Qt.ItemIsEditable:
-                    self.model().setData(sibling, value, Qt.EditRole)
-                    self.selectionModel().select(sibling, QItemSelectionModel.Select)
+                index = top_left_index.sibling(row, column)
+                if index.flags() & Qt.ItemIsEditable:
+                    indexes.append(index)
+                    values.append(value)
+                    self.selectionModel().select(index, QItemSelectionModel.Select)
                 column += 1
             row += 1
+        self.model().batch_set_data(indexes, values)
         return True
 
-    # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
-    # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
-    # def moveCursor(self, cursor_action, modifiers):
-    #     """Don't move to next index if the self.editing flag is set.
-    #     """
-    #     if self.editing and cursor_action == self.CursorAction.MoveNext:
-    #         self.editing = False
-    #         return self.currentIndex()
-    #     return super().moveCursor(cursor_action, modifiers)
 
-    # def edit(self, index, trigger, event):
-    #     self.editing = True
-    #     return super().edit(index, trigger, event)
-
-
-class ParameterTableView(CustomQTableView):
+class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 
     Attributes:
@@ -165,7 +165,6 @@ class ParameterTableView(CustomQTableView):
     """
 
     filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
-    filter_triggered = Signal("QObject", name="filter_triggered")
 
     def __init__(self, parent):
         """Initialize the class."""
@@ -196,28 +195,10 @@ class ParameterTableView(CustomQTableView):
         self.action_all.triggered.connect(self.action_all_triggered)
         filter_menu.addAction(self.action_all)
         filter_menu.addSeparator()
-        # Get values from model, after the application of all filters and subfilters from other columns
-        values = list()
-        source_model = model.sourceModel()
-        for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter
-            if not model.filter_accept_rows(source_row, QModelIndex()):
-                continue
-            # Skip values rejected by subfilters from *other* columns
-            if not model.subfilter_accept_rows(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
-                continue
-            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
-            if data is None:
-                continue
-            values.append(data)
-        # Get values currently filtered in this column
-        try:
-            filtered_values = model.subrule_dict[self.filter_column]
-        except KeyError:
-            filtered_values = list()
+        values, filtered_values = model.autofilter_values(self.filter_column)
         # Add filter actions
         self.filter_action_list = list()
-        for i, value in enumerate(sorted(list(set(values)))):
+        for i, value in enumerate(sorted(list(values))):
             action = QAction(str(value), self)
             action.setCheckable(True)
             action.triggered.connect(self.update_action_all_checked)
@@ -250,9 +231,9 @@ class ParameterTableView(CustomQTableView):
         for action in self.filter_action_list:
             action.setChecked(checked)
 
-    @Slot(name="apply_filter")
+    @Slot(name="update_and_apply_filter")
     def update_and_apply_filter(self):
-        """Called when user clicks Ok in a filter. Emit `filter_triggered` signal."""
+        """Called when user clicks Ok in a filter. Emit `filter_changed` signal."""
         filter_text_list = list()
         for action in self.filter_action_list:
             if not action.isChecked():

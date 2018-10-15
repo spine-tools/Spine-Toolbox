@@ -56,17 +56,13 @@ To install cx_Freeze, download the correct wheel for your OS, for example,
 
 To install spinedatabase_api run
 
-    pip install git+https://gitlab.vtt.fi/spine/data.git
+    pip install git+https://gitlab.vtt.fi/spine/data
 
 To update spinedatabase_api run
 
-    pip install --upgrade git+https://gitlab.vtt.fi/spine/data.git
-
+    pip install --upgrade git+https://gitlab.vtt.fi/spine/data
 
 ### Installing requirements for Anaconda & Miniconda Python (3.5+)
-
-..
-**TODO: This should be updated**
 
 PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge
 channel. Datapackage 1.2.3 is available on the manulero channel.

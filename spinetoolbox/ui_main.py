@@ -221,7 +221,10 @@ class ToolboxUI(QMainWindow):
         # Data Stores
         self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
+        # TODO: Which icon should be used
         self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # icon_provider = QFileIconProvider()
+        # self.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
@@ -402,10 +405,9 @@ class ToolboxUI(QMainWindow):
                 return False
         if not os.path.isfile(load_path):
             self.msg_error.emit("File <b>{0}</b> not found".format(load_path))
-            logging.debug("File not found: {0}".format(load_path))
             return False
         if not load_path.lower().endswith('.proj'):
-            logging.debug("File name has unsupported extension. Only .proj files supported")
+            self.msg_error.emit("Selected file has unsupported extension. Only .proj files are supported")
             return False
         # Load project from JSON file
         try:
@@ -413,10 +415,10 @@ class ToolboxUI(QMainWindow):
                 try:
                     dicts = json.load(fh)
                 except json.decoder.JSONDecodeError:
-                    logging.exception("Failed to load file:{0}".format(load_path))
+                    self.msg_error.emit("Error in file <b>{0}</b>. Not valid JSON. {0}".format(load_path))
                     return False
         except OSError:
-            logging.exception("Could not load project from file {0}".format(load_path))
+            self.msg_error.emit("[OSError] Loading project file <b>{0}</b> failed".format(load_path))
             return False
         # Initialize UI
         self.clear_ui()
@@ -634,7 +636,6 @@ class ToolboxUI(QMainWindow):
                     tools.append(def_file)
                 project_dict['tool_templates'] = tools
             except KeyError:
-                logging.debug("Adding tool_templates keyword to project file")
                 project_dict['tool_templates'] = [def_file]
             # Save dictionaries back to project save file
             dicts['project'] = project_dict
@@ -653,7 +654,6 @@ class ToolboxUI(QMainWindow):
             return
         self.msg_success.emit("Tool template <b>{0}</b> successfully updated".format(tool_template.name))
         # Reattach Tool template to any Tools that use it
-        logging.debug("Reattaching Tool template {}".format(tool_template.name))
         # Find the updated tool template from ToolTemplateModel
         template = self.tool_template_model.find_tool_template(tool_template.name)
         if not template:
@@ -691,7 +691,6 @@ class ToolboxUI(QMainWindow):
             try:
                 tool_template_paths = project_dict['tool_templates']
             except KeyError:
-                logging.debug("tool_templates keyword not found in project file")
                 self.msg_warning.emit("No Tool templates in project")
                 return
             self.init_tool_template_model(tool_template_paths)
@@ -926,7 +925,6 @@ class ToolboxUI(QMainWindow):
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
-        logging.debug(res)
         if not res:
             logging.error("Failed to open editor for {0}".format(tool_template_url))
             self.msg_error.emit("Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "

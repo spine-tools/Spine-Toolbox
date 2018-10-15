@@ -28,11 +28,17 @@ class ObjectTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-    editKeyPressed = Signal("QModelIndex", name="editKeyPressed")
+    
+    edit_key_pressed = Signal("QModelIndex", name="edit_key_pressed")
+    focus_gained = Signal(name="focus_gained")
 
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
+
+    def focusInEvent(self, event):
+        super().focusInEvent(event)
+        self.focus_gained.emit()
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):
@@ -41,7 +47,7 @@ class ObjectTreeView(QTreeView):
         for edition.
         """
         if trigger == QTreeView.EditKeyPressed:
-            self.editKeyPressed.emit(index)
+            self.edit_key_pressed.emit(index)
         return False
 
     def copy(self):
@@ -62,7 +68,7 @@ class ReferencesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-    file_dropped = Signal("QString", name="file_dropped")
+    files_dropped = Signal("QVariant", name="files_dropped")
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -86,9 +92,8 @@ class ReferencesTreeView(QTreeView):
         event.accept()
 
     def dropEvent(self, event):
-        """Emit signal for each url dropped."""
-        for url in event.mimeData().urls():
-            self.file_dropped.emit(url.toLocalFile())
+        """Emit files_dropped signal with a list of files for each dropped url."""
+        self.files_dropped.emit([url.toLocalFile() for url in event.mimeData().urls()])
 
 
 class DataTreeView(QTreeView):
@@ -97,7 +102,7 @@ class DataTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-    file_dropped = Signal("QString", name="file_dropped")
+    files_dropped = Signal("QVariant", name="files_dropped")
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -123,9 +128,8 @@ class DataTreeView(QTreeView):
         event.accept()
 
     def dropEvent(self, event):
-        """Emit signal for each url dropped."""
-        for url in event.mimeData().urls():
-            self.file_dropped.emit(url.toLocalFile())
+        """Emit files_dropped signal with a list of files for each dropped url."""
+        self.files_dropped.emit([url.toLocalFile() for url in event.mimeData().urls()])
 
     def mousePressEvent(self, event):
         """Register drag start position"""
@@ -161,13 +165,13 @@ class DataTreeView(QTreeView):
         self.drag_start_pos = None
 
 
-class IncludesTreeView(QTreeView):
-    """Custom QTreeView class for 'Includes' in Tool Template form.
+class SourcesTreeView(QTreeView):
+    """Custom QTreeView class for 'Sources' in Tool Template form.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
-    file_dropped = Signal("QString", name="file_dropped")
+    files_dropped = Signal("QVariant", name="files_dropped")
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -191,6 +195,5 @@ class IncludesTreeView(QTreeView):
         event.accept()
 
     def dropEvent(self, event):
-        """Create list of file paths and emit signal."""
-        for url in event.mimeData().urls():
-            self.file_dropped.emit(url.toLocalFile())
+        """Emit files_dropped signal with a list of files for each dropped url."""
+        self.files_dropped.emit([url.toLocalFile() for url in event.mimeData().urls()])

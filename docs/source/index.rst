@@ -10,13 +10,13 @@ computation tasks, such as energy system models.
     :maxdepth: 1
     :caption: Contents:
 
-    introduction
-    tutorial
+    getting_started
+    terminology
     contribution_guide
     code_ref
 
 Dependencies
-============
+------------
 Spine Toolbox requires Python 3.5 or higher.
 
 Spine Toolbox uses code from packages and/or projects listed in the table below. Required packages must be
@@ -42,11 +42,11 @@ minimum versions.
 +-------------------+---------------+---------------+
 | spinedatabase_api | 0.0.1         |     LGPL      |
 +-------------------+---------------+---------------+
-| numpy             | 1.15.1        |    BSD 2.0    |
+| numpy             | 1.15.1        |    BSD        |
 +-------------------+---------------+---------------+
 | matplotlib        | 2.2.3         |    BSD        |
 +-------------------+---------------+---------------+
-| scipy             | 1.1.0         |    BSD 2.0    |
+| scipy             | 1.1.0         |    BSD        |
 +-------------------+---------------+---------------+
 | **Optional packages (optional-requirements.txt)** |
 +-------------------+---------------+---------------+

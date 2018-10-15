@@ -1,12 +1,10 @@
-.. Introduction page
+.. Introduction page. Only has the terminology for now.
    Created: 31.8.2018
 
-************
-Introduction
-************
-
+***********
 Terminology
-===========
+***********
+
 The following is a list of definitions that are used throughout the documentation and in Spine Toolbox.
 
 Spine project Terminology

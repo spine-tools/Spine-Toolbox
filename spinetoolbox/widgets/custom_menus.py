@@ -166,42 +166,51 @@ class ObjectTreeContextMenu(CustomContextMenu):
         super().__init__(parent)
         if not index.isValid():
             return
+        copy_icon = self._parent.ui.actionCopy.icon()
         plus_object_icon = self._parent.ui.actionAdd_objects.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameters.icon()
         plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameters.icon()
+        edit_object_icon = self._parent.ui.actionEdit_objects.icon()
+        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
+        minus_object_icon = self._parent.ui.actionRemove_object_tree_items.icon()
+        fully_expand_icon = self._parent.fully_expand_icon
+        fully_collapse_icon = self._parent.fully_collapse_icon
+        find_next_icon = self._parent.find_next_icon
         item = index.model().itemFromIndex(index)
         item_type = item.data(Qt.UserRole)
-        self.add_action("Copy")
+        self.add_action("Copy text", copy_icon)
+        self.addSeparator()
+        if index.model().hasChildren(index):
+            self.add_action("Fully expand", fully_expand_icon)
+            self.add_action("Fully collapse", fully_collapse_icon)
+        if item_type == 'relationship':
+            self.add_action("Find next", find_next_icon)
         self.addSeparator()
         if item_type == 'root':
-            self.add_action("Add object classes")
+            self.add_action("Add object classes", plus_object_icon)
         elif item_type == 'object_class':
             self.add_action("Add relationship classes", plus_relationship_icon)
             self.add_action("Add objects", plus_object_icon)
+            self.add_action("Add parameter definitions", plus_object_parameter_icon)
             self.addSeparator()
-            self.add_action("Add parameters", plus_object_parameter_icon)
-            self.addSeparator()
-            self.add_action("Rename object class")
+            self.add_action("Edit object classes", edit_object_icon)
         elif item_type == 'object':
             self.add_action("Add parameter values", plus_object_parameter_icon)
             self.addSeparator()
-            self.add_action("Rename object")
+            self.add_action("Edit objects", edit_object_icon)
         elif item_type == 'relationship_class':
             self.add_action("Add relationships", plus_relationship_icon)
+            self.add_action("Add parameter definitions", plus_relationship_parameter_icon)
             self.addSeparator()
-            self.add_action("Add parameters", plus_relationship_parameter_icon)
-            self.addSeparator()
-            self.add_action("Rename relationship class")
+            self.add_action("Edit relationship classes", edit_relationship_icon)
         elif item_type == 'relationship':
-            self.add_action("Expand next")
-            self.addSeparator()
             self.add_action("Add parameter values", plus_relationship_parameter_icon)
             self.addSeparator()
-            self.add_action("Rename relationship")
+            self.add_action("Edit relationships", edit_relationship_icon)
         if item_type != 'root':
             self.addSeparator()
-            self.add_action("Remove selected")
+            self.add_action("Remove selected", minus_object_icon)
         self.exec_(position)
 
 
@@ -213,16 +222,17 @@ class ParameterContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
-    def __init__(self, parent, position, index):
+    def __init__(self, parent, position, index, remove_icon):
         """Class constructor."""
         super().__init__(parent)
         if not index.isValid():
             return
-        self.add_action("Remove selected")
+        copy_icon = self._parent.ui.actionCopy.icon()
+        paste_icon = self._parent.ui.actionPaste.icon()
+        self.add_action("Copy", copy_icon)
+        self.add_action("Paste", paste_icon)
         self.addSeparator()
-        self.add_action("Copy")
-        self.add_action("Paste")
-        self.add_action("Paste into new row(s)")
+        self.add_action("Remove selected", remove_icon)
         self.exec_(position)
 
 
@@ -296,7 +306,7 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         # Open a tool template file
         self.add_action("New file", self._parent.new_include)
         self.addSeparator()
-        self.add_action("Open file", self._parent.add_includes)
+        self.add_action("Open files...", self._parent.show_add_includes_dialog)
 
 
 class QOkMenu(QMenu):

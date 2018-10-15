@@ -123,10 +123,6 @@ class Tool(ProjectItem):
 
     @Slot(name="stop_process")
     def stop_process(self):
-        try:
-            self.instance.instance_finished_signal.disconnect(self.execution_finished)
-        except Exception as e:
-            logging.exception("Exception {0} caught in Tool stop_process()".format(e))
         self.instance.terminate_instance()
         self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
@@ -465,7 +461,7 @@ class Tool(ProjectItem):
                     self._toolbox.msg_error.emit("\t Output file <b>{0}</b> does not exist".format(src_path))
                     continue
                 if item.item_type == "Data Connection":
-                    item.add_file_to_references(src_path)
+                    item.add_files_to_references([src_path])  # Give path in a list
                     n_created_refs += 1
                 elif item.item_type == "Data Store":
                     reference = {

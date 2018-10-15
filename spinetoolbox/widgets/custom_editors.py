@@ -17,9 +17,8 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QWidgetAction, QWidget, \
-    QHBoxLayout, QActionGroup
-from PySide2.QtGui import QStandardItemModel, QStandardItem, QIntValidator
+from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu
+from PySide2.QtGui import QIntValidator
 from widgets.custom_menus import QOkMenu
 
 

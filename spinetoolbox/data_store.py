@@ -21,11 +21,12 @@ import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QFileIconProvider
 from project_item import ProjectItem
-from spinedatabase_api import DatabaseMapping, SpineDBAPIError, create_new_spine_database
+from spinedatabase_api import DiffDatabaseMapping, DatabaseMapping, SpineDBAPIError, create_new_spine_database
 from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
+from config import SQL_DIALECT_API
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
@@ -61,6 +62,7 @@ class DataStore(ProjectItem):
         self.selected_username = ""
         self.selected_password = ""
         # self._widget = DataStoreWidget(self, self.item_type)
+        self.data_store_treeview = None
         # Make directory for Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -121,12 +123,12 @@ class DataStore(ProjectItem):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.comboBox_dialect.setCurrentIndex(self.selected_dialect)
         # Set widgets enabled/disabled according to selected dialect
-        dialect = self._toolbox.ui.comboBox_dialect.currentText()
-        if dialect == "":
+        _dialect = self._toolbox.ui.comboBox_dialect.currentText()
+        if _dialect == "":
             self.enable_no_dialect()
-        elif dialect == "sqlite":
+        elif _dialect == "sqlite":
             self.enable_sqlite()
-        elif dialect == "mssql":
+        elif _dialect == "mssql":
             self.enable_mssql()
         else:
             self.enable_common()
@@ -168,15 +170,23 @@ class DataStore(ProjectItem):
             return
         self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
 
+    @Slot("QString", name="set_path_to_sqlite_file")
+    def set_path_to_sqlite_file(self, file_path):
+        """Set path to SQLite file."""
+        self._widget.ui.lineEdit_SQLite_file.setText(file_path)
+
     def load_reference(self, reference):
         """Update ui so it reflects the stored reference after loading a project."""
         # TODO: now it only handles SQLite references, but should handle all types of reference
-        if not reference:
+        if not reference:  # This probably does not happen anymore
             return
         # Keep compatibility with previous versions where reference was a list
         if isinstance(reference, list):
             reference = reference[0]
         db_url = reference['url']
+        if not db_url or db_url == "":
+            # No point in checking further
+            return
         database = reference['database']
         username = reference['username']
         try:
@@ -185,21 +195,24 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Unable to parse stored reference. Please select a new reference.")
             return
         try:
-            dialect, dbapi = dialect_dbapi.split('+')
+            _dialect, _dbapi = dialect_dbapi.split('+')
         except ValueError:
-            dialect = dialect_dbapi
-            dbapi = None
-        if dialect not in SQL_DIALECT_API:
-            self._toolbox.msg_error.emit("Dialect '{}' of stored reference is not supported.".format(dialect))
+            _dialect = dialect_dbapi
+            _dbapi = None
+        if _dialect not in SQL_DIALECT_API:
+            self._toolbox.msg_error.emit("Stored reference dialect <b>{}</b> is not supported.".format(_dialect))
             return
-        self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
-        if dbapi and SQL_DIALECT_API[dialect] != dbapi:
-            recommended_dbapi = SQL_DIALECT_API[dialect]
-            self._toolbox.msg_warning.emit("The stored reference is using dialect '{0}' with driver '{1}', whereas "
-                                           "'{2}' is the recommended.".format(dialect, dbapi, recommended_dbapi))
-        if dialect == 'sqlite':
+        self._toolbox.ui.comboBox_dialect.setCurrentText(_dialect)
+        if _dbapi and SQL_DIALECT_API[_dialect] != _dbapi:
+            recommended_dbapi = SQL_DIALECT_API[_dialect]
+            self._toolbox.msg_warning.emit("The stored reference is using dialect <b>{0}</b> with driver <b>{1}</b>, "
+                                           "whereas <b>{2}</b> is recommended"
+                                           .format(_dialect, _dbapi, recommended_dbapi))
+        if _dialect == 'sqlite':
+            file_path = ""
             try:
                 file_path = db_url.split(':///')[1]
+                file_path = os.path.abspath(file_path)
             except IndexError:
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
@@ -310,32 +323,27 @@ class DataStore(ProjectItem):
                     return False
             else:
                 self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
-                logging.debug("Cancelled")
                 msg = "Unable to use dialect '{}'.".format(dialect)
                 self._toolbox.msg_error.emit(msg)
                 return False
             # Check that dialect is not found
-            logging.debug("Checking dialect again")
             if not self.check_dialect(dialect):
                 self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
 
     @busy_effect
     def install_dbapi_pip(self, dbapi):
         """Install DBAPI using pip."""
-        msg = "Installing module '{}' via 'pip'.".format(dbapi)
-        self._toolbox.msg_proc.emit(msg)
+        self._toolbox.msg.emit("Installing module <b>{0}</b> using pip".format(dbapi))
         program = "pip"
-        args = ["install {0}".format(dbapi)]
+        args = list()
+        args.append("install")
+        args.append("{0}".format(dbapi))
         pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
         pip_install.start_process()
         if pip_install.wait_for_finished():
-            msg = "Module '{}' successfully installed via 'pip'.".format(dbapi)
-            self._toolbox.msg_success.emit(msg)
-            logging.debug("pip installation succeeded")
+            self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
             return True
-        logging.error("Failed to install module '{}' with pip.".format(dbapi))
-        msg = "Failed to install module '{}' with pip.".format(dbapi)
-        self._toolbox.msg_error.emit(msg)
+        self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
         return False
 
     @busy_effect
@@ -344,26 +352,41 @@ class DataStore(ProjectItem):
         try:
             import conda.cli
         except ImportError:
-            logging.debug("Could not find conda. Installing {0} failed.".format(dbapi))
-            msg = "Conda is missing"
-            self._toolbox.msg_error.emit(msg)
+            self._toolbox.msg_error.emit("Conda not found. Installing {0} failed.".format(dbapi))
             self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
         try:
-            msg = "Installing module '{}' via 'conda'.".format(dbapi)
-            self._toolbox.msg_proc.emit(msg)
+            self._toolbox.msg.emit("Installing module <b>{0}</b> using Conda".format(dbapi))
             conda.cli.main('conda', 'install',  '-y', dbapi)
-            msg = "Module '{}' successfully installed via 'conda'.".format(dbapi)
-            self._toolbox.msg_success.emit(msg)
-            logging.debug("conda installation succeeded")
+            self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
             return True
         except Exception as e:
-            logging.exception(e)
-            logging.error("Failed to install module '{}' with conda.".format(dbapi))
-            msg = "Failed to install module '{}' with conda.".format(dbapi)
-            self._toolbox.msg_error.emit(msg)
+            self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
+
+    def save_reference(self):
+        """Returns the current state of the reference. Used when saving the project."""
+        # TODO: Saving an SQLite reference is the only one that is implemented.
+        dialect = self._widget.ui.comboBox_dialect.currentText()
+        if not dialect:
+            return {"database": "", "username": "", "url": ""}
+        if dialect == 'sqlite':
+            database = self._widget.ui.lineEdit_database.text()
+            username = self._widget.ui.lineEdit_username.text()
+            sqlite_file = self._widget.ui.lineEdit_SQLite_file.text()
+            url = 'sqlite:///{0}'.format(sqlite_file)
+        else:
+            # TODO: This needs more work
+            database = self._widget.ui.comboBox_dsn.currentText()
+            username = self._widget.ui.lineEdit_username.text()
+            url = ""
+        reference = {
+            'database': database,
+            'username': username,
+            'url': url
+        }
+        return reference
 
     def reference(self):
         """Return a reference from user's choices."""
@@ -388,6 +411,12 @@ class DataStore(ProjectItem):
             database = dsn
         elif dialect == 'sqlite':
             sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
+            if not sqlite_file:
+                self._toolbox.msg_warning.emit("Path to SQLite file missing")
+                return None
+            if not os.path.isfile(sqlite_file):
+                self._toolbox.msg_warning.emit("Invalid path")
+                return None
             url = 'sqlite:///{0}'.format(sqlite_file)
             # Set database equal to file's basename for creating the reference below
             database = os.path.basename(sqlite_file)
@@ -421,12 +450,12 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Connection failed: {}".format(e.orig.args))
             return None
         if dialect == 'sqlite':
-            # Check integrity SQLite database
+            # Check integrity of SQLite database
             try:
                 engine.execute('pragma quick_check;')
             except DatabaseError as e:
-                self._toolbox.msg_error.emit("The file {0} has integrity issues "
-                                             "(not a SQLite database?): {1}".format(database, e.orig.args))
+                self._toolbox.msg_error.emit("File {0} has integrity issues "
+                                             "(not an SQLite database?): {1}".format(database, e.orig.args))
                 return None
         # Get system's username if none given
         if not username:
@@ -442,6 +471,12 @@ class DataStore(ProjectItem):
     @Slot(name="open_treeview")
     def open_treeview(self):
         """Open reference in Data Store form."""
+        if self.data_store_treeview:
+            self.data_store_treeview.raise_()
+            return
+        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
+            self._toolbox.msg_warning.emit("Please select dialect first")
+            return
         reference = self.reference()
         if not reference:
             return
@@ -449,12 +484,17 @@ class DataStore(ProjectItem):
         database = reference['database']
         username = reference['username']
         try:
-            mapping = DatabaseMapping(db_url, username)
+            db_map = DiffDatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        data_store_form = DataStoreForm(self, mapping, database)
-        data_store_form.show()
+        self.data_store_treeview = DataStoreForm(self, db_map, database)
+        self.data_store_treeview.destroyed.connect(self.data_store_treeview_destroyed)
+        self.data_store_treeview.show()
+
+    @Slot(name="data_store_treeview_destroyed")
+    def data_store_treeview_destroyed(self):
+        self.data_store_treeview = None
 
     @Slot(name="open_directory")
     def open_directory(self):
@@ -504,6 +544,12 @@ class DataStore(ProjectItem):
         if not database:
             return
         filename = os.path.join(self.data_dir, database + ".sqlite")
+        if os.path.isfile(filename):
+            msg = "File <b>{}</b> already in <b>{}</b> project directory.<br/><br/>Overwrite?"\
+                .format(database + ".sqlite", os.path.basename(self.data_dir))
+            answer = QMessageBox.question(self._toolbox, 'Overwrite file?', msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                return
         try:
             os.remove(filename)
         except OSError:

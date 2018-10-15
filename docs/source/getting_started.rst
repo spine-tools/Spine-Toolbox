@@ -22,10 +22,12 @@
 .. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
 
 
-Tutorial
-========
+***************
+Getting Started
+***************
 
-Welcome to the tutorial for Spine Toolbox. This tutorial covers the following topics:
+Welcome to the getting started guide for Spine Toolbox. This section gives an introduction to the user interface,
+and a tutorial on how to get started using the application. The following topics are covered:
 
 .. contents::
    :local:

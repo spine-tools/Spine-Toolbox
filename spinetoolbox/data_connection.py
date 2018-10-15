@@ -24,8 +24,7 @@ from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from project_item import ProjectItem
-# from spinedatabase_api import create_new_spine_database, DatabaseMapping, SpineDBAPIError
-from widgets.data_connection_subwindow_widget import DataConnectionWidget
+# from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
 from config import APPLICATION_PATH, HEADER_POINTSIZE
@@ -70,7 +69,7 @@ class DataConnection(ProjectItem):
         self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
-        # self._widget.populate_data_list(data_files)
+        # self.populate_data_list(data_files)
         self._graphics_item = DataConnectionImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
         # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
@@ -85,8 +84,9 @@ class DataConnection(ProjectItem):
         self._toolbox.ui.toolButton_datapackage.clicked.connect(self.call_infer_datapackage)
         self._toolbox.ui.treeView_dc_references.doubleClicked.connect(self.open_reference)
         self._toolbox.ui.treeView_dc_data.doubleClicked.connect(self.open_data_file)
-        self._toolbox.ui.treeView_dc_references.file_dropped.connect(self.add_file_to_references)
-        self._toolbox.ui.treeView_dc_data.file_dropped.connect(self.add_file_to_data_dir)
+        # TODO: Is file_dropped signal really in use with Data Connections?
+        # self._toolbox.ui.treeView_dc_references.file_dropped.connect(self.add_file_to_references)
+        # self._toolbox.ui.treeView_dc_data.file_dropped.connect(self.add_file_to_data_dir)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
     def disconnect_signals(self):
@@ -102,8 +102,9 @@ class DataConnection(ProjectItem):
             retvals.append(self._toolbox.ui.toolButton_datapackage.clicked.disconnect())
             retvals.append(self._toolbox.ui.treeView_dc_references.doubleClicked.disconnect())
             retvals.append(self._toolbox.ui.treeView_dc_data.doubleClicked.disconnect())
-            retvals.append(self._toolbox.ui.treeView_dc_references.file_dropped.disconnect())
-            retvals.append(self._toolbox.ui.treeView_dc_data.file_dropped.disconnect())
+            # TODO: Is file_dropped signal really in use with Data Connections?
+            # retvals.append(self._toolbox.ui.treeView_dc_references.file_dropped.disconnect())
+            # retvals.append(self._toolbox.ui.treeView_dc_data.file_dropped.disconnect())
             retvals.append(self.data_dir_watcher.directoryChanged.disconnect())
         except RuntimeError:
             self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
@@ -155,23 +156,49 @@ class DataConnection(ProjectItem):
 
     @Slot("QString", name="add_file_to_references")
     def add_file_to_references(self, path):
-        """Add filepath to reference list"""
+        """Add a single file path to reference list.
+
+        Args:
+            path (str): Path to file
+        """
         if path in self.references:
             self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
             return
         self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
 
-    @Slot("QString", name="add_file_to_data_dir")
-    def add_file_to_data_dir(self, file_path):
-        """Add file to data directory"""
-        src_dir, filename = os.path.split(file_path)
-        self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
-        try:
-            shutil.copy(file_path, self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit("[OSError] Copying failed")
-            return
+    @Slot("QVariant", name="add_files_to_references")
+    def add_files_to_references(self, paths):
+        """Add multiple file paths to reference list.
+
+        Args:
+            paths (list): A list of paths to files
+        """
+        for path in paths:
+            if path in self.references:
+                self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
+                return
+            self.references.append(os.path.abspath(path))
+        self.populate_reference_list(self.references)
+
+    @Slot("QGraphicsItem", "QVariant", name="receive_files_dropped_on_dc")
+    def receive_files_dropped_on_dc(self, item, file_paths):
+        """Called when files are dropped onto a data connection graphics item.
+        If the item is this Data Connection's graphics item, add the files to data."""
+        if item == self._graphics_item:
+            self.add_files_to_data_dir(file_paths)
+
+    @Slot("QVariant", name="add_files_to_data_dir")
+    def add_files_to_data_dir(self, file_paths):
+        """Add files to data directory"""
+        for file_path in file_paths:
+            src_dir, filename = os.path.split(file_path)
+            self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
+            try:
+                shutil.copy(file_path, self.data_dir)
+            except OSError:
+                self._toolbox.msg_error.emit("[OSError] Copying failed")
+                return
         data_files = self.data_files()
         self.populate_data_list(data_files)
 
@@ -292,11 +319,12 @@ class DataConnection(ProjectItem):
 
     def save_datapackage(self, datapackage):
         """Write datapackage to file 'datapackage.json' in data directory."""
-        if os.path.exists(os.path.join(self.data_dir, "datapackage.json")):
+        if os.path.isfile(os.path.join(self.data_dir, "datapackage.json")):
             msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. '
                    'Are you sure?').format(os.path.basename(self.data_dir))
             # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(None, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
+            answer = QMessageBox.question(
+                self._toolbox, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return False
         if datapackage.save(os.path.join(self.data_dir, 'datapackage.json')):
@@ -366,7 +394,7 @@ class DataConnection(ProjectItem):
             if fn == fname:
                 # logging.debug("{0} found in DC {1}".format(fname, self.name))
                 self._toolbox.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
-                                      .format(fname, self.name))
+                                       .format(fname, self.name))
                 return path
         visited_items.append(self)
         for input_item in self._toolbox.connection_model.input_items(self.name):
@@ -381,7 +409,6 @@ class DataConnection(ProjectItem):
                 if path is not None:
                     return path
         return None
-
 
     def make_header_for_references(self):
         """Add header to files model. I.e. External Data Connection files."""

@@ -18,8 +18,8 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Slot, Qt, QRectF
-from PySide2.QtGui import QColor, QPen, QBrush, QTransform
+from PySide2.QtCore import Signal, Slot, Qt, QRectF
+from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
 
@@ -107,26 +107,36 @@ class CustomQGraphicsView(QGraphicsView):
         self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
     def add_link(self, src_name, dst_name, index):
-        """Draw link between source and sink items on scene and add Link instance to connection model."""
+        """Draws link between source and sink items on scene and
+        appends connection model. Refreshes View references if needed."""
         src_item_index = self._project_item_model.find_item(src_name)
         dst_item_index = self._project_item_model.find_item(dst_name)
         src_item = self._project_item_model.project_item(src_item_index)
         dst_item = self._project_item_model.project_item(dst_item_index)
-        logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
+        # logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
         link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
         self.scene().addItem(link)
         self._connection_model.setData(index, link)
+        # Refresh View references
+        if dst_item.item_type == "View":
+            dst_item.view_refresh_signal.emit()
 
     def remove_link(self, index):
-        """Remove link between source and sink items
-        on scene and remove Link instance from connection model."""
+        """Removes link between source and sink items on scene and
+        updates connection model. Refreshes View references if needed."""
         link = self._connection_model.data(index, Qt.UserRole)
         if not link:
             logging.error("Link not found. This should not happen.")
             return False
-        logging.debug("Removing link in ({0},{1})".format(index.row(), index.column()))
+        # Find destination item
+        dst_name = link.dst_icon.name()
+        flags = Qt.MatchExactly | Qt.MatchRecursive
+        dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
+        # Refresh View references
+        if dst_item.item_type == "View":
+            dst_item.view_refresh_signal.emit()
 
     def restore_links(self):
         """Iterate connection model and draw links to all that are 'True'
@@ -270,8 +280,8 @@ class CustomQGraphicsView(QGraphicsView):
                 self.link_drawer.drawing = False
                 if e.button() != Qt.LeftButton:
                     return
-                self._toolbox.msg_warning.emit("Unable to make connection. "
-                                          "Try landing the connection onto a connector button.")
+                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
+                                               "the connection onto a connector button.")
 
     def showEvent(self, event):
         """Make the scene at least as big as the viewport."""
@@ -286,6 +296,7 @@ class CustomQGraphicsView(QGraphicsView):
 
 class CustomQGraphicsScene(QGraphicsScene):
     """A scene that handles drag and drop events."""
+    files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
 
     def __init__(self, parent, toolbox):
         """Initialize class."""
@@ -324,7 +335,7 @@ class CustomQGraphicsScene(QGraphicsScene):
         """
         source = event.source()
         if not isinstance(source, DraggableWidget):
-            event.ignore()
+            super().dropEvent(event)
             return
         if not self._toolbox.project():
             self._toolbox.msg.emit("Create or open a project first")

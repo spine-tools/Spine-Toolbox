@@ -366,6 +366,8 @@ color: rgb(255, 255, 255);</string>
     </layout>
    </item>
   </layout>
+  <zorder>verticalSpacer_3</zorder>
+  <zorder>toolButton_connector</zorder>
  </widget>
  <tabstops>
   <tabstop>comboBox_tool</tabstop>
