@@ -891,9 +891,12 @@ class MinimalTableModel(QAbstractTableModel):
                 continue
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
-        # TODO: This below assumes some nice ordering in the indexes list. Can we do better?
-        # Maybe just emit data changed for the entire model??
-        self.dataChanged.emit(indexes[0], indexes[-1], [Qt.EditRole, Qt.DisplayRole])
+        # Find square envelope of indexes to emit dataChanged
+        top = min(ind.row() for ind in indexes)
+        bottom = max(ind.row() for ind in indexes)
+        left = min(ind.column() for ind in indexes)
+        right = max(ind.column() for ind in indexes)
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -1246,8 +1249,6 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
             visited_item.appendRow(relationship_class_item)
-            # TODO: Don't add duplicate relationship class if parent and child are the same?
-            # TODO: Add mirror proto relationship class?
 
     def add_relationship(self, wide_relationship):
         """Add relationship item to model."""
@@ -1482,9 +1483,12 @@ class DataStoreTableModel(MinimalTableModel):
                 non_wip_data.append(data[k])
         self.batch_set_wip_data(wip_indexes, wip_data)
         self.batch_update_data(non_wip_indexes, non_wip_data)
-        # TODO: This below assumes some nice ordering in the indexes list. Can we do better?
-        # Maybe just emit data changed for the entire model?? emit layoutChanged?
-        self.dataChanged.emit(indexes[0], indexes[-1], [Qt.EditRole, Qt.DisplayRole])
+        # Find square envelope of indexes to emit dataChanged
+        top = min(ind.row() for ind in indexes)
+        bottom = max(ind.row() for ind in indexes)
+        left = min(ind.column() for ind in indexes)
+        right = max(ind.column() for ind in indexes)
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
@@ -1711,7 +1715,11 @@ class ObjectParameterModel(ParameterModel):
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in reversed(range(self.rowCount())):
-            if self._data[row][column][Qt.DisplayRole] in removed_names:
+            try:
+                name = self._data[row][column][Qt.DisplayRole]
+            except KeyError:
+                continue
+            if name in removed_names:
                 super().removeRows(row, 1)
 
     def items_to_add(self, indexes):
@@ -1792,12 +1800,19 @@ class RelationshipParameterModel(ParameterModel):
         if removed_type == "relationship_class":
             column = header_index("relationship_class_name")
             for row in reversed(range(self.rowCount())):
-                if self._data[row][column][Qt.DisplayRole] in removed_names:
+                try:
+                    name = self._data[row][column][Qt.DisplayRole]
+                except KeyError:
+                    continue
+                if name in removed_names:
                     super().removeRows(row, 1)
         elif removed_type == "object_class":
             column = header_index("object_class_name_list")
             for row in reversed(range(self.rowCount())):
-                object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
+                try:
+                    object_class_name_list = self._data[row][column][Qt.DisplayRole].split(",")
+                except KeyError:
+                    continue
                 for object_class_name in object_class_name_list:
                     if object_class_name in removed_names:
                         super().removeRows(row, 1)
@@ -1889,7 +1904,11 @@ class ObjectParameterValueModel(ParameterValueModel):
         elif removed_type == "parameter":
             column = header_index("parameter_name")
         for row in reversed(range(self.rowCount())):
-            if self._data[row][column][Qt.DisplayRole] in removed_names:
+            try:
+                name = self._data[row][column][Qt.DisplayRole]
+            except KeyError:
+                continue
+            if name in removed_names:
                 super().removeRows(row, 1)
 
     def items_to_add(self, indexes):
@@ -2015,7 +2034,11 @@ class RelationshipParameterValueModel(ParameterValueModel):
             columns = [header_index(x) for x in self.object_name_header]
             for row in reversed(range(self.rowCount())):
                 for column in columns:
-                    if self._data[row][column][Qt.DisplayRole] in removed_names:  # TODO: handle KeyError here
+                    try:
+                        name = self._data[row][column][Qt.DisplayRole]
+                    except KeyError:
+                        continue
+                    if name in removed_names:
                         super().removeRows(row, 1)
                         break
         elif removed_type in ("relationship_class", "parameter"):
@@ -2024,7 +2047,11 @@ class RelationshipParameterValueModel(ParameterValueModel):
             elif removed_type in "parameter":
                 column = header_index("parameter_name")
             for row in reversed(range(self.rowCount())):
-                if self._data[row][column][Qt.DisplayRole] in removed_names:
+                try:
+                    name = self._data[row][column][Qt.DisplayRole]
+                except KeyError:
+                    continue
+                if name in removed_names:
                     super().removeRows(row, 1)
 
     def extend_object_name_header(self, max_dim_count):

@@ -1306,6 +1306,7 @@ class ToolboxUI(QMainWindow):
             self._config.set("settings", "save_at_exit", "1")
         return
 
+    @busy_effect
     def closeEvent(self, event=None):
         """Method for handling application exit.
 
