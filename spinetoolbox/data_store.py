@@ -71,6 +71,7 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
+        self._reference = reference
         self.load_reference(reference)
         # TODO: try and create reference from first sqlite file in data directory
 
@@ -118,6 +119,12 @@ class DataStore(ProjectItem):
         self.selected_db = self._toolbox.ui.lineEdit_database.text()
         self.selected_username = self._toolbox.ui.lineEdit_username.text()
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
+        reference = {
+            "database": self.selected_db,
+            "username": self.selected_username,
+            "url": "Not Implemented"
+        }
+        self._reference = reference
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
@@ -150,10 +157,6 @@ class DataStore(ProjectItem):
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
-
-    def get_widget(self):
-        """OBSOLETE. Returns the graphical representation (QWidget) of this object."""
-        return self._widget
 
     def update_tab(self):
         """Update Data Store tab with this item's information."""
@@ -195,20 +198,20 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Unable to parse stored reference. Please select a new reference.")
             return
         try:
-            _dialect, _dbapi = dialect_dbapi.split('+')
+            dialect, dbapi = dialect_dbapi.split('+')
         except ValueError:
-            _dialect = dialect_dbapi
-            _dbapi = None
-        if _dialect not in SQL_DIALECT_API:
-            self._toolbox.msg_error.emit("Stored reference dialect <b>{}</b> is not supported.".format(_dialect))
+            dialect = dialect_dbapi
+            dbapi = None
+        if dialect not in SQL_DIALECT_API:
+            self._toolbox.msg_error.emit("Stored reference dialect <b>{}</b> is not supported.".format(dialect))
             return
-        self._toolbox.ui.comboBox_dialect.setCurrentText(_dialect)
-        if _dbapi and SQL_DIALECT_API[_dialect] != _dbapi:
-            recommended_dbapi = SQL_DIALECT_API[_dialect]
+        self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
+        if dbapi and SQL_DIALECT_API[dialect] != dbapi:
+            recommended_dbapi = SQL_DIALECT_API[dialect]
             self._toolbox.msg_warning.emit("The stored reference is using dialect <b>{0}</b> with driver <b>{1}</b>, "
                                            "whereas <b>{2}</b> is recommended"
-                                           .format(_dialect, _dbapi, recommended_dbapi))
-        if _dialect == 'sqlite':
+                                           .format(dialect, dbapi, recommended_dbapi))
+        if dialect == 'sqlite':
             file_path = ""
             try:
                 file_path = db_url.split(':///')[1]
@@ -389,6 +392,9 @@ class DataStore(ProjectItem):
         return reference
 
     def reference(self):
+        return self._reference
+
+    def make_reference(self):
         """Return a reference from user's choices."""
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
@@ -477,7 +483,7 @@ class DataStore(ProjectItem):
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return
-        reference = self.reference()
+        reference = self.make_reference()
         if not reference:
             return
         db_url = reference['url']
@@ -511,7 +517,7 @@ class DataStore(ProjectItem):
         if self in visited_items:
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
-        reference = self.reference()
+        reference = self.make_reference()
         dialect = self._toolbox.ui.comboBox_dialect.currentText()
         if dialect != "sqlite":
             return None

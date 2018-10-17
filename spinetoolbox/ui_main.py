@@ -221,7 +221,7 @@ class ToolboxUI(QMainWindow):
         # Data Stores
         self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
-        # TODO: Which icon should be used
+        # TODO: Which icon?
         self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         # icon_provider = QFileIconProvider()
         # self.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
@@ -233,6 +233,8 @@ class ToolboxUI(QMainWindow):
         self.ui.comboBox_tool.setModel(self.tool_template_model)
         self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
         self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        # Views
+        self.ui.treeView_view.setStyleSheet(DC_TREEVIEW_HEADER_SS)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

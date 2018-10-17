@@ -104,7 +104,16 @@ class Tool(ProjectItem):
             ret = False
         return ret
 
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        if not self._tool_template:
+            self._tool_template_index = None
+        else:
+            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        # self.set_tool_template(self._toolbox.tool_template_model.tool_template(selected_row))
+
     def restore_selections(self):
+        """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
         self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
         if not self._tool_template_index:
@@ -121,13 +130,6 @@ class Tool(ProjectItem):
         #     if r == -1:
         #         logging.error("error in tool_template_row() method")
         #         r = 0
-
-    def save_selections(self):
-        if not self._tool_template:
-            self._tool_template_index = None
-        else:
-            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        # self.set_tool_template(self._toolbox.tool_template_model.tool_template(selected_row))
 
     @Slot(name="open_results")
     def open_results(self):
@@ -153,14 +155,6 @@ class Tool(ProjectItem):
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
-
-    def get_widget(self):
-        """OBSOLETE. Returns the graphical representation (QWidget) of this object."""
-        return self._widget
-
-    def get_parent(self):
-        """Returns the ToolboxUI instance."""
-        return self._toolbox
 
     def update_tab(self):
         """Update Tool tab with this item's information."""

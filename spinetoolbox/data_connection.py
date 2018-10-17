@@ -146,10 +146,6 @@ class DataConnection(ProjectItem):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
 
-    def get_widget(self):
-        """OBSOLETE. Returns the graphical representation (QWidget) of this object."""
-        return self._widget
-
     def update_tab(self):
         """Update Data Connection tab with this item's information."""
         self._toolbox.ui.label_dc_name.setText(self.name)
