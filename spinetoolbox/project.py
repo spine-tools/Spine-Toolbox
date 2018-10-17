@@ -19,7 +19,6 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
 from helpers import project_dir, create_dir, copy_dir
@@ -323,9 +322,9 @@ class SpineToolboxProject(MetaObject):
             return None
         # Infer path to the main program
         try:
-            includes_main_path = definition['includes_main_path'] # path to main program relative to definition file
+            includes_main_path = definition['includes_main_path']  # path to main program relative to definition file
         except KeyError:
-            includes_main_path = "."    # assume main program and definition file are on the same path
+            includes_main_path = "."  # assume main program and definition file are on the same path
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
         return self.load_tool_template_from_dict(definition, path)
 
@@ -450,5 +449,5 @@ class SpineToolboxProject(MetaObject):
         Args:
             item (ProjectItem): Project item to select
         """
-        item.get_icon().master().setSelected(True)
-        self._toolbox.show_info(item)
+        ind = self._toolbox.project_item_model.find_item(item.name)
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)

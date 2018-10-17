@@ -288,7 +288,7 @@ class ProjectItemModel(QAbstractItemModel):
         if item.item_type == "Tool":
             item.output_dir = os.path.join(item.data_dir, TOOL_OUTPUT_DIR)
         # Update name in the subwindow widget
-        item.update_tab()
+        # item.update_tab()  # TODO: Test is the name label updated after commenting this line?
         # Update name item of the QGraphicsItem
         item.get_icon().update_name_item(value)
         # Change old item names in connection model headers to the new name

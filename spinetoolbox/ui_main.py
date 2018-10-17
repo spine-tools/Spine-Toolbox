@@ -572,10 +572,10 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
         # Update widgets in tab according to item information
-        item.update_tab()
+        # item.update_tab()
         # If Data Connection or View, refresh data files
-        if item.item_type in ("Data Connection", "View"):
-            item.refresh()
+        # if item.item_type in ("Data Connection", "View"):
+        #     item.refresh()
 
     def clear_info_area(self):
         """Set empty tab as the current tab in the item info dock widget and clear

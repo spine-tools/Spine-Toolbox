@@ -114,6 +114,7 @@ class Tool(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.label_tool_name.setText(self.name)
         self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
         self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
         if not self._tool_template_index:
@@ -155,10 +156,6 @@ class Tool(ProjectItem):
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
-
-    def update_tab(self):
-        """Update Tool tab with this item's information."""
-        self._toolbox.ui.label_tool_name.setText(self.name)
 
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
@@ -204,35 +201,6 @@ class Tool(ProjectItem):
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_input_files_list(self.tool_template().inputfiles)
             self.populate_output_files_list(self.tool_template().outputfiles)
-            # self.update_input_files()
-            # self.update_output_files()
-
-    # def update_input_files(self):
-    #     """Show input files in QListView."""
-    #     if not self.tool_template():
-    #         return
-    #     self.populate_input_files_list(self.tool_template().inputfiles)
-    #
-    # def update_output_files(self):
-    #     """Show output files in QListView."""
-    #     if not self.tool_template():
-    #         return
-    #     self.populate_output_files_list(self.tool_template().outputfiles)
-
-    def read_tool_def(self, tool_def_file):
-        """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
-        try:
-            with open(tool_def_file, 'r') as fp:
-                try:
-                    definition = json.load(fp)
-                except ValueError:
-                    self._toolbox.msg_error.emit("Tool template definition file not valid")
-                    logging.exception("Loading JSON data failed")
-                    return None
-        except FileNotFoundError:
-            self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(tool_def_file))
-            return None
-        return definition
 
     @Slot(name="execute")
     def execute(self):
@@ -607,3 +575,24 @@ class Tool(ProjectItem):
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 self.output_file_model.appendRow(qitem)
+
+    # def read_tool_def(self, tool_def_file):
+    #     """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
+    #     try:
+    #         with open(tool_def_file, 'r') as fp:
+    #             try:
+    #                 definition = json.load(fp)
+    #             except ValueError:
+    #                 self._toolbox.msg_error.emit("Tool template definition file not valid")
+    #                 logging.exception("Loading JSON data failed")
+    #                 return None
+    #     except FileNotFoundError:
+    #         self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(tool_def_file))
+    #         return None
+    #     return definition
+
+    # def update_tab(self):
+    #     """Update Tool tab with this item's information."""
+    #     self._toolbox.ui.label_tool_name.setText(self.name)
+
+

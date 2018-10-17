@@ -85,12 +85,9 @@ class View(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.label_view_name.setText(self.name)
         self._toolbox.ui.treeView_view.setModel(self.reference_model)
-        # self.refresh()
-
-    def project(self):
-        """Returns current project or None if no project open."""
-        return self._project
+        self.refresh()
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -99,9 +96,9 @@ class View(ProjectItem):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
-    def update_tab(self):
-        """Update Data Store tab with this item's information."""
-        self._toolbox.ui.label_view_name.setText(self.name)
+    def references(self):
+        """Returns a list of connection strings that are in this item as references."""
+        return self._references
 
     def find_input_items(self):
         """Find input project items (only Data Stores now) that are connected to this View.
@@ -122,7 +119,7 @@ class View(ProjectItem):
         return item_list
 
     def refresh(self):
-        """Update list of references that this item is viewing."""
+        """Update the list of references that this item is viewing."""
         input_items = self.find_input_items()
         self._toolbox.msg.emit("Refreshing View {0}".format(self.name))
         self._references = [item.reference() for item in input_items if item.reference()]
@@ -158,10 +155,6 @@ class View(ProjectItem):
         network_map_form = NetworkMapForm(self._toolbox, self, mapping)
         network_map_form.show()
 
-    def references(self):
-        """Returns a list of connection strings that are in this item as references."""
-        return self._references
-
     def add_reference_header(self):
         """Add header to reference model."""
         h = QStandardItem("References")
@@ -183,3 +176,7 @@ class View(ProjectItem):
                 qitem.setData(item['url'], Qt.ToolTipRole)
                 qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
+
+    # def update_tab(self):
+    #     """Update Data Store tab with this item's information."""
+    #     self._toolbox.ui.label_view_name.setText(self.name)
