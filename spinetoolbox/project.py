@@ -26,7 +26,7 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
-from tool_templates import GAMSTool, JuliaTool
+from tool_templates import GAMSTool, JuliaTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 
 
@@ -350,9 +350,8 @@ class SpineToolboxProject(MetaObject):
             return GAMSTool.load(self._toolbox, path, definition)
         elif _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)
-        elif _tooltype == 'executable':
-            self._toolbox.msg_warning.emit("Executable tools not supported yet")
-            return None
+        elif _tooltype == "executable":
+            return ExecutableTool.load(self._toolbox, path, definition)
         else:
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None

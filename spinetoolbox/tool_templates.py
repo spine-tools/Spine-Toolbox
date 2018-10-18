@@ -255,3 +255,57 @@ class JuliaTool(ToolTemplate):
             return JuliaTool(toolbox=toolbox, path=path, **kwargs)
         else:
             return None
+
+
+class ExecutableTool(ToolTemplate):
+    """Class for Executable tool templates.
+
+    Attributes:
+        name (str): Tool name
+        description (str): Tool description
+        path (str): Path to main script file
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main script file.
+        inputfiles (list): List of required data files
+        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+        outputfiles (list, optional): List of output files (wildcards may be used)
+        cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
+    """
+    def __init__(self, toolbox, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
+                 outputfiles=None, cmdline_args=None):
+        """Class constructor."""
+        super().__init__(toolbox, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
+                         cmdline_args)
+        main_file = includes[0]
+        # TODO: This does not do anything because main_file is always just file name
+        self.main_dir, self.main_prgm = os.path.split(main_file)
+        self.options = OrderedDict()
+        self.return_codes = {
+            0: "Normal exit",
+            1: "Error happened"
+        }
+
+    def __repr__(self):
+        """Remove this if not necessary."""
+        return "ExecutableTool('{}')".format(self.name)
+
+    @staticmethod
+    def load(toolbox, path, data):
+        """Create an ExecutableTool according to a tool specification.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            path (str): Base path to tool files
+            data (dict): Tool specification
+
+        Returns:
+            ExecutableTool instance or None if there was a problem in the tool specification.
+        """
+        kwargs = ExecutableTool.check_definition(toolbox, data)
+        if kwargs is not None:
+            # Return an executable model instance
+            return ExecutableTool(toolbox=toolbox, path=path, **kwargs)
+        else:
+            return None

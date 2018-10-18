@@ -498,6 +498,11 @@ class Tool(ProjectItem):
                 mod_work_dir = work_dir.__repr__().strip("'")
                 self.instance.julia_repl_command = r'cd("{}");'\
                     r'include("{}")'.format(mod_work_dir, self.tool_template().main_prgm)
+        elif self.tool_template().tooltype == "executable":
+            self.instance.program = "powershell"
+            batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
+            self.instance.args.append(batch_path)
+            self.append_instance_args()  # Append Tool specific cmd line args into args list
 
     def append_instance_args(self):
         """Append Tool template command line args into instance args list."""

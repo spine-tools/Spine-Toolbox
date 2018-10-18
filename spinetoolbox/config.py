@@ -65,7 +65,7 @@ else:
     JULIA_EXECUTABLE = "julia.exe"
 
 # Tool types
-TOOL_TYPES = ['GAMS', 'Julia']
+TOOL_TYPES = ["GAMS", "Julia", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
