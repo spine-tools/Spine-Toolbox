@@ -229,6 +229,8 @@ class SpineToolboxProject(MetaObject):
         views = item_dict['Views']
         n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
         self._toolbox.msg.emit("Loading project items...")
+        if n == 0:
+            self._toolbox.msg_warning.emit("Project has no items")
         # Recreate Data Stores
         for name in data_stores.keys():
             short_name = data_stores[name]['short name']
@@ -250,7 +252,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
-            self.add_data_store(name, desc, ref, x, y)
+            self.add_data_store(name, desc, ref, x, y, verbosity=False)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
@@ -266,7 +268,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_data_connection(name, desc, refs, x, y)
+            self.add_data_connection(name, desc, refs, x, y, verbosity=False)
         # Recreate Tools
         for name in tools.keys():
             short_name = tools[name]['short name']
@@ -285,7 +287,7 @@ class SpineToolboxProject(MetaObject):
             except KeyError:
                 x = 0
                 y = 0
-            self.add_tool(name, desc, tool_template, x, y)
+            self.add_tool(name, desc, tool_template, x, y, verbosity=False)
         # Recreate Views
         for name in views.keys():
             short_name = views[name]['short name']
@@ -297,7 +299,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, x, y)
+            self.add_view(name, desc, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -355,7 +357,7 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False):
+    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Store to project item model.
 
         Args:
@@ -365,6 +367,7 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
         category = "Data Stores"
         data_store = DataStore(self._toolbox, name, description, reference, x, y)
@@ -372,11 +375,12 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(data_store, ds_category)
         # Append connection model
         self.append_connection_model(name, category)
-        self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
+        if verbosity:
+            self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(data_store)
 
-    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False):
+    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Connection to project item model.
 
         Args:
@@ -386,6 +390,7 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
         category = "Data Connections"
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
@@ -393,11 +398,12 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(data_connection, dc_category)
         # Append connection model
         self.append_connection_model(name, category)
-        self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
+        if verbosity:
+            self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(data_connection)
 
-    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False):
+    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Tool to project item model.
 
         Args:
@@ -407,6 +413,7 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
         category = "Tools"
         tool = Tool(self._toolbox, name, description, tool_template, x, y)
@@ -414,11 +421,12 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(tool, tool_category)
         # Append connection model
         self.append_connection_model(name, category)
-        self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
+        if verbosity:
+            self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(tool)
 
-    def add_view(self, name, description, x=0, y=0, set_selected=False):
+    def add_view(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a View to project item model.
 
         Args:
@@ -427,6 +435,7 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
         category = "Views"
         view = View(self._toolbox, name, description, x, y)
@@ -434,7 +443,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(view, view_category)
         # Append connection model
         self.append_connection_model(name, category)
-        self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
+        if verbosity:
+            self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(view)
 

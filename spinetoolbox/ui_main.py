@@ -318,7 +318,7 @@ class ToolboxUI(QMainWindow):
             tool_cand.set_def_path(path)
             # Insert tool into model
             self.tool_template_model.insertRow(tool_cand)
-            self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
+            # self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
         # Set ToolTemplateModel to available Tools view
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
@@ -367,7 +367,7 @@ class ToolboxUI(QMainWindow):
                 self.remove_item(ind)
             self.msg.emit("All {0} items removed from project".format(n))
         # Clear widget info from QDockWidget
-        self.clear_info_area()
+        self.activate_item_tab()
         self._project = None
         self.tool_template_model = None
         self.ui.graphicsView.make_new_scene()
@@ -556,36 +556,30 @@ class ToolboxUI(QMainWindow):
         # Set current item QGraphicsItem selected as well
         current_item.get_icon().master().setSelected(True)
         current_item.connect_signals()
-        self.show_info(current_item)
+        self.activate_item_tab(current_item)
 
-    def show_info(self, item):
-        """Show information of selected item.
+    def activate_item_tab(self, item=None):
+        """Show project item tab according to item type. If no item given, sets the No Selection tab active.
 
         Args:
             item (ProjectItem): Instance of a project item
         """
-        # Find tab index according to item type
-        for i in range(self.ui.tabWidget_item_info.count()):
-            if self.ui.tabWidget_item_info.tabText(i) == item.item_type:
-                self.ui.tabWidget_item_info.setCurrentIndex(i)
-                break
-        # Set QDockWidget title to selected item's type
-        self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
-        # Update widgets in tab according to item information
-        # item.update_tab()
-        # If Data Connection or View, refresh data files
-        # if item.item_type in ("Data Connection", "View"):
-        #     item.refresh()
-
-    def clear_info_area(self):
-        """Set empty tab as the current tab in the item info dock widget and clear
-        selections project item tree view."""
-        self.ui.treeView_project.clearSelection()
-        for i in range(self.ui.tabWidget_item_info.count()):
-            if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                self.ui.tabWidget_item_info.setCurrentIndex(i)
-                break
-        self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+        if not item:
+            # Set No Selection Tab active and clear item selections
+            self.ui.treeView_project.clearSelection()
+            for i in range(self.ui.tabWidget_item_info.count()):
+                if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
+                    self.ui.tabWidget_item_info.setCurrentIndex(i)
+                    break
+            self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+        else:
+            # Find tab index according to item type
+            for i in range(self.ui.tabWidget_item_info.count()):
+                if self.ui.tabWidget_item_info.tabText(i) == item.item_type:
+                    self.ui.tabWidget_item_info.setCurrentIndex(i)
+                    break
+            # Set QDockWidget title to selected item's type
+            self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -683,6 +677,8 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("No project open")
             return
+        self.msg_warning.emit("This button is disabled on purpose and waiting for an update.")
+        return
         self.msg.emit("Refreshing Tool templates")
         # Re-open project
         project_file = self._project.path  # Path to project file
@@ -821,7 +817,6 @@ class ToolboxUI(QMainWindow):
         if n == 0:
             return
         for name in item_names:
-            logging.debug("Removing item {0}".format(name))
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
@@ -849,13 +844,10 @@ class ToolboxUI(QMainWindow):
             answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return
-        if project_item.item_type in ("Data Connection", "Data Store"):
-            try:
-                data_dir = project_item.data_dir
-            except AttributeError:
-                logging.error("Item {0} does not have a data_dir. This should not happen".format(name))
-                data_dir = None
-        else:
+        try:
+            data_dir = project_item.data_dir
+        except AttributeError:
+            logging.debug("Item {0} does not have a data_dir. Don't worry about it.".format(name))
             data_dir = None
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(project_item.get_icon().master())
@@ -877,8 +869,8 @@ class ToolboxUI(QMainWindow):
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
                     return
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
-        # Set No Selection tab selected in info area tab widget
-        self.clear_info_area()
+        # Activate No Selection tab
+        self.activate_item_tab()
         return
 
     @Slot("QUrl", name="open_anchor")

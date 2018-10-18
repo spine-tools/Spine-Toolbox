@@ -56,7 +56,7 @@ class DataConnection(ProjectItem):
         # self.add_reference_header()
         # self.add_data_header()
         self.data_dir_watcher = QFileSystemWatcher(self)
-        # Make directory for Data Connection
+        # Make project directory for this Data Connection
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
@@ -449,9 +449,9 @@ class DataConnection(ProjectItem):
                     qitem.setData(self.datapackage_icon, Qt.DecorationRole)
                 self.data_model.appendRow(qitem)
 
-    # def update_tab(self):
-    #     """Update Data Connection tab with this item's information."""
-    #     self._toolbox.ui.label_dc_name.setText(self.name)
+    def update_name_label(self):
+        """Update Data Connection tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_dc_name.setText(self.name)
 
 
 class CustomPackage(Package):

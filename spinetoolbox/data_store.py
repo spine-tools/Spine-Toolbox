@@ -62,7 +62,7 @@ class DataStore(ProjectItem):
         self.selected_password = ""
         # self._widget = DataStoreWidget(self, self.item_type)
         self.data_store_treeview = None
-        # Make directory for Data Store
+        # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
@@ -390,7 +390,7 @@ class DataStore(ProjectItem):
         if self.selected_dialect < 0:  # If no dialect selected
             return {"database": "", "username": "", "url": ""}
         elif self.selected_dialect == dialect_list.index("sqlite"):
-            logging.debug("Saving a sqlite dialect reference for {0}".format(self.name))
+            # logging.debug("Saving a sqlite dialect reference for {0}".format(self.name))
             database = self.selected_db
             username = self.selected_username
             sqlite_file = self.selected_sqlite_file
@@ -593,12 +593,11 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_username.setText(username)
         self._toolbox.ui.lineEdit_password.clear()
 
+    def update_name_label(self):
+        """Update Data Store tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_ds_name.setText(self.name)
+
     # @Slot("QString", name="set_path_to_sqlite_file")
     # def set_path_to_sqlite_file(self, file_path):
     #     """Set path to SQLite file."""
     #     self._widget.ui.lineEdit_SQLite_file.setText(file_path)
-
-    # def update_tab(self):
-    #     """Update Data Store tab with this item's information."""
-    #     self._toolbox.ui.label_ds_name.setText(self.name)
-

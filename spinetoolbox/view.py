@@ -17,6 +17,7 @@ Module for view class.
 """
 
 import logging
+import os
 from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from project_item import ProjectItem
@@ -24,7 +25,7 @@ from project_item import ProjectItem
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 from widgets.network_map_widget import NetworkMapForm
 from graphics_items import ViewImage
-from helpers import busy_effect
+from helpers import busy_effect, create_dir
 from config import HEADER_POINTSIZE
 
 
@@ -50,9 +51,14 @@ class View(ProjectItem):
         self.reference_model = QStandardItemModel()  # References to databases
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         # self._widget = ViewWidget(self, self.item_type)
-        # self._widget.make_header_for_references()
+        # Make project directory for this View
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
+                                         " Check permissions.".format(self.data_dir))
         self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        # self.connect_signals()
         self.view_refresh_signal.connect(self.refresh)
 
     def connect_signals(self):
@@ -121,9 +127,8 @@ class View(ProjectItem):
     def refresh(self):
         """Update the list of references that this item is viewing."""
         input_items = self.find_input_items()
-        self._toolbox.msg.emit("Refreshing View {0}".format(self.name))
         self._references = [item.reference() for item in input_items if item.reference()]
-        logging.debug("{0}".format(self._references))
+        # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
 
     @busy_effect
@@ -177,6 +182,6 @@ class View(ProjectItem):
                 qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
 
-    # def update_tab(self):
-    #     """Update Data Store tab with this item's information."""
-    #     self._toolbox.ui.label_view_name.setText(self.name)
+    def update_name_label(self):
+        """Update View tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_view_name.setText(self.name)

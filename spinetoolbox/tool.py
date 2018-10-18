@@ -65,7 +65,7 @@ class Tool(ProjectItem):
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        # Create Tool project directory
+        # Make project directory for this Tool
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
@@ -576,23 +576,6 @@ class Tool(ProjectItem):
                 qitem.setFlags(~Qt.ItemIsEditable)
                 self.output_file_model.appendRow(qitem)
 
-    # def read_tool_def(self, tool_def_file):
-    #     """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
-    #     try:
-    #         with open(tool_def_file, 'r') as fp:
-    #             try:
-    #                 definition = json.load(fp)
-    #             except ValueError:
-    #                 self._toolbox.msg_error.emit("Tool template definition file not valid")
-    #                 logging.exception("Loading JSON data failed")
-    #                 return None
-    #     except FileNotFoundError:
-    #         self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(tool_def_file))
-    #         return None
-    #     return definition
-
-    # def update_tab(self):
-    #     """Update Tool tab with this item's information."""
-    #     self._toolbox.ui.label_tool_name.setText(self.name)
-
-
+    def update_name_label(self):
+        """Update Tool tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_tool_name.setText(self.name)
