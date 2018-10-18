@@ -16,7 +16,6 @@ Module for view class.
 :date:   14.07.2018
 """
 
-import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
@@ -61,14 +60,14 @@ class View(ProjectItem):
         self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.view_refresh_signal.connect(self.refresh)
 
-    def connect_signals(self):
-        """Connect this data store's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()
         self._toolbox.ui.treeView_view.doubleClicked.connect(self.open_network_map)
         self._toolbox.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
 
-    def disconnect_signals(self):
-        """Disconnect signals of this item, so that the UI elements can be used again with another item."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         retvals = list()

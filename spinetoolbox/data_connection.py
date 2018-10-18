@@ -74,8 +74,8 @@ class DataConnection(ProjectItem):
         self.spine_datapackage_form = None
         # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
 
-    def connect_signals(self):
-        """Connect this data connection's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()  # Do this before connecting signals or funny things happen
         self._toolbox.ui.pushButton_dc_open.clicked.connect(self.open_directory)
         self._toolbox.ui.toolButton_plus.clicked.connect(self.add_references)
@@ -89,8 +89,8 @@ class DataConnection(ProjectItem):
         # self._toolbox.ui.treeView_dc_data.file_dropped.connect(self.add_file_to_data_dir)
         self.data_dir_watcher.directoryChanged.connect(self.refresh)
 
-    def disconnect_signals(self):
-        """Disconnect signals of this item so that UI elements can be used again with another item."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         retvals = list()  # This should be all True if every signal was disconnected successfully

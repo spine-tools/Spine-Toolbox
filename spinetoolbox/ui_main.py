@@ -23,7 +23,7 @@ import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -228,9 +228,8 @@ class ToolboxUI(QMainWindow):
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        # Tools
+        # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.pushButton_tool_stop.setEnabled(False)
-        self.ui.comboBox_tool.setModel(self.tool_template_model)
         self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
         self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
         # Views
@@ -302,6 +301,7 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_template_paths (list): List of tool definition file paths used in this project
         """
+        self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
         self.tool_template_model = ToolTemplateModel()
         n_tools = 0
         self.msg.emit("Loading Tool templates...")
@@ -319,8 +319,10 @@ class ToolboxUI(QMainWindow):
             # Insert tool into model
             self.tool_template_model.insertRow(tool_cand)
             # self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
-        # Set ToolTemplateModel to available Tools view
+        # Set model to list view on tool templates tab
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
+        # Set model to Tool project item combo box
+        self.ui.comboBox_tool.setModel(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
         # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
         # doubleClicked signal
@@ -473,6 +475,7 @@ class ToolboxUI(QMainWindow):
         self.ui.tableView_connections.resizeColumnsToContents()
         self.ui.graphicsView.restore_links()
         self.ui.graphicsView.init_scene()
+        self.ui.tabWidget.setCurrentIndex(0)  # Activate 'Items' tab
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -533,7 +536,7 @@ class ToolboxUI(QMainWindow):
                 # self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
                 # Deselect previous item's QGraphicsItem
                 previous_item.get_icon().master().setSelected(False)
-                ret = previous_item.disconnect_signals()
+                ret = previous_item.deactivate()
                 if not ret:
                     self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
             return
@@ -549,13 +552,13 @@ class ToolboxUI(QMainWindow):
             # self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
             # Deselect previous item's QGraphicsItem
             previous_item.get_icon().master().setSelected(False)
-            ret = previous_item.disconnect_signals()
+            ret = previous_item.deactivate()
             if not ret:
                 self.msg_error.emit("Something went wrong in disconnecting {0} signals".format(previous_item.name))
         # self.msg.emit("Connecting signals of {0}".format(current_item.name))
         # Set current item QGraphicsItem selected as well
         current_item.get_icon().master().setSelected(True)
-        current_item.connect_signals()
+        current_item.activate()
         self.activate_item_tab(current_item)
 
     def activate_item_tab(self, item=None):
@@ -668,7 +671,7 @@ class ToolboxUI(QMainWindow):
                 continue
             elif tool.tool_template().name == tool_template.name:
                 tool.set_tool_template(template)
-                self.msg.emit("Template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
+                self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
 
     @Slot(name="refresh_tool_templates")
     def refresh_tool_templates(self):
@@ -679,55 +682,55 @@ class ToolboxUI(QMainWindow):
             return
         self.msg_warning.emit("This button is disabled on purpose and waiting for an update.")
         return
-        self.msg.emit("Refreshing Tool templates")
-        # Re-open project
-        project_file = self._project.path  # Path to project file
-        if project_file.lower().endswith(".proj"):
-            try:
-                with open(project_file, 'r') as fh:
-                    dicts = json.load(fh)
-            except OSError:
-                self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
-                return
-            # Get project settings
-            project_dict = dicts['project']
-            try:
-                tool_template_paths = project_dict['tool_templates']
-            except KeyError:
-                self.msg_warning.emit("No Tool templates in project")
-                return
-            self.init_tool_template_model(tool_template_paths)
-            # Reattach all Tool templates because ToolTemplateModel may have changed
-            self.reattach_tool_templates()
-        else:
-            self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
-            return
-
-    def reattach_tool_templates(self, tool_template_name=None):
-        """Reattach tool templates that may have changed.
-
-        Args:
-            tool_template_name (str): if None, reattach all tool templates in project.
-            If a name is given, only reattach that one
-        """
-        tools = self.project_item_model.find_item("Tools")
-        n_tool_items = tools.rowCount()
-        for i in range(n_tool_items):
-            tool_item = tools.child(i, 0)
-            tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
-            if tool.tool_template() is not None:
-                # Get old tool template name
-                old_t_name = tool.tool_template().name
-                if not tool_template_name or old_t_name == tool_template_name:
-                    # Find the same tool template from ToolTemplateModel
-                    new_template = self.tool_template_model.find_tool_template(old_t_name)
-                    if not new_template:
-                        self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
-                        tool.set_tool_template(None)
-                        continue
-                    tool.set_tool_template(new_template)
-                    self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>"
-                                  .format(new_template.name, tool.name))
+    #     self.msg.emit("Refreshing Tool templates")
+    #     # Re-open project
+    #     project_file = self._project.path  # Path to project file
+    #     if project_file.lower().endswith(".proj"):
+    #         try:
+    #             with open(project_file, 'r') as fh:
+    #                 dicts = json.load(fh)
+    #         except OSError:
+    #             self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
+    #             return
+    #         # Get project settings
+    #         project_dict = dicts['project']
+    #         try:
+    #             tool_template_paths = project_dict['tool_templates']
+    #         except KeyError:
+    #             self.msg_warning.emit("No Tool templates in project")
+    #             return
+    #         self.init_tool_template_model(tool_template_paths)
+    #         # Reattach all Tool templates because ToolTemplateModel may have changed
+    #         self.reattach_tool_templates()
+    #     else:
+    #         self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
+    #         return
+    #
+    # def reattach_tool_templates(self, tool_template_name=None):
+    #     """Reattach tool templates that may have changed.
+    #
+    #     Args:
+    #         tool_template_name (str): if None, reattach all tool templates in project.
+    #         If a name is given, only reattach that one
+    #     """
+    #     tools = self.project_item_model.find_item("Tools")
+    #     n_tool_items = tools.rowCount()
+    #     for i in range(n_tool_items):
+    #         tool_item = tools.child(i, 0)
+    #         tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
+    #         if tool.tool_template() is not None:
+    #             # Get old tool template name
+    #             old_t_name = tool.tool_template().name
+    #             if not tool_template_name or old_t_name == tool_template_name:
+    #                 # Find the same tool template from ToolTemplateModel
+    #                 new_template = self.tool_template_model.find_tool_template(old_t_name)
+    #                 if not new_template:
+    #                     self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
+    #                     tool.set_tool_template(None)
+    #                     continue
+    #                 tool.set_tool_template(new_template)
+    #                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>"
+    #                               .format(new_template.name, tool.name))
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
@@ -757,13 +760,12 @@ class ToolboxUI(QMainWindow):
         that use this template."""
         sel_tool = self.tool_template_model.tool_template(index.row())
         tool_def_path = sel_tool.def_file_path
-        msg = "Removing Tool template <b>{0}</b>. Are you sure?".format(sel_tool.name)
+        msg = "Removing Tool template <b>{0}</b> from project. Are you sure?".format(sel_tool.name)
         # noinspection PyCallByClass, PyTypeChecker
         answer = QMessageBox.question(self, 'Remove Tool template', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             return
-        self.msg.emit("Removing Tool template <b>{0}</b> -> <b>{1}</b>".format(sel_tool.name, tool_def_path))
-        # Remove tool def file path from the project file (only JSON supported)
+        # Remove tool def file path from the project file
         project_file = self._project.path
         if not project_file.lower().endswith('.proj'):
             self.msg_error.emit("Project file extension not supported. Needs to be .proj.")
@@ -799,7 +801,7 @@ class ToolboxUI(QMainWindow):
         dicts['objects'] = object_dict
         with open(project_file, 'w') as fp:
             json.dump(dicts, fp, indent=4)
-        self.msg_success.emit("Tool template removed successfully")
+        self.msg_success.emit("Tool template removed")
 
     @Slot(name="remove_all_items")
     def remove_all_items(self):

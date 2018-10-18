@@ -74,8 +74,8 @@ class DataStore(ProjectItem):
         self.load_reference(reference)
         # TODO: try and create reference from first sqlite file in data directory
 
-    def connect_signals(self):
-        """Connect this data store's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()  # Do this before connecting signals or funny things happen
         self._toolbox.ui.pushButton_ds_open_directory.clicked.connect(self.open_directory)
         self._toolbox.ui.pushButton_ds_open_treeview.clicked.connect(self.open_treeview)
@@ -83,8 +83,8 @@ class DataStore(ProjectItem):
         self._toolbox.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
         self._toolbox.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
 
-    def disconnect_signals(self):
-        """Disconnect this data store's signals."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         signals = list()
@@ -596,8 +596,3 @@ class DataStore(ProjectItem):
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_ds_name.setText(self.name)
-
-    # @Slot("QString", name="set_path_to_sqlite_file")
-    # def set_path_to_sqlite_file(self, file_path):
-    #     """Set path to SQLite file."""
-    #     self._widget.ui.lineEdit_SQLite_file.setText(file_path)

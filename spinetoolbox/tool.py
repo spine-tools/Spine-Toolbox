@@ -50,9 +50,6 @@ class Tool(ProjectItem):
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         # self._widget = ToolSubWindowWidget(self.item_type)
-        # self._widget.make_header_for_input_files()
-        # self._widget.make_header_for_output_files()
-        # self._widget.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self.input_file_model = QStandardItemModel()
         self.populate_input_files_list(None)
         self.output_file_model = QStandardItemModel()
@@ -61,7 +58,6 @@ class Tool(ProjectItem):
         self._tool_template_index = None
         self.set_tool_template(tool_template)
         # Get row where Tool template is in the model
-        # self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
@@ -75,18 +71,17 @@ class Tool(ProjectItem):
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        # self.connect_signals()
 
-    def connect_signals(self):
-        """Connect this tool's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()
         self._toolbox.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
         self._toolbox.ui.pushButton_tool_results.clicked.connect(self.open_results)
         self._toolbox.ui.pushButton_tool_execute.clicked.connect(self.execute)
         self._toolbox.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
 
-    def disconnect_signals(self):
-        """Disconnect signals."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         retvals = list()
@@ -110,7 +105,6 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         else:
             self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        # self.set_tool_template(self._toolbox.tool_template_model.tool_template(selected_row))
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
@@ -120,17 +114,7 @@ class Tool(ProjectItem):
         if not self._tool_template_index:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
         else:
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool template model
-        # tool_template = self._toolbox.tool_template_model.tool_template(self.tool_template_row)
-        # self.set_tool_template(tool_template)
-        # # Set correct row selected in the comboBox
-        # if not tool_template:
-        #     r = 0
-        # else:
-        #     r = self._toolbox.tool_template_model.tool_template_row(tool_template.name)
-        #     if r == -1:
-        #         logging.error("error in tool_template_row() method")
-        #         r = 0
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
 
     @Slot(name="open_results")
     def open_results(self):
