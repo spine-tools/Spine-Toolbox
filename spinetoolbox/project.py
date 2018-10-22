@@ -195,7 +195,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict[category][name]["y"] = y
                 # Save item type specific things
                 if item.item_type == "Data Store":
-                    item_dict[category][name]["reference"] = item.save_reference()
+                    item_dict[category][name]["reference"] = item.current_reference()
                 elif item.item_type == "Data Connection":
                     item_dict[category][name]["references"] = item.file_references()
                 elif item.item_type == "Tool":

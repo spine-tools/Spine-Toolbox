@@ -155,8 +155,8 @@ class DataStore(ProjectItem):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
-    @Slot(name='browse_clicked')
-    def browse_clicked(self):
+    @Slot("bool", name='browse_clicked')
+    def browse_clicked(self, checked):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -218,26 +218,35 @@ class DataStore(ProjectItem):
                 file_path = ""
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
+            if not os.path.isfile(file_path):
+                file_path = ""
+                self._toolbox.msg_warning.emit("Invalid path. Maybe the file was deleted?")
             self.selected_sqlite_file = os.path.abspath(file_path)
             self.selected_db = database
             self.selected_username = username
         self.update_reference()
 
-    def save_reference(self):
+    def current_reference(self):
         """Returns the current state of the reference according to user's selections.
         Used when saving the project."""
-        # TODO: Saving an SQLite reference is the only one that is implemented.
-        # Update selections if item is currently selected
+        # Save selections if item is currently selected. This also updates its reference.
         current = self._toolbox.ui.treeView_project.currentIndex()
         current_item = self._toolbox.project_item_model.project_item(current)
         if current_item == self:
             self.save_selections()
+        # NOTE: Another option would be to update the current item's reference directly from the ui,
+        # but that'd require another method.
         return self._reference
 
     def update_reference(self):
-        """Update reference from selections. Call this whenever selections change."""
+        """Update reference from selections."""
+        # TODO: Updating an SQLite reference is the only one that is implemented.
         if not self.selected_dialect:
-            return {"database": "", "username": "", "url": ""}
+            self._reference = {
+                'database': '',
+                'username': '',
+                'url': ''
+            }
         if self.selected_dialect == 'sqlite':
             database = os.path.basename(self.selected_sqlite_file)
             username = self.selected_username
@@ -245,7 +254,7 @@ class DataStore(ProjectItem):
             url = 'sqlite:///{0}'.format(sqlite_file)
         else:
             # TODO: This needs more work
-            database = self.selected_dsn
+            database = self.selected_db
             username = self.selected_username
             url = ""
         reference = {
@@ -401,8 +410,9 @@ class DataStore(ProjectItem):
             return False
 
     def make_reference(self):
-        """Return a reference from user's selections.
-        Used when opening the data store form."""
+        """Return a reference based on the current state of the ui,
+        or None if something is bad/missing.
+        Used when opening the data store treeview form."""
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return None
@@ -484,6 +494,7 @@ class DataStore(ProjectItem):
     @Slot(name="open_treeview")
     def open_treeview(self):
         """Open reference in Data Store form."""
+        # TODO: check if the reference has changed, in which case we need to create a new form.
         if self.data_store_treeview:
             self.data_store_treeview.raise_()
             return
@@ -509,8 +520,8 @@ class DataStore(ProjectItem):
     def data_store_treeview_destroyed(self):
         self.data_store_treeview = None
 
-    @Slot(name="open_directory")
-    def open_directory(self):
+    @Slot("bool", name="open_directory")
+    def open_directory(self, checked):
         """Open file explorer in this Data Store's data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -524,7 +535,7 @@ class DataStore(ProjectItem):
         if self in visited_items:
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
-        reference = self.make_reference()
+        reference = self.current_reference()
         dialect = self._toolbox.ui.comboBox_dialect.currentText()
         if dialect != "sqlite":
             return None
@@ -549,13 +560,9 @@ class DataStore(ProjectItem):
                     return path
         return None
 
-    @Slot(name="create_new_spine_database")
-    def create_new_spine_database(self):
+    @Slot("bool", name="create_new_spine_database")
+    def create_new_spine_database(self, checked):
         """Create new (empty) Spine SQLite database file in data directory."""
-        # Set comboBox dialect to sqlite if it is not set already
-        if not self._toolbox.ui.comboBox_dialect.currentText() == "sqlite":
-            combobox_items = list(SQL_DIALECT_API.keys())
-            self._toolbox.ui.comboBox_dialect.setCurrentIndex(combobox_items.index("sqlite"))
         answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
         database = answer[0]
         if not database:
@@ -582,5 +589,12 @@ class DataStore(ProjectItem):
             'username': username,
             'url': url
         }
-        self.load_reference(reference)
-        self.restore_selections()
+        # Update UI. NOTE: this assumes fresh Spine dbs are always created with the item selected.
+        self._toolbox.ui.comboBox_dsn.clear()
+        self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
+        self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(filename))
+        self._toolbox.ui.lineEdit_host.clear()
+        self._toolbox.ui.lineEdit_port.clear()
+        self._toolbox.ui.lineEdit_database.setText(database)
+        self._toolbox.ui.lineEdit_username.setText(username)
+        self._toolbox.ui.lineEdit_password.clear()
