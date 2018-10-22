@@ -118,26 +118,7 @@ class DataStore(ProjectItem):
         self.selected_db = self._toolbox.ui.lineEdit_database.text()
         self.selected_username = self._toolbox.ui.lineEdit_username.text()
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
-        # Compose reference from selections
-        dialect = self.selected_dialect
-        if not self.selected_dialect:
-            return {"database": "", "username": "", "url": ""}
-        if self.selected_dialect == 'sqlite':
-            database = self.selected_db
-            username = self.selected_username
-            sqlite_file = self.selected_sqlite_file
-            url = 'sqlite:///{0}'.format(sqlite_file)
-        else:
-            # TODO: This needs more work
-            database = self.selected_dsn
-            username = self.selected_username
-            url = ""
-        reference = {
-            'database': database,
-            'username': username,
-            'url': url
-        }
-        self._reference = reference
+        self.update_reference()
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
@@ -174,10 +155,6 @@ class DataStore(ProjectItem):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
-    def reference(self):
-        """Returns current database reference."""
-        return self._reference
-
     @Slot(name='browse_clicked')
     def browse_clicked(self):
         """Open file browser where user can select the path to an SQLite
@@ -200,7 +177,8 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_password.clear()
 
     def load_reference(self, reference):
-        """Load reference into shared widget selections."""
+        """Load reference into shared widget selections.
+        Used when loading the project, and creating a new Spine db."""
         # TODO: now it only handles SQLite references, but should handle all types of reference
         if not reference:  # This probably does not happen anymore
             return
@@ -243,6 +221,39 @@ class DataStore(ProjectItem):
             self.selected_sqlite_file = os.path.abspath(file_path)
             self.selected_db = database
             self.selected_username = username
+        self.update_reference()
+
+    def save_reference(self):
+        """Returns the current state of the reference according to user's selections.
+        Used when saving the project."""
+        # TODO: Saving an SQLite reference is the only one that is implemented.
+        # Update selections if item is currently selected
+        current = self._toolbox.ui.treeView_project.currentIndex()
+        current_item = self._toolbox.project_item_model.project_item(current)
+        if current_item == self:
+            self.save_selections()
+        return self._reference
+
+    def update_reference(self):
+        """Update reference from selections. Call this whenever selections change."""
+        if not self.selected_dialect:
+            return {"database": "", "username": "", "url": ""}
+        if self.selected_dialect == 'sqlite':
+            database = os.path.basename(self.selected_sqlite_file)
+            username = self.selected_username
+            sqlite_file = self.selected_sqlite_file
+            url = 'sqlite:///{0}'.format(sqlite_file)
+        else:
+            # TODO: This needs more work
+            database = self.selected_dsn
+            username = self.selected_username
+            url = ""
+        reference = {
+            'database': database,
+            'username': username,
+            'url': url
+        }
+        self._reference = reference
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
@@ -388,17 +399,6 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
-
-    def save_reference(self):
-        """Returns the current state of the reference according to user's selections.
-        Used when saving the project."""
-        # TODO: Saving an SQLite reference is the only one that is implemented.
-        # Update selections if item is currently selected
-        current = self._toolbox.ui.treeView_project.currentIndex()
-        current_item = self._toolbox.project_item_model.project_item(current)
-        if current_item == self:
-            self.save_selections()
-        return self._reference
 
     def make_reference(self):
         """Return a reference from user's selections.
