@@ -53,8 +53,8 @@ class DataStore(ProjectItem):
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         # Instance variables for saving selections in shared widgets
-        self.selected_dialect = -1
-        self.selected_dsn = -1
+        self.selected_dialect = ""
+        self.selected_dsn = ""
         self.selected_sqlite_file = ""
         self.selected_host = ""
         self.selected_port = ""
@@ -111,41 +111,58 @@ class DataStore(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        self.selected_dialect = self._toolbox.ui.comboBox_dialect.currentIndex()
-        self.selected_dsn = self._toolbox.ui.comboBox_dsn.currentIndex()
+        self.selected_dialect = self._toolbox.ui.comboBox_dialect.currentText()
+        self.selected_dsn = self._toolbox.ui.comboBox_dsn.currentText()
         self.selected_sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
         self.selected_host = self._toolbox.ui.lineEdit_host.text()
         self.selected_port = self._toolbox.ui.lineEdit_port.text()
         self.selected_db = self._toolbox.ui.lineEdit_database.text()
         self.selected_username = self._toolbox.ui.lineEdit_username.text()
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
+        # Compose reference from selections
+        dialect = self.selected_dialect
+        if not self.selected_dialect:
+            return {"database": "", "username": "", "url": ""}
+        if self.selected_dialect == 'sqlite':
+            database = self.selected_db
+            username = self.selected_username
+            sqlite_file = self.selected_sqlite_file
+            url = 'sqlite:///{0}'.format(sqlite_file)
+        else:
+            # TODO: This needs more work
+            database = self.selected_dsn
+            username = self.selected_username
+            url = ""
         reference = {
-            "database": self.selected_db,
-            "username": self.selected_username,
-            "url": "Not Implemented"
+            'database': database,
+            'username': username,
+            'url': url
         }
         self._reference = reference
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.comboBox_dialect.setCurrentIndex(self.selected_dialect)
+        self._toolbox.ui.comboBox_dialect.setCurrentText(self.selected_dialect)
         # Set widgets enabled/disabled according to selected dialect
-        _dialect = self._toolbox.ui.comboBox_dialect.currentText()
-        if _dialect == "":
+        if self.selected_dialect == "":
             self.enable_no_dialect()
-        elif _dialect == "sqlite":
+        elif self.selected_dialect == "sqlite":
             self.enable_sqlite()
-        elif _dialect == "mssql":
+        elif self.selected_dialect == "mssql":
             self.enable_mssql()
         else:
             self.enable_common()
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(self.selected_dsn)
+        self._toolbox.ui.comboBox_dsn.setCurrentText(self.selected_dsn)
         self._toolbox.ui.lineEdit_SQLite_file.setText(self.selected_sqlite_file)
         self._toolbox.ui.lineEdit_host.setText(self.selected_host)
         self._toolbox.ui.lineEdit_port.setText(self.selected_port)
         self._toolbox.ui.lineEdit_database.setText(self.selected_db)
         self._toolbox.ui.lineEdit_username.setText(self.selected_username)
         self._toolbox.ui.lineEdit_password.setText(self.selected_password)
+
+    def reference(self):
+        """Stored reference. Used (at least) by the view item to populate its list of input references."""
+        return self._reference
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -179,8 +196,7 @@ class DataStore(ProjectItem):
         self._widget.ui.lineEdit_SQLite_file.setText(file_path)
 
     def load_reference(self, reference):
-        """Update ui so it reflects the stored reference after loading a project."""
-        print(reference)
+        """Load reference into shared widget selections."""
         # TODO: now it only handles SQLite references, but should handle all types of reference
         if not reference:  # This probably does not happen anymore
             return
@@ -206,8 +222,7 @@ class DataStore(ProjectItem):
         if dialect not in SQL_DIALECT_API:
             self._toolbox.msg_error.emit("Stored reference dialect <b>{}</b> is not supported.".format(dialect))
             return
-        print(reference)
-        self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
+        self.selected_dialect = dialect
         if dbapi and SQL_DIALECT_API[dialect] != dbapi:
             recommended_dbapi = SQL_DIALECT_API[dialect]
             self._toolbox.msg_warning.emit("The stored reference is using dialect <b>{0}</b> with driver <b>{1}</b>, "
@@ -221,9 +236,9 @@ class DataStore(ProjectItem):
             except IndexError:
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
-            self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
-            self._toolbox.ui.lineEdit_database.setText(database)
-            self._toolbox.ui.lineEdit_username.setText(username)
+            self.selected_sqlite_file = os.path.abspath(file_path)
+            self.selected_db = database
+            self.selected_username = username
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
@@ -371,34 +386,19 @@ class DataStore(ProjectItem):
             return False
 
     def save_reference(self):
-        """Returns the current state of the reference. Used when saving the project."""
+        """Returns the current state of the reference according to user's selections.
+        Used when saving the project."""
         # TODO: Saving an SQLite reference is the only one that is implemented.
-        dialect = self._toolbox.ui.comboBox_dialect.currentText()
-        if not dialect:
-            return {"database": "", "username": "", "url": ""}
-        if dialect == 'sqlite':
-            database = self._toolbox.ui.lineEdit_database.text()
-            username = self._toolbox.ui.lineEdit_username.text()
-            sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
-            url = 'sqlite:///{0}'.format(sqlite_file)
-        else:
-            # TODO: This needs more work
-            database = self._toolbox.ui.comboBox_dsn.currentText()
-            username = self._toolbox.ui.lineEdit_username.text()
-            url = ""
-        reference = {
-            'database': database,
-            'username': username,
-            'url': url
-        }
-        print(reference)
-        return reference
-
-    def reference(self):
+        # Update selections if item is currently selected
+        current = self._toolbox.ui.treeView_project.currentIndex()
+        current_item = self._toolbox.project_item_model.project_item(current)
+        if current_item == self:
+            self.save_selections()
         return self._reference
 
     def make_reference(self):
-        """Return a reference from user's choices."""
+        """Return a reference from user's selections.
+        Used when opening the data store form."""
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return None
@@ -572,3 +572,4 @@ class DataStore(ProjectItem):
             'url': url
         }
         self.load_reference(reference)
+        self.restore_selections()
