@@ -16,7 +16,7 @@ Module for view class.
 :date:   14.07.2018
 """
 
-import logging
+import os
 from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from project_item import ProjectItem
@@ -24,7 +24,7 @@ from project_item import ProjectItem
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 from widgets.network_map_widget import NetworkMapForm
 from graphics_items import ViewImage
-from helpers import busy_effect
+from helpers import busy_effect, create_dir
 from config import HEADER_POINTSIZE
 
 
@@ -50,19 +50,24 @@ class View(ProjectItem):
         self.reference_model = QStandardItemModel()  # References to databases
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         # self._widget = ViewWidget(self, self.item_type)
-        # self._widget.make_header_for_references()
+        # Make project directory for this View
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
+                                         " Check permissions.".format(self.data_dir))
         self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        # self.connect_signals()
         self.view_refresh_signal.connect(self.refresh)
 
-    def connect_signals(self):
-        """Connect this data store's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()
         self._toolbox.ui.treeView_view.doubleClicked.connect(self.open_network_map)
         self._toolbox.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
 
-    def disconnect_signals(self):
-        """Disconnect signals of this item, so that the UI elements can be used again with another item."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         retvals = list()
@@ -85,12 +90,9 @@ class View(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.label_view_name.setText(self.name)
         self._toolbox.ui.treeView_view.setModel(self.reference_model)
-        # self.refresh()
-
-    def project(self):
-        """Returns current project or None if no project open."""
-        return self._project
+        self.refresh()
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -99,9 +101,9 @@ class View(ProjectItem):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
-    def update_tab(self):
-        """Update Data Store tab with this item's information."""
-        self._toolbox.ui.label_view_name.setText(self.name)
+    def references(self):
+        """Returns a list of connection strings that are in this item as references."""
+        return self._references
 
     def find_input_items(self):
         """Find input project items (only Data Stores now) that are connected to this View.
@@ -122,11 +124,10 @@ class View(ProjectItem):
         return item_list
 
     def refresh(self):
-        """Update list of references that this item is viewing."""
+        """Update the list of references that this item is viewing."""
         input_items = self.find_input_items()
-        self._toolbox.msg.emit("Refreshing View {0}".format(self.name))
         self._references = [item.reference() for item in input_items if item.reference()]
-        logging.debug("{0}".format(self._references))
+        # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
 
     @busy_effect
@@ -158,10 +159,6 @@ class View(ProjectItem):
         network_map_form = NetworkMapForm(self._toolbox, self, mapping)
         network_map_form.show()
 
-    def references(self):
-        """Returns a list of connection strings that are in this item as references."""
-        return self._references
-
     def add_reference_header(self):
         """Add header to reference model."""
         h = QStandardItem("References")
@@ -183,3 +180,7 @@ class View(ProjectItem):
                 qitem.setData(item['url'], Qt.ToolTipRole)
                 qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
+
+    def update_name_label(self):
+        """Update View tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_view_name.setText(self.name)

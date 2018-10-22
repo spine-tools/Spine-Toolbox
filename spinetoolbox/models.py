@@ -285,10 +285,14 @@ class ProjectItemModel(QAbstractItemModel):
             item.data_dir_watcher.removePaths(item.data_dir_watcher.directories())
             item.data_dir_watcher.addPath(item.data_dir)
         # If item is a Tool, also output_dir must be updated
-        if item.item_type == "Tool":
+        elif item.item_type == "Tool":
             item.output_dir = os.path.join(item.data_dir, TOOL_OUTPUT_DIR)
-        # Update name in the subwindow widget
-        item.update_tab()
+        # If item is a Data Store and an SQLite path is set, give the user a notice that this must be updated manually
+        elif item.item_type == "Data Store":
+            if not self._toolbox.ui.lineEdit_SQLite_file.text().strip() == "":
+                self._toolbox.msg_warning.emit("Note: Path to SQLite file may need updating.")
+        # Update name label in tab
+        item.update_name_label()
         # Update name item of the QGraphicsItem
         item.get_icon().update_name_item(value)
         # Change old item names in connection model headers to the new name

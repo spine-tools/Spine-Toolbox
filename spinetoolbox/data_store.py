@@ -21,12 +21,11 @@ import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QFileIconProvider
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
-from spinedatabase_api import DiffDatabaseMapping, DatabaseMapping, SpineDBAPIError, create_new_spine_database
-from widgets.data_store_subwindow_widget import DataStoreWidget
+from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
+# from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
-from config import SQL_DIALECT_API
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
@@ -63,7 +62,7 @@ class DataStore(ProjectItem):
         self.selected_password = ""
         # self._widget = DataStoreWidget(self, self.item_type)
         self.data_store_treeview = None
-        # Make directory for Data Store
+        # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
@@ -75,8 +74,8 @@ class DataStore(ProjectItem):
         self.load_reference(reference)
         # TODO: try and create reference from first sqlite file in data directory?
 
-    def connect_signals(self):
-        """Connect this data store's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()  # Do this before connecting signals or funny things happen
         self._toolbox.ui.pushButton_ds_open_directory.clicked.connect(self.open_directory)
         self._toolbox.ui.pushButton_ds_open_treeview.clicked.connect(self.open_treeview)
@@ -84,8 +83,8 @@ class DataStore(ProjectItem):
         self._toolbox.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
         self._toolbox.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
 
-    def disconnect_signals(self):
-        """Disconnect this data store's signals."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         signals = list()
@@ -175,9 +174,9 @@ class DataStore(ProjectItem):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
-    def update_tab(self):
-        """Update Data Store tab with this item's information."""
-        self._toolbox.ui.label_ds_name.setText(self.name)
+    def reference(self):
+        """Returns current database reference."""
+        return self._reference
 
     @Slot(name='browse_clicked')
     def browse_clicked(self):
@@ -188,12 +187,17 @@ class DataStore(ProjectItem):
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
+        filename = os.path.split(file_path)[1]
+        if filename.endswith(".sqlite"):
+            filename = filename[:-len(".sqlite")]
+        # Update UI
+        self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
-
-    @Slot("QString", name="set_path_to_sqlite_file")
-    def set_path_to_sqlite_file(self, file_path):
-        """Set path to SQLite file."""
-        self._widget.ui.lineEdit_SQLite_file.setText(file_path)
+        self._toolbox.ui.lineEdit_host.clear()
+        self._toolbox.ui.lineEdit_port.clear()
+        self._toolbox.ui.lineEdit_database.setText(filename)
+        self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
+        self._toolbox.ui.lineEdit_password.clear()
 
     def load_reference(self, reference):
         """Load reference into shared widget selections."""
@@ -228,12 +232,12 @@ class DataStore(ProjectItem):
             self._toolbox.msg_warning.emit("The stored reference is using dialect <b>{0}</b> with driver <b>{1}</b>, "
                                            "whereas <b>{2}</b> is recommended"
                                            .format(dialect, dbapi, recommended_dbapi))
-        if dialect == 'sqlite':
-            file_path = ""
+        if dialect == "sqlite":
             try:
-                file_path = db_url.split(':///')[1]
-                file_path = os.path.abspath(file_path)
+                file_path = os.path.abspath(db_url.split(':///')[1])
+                # file_path = os.path.abspath(file_path)
             except IndexError:
+                file_path = ""
                 self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
                                                "Please select a new one.")
             self.selected_sqlite_file = os.path.abspath(file_path)
@@ -534,24 +538,31 @@ class DataStore(ProjectItem):
         visited_items.append(self)
         for input_item in self._toolbox.connection_model.input_items(self.name):
             # Find item from project model
-            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
-            if not found_item:
+            item_index = self._toolbox.project_item_model.find_item(input_item)
+            if not item_index:
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
-            item_data = found_item.data(Qt.UserRole)
-            if item_data.item_type in ["Data Store", "Data Connection"]:
-                path = item_data.find_file(fname, visited_items)
+            item = self._toolbox.project_item_model.project_item(item_index)
+            if item.item_type in ["Data Store", "Data Connection"]:
+                path = item.find_file(fname, visited_items)
                 if path is not None:
                     return path
         return None
 
     @Slot(name="create_new_spine_database")
     def create_new_spine_database(self):
-        """Create new (empty) Spine database file in data directory."""
+        """Create new (empty) Spine SQLite database file in data directory."""
+        # Set comboBox dialect to sqlite if it is not set already
+        if not self._toolbox.ui.comboBox_dialect.currentText() == "sqlite":
+            combobox_items = list(SQL_DIALECT_API.keys())
+            self._toolbox.ui.comboBox_dialect.setCurrentIndex(combobox_items.index("sqlite"))
         answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
         database = answer[0]
         if not database:
             return
+        # Remove .sqlite extension from given name if present so that it is not duplicated
+        if database.endswith(".sqlite"):
+            database = database[:-len(".sqlite")]
         filename = os.path.join(self.data_dir, database + ".sqlite")
         if os.path.isfile(filename):
             msg = "File <b>{}</b> already in <b>{}</b> project directory.<br/><br/>Overwrite?"\
@@ -566,7 +577,7 @@ class DataStore(ProjectItem):
         url = "sqlite:///" + filename
         create_new_spine_database(url)
         username = getpass.getuser()
-        reference = {
+        self._reference = {
             'database': database,
             'username': username,
             'url': url

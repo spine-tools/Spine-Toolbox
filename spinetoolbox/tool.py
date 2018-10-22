@@ -50,9 +50,6 @@ class Tool(ProjectItem):
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         # self._widget = ToolSubWindowWidget(self.item_type)
-        # self._widget.make_header_for_input_files()
-        # self._widget.make_header_for_output_files()
-        # self._widget.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self.input_file_model = QStandardItemModel()
         self.populate_input_files_list(None)
         self.output_file_model = QStandardItemModel()
@@ -61,11 +58,10 @@ class Tool(ProjectItem):
         self._tool_template_index = None
         self.set_tool_template(tool_template)
         # Get row where Tool template is in the model
-        # self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        # Create Tool project directory
+        # Make project directory for this Tool
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
             create_dir(self.data_dir)
@@ -75,18 +71,17 @@ class Tool(ProjectItem):
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        # self.connect_signals()
 
-    def connect_signals(self):
-        """Connect this tool's signals to slots."""
+    def activate(self):
+        """Restore selections and connect signals."""
         self.restore_selections()
         self._toolbox.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
         self._toolbox.ui.pushButton_tool_results.clicked.connect(self.open_results)
         self._toolbox.ui.pushButton_tool_execute.clicked.connect(self.execute)
         self._toolbox.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
 
-    def disconnect_signals(self):
-        """Disconnect signals."""
+    def deactivate(self):
+        """Save selections and disconnect signals."""
         self.save_selections()
         ret = True
         retvals = list()
@@ -110,26 +105,16 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         else:
             self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        # self.set_tool_template(self._toolbox.tool_template_model.tool_template(selected_row))
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.label_tool_name.setText(self.name)
         self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
         self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
         if not self._tool_template_index:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
         else:
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool template model
-        # tool_template = self._toolbox.tool_template_model.tool_template(self.tool_template_row)
-        # self.set_tool_template(tool_template)
-        # # Set correct row selected in the comboBox
-        # if not tool_template:
-        #     r = 0
-        # else:
-        #     r = self._toolbox.tool_template_model.tool_template_row(tool_template.name)
-        #     if r == -1:
-        #         logging.error("error in tool_template_row() method")
-        #         r = 0
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
 
     @Slot(name="open_results")
     def open_results(self):
@@ -155,10 +140,6 @@ class Tool(ProjectItem):
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
-
-    def update_tab(self):
-        """Update Tool tab with this item's information."""
-        self._toolbox.ui.label_tool_name.setText(self.name)
 
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
@@ -204,35 +185,6 @@ class Tool(ProjectItem):
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_input_files_list(self.tool_template().inputfiles)
             self.populate_output_files_list(self.tool_template().outputfiles)
-            # self.update_input_files()
-            # self.update_output_files()
-
-    # def update_input_files(self):
-    #     """Show input files in QListView."""
-    #     if not self.tool_template():
-    #         return
-    #     self.populate_input_files_list(self.tool_template().inputfiles)
-    #
-    # def update_output_files(self):
-    #     """Show output files in QListView."""
-    #     if not self.tool_template():
-    #         return
-    #     self.populate_output_files_list(self.tool_template().outputfiles)
-
-    def read_tool_def(self, tool_def_file):
-        """[OBSOLETE?] Return tool template definition file contents or None if operation failed."""
-        try:
-            with open(tool_def_file, 'r') as fp:
-                try:
-                    definition = json.load(fp)
-                except ValueError:
-                    self._toolbox.msg_error.emit("Tool template definition file not valid")
-                    logging.exception("Loading JSON data failed")
-                    return None
-        except FileNotFoundError:
-            self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(tool_def_file))
-            return None
-        return definition
 
     @Slot(name="execute")
     def execute(self):
@@ -546,6 +498,11 @@ class Tool(ProjectItem):
                 mod_work_dir = work_dir.__repr__().strip("'")
                 self.instance.julia_repl_command = r'cd("{}");'\
                     r'include("{}")'.format(mod_work_dir, self.tool_template().main_prgm)
+        elif self.tool_template().tooltype == "executable":
+            self.instance.program = "powershell"
+            batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
+            self.instance.args.append(batch_path)
+            self.append_instance_args()  # Append Tool specific cmd line args into args list
 
     def append_instance_args(self):
         """Append Tool template command line args into instance args list."""
@@ -607,3 +564,7 @@ class Tool(ProjectItem):
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 self.output_file_model.appendRow(qitem)
+
+    def update_name_label(self):
+        """Update Tool tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_tool_name.setText(self.name)
