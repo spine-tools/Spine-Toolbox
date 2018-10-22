@@ -73,7 +73,7 @@ class DataStore(ProjectItem):
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
         self.load_reference(reference)
-        # TODO: try and create reference from first sqlite file in data directory
+        # TODO: try and create reference from first sqlite file in data directory?
 
     def connect_signals(self):
         """Connect this data store's signals to slots."""
@@ -180,6 +180,7 @@ class DataStore(ProjectItem):
 
     def load_reference(self, reference):
         """Update ui so it reflects the stored reference after loading a project."""
+        print(reference)
         # TODO: now it only handles SQLite references, but should handle all types of reference
         if not reference:  # This probably does not happen anymore
             return
@@ -205,6 +206,7 @@ class DataStore(ProjectItem):
         if dialect not in SQL_DIALECT_API:
             self._toolbox.msg_error.emit("Stored reference dialect <b>{}</b> is not supported.".format(dialect))
             return
+        print(reference)
         self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
         if dbapi and SQL_DIALECT_API[dialect] != dbapi:
             recommended_dbapi = SQL_DIALECT_API[dialect]
@@ -371,24 +373,25 @@ class DataStore(ProjectItem):
     def save_reference(self):
         """Returns the current state of the reference. Used when saving the project."""
         # TODO: Saving an SQLite reference is the only one that is implemented.
-        dialect = self._widget.ui.comboBox_dialect.currentText()
+        dialect = self._toolbox.ui.comboBox_dialect.currentText()
         if not dialect:
             return {"database": "", "username": "", "url": ""}
         if dialect == 'sqlite':
-            database = self._widget.ui.lineEdit_database.text()
-            username = self._widget.ui.lineEdit_username.text()
-            sqlite_file = self._widget.ui.lineEdit_SQLite_file.text()
+            database = self._toolbox.ui.lineEdit_database.text()
+            username = self._toolbox.ui.lineEdit_username.text()
+            sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
             url = 'sqlite:///{0}'.format(sqlite_file)
         else:
             # TODO: This needs more work
-            database = self._widget.ui.comboBox_dsn.currentText()
-            username = self._widget.ui.lineEdit_username.text()
+            database = self._toolbox.ui.comboBox_dsn.currentText()
+            username = self._toolbox.ui.lineEdit_username.text()
             url = ""
         reference = {
             'database': database,
             'username': username,
             'url': url
         }
+        print(reference)
         return reference
 
     def reference(self):
