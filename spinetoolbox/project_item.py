@@ -116,3 +116,23 @@ class ProjectItem(MetaObject):
         child = self._children.pop(row)
         child._parent = None
         return True
+
+    def connect_signals(self):
+        """Connect signals to handlers."""
+        for signal, handler in self._sigs.items():
+            signal.connect(handler)
+
+    def disconnect_signals(self):
+        """Disconnect signals from handlers and check for errors."""
+        for signal, handler in self._sigs.items():
+            try:
+                ret = signal.disconnect(handler)
+            except RuntimeError:
+                self._toolbox.msg_error.emit("RuntimeError in disconnecting <b>{0}</b> signals".format(self.name))
+                logging.error("RuntimeError in disconnecting signal:{0} from handler:{1}".format(signal, handler))
+                return False
+            if not ret:
+                self._toolbox.msg_error.emit("Disconnecting signal in {0} failed".format(self.name))
+                logging.error("Disconnecting signal {0} from handler {1} failed".format(signal, handler))
+                return False
+        return True

@@ -12,7 +12,7 @@
 """
 Module for data store class.
 
-:author: P. Savolainen (VTT)
+:authors: P. Savolainen (VTT), M. Marin (KTH)
 :date:   18.12.2017
 """
 
@@ -23,7 +23,6 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
-from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
 # from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from graphics_items import DataStoreImage
@@ -32,6 +31,7 @@ from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
+import spinedatabase_api
 
 
 class DataStore(ProjectItem):
@@ -73,52 +73,31 @@ class DataStore(ProjectItem):
         self._reference = reference
         self.load_reference(reference)
         # TODO: try and create reference from first sqlite file in data directory?
+        self._sigs = self.make_signal_handler_dict()
+
+    def make_signal_handler_dict(self):
+        """Returns a dictionary of all shared signals and their handlers.
+        This is to enable simpler connecting and disconnecting."""
+        s = dict()
+        s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
+        s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.open_treeview
+        s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
+        s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
+        s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
+        return s
 
     def activate(self):
         """Restore selections and connect signals."""
         self.restore_selections()  # Do this before connecting signals or funny things happen
-        self._toolbox.ui.pushButton_ds_open_directory.clicked.connect(self.open_directory)
-        self._toolbox.ui.pushButton_ds_open_treeview.clicked.connect(self.open_treeview)
-        self._toolbox.ui.toolButton_browse.clicked.connect(self.browse_clicked)
-        self._toolbox.ui.comboBox_dialect.currentTextChanged.connect(self.check_dialect)
-        self._toolbox.ui.toolButton_spine.clicked.connect(self.create_new_spine_database)
+        super().connect_signals()
 
     def deactivate(self):
         """Save selections and disconnect signals."""
         self.save_selections()
-        ret = True
-        signals = list()
-        retvals = dict()
-        signals.append(self._toolbox.ui.pushButton_ds_open_directory.clicked)
-        signals.append(self._toolbox.ui.pushButton_ds_open_treeview.clicked)
-        signals.append(self._toolbox.ui.toolButton_browse.clicked)
-        signals.append(self._toolbox.ui.comboBox_dialect.currentTextChanged)
-        signals.append(self._toolbox.ui.toolButton_spine.clicked)
-        # Do this in all project item if this works fine and the actual signal can be printed in plain english
-        for i in range(len(signals)):
-            try:
-                retvals[signals[i]] = signals[i].disconnect()
-            except RuntimeError:
-                self._toolbox.msg_error.emit("RuntimeError disconnecting signal {0}".format(signals[i]))
-                ret = False
-        if not all(retvals.values()):
-            logging.error("{0} retvals:{1}".format(self.name, retvals))
-            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
-                                         .format(self.name, retvals))
-            ret = False
-        return ret
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        self.selected_dialect = self._toolbox.ui.comboBox_dialect.currentText()
-        self.selected_dsn = self._toolbox.ui.comboBox_dsn.currentText()
-        self.selected_sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
-        self.selected_host = self._toolbox.ui.lineEdit_host.text()
-        self.selected_port = self._toolbox.ui.lineEdit_port.text()
-        self.selected_db = self._toolbox.ui.lineEdit_database.text()
-        self.selected_username = self._toolbox.ui.lineEdit_username.text()
-        self.selected_password = self._toolbox.ui.lineEdit_password.text()
-        self.update_reference()
+        if not super().disconnect_signals():
+            logging.error("Item {0} deactivation failed".format(self.name))
+            return False
+        return True
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
@@ -140,6 +119,18 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_username.setText(self.selected_username)
         self._toolbox.ui.lineEdit_password.setText(self.selected_password)
 
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        self.selected_dialect = self._toolbox.ui.comboBox_dialect.currentText()
+        self.selected_dsn = self._toolbox.ui.comboBox_dsn.currentText()
+        self.selected_sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
+        self.selected_host = self._toolbox.ui.lineEdit_host.text()
+        self.selected_port = self._toolbox.ui.lineEdit_port.text()
+        self.selected_db = self._toolbox.ui.lineEdit_database.text()
+        self.selected_username = self._toolbox.ui.lineEdit_username.text()
+        self.selected_password = self._toolbox.ui.lineEdit_password.text()
+        self.update_reference()
+
     def reference(self):
         """Stored reference. Used (at least) by the view item to populate its list of input references."""
         return self._reference
@@ -155,7 +146,7 @@ class DataStore(ProjectItem):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
 
-    @Slot("bool", name='browse_clicked')
+    @Slot(bool, name='browse_clicked')
     def browse_clicked(self, checked):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
@@ -311,7 +302,7 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
 
-    @Slot("str", name="check_dialect")
+    @Slot(str, name="check_dialect")
     def check_dialect(self, dialect):
         """Check if selected dialect is supported. Offer to install DBAPI if not.
 
@@ -490,9 +481,9 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    @busy_effect
-    @Slot(name="open_treeview")
-    def open_treeview(self):
+    # @busy_effect  # TODO: How to make this work with the new style of connecting&disconnecting signals?
+    @Slot(bool, name="open_treeview")
+    def open_treeview(self, checked):
         """Open reference in Data Store form."""
         # TODO: check if the reference has changed, in which case we need to create a new form.
         if self.data_store_treeview:
@@ -508,8 +499,8 @@ class DataStore(ProjectItem):
         database = reference['database']
         username = reference['username']
         try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
+            db_map = spinedatabase_api.DiffDatabaseMapping(db_url, username)
+        except spinedatabase_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
         self.data_store_treeview = DataStoreForm(self, db_map, database)
@@ -520,7 +511,7 @@ class DataStore(ProjectItem):
     def data_store_treeview_destroyed(self):
         self.data_store_treeview = None
 
-    @Slot("bool", name="open_directory")
+    @Slot(bool, name="open_directory")
     def open_directory(self, checked):
         """Open file explorer in this Data Store's data directory."""
         url = "file:///" + self.data_dir
@@ -560,7 +551,7 @@ class DataStore(ProjectItem):
                     return path
         return None
 
-    @Slot("bool", name="create_new_spine_database")
+    @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked):
         """Create new (empty) Spine SQLite database file in data directory."""
         answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
@@ -582,7 +573,7 @@ class DataStore(ProjectItem):
         except OSError:
             pass
         url = "sqlite:///" + filename
-        create_new_spine_database(url)
+        spinedatabase_api.create_new_spine_database(url)
         username = getpass.getuser()
         self._reference = {
             'database': database,
@@ -598,3 +589,5 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setText(database)
         self._toolbox.ui.lineEdit_username.setText(username)
         self._toolbox.ui.lineEdit_password.clear()
+        # self.load_reference(reference)
+        # self.restore_selections()

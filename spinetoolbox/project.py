@@ -343,8 +343,8 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition['tooltype'].lower()
         except KeyError:
-            self._toolbox.msg_error.emit("No type of tool defined in tool definition file. Should be "
-                                         "GAMS, Julia or executable")
+            self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
+                                         "'gams', 'julia' and 'executable'")
             return None
         if _tooltype == "gams":
             return GAMSTool.load(self._toolbox, path, definition)
