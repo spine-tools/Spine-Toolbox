@@ -128,7 +128,6 @@ class CopyPasteTableView(QTableView):
         top_left_index = self.currentIndex()
         if not top_left_index.isValid():
             return False
-        self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
         row = top_left_index.row()
@@ -146,11 +145,10 @@ class CopyPasteTableView(QTableView):
                     continue
                 if h_header.isSectionHidden(column):
                     column += 1
-                index = top_left_index.sibling(row, column)
+                index = self.model().index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
                     values.append(value)
-                    self.selectionModel().select(index, QItemSelectionModel.Select)
                 column += 1
             row += 1
         self.model().batch_set_data(indexes, values)

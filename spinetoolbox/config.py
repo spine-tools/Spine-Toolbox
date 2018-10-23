@@ -152,3 +152,5 @@ TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
 # Draw border on all QWidgets when in focus
 # TT_FOCUS_SS = ":focus {border: 1px groove;}"
+
+PARAMETER_TABLE_PAGE_SIZE = 4  # The number of rows to insert at a time when calling fetchMore on parameter models

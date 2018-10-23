@@ -98,6 +98,8 @@ class DataStoreForm(QMainWindow):
         self.clipboard_text = self.clipboard.text()
         self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        self.visible_rows = int(max_screen_height / self.default_row_height)
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
@@ -511,15 +513,15 @@ class DataStoreForm(QMainWindow):
         """Initialize parameter value models from source database."""
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
-        self.object_parameter_value_model.init_model()
-        self.relationship_parameter_value_model.init_model()
+        self.object_parameter_value_model.init_model(min_row_count=self.visible_rows)
+        self.relationship_parameter_value_model.init_model(min_row_count=self.visible_rows)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
-        self.object_parameter_model.init_model()
-        self.relationship_parameter_model.init_model()
+        self.object_parameter_model.init_model(min_row_count=self.visible_rows)
+        self.relationship_parameter_model.init_model(min_row_count=self.visible_rows)
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -534,7 +536,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(1)
+        self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
@@ -544,7 +546,8 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().setResizeContentsPrecision(1)
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().\
+            setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_object_parameter_view(self):
@@ -554,7 +557,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter.horizontalHeader().setResizeContentsPrecision(1)
+        self.ui.tableView_object_parameter.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter.resizeColumnsToContents()
 
     def init_relationship_parameter_view(self):
@@ -564,7 +567,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter.horizontalHeader().setResizeContentsPrecision(1)
+        self.ui.tableView_relationship_parameter.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter.resizeColumnsToContents()
 
     @Slot("QModelIndex", name="find_next_leaf")
@@ -1140,9 +1143,8 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_value_model
         proxy_index = self.ui.tableView_object_parameter_value.currentIndex()
         index = self.object_parameter_value_proxy.mapToSource(proxy_index)
-        row = index.row() + 1
+        row = model.fixed_row_count
         tree_selection = self.ui.treeView_object.selectionModel().selection()
-        some_inserted = False
         if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
             object_name_column = model.horizontal_header_labels().index('object_name')
@@ -1163,12 +1165,9 @@ class DataStoreForm(QMainWindow):
                 data.extend([object_class_name, object_name])
                 i += 1
             if i > 0:
-                some_inserted = True
                 model.insertRows(row, i)
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
-        if not some_inserted:
-            model.insertRows(row, 1)
         self.ui.tabWidget_object.setCurrentIndex(0)
         self.object_parameter_value_proxy.apply_filter()
 
@@ -1180,9 +1179,8 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_value_model
         proxy_index = self.ui.tableView_relationship_parameter_value.currentIndex()
         index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
-        row = index.row() + 1
+        row = model.fixed_row_count
         tree_selection = self.ui.treeView_object.selectionModel().selection()
-        some_inserted = False
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
             object_name_1_column = model.horizontal_header_labels().index('object_name_1')
@@ -1213,12 +1211,9 @@ class DataStoreForm(QMainWindow):
                     data.append(object_name)
                 i += 1
             if i > 0:
-                some_inserted = True
                 model.insertRows(row, i)
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
-        if not some_inserted:
-            model.insertRows(row, 1)
         self.ui.tabWidget_relationship.setCurrentIndex(0)
         self.relationship_parameter_value_proxy.apply_filter()
 
@@ -1230,9 +1225,8 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_model
         proxy_index = self.ui.tableView_object_parameter.currentIndex()
         index = self.object_parameter_proxy.mapToSource(proxy_index)
-        row = index.row() + 1
+        row = model.fixed_row_count
         tree_selection = self.ui.treeView_object.selectionModel().selection()
-        some_inserted = False
         if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
             row_column_tuples = list()
@@ -1249,12 +1243,9 @@ class DataStoreForm(QMainWindow):
                 data.append(object_class_name)
                 i += 1
             if i > 0:
-                some_inserted = True
                 model.insertRows(row, i)
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
-        if not some_inserted:
-            model.insertRows(row, 1)
         self.ui.tabWidget_object.setCurrentIndex(1)
         self.object_parameter_proxy.apply_filter()
 
@@ -1266,9 +1257,8 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_model
         proxy_index = self.ui.tableView_relationship_parameter.currentIndex()
         index = self.relationship_parameter_proxy.mapToSource(proxy_index)
-        row = index.row() + 1
+        row = model.fixed_row_count
         tree_selection = self.ui.treeView_object.selectionModel().selection()
-        some_inserted = False
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
             row_column_tuples = list()
@@ -1285,12 +1275,9 @@ class DataStoreForm(QMainWindow):
                 data.append(relationship_class_name)
                 i += 1
             if i > 0:
-                some_inserted = True
                 model.insertRows(row, i)
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
-        if not some_inserted:
-            model.insertRows(row, 1)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
         self.relationship_parameter_proxy.apply_filter()
 
@@ -1491,7 +1478,9 @@ class DataStoreForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("dataStoreWidget/splitterTreeParameterState", self.ui.splitter_tree_parameter.saveState())
+        self.qsettings.setValue(
+            "dataStoreWidget/splitterTreeParameterState",
+            self.ui.splitter_tree_parameter.saveState())
         self.qsettings.setValue("dataStoreWidget/windowSize", self.size())
         self.qsettings.setValue("dataStoreWidget/windowPosition", self.pos())
         if self.windowState() == Qt.WindowMaximized:

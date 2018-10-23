@@ -24,7 +24,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QA
     QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
-from config import INVALID_CHARS, TOOL_OUTPUT_DIR
+from config import INVALID_CHARS, TOOL_OUTPUT_DIR, PARAMETER_TABLE_PAGE_SIZE
 from helpers import rename_dir
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
@@ -866,7 +866,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     row_with_data_inserted = Signal(QModelIndex, int, name="row_with_data_inserted")
 
-    def __init__(self, toolbox=None):
+    def __init__(self, toolbox=None, can_grow=False, min_row_count=0):
         """Initialize class"""
         super().__init__()
         self._toolbox = toolbox  # QMainWindow
@@ -874,7 +874,17 @@ class MinimalTableModel(QAbstractTableModel):
         self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
-        self.can_grow = False
+        self.can_grow = can_grow
+        self.min_row_count = min_row_count
+        self.rowsRemoved.connect(self.receive_rows_removed)
+
+    @Slot("QModelIndex", "int", "int", name="receive_rows_removed")
+    def receive_rows_removed(self, parent, first, last):
+        self.enforce_min_row_count()
+
+    def enforce_min_row_count(self):
+        """Insert empty rows to meet the minimum."""
+        self.insertRows(self.rowCount(), self.min_row_count - self.rowCount())
 
     def clear(self):
         self.beginResetModel()
@@ -967,12 +977,10 @@ class MinimalTableModel(QAbstractTableModel):
         if self.can_grow:
             last_row = self.rowCount(parent) - 1
             last_column = self.columnCount(parent) - 1
-            if row > last_row:
-                for i in range(row - last_row):
-                    self.insertRows(self.rowCount(parent), 1, parent)
+            if row > last_row :
+                self.insertRows(self.rowCount(parent), row - last_row, parent)
             if column > last_column:
-                for j in range(column - last_column):
-                    self.insertColumns(self.columnCount(parent), 1, parent)
+                self.insertColumns(self.columnCount(parent), column - last_column, parent)
         return super().index(row, column, parent)
 
     def data(self, index, role=Qt.DisplayRole):
@@ -1075,6 +1083,8 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if row < 0 or row > self.rowCount():
             return False
+        if count < 1:
+            return False
         self.beginInsertRows(parent, row, row + count - 1)
         for i in range(count):
             if self.columnCount() == 0:
@@ -1103,6 +1113,8 @@ class MinimalTableModel(QAbstractTableModel):
             True if columns were inserted successfully, False otherwise
         """
         if column < 0 or column > self.columnCount():
+            return False
+        if count < 1:
             return False
         self.beginInsertColumns(parent, column, column + count - 1)
         for j in range(count):
@@ -1195,6 +1207,8 @@ class MinimalTableModel(QAbstractTableModel):
 
     def reset_model(self, new_data=None):
         """Reset model."""
+        if not new_data:
+            self.enforce_min_row_count()
         self.beginResetModel()
         self._data = list()
         self._flags = list()
@@ -1212,9 +1226,11 @@ class MinimalTableModel(QAbstractTableModel):
                 self._data.append(new_row)
                 self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
         self.endResetModel()
+        self.enforce_min_row_count()
+
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1583,10 +1599,21 @@ class DataStoreTableModel(MinimalTableModel):
         self._data_store_form = data_store_form
         self.db_map = self._data_store_form.db_map
         self.fixed_columns = list()
+        self.can_grow = True  # Make the model grow automatically when pasting data larger than it.
+        self.fixed_row_count = 0
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
 
+    def canFetchMore(self, parent):
+        """Always return True. This is so we call fetchMore everytime the user scrolls down
+        below the end of the table."""
+        return True
+
+    def fetchMore(self, parent):
+        """Insert new rows so the user can add new data."""
+        self.insertRows(self.rowCount(), PARAMETER_TABLE_PAGE_SIZE, parent)
+
     def set_fixed_columns(self, *column_names):
-        """Set the fixed_column attribute from the column names given as argument."""
+        """Set the fixed_columns attribute according to the column names given as argument."""
         header = self.horizontal_header_labels()
         self.fixed_columns = [header.index(name) for name in column_names]
 
@@ -1682,12 +1709,13 @@ class DataStoreTableModel(MinimalTableModel):
         return self._flags[row][self.fixed_columns[0]] & Qt.ItemIsEditable
 
     def make_columns_fixed_for_rows(self, *rows):
-        """Set fixed columns as not editable and paint them gray."""
+        """Set fixed columns as non-editable and paint them gray."""
         header = self.horizontal_header_labels()
         for row in rows:
             for column in self.fixed_columns:
                 self._data[row][column][Qt.BackgroundRole] = self.gray_brush
                 self._flags[row][column] = ~Qt.ItemIsEditable
+        self.fixed_row_count = max(self.fixed_row_count, max(rows, default=0))
         try:
             top_left = self.index(rows[0], self.fixed_columns[0])
             bottom_right = self.index(rows[-1], self.fixed_columns[-1])
@@ -1697,13 +1725,9 @@ class DataStoreTableModel(MinimalTableModel):
 
     def reset_model(self, model_data, fixed_column_names=list()):
         """Reset model while keeping the work in progress rows."""
-        wip_row_list = [row for row in range(self.rowCount()) if self.is_work_in_progress(row)]
-        for row in wip_row_list:
-            row_data = self.row_data(row, role=Qt.DisplayRole)
-            model_data.insert(row, row_data)
-        super().reset_model(model_data)
         self.set_fixed_columns(*fixed_column_names)
-        self.make_columns_fixed_for_rows(*[r for r in range(self.rowCount()) if r not in wip_row_list])
+        super().reset_model(model_data)
+        self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
 
 
 class ParameterModel(DataStoreTableModel):
@@ -1847,8 +1871,9 @@ class ObjectParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, min_row_count=0):
         """Initialize model from source database."""
+        self.min_row_count = min_row_count
         object_parameter_list = self.db_map.object_parameter_list()
         header = self.db_map.object_parameter_fields()
         self.set_horizontal_header_labels(header)
@@ -1915,8 +1940,9 @@ class RelationshipParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, min_row_count=0):
         """Initialize model from source database."""
+        self.min_row_count = min_row_count
         relationship_parameter_list = self.db_map.relationship_parameter_list()
         header = self.db_map.relationship_parameter_fields()
         self.set_horizontal_header_labels(header)
@@ -2015,8 +2041,9 @@ class ObjectParameterValueModel(ParameterValueModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, min_row_count=0):
         """Initialize model from source database."""
+        self.min_row_count = min_row_count
         object_parameter_value_list = self.db_map.object_parameter_value_list()
         header = self.db_map.object_parameter_value_fields()
         self.set_horizontal_header_labels(header)
@@ -2113,8 +2140,9 @@ class RelationshipParameterValueModel(ParameterValueModel):
         super().__init__(data_store_form)
         self.object_name_header = list()
 
-    def init_model(self):
+    def init_model(self, min_row_count=0):
         """Initialize model from source database."""
+        self.min_row_count = min_row_count
         relationship_parameter_value_list = self.db_map.relationship_parameter_value_list()
         # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
         header = self.db_map.relationship_parameter_value_fields()

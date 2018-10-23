@@ -46,8 +46,7 @@ class AddItemsDialog(QDialog):
         super().__init__(parent)
         self._parent = parent
         self.ui = None
-        self.model = MinimalTableModel(self)
-        self.model.can_grow = True
+        self.model = MinimalTableModel(self, can_grow=True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         self.icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
