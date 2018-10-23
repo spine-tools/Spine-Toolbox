@@ -146,7 +146,7 @@ class DataStore(ProjectItem):
         return self._graphics_item
 
     @Slot(bool, name='browse_clicked')
-    def browse_clicked(self, checked):
+    def browse_clicked(self, checked=False):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -481,7 +481,7 @@ class DataStore(ProjectItem):
 
     # @busy_effect  # TODO: How to make this work with the new style of connecting&disconnecting signals?
     @Slot(bool, name="open_treeview")
-    def open_treeview(self, checked):
+    def open_treeview(self, checked=False):
         """Open reference in Data Store form."""
         # TODO: check if the reference has changed, in which case we need to create a new form.
         if self.data_store_treeview:
@@ -510,7 +510,7 @@ class DataStore(ProjectItem):
         self.data_store_treeview = None
 
     @Slot(bool, name="open_directory")
-    def open_directory(self, checked):
+    def open_directory(self, checked=False):
         """Open file explorer in this Data Store's data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -550,7 +550,7 @@ class DataStore(ProjectItem):
         return None
 
     @Slot(bool, name="create_new_spine_database")
-    def create_new_spine_database(self, checked):
+    def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine SQLite database file in data directory."""
         answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
         database = answer[0]
