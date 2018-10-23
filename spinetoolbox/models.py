@@ -1046,22 +1046,21 @@ class MinimalTableModel(QAbstractTableModel):
         return [self.row_data(row, role) for row in range(self.rowCount())]
 
     def setData(self, index, value, role=Qt.EditRole):
+        """Set data in model."""
         if not index.isValid():
             return False
-        roles = [role]
-        self._data[index.row()][index.column()][role] = value
-        if role == Qt.EditRole:
-            self._data[index.row()][index.column()][Qt.DisplayRole] = value
-            roles.append(Qt.DisplayRole)
-        self.dataChanged.emit(index, index, roles)
-        return True
+        if role != Qt.EditRole:
+            self._data[index.row()][index.column()][role] = value
+            self.dataChanged.emit(index, index, [role])
+            return True
+        return self.batch_set_data([index], [value])
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes."""
         if not indexes:
-            return
+            return False
         if len(indexes) != len(data):
-            return
+            return False
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -1073,6 +1072,7 @@ class MinimalTableModel(QAbstractTableModel):
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -1610,7 +1610,7 @@ class DataStoreTableModel(MinimalTableModel):
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
 
     def canFetchMore(self, parent):
-        """Always return True. This is so we call fetchMore everytime the user scrolls down
+        """Always return True. This is so the view calls fetchMore everytime the user scrolls down
         below the end of the table."""
         return True
 
@@ -1624,47 +1624,17 @@ class DataStoreTableModel(MinimalTableModel):
         self.fixed_columns = [header.index(name) for name in column_names]
 
     def setData(self, index, value, role=Qt.EditRole):
-        """Set data in model. Call the proper method depending on whether the row
-        is a work in progress or not.
-        """
+        """Set data in model."""
         if role != Qt.EditRole:
             return super().setData(index, value, role)
-        if not index.isValid():
-            return False
-        if self.is_work_in_progress(index.row()):
-            if not self.set_wip_data(index, value):
-                return False
-        else:
-            if not self.update_data(index, value):
-                return False
-        self.dataChanged.emit(index, index)
-        return True
-
-    def set_wip_data(self, index, value):
-        """Set work in progress data. Update model first, then see if the database
-        needs to be updated as well.
-        """
-        self._data[index.row()][index.column()][Qt.EditRole] = value
-        self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        self.add_items_to_db(self.items_to_add([index]))
-        return True
-
-    def update_data(self, index, value):
-        """Update non work in progess data. Try and update database first, and if
-        successful update model.
-        """
-        if not self.update_items_in_db(self.items_to_update([index], [value])):
-            return False
-        self._data[index.row()][index.column()][Qt.EditRole] = value
-        self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        return True
+        return self.batch_set_data([index], [value])
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes."""
         if not indexes:
-            return
+            return False
         if len(indexes) != len(data):
-            return
+            return False
         wip_indexes = list()
         wip_data = list()
         non_wip_indexes = list()
@@ -1678,37 +1648,42 @@ class DataStoreTableModel(MinimalTableModel):
             else:
                 non_wip_indexes.append(index)
                 non_wip_data.append(data[k])
-        self.batch_set_wip_data(wip_indexes, wip_data)
-        self.batch_update_data(non_wip_indexes, non_wip_data)
+        wip_data_set = self.batch_set_wip_data(wip_indexes, wip_data)
+        non_wip_data_set = self.batch_set_non_wip_data(non_wip_indexes, non_wip_data)
+        if not wip_data_set and not non_wip_data_set:
+            return False
         # Find square envelope of indexes to emit dataChanged
-        top = min(ind.row() for ind in [*non_wip_indexes, *wip_indexes])
-        bottom = max(ind.row() for ind in [*non_wip_indexes, *wip_indexes])
-        left = min(ind.column() for ind in [*non_wip_indexes, *wip_indexes])
-        right = max(ind.column() for ind in [*non_wip_indexes, *wip_indexes])
+        set_indexes = list()
+        if wip_data_set:
+            set_indexes.extend(wip_indexes)
+        if non_wip_data_set:
+            set_indexes.extend(non_wip_indexes)
+        top = min(ind.row() for ind in set_indexes)
+        bottom = max(ind.row() for ind in set_indexes)
+        left = min(ind.column() for ind in set_indexes)
+        right = max(ind.column() for ind in set_indexes)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        return True
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
         needs to be updated as well."""
         if not indexes:
-            return
-        if len(indexes) != len(data):
-            return
+            return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
         self.add_items_to_db(self.items_to_add(indexes))
+        return True
 
-    def batch_update_data(self, indexes, data):
-        """Batch update non work in progess data. Try and update database first, and if
-        successful update model.
+    def batch_set_non_wip_data(self, indexes, data):
+        """Batch set non work in progess data. Try and set data in database first, and if
+        successful set data model.
         """
         if not indexes:
-            return
-        if len(indexes) != len(data):
-            return
+            return False
         if not self.update_items_in_db(self.items_to_update(indexes, data)):
-            return
+            return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
@@ -2004,7 +1979,8 @@ class RelationshipParameterModel(ParameterModel):
                         break
 
     def items_to_add(self, indexes):
-        """Return a dictionary of rows (int) to items (dict) to add to the db."""
+        """Return a dictionary of rows (int) to items (dict) to add to the db.
+        Also extend the given list of indexes if some are autoset."""
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
@@ -2097,7 +2073,8 @@ class ObjectParameterValueModel(ParameterValueModel):
                 super().removeRows(row, 1)
 
     def items_to_add(self, indexes):
-        """Return a dictionary of rows (int) to items (dict) to add to the db."""
+        """Return a dictionary of rows (int) to items (dict) to add to the db.
+        Also extend the given list of indexes if some are autoset."""
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
@@ -2246,32 +2223,22 @@ class RelationshipParameterValueModel(ParameterValueModel):
             self.insert_horizontal_header_labels(section, object_name_header_ext)
             self.object_name_header.extend(object_name_header_ext)
 
-    def set_wip_data(self, index, value):
-        """Set work in progress data. Update model first, then see if the database
-        needs to be updated as well.
-        """
-        self._data[index.row()][index.column()][Qt.EditRole] = value
-        self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        relationships_on_the_fly = self.relationships_on_the_fly([index])
-        self.add_items_to_db(self.items_to_add([index], relationships_on_the_fly))
-        return True
-
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
         needs to be updated as well."""
         if not indexes:
-            return
-        if len(indexes) != len(data):
-            return
+            return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
         relationships_on_the_fly = self.relationships_on_the_fly(indexes)
         self.add_items_to_db(self.items_to_add(indexes, relationships_on_the_fly))
+        return True
 
     def relationships_on_the_fly(self, indexes):
         """Return a dict of row (int) to relationship items (KeyedTuple),
         either retrieved or added on the fly.
+        Also extend the given list of indexes if some are autoset.
         """
         relationships_on_the_fly = dict()
         relationships_to_add = dict()
@@ -2411,7 +2378,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
     def batch_set_data(self, proxy_indexes, values):
         source_indexes = [self.mapToSource(ind) for ind in proxy_indexes]
-        self.sourceModel().batch_set_data(source_indexes, values)
+        return self.sourceModel().batch_set_data(source_indexes, values)
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
