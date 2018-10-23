@@ -84,6 +84,7 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.lineEdit_SQLite_file.file_dropped] = self.set_path_to_sqlite_file
         return s
 
     def activate(self):
@@ -144,6 +145,11 @@ class DataStore(ProjectItem):
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""
         return self._graphics_item
+
+    @Slot("QString", name="set_path_to_sqlite_file")
+    def set_path_to_sqlite_file(self, file_path):
+        """Set path to SQLite file."""
+        self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
 
     @Slot(bool, name='browse_clicked')
     def browse_clicked(self, checked=False):
@@ -206,11 +212,11 @@ class DataStore(ProjectItem):
                 # file_path = os.path.abspath(file_path)
             except IndexError:
                 file_path = ""
-                self._toolbox.msg_warning.emit("Unable to determine path of stored SQLite reference. "
+                self._toolbox.msg_warning.emit("Unable to determine path to SQLite file from stored reference. "
                                                "Please select a new one.")
             if not os.path.isfile(file_path):
                 file_path = ""
-                self._toolbox.msg_warning.emit("Invalid path. Maybe the file was deleted?")
+                self._toolbox.msg_warning.emit("Invalid path to SQLite file. Maybe it was deleted?")
             self.selected_sqlite_file = os.path.abspath(file_path)
             self.selected_db = database
             self.selected_username = username
