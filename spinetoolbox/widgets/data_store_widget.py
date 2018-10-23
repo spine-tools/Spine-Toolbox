@@ -444,7 +444,7 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def export_to_sqlite(self, file_path):
         """Export data from database into SQlite file."""
-        # Remove file if exists (at this point, the user has confirmed they want to overwrite)
+        # Remove file if exists (at this point, the user has confirmed that overwritting is ok)
         try:
             os.remove(file_path)
         except OSError:
