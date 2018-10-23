@@ -2393,7 +2393,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
         source_model = self.sourceModel()
         data = source_model._data
         for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter if rwo it's not wip
+            # Skip values rejected by filter if row is not wip
             if not source_model.is_work_in_progress(source_row) \
                     and not self.filter_accepts_row(source_row, QModelIndex()):
                 continue
