@@ -22,7 +22,7 @@ import logging
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QStyle
 from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
@@ -60,6 +60,7 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
+        self.ui.toolButton_add_main_program.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.ui.treeView_sourcefiles.setModel(self.sourcefiles_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -108,6 +109,7 @@ class ToolTemplateWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
+        self.ui.toolButton_add_main_program.clicked.connect(self.browse_main_program)
         self.ui.toolButton_plus_includes.clicked.connect(self.show_add_includes_dialog)
         self.ui.treeView_sourcefiles.files_dropped.connect(self.add_dropped_includes)
         self.ui.treeView_sourcefiles.doubleClicked.connect(self.open_includes_file)
@@ -185,6 +187,20 @@ class ToolTemplateWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 self.outputfiles_model.appendRow(qitem)
+
+    @Slot(bool, name="browse_main_program")
+    def browse_main_program(self, checked):
+        """Open file browser where user can select the path the main program file."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getOpenFileName(self._toolbox, "Add main program file", APPLICATION_PATH, "*.*")
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        folder_path = os.path.split(file_path)[0]
+        self.program_path = folder_path
+        # Update UI
+        self.ui.lineEdit_main_program.setText(file_path)
+        self.ui.label_mainpath.setText(self.program_path)
 
     @Slot(name="new_include")
     def new_include(self):
