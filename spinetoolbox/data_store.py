@@ -129,7 +129,6 @@ class DataStore(ProjectItem):
         self.selected_db = self._toolbox.ui.lineEdit_database.text()
         self.selected_username = self._toolbox.ui.lineEdit_username.text()
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
-        self.update_reference()
 
     def reference(self):
         """Stored reference. Used (at least) by the view item to populate its list of input references."""
@@ -215,7 +214,6 @@ class DataStore(ProjectItem):
             self.selected_sqlite_file = os.path.abspath(file_path)
             self.selected_db = database
             self.selected_username = username
-        self.update_reference()
 
     def current_reference(self):
         """Returns the current state of the reference according to user's selections.
@@ -227,6 +225,7 @@ class DataStore(ProjectItem):
             self.save_selections()
         # NOTE: Another option would be to update the current item's reference directly from the ui,
         # but that'd require another method.
+        self.update_reference()
         return self._reference
 
     def update_reference(self):
@@ -248,12 +247,11 @@ class DataStore(ProjectItem):
             database = self.selected_db
             username = self.selected_username
             url = ""
-        reference = {
+        self._reference = {
             'database': database,
             'username': username,
             'url': url
         }
-        self._reference = reference
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
@@ -527,10 +525,10 @@ class DataStore(ProjectItem):
             logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
             return None
         reference = self.current_reference()
-        dialect = self._toolbox.ui.comboBox_dialect.currentText()
-        if dialect != "sqlite":
+        db_url = reference['url']
+        if not db_url.lower().startswith('sqlite'):
             return None
-        file_path = self._toolbox.ui.lineEdit_SQLite_file.text()
+        file_path = os.path.abspath(db_url.split(':///')[1])
         if not os.path.exists(file_path):
             return None
         if fname == os.path.basename(file_path):
