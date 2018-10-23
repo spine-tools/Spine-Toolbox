@@ -58,7 +58,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 27))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -112,7 +112,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.dockWidget_process_output.sizePolicy().hasHeightForWidth())
         self.dockWidget_process_output.setSizePolicy(sizePolicy)
-        self.dockWidget_process_output.setMinimumSize(QtCore.QSize(95, 113))
+        self.dockWidget_process_output.setMinimumSize(QtCore.QSize(106, 113))
         self.dockWidget_process_output.setObjectName("dockWidget_process_output")
         self.dockWidgetContents_2 = QtWidgets.QWidget()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -141,7 +141,7 @@ class Ui_MainWindow(object):
         self.dockWidget_process_output.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_process_output)
         self.dockWidget_item = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_item.setMinimumSize(QtCore.QSize(312, 404))
+        self.dockWidget_item.setMinimumSize(QtCore.QSize(421, 404))
         self.dockWidget_item.setObjectName("dockWidget_item")
         self.dockWidgetContents_3 = QtWidgets.QWidget()
         self.dockWidgetContents_3.setObjectName("dockWidgetContents_3")
@@ -280,7 +280,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.lineEdit_username, 5, 1, 1, 2)
         self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_6.setObjectName("horizontalLayout_6")
-        self.lineEdit_SQLite_file = QtWidgets.QLineEdit(self.tab_data_store)
+        self.lineEdit_SQLite_file = CustomQLineEdit(self.tab_data_store)
         self.lineEdit_SQLite_file.setEnabled(False)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -1082,7 +1082,8 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
         self.actionRestore_Dock_Widgets.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc
