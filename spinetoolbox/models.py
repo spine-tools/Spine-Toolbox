@@ -1064,9 +1064,12 @@ class MinimalTableModel(QAbstractTableModel):
                 continue
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
-        # TODO: This below assumes some nice ordering in the indexes list. Can we do better?
-        # Maybe just emit data changed for the entire model??
-        self.dataChanged.emit(indexes[0], indexes[-1], [Qt.EditRole, Qt.DisplayRole])
+        # Find square envelope of indexes to emit dataChanged
+        top = min(ind.row() for ind in indexes)
+        bottom = max(ind.row() for ind in indexes)
+        left = min(ind.column() for ind in indexes)
+        right = max(ind.column() for ind in indexes)
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -1674,9 +1677,12 @@ class DataStoreTableModel(MinimalTableModel):
                 non_wip_data.append(data[k])
         self.batch_set_wip_data(wip_indexes, wip_data)
         self.batch_update_data(non_wip_indexes, non_wip_data)
-        # TODO: This below assumes some nice ordering in the indexes list. Can we do better?
-        # Maybe just emit data changed for the entire model?? emit layoutChanged?
-        self.dataChanged.emit(indexes[0], indexes[-1], [Qt.EditRole, Qt.DisplayRole])
+        # Find square envelope of indexes to emit dataChanged
+        top = min(ind.row() for ind in [*non_wip_indexes, *wip_indexes])
+        bottom = max(ind.row() for ind in [*non_wip_indexes, *wip_indexes])
+        left = min(ind.column() for ind in [*non_wip_indexes, *wip_indexes])
+        right = max(ind.column() for ind in [*non_wip_indexes, *wip_indexes])
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
@@ -2005,7 +2011,8 @@ class RelationshipParameterModel(ParameterModel):
         # Query db and build ad-hoc dicts
         relationship_class_dict = {x.name: {'id': x.id, 'object_class_name_list': x.object_class_name_list}
                                    for x in self.db_map.wide_relationship_class_list()}
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
@@ -2017,6 +2024,8 @@ class RelationshipParameterModel(ParameterModel):
                     object_class_name_list = relationship_class_dict[relationship_class_name]['object_class_name_list']
                     self._data[row][object_class_name_list_column][Qt.EditRole] = object_class_name_list
                     self._data[row][object_class_name_list_column][Qt.DisplayRole] = object_class_name_list
+                    # Append index to indexes, so we can emit dataChanged with it later
+                    indexes.append(self.index(row, object_class_name_list_column))
                 except KeyError:
                     pass
             if not parameter_name:
@@ -2097,7 +2106,8 @@ class ObjectParameterValueModel(ParameterValueModel):
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self.db_map.object_list()}
         parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
                           for x in self.db_map.parameter_list()}
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
@@ -2116,6 +2126,8 @@ class ObjectParameterValueModel(ParameterValueModel):
                     object_class_name = object_class_lookup_dict[object_class_id]
                     self._data[row][object_class_name_column][Qt.EditRole] = object_class_name
                     self._data[row][object_class_name_column][Qt.DisplayRole] = object_class_name
+                    # Append index to indexes, so we can emit dataChanged with it later
+                    indexes.append(self.index(row, object_class_name_column))
                 except KeyError:
                     pass
             try:
@@ -2274,7 +2286,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
         relationship_dict = {x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
                              for x in self.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self.db_map.object_list()}
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
@@ -2287,6 +2300,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
                         relationship_class_name = relationship_class_lookup_dict[relationship_class_id]
                         self._data[row][relationship_class_name_column][Qt.EditRole] = relationship_class_name
                         self._data[row][relationship_class_name_column][Qt.DisplayRole] = relationship_class_name
+                        # Append index to indexes, so we can emit dataChanged with it later
+                        indexes.append(self.index(row, relationship_class_name_column))
                     except KeyError:
                         pass
                 except KeyError:
