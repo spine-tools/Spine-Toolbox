@@ -884,7 +884,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     def enforce_min_row_count(self):
         """Insert empty rows to meet the minimum."""
-        self.insertRows(self.rowCount(), self.min_row_count - self.rowCount())
+        self.insertRows(self.rowCount(), self.min_row_count)
 
     def clear(self):
         self.beginResetModel()
@@ -1199,7 +1199,7 @@ class MinimalTableModel(QAbstractTableModel):
         if first < 0 or last >= self.rowCount():
             return False
         self.beginRemoveRows(parent, first, last)
-        for row in reversed(list(row_set)):
+        for row in reversed(sorted(row_set)):
             removed_data_row = self._data.pop(row)
             removed_flags_data_row = self._flags.pop(row)
         self.endRemoveRows()

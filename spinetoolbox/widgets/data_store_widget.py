@@ -274,26 +274,30 @@ class DataStoreForm(QMainWindow):
     @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_selection_changed")
     def receive_object_parameter_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
+        selection = self.ui.tableView_object_parameter.selectionModel().selection()
         index = self.ui.tabWidget_object.currentIndex()
-        self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selected.isEmpty())
+        self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_value_selection_changed")
     def receive_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
+        selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
         index = self.ui.tabWidget_object.currentIndex()
-        self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+        self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_selection_changed")
     def receive_relationship_parameter_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
+        selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
         index = self.ui.tabWidget_relationship.currentIndex()
-        self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selected.isEmpty())
+        self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_value_selection_changed")
     def receive_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
+        selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         index = self.ui.tabWidget_relationship.currentIndex()
-        self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+        self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selection.isEmpty())
 
     @Slot("int", name="receive_object_parameter_tab_changed")
     def receive_object_parameter_tab_changed(self, index):
@@ -1143,7 +1147,7 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_value_model
         proxy_index = self.ui.tableView_object_parameter_value.currentIndex()
         index = self.object_parameter_value_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count
+        row = model.fixed_row_count + 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
@@ -1179,7 +1183,7 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_value_model
         proxy_index = self.ui.tableView_relationship_parameter_value.currentIndex()
         index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count
+        row = model.fixed_row_count + 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
@@ -1225,7 +1229,7 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_model
         proxy_index = self.ui.tableView_object_parameter.currentIndex()
         index = self.object_parameter_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count
+        row = model.fixed_row_count + 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
@@ -1257,7 +1261,7 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_model
         proxy_index = self.ui.tableView_relationship_parameter.currentIndex()
         index = self.relationship_parameter_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count
+        row = model.fixed_row_count + 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
@@ -1314,7 +1318,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        source_row_set = self.source_row_set(selection)
+        source_row_set = self.source_row_set(selection, self.object_parameter_value_proxy)
         parameter_value_ids = set()
         id_column = self.object_parameter_value_model.horizontal_header_labels().index("id")
         for source_row in source_row_set:
@@ -1333,7 +1337,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        source_row_set = self.source_row_set(selection)
+        source_row_set = self.source_row_set(selection, self.relationship_parameter_value_proxy)
         parameter_value_ids = set()
         id_column = self.relationship_parameter_value_model.horizontal_header_labels().index("id")
         for source_row in source_row_set:
@@ -1352,7 +1356,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_object_parameters")
     def remove_object_parameters(self):
         selection = self.ui.tableView_object_parameter.selectionModel().selection()
-        source_row_set = self.source_row_set(selection)
+        source_row_set = self.source_row_set(selection, self.object_parameter_proxy)
         parameter_ids = set()
         parameter_names = set()
         id_column = self.object_parameter_model.horizontal_header_labels().index("id")
@@ -1376,7 +1380,7 @@ class DataStoreForm(QMainWindow):
     @Slot(name="remove_relationship_parameters")
     def remove_relationship_parameters(self):
         selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
-        source_row_set = self.source_row_set(selection)
+        source_row_set = self.source_row_set(selection, self.relationship_parameter_proxy)
         parameter_ids = set()
         parameter_names = set()
         id_column = self.relationship_parameter_model.horizontal_header_labels().index("id")
@@ -1397,16 +1401,13 @@ class DataStoreForm(QMainWindow):
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    def source_row_set(self, selection):
+    def source_row_set(self, selection, proxy_model):
         """A set of source rows corresponding to the selection of proxy indexes:
         object_parameter_model, relationship_parameter_model,
         object_parameter_value_model, relationship_parameter_value_model
         """
-        indexes = selection.indexes()
-        if not indexes:
+        if selection.isEmpty():
             return {}
-        proxy_model = indexes[0].model()
-        source_model = proxy_model.sourceModel()
         proxy_row_set = set()
         while not selection.isEmpty():
             current = selection.takeFirst()
