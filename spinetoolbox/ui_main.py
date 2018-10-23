@@ -325,25 +325,21 @@ class ToolboxUI(QMainWindow):
         self.ui.comboBox_tool.setModel(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
         # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
-        # doubleClicked signal
-        n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
-        if n_recv == 0:
+        n_recv_sig1 = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
+        if n_recv_sig1 == 0:
             # logging.debug("Connecting doubleClicked signal for QListView")
             self.ui.listView_tool_templates.doubleClicked.connect(self.edit_tool_template)
-        elif n_recv > 1:
-            # Check that this never gets over 1
-            logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv))
+        elif n_recv_sig1 > 1:  # Check that this never gets over 1
+            logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv_sig1))
         else:
             pass  # signal already connected
-        # customContextMenuRequested signal. Get n of receivers for this signal
-        n_recv = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
-        if n_recv == 0:
+        n_recv_sig2 = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
+        if n_recv_sig2 == 0:
             # slogging.debug("Connecting customContextMenuRequested signal for QListView")
             self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
-        elif n_recv > 1:
-            # Check that this never gets over 1
+        elif n_recv_sig2 > 1:  # Check that this never gets over 1
             logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}"
-                          .format(n_recv))
+                          .format(n_recv_sig2))
         else:
             pass  # signal already connected
         if n_tools == 0:
@@ -652,7 +648,12 @@ class ToolboxUI(QMainWindow):
             return
 
     def update_tool_template(self, row, tool_template):
-        """Update a ToolTemplate instance in the project."""
+        """Update a Tool template and refresh Tools that use it.
+
+        Args:
+            row (int): Row of tool template in ToolTemplateModel
+            tool_template (ToolTemplate): An updated Tool template
+        """
         if not self.tool_template_model.update_tool_template(tool_template, row):
             self.msg_error.emit("Unable to update Tool template <b>{0}</b>".format(tool_template.name))
             return
@@ -663,15 +664,23 @@ class ToolboxUI(QMainWindow):
         if not template:
             self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(tool_template.name))
             return
-        tools = self.project_item_model.find_item('Tools')
-        n_tool_items = tools.rowCount()
-        for i in range(n_tool_items):
-            tool = tools.child(i, 0).data(Qt.UserRole)
+        # Get all Tool project items
+        tools = self.project_item_model.items("Tools")
+        for tool in tools:
             if not tool.tool_template():
                 continue
             elif tool.tool_template().name == tool_template.name:
                 tool.set_tool_template(template)
                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
+
+        # n_tool_items = tools.rowCount()
+        # for i in range(n_tool_items):
+        #     tool = tools.child(i, 0).data(Qt.UserRole)
+        #     if not tool.tool_template():
+        #         continue
+        #     elif tool.tool_template().name == tool_template.name:
+        #         tool.set_tool_template(template)
+        #         self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
 
     @Slot(name="refresh_tool_templates")
     def refresh_tool_templates(self):

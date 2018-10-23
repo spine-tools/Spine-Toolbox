@@ -53,8 +53,6 @@ class DataConnection(ProjectItem):
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
-        # self.add_reference_header()
-        # self.add_data_header()
         self.data_dir_watcher = QFileSystemWatcher(self)
         # Make project directory for this Data Connection
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
@@ -73,66 +71,37 @@ class DataConnection(ProjectItem):
         self._graphics_item = DataConnectionImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
         # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
+        self._sigs = self.make_signal_handler_dict()
+
+    def make_signal_handler_dict(self):
+        """Returns a dictionary of all shared signals and their handlers.
+        This is to enable simpler connecting and disconnecting."""
+        s = dict()
+        s[self._toolbox.ui.pushButton_dc_open.clicked] = self.open_directory
+        s[self._toolbox.ui.toolButton_plus.clicked] = self.add_references
+        s[self._toolbox.ui.toolButton_minus.clicked] = self.remove_references
+        s[self._toolbox.ui.toolButton_add.clicked] = self.copy_to_project
+        s[self._toolbox.ui.toolButton_datapackage.clicked] = self.call_infer_datapackage
+        s[self._toolbox.ui.treeView_dc_references.doubleClicked] = self.open_reference
+        s[self._toolbox.ui.treeView_dc_data.doubleClicked] = self.open_data_file
+        s[self.data_dir_watcher.directoryChanged] = self.refresh
+        # TODO: Is file_dropped signal actually in use with Data Connections?
+        # self._toolbox.ui.treeView_dc_references.file_dropped.connect(self.add_file_to_references)
+        # self._toolbox.ui.treeView_dc_data.file_dropped.connect(self.add_file_to_data_dir)
+        return s
 
     def activate(self):
         """Restore selections and connect signals."""
         self.restore_selections()  # Do this before connecting signals or funny things happen
-        self._toolbox.ui.pushButton_dc_open.clicked.connect(self.open_directory)
-        self._toolbox.ui.toolButton_plus.clicked.connect(self.add_references)
-        self._toolbox.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._toolbox.ui.toolButton_add.clicked.connect(self.copy_to_project)
-        self._toolbox.ui.toolButton_datapackage.clicked.connect(self.call_infer_datapackage)
-        self._toolbox.ui.treeView_dc_references.doubleClicked.connect(self.open_reference)
-        self._toolbox.ui.treeView_dc_data.doubleClicked.connect(self.open_data_file)
-        # TODO: Is file_dropped signal really in use with Data Connections?
-        # self._toolbox.ui.treeView_dc_references.file_dropped.connect(self.add_file_to_references)
-        # self._toolbox.ui.treeView_dc_data.file_dropped.connect(self.add_file_to_data_dir)
-        self.data_dir_watcher.directoryChanged.connect(self.refresh)
+        super().connect_signals()
 
     def deactivate(self):
         """Save selections and disconnect signals."""
         self.save_selections()
-        ret = True
-        retvals = list()  # This should be all True if every signal was disconnected successfully
-        try:
-            retvals.append(self._toolbox.ui.pushButton_dc_open.clicked.disconnect())
-            retvals.append(self._toolbox.ui.toolButton_plus.clicked.disconnect())
-            retvals.append(self._toolbox.ui.toolButton_minus.clicked.disconnect())
-            retvals.append(self._toolbox.ui.toolButton_add.clicked.disconnect())
-            retvals.append(self._toolbox.ui.toolButton_datapackage.clicked.disconnect())
-            retvals.append(self._toolbox.ui.treeView_dc_references.doubleClicked.disconnect())
-            retvals.append(self._toolbox.ui.treeView_dc_data.doubleClicked.disconnect())
-            # TODO: Is file_dropped signal really in use with Data Connections?
-            # retvals.append(self._toolbox.ui.treeView_dc_references.file_dropped.disconnect())
-            # retvals.append(self._toolbox.ui.treeView_dc_data.file_dropped.disconnect())
-            retvals.append(self.data_dir_watcher.directoryChanged.disconnect())
-        except RuntimeError:
-            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
-            ret = False
-        if not all(retvals):
-            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
-                                         .format(self.name, retvals))
-            ret = False
-        return ret
-
-        # These do not work for some reason
-        # try:
-        #     self._toolbox.ui.pushButton_dc_open.clicked.disconnect(self.open_directory)
-        #     self._toolbox.ui.toolButton_plus.clicked.disconnect(self.add_references)
-        #     self._toolbox.ui.toolButton_minus.clicked.disconnect(self.remove_references)
-        #     self._toolbox.ui.toolButton_add.clicked.disconnect(self.copy_to_project)
-        #     self._toolbox.ui.toolButton_datapackage.clicked.disconnect(self.call_infer_datapackage)
-        #     self._toolbox.ui.treeView_dc_references.doubleClicked.disconnect(self.open_reference)
-        #     self._toolbox.ui.treeView_dc_data.doubleClicked.disconnect(self.open_data_file)
-        #     self._toolbox.ui.treeView_dc_references.file_dropped.disconnect(self.add_file_to_references)
-        #     self._toolbox.ui.treeView_dc_data.file_dropped.disconnect(self.add_file_to_data_dir)
-        #     self.data_dir_watcher.directoryChanged.disconnect(self.refresh)
-        # except RuntimeError:
-        #     self._toolbox.msg_warning.emit("Runtime error")
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        pass
+        if not super().disconnect_signals():
+            logging.error("Item {0} deactivation failed".format(self.name))
+            return False
+        return True
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
@@ -140,6 +109,10 @@ class DataConnection(ProjectItem):
         self._toolbox.ui.treeView_dc_references.setModel(self.reference_model)
         self._toolbox.ui.treeView_dc_data.setModel(self.data_model)
         self.refresh()
+
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        pass
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -196,8 +169,8 @@ class DataConnection(ProjectItem):
         data_files = self.data_files()
         self.populate_data_list(data_files)
 
-    @Slot(name="open_directory")
-    def open_directory(self):
+    @Slot(bool, name="open_directory")
+    def open_directory(self, checked):
         """Open file explorer in Data Connection data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -205,8 +178,8 @@ class DataConnection(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    @Slot(name="add_references")
-    def add_references(self):
+    @Slot(bool, name="add_references")
+    def add_references(self, checked):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", APPLICATION_PATH, "*.*")
@@ -220,8 +193,8 @@ class DataConnection(ProjectItem):
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
 
-    @Slot(name="remove_references")
-    def remove_references(self):
+    @Slot(bool, name="remove_references")
+    def remove_references(self, checked):
         """Remove selected references from reference list.
         Removes all references if nothing is selected.
         """
@@ -237,8 +210,8 @@ class DataConnection(ProjectItem):
             self._toolbox.msg.emit("Selected references removed")
         self.populate_reference_list(self.references)
 
-    @Slot(name="copy_to_project")
-    def copy_to_project(self):
+    @Slot(bool, name="copy_to_project")
+    def copy_to_project(self, checked):
         """Copy files in the file reference list to project and update Data QTreeView."""
         if not self.references:
             self._toolbox.msg_warning.emit("No files to copy")
@@ -293,8 +266,8 @@ class DataConnection(ProjectItem):
                 if not res:
                     self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
-    @Slot(name="call_infer_datapackage")
-    def call_infer_datapackage(self, load_resource_data=True):
+    @Slot(bool, name="call_infer_datapackage")
+    def call_infer_datapackage(self, checked):
         """Infer datapackage from CSV files in data directory."""
         data_files = self.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:

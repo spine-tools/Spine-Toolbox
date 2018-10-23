@@ -195,6 +195,7 @@ class Ui_MainWindow(object):
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap(":/icons/Spine_db_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_spine.setIcon(icon)
+        self.toolButton_spine.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_spine.setObjectName("toolButton_spine")
         self.horizontalLayout_4.addWidget(self.toolButton_spine)
         self.gridLayout.addLayout(self.horizontalLayout_4, 0, 1, 1, 2)
@@ -484,6 +485,7 @@ class Ui_MainWindow(object):
         icon1 = QtGui.QIcon()
         icon1.addPixmap(QtGui.QPixmap(":/icons/plus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_plus.setIcon(icon1)
+        self.toolButton_plus.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_plus.setObjectName("toolButton_plus")
         self.horizontalLayout_2.addWidget(self.toolButton_plus)
         self.toolButton_minus = QtWidgets.QToolButton(self.tab_data_connection)
@@ -503,6 +505,7 @@ class Ui_MainWindow(object):
         icon2 = QtGui.QIcon()
         icon2.addPixmap(QtGui.QPixmap(":/icons/minus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_minus.setIcon(icon2)
+        self.toolButton_minus.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_minus.setObjectName("toolButton_minus")
         self.horizontalLayout_2.addWidget(self.toolButton_minus)
         self.toolButton_add = QtWidgets.QToolButton(self.tab_data_connection)
@@ -511,6 +514,7 @@ class Ui_MainWindow(object):
         icon3 = QtGui.QIcon()
         icon3.addPixmap(QtGui.QPixmap(":/icons/import.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_add.setIcon(icon3)
+        self.toolButton_add.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_add.setObjectName("toolButton_add")
         self.horizontalLayout_2.addWidget(self.toolButton_add)
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -606,9 +610,12 @@ class Ui_MainWindow(object):
         self.comboBox_tool.setObjectName("comboBox_tool")
         self.horizontalLayout_9.addWidget(self.comboBox_tool)
         self.toolButton_tool_template = QtWidgets.QToolButton(self.tab_tool)
+        self.toolButton_tool_template.setMinimumSize(QtCore.QSize(26, 26))
+        self.toolButton_tool_template.setMaximumSize(QtCore.QSize(26, 26))
         icon5 = QtGui.QIcon()
         icon5.addPixmap(QtGui.QPixmap(":/icons/tool_options.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_tool_template.setIcon(icon5)
+        self.toolButton_tool_template.setIconSize(QtCore.QSize(22, 22))
         self.toolButton_tool_template.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_tool_template.setObjectName("toolButton_tool_template")
         self.horizontalLayout_9.addWidget(self.toolButton_tool_template)
@@ -1012,7 +1019,6 @@ class Ui_MainWindow(object):
         self.label_tool_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
         self.label_tool_template.setText(QtWidgets.QApplication.translate("MainWindow", "Template", None, -1))
         self.toolButton_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool template options.</p></body></html>", None, -1))
-        self.toolButton_tool_template.setText(QtWidgets.QApplication.translate("MainWindow", "...", None, -1))
         self.label_tool_args.setText(QtWidgets.QApplication.translate("MainWindow", "Args", None, -1))
         self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool command line arguments. Edit tool definition file to change these.</p></body></html>", None, -1))
         self.treeView_input_files.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Edit Tool template to modify these</p></body></html>", None, -1))
@@ -1076,7 +1082,7 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
         self.actionRestore_Dock_Widgets.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

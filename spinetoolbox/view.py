@@ -16,6 +16,7 @@ Module for view class.
 :date:   14.07.2018
 """
 
+import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
@@ -58,41 +59,40 @@ class View(ProjectItem):
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
         self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
+        # Note: view_refresh_signal is not shared with other project items so there is no need to disconnect it
         self.view_refresh_signal.connect(self.refresh)
+        self._sigs = self.make_signal_handler_dict()
+
+    def make_signal_handler_dict(self):
+        """Returns a dictionary of all shared signals and their handlers.
+        This is to enable simpler connecting and disconnecting."""
+        s = dict()
+        s[self._toolbox.ui.treeView_view.doubleClicked] = self.open_network_map
+        s[self._toolbox.ui.pushButton_open_network_map.clicked] = self.open_network_map
+        return s
 
     def activate(self):
         """Restore selections and connect signals."""
         self.restore_selections()
-        self._toolbox.ui.treeView_view.doubleClicked.connect(self.open_network_map)
-        self._toolbox.ui.pushButton_open_network_map.clicked.connect(self.open_network_map)
+        super().connect_signals()
 
     def deactivate(self):
         """Save selections and disconnect signals."""
         self.save_selections()
-        ret = True
-        retvals = list()
-        try:
-            retvals.append(self._toolbox.ui.treeView_view.doubleClicked.disconnect(self.open_network_map))
-            retvals.append(self._toolbox.ui.pushButton_open_network_map.clicked.disconnect(self.open_network_map))
-            # retvals.append(self.view_refresh_signal.disconnect(self.refresh))
-        except RuntimeError:
-            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
-            ret = False
-        if not all(retvals):
-            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
-                                         .format(self.name, retvals))
-            ret = False
-        return ret
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        self._toolbox.ui.treeView_view.setModel(None)
+        if not super().disconnect_signals():
+            logging.error("Item {0} deactivation failed".format(self.name))
+            return False
+        return True
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_view_name.setText(self.name)
         self._toolbox.ui.treeView_view.setModel(self.reference_model)
         self.refresh()
+
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        self._toolbox.ui.treeView_view.setModel(None)
 
     def set_icon(self, icon):
         self._graphics_item = icon

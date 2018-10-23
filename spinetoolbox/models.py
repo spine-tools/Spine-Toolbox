@@ -494,8 +494,10 @@ class ToolTemplateModel(QAbstractListModel):
             row (int): Row of tool template
 
         Returns:
-            ToolTemplate from tool template list
+            ToolTemplate from tool template list or None if given row is zero
         """
+        if row == 0:
+            return None
         return self._tools[row]
 
     def find_tool_template(self, name):
@@ -513,7 +515,7 @@ class ToolTemplateModel(QAbstractListModel):
         return None
 
     def tool_template_row(self, name):
-        """Returns the index (row) on which the given template lives or -1 if not found."""
+        """Returns the row on which the given template is located or -1 if it is not found."""
         for i in range(len(self._tools)):
             if isinstance(self._tools[i], str):
                 continue
@@ -523,7 +525,8 @@ class ToolTemplateModel(QAbstractListModel):
         return -1
 
     def tool_template_index(self, name):
-        """Returns the index (QModelIndex) on which the given template lives or -1 if not found."""
+        """Returns the QModelIndex on which a tool template with
+        the given name is located or None if it is not found."""
         row = self.tool_template_row(name)
         if row == -1:
             return QModelIndex()

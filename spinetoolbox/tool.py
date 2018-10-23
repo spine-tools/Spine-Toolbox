@@ -23,7 +23,7 @@ import shutil
 import getpass
 from project_item import ProjectItem
 # from widgets.tool_subwindow_widget import ToolSubWindowWidget
-from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtCore import Slot, Qt, QUrl, QModelIndex
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
@@ -57,7 +57,6 @@ class Tool(ProjectItem):
         self._tool_template = None
         self._tool_template_index = None
         self.set_tool_template(tool_template)
-        # Get row where Tool template is in the model
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
@@ -71,40 +70,30 @@ class Tool(ProjectItem):
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
+        self._sigs = self.make_signal_handler_dict()
+
+    def make_signal_handler_dict(self):
+        """Returns a dictionary of all shared signals and their handlers.
+        This is to enable simpler connecting and disconnecting."""
+        s = dict()
+        s[self._toolbox.ui.pushButton_tool_stop.clicked] = self.stop_process
+        s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
+        s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
+        s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
+        return s
 
     def activate(self):
         """Restore selections and connect signals."""
         self.restore_selections()
-        self._toolbox.ui.pushButton_tool_stop.clicked.connect(self.stop_process)
-        self._toolbox.ui.pushButton_tool_results.clicked.connect(self.open_results)
-        self._toolbox.ui.pushButton_tool_execute.clicked.connect(self.execute)
-        self._toolbox.ui.comboBox_tool.currentIndexChanged.connect(self.update_tool_template)
+        super().connect_signals()
 
     def deactivate(self):
         """Save selections and disconnect signals."""
         self.save_selections()
-        ret = True
-        retvals = list()
-        try:
-            retvals.append(self._toolbox.ui.pushButton_tool_stop.clicked.disconnect(self.stop_process))
-            retvals.append(self._toolbox.ui.pushButton_tool_results.clicked.disconnect(self.open_results))
-            retvals.append(self._toolbox.ui.pushButton_tool_execute.clicked.disconnect(self.execute))
-            retvals.append(self._toolbox.ui.comboBox_tool.currentIndexChanged.disconnect(self.update_tool_template))
-        except RuntimeError:
-            self._toolbox.msg_error.emit("Runtime error in disconnecting <b>{0}</b> signals".format(self.name))
-            ret = False
-        if not all(retvals):
-            self._toolbox.msg_error.emit("A signal in <b>{0}</b> was not disconnected properly<br/>{1}"
-                                         .format(self.name, retvals))
-            ret = False
-        return ret
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        if not self._tool_template:
-            self._tool_template_index = None
-        else:
-            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        if not super().disconnect_signals():
+            logging.error("Item {0} deactivation failed".format(self.name))
+            return False
+        return True
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
@@ -113,11 +102,60 @@ class Tool(ProjectItem):
         self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
         if not self._tool_template_index:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
+            self.set_tool_template(None)
         else:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
+            tool_template = self._toolbox.tool_template_model.tool_template(self._tool_template_index.row())
+            self.set_tool_template(tool_template)
 
-    @Slot(name="open_results")
-    def open_results(self):
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        if not self._tool_template:
+            self._tool_template_index = None
+        else:
+            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+
+    @Slot(int, name="update_tool_template")
+    def update_tool_template(self, row):
+        """Update Tool template according to selection.
+
+        Args:
+            row (int): Selected row in the comboBox
+        """
+        new_tool = self._toolbox.tool_template_model.tool_template(row)
+        self.set_tool_template(new_tool)
+
+    def set_tool_template(self, tool_template):
+        """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
+
+        Args:
+            tool_template (ToolTemplate): Template for this Tool. None removes the template.
+
+        Returns:
+            ToolTemplate or None if no Tool Template set for this Tool.
+        """
+        self._tool_template = tool_template
+        if not tool_template:
+            self._tool_template_index = None
+        else:
+            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
+        self.update_tool_ui()
+
+    def update_tool_ui(self):
+        """Update Tool UI to show Tool template details."""
+        if not self.tool_template():
+            self._toolbox.ui.lineEdit_tool_args.setText("")
+            self.populate_input_files_list(None)
+            self.populate_output_files_list(None)
+        else:
+            self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self.populate_input_files_list(self.tool_template().inputfiles)
+            self.populate_output_files_list(self.tool_template().outputfiles)
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
+        self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+
+    @Slot(bool, name="open_results")
+    def open_results(self, checked):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no results. "
@@ -129,8 +167,8 @@ class Tool(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
 
-    @Slot(name="stop_process")
-    def stop_process(self):
+    @Slot(bool, name="stop_process")
+    def stop_process(self, checked):
         self.instance.terminate_instance()
         self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
@@ -157,37 +195,8 @@ class Tool(ProjectItem):
         """Returns Tool template."""
         return self._tool_template
 
-    def set_tool_template(self, tool_template):
-        """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
-
-        Args:
-            tool_template (ToolTemplate): Template for this Tool. None removes the template.
-
-        Returns:
-            ToolTemplate or None if no Tool Template set for this Tool.
-        """
-        self._tool_template = tool_template
-        if tool_template:
-            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
-        else:
-            self._tool_template_index = None
-        self.update_tool_ui()
-        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
-
-    def update_tool_ui(self):
-        """Update Tool UI to show Tool template details."""
-        if not self.tool_template():
-            self._toolbox.ui.lineEdit_tool_args.setText("")
-            self.populate_input_files_list(None)
-            self.populate_output_files_list(None)
-        else:
-            self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-            self.populate_input_files_list(self.tool_template().inputfiles)
-            self.populate_output_files_list(self.tool_template().outputfiles)
-
-    @Slot(name="execute")
-    def execute(self):
+    @Slot(bool, name="execute")
+    def execute(self, checked):
         """Execute button clicked."""
         if not self.tool_template():
             self._toolbox.msg_warning.emit("No Tool template attached to Tool <b>{0}</b>".format(self.name))
@@ -510,20 +519,6 @@ class Tool(ProjectItem):
         if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
             # Tool template cmdline args is a space delimited string. Add them to a list.
             self.instance.args += self.tool_template().cmdline_args.split(" ")
-
-    @Slot(int, name="update_tool_template")
-    def update_tool_template(self, row):
-        """Update Tool template according to selection.
-
-        Args:
-            row (int): Selected row in the comboBox
-        """
-        if row == 0:
-            new_tool = None
-        else:
-            # Find ToolTemplate from model according to row
-            new_tool = self._toolbox.tool_template_model.tool_template(row)
-        self.set_tool_template(new_tool)
 
     def make_header_for_input_files(self):
         """Add header to input files model."""
