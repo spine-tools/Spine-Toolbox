@@ -85,9 +85,9 @@ class DataConnection(ProjectItem):
         s[self._toolbox.ui.treeView_dc_references.doubleClicked] = self.open_reference
         s[self._toolbox.ui.treeView_dc_data.doubleClicked] = self.open_data_file
         s[self.data_dir_watcher.directoryChanged] = self.refresh
-        # TODO: Is file_dropped signal actually in use with Data Connections?
-        # self._toolbox.ui.treeView_dc_references.file_dropped.connect(self.add_file_to_references)
-        # self._toolbox.ui.treeView_dc_data.file_dropped.connect(self.add_file_to_data_dir)
+        s[self._toolbox.ui.treeView_dc_references.files_dropped] = self.add_files_to_references
+        s[self._toolbox.ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
+        s[self._graphics_item.master().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
         return s
 
     def activate(self):
@@ -121,18 +121,6 @@ class DataConnection(ProjectItem):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
 
-    @Slot("QString", name="add_file_to_references")
-    def add_file_to_references(self, path):
-        """Add a single file path to reference list.
-
-        Args:
-            path (str): Path to file
-        """
-        if path in self.references:
-            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
-            return
-        self.references.append(os.path.abspath(path))
-        self.populate_reference_list(self.references)
 
     @Slot("QVariant", name="add_files_to_references")
     def add_files_to_references(self, paths):
