@@ -37,7 +37,7 @@ class LineEditDelegate(QItemDelegate):
     def setEditorData(self, editor, index):
         """Init the line editor with previous data from the index."""
         data = index.data(Qt.EditRole)
-        if data:
+        if data is not None:
             editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
@@ -133,7 +133,7 @@ class DataStoreDelegate(QItemDelegate):
             editor.showPopup()
         elif isinstance(editor, CustomLineEditor):
             data = editor.index().data(Qt.EditRole)
-            if data:
+            if data is not None:
                 editor.setText(str(data))
 
     def setModelData(self, editor, model, index):
@@ -141,6 +141,7 @@ class DataStoreDelegate(QItemDelegate):
         pass
 
 
+# NOTE: Not in use at the moment
 class HighlightFrameDelegate(QItemDelegate):
     """A delegate that paints a blue frame around the row.
 

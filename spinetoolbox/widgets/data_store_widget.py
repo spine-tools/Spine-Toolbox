@@ -1301,7 +1301,7 @@ class DataStoreForm(QMainWindow):
     def set_parameter_data(self, editor):
         """Update parameter (object or relationship) with newly edited data."""
         new_value = editor.text()
-        if not new_value:
+        if new_value is None:
             return
         index = editor.index()
         proxy_model = index.model()

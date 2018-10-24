@@ -879,7 +879,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.has_empty_row = has_empty_row
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
-        self.modelReset.connect(self.receive_model_reset)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
@@ -907,17 +906,13 @@ class MinimalTableModel(QAbstractTableModel):
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
 
-    @Slot(name="model_reset")
-    def receive_model_reset(self):
-        """In models with a last empty row, insert a new empty row after model reset."""
-        if not self.has_empty_row:
-            return
-        self.insertRows(self.rowCount(), 1)
-
     def clear(self):
         self.beginResetModel()
         self._data = list()
         self.endResetModel()
+        if not self.has_empty_row:
+            return
+        self.insertRows(self.rowCount(), 1)
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -1255,7 +1250,9 @@ class MinimalTableModel(QAbstractTableModel):
             self._data.append(new_row)
             self._flags.append(new_flags_row)
         self.endResetModel()
-
+        if not self.has_empty_row:
+            return
+        self.insertRows(self.rowCount(), 1)
 
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview."""
