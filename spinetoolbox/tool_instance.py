@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 ToolInstance class definition.
@@ -128,6 +120,12 @@ class ToolInstance(QObject):
             # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
             # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
             self.tool_process.start_process(workdir=self.basedir)
+        elif self.tool_template.tooltype == "executable":
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
+            # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
+            # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
+            self.tool_process.start_process(workdir=self.basedir)
 
     def julia_repl_tool_finished(self, ret):
         """Run when Julia tool using REPL has finished processing.
@@ -191,8 +189,8 @@ class ToolInstance(QObject):
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
-                                       "GAMS is installed properly on your computer "
-                                       "and GAMS directory is given in Settings (F1).")
+                                             "GAMS is installed properly on your computer "
+                                             "and GAMS directory is given in Settings (F1).")
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -201,6 +199,30 @@ class ToolInstance(QObject):
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tGAMS Tool template finished successfully. Return code:{0}".format(ret))
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.save_output_files(ret)
+
+    @Slot(int, name="executable_tool_finished")
+    def executable_tool_finished(self, ret):
+        """Run when an executable tool has finished processing. Copies output of tool
+        to project output directory.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.executable_tool_finished)  # Disconnect after execution
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit("Sub-process failed to start.")
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tExecutable Tool template finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -217,7 +239,7 @@ class ToolInstance(QObject):
             create_dir(result_path)
         except OSError:
             self._toolbox.msg_error.emit("\tError creating timestamped output directory. "
-                                   "Tool output files not copied. Check folder permissions.")
+                                         "Tool output files not copied. Check folder permissions.")
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
             return

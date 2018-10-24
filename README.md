@@ -62,7 +62,6 @@ To update spinedatabase_api run
 
     pip install --upgrade git+https://gitlab.vtt.fi/spine/data
 
-
 ### Installing requirements for Anaconda & Miniconda Python (3.5+)
 
 PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge

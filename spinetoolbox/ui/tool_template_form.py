@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 # -*- coding: utf-8 -*-
 
@@ -31,7 +23,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(600, 741)
+        Form.resize(600, 766)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -44,7 +36,7 @@ class Ui_Form(object):
         self.verticalLayout_6.setObjectName("verticalLayout_6")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout()
         self.verticalLayout_5.setSpacing(6)
-        self.verticalLayout_5.setContentsMargins(9, 9, 9, 0)
+        self.verticalLayout_5.setContentsMargins(9, 9, 9, 9)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
@@ -77,6 +69,15 @@ class Ui_Form(object):
         self.textEdit_description.setTabChangesFocus(True)
         self.textEdit_description.setObjectName("textEdit_description")
         self.verticalLayout_5.addWidget(self.textEdit_description)
+        self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_6.setObjectName("horizontalLayout_6")
+        self.lineEdit_main_program = QtWidgets.QLineEdit(Form)
+        self.lineEdit_main_program.setObjectName("lineEdit_main_program")
+        self.horizontalLayout_6.addWidget(self.lineEdit_main_program)
+        self.toolButton_add_main_program = QtWidgets.QToolButton(Form)
+        self.toolButton_add_main_program.setObjectName("toolButton_add_main_program")
+        self.horizontalLayout_6.addWidget(self.toolButton_add_main_program)
+        self.verticalLayout_5.addLayout(self.horizontalLayout_6)
         self.lineEdit_args = QtWidgets.QLineEdit(Form)
         self.lineEdit_args.setEnabled(True)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
@@ -94,21 +95,21 @@ class Ui_Form(object):
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.treeView_includes = SourcesTreeView(Form)
+        self.treeView_sourcefiles = SourcesTreeView(Form)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.treeView_includes.sizePolicy().hasHeightForWidth())
-        self.treeView_includes.setSizePolicy(sizePolicy)
-        self.treeView_includes.setMaximumSize(QtCore.QSize(16777215, 200))
+        sizePolicy.setHeightForWidth(self.treeView_sourcefiles.sizePolicy().hasHeightForWidth())
+        self.treeView_sourcefiles.setSizePolicy(sizePolicy)
+        self.treeView_sourcefiles.setMaximumSize(QtCore.QSize(16777215, 200))
         font = QtGui.QFont()
         font.setPointSize(10)
-        self.treeView_includes.setFont(font)
-        self.treeView_includes.setAcceptDrops(True)
-        self.treeView_includes.setLineWidth(1)
-        self.treeView_includes.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.treeView_includes.setObjectName("treeView_includes")
-        self.verticalLayout.addWidget(self.treeView_includes)
+        self.treeView_sourcefiles.setFont(font)
+        self.treeView_sourcefiles.setAcceptDrops(True)
+        self.treeView_sourcefiles.setLineWidth(1)
+        self.treeView_sourcefiles.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_sourcefiles.setObjectName("treeView_sourcefiles")
+        self.verticalLayout.addWidget(self.treeView_sourcefiles)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         self.toolButton_plus_includes = QtWidgets.QToolButton(Form)
@@ -365,13 +366,15 @@ class Ui_Form(object):
         QtCore.QMetaObject.connectSlotsByName(Form)
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Tool Template", None, -1))
+        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Edit Tool Template", None, -1))
         self.lineEdit_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item name (required)</p></body></html>", None, -1))
         self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type tool name here...", None, -1))
         self.textEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type description here...", None, -1))
+        self.lineEdit_main_program.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Add main program file here...", None, -1))
+        self.toolButton_add_main_program.setText(QtWidgets.QApplication.translate("Form", "...", None, -1))
         self.lineEdit_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item description (optional)</p></body></html>", None, -1))
         self.lineEdit_args.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type command line arguments here...", None, -1))
-        self.treeView_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Supports Dragging &amp; Dropping from File Explorer.</p></body></html>", None, -1))
+        self.treeView_sourcefiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Supports Dragging &amp; Dropping from File Explorer.</p></body></html>", None, -1))
         self.toolButton_plus_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add source code files and directories that your program requires in order to run. <span style=\" font-weight:600;\">Start with the main program file</span>.</p></body></html>", None, -1))
         self.toolButton_minus_includes.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected or all if nothing is selected</p></body></html>", None, -1))
         self.treeView_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Double-click or press F2 to edit selected item</p></body></html>", None, -1))

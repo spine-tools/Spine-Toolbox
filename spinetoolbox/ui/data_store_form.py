@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 # -*- coding: utf-8 -*-
 
@@ -278,7 +270,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.splitter_tree_parameter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -523,6 +515,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

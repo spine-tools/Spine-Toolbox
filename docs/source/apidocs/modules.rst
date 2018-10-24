@@ -15,6 +15,7 @@ spinetoolbox
    metaobject
    models
    project
+   project_item
    qsubprocess
    resources_icons_rc
    resources_logos_rc

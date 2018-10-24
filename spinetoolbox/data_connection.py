@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Module for data connection class.
@@ -29,18 +21,18 @@ import shutil
 import logging
 from collections import Counter
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
-from PySide2.QtGui import QDesktopServices
+from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QMessageBox
-from metaobject import MetaObject
-from widgets.data_connection_subwindow_widget import DataConnectionWidget
+from project_item import ProjectItem
+# from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
-from config import APPLICATION_PATH
+from config import APPLICATION_PATH, HEADER_POINTSIZE
 from datapackage import Package
 from graphics_items import DataConnectionImage
 
 
-class DataConnection(MetaObject):
+class DataConnection(ProjectItem):
     """Data Connection class.
 
     Attributes:
@@ -57,15 +49,13 @@ class DataConnection(MetaObject):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
-        self.item_category = "Data Connections"
-        self._widget = DataConnectionWidget(self, self.item_type)
-        self._widget.set_name_label(name)
-        self._widget.make_header_for_references()
-        self._widget.make_header_for_data()
+        # self._widget = DataConnectionWidget(self, self.item_type)
+        self.reference_model = QStandardItemModel()  # References to files
+        self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
+        self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
         self.data_dir_watcher = QFileSystemWatcher(self)
-        # Make directory for Data Connection
+        # Make project directory for this Data Connection
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        self.references = references
         try:
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
@@ -73,28 +63,56 @@ class DataConnection(MetaObject):
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
         # Populate references model
-        self._widget.populate_reference_list(self.references)
+        self.references = references
+        self.populate_reference_list(self.references)
         # Populate data (files) model
         data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
+        self.populate_data_list(data_files)
         self._graphics_item = DataConnectionImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
-        self.connect_signals()
-        # self._widget.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)
+        # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
+        self._sigs = self.make_signal_handler_dict()
 
-    def connect_signals(self):
-        """Connect this data connection's signals to slots."""
-        self._widget.ui.pushButton_open.clicked.connect(self.open_directory)
-        self._widget.ui.toolButton_plus.clicked.connect(self.add_references)
-        self._widget.ui.toolButton_minus.clicked.connect(self.remove_references)
-        self._widget.ui.toolButton_add.clicked.connect(self.copy_to_project)
-        self._widget.ui.toolButton_datapackage.clicked.connect(self.call_infer_datapackage)
-        self._widget.ui.treeView_references.doubleClicked.connect(self.open_reference)
-        self._widget.ui.treeView_data.doubleClicked.connect(self.open_data_file)
-        self._widget.ui.treeView_references.files_dropped.connect(self.add_files_to_references)
-        self._widget.ui.treeView_data.files_dropped.connect(self.add_files_to_data_dir)
-        self._graphics_item.master().scene().files_dropped_on_dc.connect(self.receive_files_dropped_on_dc)
-        self.data_dir_watcher.directoryChanged.connect(self.refresh)
+    def make_signal_handler_dict(self):
+        """Returns a dictionary of all shared signals and their handlers.
+        This is to enable simpler connecting and disconnecting."""
+        s = dict()
+        s[self._toolbox.ui.pushButton_dc_open.clicked] = self.open_directory
+        s[self._toolbox.ui.toolButton_plus.clicked] = self.add_references
+        s[self._toolbox.ui.toolButton_minus.clicked] = self.remove_references
+        s[self._toolbox.ui.toolButton_add.clicked] = self.copy_to_project
+        s[self._toolbox.ui.toolButton_datapackage.clicked] = self.call_infer_datapackage
+        s[self._toolbox.ui.treeView_dc_references.doubleClicked] = self.open_reference
+        s[self._toolbox.ui.treeView_dc_data.doubleClicked] = self.open_data_file
+        s[self.data_dir_watcher.directoryChanged] = self.refresh
+        s[self._toolbox.ui.treeView_dc_references.files_dropped] = self.add_files_to_references
+        s[self._toolbox.ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
+        s[self._graphics_item.master().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
+        return s
+
+    def activate(self):
+        """Restore selections and connect signals."""
+        self.restore_selections()  # Do this before connecting signals or funny things happen
+        super().connect_signals()
+
+    def deactivate(self):
+        """Save selections and disconnect signals."""
+        self.save_selections()
+        if not super().disconnect_signals():
+            logging.error("Item {0} deactivation failed".format(self.name))
+            return False
+        return True
+
+    def restore_selections(self):
+        """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.label_dc_name.setText(self.name)
+        self._toolbox.ui.treeView_dc_references.setModel(self.reference_model)
+        self._toolbox.ui.treeView_dc_data.setModel(self.data_model)
+        self.refresh()
+
+    def save_selections(self):
+        """Save selections in shared widgets for this project item into instance variables."""
+        pass
 
     def set_icon(self, icon):
         self._graphics_item = icon
@@ -103,20 +121,6 @@ class DataConnection(MetaObject):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
 
-    def get_widget(self):
-        """Returns the graphical representation (QWidget) of this object."""
-        return self._widget
-
-    def add_file_to_references(self, path):
-        """Add a single file path to reference list.
-
-        Args:
-            path (str): Path to file
-        """
-        if path in self.references:
-            self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
-            return
-        self.references.append(os.path.abspath(path))
 
     @Slot("QVariant", name="add_files_to_references")
     def add_files_to_references(self, paths):
@@ -130,7 +134,7 @@ class DataConnection(MetaObject):
                 self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
                 return
             self.references.append(os.path.abspath(path))
-        self._widget.populate_reference_list(self.references)
+        self.populate_reference_list(self.references)
 
     @Slot("QGraphicsItem", "QVariant", name="receive_files_dropped_on_dc")
     def receive_files_dropped_on_dc(self, item, file_paths):
@@ -151,10 +155,10 @@ class DataConnection(MetaObject):
                 self._toolbox.msg_error.emit("[OSError] Copying failed")
                 return
         data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
+        self.populate_data_list(data_files)
 
-    @Slot(name="open_directory")
-    def open_directory(self):
+    @Slot(bool, name="open_directory")
+    def open_directory(self, checked):
         """Open file explorer in Data Connection data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -162,8 +166,8 @@ class DataConnection(MetaObject):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    @Slot(name="add_references")
-    def add_references(self):
+    @Slot(bool, name="add_references")
+    def add_references(self, checked):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", APPLICATION_PATH, "*.*")
@@ -175,14 +179,14 @@ class DataConnection(MetaObject):
                 self._toolbox.msg_warning.emit("Reference to file <b>{0}</b> already available".format(path))
                 continue
             self.references.append(os.path.abspath(path))
-        self._widget.populate_reference_list(self.references)
+        self.populate_reference_list(self.references)
 
-    @Slot(name="remove_references")
-    def remove_references(self):
+    @Slot(bool, name="remove_references")
+    def remove_references(self, checked):
         """Remove selected references from reference list.
         Removes all references if nothing is selected.
         """
-        indexes = self._widget.ui.treeView_references.selectedIndexes()
+        indexes = self._toolbox.ui.treeView_dc_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self.references.clear()
             self._toolbox.msg.emit("All references removed")
@@ -192,10 +196,10 @@ class DataConnection(MetaObject):
             for row in rows:
                 self.references.pop(row)
             self._toolbox.msg.emit("Selected references removed")
-        self._widget.populate_reference_list(self.references)
+        self.populate_reference_list(self.references)
 
-    @Slot(name="copy_to_project")
-    def copy_to_project(self):
+    @Slot(bool, name="copy_to_project")
+    def copy_to_project(self, checked):
         """Copy files in the file reference list to project and update Data QTreeView."""
         if not self.references:
             self._toolbox.msg_warning.emit("No files to copy")
@@ -213,7 +217,7 @@ class DataConnection(MetaObject):
                 self._toolbox.msg_error.emit("[OSError] Copying failed")
                 continue
         data_files = self.data_files()
-        self._widget.populate_data_list(data_files)
+        self.populate_data_list(data_files)
 
     @Slot("QModelIndex", name="open_reference")
     def open_reference(self, index):
@@ -250,13 +254,13 @@ class DataConnection(MetaObject):
                 if not res:
                     self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
-    @Slot(name="call_infer_datapackage")
-    def call_infer_datapackage(self, load_resource_data=True):
+    @Slot(bool, name="call_infer_datapackage")
+    def call_infer_datapackage(self, checked):
         """Infer datapackage from CSV files in data directory."""
         data_files = self.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
             self._toolbox.msg_error.emit("The folder <b>{0}</b> does not have any CSV files. "
-                                        "Add some and try again".format(self.data_dir))
+                                         "Add some and try again".format(self.data_dir))
             return
         self.infer_datapackage()
 
@@ -327,7 +331,7 @@ class DataConnection(MetaObject):
         """Refresh data files QTreeView.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
-        self._widget.populate_data_list(d)
+        self.populate_data_list(d)
 
     def find_file(self, fname, visited_items):
         """Search for filename in references and data and return the path if found."""
@@ -345,21 +349,70 @@ class DataConnection(MetaObject):
             if fn == fname:
                 # logging.debug("{0} found in DC {1}".format(fname, self.name))
                 self._toolbox.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
-                                      .format(fname, self.name))
+                                       .format(fname, self.name))
                 return path
         visited_items.append(self)
         for input_item in self._toolbox.connection_model.input_items(self.name):
             # Find item from project model
-            found_item = self._toolbox.project_item_model.find_item(input_item, Qt.MatchExactly | Qt.MatchRecursive)
-            if not found_item:
+            found_index = self._toolbox.project_item_model.find_item(input_item)
+            if not found_index:
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
-            item_data = found_item.data(Qt.UserRole)
-            if item_data.item_type in ["Data Store", "Data Connection"]:
-                path = item_data.find_file(fname, visited_items)
+            item = self._toolbox.project_item_model.project_item(found_index)
+            if item.item_type in ["Data Store", "Data Connection"]:
+                path = item.find_file(fname, visited_items)
                 if path is not None:
                     return path
         return None
+
+    def add_reference_header(self):
+        """Add header to files model. I.e. External Data Connection files."""
+        h = QStandardItem("References")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.reference_model.setHorizontalHeaderItem(0, h)
+
+    def add_data_header(self):
+        """Add header to data model. I.e. Internal Data Connection files."""
+        h = QStandardItem("Data")
+        # Decrease font size
+        font = h.font()
+        font.setPointSize(HEADER_POINTSIZE)
+        h.setFont(font)
+        self.data_model.setHorizontalHeaderItem(0, h)
+
+    def populate_reference_list(self, items):
+        """List file references in QTreeView.
+        If items is None or empty list, model is cleared.
+        """
+        self.reference_model.clear()
+        self.add_reference_header()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(item, Qt.ToolTipRole)
+                self.reference_model.appendRow(qitem)
+
+    def populate_data_list(self, items):
+        """List project internal data (files) in QTreeView.
+        If items is None or empty list, model is cleared.
+        """
+        self.data_model.clear()
+        self.add_data_header()
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                if item == 'datapackage.json':
+                    qitem.setData(self.datapackage_icon, Qt.DecorationRole)
+                self.data_model.appendRow(qitem)
+
+    def update_name_label(self):
+        """Update Data Connection tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_dc_name.setText(self.name)
 
 
 class CustomPackage(Package):

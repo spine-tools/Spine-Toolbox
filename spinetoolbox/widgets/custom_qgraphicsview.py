@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Class for a custom QGraphicsView for visualizing project items and connections.
@@ -117,9 +109,11 @@ class CustomQGraphicsView(QGraphicsView):
     def add_link(self, src_name, dst_name, index):
         """Draws link between source and sink items on scene and
         appends connection model. Refreshes View references if needed."""
-        flags = Qt.MatchExactly | Qt.MatchRecursive
-        src_item = self._project_item_model.find_item(src_name, flags).data(Qt.UserRole)
-        dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
+        src_item_index = self._project_item_model.find_item(src_name)
+        dst_item_index = self._project_item_model.find_item(dst_name)
+        src_item = self._project_item_model.project_item(src_item_index)
+        dst_item = self._project_item_model.project_item(dst_item_index)
+        # logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
         link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
         self.scene().addItem(link)
         self._connection_model.setData(index, link)
@@ -136,8 +130,7 @@ class CustomQGraphicsView(QGraphicsView):
             return False
         # Find destination item
         dst_name = link.dst_icon.name()
-        flags = Qt.MatchExactly | Qt.MatchRecursive
-        dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
+        dst_item = self._project_item_model.project_item(self._project_item_model.find_item(dst_name))
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
         # Refresh View references
@@ -155,9 +148,10 @@ class CustomQGraphicsView(QGraphicsView):
                 data = self._connection_model.data(index, Qt.DisplayRole)  # NOTE: data DisplayRole returns a string
                 src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                 dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                flags = Qt.MatchExactly | Qt.MatchRecursive
-                src_item = self._project_item_model.find_item(src_name, flags).data(Qt.UserRole)
-                dst_item = self._project_item_model.find_item(dst_name, flags).data(Qt.UserRole)
+                src = self._project_item_model.find_item(src_name)
+                src_item = self._project_item_model.project_item(src)
+                dst = self._project_item_model.find_item(dst_name)
+                dst_item = self._project_item_model.project_item(dst)
                 if data == "True":
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
                     link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
@@ -217,45 +211,44 @@ class CustomQGraphicsView(QGraphicsView):
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
         if self.src_widget == self.dst_widget:
-            self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. The functionality for feedback "
-                                           "links is not implemented yet.")
+            self._toolbox.msg_warning.emit("<b>Not implemented</b>. The functionality for feedback links "
+                                           "is not implemented yet.")
         else:
-            src_item = self._project_item_model.find_item(self.src_widget, Qt.MatchExactly | Qt.MatchRecursive)
-            if not src_item:
+            src_index = self._project_item_model.find_item(self.src_widget)
+            if not src_index:
+                logging.error("Item {0} not found".format(self.src_widget))
+                return
+            dst_index = self._project_item_model.find_item(self.dst_widget)
+            if not dst_index:
                 logging.error("Item {0} not found".format(self.dst_widget))
                 return
-            src_item_type = src_item.data(Qt.UserRole).item_type
-            dst_item = self._project_item_model.find_item(self.dst_widget, Qt.MatchExactly | Qt.MatchRecursive)
-            if not dst_item:
-                logging.error("Item {0} not found".format(self.dst_widget))
-                return
-            dst_item_type = dst_item.data(Qt.UserRole).item_type
-            if src_item_type == 'Data Connection' and dst_item_type == 'Tool':
-                self._toolbox.msg.emit("\t-> Input files for <b>{0}</b>'s execution will be looked "
-                                       "up in <b>{1}</b>'s references and data directory."
+            src_item_type = self._project_item_model.project_item(src_index).item_type
+            dst_item_type = self._project_item_model.project_item(dst_index).item_type
+            if src_item_type == "Data Connection" and dst_item_type == "Tool":
+                self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
+                                       "will be looked up in <b>{1}</b>'s references and data directory."
                                        .format(self.dst_widget, self.src_widget))
-            elif src_item_type == 'Data Store' and dst_item_type == 'Tool':
-                self._toolbox.msg.emit("\t-> Input files for <b>{0}</b>'s execution will be looked "
-                                       "up in <b>{1}</b>'s data directory."
+            elif src_item_type == "Data Store" and dst_item_type == "Tool":
+                self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
+                                       "will be looked up in <b>{1}</b>'s data directory."
                                        .format(self.dst_widget, self.src_widget))
-            elif src_item_type == 'Tool' and dst_item_type in ['Data Connection', 'Data Store']:
-                self._toolbox.msg.emit("\t-> Output files from <b>{0}</b>'s execution will be passed "
-                                       "as reference to <b>{1}</b>."
+            elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
+                self._toolbox.msg.emit("-> Output files from <b>{0}</b>'s execution "
+                                       "will be passed as reference to <b>{1}</b>'s data directory."
                                        .format(self.src_widget, self.dst_widget))
-            elif src_item_type in ['Data Connection', 'Data Store']\
-                    and dst_item_type in ['Data Connection', 'Data Store']:
-                self._toolbox.msg.emit("\t-> Input files for a tool's execution will be looked up "
-                                       "in <b>{0}</b> if not found in <b>{1}</b>."
+            elif src_item_type in ["Data Connection", "Data Store"] \
+                    and dst_item_type in ["Data Connection", "Data Store"]:
+                self._toolbox.msg.emit("-> Input files for a tool's execution "
+                                       "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
                                        .format(self.src_widget, self.dst_widget))
-            elif src_item_type == 'Data Store' and dst_item_type == 'View':
-                self._toolbox.msg_warning.emit("\t-> Database references in <b>{0}</b> will be viewed "
-                                               "by <b>{1}</b>."
+            elif src_item_type == "Data Store" and dst_item_type == "View":
+                self._toolbox.msg_warning.emit("-> Database references in <b>{0}</b> will be viewed by <b>{1}</b>."
                                                .format(self.src_widget, self.dst_widget))
-            elif src_item_type == 'Tool' and dst_item_type == 'Tool':
-                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Interaction between Tool "
-                                               "items is not implemented yet.")
+            elif src_item_type == "Tool" and dst_item_type == "Tool":
+                self._toolbox.msg_warning.emit("<b>Not implemented</b>. Interaction between two "
+                                               "Tool items is not implemented yet.")
             else:
-                self._toolbox.msg_warning.emit("\t<b>Not implemented</b>. Whatever you are trying to do "
+                self._toolbox.msg_warning.emit("<b>Not implemented</b>. Whatever you are trying to do "
                                                "is not implemented yet :)")
 
     def mouseMoveEvent(self, e):
@@ -286,8 +279,8 @@ class CustomQGraphicsView(QGraphicsView):
                 self.link_drawer.drawing = False
                 if e.button() != Qt.LeftButton:
                     return
-                self._toolbox.msg_warning.emit("Unable to make connection. "
-                                          "Try landing the connection onto a connector button.")
+                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
+                                               "the connection onto a connector button.")
 
     def showEvent(self, event):
         """Make the scene at least as big as the viewport."""

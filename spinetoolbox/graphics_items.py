@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Classes for drawing graphics items on QGraphicsScene.
@@ -270,12 +262,13 @@ class ItemImage(QGraphicsItem):
         """
         if event.key() == Qt.Key_Delete and self._master.isSelected():
             name = self.name()
-            ind = self._toolbox.project_item_model.find_item(name, Qt.MatchExactly | Qt.MatchRecursive).index()
+            ind = self._toolbox.project_item_model.find_item(name)
             self._toolbox.remove_item(ind, delete_item=True)
 
     def show_item_info(self):
-        """Update GUI to show the details of the selected item in a QDockWidget."""
-        self._toolbox.show_info(self.name())
+        """Update GUI to show the details of the selected item."""
+        ind = self._toolbox.project_item_model.find_item(self.name())
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
     def draw_link(self):
         """Start or stop drawing a link from or to the center point of the connector button."""

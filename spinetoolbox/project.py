@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Spine Toolbox project class.
@@ -27,7 +19,6 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
 from helpers import project_dir, create_dir, copy_dir
@@ -35,7 +26,7 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
-from tool_templates import GAMSTool, JuliaTool
+from tool_templates import GAMSTool, JuliaTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 
 
@@ -187,42 +178,36 @@ class SpineToolboxProject(MetaObject):
         project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
         n = 0
-        # Traverse all items in project model
-        top_level_items = self._toolbox.project_item_model.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            top_level_item_txt = top_level_item.data(Qt.DisplayRole)
-            # logging.debug("Children of {0}".format(top_level_item.data(Qt.DisplayRole)))
-            item_dict[top_level_item_txt] = dict()
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    n += 1
-                    child = top_level_item.child(i, 0)
-                    child_data = child.data(Qt.UserRole)
-                    name = child_data.name
-                    # logging.debug("{0}".format(child.data(Qt.DisplayRole)))
-                    item_dict[top_level_item_txt][name] = dict()
-                    item_dict[top_level_item_txt][name]["short name"] = child_data.short_name
-                    item_dict[top_level_item_txt][name]["description"] = child_data.description
-                    x = child_data.get_icon().master().sceneBoundingRect().center().x()
-                    y = child_data.get_icon().master().sceneBoundingRect().center().y()
-                    item_dict[top_level_item_txt][name]["x"] = x
-                    item_dict[top_level_item_txt][name]["y"] = y
-                    if child_data.item_type == "Tool":
-                        if not child_data.tool_template():
-                            item_dict[top_level_item_txt][name]["tool"] = ""
-                        else:
-                            item_dict[top_level_item_txt][name]["tool"] = child_data.tool_template().name
-                    elif child_data.item_type == "Data Connection":
-                        # Save references
-                        item_dict[top_level_item_txt][name]["references"] = child_data.file_references()
-                    elif child_data.item_type == "Data Store":
-                        item_dict[top_level_item_txt][name]["reference"] = child_data.save_reference()
-                    elif child_data.item_type == "View":
-                        pass
+        # Traverse all items in project model by category
+        category_names = [category_item.name for category_item in self._toolbox.project_item_model.root().children()]
+        for category in category_names:
+            items = self._toolbox.project_item_model.items(category)
+            item_dict[category] = dict()
+            for item in items:
+                # Save generic things common for all project items
+                name = item.name
+                item_dict[category][name] = dict()
+                item_dict[category][name]["short name"] = item.short_name
+                item_dict[category][name]["description"] = item.description
+                x = item.get_icon().master().sceneBoundingRect().center().x()
+                y = item.get_icon().master().sceneBoundingRect().center().y()
+                item_dict[category][name]["x"] = x
+                item_dict[category][name]["y"] = y
+                # Save item type specific things
+                if item.item_type == "Data Store":
+                    item_dict[category][name]["reference"] = item.current_reference()
+                elif item.item_type == "Data Connection":
+                    item_dict[category][name]["references"] = item.file_references()
+                elif item.item_type == "Tool":
+                    if not item.tool_template():
+                        item_dict[category][name]["tool"] = ""
                     else:
-                        logging.error("Unrecognized item type: {0}".format(child_data.item_type))
-        # Save project stuff
+                        item_dict[category][name]["tool"] = item.tool_template().name
+                elif item.item_type == "View":
+                    pass
+                else:
+                    logging.error("Unrecognized item type: {0}".format(item.item_type))
+        # Save project to file
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
         # Write into JSON file
@@ -244,6 +229,8 @@ class SpineToolboxProject(MetaObject):
         views = item_dict['Views']
         n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
         self._toolbox.msg.emit("Loading project items...")
+        if n == 0:
+            self._toolbox.msg_warning.emit("Project has no items")
         # Recreate Data Stores
         for name in data_stores.keys():
             short_name = data_stores[name]['short name']
@@ -265,7 +252,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
-            self.add_data_store(name, desc, ref, x, y)
+            self.add_data_store(name, desc, ref, x, y, verbosity=False)
         # Recreate Data Connections
         for name in data_connections.keys():
             short_name = data_connections[name]['short name']
@@ -281,7 +268,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_data_connection(name, desc, refs, x, y)
+            self.add_data_connection(name, desc, refs, x, y, verbosity=False)
         # Recreate Tools
         for name in tools.keys():
             short_name = tools[name]['short name']
@@ -300,7 +287,7 @@ class SpineToolboxProject(MetaObject):
             except KeyError:
                 x = 0
                 y = 0
-            self.add_tool(name, desc, tool_template, x, y)
+            self.add_tool(name, desc, tool_template, x, y, verbosity=False)
         # Recreate Views
         for name in views.keys():
             short_name = views[name]['short name']
@@ -312,7 +299,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_view(name, desc, x, y)
+            self.add_view(name, desc, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -337,9 +324,9 @@ class SpineToolboxProject(MetaObject):
             return None
         # Infer path to the main program
         try:
-            includes_main_path = definition['includes_main_path'] # path to main program relative to definition file
+            includes_main_path = definition['includes_main_path']  # path to main program relative to definition file
         except KeyError:
-            includes_main_path = "."    # assume main program and definition file are on the same path
+            includes_main_path = "."  # assume main program and definition file are on the same path
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
         return self.load_tool_template_from_dict(definition, path)
 
@@ -356,21 +343,20 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition['tooltype'].lower()
         except KeyError:
-            self._toolbox.msg_error.emit("No type of tool defined in tool definition file. Should be "
-                                         "GAMS, Julia or executable")
+            self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
+                                         "'gams', 'julia' and 'executable'")
             return None
         if _tooltype == "gams":
             return GAMSTool.load(self._toolbox, path, definition)
         elif _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)
-        elif _tooltype == 'executable':
-            self._toolbox.msg_warning.emit("Executable tools not supported yet")
-            return None
+        elif _tooltype == "executable":
+            return ExecutableTool.load(self._toolbox, path, definition)
         else:
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False):
+    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Store to project item model.
 
         Args:
@@ -380,15 +366,20 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
+        category = "Data Stores"
         data_store = DataStore(self._toolbox, name, description, reference, x, y)
-        self._toolbox.project_refs.append(data_store)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Data Stores", name, data_store)
-        self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
+        ds_category = self._toolbox.project_item_model.find_category(category)
+        self._toolbox.project_item_model.insert_item(data_store, ds_category)
+        # Append connection model
+        self.append_connection_model(name, category)
+        if verbosity:
+            self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(data_store)
 
-    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False):
+    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Connection to project item model.
 
         Args:
@@ -398,15 +389,20 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
+        category = "Data Connections"
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        self._toolbox.project_refs.append(data_connection)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Data Connections", name, data_connection)
-        self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
+        dc_category = self._toolbox.project_item_model.find_category(category)
+        self._toolbox.project_item_model.insert_item(data_connection, dc_category)
+        # Append connection model
+        self.append_connection_model(name, category)
+        if verbosity:
+            self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(data_connection)
 
-    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False):
+    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Tool to project item model.
 
         Args:
@@ -416,15 +412,20 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
+        category = "Tools"
         tool = Tool(self._toolbox, name, description, tool_template, x, y)
-        self._toolbox.project_refs.append(tool)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Tools", name, tool)
-        self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
+        tool_category = self._toolbox.project_item_model.find_category(category)
+        self._toolbox.project_item_model.insert_item(tool, tool_category)
+        # Append connection model
+        self.append_connection_model(name, category)
+        if verbosity:
+            self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(tool)
 
-    def add_view(self, name, description, x=0, y=0, set_selected=False):
+    def add_view(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a View to project item model.
 
         Args:
@@ -433,19 +434,29 @@ class SpineToolboxProject(MetaObject):
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
         """
+        category = "Views"
         view = View(self._toolbox, name, description, x, y)
-        self._toolbox.project_refs.append(view)  # Save reference or signals don't stick
-        self._toolbox.add_item_to_model("Views", name, view)
-        self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
+        view_category = self._toolbox.project_item_model.find_category(category)
+        self._toolbox.project_item_model.insert_item(view, view_category)
+        # Append connection model
+        self.append_connection_model(name, category)
+        if verbosity:
+            self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(view)
+
+    def append_connection_model(self, item_name, category):
+        """Adds new item to connection model to keep project and connection model synchronized."""
+        row_in_con_model = self._toolbox.project_item_model.new_item_index(category)
+        self._toolbox.connection_model.append_item(item_name, row_in_con_model)
 
     def set_item_selected(self, item):
         """Sets item selected and shows its info screen.
 
         Args:
-            item (QMetaObject): Project item to select
+            item (ProjectItem): Project item to select
         """
-        item.get_icon().master().setSelected(True)
-        self._toolbox.show_info(item.name)
+        ind = self._toolbox.project_item_model.find_item(item.name)
+        self._toolbox.ui.treeView_project.setCurrentIndex(ind)

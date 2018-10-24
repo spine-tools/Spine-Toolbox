@@ -1,0 +1,13 @@
+{
+    "name": "Batch",
+    "description": "",
+    "tooltype": "executable",
+    "includes": [
+        "batch.bat"
+    ],
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [],
+    "cmdline_args": "",
+    "includes_main_path": "."
+}
