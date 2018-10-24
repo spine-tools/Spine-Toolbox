@@ -49,16 +49,6 @@ CALL pyside2-uic ../spinetoolbox/ui/add_objects.ui -o ../spinetoolbox/ui/add_obj
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_objects.py.o > ..\spinetoolbox\ui\add_objects.py
 del ..\spinetoolbox\ui\add_objects.py.o
 
-ECHO building add_parameter_values.py
-CALL pyside2-uic ../spinetoolbox/ui/add_parameter_values.ui -o ../spinetoolbox/ui/add_parameter_values.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameter_values.py.o > ..\spinetoolbox\ui\add_parameter_values.py
-del ..\spinetoolbox\ui\add_parameter_values.py.o
-
-ECHO building add_parameters.py
-CALL pyside2-uic ../spinetoolbox/ui/add_parameters.ui -o ../spinetoolbox/ui/add_parameters.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_parameters.py.o > ..\spinetoolbox\ui\add_parameters.py
-del ..\spinetoolbox\ui\add_parameters.py.o
-
 ECHO building add_relationship_classes.py
 CALL pyside2-uic ../spinetoolbox/ui/add_relationship_classes.ui -o ../spinetoolbox/ui/add_relationship_classes.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_relationship_classes.py.o > ..\spinetoolbox\ui\add_relationship_classes.py
@@ -134,8 +124,6 @@ CALL append_license_xml ..\spinetoolbox\ui\add_data_store.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_db_reference.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_object_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_objects.ui
-CALL append_license_xml ..\spinetoolbox\ui\add_parameter_values.ui
-CALL append_license_xml ..\spinetoolbox\ui\add_parameters.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationship_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationships.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
@@ -156,8 +144,6 @@ CALL append_license_py ..\spinetoolbox\ui\add_data_store.py
 CALL append_license_py ..\spinetoolbox\ui\add_db_reference.py
 CALL append_license_py ..\spinetoolbox\ui\add_object_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_objects.py
-CALL append_license_py ..\spinetoolbox\ui\add_parameter_values.py
-CALL append_license_py ..\spinetoolbox\ui\add_parameters.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationship_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationships.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py

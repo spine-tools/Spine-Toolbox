@@ -52,22 +52,6 @@ ui.add\_objects module
     :undoc-members:
     :show-inheritance:
 
-ui.add\_parameter\_values module
---------------------------------
-
-.. automodule:: ui.add_parameter_values
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.add\_parameters module
--------------------------
-
-.. automodule:: ui.add_parameters
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ui.add\_relationship\_classes module
 ------------------------------------
 

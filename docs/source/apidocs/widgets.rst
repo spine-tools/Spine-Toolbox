@@ -124,14 +124,6 @@ widgets.data\_store\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.edit\_datapackage\_keys\_widget module
-----------------------------------------------
-
-.. automodule:: widgets.edit_datapackage_keys_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.julia\_repl\_widget module
 ----------------------------------
 
@@ -160,14 +152,6 @@ widgets.settings\_widget module
 -------------------------------
 
 .. automodule:: widgets.settings_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.spine\_data\_explorer\_widget module
---------------------------------------------
-
-.. automodule:: widgets.spine_data_explorer_widget
     :members:
     :undoc-members:
     :show-inheritance:
