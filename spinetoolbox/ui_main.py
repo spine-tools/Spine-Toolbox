@@ -104,7 +104,7 @@ class ToolboxUI(QMainWindow):
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
         # Add QAction for showing the tabBar in the item info QTabWidget (for debugging purposes)
-        self.tabbar_action = QAction()
+        self.tabbar_action = QAction(self)
         self.tabbar_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.addAction(self.tabbar_action)
         # Hide tabBar in the project item info QTabBar
