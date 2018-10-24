@@ -867,9 +867,7 @@ class ConnectionModel(QAbstractTableModel):
 class MinimalTableModel(QAbstractTableModel):
     """Table model for outlining simple tabular data."""
 
-    row_with_data_inserted = Signal(QModelIndex, int, name="row_with_data_inserted")
-
-    def __init__(self, toolbox=None):
+    def __init__(self, toolbox=None, can_grow=False, has_empty_row=False):
         """Initialize class"""
         super().__init__()
         self._toolbox = toolbox  # QMainWindow
@@ -877,12 +875,40 @@ class MinimalTableModel(QAbstractTableModel):
         self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
-        self.can_grow = False
+        self.can_grow = can_grow
+        self.has_empty_row = has_empty_row
+        if has_empty_row:
+            self.dataChanged.connect(self.receive_data_changed)
+            self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
+    def receive_data_changed(self, top_left, bottom_right, roles):
+        """In models with a last empty row, insert an empty row
+        in case the last one has been filled with any visible data."""
+        last_row = self.rowCount() - 1
+        last_row_data = list()
+        for column in range(self.columnCount()):
+            try:
+                last_row_data.append(self._data[last_row][column][Qt.DisplayRole])
+            except KeyError:
+                continue
+        if any(last_row_data):
+            self.insertRows(self.rowCount(), 1)
+
+    @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
+    def receive_rows_about_to_be_removed(self, parent, first, last):
+        """In models with a last empty row, insert a new empty row
+        in case the current one is being deleted."""
+        last_row = self.rowCount() - 1
+        if last_row in range(first, last + 1):
+            self.insertRows(self.rowCount(), 1)
 
     def clear(self):
         self.beginResetModel()
         self._data = list()
         self.endResetModel()
+        if self.has_empty_row:
+            self.insertRows(0, 1)
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -965,17 +991,16 @@ class MinimalTableModel(QAbstractTableModel):
         return False
 
     def index(self, row, column, parent=QModelIndex()):
-        if row is None or column is None:
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
             return QModelIndex()
         if self.can_grow:
-            last_row = self.rowCount(parent) - 1
-            last_column = self.columnCount(parent) - 1
-            if row > last_row:
-                for i in range(row - last_row):
-                    self.insertRows(self.rowCount(parent), 1, parent)
-            if column > last_column:
-                for j in range(column - last_column):
-                    self.insertColumns(self.columnCount(parent), 1, parent)
+            index = super().index(row, column, parent)
+            while not index.isValid():
+                self.insertRows(self.rowCount(parent), 1, parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
         return super().index(row, column, parent)
 
     def data(self, index, role=Qt.DisplayRole):
@@ -1038,22 +1063,21 @@ class MinimalTableModel(QAbstractTableModel):
         return [self.row_data(row, role) for row in range(self.rowCount())]
 
     def setData(self, index, value, role=Qt.EditRole):
+        """Set data in model."""
         if not index.isValid():
             return False
-        roles = [role]
-        self._data[index.row()][index.column()][role] = value
-        if role == Qt.EditRole:
-            self._data[index.row()][index.column()][Qt.DisplayRole] = value
-            roles.append(Qt.DisplayRole)
-        self.dataChanged.emit(index, index, roles)
-        return True
+        if role != Qt.EditRole:
+            self._data[index.row()][index.column()][role] = value
+            self.dataChanged.emit(index, index, [role])
+            return True
+        return self.batch_set_data([index], [value])
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes."""
         if not indexes:
-            return
+            return False
         if len(indexes) != len(data):
-            return
+            return False
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -1065,6 +1089,7 @@ class MinimalTableModel(QAbstractTableModel):
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -1080,6 +1105,8 @@ class MinimalTableModel(QAbstractTableModel):
             True if rows were inserted successfully, False otherwise
         """
         if row < 0 or row > self.rowCount():
+            return False
+        if count < 1:
             return False
         self.beginInsertRows(parent, row, row + count - 1)
         for i in range(count):
@@ -1109,6 +1136,8 @@ class MinimalTableModel(QAbstractTableModel):
             True if columns were inserted successfully, False otherwise
         """
         if column < 0 or column > self.columnCount():
+            return False
+        if count < 1:
             return False
         self.beginInsertColumns(parent, column, column + count - 1)
         for j in range(count):
@@ -1193,7 +1222,7 @@ class MinimalTableModel(QAbstractTableModel):
         if first < 0 or last >= self.rowCount():
             return False
         self.beginRemoveRows(parent, first, last)
-        for row in reversed(list(row_set)):
+        for row in reversed(sorted(row_set)):
             removed_data_row = self._data.pop(row)
             removed_flags_data_row = self._flags.pop(row)
         self.endRemoveRows()
@@ -1201,6 +1230,9 @@ class MinimalTableModel(QAbstractTableModel):
 
     def reset_model(self, new_data=None):
         """Reset model."""
+        if not new_data and self.has_empty_row:
+            self.insertRows(0, 1)
+            return
         self.beginResetModel()
         self._data = list()
         self._flags = list()
@@ -1218,9 +1250,9 @@ class MinimalTableModel(QAbstractTableModel):
                 self._data.append(new_row)
                 self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.endResetModel()
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1583,59 +1615,29 @@ class DataStoreTableModel(MinimalTableModel):
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(data_store_form, can_grow=True, has_empty_row=True)
         self._data_store_form = data_store_form
         self.db_map = self._data_store_form.db_map
         self.fixed_columns = list()
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
 
     def set_fixed_columns(self, *column_names):
-        """Set the fixed_column attribute from the column names given as argument."""
+        """Set the fixed_columns attribute according to the column names given as argument."""
         header = self.horizontal_header_labels()
         self.fixed_columns = [header.index(name) for name in column_names]
 
     def setData(self, index, value, role=Qt.EditRole):
-        """Set data in model. Call the proper method depending on whether the row
-        is a work in progress or not.
-        """
+        """Set data in model."""
         if role != Qt.EditRole:
             return super().setData(index, value, role)
-        if not index.isValid():
-            return False
-        if self.is_work_in_progress(index.row()):
-            if not self.set_wip_data(index, value):
-                return False
-        else:
-            if not self.update_data(index, value):
-                return False
-        self.dataChanged.emit(index, index)
-        return True
-
-    def set_wip_data(self, index, value):
-        """Set work in progress data. Update model first, then see if the database
-        needs to be updated as well.
-        """
-        self._data[index.row()][index.column()][Qt.EditRole] = value
-        self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        self.add_items_to_db(self.items_to_add([index]))
-        return True
-
-    def update_data(self, index, value):
-        """Update non work in progess data. Try and update database first, and if
-        successful update model.
-        """
-        if not self.update_items_in_db(self.items_to_update([index], [value])):
-            return False
-        self._data[index.row()][index.column()][Qt.EditRole] = value
-        self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        return True
+        return self.batch_set_data([index], [value])
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes."""
         if not indexes:
-            return
+            return False
         if len(indexes) != len(data):
-            return
+            return False
         wip_indexes = list()
         wip_data = list()
         non_wip_indexes = list()
@@ -1649,37 +1651,42 @@ class DataStoreTableModel(MinimalTableModel):
             else:
                 non_wip_indexes.append(index)
                 non_wip_data.append(data[k])
-        self.batch_set_wip_data(wip_indexes, wip_data)
-        self.batch_update_data(non_wip_indexes, non_wip_data)
+        wip_data_set = self.batch_set_wip_data(wip_indexes, wip_data)
+        non_wip_data_set = self.batch_set_non_wip_data(non_wip_indexes, non_wip_data)
+        if not wip_data_set and not non_wip_data_set:
+            return False
         # Find square envelope of indexes to emit dataChanged
-        top = min(ind.row() for ind in indexes)
-        bottom = max(ind.row() for ind in indexes)
-        left = min(ind.column() for ind in indexes)
-        right = max(ind.column() for ind in indexes)
+        set_indexes = list()
+        if wip_data_set:
+            set_indexes.extend(wip_indexes)
+        if non_wip_data_set:
+            set_indexes.extend(non_wip_indexes)
+        top = min(ind.row() for ind in set_indexes)
+        bottom = max(ind.row() for ind in set_indexes)
+        left = min(ind.column() for ind in set_indexes)
+        right = max(ind.column() for ind in set_indexes)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        return True
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
         needs to be updated as well."""
         if not indexes:
-            return
-        if len(indexes) != len(data):
-            return
+            return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
         self.add_items_to_db(self.items_to_add(indexes))
+        return True
 
-    def batch_update_data(self, indexes, data):
-        """Batch update non work in progess data. Try and update database first, and if
-        successful update model.
+    def batch_set_non_wip_data(self, indexes, data):
+        """Batch set non work in progess data. Try and set data in database first, and if
+        successful set data model.
         """
         if not indexes:
-            return
-        if len(indexes) != len(data):
-            return
+            return False
         if not self.update_items_in_db(self.items_to_update(indexes, data)):
-            return
+            return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
@@ -1689,7 +1696,7 @@ class DataStoreTableModel(MinimalTableModel):
         return self._flags[row][self.fixed_columns[0]] & Qt.ItemIsEditable
 
     def make_columns_fixed_for_rows(self, *rows):
-        """Set fixed columns as not editable and paint them gray."""
+        """Set fixed columns as non-editable and paint them gray."""
         header = self.horizontal_header_labels()
         for row in rows:
             for column in self.fixed_columns:
@@ -1704,13 +1711,9 @@ class DataStoreTableModel(MinimalTableModel):
 
     def reset_model(self, model_data, fixed_column_names=list()):
         """Reset model while keeping the work in progress rows."""
-        wip_row_list = [row for row in range(self.rowCount()) if self.is_work_in_progress(row)]
-        for row in wip_row_list:
-            row_data = self.row_data(row, role=Qt.DisplayRole)
-            model_data.insert(row, row_data)
-        super().reset_model(model_data)
         self.set_fixed_columns(*fixed_column_names)
-        self.make_columns_fixed_for_rows(*[r for r in range(self.rowCount()) if r not in wip_row_list])
+        super().reset_model(model_data)
+        self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
 
 
 class ParameterModel(DataStoreTableModel):
@@ -1987,7 +1990,8 @@ class RelationshipParameterModel(ParameterModel):
                         break
 
     def items_to_add(self, indexes):
-        """Return a dictionary of rows (int) to items (dict) to add to the db."""
+        """Return a dictionary of rows (int) to items (dict) to add to the db.
+        Also extend the given list of indexes if some are autoset."""
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
@@ -1997,7 +2001,8 @@ class RelationshipParameterModel(ParameterModel):
         # Query db and build ad-hoc dicts
         relationship_class_dict = {x.name: {'id': x.id, 'object_class_name_list': x.object_class_name_list}
                                    for x in self.db_map.wide_relationship_class_list()}
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
@@ -2009,6 +2014,8 @@ class RelationshipParameterModel(ParameterModel):
                     object_class_name_list = relationship_class_dict[relationship_class_name]['object_class_name_list']
                     self._data[row][object_class_name_list_column][Qt.EditRole] = object_class_name_list
                     self._data[row][object_class_name_list_column][Qt.DisplayRole] = object_class_name_list
+                    # Append index to indexes, so we can emit dataChanged with it later
+                    indexes.append(self.index(row, object_class_name_list_column))
                 except KeyError:
                     pass
             if not parameter_name:
@@ -2080,7 +2087,8 @@ class ObjectParameterValueModel(ParameterValueModel):
                 super().removeRows(row, 1)
 
     def items_to_add(self, indexes):
-        """Return a dictionary of rows (int) to items (dict) to add to the db."""
+        """Return a dictionary of rows (int) to items (dict) to add to the db.
+        Also extend the given list of indexes if some are autoset."""
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
@@ -2092,7 +2100,8 @@ class ObjectParameterValueModel(ParameterValueModel):
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self.db_map.object_list()}
         parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
                           for x in self.db_map.parameter_list()}
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
@@ -2111,6 +2120,8 @@ class ObjectParameterValueModel(ParameterValueModel):
                     object_class_name = object_class_lookup_dict[object_class_id]
                     self._data[row][object_class_name_column][Qt.EditRole] = object_class_name
                     self._data[row][object_class_name_column][Qt.DisplayRole] = object_class_name
+                    # Append index to indexes, so we can emit dataChanged with it later
+                    indexes.append(self.index(row, object_class_name_column))
                 except KeyError:
                     pass
             try:
@@ -2233,32 +2244,22 @@ class RelationshipParameterValueModel(ParameterValueModel):
             self.insert_horizontal_header_labels(section, object_name_header_ext)
             self.object_name_header.extend(object_name_header_ext)
 
-    def set_wip_data(self, index, value):
-        """Set work in progress data. Update model first, then see if the database
-        needs to be updated as well.
-        """
-        self._data[index.row()][index.column()][Qt.EditRole] = value
-        self._data[index.row()][index.column()][Qt.DisplayRole] = value
-        relationships_on_the_fly = self.relationships_on_the_fly([index])
-        self.add_items_to_db(self.items_to_add([index], relationships_on_the_fly))
-        return True
-
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
         needs to be updated as well."""
         if not indexes:
-            return
-        if len(indexes) != len(data):
-            return
+            return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
         relationships_on_the_fly = self.relationships_on_the_fly(indexes)
         self.add_items_to_db(self.items_to_add(indexes, relationships_on_the_fly))
+        return True
 
     def relationships_on_the_fly(self, indexes):
         """Return a dict of row (int) to relationship items (KeyedTuple),
         either retrieved or added on the fly.
+        Also extend the given list of indexes if some are autoset.
         """
         relationships_on_the_fly = dict()
         relationships_to_add = dict()
@@ -2276,7 +2277,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
         relationship_dict = {x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
                              for x in self.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self.db_map.object_list()}
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
@@ -2289,6 +2291,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
                         relationship_class_name = relationship_class_lookup_dict[relationship_class_id]
                         self._data[row][relationship_class_name_column][Qt.EditRole] = relationship_class_name
                         self._data[row][relationship_class_name_column][Qt.DisplayRole] = relationship_class_name
+                        # Append index to indexes, so we can emit dataChanged with it later
+                        indexes.append(self.index(row, relationship_class_name_column))
                     except KeyError:
                         pass
                 except KeyError:
@@ -2384,6 +2388,34 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
 
+    def index(self, row, column, parent=QModelIndex()):
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        if self.can_grow:
+            index = super().index(row, column, parent)
+            while not index.isValid():
+                self.insertRows(self.rowCount(parent), 1, parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
+        return super().index(row, column, parent)
+
+    def index(self, row, column, parent=QModelIndex()):
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        if self.sourceModel().can_grow:
+            index = super().index(row, column, parent)
+            source_parent = self.mapToSource(parent)
+            while not index.isValid():
+                self.sourceModel().insertRows(
+                    self.sourceModel().rowCount(source_parent), 1, source_parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
+        return super().index(row, column, parent)
+
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
@@ -2395,7 +2427,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
     def batch_set_data(self, proxy_indexes, values):
         source_indexes = [self.mapToSource(ind) for ind in proxy_indexes]
-        self.sourceModel().batch_set_data(source_indexes, values)
+        return self.sourceModel().batch_set_data(source_indexes, values)
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
@@ -2410,7 +2442,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
         source_model = self.sourceModel()
         data = source_model._data
         for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter if rwo it's not wip
+            # Skip values rejected by filter if row is not wip
             if not source_model.is_work_in_progress(source_row) \
                     and not self.filter_accepts_row(source_row, QModelIndex()):
                 continue

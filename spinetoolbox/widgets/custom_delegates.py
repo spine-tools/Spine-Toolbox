@@ -168,7 +168,7 @@ class HighlightFrameDelegate(QItemDelegate):
             painter.setPen(pen)
 
 
-class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class ObjectParameterValueDelegate(DataStoreDelegate):
     """A delegate for the object parameter value model and view in DataStoreForm.
 
     Attributes:
@@ -214,7 +214,7 @@ class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
             return CustomLineEditor(parent, proxy_index)
 
 
-class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class ObjectParameterDelegate(DataStoreDelegate):
     """A delegate for the object parameter model and view in DataStoreForm.
 
     Attributes:
@@ -235,7 +235,7 @@ class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
         return CustomComboEditor(parent, proxy_index, object_class_name_list)
 
 
-class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class RelationshipParameterValueDelegate(DataStoreDelegate):
     """A delegate for the relationship parameter value model and view in DataStoreForm.
 
     Attributes:
@@ -307,7 +307,7 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
             return CustomLineEditor(parent, proxy_index)
 
 
-class RelationshipParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class RelationshipParameterDelegate(DataStoreDelegate):
     """A delegate for the object parameter model and view in DataStoreForm.
 
     Attributes:
