@@ -54,6 +54,13 @@ To install cx_Freeze, download the correct wheel for your OS, for example,
 
     pip install cx_Freeze-6.0b1-cp36-cp36m-win_amd64.whl
 
+To install QTConsole, numpy, matplotlib, and scipy with pip, run
+
+    pip install qtconsole
+    pip install scipy
+    pip install matplotlib
+    pip install numpy
+
 To install spinedatabase_api run
 
     pip install git+https://gitlab.vtt.fi/spine/data
