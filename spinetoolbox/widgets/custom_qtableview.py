@@ -34,7 +34,6 @@ class CopyPasteTableView(QTableView):
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
-        # self.editing = False
         QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
         self.clipboard_text = QApplication.clipboard().text()
 
