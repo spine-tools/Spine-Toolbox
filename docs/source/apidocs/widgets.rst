@@ -84,6 +84,14 @@ widgets.custom\_qgraphicsview module
     :undoc-members:
     :show-inheritance:
 
+widgets.custom\_qlineedit module
+--------------------------------
+
+.. automodule:: widgets.custom_qlineedit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.custom\_qtableview module
 ---------------------------------
 
@@ -108,26 +116,18 @@ widgets.custom\_qtreeview module
     :undoc-members:
     :show-inheritance:
 
-widgets.data\_connection\_subwindow\_widget module
---------------------------------------------------
-
-.. automodule:: widgets.data_connection_subwindow_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.data\_store\_subwindow\_widget module
----------------------------------------------
-
-.. automodule:: widgets.data_store_subwindow_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.data\_store\_widget module
 ----------------------------------
 
 .. automodule:: widgets.data_store_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.edit\_datapackage\_keys\_widget module
+----------------------------------------------
+
+.. automodule:: widgets.edit_datapackage_keys_widget
     :members:
     :undoc-members:
     :show-inheritance:
@@ -164,18 +164,18 @@ widgets.settings\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.spine\_datapackage\_widget module
------------------------------------------
+widgets.spine\_data\_explorer\_widget module
+--------------------------------------------
 
-.. automodule:: widgets.spine_datapackage_widget
+.. automodule:: widgets.spine_data_explorer_widget
     :members:
     :undoc-members:
     :show-inheritance:
 
-widgets.tool\_subwindow\_widget module
---------------------------------------
+widgets.spine\_datapackage\_widget module
+-----------------------------------------
 
-.. automodule:: widgets.tool_subwindow_widget
+.. automodule:: widgets.spine_datapackage_widget
     :members:
     :undoc-members:
     :show-inheritance:
@@ -192,14 +192,6 @@ widgets.toolbars module
 -----------------------
 
 .. automodule:: widgets.toolbars
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.view\_subwindow\_widget module
---------------------------------------
-
-.. automodule:: widgets.view_subwindow_widget
     :members:
     :undoc-members:
     :show-inheritance:

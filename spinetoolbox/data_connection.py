@@ -24,7 +24,6 @@ from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QMessageBox
 from project_item import ProjectItem
-# from widgets.data_connection_subwindow_widget import DataConnectionWidget
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
 from config import APPLICATION_PATH, HEADER_POINTSIZE

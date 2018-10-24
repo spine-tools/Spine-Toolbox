@@ -18,12 +18,10 @@ Tool class.
 
 import logging
 import os
-import json
 import shutil
 import getpass
 from project_item import ProjectItem
-# from widgets.tool_subwindow_widget import ToolSubWindowWidget
-from PySide2.QtCore import Slot, Qt, QUrl, QModelIndex
+from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
@@ -49,7 +47,6 @@ class Tool(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Tool"
-        # self._widget = ToolSubWindowWidget(self.item_type)
         self.input_file_model = QStandardItemModel()
         self.populate_input_files_list(None)
         self.output_file_model = QStandardItemModel()

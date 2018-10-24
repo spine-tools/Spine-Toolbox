@@ -20,10 +20,9 @@ import os
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, Qt
+from PySide2.QtCore import Slot, QUrl
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
-# from widgets.data_store_subwindow_widget import DataStoreWidget
 from widgets.data_store_widget import DataStoreForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
@@ -60,7 +59,6 @@ class DataStore(ProjectItem):
         self.selected_db = ""
         self.selected_username = ""
         self.selected_password = ""
-        # self._widget = DataStoreWidget(self, self.item_type)
         self.data_store_treeview = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)

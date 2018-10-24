@@ -21,7 +21,6 @@ import os
 from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from project_item import ProjectItem
-# from widgets.view_subwindow_widget import ViewWidget
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError
 from widgets.network_map_widget import NetworkMapForm
 from graphics_items import ViewImage
@@ -50,7 +49,6 @@ class View(ProjectItem):
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
-        # self._widget = ViewWidget(self, self.item_type)
         # Make project directory for this View
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:

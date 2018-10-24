@@ -108,6 +108,14 @@ ui.data\_store\_form module
     :undoc-members:
     :show-inheritance:
 
+ui.edit\_data\_items module
+---------------------------
+
+.. automodule:: ui.edit_data_items
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ui.mainwindow module
 --------------------
 
@@ -144,38 +152,6 @@ ui.spine\_datapackage\_form module
 ----------------------------------
 
 .. automodule:: ui.spine_datapackage_form
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.subwindow\_data\_connection module
--------------------------------------
-
-.. automodule:: ui.subwindow_data_connection
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.subwindow\_data\_store module
---------------------------------
-
-.. automodule:: ui.subwindow_data_store
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.subwindow\_tool module
--------------------------
-
-.. automodule:: ui.subwindow_tool
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.subwindow\_view module
--------------------------
-
-.. automodule:: ui.subwindow_view
     :members:
     :undoc-members:
     :show-inheritance:
