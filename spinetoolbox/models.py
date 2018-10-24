@@ -877,14 +877,16 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        if has_empty_row:
-            self.dataChanged.connect(self.receive_data_changed)
-            self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
+        self.dataChanged.connect(self.receive_data_changed)
+        self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
+        self.modelReset.connect(self.receive_model_reset)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
         """In models with a last empty row, insert an empty row
         in case the last one has been filled with any visible data."""
+        if not self.has_empty_row:
+            return
         last_row = self.rowCount() - 1
         last_row_data = list()
         for column in range(self.columnCount()):
@@ -899,16 +901,23 @@ class MinimalTableModel(QAbstractTableModel):
     def receive_rows_about_to_be_removed(self, parent, first, last):
         """In models with a last empty row, insert a new empty row
         in case the current one is being deleted."""
+        if not self.has_empty_row:
+            return
         last_row = self.rowCount() - 1
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
+
+    @Slot(name="model_reset")
+    def receive_model_reset(self):
+        """In models with a last empty row, insert a new empty row after model reset."""
+        if not self.has_empty_row:
+            return
+        self.insertRows(self.rowCount(), 1)
 
     def clear(self):
         self.beginResetModel()
         self._data = list()
         self.endResetModel()
-        if self.has_empty_row:
-            self.insertRows(0, 1)
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -1230,29 +1239,22 @@ class MinimalTableModel(QAbstractTableModel):
 
     def reset_model(self, new_data=None):
         """Reset model."""
-        if not new_data and self.has_empty_row:
-            self.insertRows(0, 1)
-            return
         self.beginResetModel()
         self._data = list()
         self._flags = list()
-        if new_data:
-            for line in new_data:
-                new_row = list()
-                new_flags_row = list()
-                for value in line:
-                    new_dict = {
-                        Qt.EditRole: value,
-                        Qt.DisplayRole: value
-                    }
-                    new_row.append(new_dict)
-                    new_flags_row.append(self.default_flags)
-                self._data.append(new_row)
-                self._flags.append(new_flags_row)
-        top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
+        for line in new_data:
+            new_row = list()
+            new_flags_row = list()
+            for value in line:
+                new_dict = {
+                    Qt.EditRole: value,
+                    Qt.DisplayRole: value
+                }
+                new_row.append(new_dict)
+                new_flags_row.append(self.default_flags)
+            self._data.append(new_row)
+            self._flags.append(new_flags_row)
         self.endResetModel()
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1670,13 +1672,16 @@ class DataStoreTableModel(MinimalTableModel):
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
-        needs to be updated as well."""
+        needs to be updated as well. Extend indexes in case ids are set."""
         if not indexes:
             return False
         for k, index in enumerate(indexes):
             self._data[index.row()][index.column()][Qt.EditRole] = data[k]
             self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
-        self.add_items_to_db(self.items_to_add(indexes))
+        items_to_add = self.items_to_add(indexes)
+        if self.add_items_to_db(items_to_add):
+            id_column = self.horizontal_header_labels().index('id')
+            indexes.extend([self.index(row, id_column) for row in items_to_add])
         return True
 
     def batch_set_non_wip_data(self, indexes, data):
@@ -1749,9 +1754,9 @@ class ParameterModel(DataStoreTableModel):
     def add_items_to_db(self, items_to_add):
         """Add items to database and make columns fixed if successful."""
         if not items_to_add:
-            return
+            return False
         try:
-            # TODO: Make it flexible rather than all or nothing, but this requires updating database_api
+            # TODO: Make it flexible rather than all or nothing? Anyways this would require updating database_api
             items = list(items_to_add.values())
             rows = list(items_to_add.keys())
             parameters = self.db_map.add_parameters(*items)
@@ -1762,10 +1767,13 @@ class ParameterModel(DataStoreTableModel):
             self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
             self._data_store_form.msg.emit(msg)
+            return True
         except SpineIntegrityError as e:
             self._data_store_form.msg_error.emit(e.msg)
+            return False
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
+            return False
 
     def update_items_in_db(self, items_to_update):
         """Try and update parameters in database."""
@@ -1816,7 +1824,7 @@ class ParameterValueModel(DataStoreTableModel):
     def add_items_to_db(self, items_to_add):
         """Add parameter values to database and make columns fixed if successful."""
         if not items_to_add:
-            return
+            return False
         try:
             items = list(items_to_add.values())
             rows = list(items_to_add.keys())
@@ -1828,10 +1836,13 @@ class ParameterValueModel(DataStoreTableModel):
             self._data_store_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
             self._data_store_form.msg.emit(msg)
+            return True
         except SpineIntegrityError as e:
             self._data_store_form.msg_error.emit(e.msg)
+            return False
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
+            return False
 
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database."""
@@ -2387,19 +2398,6 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.rule_dict = dict()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
-
-    def index(self, row, column, parent=QModelIndex()):
-        if row < 0 or column < 0 or column >= self.columnCount(parent):
-            return QModelIndex()
-        if self.can_grow:
-            index = super().index(row, column, parent)
-            while not index.isValid():
-                self.insertRows(self.rowCount(parent), 1, parent)
-                index = super().index(row, column, parent)
-            return index
-        if row >= self.rowCount(parent):
-            return QModelIndex()
-        return super().index(row, column, parent)
 
     def index(self, row, column, parent=QModelIndex()):
         if row < 0 or column < 0 or column >= self.columnCount(parent):

@@ -1325,7 +1325,7 @@ class DataStoreForm(QMainWindow):
             if self.object_parameter_value_model.is_work_in_progress(source_row):
                 continue
             source_index = self.object_parameter_value_model.index(source_row, id_column)
-            parameter_value_ids.add(source_index.data(Qt.DisplayRole))
+            parameter_value_ids.add(source_index.data(Qt.EditRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
             self.object_parameter_value_model.batch_remove_rows(source_row_set)
@@ -1344,7 +1344,7 @@ class DataStoreForm(QMainWindow):
             if self.relationship_parameter_value_model.is_work_in_progress(source_row):
                 continue
             source_index = self.relationship_parameter_value_model.index(source_row, id_column)
-            parameter_value_ids.add(source_index.data(Qt.DisplayRole))
+            parameter_value_ids.add(source_index.data(Qt.EditRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
             self.relationship_parameter_value_model.batch_remove_rows(source_row_set)
@@ -1365,7 +1365,7 @@ class DataStoreForm(QMainWindow):
             if self.object_parameter_model.is_work_in_progress(source_row):
                 continue
             source_index = self.object_parameter_model.index(source_row, id_column)
-            parameter_ids.add(source_index.data(Qt.DisplayRole))
+            parameter_ids.add(source_index.data(Qt.EditRole))
             source_index = self.object_parameter_model.index(source_row, name_column)
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
@@ -1389,7 +1389,7 @@ class DataStoreForm(QMainWindow):
             if self.relationship_parameter_model.is_work_in_progress(source_row):
                 continue
             source_index = self.relationship_parameter_model.index(source_row, id_column)
-            parameter_ids.add(source_index.data(Qt.DisplayRole))
+            parameter_ids.add(source_index.data(Qt.EditRole))
             source_index = self.relationship_parameter_model.index(source_row, name_column)
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
