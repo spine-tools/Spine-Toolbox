@@ -24,7 +24,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QA
     QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
-from config import INVALID_CHARS, TOOL_OUTPUT_DIR, PARAMETER_TABLE_PAGE_SIZE
+from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
@@ -867,9 +867,7 @@ class ConnectionModel(QAbstractTableModel):
 class MinimalTableModel(QAbstractTableModel):
     """Table model for outlining simple tabular data."""
 
-    row_with_data_inserted = Signal(QModelIndex, int, name="row_with_data_inserted")
-
-    def __init__(self, toolbox=None, can_grow=False, min_row_count=0):
+    def __init__(self, toolbox=None, can_grow=False, has_empty_row=False):
         """Initialize class"""
         super().__init__()
         self._toolbox = toolbox  # QMainWindow
@@ -878,21 +876,39 @@ class MinimalTableModel(QAbstractTableModel):
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = can_grow
-        self.min_row_count = min_row_count
-        self.rowsRemoved.connect(self.receive_rows_removed)
+        self.has_empty_row = has_empty_row
+        if has_empty_row:
+            self.dataChanged.connect(self.receive_data_changed)
+            self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
 
-    @Slot("QModelIndex", "int", "int", name="receive_rows_removed")
-    def receive_rows_removed(self, parent, first, last):
-        self.enforce_min_row_count()
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
+    def receive_data_changed(self, top_left, bottom_right, roles):
+        """In models with a last empty row, insert an empty row
+        in case the last one has been filled with any visible data."""
+        last_row = self.rowCount() - 1
+        last_row_data = list()
+        for column in range(self.columnCount()):
+            try:
+                last_row_data.append(self._data[last_row][column][Qt.DisplayRole])
+            except KeyError:
+                continue
+        if any(last_row_data):
+            self.insertRows(self.rowCount(), 1)
 
-    def enforce_min_row_count(self):
-        """Insert empty rows to meet the minimum."""
-        self.insertRows(self.rowCount(), self.min_row_count)
+    @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
+    def receive_rows_about_to_be_removed(self, parent, first, last):
+        """In models with a last empty row, insert a new empty row
+        in case the current one is being deleted."""
+        last_row = self.rowCount() - 1
+        if last_row in range(first, last + 1):
+            self.insertRows(self.rowCount(), 1)
 
     def clear(self):
         self.beginResetModel()
         self._data = list()
         self.endResetModel()
+        if self.has_empty_row:
+            self.insertRows(0, 1)
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -975,15 +991,16 @@ class MinimalTableModel(QAbstractTableModel):
         return False
 
     def index(self, row, column, parent=QModelIndex()):
-        if row is None or column is None:
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
             return QModelIndex()
         if self.can_grow:
-            last_row = self.rowCount(parent) - 1
-            last_column = self.columnCount(parent) - 1
-            if row > last_row :
-                self.insertRows(self.rowCount(parent), row - last_row, parent)
-            if column > last_column:
-                self.insertColumns(self.columnCount(parent), column - last_column, parent)
+            index = super().index(row, column, parent)
+            while not index.isValid():
+                self.insertRows(self.rowCount(parent), 1, parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
         return super().index(row, column, parent)
 
     def data(self, index, role=Qt.DisplayRole):
@@ -1213,8 +1230,9 @@ class MinimalTableModel(QAbstractTableModel):
 
     def reset_model(self, new_data=None):
         """Reset model."""
-        if not new_data:
-            self.enforce_min_row_count()
+        if not new_data and self.has_empty_row:
+            self.insertRows(0, 1)
+            return
         self.beginResetModel()
         self._data = list()
         self._flags = list()
@@ -1233,10 +1251,8 @@ class MinimalTableModel(QAbstractTableModel):
                 self._flags.append(new_flags_row)
         top_left = self.index(0, 0)
         bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
         self.endResetModel()
-        self.enforce_min_row_count()
-
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1601,22 +1617,11 @@ class DataStoreTableModel(MinimalTableModel):
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(data_store_form, can_grow=True, has_empty_row=True)
         self._data_store_form = data_store_form
         self.db_map = self._data_store_form.db_map
         self.fixed_columns = list()
-        self.can_grow = True  # Make the model grow automatically when pasting data larger than it.
-        self.fixed_row_count = 0
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
-
-    def canFetchMore(self, parent):
-        """Always return True. This is so the view calls fetchMore everytime the user scrolls down
-        below the end of the table."""
-        return True
-
-    def fetchMore(self, parent):
-        """Insert new rows so the user can add new data."""
-        self.insertRows(self.rowCount(), PARAMETER_TABLE_PAGE_SIZE, parent)
 
     def set_fixed_columns(self, *column_names):
         """Set the fixed_columns attribute according to the column names given as argument."""
@@ -1699,7 +1704,6 @@ class DataStoreTableModel(MinimalTableModel):
             for column in self.fixed_columns:
                 self._data[row][column][Qt.BackgroundRole] = self.gray_brush
                 self._flags[row][column] = ~Qt.ItemIsEditable
-        self.fixed_row_count = max(self.fixed_row_count, max(rows, default=0))
         try:
             top_left = self.index(rows[0], self.fixed_columns[0])
             bottom_right = self.index(rows[-1], self.fixed_columns[-1])
@@ -1855,9 +1859,8 @@ class ObjectParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self, min_row_count=0):
+    def init_model(self):
         """Initialize model from source database."""
-        self.min_row_count = min_row_count
         object_parameter_list = self.db_map.object_parameter_list()
         header = self.db_map.object_parameter_fields()
         self.set_horizontal_header_labels(header)
@@ -1924,9 +1927,8 @@ class RelationshipParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self, min_row_count=0):
+    def init_model(self):
         """Initialize model from source database."""
-        self.min_row_count = min_row_count
         relationship_parameter_list = self.db_map.relationship_parameter_list()
         header = self.db_map.relationship_parameter_fields()
         self.set_horizontal_header_labels(header)
@@ -2029,9 +2031,8 @@ class ObjectParameterValueModel(ParameterValueModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self, min_row_count=0):
+    def init_model(self):
         """Initialize model from source database."""
-        self.min_row_count = min_row_count
         object_parameter_value_list = self.db_map.object_parameter_value_list()
         header = self.db_map.object_parameter_value_fields()
         self.set_horizontal_header_labels(header)
@@ -2132,9 +2133,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
         super().__init__(data_store_form)
         self.object_name_header = list()
 
-    def init_model(self, min_row_count=0):
+    def init_model(self):
         """Initialize model from source database."""
-        self.min_row_count = min_row_count
         relationship_parameter_value_list = self.db_map.relationship_parameter_value_list()
         # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
         header = self.db_map.relationship_parameter_value_fields()
@@ -2366,6 +2366,34 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.rule_dict = dict()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
+
+    def index(self, row, column, parent=QModelIndex()):
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        if self.can_grow:
+            index = super().index(row, column, parent)
+            while not index.isValid():
+                self.insertRows(self.rowCount(parent), 1, parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
+        return super().index(row, column, parent)
+
+    def index(self, row, column, parent=QModelIndex()):
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        if self.sourceModel().can_grow:
+            index = super().index(row, column, parent)
+            source_parent = self.mapToSource(parent)
+            while not index.isValid():
+                self.sourceModel().insertRows(
+                    self.sourceModel().rowCount(source_parent), 1, source_parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
+        return super().index(row, column, parent)
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)

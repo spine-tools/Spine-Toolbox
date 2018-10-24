@@ -145,7 +145,7 @@ class CopyPasteTableView(QTableView):
                     continue
                 if h_header.isSectionHidden(column):
                     column += 1
-                index = self.model().index(row, column)
+                index = self.model().index(row, column)  # NOTE: This should make the model grow if needed
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
                     values.append(value)

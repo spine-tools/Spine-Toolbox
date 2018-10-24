@@ -517,15 +517,15 @@ class DataStoreForm(QMainWindow):
         """Initialize parameter value models from source database."""
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
-        self.object_parameter_value_model.init_model(min_row_count=self.visible_rows)
-        self.relationship_parameter_value_model.init_model(min_row_count=self.visible_rows)
+        self.object_parameter_value_model.init_model()
+        self.relationship_parameter_value_model.init_model()
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
         self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
         self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
-        self.object_parameter_model.init_model(min_row_count=self.visible_rows)
-        self.relationship_parameter_model.init_model(min_row_count=self.visible_rows)
+        self.object_parameter_model.init_model()
+        self.relationship_parameter_model.init_model()
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -1147,7 +1147,7 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_value_model
         proxy_index = self.ui.tableView_object_parameter_value.currentIndex()
         index = self.object_parameter_value_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count + 1
+        row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
@@ -1183,7 +1183,7 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_value_model
         proxy_index = self.ui.tableView_relationship_parameter_value.currentIndex()
         index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count + 1
+        row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
@@ -1229,7 +1229,7 @@ class DataStoreForm(QMainWindow):
         model = self.object_parameter_model
         proxy_index = self.ui.tableView_object_parameter.currentIndex()
         index = self.object_parameter_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count + 1
+        row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             object_class_name_column = model.horizontal_header_labels().index('object_class_name')
@@ -1261,7 +1261,7 @@ class DataStoreForm(QMainWindow):
         model = self.relationship_parameter_model
         proxy_index = self.ui.tableView_relationship_parameter.currentIndex()
         index = self.relationship_parameter_proxy.mapToSource(proxy_index)
-        row = model.fixed_row_count + 1
+        row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')

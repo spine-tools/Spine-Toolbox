@@ -46,7 +46,7 @@ class AddItemsDialog(QDialog):
         super().__init__(parent)
         self._parent = parent
         self.ui = None
-        self.model = MinimalTableModel(self, can_grow=True)
+        self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         self.icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
@@ -128,7 +128,6 @@ class AddObjectClassesDialog(AddItemsDialog):
             ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
         self.ui.comboBox.addItems(insert_position_list)
         self.connect_signals()
-        self.insert_row()
         self.resize_tableview()
 
     def resize_tableview(self):
@@ -183,7 +182,6 @@ class AddObjectsDialog(AddItemsDialog):
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
-        self.insert_row()
         self.resize_tableview()
 
     def connect_signals(self):
@@ -269,7 +267,6 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
         self.connect_signals()
-        self.insert_row()
         self.resize_tableview()
 
     def connect_signals(self):
@@ -476,7 +473,6 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.model.set_horizontal_header_labels(header)
         self.model.clear()
         self.reset_default_object_column()
-        self.insert_row()
         self.resize_tableview()
         self.ui.toolButton_insert_row.setEnabled(True)
         self.ui.toolButton_remove_rows.setEnabled(True)
