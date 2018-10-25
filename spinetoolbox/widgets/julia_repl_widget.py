@@ -24,9 +24,37 @@ from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs
-from config import JULIA_EXECUTABLE
+from qtconsole.manager import QtKernelRestarter
+from config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
 from widgets.toolbars import DraggableWidget
 from helpers import busy_effect
+
+
+class CustomQtKernelManager(QtKernelManager):
+    """A QtKernelManager with a custom restarter."""
+
+    kernel_restarted = Signal("int", "int", name="kernel_dead")
+    kernel_dead = Signal("int", name="kernel_dead")
+
+    def start_restarter(self):
+        if self.autorestart and self.has_kernel:
+            if self._restarter is None:
+                self._restarter = QtKernelRestarter(
+                    time_to_dead=JL_REPL_TIME_TO_DEAD,
+                    restart_limit=JL_REPL_RESTART_LIMIT,
+                    kernel_manager=self,
+                    parent=self,
+                    log=self.log,
+                )
+                self._restarter.add_callback(self._handle_kernel_restarted, event='restart')
+                self._restarter.add_callback(self._handle_kernel_dead, event='dead')
+            self._restarter.start()
+
+    def _handle_kernel_restarted(self):
+        self.kernel_restarted.emit(self._restarter._restart_count, self._restarter.restart_limit)
+
+    def _handle_kernel_dead(self):
+        self.kernel_dead.emit(self._restarter.restart_limit)
 
 
 class JuliaREPLWidget(RichJupyterWidget):
@@ -45,9 +73,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.running = False
         self.command = None
         self.kernel_execution_state = None
-        self.custom_restart = True  # Needed to get the `custom_restart_kernel_died` signal
-        self.custom_restart_kernel_died.connect(self.kernel_died)
-        self.kernel_died_count = None
         self.ijulia_process = None  # IJulia installation/reconfiguration process (QSubProcess)
         self.ijulia_process_succeeded = False  # True if IJulia installation was successful
         self.execution_failed_to_start = False
@@ -102,41 +127,51 @@ class JuliaREPLWidget(RichJupyterWidget):
         if not self.kernel_manager:
             self.starting = True
             self._toolbox.msg.emit("*** Starting Julia REPL ***")
-            self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
                 return
             # try to start the kernel using the available spec
-            kernel_manager = QtKernelManager(kernel_name=kernel_name)
+            kernel_manager = CustomQtKernelManager(kernel_name=kernel_name)
             try:
                 kernel_manager.start_kernel()
             except FileNotFoundError:
                 self._toolbox.msg_error.emit("\tCouldn't find the specified Julia Jupyter kernel.")
                 self.prompt_to_reconfigure_ijulia()
                 return
-            kernel_client = kernel_manager.client()
-            kernel_client.start_channels()
             self.kernel_manager = kernel_manager
-            self.kernel_client = kernel_client
-            # connect client signals
-            self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
-            self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
+            self.setup_client()
+            self.connect_signals()
         else:
             self._toolbox.msg.emit("*** Using previously started Julia REPL ***")
 
-    @Slot("float", name="kernel_died")
-    def kernel_died(self, since_last_heartbeat):
-        """Run when kernel dies after a start attempt.
-        After 5 deaths, prompt to (re)install IJulia"""
-        self.kernel_died_count += 1
+    def setup_client(self):
+        if not self.kernel_manager:
+            return
+        kernel_client = self.kernel_manager.client()
+        kernel_client.hb_channel.time_to_dead = JL_REPL_TIME_TO_DEAD
+        kernel_client.start_channels()
+        self.kernel_client = kernel_client
+
+    def connect_signals(self):
+        self.kernel_manager.kernel_restarted.connect(self.receive_kernel_restarted)
+        self.kernel_manager.kernel_dead.connect(self.receive_kernel_dead)
+        self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
+        self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
+
+    @Slot("int", "int", name="receive_kernel_restarted")
+    def receive_kernel_restarted(self, restart_count, restart_limit):
+        """Called when the kernel is restarted, i.e., when time to dead has elapsed."""
         self._toolbox.msg_warning.emit("\tFailed to start Julia Jupyter kernel "
-                                       "(attempt {} of 5)".format(self.kernel_died_count))
-        if self.kernel_died_count == 5:
-            self._toolbox.msg_error.emit("\tFailed to start Julia Jupyter kernel in 5 attempts.")
-            self.kernel_died_count = None
-            self.kernel_manager = None
-            self.kernel_client = None
-            self.prompt_to_install_ijulia()
+                                       "(attempt {0} of {1})".format(restart_count, restart_limit))
+
+    @Slot("int", name="receive_kernel_dead")
+    def receive_kernel_dead(self, restart_limit):
+        """Called when the kernel is finally declared dead, i.e., the restart limit has been reached."""
+        self._toolbox.msg_error.emit("\tFailed to start Julia Jupyter kernel "
+                                     "in {0} attempts.".format(restart_limit))
+        self.kernel_manager = None
+        self.kernel_client = None
+        self.prompt_to_install_ijulia()
 
     def prompt_to_reconfigure_ijulia(self):
         """Prompt user to reconfigure IJulia via QSubProcess."""
@@ -157,6 +192,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                       "</ul><p>Do you want to run the automatic reconfiguration process again?</p>"
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
+            self._control.viewport().setCursor(self.normal_cursor)
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
             return
@@ -198,6 +234,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                       "</ul><p>Do you want to run the automatic installation process again?</p>"
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
+            self._control.viewport().setCursor(self.normal_cursor)
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
             return
@@ -324,12 +361,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         self._toolbox.msg.emit("Restarting Julia REPL...")
         self.kernel_client.stop_channels()
         self.kernel_manager.restart_kernel(now=True)
-        kernel_client = self.kernel_manager.client()
-        kernel_client.start_channels()
-        self.kernel_client = kernel_client
-        # connect client signals
-        self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
-        self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
+        self.setup_client()
+        self.connect_signals()
 
     def _custom_context_menu_requested(self, pos):
         """Reimplemented method to add a (re)start REPL action into the default context menu.

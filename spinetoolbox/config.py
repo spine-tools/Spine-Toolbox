@@ -152,3 +152,6 @@ TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
 # Draw border on all QWidgets when in focus
 # TT_FOCUS_SS = ":focus {border: 1px groove;}"
+
+JL_REPL_TIME_TO_DEAD = 5.0
+JL_REPL_RESTART_LIMIT = 3
