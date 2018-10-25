@@ -77,7 +77,6 @@ class ToolboxUI(QMainWindow):
         # Widget and form references
         self.settings_form = None
         self.about_form = None
-        self.data_store_form = None  # OBSOLETE?
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
         self.link_context_menu = None
@@ -90,6 +89,7 @@ class ToolboxUI(QMainWindow):
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
+        self.connections_tab = None
         # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -103,30 +103,19 @@ class ToolboxUI(QMainWindow):
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
-        # Add QAction for showing the tabBar in the item info QTabWidget (for debugging purposes)
-        self.tabbar_action = QAction(self)
-        self.tabbar_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.addAction(self.tabbar_action)
-        # Hide tabBar in the project item info QTabBar
-        self.ui.tabWidget_item_info.tabBar().hide()
+        # QActions
+        self.show_connections_tab = QAction(self)  # self is for PySide 5.6
+        self.show_item_tabbar = QAction(self)
+        self.hide_tabs()
         # Add toggleview actions
         self.add_toggle_view_actions()
         self.init_conf()
         self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
         self.init_project()
-        # Initialize widgets that are shared among many project items
+        # Initialize widgets that are shared among multiple project items
         self.init_shared_widgets()
         self.restore_ui()
-
-    def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu."""
-        self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -171,7 +160,8 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Other QActions
-        self.tabbar_action.triggered.connect(self.toggle_tabbar_visibility)
+        self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
+        self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
         # Project TreeView
@@ -184,13 +174,6 @@ class ToolboxUI(QMainWindow):
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
-
-    def toggle_tabbar_visibility(self):
-        """Shows or hides the tab bar in project item info tab widget. For debugging purposes."""
-        if self.ui.tabWidget_item_info.tabBar().isVisible():
-            self.ui.tabWidget_item_info.tabBar().hide()
-        else:
-            self.ui.tabWidget_item_info.tabBar().show()
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -216,163 +199,9 @@ class ToolboxUI(QMainWindow):
             logging.error("Loading project file '{0}' failed".format(project_file_path))
         return
 
-    def init_shared_widgets(self):
-        """Initialize widgets that are shared among all ProjectItems of the same type."""
-        # Data Stores
-        self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
-        self.ui.comboBox_dialect.setCurrentIndex(-1)
-        # TODO: Which icon?
-        self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # icon_provider = QFileIconProvider()
-        # self.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
-        # Data Connections
-        self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        # Tools (Tool template combobox is initialized in init_tool_template_model)
-        self.ui.pushButton_tool_stop.setEnabled(False)
-        self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
-        self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
-        # Views
-        self.ui.treeView_view.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        window_size = self.qsettings.value("mainWindow/windowSize")
-        window_pos = self.qsettings.value("mainWindow/windowPosition")
-        window_state = self.qsettings.value("mainWindow/windowState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
-        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
-        # noinspection PyArgumentList
-        n_screens_now = len(QGuiApplication.screens())  # number of screens now
-        if window_size:
-            self.resize(window_size)
-        if window_pos:
-            self.move(window_pos)
-        if window_state:
-            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-        if window_maximized == 'true':
-            self.setWindowState(Qt.WindowMaximized)
-        if n_screens_now < int(n_screens):
-            # There are less screens available now than on previous application startup
-            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
-            self.move(0, 0)
-
-    @Slot(name="restore_dock_widgets")
-    def restore_dock_widgets(self):
-        """Dock all floating and or hidden QDockWidgets back to the main window."""
-        for dock in self.findChildren(QDockWidget):
-            if not dock.isVisible():
-                dock.setVisible(True)
-            if dock.isFloating():
-                dock.setFloating(False)
-
-    # noinspection PyMethodMayBeStatic
-    def init_models(self, tool_template_paths):
-        """Initialize application internal data models.
-
-        Args:
-            tool_template_paths (list): List of tool definition file paths used in this project
-        """
-        self.init_project_item_model()
-        self.ui.treeView_project.selectionModel().currentChanged.connect(self.selected_item_changed)
-        self.init_tool_template_model(tool_template_paths)
-        self.init_connection_model()
-
-    def init_project_item_model(self):
-        """Initializes project item model. Create root and category items and
-        add them to the model."""
-        root_item = ProjectItem("root", "", is_root=True, is_category=False)
-        ds_category = ProjectItem("Data Stores", "", is_root=False, is_category=True)
-        dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
-        tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
-        view_category = ProjectItem("Views", "", is_root=False, is_category=True)
-        self.project_item_model = ProjectItemModel(self, root=root_item)
-        self.project_item_model.insert_item(ds_category)
-        self.project_item_model.insert_item(dc_category)
-        self.project_item_model.insert_item(tool_category)
-        self.project_item_model.insert_item(view_category)
-        self.ui.treeView_project.setModel(self.project_item_model)
-        self.ui.treeView_project.header().hide()
-        self.ui.graphicsView.set_project_item_model(self.project_item_model)
-
-    def init_tool_template_model(self, tool_template_paths):
-        """Initializes Tool template model.
-
-        Args:
-            tool_template_paths (list): List of tool definition file paths used in this project
-        """
-        self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
-        self.tool_template_model = ToolTemplateModel()
-        n_tools = 0
-        self.msg.emit("Loading Tool templates...")
-        for path in tool_template_paths:
-            if path == '' or not path:
-                continue
-            # Add tool template into project
-            tool_cand = self._project.load_tool_template_from_file(path)
-            n_tools += 1
-            if not tool_cand:
-                self.msg_error.emit("Failed to load Tool template from <b>{0}</b>".format(path))
-                continue
-            # Add tool definition file path to tool instance variable
-            tool_cand.set_def_path(path)
-            # Insert tool into model
-            self.tool_template_model.insertRow(tool_cand)
-            # self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
-        # Set model to list view on tool templates tab
-        self.ui.listView_tool_templates.setModel(self.tool_template_model)
-        # Set model to Tool project item combo box
-        self.ui.comboBox_tool.setModel(self.tool_template_model)
-        # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
-        # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
-        n_recv_sig1 = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
-        if n_recv_sig1 == 0:
-            # logging.debug("Connecting doubleClicked signal for QListView")
-            self.ui.listView_tool_templates.doubleClicked.connect(self.edit_tool_template)
-        elif n_recv_sig1 > 1:  # Check that this never gets over 1
-            logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv_sig1))
-        else:
-            pass  # signal already connected
-        n_recv_sig2 = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
-        if n_recv_sig2 == 0:
-            # slogging.debug("Connecting customContextMenuRequested signal for QListView")
-            self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
-        elif n_recv_sig2 > 1:  # Check that this never gets over 1
-            logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}"
-                          .format(n_recv_sig2))
-        else:
-            pass  # signal already connected
-        if n_tools == 0:
-            self.msg_warning.emit("Project has no tool templates")
-
-    def init_connection_model(self):
-        """Initializes a model representing connections between project items."""
-        self.connection_model = ConnectionModel(self)
-        self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
-        self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
-        self.ui.graphicsView.set_connection_model(self.connection_model)
-
-    def clear_ui(self):
-        """Clean UI to make room for a new or opened project."""
-        if self.project_item_model:
-            item_names = self.project_item_model.return_item_names()
-            n = len(item_names)
-            if n == 0:
-                return
-            for name in item_names:
-                ind = self.project_item_model.find_item(name)
-                self.remove_item(ind)
-            self.msg.emit("All {0} items removed from project".format(n))
-        # Clear widget info from QDockWidget
-        self.activate_item_tab()
-        self._project = None
-        self.tool_template_model = None
-        self.ui.graphicsView.make_new_scene()
-
     @Slot(name="new_project")
     def new_project(self):
-        """Create new project and activate it."""
+        """Shows new project form."""
         self.project_form = NewProjectForm(self, self._config)
         self.project_form.show()
 
@@ -510,6 +339,151 @@ class ToolboxUI(QMainWindow):
         # Load project
         self.open_project(self._project.path)
         return
+
+    # noinspection PyMethodMayBeStatic
+    def init_models(self, tool_template_paths):
+        """Initialize application internal data models.
+
+        Args:
+            tool_template_paths (list): List of tool definition file paths used in this project
+        """
+        self.init_project_item_model()
+        self.ui.treeView_project.selectionModel().currentChanged.connect(self.selected_item_changed)
+        self.init_tool_template_model(tool_template_paths)
+        self.init_connection_model()
+
+    def init_project_item_model(self):
+        """Initializes project item model. Create root and category items and
+        add them to the model."""
+        root_item = ProjectItem("root", "", is_root=True, is_category=False)
+        ds_category = ProjectItem("Data Stores", "", is_root=False, is_category=True)
+        dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
+        tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
+        view_category = ProjectItem("Views", "", is_root=False, is_category=True)
+        self.project_item_model = ProjectItemModel(self, root=root_item)
+        self.project_item_model.insert_item(ds_category)
+        self.project_item_model.insert_item(dc_category)
+        self.project_item_model.insert_item(tool_category)
+        self.project_item_model.insert_item(view_category)
+        self.ui.treeView_project.setModel(self.project_item_model)
+        self.ui.treeView_project.header().hide()
+        self.ui.graphicsView.set_project_item_model(self.project_item_model)
+
+    def init_tool_template_model(self, tool_template_paths):
+        """Initializes Tool template model.
+
+        Args:
+            tool_template_paths (list): List of tool definition file paths used in this project
+        """
+        self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
+        self.tool_template_model = ToolTemplateModel()
+        n_tools = 0
+        self.msg.emit("Loading Tool templates...")
+        for path in tool_template_paths:
+            if path == '' or not path:
+                continue
+            # Add tool template into project
+            tool_cand = self._project.load_tool_template_from_file(path)
+            n_tools += 1
+            if not tool_cand:
+                self.msg_error.emit("Failed to load Tool template from <b>{0}</b>".format(path))
+                continue
+            # Add tool definition file path to tool instance variable
+            tool_cand.set_def_path(path)
+            # Insert tool into model
+            self.tool_template_model.insertRow(tool_cand)
+            # self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
+        # Set model to list view on tool templates tab
+        self.ui.listView_tool_templates.setModel(self.tool_template_model)
+        # Set model to Tool project item combo box
+        self.ui.comboBox_tool.setModel(self.tool_template_model)
+        # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
+        # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
+        n_recv_sig1 = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
+        if n_recv_sig1 == 0:
+            # logging.debug("Connecting doubleClicked signal for QListView")
+            self.ui.listView_tool_templates.doubleClicked.connect(self.edit_tool_template)
+        elif n_recv_sig1 > 1:  # Check that this never gets over 1
+            logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv_sig1))
+        else:
+            pass  # signal already connected
+        n_recv_sig2 = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
+        if n_recv_sig2 == 0:
+            # slogging.debug("Connecting customContextMenuRequested signal for QListView")
+            self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
+        elif n_recv_sig2 > 1:  # Check that this never gets over 1
+            logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}"
+                          .format(n_recv_sig2))
+        else:
+            pass  # signal already connected
+        if n_tools == 0:
+            self.msg_warning.emit("Project has no tool templates")
+
+    def init_connection_model(self):
+        """Initializes a model representing connections between project items."""
+        self.connection_model = ConnectionModel(self)
+        self.ui.tableView_connections.setModel(self.connection_model)
+        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
+        self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
+        self.ui.graphicsView.set_connection_model(self.connection_model)
+
+    def init_shared_widgets(self):
+        """Initialize widgets that are shared among all ProjectItems of the same type."""
+        # Data Stores
+        self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
+        self.ui.comboBox_dialect.setCurrentIndex(-1)
+        # TODO: Which icon?
+        self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # icon_provider = QFileIconProvider()
+        # self.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
+        # Data Connections
+        self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        # Tools (Tool template combobox is initialized in init_tool_template_model)
+        self.ui.pushButton_tool_stop.setEnabled(False)
+        self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        # Views
+        self.ui.treeView_view.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+
+    def restore_ui(self):
+        """Restore UI state from previous session."""
+        window_size = self.qsettings.value("mainWindow/windowSize")
+        window_pos = self.qsettings.value("mainWindow/windowPosition")
+        window_state = self.qsettings.value("mainWindow/windowState")
+        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
+        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
+        # noinspection PyArgumentList
+        n_screens_now = len(QGuiApplication.screens())  # number of screens now
+        if window_size:
+            self.resize(window_size)
+        if window_pos:
+            self.move(window_pos)
+        if window_state:
+            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+        if n_screens_now < int(n_screens):
+            # There are less screens available now than on previous application startup
+            # Move main window to position 0,0 to make sure that it is not lost on another screen that does not exist
+            self.move(0, 0)
+
+    def clear_ui(self):
+        """Clean UI to make room for a new or opened project."""
+        if self.project_item_model:
+            item_names = self.project_item_model.return_item_names()
+            n = len(item_names)
+            if n == 0:
+                return
+            for name in item_names:
+                ind = self.project_item_model.find_item(name)
+                self.remove_item(ind)
+            self.msg.emit("All {0} items removed from project".format(n))
+        # Clear widget info from QDockWidget
+        self.activate_item_tab()
+        self._project = None
+        self.tool_template_model = None
+        self.ui.graphicsView.make_new_scene()
 
     @Slot("QModelIndex", "QModelIndex", name="selected_item_changed")
     def selected_item_changed(self, current, previous):
@@ -979,7 +953,6 @@ class ToolboxUI(QMainWindow):
     @Slot("QModelIndex", name="connection_data_changed")
     def connection_data_changed(self, index):
         """Called when checkbox delegate wants to edit connection data. Add or remove Link instance accordingly."""
-        # model = self.connection_model
         d = self.connection_model.data(index, Qt.DisplayRole)  # Current status
         if d == "False":  # Add link
             src_name = self.connection_model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
@@ -987,6 +960,50 @@ class ToolboxUI(QMainWindow):
             self.ui.graphicsView.add_link(src_name, dst_name, index)
         else:  # Remove link
             self.ui.graphicsView.remove_link(index)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the main window."""
+        for dock in self.findChildren(QDockWidget):
+            if not dock.isVisible():
+                dock.setVisible(True)
+            if dock.isFloating():
+                dock.setFloating(False)
+
+    def hide_tabs(self):
+        """Hides project item info tab bar and connections tab in project item QTreeView.
+        Makes (hidden) actions on how to show them if needed for debugging purposes."""
+        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
+        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
+        self.addAction(self.show_item_tabbar)
+        self.addAction(self.show_connections_tab)
+        self.ui.tabWidget_item_info.tabBar().hide()  # Hide project item info QTabBar
+        self.connections_tab = self.ui.tabWidget.widget(2)
+        self.ui.tabWidget.removeTab(2)  # Remove connections tab
+
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        self.ui.menuToolbars.addAction(self.item_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_project.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
+
+    def toggle_tabbar_visibility(self):
+        """Shows or hides the tab bar in project item info tab widget. For debugging purposes."""
+        if self.ui.tabWidget_item_info.tabBar().isVisible():
+            self.ui.tabWidget_item_info.tabBar().hide()
+        else:
+            self.ui.tabWidget_item_info.tabBar().show()
+
+    def toggle_connections_tab_visibility(self):
+        """Shows or hides connections tab in the project item QTreeView. For debugging purposes."""
+        if self.ui.tabWidget.count() == 2:  # Connections tab hidden
+            self.ui.tabWidget.insertTab(2, self.connections_tab, "Connections")
+        else:
+            self.connections_tab = self.ui.tabWidget.widget(2)
+            self.ui.tabWidget.removeTab(2)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):

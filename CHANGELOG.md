@@ -24,14 +24,13 @@ In this way you can correct your work and try again.
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
 second one.
--
 
 ### Changed
 
 ### Deprecated
 
 ### Removed
-- Connections tab on the main window is useless and will be removed.
+- Connections tab has been removed (actually, it is just hidden and can be restored with a keyboard shortcut)
 
 ### Security
 
