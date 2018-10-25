@@ -61,8 +61,8 @@ class JuliaREPLWidget(RichJupyterWidget):
 
     @busy_effect
     def find_julia_kernel(self):
-        """Return the name of the most recent julia kernel available
-        or None if none available."""
+        """Return the name of the julia kernel according to julia executable from settings,
+        or None if not found."""
         kernel_specs = find_kernel_specs()
         julia_specs = [x for x in kernel_specs if x.startswith('julia')]
         if not julia_specs:
