@@ -30,6 +30,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.spatial.distance import cdist
 from scipy.sparse.csgraph import dijkstra
 from scipy.optimize import minimize
+import logging
 
 
 class NetworkMapForm(QWidget):
@@ -42,6 +43,9 @@ class NetworkMapForm(QWidget):
     def __init__(self, toolbox, view, mapping, settings_path=""):
         """Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        # Set logging level for matplotlib logger
+        mpl_logger = logging.getLogger("matplotlib")
+        mpl_logger.setLevel(logging.WARNING)
         self._view = view
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()

@@ -31,7 +31,7 @@ choose the SQL dialect API (pymysql, pyodbc psycopg2, and cx_Oracle) they want t
 be installed in Spine Toolbox when needed. Sphinx, recommonmark, and cx_Freeze packages 
 are needed for building the user guide and for deploying the application.
 
-### Installing requirements on Python 3.5+
+### Installing requirements
 
 Run
 
@@ -70,11 +70,15 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
         pip install -r requirements.txt
 
+4. And finally to install optional requirements run
+
+        pip install -r optional-requirements.txt
+
 in Spine Toolbox root folder.
 
 **Note: Using the *conda-forge* channel for installing the requirements is not recommended.**
 
-Installing the `qtconsole` package from *conda-forge* channel also
+The required `qtconsole` package from *conda-forge* channel also
 installs `qt` and `PyQt` packages. Since this is a PySide2 application, those are 
 not needed and there is a chance of conflicts between the packages.
 

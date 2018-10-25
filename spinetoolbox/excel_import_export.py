@@ -635,12 +635,13 @@ def merge_spine_xlsx_data(data):
             objects = values[0].objects
             class_type = values[0].class_type
 
+            #skip first sheet
             iter_values = iter(values)
             next(iter_values)
             for v in iter_values:
                 # make sure that the new sheet has same object_classes that first
                 if v.object_classes != object_classes:
-                    error_log.append["sheet",v.sheet_name,"sheet {} as different object_classes than sheet {} for class {}".format(v.sheet_name, sheet_name, class_name)]
+                    error_log.append(["sheet",v.sheet_name,"sheet {} as different object_classes than sheet {} for class {}".format(v.sheet_name, sheet_name, class_name)])
                     continue
                 parameters = parameters + v.parameters
                 objects = objects + v.objects
@@ -1450,7 +1451,7 @@ def export_relationships_parameter_value_to_spine_db(db, data):
 
             if value != compare_with:
                 # parameter does not match existing value, update value
-                update_par.append([{'id': db_rel_par[class_name_obj_name_list_par_str].parameter_value_id,
+                update_par.append([{'id': db_rel_par[class_name_obj_name_list_par_str].id,
                                     'field_name': r[2].parameter_type,
                                     'new_value': value}, key])
         else:

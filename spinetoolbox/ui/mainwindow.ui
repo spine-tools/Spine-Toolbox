@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -112,7 +112,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -1844,41 +1844,6 @@ color: rgb(255, 255, 255);</string>
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_refresh_tool_templates">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>26</width>
-               <height>26</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>26</width>
-               <height>26</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Refresh Tool templates&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/refresh_tools.png</normaloff>:/icons/refresh_tools.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-           <item>
             <widget class="QToolButton" name="toolButton_remove_tool_template">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -2187,7 +2152,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>treeView_project</tabstop>
   <tabstop>listView_tool_templates</tabstop>
   <tabstop>toolButton_add_tool_template</tabstop>
-  <tabstop>toolButton_refresh_tool_templates</tabstop>
   <tabstop>toolButton_remove_tool_template</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>

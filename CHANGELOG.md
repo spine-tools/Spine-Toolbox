@@ -16,7 +16,7 @@ optimizing queries to the database.)
 - New options to edit items in the object tree view, including changing the objects involved in a relationship.
 - The dialogs to add/edit tree view items are not closed in case there's an error in the user choices.
 In this way you can correct your work and try again.
-- Now it's possible to interrupt a tool's execution by pressing the stop button.
+- Stop button now terminates tool execution.
 - New context menu options to fully expand and collapse object tree items in the Data store form.
 - The autofilter in the Data store form now can also filter work in progress rows.
 - In the Data store item controls, the path to the Sqlite file can be specified by dropping a file.
@@ -24,14 +24,14 @@ In this way you can correct your work and try again.
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
 second one.
--
 
 ### Changed
 
 ### Deprecated
 
 ### Removed
-- Connections tab on the main window is useless and will be removed.
+- Connections tab has been removed (actually, it is just hidden and can be restored with a keyboard shortcut)
+- Refresh Tools button on Templates tab has been removed as it was not needed anymore
 
 ### Security
 
