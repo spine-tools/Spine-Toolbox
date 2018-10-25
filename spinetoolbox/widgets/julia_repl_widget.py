@@ -26,6 +26,7 @@ from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs
 from config import JULIA_EXECUTABLE
 from widgets.toolbars import DraggableWidget
+from helpers import busy_effect
 
 
 class JuliaREPLWidget(RichJupyterWidget):
@@ -58,16 +59,43 @@ class JuliaREPLWidget(RichJupyterWidget):
         traitlets_logger.setLevel(level=logging.ERROR)
         asyncio_logger.setLevel(level=logging.ERROR)
 
+    @busy_effect
     def find_julia_kernel(self):
         """Return the name of the most recent julia kernel available
         or None if none available."""
         kernel_specs = find_kernel_specs()
         julia_specs = [x for x in kernel_specs if x.startswith('julia')]
         if not julia_specs:
+            self._toolbox.msg_error.emit("\tCouldn't find any Julia Jupyter kernel specification.")
+            self.prompt_to_install_ijulia()
             return None
-        # pick the most recent available julia kernel
-        julia_specs.sort(reverse=True)
-        return julia_specs[0]
+        # Find out julia version from executable in settings
+        self._toolbox.msg.emit("Finding out Julia version...")
+        julia_dir = self._toolbox._config.get("settings", "julia_path")
+        if not julia_dir == '':
+            julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+        else:
+            julia_exe = JULIA_EXECUTABLE
+        program = "{0}".format(julia_exe)
+        args = list()
+        args.append("-e")
+        args.append("println(VERSION)")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args)
+        q_process.start_process()
+        if not q_process.wait_for_finished(msecs=3000):
+            self._toolbox.msg_error.emit("Subprocess failed. "
+                                         "Make sure that Julia is installed properly on your computer "
+                                         "and try again.")
+            return None
+        julia_version = q_process.out
+        self._toolbox.msg.emit("\tJulia version is {0}".format(julia_version))
+        julia_spec = "julia-" + ".".join(julia_version.split(".")[0:2])
+        if julia_spec not in julia_specs:
+            self._toolbox.msg_error.emit("\tCouldn't find a Jupyter kernel specification "
+                                         "for Julia version {0}.".format(julia_version))
+            self.prompt_to_install_ijulia()
+            return None
+        return julia_spec
 
     def start_jupyter_kernel(self):
         """Start a julia kernel, and connect to it."""
@@ -77,15 +105,13 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.kernel_died_count = 0
             kernel_name = self.find_julia_kernel()
             if not kernel_name:
-                self._toolbox.msg_error.emit("\tCouldn't find a Julia Jupyter kernel specification.")
-                self.prompt_to_install_ijulia()
                 return
             # try to start the kernel using the available spec
             kernel_manager = QtKernelManager(kernel_name=kernel_name)
             try:
                 kernel_manager.start_kernel()
             except FileNotFoundError:
-                self._toolbox.msg_error.emit("\tCouldn't find the specified Julia kernel for Jupyter.")
+                self._toolbox.msg_error.emit("\tCouldn't find the specified Julia Jupyter kernel.")
                 self.prompt_to_reconfigure_ijulia()
                 return
             kernel_client = kernel_manager.client()
@@ -145,7 +171,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         command = "{0}".format(julia_exe)
         args = list()
         args.append("-e")
-        args.append("try using Pkg catch: end; ENV[ARGS[1]] = ARGS[2]; Pkg.build(ARGS[3])")
+        args.append("try using Pkg catch; end; ENV[ARGS[1]] = ARGS[2]; Pkg.build(ARGS[3])")
         args.append("JUPYTER")
         args.append("jupyter")
         args.append("IJulia")
@@ -189,7 +215,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         command = "{0}".format(julia_exe)
         args = list()
         args.append("-e")
-        args.append("try using Pkg catch: end; ENV[ARGS[1]] = ARGS[2]; Pkg.add(ARGS[3])")
+        args.append("try using Pkg catch; end; ENV[ARGS[1]] = ARGS[2]; Pkg.add(ARGS[3])")
         args.append("JUPYTER")
         args.append("jupyter")
         args.append("IJulia")

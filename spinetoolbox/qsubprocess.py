@@ -41,6 +41,8 @@ class QSubProcess(QObject):
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
+        self.out = ""
+        self.err = ""
 
     # noinspection PyUnresolvedReferences
     def start_process(self, workdir=None):
@@ -171,9 +173,11 @@ class QSubProcess(QObject):
         """Emit data from stdout."""
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
         self._toolbox.msg_proc.emit(out.strip())
+        self.out += out.strip()
 
     @Slot(name="on_ready_stderr")
     def on_ready_stderr(self):
         """Emit data from stderr."""
-        out = str(self._process.readAllStandardError().data(), "utf-8")
-        self._toolbox.msg_proc_error.emit(out.strip())
+        err = str(self._process.readAllStandardError().data(), "utf-8")
+        self._toolbox.msg_proc_error.emit(err.strip())
+        self.err += err.strip()
