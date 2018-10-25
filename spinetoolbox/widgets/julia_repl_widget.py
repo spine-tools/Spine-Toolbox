@@ -55,8 +55,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         # Set logging level for jupyter module loggers
         traitlets_logger = logging.getLogger("traitlets")
         asyncio_logger = logging.getLogger("asyncio")
-        traitlets_logger.setLevel(level=logging.ERROR)
-        asyncio_logger.setLevel(level=logging.ERROR)
+        traitlets_logger.setLevel(level=logging.WARNING)
+        asyncio_logger.setLevel(level=logging.WARNING)
 
     def find_julia_kernel(self):
         """Return the name of the most recent julia kernel available
@@ -103,7 +103,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when kernel dies after a start attempt.
         After 5 deaths, prompt to (re)install IJulia"""
         self.kernel_died_count += 1
-        self._toolbox.msg_warning.emit("Failed to start Julia Jupyter kernel "
+        self._toolbox.msg_warning.emit("\tFailed to start Julia Jupyter kernel "
                                        "(attempt {} of 5)".format(self.kernel_died_count))
         if self.kernel_died_count == 5:
             self._toolbox.msg_error.emit("\tFailed to start Julia Jupyter kernel in 5 attempts.")
@@ -202,11 +202,11 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when IJulia installation/reconfiguration process finishes"""
         if self.ijulia_process.process_failed:
             if self.ijulia_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
+                self._toolbox.msg_error.emit("Process failed to start. Make sure that "
                                              "Julia is installed properly on your computer "
                                              "and try again.")
             else:
-                self._toolbox.msg_error.emit("Sub-process failed [exit code:{1}]".format(ret))
+                self._toolbox.msg_error.emit("Process failed [exit code:{0}]".format(ret))
             self.execution_failed_to_start = True
             self.execution_finished_signal.emit(-9999)
         else:
@@ -230,7 +230,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         # logging.debug("content: {}".format(msg['content']))
         if self.running and msg['msg_type'] == 'execute_reply':
             if msg['content']['execution_count'] == 0:
-                self._toolbox.msg.emit("Julia Jupyter kernel successfully started.")
+                self._toolbox.msg.emit("\tJulia Jupyter kernel successfully started.")
                 return
             if msg['content']['status'] == 'ok':
                 self.execution_finished_signal.emit(0)  # success code
