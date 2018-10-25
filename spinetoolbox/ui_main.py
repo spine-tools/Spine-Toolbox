@@ -169,7 +169,6 @@ class ToolboxUI(QMainWindow):
         # Tools ListView
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
         self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
-        self.ui.toolButton_refresh_tool_templates.clicked.connect(self.refresh_tool_templates)
         self.ui.toolButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
         self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
@@ -646,74 +645,6 @@ class ToolboxUI(QMainWindow):
             elif tool.tool_template().name == tool_template.name:
                 tool.set_tool_template(template)
                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
-
-        # n_tool_items = tools.rowCount()
-        # for i in range(n_tool_items):
-        #     tool = tools.child(i, 0).data(Qt.UserRole)
-        #     if not tool.tool_template():
-        #         continue
-        #     elif tool.tool_template().name == tool_template.name:
-        #         tool.set_tool_template(template)
-        #         self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
-
-    @Slot(name="refresh_tool_templates")
-    def refresh_tool_templates(self):
-        """If user has changed a Tool template while the application is running,
-        this method refreshes all Tools that use this template to reflect the changes."""
-        if not self._project:
-            self.msg.emit("No project open")
-            return
-        self.msg_warning.emit("This button is disabled on purpose and waiting for an update.")
-        return
-    #     self.msg.emit("Refreshing Tool templates")
-    #     # Re-open project
-    #     project_file = self._project.path  # Path to project file
-    #     if project_file.lower().endswith(".proj"):
-    #         try:
-    #             with open(project_file, 'r') as fh:
-    #                 dicts = json.load(fh)
-    #         except OSError:
-    #             self.msg_error.emit("OSError: Could not load file <b>{0}</b>".format(project_file))
-    #             return
-    #         # Get project settings
-    #         project_dict = dicts['project']
-    #         try:
-    #             tool_template_paths = project_dict['tool_templates']
-    #         except KeyError:
-    #             self.msg_warning.emit("No Tool templates in project")
-    #             return
-    #         self.init_tool_template_model(tool_template_paths)
-    #         # Reattach all Tool templates because ToolTemplateModel may have changed
-    #         self.reattach_tool_templates()
-    #     else:
-    #         self.msg_error.emit("Unsupported project filename {0}. Extension should be .proj.".format(project_file))
-    #         return
-    #
-    # def reattach_tool_templates(self, tool_template_name=None):
-    #     """Reattach tool templates that may have changed.
-    #
-    #     Args:
-    #         tool_template_name (str): if None, reattach all tool templates in project.
-    #         If a name is given, only reattach that one
-    #     """
-    #     tools = self.project_item_model.find_item("Tools")
-    #     n_tool_items = tools.rowCount()
-    #     for i in range(n_tool_items):
-    #         tool_item = tools.child(i, 0)
-    #         tool = tool_item.data(Qt.UserRole)  # Tool that is saved into QStandardItem data
-    #         if tool.tool_template() is not None:
-    #             # Get old tool template name
-    #             old_t_name = tool.tool_template().name
-    #             if not tool_template_name or old_t_name == tool_template_name:
-    #                 # Find the same tool template from ToolTemplateModel
-    #                 new_template = self.tool_template_model.find_tool_template(old_t_name)
-    #                 if not new_template:
-    #                     self.msg_error.emit("Could not find Tool template <b>{0}</b>".format(old_t_name))
-    #                     tool.set_tool_template(None)
-    #                     continue
-    #                 tool.set_tool_template(new_template)
-    #                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>"
-    #                               .format(new_template.name, tool.name))
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
