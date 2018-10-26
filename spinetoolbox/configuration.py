@@ -64,7 +64,7 @@ class ConfigurationParser(object):
         try:
             value = self.parser.get(section, option)
         except configparser.NoOptionError:
-            logging.debug("Option '{}' not found in conf file".format(option))
+            # logging.debug("Option '{}' not found in conf file".format(option))
             value = ''
         return value
 
@@ -147,5 +147,5 @@ class ConfigurationParser(object):
             destination (str): Destination configuration section.
         """
         for option in self.parser.options(source):
-            logging.debug("Copy option: %s" % self.get(source, option))
+            # logging.debug("Copy option: %s" % self.get(source, option))
             self.set(destination, option, self.get(source, option))

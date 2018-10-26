@@ -483,10 +483,11 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    # @busy_effect  # TODO: How to make this work with the new style of connecting&disconnecting signals?
+    # @busy_effect
     @Slot(bool, name="open_treeview")
     def open_treeview(self, checked=False):
         """Open reference in Data Store form."""
+        # TODO: How to make busy_effect work with the new style of connecting&disconnecting signals?
         # TODO: check if the reference has changed, in which case we need to create a new form.
         if self.data_store_treeview:
             self.data_store_treeview.raise_()
@@ -526,7 +527,8 @@ class DataStore(ProjectItem):
         """Search for filename in data and return the path if found."""
         # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
         if self in visited_items:
-            logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
+            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
+                                           "connections and try again. Detected at {0}.".format(self.name))
             return None
         reference = self.current_reference()
         db_url = reference['url']

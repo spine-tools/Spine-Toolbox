@@ -408,7 +408,7 @@ class ToolboxUI(QMainWindow):
             pass  # signal already connected
         n_recv_sig2 = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
         if n_recv_sig2 == 0:
-            # slogging.debug("Connecting customContextMenuRequested signal for QListView")
+            # logging.debug("Connecting customContextMenuRequested signal for QListView")
             self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
         elif n_recv_sig2 > 1:  # Check that this never gets over 1
             logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}"
@@ -763,7 +763,6 @@ class ToolboxUI(QMainWindow):
         try:
             data_dir = project_item.data_dir
         except AttributeError:
-            logging.debug("Item {0} does not have a data_dir. Don't worry about it.".format(name))
             data_dir = None
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(project_item.get_icon().master())

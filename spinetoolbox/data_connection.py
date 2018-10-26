@@ -336,7 +336,8 @@ class DataConnection(ProjectItem):
         """Search for filename in references and data and return the path if found."""
         # logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
         if self in visited_items:
-            logging.debug("Infinite loop detected while visiting {0}.".format(self.name))
+            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
+                                           "connections and try again. Detected at {0}.".format(self.name))
             return None
         if fname in self.data_files():
             # logging.debug("{0} found in DC {1}".format(fname, self.name))

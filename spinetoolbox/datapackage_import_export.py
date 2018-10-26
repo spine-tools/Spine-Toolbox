@@ -16,11 +16,11 @@ Functions to import/export between spine database and frictionless data's datapa
 :date:   28.8.2018
 """
 
-from PySide2.QtCore import Qt
 from datapackage import Package
 from spinedatabase_api import SpineDBAPIError
 from helpers import busy_effect
 import logging
+
 
 @busy_effect
 def import_datapackage(data_store_form, datapackage_path):
@@ -59,7 +59,7 @@ def import_datapackage(data_store_form, datapackage_path):
                 try:
                     parameter = mapping.add_parameter(object_class_id=object_class_id, name=field.name)
                 except SpineDBAPIError as e:
-                    logging.debug(e.msg)
+                    logging.error(e.msg)
                 continue
             # Create relationship classes
             for child_object_class_name in child_object_class_name_list:
@@ -75,7 +75,7 @@ def import_datapackage(data_store_form, datapackage_path):
                     )
                     data_store_form.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
                 except SpineDBAPIError as e:
-                    logging.debug(e.msg)
+                    logging.error(e.msg)
         # Iterate over resource rows to create objects and parameter values
         for i, row in enumerate(resource.read(cast=False)):  # TODO: try and get field keys from read method too
             row_dict = dict(zip(resource.schema.field_names, row))
@@ -88,7 +88,7 @@ def import_datapackage(data_store_form, datapackage_path):
                 object_ = mapping.add_object(class_id=object_class_id, name=object_name)
                 data_store_form.object_tree_model.add_object(object_.__dict__)
             except SpineDBAPIError as e:
-                logging.debug(e.msg)
+                logging.error(e.msg)
                 continue
             # Create parameters
             object_id = object_.id
@@ -107,12 +107,11 @@ def import_datapackage(data_store_form, datapackage_path):
                         value=value
                     )
                 except SpineDBAPIError as e:
-                    logging.debug(e.msg)
-
+                    logging.error(e.msg)
 
         # TODO: Import relationships from foreign keys
         # Iterate over resources (again) to create relationships
-        #for resource in self.datapackage.resources:
+        # for resource in self.datapackage.resources:
         #    parent_object_class_name = resource.name
         #    if parent_object_class_name not in self.object_class_name_list:
         #        continue

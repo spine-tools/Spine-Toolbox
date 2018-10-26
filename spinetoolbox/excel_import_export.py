@@ -333,7 +333,7 @@ def get_unstacked_relationships(db):
                 val = json.loads(row[3].replace("\n", ""))
                 json_vals.append([rel_list+[parameter], val])
             except:
-                logging.debug("error parsing json value for parameter: {} for relationship {}".format(parameter, row[1]))
+                logging.error("error parsing json value for parameter: {} for relationship {}".format(parameter, row[1]))
         if json_vals:
             object_classes = class_2_obj_list[k]
             parsed_json.append([k, object_classes, json_vals])
@@ -379,7 +379,7 @@ def get_unstacked_objects(db):
                 val = json.loads(row[3].replace("\n", ""))
                 json_vals.append([[obj,parameter], val])
             except:
-                logging.debug("error parsing json value for parameter: {} for object {}".format(parameter, obj))
+                logging.error("error parsing json value for parameter: {} for object {}".format(parameter, obj))
         if json_vals:
             parsed_json.append([k, [k], json_vals])
 

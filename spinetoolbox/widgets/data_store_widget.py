@@ -19,6 +19,7 @@ Widget to show Data Store Form.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
+import json
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
     QMessageBox, QCheckBox, QFileDialog, QApplication
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
@@ -114,7 +115,7 @@ class DataStoreForm(QMainWindow):
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
-        logging.debug("Data Store form created in {} seconds".format(toc - tic))
+        self.msg.emit("Data Store form created in {} seconds".format(toc - tic))
 
     def setup_buttons(self):
         """Specify actions and menus for add/remove parameter buttons."""
@@ -401,17 +402,24 @@ class DataStoreForm(QMainWindow):
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
         elif file_path.lower().endswith('xlsx'):
+            error_log = []
             try:
                 insert_log, error_log = import_xlsx_to_db(self.db_map, file_path)
                 self.msg.emit("Excel file successfully imported.")
                 self.set_commit_rollback_actions_enabled(True)
-                logging.debug(insert_log)
-                logging.debug(error_log)
+                # logging.debug(insert_log)
                 self.init_models()
             except SpineIntegrityError as e:
                 self.msg_error.emit(e.msg)
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
+            finally:
+                if not len(error_log) == 0:
+                    msg = "Something went wrong in importing the db to " \
+                          "an Excel file. Here is the error log:\n\n{0}".format(error_log)
+                    # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+                    QMessageBox.information(self, "Excel import may have failed", msg)
+                    # logging.debug(error_log)
 
     @Slot(name="show_export_file_dialog")
     def show_export_file_dialog(self):
