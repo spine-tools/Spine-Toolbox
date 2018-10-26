@@ -32,7 +32,8 @@ second one.
 ### Removed
 - Connections tab has been removed (actually, it is just hidden and can be restored with a keyboard shortcut)
 - Refresh Tools button on Templates tab has been removed as it was not needed anymore
-
+- Set Debug message level in Settings has been removed
+ 
 ### Security
 
 ## [0.1.5] - 2018-09-28

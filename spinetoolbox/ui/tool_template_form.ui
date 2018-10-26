@@ -227,6 +227,9 @@
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="acceptDrops">
             <bool>true</bool>
            </property>
@@ -362,6 +365,9 @@
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
@@ -488,6 +494,9 @@
              <pointsize>10</pointsize>
             </font>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
@@ -610,6 +619,9 @@
             <font>
              <pointsize>10</pointsize>
             </font>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -836,7 +848,6 @@
   </layout>
   <zorder></zorder>
   <zorder></zorder>
-  <zorder>verticalLayoutWidget</zorder>
  </widget>
  <customwidgets>
   <customwidget>
@@ -847,6 +858,21 @@
  </customwidgets>
  <tabstops>
   <tabstop>lineEdit_name</tabstop>
+  <tabstop>comboBox_tooltype</tabstop>
+  <tabstop>textEdit_description</tabstop>
+  <tabstop>lineEdit_main_program</tabstop>
+  <tabstop>toolButton_add_main_program</tabstop>
+  <tabstop>lineEdit_args</tabstop>
+  <tabstop>toolButton_plus_includes</tabstop>
+  <tabstop>toolButton_minus_includes</tabstop>
+  <tabstop>toolButton_plus_inputfiles</tabstop>
+  <tabstop>toolButton_minus_inputfiles</tabstop>
+  <tabstop>toolButton_plus_inputfiles_opt</tabstop>
+  <tabstop>toolButton_minus_inputfiles_opt</tabstop>
+  <tabstop>toolButton_plus_outputfiles</tabstop>
+  <tabstop>toolButton_minus_outputfiles</tabstop>
+  <tabstop>pushButton_ok</tabstop>
+  <tabstop>pushButton_cancel</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
