@@ -100,6 +100,7 @@ class DataStore(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
+        self._toolbox.ui.label_ds_name.setText(self.name)
         self._toolbox.ui.comboBox_dialect.setCurrentText(self.selected_dialect)
         # Set widgets enabled/disabled according to selected dialect
         if self.selected_dialect == "":
@@ -188,7 +189,8 @@ class DataStore(ProjectItem):
         try:
             dialect_dbapi = db_url.split('://')[0]
         except IndexError:
-            self._toolbox.msg_error.emit("Unable to parse stored reference. Please select a new reference.")
+            self._toolbox.msg_error.emit("Error in <b>{0}</b> database reference. Unable to parse stored "
+                                         "reference. Please select a new one.".format(self.name))
             return
         try:
             dialect, dbapi = dialect_dbapi.split('+')
@@ -196,25 +198,29 @@ class DataStore(ProjectItem):
             dialect = dialect_dbapi
             dbapi = None
         if dialect not in SQL_DIALECT_API:
-            self._toolbox.msg_error.emit("Stored reference dialect <b>{}</b> is not supported.".format(dialect))
+            self._toolbox.msg_error.emit("Error in <b>{0}</b> database reference. Stored reference "
+                                         "dialect <b>{1}</b> is not supported.".format(self.name, dialect))
             return
         self.selected_dialect = dialect
         if dbapi and SQL_DIALECT_API[dialect] != dbapi:
             recommended_dbapi = SQL_DIALECT_API[dialect]
-            self._toolbox.msg_warning.emit("The stored reference is using dialect <b>{0}</b> with driver <b>{1}</b>, "
-                                           "whereas <b>{2}</b> is recommended"
-                                           .format(dialect, dbapi, recommended_dbapi))
+            self._toolbox.msg_warning.emit("Warning regarding <b>{0}</b> database reference. Stored reference "
+                                           "is using dialect <b>{1}</b> with driver <b>{2}</b>, whereas "
+                                           "<b>{3}</b> is recommended"
+                                           .format(self.name, dialect, dbapi, recommended_dbapi))
         if dialect == "sqlite":
             try:
                 file_path = os.path.abspath(db_url.split(':///')[1])
                 # file_path = os.path.abspath(file_path)
             except IndexError:
                 file_path = ""
-                self._toolbox.msg_warning.emit("Unable to determine path to SQLite file from stored reference. "
-                                               "Please select a new one.")
+                self._toolbox.msg_error.emit("Error in <b>{0}</b> database reference. Unable to determine "
+                                             "path to SQLite file from stored reference. Please select "
+                                             "a new one.".format(self.name))
             if not os.path.isfile(file_path):
                 file_path = ""
-                self._toolbox.msg_warning.emit("Invalid path to SQLite file. Maybe it was deleted?")
+                self._toolbox.msg_warning.emit("Error in <b>{0}</b> database reference. Invalid path to "
+                                               "SQLite file. Maybe it was deleted?".format(self.name))
             self.selected_sqlite_file = os.path.abspath(file_path)
             self.selected_db = database
             self.selected_username = username
@@ -584,7 +590,7 @@ class DataStore(ProjectItem):
             'username': username,
             'url': url
         }
-        # Update UI. NOTE: this assumes fresh Spine dbs are always created with the item selected.
+        # Update UI. NOTE: this assumes fresh Spine dbs are always created with the item selected. How can you do it in another way??
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
         self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(filename))
@@ -593,5 +599,3 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setText(database)
         self._toolbox.ui.lineEdit_username.setText(username)
         self._toolbox.ui.lineEdit_password.clear()
-        # self.load_reference(reference)
-        # self.restore_selections()

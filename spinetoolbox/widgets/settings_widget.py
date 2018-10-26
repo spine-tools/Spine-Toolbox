@@ -120,7 +120,6 @@ class SettingsWidget(QWidget):
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
         commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
-        logging_level = self._configs.get("settings", "logging_level")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
@@ -146,10 +145,6 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         else:  # default
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
-        if logging_level == "2":
-            self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
-        else:
-            self.ui.checkBox_debug_messages.setCheckState(Qt.Unchecked)
         if datetime:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if not proj_dir:
@@ -177,7 +172,6 @@ class SettingsWidget(QWidget):
         b = int(self.ui.checkBox_exit_prompt.checkState())
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        c = str(int(self.ui.checkBox_debug_messages.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
         gams_path = self.ui.lineEdit_gams_path.text()
@@ -200,13 +194,10 @@ class SettingsWidget(QWidget):
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "save_at_exit", f)
         self._configs.set("settings", "commit_at_exit", g)
-        self._configs.set("settings", "logging_level", c)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)
-        # Set logging level
-        self._toolbox.set_debug_level(c)
         # Update project settings
         self.update_project_settings()
         self._configs.save()
@@ -225,7 +216,7 @@ class SettingsWidget(QWidget):
         if not self.orig_work_dir == work_dir:
             if not self._project.change_work_dir(work_dir):
                 self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
-                                            .format(work_dir))
+                                             .format(work_dir))
             else:
                 save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():

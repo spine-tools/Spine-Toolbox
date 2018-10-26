@@ -110,7 +110,6 @@ class ToolboxUI(QMainWindow):
         # Add toggleview actions
         self.add_toggle_view_actions()
         self.init_conf()
-        self.set_debug_level(level=self._config.get("settings", "logging_level"))
         self.connect_signals()
         self.init_project()
         # Initialize widgets that are shared among multiple project items
@@ -121,20 +120,6 @@ class ToolboxUI(QMainWindow):
         """Load settings from configuration file."""
         self._config = ConfigurationParser(CONFIGURATION_FILE, defaults=SETTINGS)
         self._config.load()
-
-    # noinspection PyMethodMayBeStatic
-    def set_debug_level(self, level):
-        """Control application debug message verbosity.
-
-        Args:
-            level (str): '2' shows all messages, not '2' shows only error messages
-        """
-        if level == '2':
-            logging.getLogger().setLevel(level=logging.DEBUG)
-            # logging.debug("Logging level: All messages")
-        else:
-            logging.debug("Logging level: Error messages only")
-            logging.getLogger().setLevel(level=logging.ERROR)
 
     def connect_signals(self):
         """Connect signals."""
