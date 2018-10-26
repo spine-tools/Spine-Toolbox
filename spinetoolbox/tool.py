@@ -152,7 +152,7 @@ class Tool(ProjectItem):
         self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
 
     @Slot(bool, name="open_results")
-    def open_results(self, checked):
+    def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no results. "
@@ -165,7 +165,7 @@ class Tool(ProjectItem):
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
 
     @Slot(bool, name="stop_process")
-    def stop_process(self, checked):
+    def stop_process(self, checked=False):
         self.instance.terminate_instance()
         self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
@@ -193,8 +193,10 @@ class Tool(ProjectItem):
         return self._tool_template
 
     @Slot(bool, name="execute")
-    def execute(self, checked):
+    def execute(self, checked=False):
         """Execute button clicked."""
+        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
         if not self.tool_template():
             self._toolbox.msg_warning.emit("No Tool template attached to Tool <b>{0}</b>".format(self.name))
             return
@@ -203,11 +205,6 @@ class Tool(ProjectItem):
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("----------------------------")
         self._toolbox.msg.emit("")
-        try:
-            self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
-        except OSError as e:
-            self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
-            return
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool template requirements ***")
@@ -218,20 +215,17 @@ class Tool(ProjectItem):
                 return
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
-            if n_dirs > 0:
-                self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
-                if not self.create_dirs_to_work():
-                    # Creating directories failed -> abort
-                    self._toolbox.msg_error.emit("Creating directories to work failed. Tool execution aborted")
-                    return
-            else:  # just for testing
-                # logging.debug("No directories to create")
-                pass
             if n_files > 0:
                 self._toolbox.msg.emit("*** Searching for required input files ***")
                 file_copy_paths = self.find_input_files()
                 if not file_copy_paths:
                     self._toolbox.msg_error.emit("Input files not found. Tool execution aborted.")
+                    return
+                # Required files and dirs should have been found at this point, so create instance
+                try:
+                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
+                except OSError as e:
+                    self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                     return
                 self._toolbox.msg.emit("*** Copying input files to work directory ***")
                 # Copy input files to ToolInstance work directory
@@ -242,6 +236,22 @@ class Tool(ProjectItem):
             else:  # just for testing
                 # logging.debug("No input files to copy")
                 pass
+            if n_dirs > 0:
+                self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
+                if not self.create_dirs_to_work():
+                    # Creating directories failed -> abort
+                    self._toolbox.msg_error.emit("Creating directories to work failed. Tool execution aborted")
+                    return
+            else:  # just for testing
+                # logging.debug("No directories to create")
+                pass
+        else:  # Tool template does not have requirements
+            try:
+                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
+            except OSError as e:
+                self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
+                return
+
         self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
         self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
         self._graphics_item.start_wheel_animation()
@@ -358,7 +368,7 @@ class Tool(ProjectItem):
         """Copy files from given paths to the directories in work directory, where the Tool requires them to be.
 
         Args:
-            paths (dict): Key is path to required file, value is path to source file.
+            paths (dict): Key is path to destination file, value is path to source file.
 
         Returns:
             Boolean variable depending on operation success
