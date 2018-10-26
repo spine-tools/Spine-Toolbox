@@ -120,7 +120,6 @@ class DataConnection(ProjectItem):
         """Returns the item representing this data connection in the scene."""
         return self._graphics_item
 
-
     @Slot("QVariant", name="add_files_to_references")
     def add_files_to_references(self, paths):
         """Add multiple file paths to reference list.
