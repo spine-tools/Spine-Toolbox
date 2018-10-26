@@ -20,6 +20,8 @@ In this way you can correct your work and try again.
 - New context menu options to fully expand and collapse object tree items in the Data store form.
 - The autofilter in the Data store form now can also filter work in progress rows.
 - In the Data store item controls, the path to the Sqlite file can be specified by dropping a file.
+- Parameter and parameter value tables in the data store form now have an empty row at the end,
+which can be used to enter data more easily. 
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a

@@ -151,8 +151,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         kernel_client.hb_channel.time_to_dead = JL_REPL_TIME_TO_DEAD  # Not crucial, but nicer to keep the same as mngr
         kernel_client.start_channels()
         self.kernel_client = kernel_client
-        self.kernel_client.iopub_channel.message_received.connect(self.iopub_message_received)
-        self.kernel_client.shell_channel.message_received.connect(self.shell_message_received)
 
     @Slot(name="_handle_kernel_restarted")
     def _handle_kernel_restarted(self):
@@ -277,52 +275,41 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.ijulia_process.deleteLater()
         self.ijulia_process = None
 
-    @Slot("dict", name="shell_message_received")
-    def shell_message_received(self, msg):
-        """Run when a message is received on the shell channel.
-        Finish execution if message is 'execute_reply'.
-
-        Args:
-            msg (dict): Message sent by Julia kernel.
-        """
-        # logging.debug("shell message received")
-        # logging.debug("id: {}".format(msg['msg_id']))
-        # logging.debug("type: {}".format(msg['msg_type']))
-        # logging.debug("content: {}".format(msg['content']))
-        if self.running and msg['msg_type'] == 'execute_reply':
-            if msg['content']['execution_count'] == 0:
+    @Slot("dict", name="_handle_execute_reply")
+    def _handle_execute_reply(self, msg):
+        super()._handle_execute_reply(msg)
+        if self.running:
+            content = msg['content']
+            if content['execution_count'] == 0:
                 return
-            if msg['content']['status'] == 'ok':
+            if content['status'] == 'ok':
                 self.execution_finished_signal.emit(0)  # success code
             else:
                 self.execution_finished_signal.emit(-9999)  # any error code
             self.running = False
 
-    @Slot("dict", name="iopub_message_received")
-    def iopub_message_received(self, msg):
-        """Run when a message is received on the iopub channel.
-        Execute current command if the kernel reports status 'idle'
-
-        Args:
-            msg (dict): Message sent by Julia ekernel.
-        """
-        # logging.debug("iopub message received")
-        # logging.debug("id: {}".format(msg['msg_id']))
-        # logging.debug("type: {}".format(msg['msg_type']))
-        # logging.debug("content: {}".format(msg['content']))
-        if msg['msg_type'] == 'status':
-            self.kernel_execution_state = msg['content']['execution_state']
-            if self.starting and self.kernel_execution_state == 'idle':
-                self._toolbox.msg.emit("\tJulia REPL successfully started.")
+    @Slot("dict", name="_handle_status")
+    def _handle_status(self, msg):
+        """Handle status message"""
+        super()._handle_status(msg)
+        state = msg['content'].get('execution_state', '')
+        if state == 'idle':
+            if self.starting:
                 self.starting = False
+                self._toolbox.msg.emit("\tJulia REPL successfully started.")
                 self._control.viewport().setCursor(self.normal_cursor)
-            if self.command and self.kernel_execution_state == 'idle':
+            if self.command:
                 self.running = True
                 self.execute(self.command)
                 self.command = None
-        # handle interrupt exception caused by pressing Stop button in tool item
-        elif self.running and msg['msg_type'] == 'error':
+
+    @Slot("dict", name="_handle_error")
+    def _handle_error(self, msg):
+        """Handle error messages."""
+        super()._handle_error(msg)
+        if self.running:
             self.execution_finished_signal.emit(-9999)  # any error code
+            self.running = False
 
     def execute_instance(self, command):
         """Execute command immediately if kernel is idle. If not, save it for later
