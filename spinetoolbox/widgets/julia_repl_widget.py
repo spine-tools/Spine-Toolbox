@@ -296,8 +296,8 @@ class JuliaREPLWidget(RichJupyterWidget):
     def _handle_status(self, msg):
         """Handle status message"""
         super()._handle_status(msg)
-        state = msg['content'].get('execution_state', '')
-        if state == 'idle':
+        self.kernel_execution_state = msg['content'].get('execution_state', '')
+        if self.kernel_execution_state == 'idle':
             if self.starting:
                 self.starting = False
                 self._toolbox.msg_success.emit("\tJulia REPL successfully started "
@@ -324,7 +324,6 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         self.start_jupyter_kernel()
         if self.kernel_execution_state == 'idle':
-            # TODO: Are we using this at all?
             self.running = True
             self.execute(command)
         else:

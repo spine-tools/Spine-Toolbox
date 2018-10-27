@@ -415,8 +415,8 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
             finally:
                 if not len(error_log) == 0:
-                    msg = "Something went wrong in importing the db to " \
-                          "an Excel file. Here is the error log:\n\n{0}".format(error_log)
+                    msg = "Something went wrong in importing an Excel file " \
+                          "into the current session. Here is the error log:\n\n{0}".format(error_log)
                     # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
                     QMessageBox.information(self, "Excel import may have failed", msg)
                     # logging.debug(error_log)
