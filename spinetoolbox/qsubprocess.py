@@ -25,7 +25,7 @@ class QSubProcess(QObject):
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
 
-    def __init__(self, toolbox, program=None, args=None):
+    def __init__(self, toolbox, program=None, args=None, silent=False):
         """Class constructor.
 
         Args:
@@ -37,12 +37,12 @@ class QSubProcess(QObject):
         self._toolbox = toolbox
         self._program = program
         self._args = args
+        self._silent = silent
         self.process_failed = False
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
-        self.out = ""
-        self.err = ""
+        self.output = None
 
     def program(self):
         """Program getter method."""
@@ -62,8 +62,9 @@ class QSubProcess(QObject):
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
         self._process.started.connect(self.process_started)
-        self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
-        self._process.readyReadStandardError.connect(self.on_ready_stderr)
+        if not self._silent:
+            self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
+            self._process.readyReadStandardError.connect(self.on_ready_stderr)
         self._process.finished.connect(self.process_finished)
         self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
         self._process.stateChanged.connect(self.on_state_changed)
@@ -106,7 +107,8 @@ class QSubProcess(QObject):
             arg_str = " ".join(self._args)
             self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
-            self._toolbox.msg_warning.emit("\tProcess messages are printed to the Subprocess Output tab")
+            if not self._silent:
+                self._toolbox.msg_warning.emit("\tProcess messages are printed to the Subprocess Output tab")
         elif new_state == QProcess.NotRunning:
             # logging.debug("QProcess is not running")
             pass
@@ -163,6 +165,9 @@ class QSubProcess(QObject):
             self._toolbox.msg_error.emit("\tProcess crashed")
             self.process_failed = True
         elif exit_status == QProcess.NormalExit:
+            out = str(self._process.readAllStandardOutput().data(), "utf-8")
+            if out is not None:
+                self.output = out.strip()
             self._toolbox.msg.emit("\tProcess finished")
         else:
             self._toolbox.msg_error.emit("Peculiar process exit status")
@@ -186,11 +191,9 @@ class QSubProcess(QObject):
         """Emit data from stdout."""
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
         self._toolbox.msg_proc.emit(out.strip())
-        self.out += out.strip()
 
     @Slot(name="on_ready_stderr")
     def on_ready_stderr(self):
         """Emit data from stderr."""
         err = str(self._process.readAllStandardError().data(), "utf-8")
         self._toolbox.msg_proc_error.emit(err.strip())
-        self.err += err.strip()

@@ -54,7 +54,7 @@ class CustomQtKernelManager(QtKernelManager):
         self.kernel_left_dead.emit()
 
 
-# FIXME: when the kernel cannot be started we always assume the execution failed and send the signal,
+# FIXME: if the kernel cannot be started we always assume the execution failed and send the signal,
 # but maybe the user wasn't running anything, juts starting or restarting the REPL...
 class JuliaREPLWidget(RichJupyterWidget):
     """Class for a custom RichJupyterWidget.
@@ -98,14 +98,14 @@ class JuliaREPLWidget(RichJupyterWidget):
         args = list()
         args.append("-e")
         args.append("println(VERSION)")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args)
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=3000):
             self._toolbox.msg_error.emit("Subprocess failed. "
                                          "Make sure that Julia is installed properly on your computer "
                                          "and try again.")
             return None
-        julia_version = q_process.out
+        julia_version = q_process.output
         kernel_name = "julia-" + ".".join(julia_version.split(".")[0:2])
         if self.kernel_name is not None and self.kernel_name != kernel_name:
             self._toolbox.msg.emit("\tJulia version has changed in settings. "
@@ -324,6 +324,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         self.start_jupyter_kernel()
         if self.kernel_execution_state == 'idle':
+            # TODO: Are we using this at all?
             self.running = True
             self.execute(command)
         else:
