@@ -1480,6 +1480,22 @@ class DataStoreForm(QMainWindow):
             config.set("settings", "commit_at_exit", "1")
         return
 
+    def close_editors(self):
+        """Close any open editor in the parameter table views.
+        Call this before closing the database mapping."""
+        current = self.ui.tableView_object_parameter.currentIndex()
+        if self.ui.tableView_object_parameter.isPersistentEditorOpen(current):
+            self.ui.tableView_object_parameter.closePersistentEditor(current)
+        current = self.ui.tableView_object_parameter_value.currentIndex()
+        if self.ui.tableView_object_parameter_value.isPersistentEditorOpen(current):
+            self.ui.tableView_object_parameter_value.closePersistentEditor(current)
+        current = self.ui.tableView_relationship_parameter.currentIndex()
+        if self.ui.tableView_relationship_parameter.isPersistentEditorOpen(current):
+            self.ui.tableView_relationship_parameter.closePersistentEditor(current)
+        current = self.ui.tableView_relationship_parameter_value.currentIndex()
+        if self.ui.tableView_relationship_parameter_value.isPersistentEditorOpen(current):
+            self.ui.tableView_relationship_parameter_value.closePersistentEditor(current)
+
     def closeEvent(self, event=None):
         """Handle close window.
 
@@ -1496,6 +1512,7 @@ class DataStoreForm(QMainWindow):
             self.qsettings.setValue("dataStoreWidget/windowMaximized", True)
         else:
             self.qsettings.setValue("dataStoreWidget/windowMaximized", False)
+        self.close_editors()
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
         self.db_map.close()
