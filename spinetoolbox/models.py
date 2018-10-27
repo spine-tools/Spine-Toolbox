@@ -1866,12 +1866,13 @@ class ObjectParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, skip_fields=["object_class_id"]):
         """Initialize model from source database."""
-        object_parameter_list = self.db_map.object_parameter_list()
-        header = self.db_map.object_parameter_fields()
+        item_list = self.db_map.object_parameter_list()
+        field_list = self.db_map.object_parameter_fields()
+        header = [x for x in field_list if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [list(row._asdict().values()) for row in object_parameter_list]
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -1938,12 +1939,13 @@ class RelationshipParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, skip_fields=["relationship_class_id", 'object_class_id_list']):
         """Initialize model from source database."""
-        relationship_parameter_list = self.db_map.relationship_parameter_list()
-        header = self.db_map.relationship_parameter_fields()
+        item_list = self.db_map.relationship_parameter_list()
+        field_list = self.db_map.relationship_parameter_fields()
+        header = [x for x in field_list if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [list(row._asdict().values()) for row in relationship_parameter_list]
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
         self.reset_model(model_data, fixed_column_names=['id', 'relationship_class_name', 'object_class_name_list'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -2049,12 +2051,13 @@ class ObjectParameterValueModel(ParameterValueModel):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, skip_fields=['object_class_id', 'object_id', 'parameter_id']):
         """Initialize model from source database."""
-        object_parameter_value_list = self.db_map.object_parameter_value_list()
-        header = self.db_map.object_parameter_value_fields()
+        item_list = self.db_map.object_parameter_value_list()
+        field_list = self.db_map.object_parameter_value_fields()
+        header = [x for x in field_list if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [list(row._asdict().values()) for row in object_parameter_value_list]
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -2155,11 +2158,12 @@ class RelationshipParameterValueModel(ParameterValueModel):
         super().__init__(data_store_form)
         self.object_name_header = list()
 
-    def init_model(self):
+    def init_model(self, skip_fields=['relationship_class_id', 'object_id_list', 'parameter_id']):
         """Initialize model from source database."""
-        relationship_parameter_value_list = self.db_map.relationship_parameter_value_list()
-        # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
-        header = self.db_map.relationship_parameter_value_fields()
+        item_list = self.db_map.relationship_parameter_value_list()
+        field_list = self.db_map.relationship_parameter_value_fields()
+        header = [x for x in field_list if x not in skip_fields]
+        # Split single 'object_name_list' column into several 'object_name' columns
         relationship_class_list = self.db_map.wide_relationship_class_list()
         max_dim_count = max(
             [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
@@ -2171,8 +2175,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
         self.set_horizontal_header_labels(header)
         # Compute model data: split single 'object_name_list' value into several 'object_name' values
         model_data = list()
-        for row in relationship_parameter_value_list:
-            row_values_list = list(row._asdict().values())
+        for row in item_list:
+            row_values_list = [v for k, v in row._asdict().items() if k not in skip_fields]
             object_name_list = row_values_list.pop(object_name_list_index).split(',')
             for i in range(max_dim_count):
                 try:
