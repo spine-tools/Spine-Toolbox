@@ -1241,10 +1241,12 @@ class MinimalTableModel(QAbstractTableModel):
             new_row = list()
             new_flags_row = list()
             for value in line:
-                new_dict = {
-                    Qt.EditRole: value,
-                    Qt.DisplayRole: value
-                }
+                new_dict = {}
+                new_dict[Qt.EditRole] = value
+                if isinstance(value, str) and len(value) > 64:
+                    new_dict[Qt.DisplayRole] = value[0:63] + "..."
+                else:
+                    new_dict[Qt.DisplayRole] = value
                 new_row.append(new_dict)
                 new_flags_row.append(self.default_flags)
             self._data.append(new_row)
@@ -1253,6 +1255,7 @@ class MinimalTableModel(QAbstractTableModel):
         if not self.has_empty_row:
             return
         self.insertRows(self.rowCount(), 1)
+
 
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview."""
@@ -1736,6 +1739,8 @@ class ParameterModel(DataStoreTableModel):
         header = self.horizontal_header_labels()
         id_column = header.index('id')
         for k, index in enumerate(indexes):
+            if values[k] == index.data(Qt.EditRole):
+                continue
             row = index.row()
             if self.is_work_in_progress(row):
                 continue
@@ -1808,6 +1813,8 @@ class ParameterValueModel(DataStoreTableModel):
         header = self.horizontal_header_labels()
         id_column = header.index('id')
         for k, index in enumerate(indexes):
+            if values[k] == index.data(Qt.EditRole):
+                continue
             row = index.row()
             if self.is_work_in_progress(row):
                 continue
@@ -2450,7 +2457,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
             if not self.autofilter_accepts_row(source_row, QModelIndex(), skip_source_column=[column]):
                 continue
             try:
-                value = data[source_row][column][Qt.DisplayRole]
+                value = data[source_row][column][self.filterRole()]
             except KeyError:
                 value = ""
             if value is None:

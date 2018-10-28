@@ -15,10 +15,11 @@ Custom item delegates.
 :author: M. Marin (KTH)
 :date:   1.9.2018
 """
-from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication
+from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
+from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
+    QTextEdit
 from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor, CustomTextEditor
 
 
 class LineEditDelegate(QItemDelegate):
@@ -120,12 +121,12 @@ class DataStoreDelegate(QItemDelegate):
     """A custom delegate for the parameter value models and views in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
+    def __init__(self, parent, db_map):
         super().__init__(parent)
         self._parent = parent
-        self.db_map = parent.db_map
+        self.db_map = db_map
 
     def setEditorData(self, editor, index):
         """Do nothing."""
@@ -135,58 +136,103 @@ class DataStoreDelegate(QItemDelegate):
             data = editor.index().data(Qt.EditRole)
             if data is not None:
                 editor.setText(str(data))
+        elif isinstance(editor, CustomTextEditor):
+            editor.commit_data.connect(self.editor_data_committed)
+            data = editor.index().data(Qt.EditRole)
+            if data is not None:
+                editor.text_edit.setPlainText(str(data))
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `commitData` signal."""
         pass
 
+    @Slot("QWidget", name="editor_data_committed")
+    def editor_data_committed(self, editor):
+        self.commitData.emit(editor)
+        self.destroyEditor(editor, editor.index())
 
-# NOTE: Not in use at the moment
-class HighlightFrameDelegate(QItemDelegate):
-    """A delegate that paints a blue frame around the row.
 
-    Attributes:
-        parent (QMainWindow): either data store or spine datapackage widget
-    """
+class JSONDelegate(QItemDelegate):
+    """A delegate that handles JSON data."""
     def __init__(self, parent):
         super().__init__(parent)
-        self.highlight_pen = QPen(parent.palette().highlight(), 1)
+        self._json_view = QTextEdit(parent)
+        self._json_view.setReadOnly(True)
+        self._json_view.setMinimumSize(256, 192)
+        self._json_view.hide()
+        self._json_view.leaveEvent = self._json_view_leave_event
+        self._json_view_owner = None
+        self._json_editor_open = False
 
-    def paint(self, painter, option, index):
-        """Paint a blue frame on the work in progress rows."""
-        super().paint(painter, option, index)
-        model = index.model()
-        if model.is_work_in_progress(index.row()):
-            pen = painter.pen()
-            painter.setPen(self.highlight_pen)
-            x1, y1, x2, y2 = option.rect.getCoords()
-            painter.drawLine(x1, y1, x2, y1)
-            painter.drawLine(x1, y2, x2, y2)
-            if index.column() == 0:
-                painter.drawLine(x1+1, y1, x1+1, y2)
-            if index.column() == model.columnCount()-1:
-                painter.drawLine(x2, y1, x2, y2)
-            painter.setPen(pen)
+    def _json_view_leave_event(self, event):
+        self._json_view.hide()
+
+    def paint(self, painter, option, proxy_index):
+        """Show JSON data in a QTextEdit next to the hovered item
+        if it contains JSON data."""
+        super().paint(painter, option, proxy_index)
+        if self._json_editor_open:
+            return
+        model = proxy_index.model().sourceModel()
+        index = proxy_index.model().mapToSource(proxy_index)
+        header = model.horizontal_header_labels()
+        if header[index.column()] == 'json' and option.state & QStyle.State_MouseOver:
+            index_data = index.data(Qt.EditRole)
+            if index_data:
+                if index != self._json_view_owner:
+                    json_table_point = option.rect.bottomRight()
+                    column = proxy_index.column()
+                    x = self._parent.columnViewportPosition(column) + self._parent.columnWidth(column)
+                    y = self._parent.rowViewportPosition(proxy_index.row()) \
+                        + self._parent.horizontalHeader().sizeHint().height()
+                    self._json_view.move(option.rect.bottomRight())
+                    self._json_view.setPlainText(index_data)
+                    self._json_view_owner = index
+                self._json_view.show()
+        elif index == self._json_view_owner and not self._json_view.underMouse():
+            self._json_view.hide()
+
+    def updateEditorGeometry(self, editor, option, proxy_index):
+        """Adjust dimensions of CustomTextEditor for editing the JSON data."""
+        super().updateEditorGeometry(editor, option, proxy_index)
+        model = proxy_index.model().sourceModel()
+        index = proxy_index.model().mapToSource(proxy_index)
+        header = model.horizontal_header_labels()
+        if header[index.column()] == 'json':
+            size = self._json_view.size()
+            width = max(self._parent.columnWidth(index.column()), size.width())
+            height = size.height()
+            editor.setGeometry(option.rect.x(), option.rect.y(), width, height)
+
+    def destroyEditor(self, editor, proxy_index):
+        """Unset the _json_editor_open flag."""
+        super().destroyEditor(editor, proxy_index)
+        model = proxy_index.model().sourceModel()
+        index = proxy_index.model().mapToSource(proxy_index)
+        header = model.horizontal_header_labels()
+        if header[index.column()] == 'json':
+            self._json_editor_open = False
 
 
-class ObjectParameterValueDelegate(DataStoreDelegate):
+class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
     """A delegate for the object parameter value model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, proxy_index):
         """Return editor."""
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
-        h = model.horizontal_header_labels().index
-        if index.column() == h('object_class_name'):
+        header = model.horizontal_header_labels()
+        h = header.index
+        if header[index.column()] == 'object_class_name':
             object_class_name_list = [x.name for x in self.db_map.object_class_list()]
             return CustomComboEditor(parent, proxy_index, object_class_name_list)
-        elif index.column() == h('object_name'):
+        elif header[index.column()] == 'object_name':
             parameter_name = index.sibling(index.row(), h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
             if parameter:
@@ -198,7 +244,7 @@ class ObjectParameterValueDelegate(DataStoreDelegate):
                 object_list = self.db_map.object_list(class_id=object_class_id)
             object_name_list = [x.name for x in object_list]
             return CustomComboEditor(parent, proxy_index, object_name_list)
-        elif index.column() == h('parameter_name'):
+        elif header[index.column()] == 'parameter_name':
             object_name = index.sibling(index.row(), h('object_name')).data(Qt.DisplayRole)
             object_ = self.db_map.single_object(name=object_name).one_or_none()
             if object_:
@@ -211,6 +257,10 @@ class ObjectParameterValueDelegate(DataStoreDelegate):
                 parameter_list = self.db_map.object_parameter_list(object_class_id=object_class_id)
                 parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
+        elif header[index.column()] == 'json':
+            self._json_editor_open = True
+            self._json_view.hide()
+            return CustomTextEditor(parent, proxy_index)
         else:
             return CustomLineEditor(parent, proxy_index)
 
@@ -219,31 +269,30 @@ class ObjectParameterDelegate(DataStoreDelegate):
     """A delegate for the object parameter model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, proxy_index):
         """Return editor."""
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         header = model.horizontal_header_labels()
-        h = header.index
-        if not index.column() == h('object_class_name'):
+        if not header[index.column()] == 'object_class_name':
             return CustomLineEditor(parent, proxy_index)
         object_class_name_list = [x.name for x in self.db_map.object_class_list()]
         return CustomComboEditor(parent, proxy_index, object_class_name_list)
 
 
-class RelationshipParameterValueDelegate(DataStoreDelegate):
+class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
     """A delegate for the relationship parameter value model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, proxy_index):
         """Return editor."""
@@ -304,6 +353,10 @@ class RelationshipParameterValueDelegate(DataStoreDelegate):
                         relationship_class_id=relationship_class.id)
                     parameter_name_list = [x.parameter_name for x in parameter_list]
             return CustomComboEditor(parent, proxy_index, parameter_name_list)
+        elif header[index.column()] == 'json':
+            self._json_editor_open = True
+            self._json_view.hide()
+            return CustomTextEditor(parent, proxy_index)
         else:
             return CustomLineEditor(parent, proxy_index)
 
@@ -312,18 +365,17 @@ class RelationshipParameterDelegate(DataStoreDelegate):
     """A delegate for the object parameter model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, proxy_index):
         """Return editor."""
         model = proxy_index.model().sourceModel()
         index = proxy_index.model().mapToSource(proxy_index)
         header = model.horizontal_header_labels()
-        h = header.index
-        if not index.column() == h('relationship_class_name'):
+        if not header[index.column()] == 'relationship_class_name':
             return CustomLineEditor(parent, proxy_index)
         relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
         return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
@@ -333,7 +385,7 @@ class AddObjectsDelegate(DataStoreDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
     def __init__(self, parent):
         super().__init__(parent)
@@ -353,7 +405,7 @@ class AddRelationshipClassesDelegate(DataStoreDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
     def __init__(self, parent):
         super().__init__(parent)
@@ -373,7 +425,7 @@ class AddRelationshipsDelegate(DataStoreDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
     def __init__(self, parent):
         super().__init__(parent)
@@ -416,6 +468,34 @@ class ResourceNameDelegate(QItemDelegate):
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `commitData` signal."""
         pass
+
+
+# NOTE: Only in use by ForeignKeysDelegate at the moment
+class HighlightFrameDelegate(QItemDelegate):
+    """A delegate that paints a blue frame around the row.
+
+    Attributes:
+        parent (QMainWindow): either data store or spine datapackage widget
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.highlight_pen = QPen(parent.palette().highlight(), 1)
+
+    def paint(self, painter, option, index):
+        """Paint a blue frame on the work in progress rows."""
+        super().paint(painter, option, index)
+        model = index.model()
+        if model.is_work_in_progress(index.row()):
+            pen = painter.pen()
+            painter.setPen(self.highlight_pen)
+            x1, y1, x2, y2 = option.rect.getCoords()
+            painter.drawLine(x1, y1, x2, y1)
+            painter.drawLine(x1, y2, x2, y2)
+            if index.column() == 0:
+                painter.drawLine(x1+1, y1, x1+1, y2)
+            if index.column() == model.columnCount()-1:
+                painter.drawLine(x2, y1, x2, y2)
+            painter.setPen(pen)
 
 
 class ForeignKeysDelegate(HighlightFrameDelegate):

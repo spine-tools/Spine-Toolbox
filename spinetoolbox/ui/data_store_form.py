@@ -121,6 +121,7 @@ class Ui_MainWindow(object):
         font.setWeight(50)
         font.setBold(False)
         self.tableView_object_parameter_value.setFont(font)
+        self.tableView_object_parameter_value.setMouseTracking(True)
         self.tableView_object_parameter_value.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableView_object_parameter_value.setTabKeyNavigation(False)
         self.tableView_object_parameter_value.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -214,6 +215,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.tableView_relationship_parameter_value.sizePolicy().hasHeightForWidth())
         self.tableView_relationship_parameter_value.setSizePolicy(sizePolicy)
+        self.tableView_relationship_parameter_value.setMouseTracking(True)
         self.tableView_relationship_parameter_value.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.tableView_relationship_parameter_value.setTabKeyNavigation(False)
         self.tableView_relationship_parameter_value.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -270,7 +272,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.splitter_tree_parameter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 27))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -515,6 +517,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

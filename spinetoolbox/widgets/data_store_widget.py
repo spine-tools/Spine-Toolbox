@@ -21,7 +21,7 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 import json
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
-    QMessageBox, QCheckBox, QFileDialog, QApplication
+    QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap
 from ui.data_store_form import Ui_MainWindow
@@ -73,6 +73,7 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         # Class attributes
+        self.err_msg = QErrorMessage(self)
         # DB db_map
         self.db_map = db_map
         self.database = database
@@ -139,10 +140,22 @@ class DataStoreForm(QMainWindow):
 
     def setup_delegates(self):
         """Set delegates for tables."""
-        self.ui.tableView_object_parameter.setItemDelegate(ObjectParameterDelegate(self))
-        self.ui.tableView_object_parameter_value.setItemDelegate(ObjectParameterValueDelegate(self))
-        self.ui.tableView_relationship_parameter.setItemDelegate(RelationshipParameterDelegate(self))
-        self.ui.tableView_relationship_parameter_value.setItemDelegate(RelationshipParameterValueDelegate(self))
+        # Object parameter
+        table_view = self.ui.tableView_object_parameter
+        delegate = ObjectParameterDelegate(table_view, self.db_map)
+        table_view.setItemDelegate(delegate)
+        # Object parameter value
+        table_view = self.ui.tableView_object_parameter_value
+        delegate = ObjectParameterValueDelegate(table_view, self.db_map)
+        table_view.setItemDelegate(delegate)
+        # Relationship parameter
+        table_view = self.ui.tableView_relationship_parameter
+        delegate = RelationshipParameterDelegate(table_view, self.db_map)
+        table_view.setItemDelegate(delegate)
+        # Relationship parameter value
+        table_view = self.ui.tableView_relationship_parameter_value
+        delegate = RelationshipParameterValueDelegate(table_view, self.db_map)
+        table_view.setItemDelegate(delegate)
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -187,13 +200,13 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
         # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter.itemDelegate().closeEditor.\
+        self.ui.tableView_object_parameter.itemDelegate().commitData.\
             connect(self.set_parameter_data)
-        self.ui.tableView_object_parameter_value.itemDelegate().closeEditor.\
+        self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
             connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter.itemDelegate().closeEditor.\
+        self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
             connect(self.set_parameter_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().closeEditor.\
+        self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
             connect(self.set_parameter_value_data)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter.selectionModel().selectionChanged.\
@@ -237,17 +250,12 @@ class DataStoreForm(QMainWindow):
 
     @Slot(str, name="add_error_message")
     def add_error_message(self, msg):
-        """Show error message in message box.
+        """Show error message.
 
         Args:
-            msg (str): String to show in QMessageBox
+            msg (str): String to show in QErrorMessage
         """
-        QApplication.restoreOverrideCursor()
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Critical)
-        msg_box.setWindowTitle("Operation failed")
-        msg_box.setText(msg)
-        msg_box.exec_()
+        self.err_msg.showMessage(msg)
 
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
