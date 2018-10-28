@@ -27,7 +27,7 @@ class CustomComboEditor(QComboBox):
     """A custom QComboBox to handle data from models.
 
     Attributes:
-        parent (QMainWindow): either data store or spine datapackage widget
+        parent (QWidget): the widget that wants to edit the data
         index (QModelIndex): the model index being edited
         items (list): list of items to populate the combobox
     """
@@ -50,7 +50,7 @@ class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models.
 
     Attributes:
-        parent (QMainWindow): either data store or spine datapackage widget
+        parent (QWidget): the widget that wants to edit the data
         index (QModelIndex): the model index being edited
     """
     def __init__(self, parent, index):
@@ -65,10 +65,10 @@ class CustomLineEditor(QLineEdit):
 
 
 class CustomTextEditor(QWidget):
-    """A custom QLineEdit to handle data from models.
+    """A custom QWidget with a QTextEdit and a QPushButton to edit JSON data.
 
     Attributes:
-        parent (QMainWindow): either data store or spine datapackage widget
+        parent (QWidget): the widget that wants to edit the data
         index (QModelIndex): the model index being edited
     """
     commit_data = Signal("QWidget", name="commit_data")

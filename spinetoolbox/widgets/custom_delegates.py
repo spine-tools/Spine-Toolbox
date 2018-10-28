@@ -180,11 +180,6 @@ class JSONDelegate(QItemDelegate):
             index_data = index.data(Qt.EditRole)
             if index_data:
                 if index != self._json_view_owner:
-                    json_table_point = option.rect.bottomRight()
-                    column = proxy_index.column()
-                    x = self._parent.columnViewportPosition(column) + self._parent.columnWidth(column)
-                    y = self._parent.rowViewportPosition(proxy_index.row()) \
-                        + self._parent.horizontalHeader().sizeHint().height()
                     self._json_view.move(option.rect.bottomRight())
                     self._json_view.setPlainText(index_data)
                     self._json_view_owner = index
