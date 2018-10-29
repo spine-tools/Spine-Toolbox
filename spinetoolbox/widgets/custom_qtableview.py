@@ -240,7 +240,7 @@ class JSONEditor(CopyPasteTableView):
     """
     def __init__(self, parent):
         super().__init__(parent)
-        self.setMinimumSize(256, 192)
+        self.setMinimumSize(200, 200)
         self.json_model = JSONModel(self)
         self.setModel(self.json_model)
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
@@ -270,6 +270,10 @@ class JSONPopupTableView(AutoFilterCopyPasteTableView):
         self._json_popup.hide()
         return super().edit(index, trigger, event)
 
+    def leaveEvent(self, event):
+        self._json_popup.hide()
+        super().leaveEvent(event)
+
     def mouseMoveEvent(self, event):
         pos = event.pos()
         index = self.indexAt(pos)
@@ -279,8 +283,15 @@ class JSONPopupTableView(AutoFilterCopyPasteTableView):
             if index_data:
                 x = self.columnViewportPosition(index.column() + 1) + self.verticalHeader().width()
                 y = self.rowViewportPosition(index.row()) + self.horizontalHeader().height()
+                if y + self._json_popup.height() > self.height():
+                    y -= self._json_popup.height() - self._json_popup.default_row_height
                 self._json_popup.move(x, y)
                 self._json_popup.set_data(index_data, flags=~Qt.ItemIsEditable, has_empty_row=False)
                 self._json_popup.show()
+                event.accept()
+            else:
+                self._json_popup.hide()
+                event.ignore()
         else:
             self._json_popup.hide()
+            event.ignore()

@@ -2711,7 +2711,12 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
 
 # TODO: For now it only handles JSON array...
 class JSONModel(MinimalTableModel):
-    """A class to present JSON data in a treeview."""
+    """A class to present JSON data in a treeview.
+
+    Attributes:
+        parent (JSONEditor): the parent widget
+        stride (int): The number of elements to fetch
+    """
     def __init__(self, parent, stride=256):
         """Initialize class"""
         super().__init__(parent, can_grow=True)
@@ -2720,6 +2725,9 @@ class JSONModel(MinimalTableModel):
         self._stride = stride
 
     def reset_model(self, json, flags=None, has_empty_row=True):
+        """Store JSON array into a list.
+        Initialize `stride` rows.
+        """
         if json:
             self._json = [x.strip() for x in json[1:-1].split(",")]
         if flags:
@@ -2751,6 +2759,7 @@ class JSONModel(MinimalTableModel):
         self.batch_set_data(indexes, data)
 
     def json(self):
+        """Return data into JSON array."""
         last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
         new_json = [self.index(i, 0).data() for i in range(last_data_row)]
         new_json.extend(self._json)  # Whatever remains unfetched

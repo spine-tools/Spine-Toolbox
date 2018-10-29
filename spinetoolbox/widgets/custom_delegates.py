@@ -151,11 +151,12 @@ class JSONDelegate(QItemDelegate):
         super().updateEditorGeometry(editor, option, index)
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'json':
-            size = editor.size()
             x = option.rect.x()
             y = option.rect.y()
-            width = max(self._parent.columnWidth(index.column()), size.width())
-            height = size.height()
+            width = max(self._parent.columnWidth(index.column()), editor.width())
+            height = editor.height()
+            if y + editor.default_row_height + height > self._parent.height():
+                y -= height - editor.default_row_height
             editor.setGeometry(x, y, width, height)
 
 
