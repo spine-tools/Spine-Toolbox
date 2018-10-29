@@ -56,16 +56,14 @@ class AddItemsDialog(QDialog):
     def setup_ui(self, ui_dialog):
         self.ui = ui_dialog
         self.ui.setupUi(self)
-        self.ui.toolButton_insert_row.setDefaultAction(self.ui.actionInsert_row)
         self.ui.toolButton_remove_rows.setDefaultAction(self.ui.actionRemove_rows)
         self.ui.tableView.setModel(self.model)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.actionInsert_row.triggered.connect(self.insert_row)
         self.ui.actionRemove_rows.triggered.connect(self.remove_rows)
-        self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
+        self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
         self.model.dataChanged.connect(self.model_data_changed)
 
     def resize_tableview(self):
@@ -75,12 +73,6 @@ class AddItemsDialog(QDialog):
         section = self.ui.tableView.horizontalHeader().count() - 1
         table_width += min(250, self.ui.tableView.horizontalHeader().sectionSize(section))
         self.ui.tableView.setMinimumWidth(table_width)
-
-    @Slot(name="insert_row")
-    def insert_row(self, row=False):
-        if row is False:
-            row = self.ui.tableView.currentIndex().row() + 1
-        self.model.insertRows(row, 1)
 
     @Slot(name="remove_rows")
     def remove_rows(self):
@@ -94,13 +86,11 @@ class AddItemsDialog(QDialog):
         for row in reversed(list(row_set)):
             self.model.removeRows(row, 1)
 
-    @Slot("QWidget", name='data_committed')
-    def data_committed(self, editor):
+    @Slot("QModelIndex", "QVariant", name='data_committed')
+    def data_committed(self, index, data):
         """Update 'object x' field with data from combobox editor."""
-        data = editor.text()
         if data is None:
             return
-        index = editor.index()
         self.model.setData(index, data, Qt.EditRole)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
@@ -179,8 +169,9 @@ class AddObjectsDialog(AddItemsDialog):
         self.default_class_name = default_class.name if default_class else None
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
+        self.model.clear()
         self.setup_ui(ui.add_objects.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
+        self.ui.tableView.setItemDelegate(AddObjectsDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
         self.resize_tableview()
 
@@ -264,8 +255,9 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 self.object_class_one_name = object_class_one.name
         self.model.set_horizontal_header_labels(
             ['object class 1 name', 'object class 2 name', 'relationship class name'])
+        self.model.clear()
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
+        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
         self.resize_tableview()
 
@@ -402,10 +394,9 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.default_object_name = None
         self.set_default_object_name()
         self.setup_ui(ui.add_relationships.Ui_Dialog())
-        self.ui.toolButton_insert_row.setEnabled(False)
         self.ui.toolButton_remove_rows.setEnabled(False)
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
+        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self.ui.tableView, parent.db_map))
+        # self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
         self.init_relationship_class()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
@@ -474,7 +465,6 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.model.clear()
         self.reset_default_object_column()
         self.resize_tableview()
-        self.ui.toolButton_insert_row.setEnabled(True)
         self.ui.toolButton_remove_rows.setEnabled(True)
 
     def set_default_object_name(self):
@@ -819,17 +809,15 @@ class EditRelationshipsDialog(EditItemsDialog):
             for column in range(self.model.columnCount() - 1):
                 index = self.model.index(row, column)
                 self.model.setData(index, self.object_icon, Qt.DecorationRole)
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.ui.tableView.itemDelegate().commitData.connect(self.data_committed)
+        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self.ui.tableView, parent.db_map))
+        self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
         self.resize_tableview()
 
-    @Slot("QWidget", name='data_committed')
-    def data_committed(self, editor):
+    @Slot("QModelIndex", "QVariant", name='data_committed')
+    def data_committed(self, index, data):
         """Update 'object x' field with data from combobox editor."""
-        data = editor.text()
         if data is None:
             return
-        index = editor.index()
         self.model.setData(index, data, Qt.EditRole)
 
     def resize_tableview(self):

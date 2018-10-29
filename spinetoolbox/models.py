@@ -2427,6 +2427,9 @@ class AutoFilterProxy(QSortFilterProxyModel):
         super().setSourceModel(source_model)
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
 
+    def horizontal_header_labels(self):
+        return [self.headerData(i, Qt.Horizontal) for i in range(self.columnCount())]
+
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         if orientation == Qt.Horizontal:
@@ -2703,6 +2706,40 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                 row_data[j][Qt.FontRole] = None
 
 
+# TODO: Make it inherit from MinimalTableModel
+class JSONModel(QStandardItemModel):
+    """A class to present JSON data in a treeview."""
+    def __init__(self, parent, stride=256):
+        """Initialize class"""
+        super().__init__(parent)
+        self._json = None
+        self._head = 0
+        self._stride = stride
+
+    def reset_model(self, json):
+        if json:
+            self._json = json[1:-1].split(",")  # For now...
+        else:
+            self._json = []
+
+    def canFetchMore(self, parent):
+        try:
+            self._json[self._head]
+            return True
+        except IndexError:
+            return False
+
+    def fetchMore(self, parent):
+        parent = self.invisibleRootItem()
+        new_head = self._head + self._stride
+        for x in self._json[self._head:new_head]:
+            self.appendRow(QStandardItem(x))
+        self._head = new_head
+
+    def json(self):
+        return "[" + ", ".join([self.index(i, 0).data() for i in range(self.rowCount())]) + "]"
+
+
 class DatapackageResourcesModel(QStandardItemModel):
     """A class to hold datapackage resources and show them in a tableview."""
     def __init__(self, spine_datapackage_widget=None):
@@ -2762,10 +2799,11 @@ class DatapackageForeignKeysModel(MinimalTableModel):
     """A class to hold schema foreign keys and show them in a treeview."""
     def __init__(self, parent=None):
         """Initialize class"""
-        super().__init__(parent)
+        super().__init__(parent, has_empty_row=True)
         # TODO: Change parent (attribute name) to something else
         self.schema = None
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
+        self.clear()
 
     def reset_model(self, schema):
         self.schema = schema
@@ -2776,9 +2814,3 @@ class DatapackageForeignKeysModel(MinimalTableModel):
             reference_fields = foreign_key['reference']['fields']
             data.append([fields, reference_resource, reference_fields])
         super().reset_model(data)
-
-    def insert_empty_row(self, row):
-        self.insertRow(row)
-        self.set_work_in_progress(row, True)
-        for column in range(self.columnCount()):
-            self.setData(self.index(row, column), None, Qt.EditRole)
