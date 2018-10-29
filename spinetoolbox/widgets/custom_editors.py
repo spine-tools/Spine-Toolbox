@@ -17,10 +17,9 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot, Signal
-from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QTableView
+from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu
 from PySide2.QtGui import QIntValidator
 from widgets.custom_menus import QOkMenu
-from models import JSONModel
 
 
 class CustomComboEditor(QComboBox):
@@ -64,26 +63,6 @@ class CustomLineEditor(QLineEdit):
 
     def data(self):
         return self.text()
-
-
-class JSONEditor(QTableView):
-    """A custom QTableView to edit JSON data.
-
-    Attributes:
-        parent (QWidget): the widget that wants to edit the data
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.json_model = JSONModel(self)
-        self.setModel(self.json_model)
-        self.verticalHeader().setDefaultSectionSize(parent.parent().verticalHeader().defaultSectionSize())
-
-    def set_data(self, data):
-        self.json_model.reset_model(data)
-
-    def data(self):
-        return self.json_model.json()
 
 
 class CustomSimpleToolButtonEditor(QToolButton):

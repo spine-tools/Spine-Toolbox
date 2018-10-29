@@ -111,7 +111,7 @@ class Ui_MainWindow(object):
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem)
         self.horizontalLayout.addLayout(self.verticalLayout_2)
-        self.tableView_object_parameter_value = AutoFilterCopyPasteTableView(self.tab_object_parameter_value)
+        self.tableView_object_parameter_value = JSONPopupTableView(self.tab_object_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -209,7 +209,7 @@ class Ui_MainWindow(object):
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
         self.horizontalLayout_2.addLayout(self.verticalLayout)
-        self.tableView_relationship_parameter_value = AutoFilterCopyPasteTableView(self.tab_relationship_parameter_value)
+        self.tableView_relationship_parameter_value = JSONPopupTableView(self.tab_relationship_parameter_value)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -517,6 +517,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
 from widgets.custom_qtreeview import ObjectTreeView
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

@@ -19,7 +19,9 @@ from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
     QTextEdit
 from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor, JSONEditor
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor
+from widgets.custom_qtableview import JSONEditor
+import logging
 
 
 class LineEditDelegate(QItemDelegate):
@@ -136,55 +138,25 @@ class DataStoreDelegate(QItemDelegate):
 
 
 class JSONDelegate(QItemDelegate):
-    """A delegate that handles JSON data."""
+    """A delegate that handles JSON data.
+
+    Attributes:
+        parent (QTableView): widget where the delegate is installed
+    """
     def __init__(self, parent):
         super().__init__(parent)
-        self._json_view = QTextEdit(parent)
-        self._json_view.setReadOnly(True)
-        self._json_view.setMinimumSize(256, 192)
-        self._json_view.hide()
-        self._json_view.leaveEvent = self._json_view_leave_event
-        self._json_view_owner = None
-        self._json_editor_open = False
-
-    def _json_view_leave_event(self, event):
-        self._json_view.hide()
-
-    def paint(self, painter, option, index):
-        """Show JSON data in a QTextEdit next to the hovered item
-        if it contains JSON data."""
-        super().paint(painter, option, index)
-        return  # TODO: comment when it works
-        if self._json_editor_open:
-            return
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'json' and option.state & QStyle.State_MouseOver:
-            index_data = index.data(Qt.EditRole)
-            if index_data:
-                if index != self._json_view_owner:
-                    self._json_view.move(option.rect.bottomRight())
-                    self._json_view.setPlainText(index_data)
-                    self._json_view_owner = index
-                self._json_view.show()
-        elif index == self._json_view_owner and not self._json_view.underMouse():
-            self._json_view.hide()
 
     def updateEditorGeometry(self, editor, option, index):
         """Adjust dimensions of CustomTextEditor for editing the JSON data."""
         super().updateEditorGeometry(editor, option, index)
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'json':
-            size = self._json_view.size()
+            size = editor.size()
+            x = option.rect.x()
+            y = option.rect.y()
             width = max(self._parent.columnWidth(index.column()), size.width())
             height = size.height()
-            editor.setGeometry(option.rect.x(), option.rect.y(), width, height)
-
-    def destroyEditor(self, editor, index):
-        """Unset the _json_editor_open flag."""
-        super().destroyEditor(editor, index)
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'json':
-            self._json_editor_open = False
+            editor.setGeometry(x, y, width, height)
 
 
 class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
@@ -203,8 +175,6 @@ class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
         if header[index.column()] in ('object_class_name', 'parameter_name'):
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
-            self._json_editor_open = True
-            self._json_view.hide()
             return JSONEditor(parent)
         else:
             return CustomLineEditor(parent)
@@ -242,8 +212,6 @@ class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
                 parameter_name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), parameter_name_list)
         elif header[index.column()] == 'json':
-            self._json_editor_open = True
-            self._json_view.hide()
             editor.set_data(index.data(Qt.EditRole))
         else:
             editor.set_data(index.data(Qt.EditRole))
@@ -358,8 +326,6 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
                     parameter_name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), parameter_name_list)
         elif header[index.column()] == 'json':
-            self._json_editor_open = True
-            self._json_view.hide()
             editor.set_data(index.data(Qt.EditRole))
         else:
             editor.set_data(index.data(Qt.EditRole))

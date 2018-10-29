@@ -936,7 +936,10 @@ class MinimalTableModel(QAbstractTableModel):
 
     def columnCount(self, *args, **kwargs):
         """Number of columns in the model."""
-        return len(self.header)
+        try:
+            return len(self._data[0])
+        except IndexError:
+            return len(self.header)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Get headers."""
@@ -2706,38 +2709,52 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                 row_data[j][Qt.FontRole] = None
 
 
-# TODO: Make it inherit from MinimalTableModel
-class JSONModel(QStandardItemModel):
+# TODO: For now it only handles JSON array...
+class JSONModel(MinimalTableModel):
     """A class to present JSON data in a treeview."""
     def __init__(self, parent, stride=256):
         """Initialize class"""
-        super().__init__(parent)
-        self._json = None
-        self._head = 0
+        super().__init__(parent, can_grow=True)
+        self._json = list()
+        self.set_horizontal_header_labels(["data"])
         self._stride = stride
 
-    def reset_model(self, json):
+    def reset_model(self, json, flags=None, has_empty_row=True):
         if json:
-            self._json = json[1:-1].split(",")  # For now...
-        else:
-            self._json = []
+            self._json = [x.strip() for x in json[1:-1].split(",")]
+        if flags:
+            self.default_flags = flags
+        self.has_empty_row = has_empty_row
+        data = list()
+        for i in range(self._stride):
+            try:
+                data.append([self._json.pop(0)])
+            except IndexError:
+                break
+        super().reset_model(data)
 
     def canFetchMore(self, parent):
-        try:
-            self._json[self._head]
-            return True
-        except IndexError:
-            return False
+        return len(self._json) > 0
 
     def fetchMore(self, parent):
-        parent = self.invisibleRootItem()
-        new_head = self._head + self._stride
-        for x in self._json[self._head:new_head]:
-            self.appendRow(QStandardItem(x))
-        self._head = new_head
+        data = list()
+        count = 0
+        for i in range(self._stride):
+            try:
+                data.append(self._json.pop(0))
+                count += 1
+            except IndexError:
+                break
+        last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+        self.insertRows(last_data_row, count)
+        indexes = [self.index(last_data_row + i, 0) for i in range(count)]
+        self.batch_set_data(indexes, data)
 
     def json(self):
-        return "[" + ", ".join([self.index(i, 0).data() for i in range(self.rowCount())]) + "]"
+        last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+        new_json = [self.index(i, 0).data() for i in range(last_data_row)]
+        new_json.extend(self._json)  # Whatever remains unfetched
+        return "[" + ", ".join(new_json) + "]"
 
 
 class DatapackageResourcesModel(QStandardItemModel):

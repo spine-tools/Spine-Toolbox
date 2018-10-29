@@ -18,8 +18,9 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 
 from PySide2.QtWidgets import QTableView, QApplication, QAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
-from PySide2.QtGui import QKeySequence
+from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
 from widgets.custom_menus import QOkMenu
+from models import JSONModel
 
 
 class CopyPasteTableView(QTableView):
@@ -28,9 +29,6 @@ class CopyPasteTableView(QTableView):
     Attributes:
         parent (QWidget): The parent of this view
     """
-
-    focus_gained = Signal(name="focus_gained")
-
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
@@ -40,10 +38,6 @@ class CopyPasteTableView(QTableView):
     @Slot(name="clipboard_data_changed")
     def clipboard_data_changed(self):
         self.clipboard_text = QApplication.clipboard().text()
-
-    def focusInEvent(self, event):
-        super().focusInEvent(event)
-        self.focus_gained.emit()
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -236,3 +230,57 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
             if not action.isChecked():
                 filter_text_list.append(action.text())
         self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)
+
+
+class JSONEditor(CopyPasteTableView):
+    """A custom CopyPasteTableView to edit JSON data.
+
+    Attributes:
+        parent (QWidget): the widget that wants to edit the data
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setMinimumSize(256, 192)
+        self.json_model = JSONModel(self)
+        self.setModel(self.json_model)
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        self.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.horizontalHeader().setVisible(False)
+
+    def set_data(self, data, flags=None, has_empty_row=True):
+        self.json_model.reset_model(data, flags=flags, has_empty_row=has_empty_row)
+
+    def data(self):
+        return self.json_model.json()
+
+
+class JSONPopupTableView(AutoFilterCopyPasteTableView):
+    """Custom QTableView class with a JSON popup.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent=parent)
+        self._json_popup = JSONEditor(self)
+        self._json_popup.hide()
+
+    def edit(self, index, trigger, event):
+        self._json_popup.hide()
+        return super().edit(index, trigger, event)
+
+    def mouseMoveEvent(self, event):
+        pos = event.pos()
+        index = self.indexAt(pos)
+        header = self.model().horizontal_header_labels()
+        if header[index.column()] == 'json':
+            index_data = index.data(Qt.EditRole)
+            if index_data:
+                x = self.columnViewportPosition(index.column() + 1) + self.verticalHeader().width()
+                y = self.rowViewportPosition(index.row()) + self.horizontalHeader().height()
+                self._json_popup.move(x, y)
+                self._json_popup.set_data(index_data, flags=~Qt.ItemIsEditable, has_empty_row=False)
+                self._json_popup.show()
+        else:
+            self._json_popup.hide()
