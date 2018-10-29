@@ -78,7 +78,6 @@ class QSubProcess(QObject):
 
     def wait_for_finished(self, msecs=30000):
         """Wait for subprocess to finish.
-        # TODO: Check if this method is necessary
 
         Return:
             True if process finished successfully, False otherwise
@@ -163,16 +162,16 @@ class QSubProcess(QObject):
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             self._toolbox.msg_error.emit("\tProcess crashed")
-            self.process_failed = True
+            exit_code = -1
         elif exit_status == QProcess.NormalExit:
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
             if out is not None:
                 self.output = out.strip()
             self._toolbox.msg.emit("\tProcess finished")
         else:
-            self._toolbox.msg_error.emit("Peculiar process exit status")
+            self._toolbox.msg_error.emit("Unknown QProcess exit status")
             logging.error("Unknown exit from QProcess '{0}'".format(exit_status))
-        # TODO: exit_code is not valid if QProcess exit status is CrashExit.
+            exit_code = -1
         if not exit_code == 0:
             self.process_failed = True
         if not self._user_stopped:
@@ -180,7 +179,7 @@ class QSubProcess(QObject):
             if out is not None:
                 self._toolbox.msg_proc.emit(out.strip())
         else:
-            self._toolbox.msg.emit("*** Terminating subprocess ***")
+            self._toolbox.msg.emit("*** Terminating process ***")
         # Delete QProcess
         self._process.deleteLater()
         self._process = None

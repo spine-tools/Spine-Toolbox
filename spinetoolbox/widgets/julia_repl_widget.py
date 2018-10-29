@@ -100,7 +100,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         args.append("println(VERSION)")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
-        if not q_process.wait_for_finished(msecs=3000):
+        if not q_process.wait_for_finished(msecs=5000):
             self._toolbox.msg_error.emit("Subprocess failed. "
                                          "Make sure that Julia is installed properly on your computer "
                                          "and try again.")
