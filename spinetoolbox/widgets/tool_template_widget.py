@@ -190,7 +190,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(bool, name="browse_main_program")
     def browse_main_program(self, checked):
-        """Open file browser where user can select the path the main program file."""
+        """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(self._toolbox, "Add main program file", APPLICATION_PATH, "*.*")
         file_path = answer[0]
@@ -210,7 +210,7 @@ class ToolTemplateWidget(QWidget):
         file_path = dir_path[0]
         if file_path == '':  # Cancel button clicked
             return
-        # create file. NOTE: getSaveFileName does the 'check for existance' for us
+        # create file. NOTE: getSaveFileName does the 'check for existence' for us
         open(file_path, 'w').close()
         self.add_single_include(file_path)
 
@@ -285,8 +285,9 @@ class ToolTemplateWidget(QWidget):
         if not indexes:  # Nothing selected
             self.sourcefiles_model.clear()
             self.make_header_for_includes()
-            self.program_path = None
-            self.ui.label_mainpath.clear()
+            if self.ui.lineEdit_main_program.text().strip() == "":
+                self.program_path = None
+                self.ui.label_mainpath.clear()
             self.statusbar.showMessage("All source files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
@@ -294,8 +295,9 @@ class ToolTemplateWidget(QWidget):
             for row in rows:
                 self.sourcefiles_model.removeRow(row)
             if self.sourcefiles_model.rowCount() == 0:
-                self.program_path = None
-                self.ui.label_mainpath.clear()
+                if self.ui.lineEdit_main_program.text().strip() == "":
+                    self.program_path = None
+                    self.ui.label_mainpath.clear()
             elif 0 in rows:  # main program was removed
                 # new main is the first one still in the list
                 # TODO: isn't it better to pick the new main as the one with the smallest path?

@@ -58,7 +58,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 26))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -923,6 +923,8 @@ class Ui_MainWindow(object):
         self.actionUser_Guide.setObjectName("actionUser_Guide")
         self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
         self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
+        self.actionAbout_Qt = QtWidgets.QAction(MainWindow)
+        self.actionAbout_Qt.setObjectName("actionAbout_Qt")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
@@ -932,6 +934,7 @@ class Ui_MainWindow(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
+        self.menuHelp.addAction(self.actionAbout_Qt)
         self.menuHelp.addAction(self.actionAbout)
         self.menuEdit.addAction(self.actionAdd_Data_Store)
         self.menuEdit.addAction(self.actionAdd_Data_Connection)
@@ -1033,7 +1036,7 @@ class Ui_MainWindow(object):
         self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Q", None, -1))
         self.actionData_Store.setText(QtWidgets.QApplication.translate("MainWindow", "Data Store", None, -1))
         self.actionDocumentation.setText(QtWidgets.QApplication.translate("MainWindow", "Documentation", None, -1))
-        self.actionAbout.setText(QtWidgets.QApplication.translate("MainWindow", "About", None, -1))
+        self.actionAbout.setText(QtWidgets.QApplication.translate("MainWindow", "About Spine Toolbox", None, -1))
         self.actionAbout.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F12", None, -1))
         self.actionAdd_Data_Connection.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Connection", None, -1))
         self.actionAdd_Data_Store.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Store", None, -1))
@@ -1065,9 +1068,11 @@ class Ui_MainWindow(object):
         self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
         self.actionRestore_Dock_Widgets.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None, -1))
+        self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt", None, -1))
+        self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

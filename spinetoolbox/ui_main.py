@@ -143,6 +143,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Other QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)

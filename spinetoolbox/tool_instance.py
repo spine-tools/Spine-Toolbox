@@ -123,8 +123,6 @@ class ToolInstance(QObject):
         elif self.tool_template.tooltype == "executable":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
             self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
-            # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
-            # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
             self.tool_process.start_process(workdir=self.basedir)
 
     def julia_repl_tool_finished(self, ret):

@@ -112,7 +112,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -133,6 +133,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionUser_Guide"/>
+    <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -1967,7 +1968,7 @@ color: rgb(255, 255, 255);</string>
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About</string>
+    <string>About Spine Toolbox</string>
    </property>
    <property name="shortcut">
     <string>F12</string>
@@ -2117,6 +2118,14 @@ color: rgb(255, 255, 255);</string>
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Dock all floating and/or hidden dock widgets back to main window.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionAbout_Qt">
+   <property name="text">
+    <string>About Qt</string>
+   </property>
+   <property name="shortcut">
+    <string>F11</string>
    </property>
   </action>
  </widget>
