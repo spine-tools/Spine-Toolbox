@@ -65,9 +65,9 @@ class QSubProcess(QObject):
         if not self._silent:
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
-        self._process.finished.connect(self.process_finished)
-        self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
-        self._process.stateChanged.connect(self.on_state_changed)
+            self._process.finished.connect(self.process_finished)
+            self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
+            self._process.stateChanged.connect(self.on_state_changed)
         # self._toolbox.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
         self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
@@ -86,7 +86,17 @@ class QSubProcess(QObject):
             return False
         if self.process_failed or self.process_failed_to_start:
             return False
-        return self._process.waitForFinished(msecs)
+        if not self._process.waitForFinished(msecs):
+            self.process_failed = True
+            self._process.close()
+            self._process = None
+            return False
+        out = str(self._process.readAllStandardOutput().data(), "utf-8")
+        if out is not None:
+            self.output = out.strip()
+        self._process.deleteLater()
+        self._process = None
+        return True
 
     @Slot(name="process_started")
     def process_started(self):
@@ -165,8 +175,6 @@ class QSubProcess(QObject):
             exit_code = -1
         elif exit_status == QProcess.NormalExit:
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
-            if out is not None:
-                self.output = out.strip()
             self._toolbox.msg.emit("\tProcess finished")
         else:
             self._toolbox.msg_error.emit("Unknown QProcess exit status")

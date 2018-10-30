@@ -54,8 +54,6 @@ class CustomQtKernelManager(QtKernelManager):
         self.kernel_left_dead.emit()
 
 
-# FIXME: if the kernel cannot be started we always assume the execution failed and send the signal,
-# but maybe the user wasn't running anything, juts starting or restarting the REPL...
 class JuliaREPLWidget(RichJupyterWidget):
     """Class for a custom RichJupyterWidget.
 
@@ -101,11 +99,12 @@ class JuliaREPLWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("Subprocess failed. "
+            self._toolbox.msg_error.emit("Couldn't find out julia version. "
                                          "Make sure that Julia is installed properly on your computer "
                                          "and try again.")
             return None
         julia_version = q_process.output
+        self._toolbox.msg.emit("\tJulia version is {0}".format(julia_version))
         kernel_name = "julia-" + ".".join(julia_version.split(".")[0:2])
         if self.kernel_name is not None and self.kernel_name != kernel_name:
             self._toolbox.msg.emit("\tJulia version has changed in settings. "
@@ -117,6 +116,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         start a new kernel if needed."""
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
+            self.abort_execution()
             return
         if self.kernel_manager and kernel_name == self.kernel_name:
             self._toolbox.msg.emit("*** Using previously started Julia REPL ***")
@@ -194,8 +194,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         if not answer == QMessageBox.Yes:
             self.starting = False
             self._control.viewport().setCursor(self.normal_cursor)
-            self.execution_failed_to_start = True
-            self.execution_finished_signal.emit(-9999)
+            self.abort_execution()
             return
         self._toolbox.msg.emit("*** Reconfiguring <b>IJulia</b> ***")
         self._toolbox.msg_warning.emit("Depending on your system, this process can take a few minutes...")
@@ -237,8 +236,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         if not answer == QMessageBox.Yes:
             self.starting = False
             self._control.viewport().setCursor(self.normal_cursor)
-            self.execution_failed_to_start = True
-            self.execution_finished_signal.emit(-9999)
+            self.abort_execution()
             return
         self._toolbox.msg.emit("*** Installing <b>IJulia</b> ***")
         self._toolbox.msg_warning.emit("Depending on your system, this process can take a few minutes...")
@@ -263,14 +261,13 @@ class JuliaREPLWidget(RichJupyterWidget):
     def ijulia_process_finished(self, ret):
         """Run when IJulia installation/reconfiguration process finishes"""
         if self.ijulia_process.process_failed:
+            self.abort_execution()
             if self.ijulia_process.process_failed_to_start:
                 self._toolbox.msg_error.emit("Process failed to start. Make sure that "
                                              "Julia is installed properly in your system "
                                              "and try again.")
             else:
                 self._toolbox.msg_error.emit("Process failed [exit code:{0}]".format(ret))
-            self.execution_failed_to_start = True
-            self.execution_finished_signal.emit(-9999)
         else:
             self._toolbox.msg.emit("Julia kernel for Jupyter successfully installed.")
             self.ijulia_process_succeeded = True
@@ -285,7 +282,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         if self.running:
             content = msg['content']
             if content['execution_count'] == 0:
-                return
+                return  # This is not the instance, this is just the kernel saying hello
             if content['status'] == 'ok':
                 self.execution_finished_signal.emit(0)  # success code
             else:
@@ -294,7 +291,9 @@ class JuliaREPLWidget(RichJupyterWidget):
 
     @Slot("dict", name="_handle_status")
     def _handle_status(self, msg):
-        """Handle status message"""
+        """Handle status message. If we have a command in line
+        and the kernel reports status 'idle', execute that command.
+        """
         super()._handle_status(msg)
         self.kernel_execution_state = msg['content'].get('execution_state', '')
         if self.kernel_execution_state == 'idle':
@@ -317,23 +316,32 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.running = False
 
     def execute_instance(self, command):
-        """Execute command immediately if kernel is idle. If not, save it for later
-        execution.
+        """Execute command immediately if kernel is idle.
+        If not, store the command and start the kernel.
+        The command will be executed as soon as the kernel
+        reports status 'idle' (see `_handle_status` method).
         """
         if not command:
             return
-        self.start_jupyter_kernel()
         if self.kernel_execution_state == 'idle':
             self.running = True
             self.execute(command)
         else:
-            # store command. It will be executed as soon as the kernel is 'idle'
             self.command = command
+            self.start_jupyter_kernel()
 
     def terminate_process(self):
         """Send interrupt signal to kernel."""
         # logging.debug("interrupt exec")
         self.kernel_manager.interrupt_kernel()
+
+    def abort_execution(self):
+        """Abort an execution that cannot be started for whatever reason
+        (e.g., cannot start kernel, julia not correctly installed)."""
+        if self.command:
+            self.command = None
+            self.execution_failed_to_start = True
+            self.execution_finished_signal.emit(-9999)
 
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""
