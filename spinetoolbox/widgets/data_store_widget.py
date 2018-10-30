@@ -200,13 +200,13 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
         # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter.itemDelegate().commitData.\
+        self.ui.tableView_object_parameter.itemDelegate().commit_model_data.\
             connect(self.set_parameter_data)
-        self.ui.tableView_object_parameter_value.itemDelegate().commitData.\
+        self.ui.tableView_object_parameter_value.itemDelegate().commit_model_data.\
             connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter.itemDelegate().commitData.\
+        self.ui.tableView_relationship_parameter.itemDelegate().commit_model_data.\
             connect(self.set_parameter_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().commitData.\
+        self.ui.tableView_relationship_parameter_value.itemDelegate().commit_model_data.\
             connect(self.set_parameter_value_data)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter.selectionModel().selectionChanged.\
@@ -1301,25 +1301,21 @@ class DataStoreForm(QMainWindow):
         self.ui.tabWidget_relationship.setCurrentIndex(1)
         self.relationship_parameter_proxy.apply_filter()
 
-    @Slot("QWidget", name="set_parameter_value_data")
-    def set_parameter_value_data(self, editor):
+    @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
+    def set_parameter_value_data(self, index, new_value):
         """Update (object or relationship) parameter_value table with newly edited data."""
-        new_value = editor.text()
         if new_value is None:
             return
-        index = editor.index()
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
         source_model.setData(source_index, new_value)
 
-    @Slot("QWidget", name="set_parameter_data")
-    def set_parameter_data(self, editor):
+    @Slot("QModelIndex", "QVariant", name="set_parameter_data")
+    def set_parameter_data(self, index, new_value):
         """Update parameter (object or relationship) with newly edited data."""
-        new_value = editor.text()
         if new_value is None:
             return
-        index = editor.index()
         proxy_model = index.model()
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)

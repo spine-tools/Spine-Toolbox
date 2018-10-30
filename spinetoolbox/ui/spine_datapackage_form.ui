@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -266,16 +266,6 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <widget class="QToolButton" name="toolButton_insert_foreign_key">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="text">
-                 <string>...</string>
-                </property>
-               </widget>
-              </item>
              </layout>
             </item>
             <item>
@@ -382,15 +372,6 @@
    </property>
    <property name="toolTip">
     <string>Remove selected foreign keys.</string>
-   </property>
-  </action>
-  <action name="actionInsert_foreign_key">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
-   </property>
-   <property name="text">
-    <string>Insert foreign key</string>
    </property>
   </action>
  </widget>

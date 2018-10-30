@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -29,6 +29,9 @@
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
+      <widget class="QComboBox" name="comboBox"/>
+     </item>
+     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -43,13 +46,6 @@
      </item>
      <item>
       <widget class="QToolButton" name="toolButton_remove_rows">
-       <property name="text">
-        <string>...</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QToolButton" name="toolButton_insert_row">
        <property name="text">
         <string>...</string>
        </property>
@@ -71,9 +67,6 @@
     </widget>
    </item>
    <item>
-    <widget class="QComboBox" name="comboBox"/>
-   </item>
-   <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="focusPolicy">
       <enum>Qt::StrongFocus</enum>
@@ -87,21 +80,6 @@
     </widget>
    </item>
   </layout>
-  <action name="actionInsert_row">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Insert row</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Insert row below current one &lt;span style=&quot; font-weight:600;&quot;&gt;(Ctrl+Ins)&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Ins</string>
-   </property>
-  </action>
   <action name="actionRemove_rows">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -127,10 +105,8 @@
  </customwidgets>
  <tabstops>
   <tabstop>tableView</tabstop>
-  <tabstop>comboBox</tabstop>
   <tabstop>buttonBox</tabstop>
   <tabstop>toolButton_remove_rows</tabstop>
-  <tabstop>toolButton_insert_row</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

@@ -218,7 +218,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_value">
+                <widget class="JSONPopupTableView" name="tableView_object_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -448,7 +448,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_value">
+                <widget class="JSONPopupTableView" name="tableView_relationship_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -990,6 +990,11 @@
   </customwidget>
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>JSONPopupTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

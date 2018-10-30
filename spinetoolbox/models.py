@@ -936,7 +936,10 @@ class MinimalTableModel(QAbstractTableModel):
 
     def columnCount(self, *args, **kwargs):
         """Number of columns in the model."""
-        return len(self.header)
+        try:
+            return len(self._data[0])
+        except IndexError:
+            return len(self.header)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Get headers."""
@@ -1243,10 +1246,7 @@ class MinimalTableModel(QAbstractTableModel):
             for value in line:
                 new_dict = {}
                 new_dict[Qt.EditRole] = value
-                if isinstance(value, str) and len(value) > 64:
-                    new_dict[Qt.DisplayRole] = value[0:63] + "..."
-                else:
-                    new_dict[Qt.DisplayRole] = value
+                new_dict[Qt.DisplayRole] = value
                 new_row.append(new_dict)
                 new_flags_row.append(self.default_flags)
             self._data.append(new_row)
@@ -1613,7 +1613,7 @@ class ObjectTreeModel(QStandardItemModel):
 
 
 class DataStoreTableModel(MinimalTableModel):
-    """A model to use with parameter and parameter value tables in DataStoreForm."""
+    """A model of parameter and parameter value data, used by DataStoreForm."""
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
@@ -1723,7 +1723,7 @@ class DataStoreTableModel(MinimalTableModel):
 
 
 class ParameterModel(DataStoreTableModel):
-    """A model to use with parameter tables in DataStoreForm."""
+    """A model of parameter data, used by DataStoreForm."""
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
@@ -1797,11 +1797,26 @@ class ParameterModel(DataStoreTableModel):
 
 
 class ParameterValueModel(DataStoreTableModel):
-    """A model to use with parameter value tables in DataStoreForm."""
-
+    """A model of parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Limit the output of json array data to 8 positions."""
+        data = super().data(index, role)
+        if role != Qt.DisplayRole:
+            return data
+        if self.header[index.column()][Qt.DisplayRole] == 'json':
+            try:
+                json_data = data[1:-1].split(",")
+                if len(json_data) <= 8:
+                    return data
+                new_data = [x.strip() for x in json_data[0:8]]
+                return "[" + ", ".join(new_data) + "..."
+            except TypeError:
+                return data
+        return data
 
     def items_to_update(self, indexes, values):
         """Return a list of items (dict) to update in the database."""
@@ -1868,7 +1883,7 @@ class ParameterValueModel(DataStoreTableModel):
 
 
 class ObjectParameterModel(ParameterModel):
-    """A model to view and edit object parameters in DataStoreForm."""
+    """A model of object parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -1941,7 +1956,7 @@ class ObjectParameterModel(ParameterModel):
 
 
 class RelationshipParameterModel(ParameterModel):
-    """A model to view and edit relationship parameters in DataStoreForm."""
+    """A model of relationship parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2053,7 +2068,7 @@ class RelationshipParameterModel(ParameterModel):
 
 
 class ObjectParameterValueModel(ParameterValueModel):
-    """A model to view and edit object parameter values in DataStoreForm."""
+    """A model of object parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2159,7 +2174,7 @@ class ObjectParameterValueModel(ParameterValueModel):
 
 
 class RelationshipParameterValueModel(ParameterValueModel):
-    """A model to view and edit relationship parameter values in DataStoreForm."""
+    """A model of relationship parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2395,7 +2410,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
 
 
 class AutoFilterProxy(QSortFilterProxyModel):
-    """A custom sort filter proxy model which implementes a autofilter mechanism."""
+    """A custom sort filter proxy model which implementes a two-level filter."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2426,6 +2441,9 @@ class AutoFilterProxy(QSortFilterProxyModel):
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
+
+    def horizontal_header_labels(self):
+        return [self.headerData(i, Qt.Horizontal) for i in range(self.columnCount())]
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -2530,7 +2548,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
 
 class ObjectParameterProxy(AutoFilterProxy):
-    """"""
+    """A model to filter object parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2567,7 +2585,7 @@ class ObjectParameterProxy(AutoFilterProxy):
 
 
 class ObjectParameterValueProxy(ObjectParameterProxy):
-    """"""
+    """A model to filter object parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2606,7 +2624,7 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
 
 
 class RelationshipParameterProxy(AutoFilterProxy):
-    """"""
+    """A model to filter relationship parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2643,7 +2661,7 @@ class RelationshipParameterProxy(AutoFilterProxy):
 
 
 class RelationshipParameterValueProxy(RelationshipParameterProxy):
-    """"""
+    """A model to filter relationship parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2703,8 +2721,66 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                 row_data[j][Qt.FontRole] = None
 
 
+class JSONModel(MinimalTableModel):
+    """A model of JSON array data, used by DataStoreForm.
+    TODO: Handle the JSON object data type.
+
+    Attributes:
+        parent (JSONEditor): the parent widget
+        stride (int): The number of elements to fetch
+    """
+    def __init__(self, parent, stride=256):
+        """Initialize class"""
+        super().__init__(parent, can_grow=True)
+        self._json = list()
+        self.set_horizontal_header_labels(["json"])
+        self._stride = stride
+
+    def reset_model(self, json, flags=None, has_empty_row=True):
+        """Store JSON array into a list.
+        Initialize `stride` rows.
+        """
+        if json:
+            self._json = [x.strip() for x in json[1:-1].split(",")]
+        if flags:
+            self.default_flags = flags
+        self.has_empty_row = has_empty_row
+        data = list()
+        for i in range(self._stride):
+            try:
+                data.append([self._json.pop(0)])
+            except IndexError:
+                break
+        super().reset_model(data)
+
+    def canFetchMore(self, parent):
+        return len(self._json) > 0
+
+    def fetchMore(self, parent):
+        """Pop data from the _json attribute and add it to the model."""
+        data = list()
+        count = 0
+        for i in range(self._stride):
+            try:
+                data.append(self._json.pop(0))
+                count += 1
+            except IndexError:
+                break
+        last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+        self.insertRows(last_data_row, count)
+        indexes = [self.index(last_data_row + i, 0) for i in range(count)]
+        self.batch_set_data(indexes, data)
+
+    def json(self):
+        """Return data into JSON array."""
+        last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+        new_json = [self.index(i, 0).data() for i in range(last_data_row)]
+        new_json.extend(self._json)  # Whatever remains unfetched
+        return "[" + ", ".join(new_json) + "]"
+
+
 class DatapackageResourcesModel(QStandardItemModel):
-    """A class to hold datapackage resources and show them in a tableview."""
+    """A model of datapackage resource data, used by SpineDatapackageWidget."""
     def __init__(self, spine_datapackage_widget=None):
         """Initialize class"""
         super().__init__(spine_datapackage_widget)
@@ -2735,7 +2811,7 @@ class DatapackageResourcesModel(QStandardItemModel):
 
 
 class DatapackageFieldsModel(QStandardItemModel):
-    """A class to hold schema fields and show them in a treeview."""
+    """A model of datapackage field data, used by SpineDatapackageWidget."""
     def __init__(self, spine_datapackage_widget=None):
         """Initialize class"""
         super().__init__(spine_datapackage_widget)
@@ -2759,13 +2835,14 @@ class DatapackageFieldsModel(QStandardItemModel):
 
 
 class DatapackageForeignKeysModel(MinimalTableModel):
-    """A class to hold schema foreign keys and show them in a treeview."""
+    """A model of datapackage foreign key data, used by SpineDatapackageWidget."""
     def __init__(self, parent=None):
         """Initialize class"""
-        super().__init__(parent)
+        super().__init__(parent, has_empty_row=True)
         # TODO: Change parent (attribute name) to something else
         self.schema = None
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
+        self.clear()
 
     def reset_model(self, schema):
         self.schema = schema
@@ -2776,9 +2853,3 @@ class DatapackageForeignKeysModel(MinimalTableModel):
             reference_fields = foreign_key['reference']['fields']
             data.append([fields, reference_resource, reference_fields])
         super().reset_model(data)
-
-    def insert_empty_row(self, row):
-        self.insertRow(row)
-        self.set_work_in_progress(row, True)
-        for column in range(self.columnCount()):
-            self.setData(self.index(row, column), None, Qt.EditRole)
