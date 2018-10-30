@@ -276,6 +276,7 @@ class JSONPopupTableView(AutoFilterCopyPasteTableView):
         super().leaveEvent(event)
 
     def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
         pos = event.pos()
         index = self.indexAt(pos)
         header = self.model().horizontal_header_labels()
