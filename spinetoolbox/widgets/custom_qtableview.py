@@ -240,12 +240,12 @@ class JSONEditor(CopyPasteTableView):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.setMinimumSize(200, 200)
         self.json_model = JSONModel(self)
         self.setModel(self.json_model)
-        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         self.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.horizontalHeader().setVisible(False)
+        self.horizontalHeader().setStretchLastSection(True)
 
     def set_data(self, data, flags=None, has_empty_row=True):
         self.json_model.reset_model(data, flags=flags, has_empty_row=has_empty_row)
@@ -264,6 +264,7 @@ class JSONPopupTableView(AutoFilterCopyPasteTableView):
         """Initialize the class."""
         super().__init__(parent=parent)
         self._json_popup = JSONEditor(self)
+        self._json_popup.json_model.set_horizontal_header_labels(["json (preview)"])
         self._json_popup.hide()
 
     def edit(self, index, trigger, event):
