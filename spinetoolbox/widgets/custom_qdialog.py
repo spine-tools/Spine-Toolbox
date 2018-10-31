@@ -165,20 +165,16 @@ class AddObjectsDialog(AddItemsDialog):
     """
     def __init__(self, parent, class_id=None):
         super().__init__(parent)
-        default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
-        self.default_class_name = default_class.name if default_class else None
-        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
-        self.model.clear()
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddObjectsDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
+        default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
+        self.default_class_name = default_class.name if default_class else None
+        self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
+        self.model.set_row_defaults([self.default_class_name], [Qt.DisplayRole, Qt.EditRole])
+        self.model.set_row_defaults([self.object_icon], [Qt.DecorationRole])
+        self.model.clear()
         self.resize_tableview()
-
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.model.rowsInserted.connect(self.setup_new_row)
-        super().connect_signals()
 
     def resize_tableview(self):
         self.ui.tableView.resizeColumnsToContents()
@@ -190,27 +186,6 @@ class AddObjectsDialog(AddItemsDialog):
         header.resizeSection(1, 150)
         header.resizeSection(2, 200)
         super().resize_tableview()
-
-    @Slot("QModelIndex", "int", "int", name="setup_new_row")
-    def setup_new_row(self, parent, first, last):
-        if self.default_class_name:
-            self.model.setData(self.model.index(first, 0, parent), self.default_class_name)
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
-    def model_data_changed(self, top_left, bottom_right, roles):
-        if Qt.EditRole not in roles:
-            return
-        object_class_name_column = self.model.horizontal_header_labels().index('object class name')
-        top = top_left.row()
-        left = top_left.column()
-        bottom = bottom_right.row()
-        right = bottom_right.column()
-        for row in range(top, bottom + 1):
-            for column in range(left, right + 1):
-                if column != object_class_name_column:
-                    continue
-                index = self.model.index(row, column)
-                self.model.setData(index, self.object_icon, Qt.DecorationRole)
 
     def accept(self):
         """Collect info from dialog and try to add items."""
@@ -247,6 +222,9 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     """
     def __init__(self, parent, object_class_one_id=None):
         super().__init__(parent)
+        self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
+        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self.ui.tableView, parent.db_map))
+        self.connect_signals()
         self.number_of_dimensions = 2
         self.object_class_one_name = None
         if object_class_one_id:
@@ -255,16 +233,14 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 self.object_class_one_name = object_class_one.name
         self.model.set_horizontal_header_labels(
             ['object class 1 name', 'object class 2 name', 'relationship class name'])
+        self.model.set_row_defaults([self.object_class_one_name], [Qt.DisplayRole, Qt.EditRole])
+        self.model.set_row_defaults([self.object_icon] * self.number_of_dimensions, [Qt.DecorationRole])
         self.model.clear()
-        self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self.ui.tableView, parent.db_map))
-        self.connect_signals()
         self.resize_tableview()
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.spinBox.valueChanged.connect(self.insert_or_remove_column)
-        self.model.rowsInserted.connect(self.setup_new_row)
         super().connect_signals()
 
     def resize_tableview(self):
@@ -286,15 +262,13 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         elif i < self.number_of_dimensions:
             self.remove_column()
         self.ui.spinBox.setEnabled(True)
-        for row in range(self.model.rowCount()):
-            self.compose_relationship_class_name(row)
 
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
-        self.model.header.insert(column, {})
         column_name = "object class {} name".format(self.number_of_dimensions)
-        self.model.setHeaderData(column, Qt.Horizontal, column_name, Qt.EditRole)
+        self.model.insert_horizontal_header_labels(column, [column_name])
+        self.model.set_row_defaults([self.object_icon] * self.number_of_dimensions, [Qt.DecorationRole])
         self.model.insertColumns(column, 1)
         self.ui.tableView.resizeColumnToContents(column)
 
@@ -302,12 +276,8 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         self.number_of_dimensions -= 1
         column = self.number_of_dimensions
         self.model.header.pop(column)
+        self.model.row_defaults.pop(column)
         self.model.removeColumns(column, 1)
-
-    @Slot("QModelIndex", "int", "int", name="setup_new_row")
-    def setup_new_row(self, parent, first, last):
-        if self.object_class_one_name:
-            self.model.setData(self.model.index(first, 0), self.object_class_one_name)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
@@ -323,7 +293,6 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 if column == relationship_class_name_column:
                     continue
                 index = self.model.index(row, column)
-                self.model.setData(index, self.object_icon, Qt.DecorationRole)
                 self.compose_relationship_class_name(row)
 
     def compose_relationship_class_name(self, row):
@@ -396,7 +365,6 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.setup_ui(ui.add_relationships.Ui_Dialog())
         self.ui.toolButton_remove_rows.setEnabled(False)
         self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self.ui.tableView, parent.db_map))
-        # self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
         self.init_relationship_class()
         # Add status bar to form
         self.statusbar = QStatusBar(self)
@@ -425,7 +393,6 @@ class AddRelationshipsDialog(AddItemsDialog):
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.comboBox_relationship_class.currentIndexChanged.connect(self.call_reset_model)
-        self.model.rowsInserted.connect(self.setup_new_row)
         super().connect_signals()
 
     def resize_tableview(self):
@@ -462,8 +429,13 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_class_name_list = self.relationship_class.object_class_name_list.split(',')
         header = [*[x + " name" for x in object_class_name_list], 'relationship name']
         self.model.set_horizontal_header_labels(header)
-        self.model.clear()
         self.reset_default_object_column()
+        if self.default_object_name and self.default_object_column is not None:
+            defaults = [None for i in range(len(header) - 1)]
+            defaults[self.default_object_column] = self.default_object_name
+            self.model.set_row_defaults(defaults, [Qt.DisplayRole, Qt.EditRole])
+        self.model.set_row_defaults([self.object_icon] * (len(header) - 1), [Qt.DecorationRole])
+        self.model.clear()
         self.resize_tableview()
         self.ui.toolButton_remove_rows.setEnabled(True)
 
@@ -486,12 +458,6 @@ class AddRelationshipsDialog(AddItemsDialog):
         except ValueError:
             pass
 
-    @Slot("QModelIndex", "int", "int", name="setup_new_row")
-    def setup_new_row(self, parent, first, last):
-        if self.default_object_name and self.default_object_column is not None:
-            index = self.model.index(first, self.default_object_column)
-            self.model.setData(index, self.default_object_name, Qt.EditRole)
-
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
@@ -506,7 +472,6 @@ class AddRelationshipsDialog(AddItemsDialog):
                 if column == relationship_name_column:
                     continue
                 index = self.model.index(row, column)
-                self.model.setData(index, self.object_icon, Qt.DecorationRole)
                 self.compose_relationship_name(row)
 
     def compose_relationship_name(self, row):
@@ -570,6 +535,7 @@ class EditItemsDialog(QDialog):
         self.orig_kwargs_list = orig_kwargs_list
         self.ui = None
         self.model = MinimalTableModel(self)
+        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.font_metric = QFontMetrics(QFont("", 0))
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -618,6 +584,9 @@ class EditObjectClassesDialog(EditItemsDialog):
             row_data = [name, description]
             self.orig_data.append(row_data)
         self.model.reset_model(self.orig_data)
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, 0)
+            self.model.setData(index, self.object_icon, Qt.DecorationRole)
         self.resize_tableview()
 
     def resize_tableview(self):
@@ -784,7 +753,6 @@ class EditRelationshipsDialog(EditItemsDialog):
         super().__init__(parent, orig_kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit relationships")
-        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         object_class_name_list = relationship_class.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
