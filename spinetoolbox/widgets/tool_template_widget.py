@@ -263,8 +263,8 @@ class ToolTemplateWidget(QWidget):
     def add_single_include(self, path):
         """Add file path to Source files list."""
         dirname, file_pattern = os.path.split(path)
-        logging.debug("program path:{0}".format(self.program_path))
-        logging.debug("{0}, {1}".format(dirname, file_pattern))
+        # logging.debug("program path:{0}".format(self.program_path))
+        # logging.debug("{0}, {1}".format(dirname, file_pattern))
         if not self.program_path:
             self.program_path = dirname
             self.ui.label_mainpath.setText(self.program_path)
@@ -272,7 +272,7 @@ class ToolTemplateWidget(QWidget):
         else:
             # check if path is a descendant of main dir. TODO: Is os.path.abspath() the answer?
             common_prefix = os.path.commonprefix([os.path.abspath(self.program_path), os.path.abspath(path)])
-            logging.debug("common_prefix:{0}".format(common_prefix))
+            # logging.debug("common_prefix:{0}".format(common_prefix))
             if common_prefix != self.program_path:
                 self.statusbar.showMessage("Source file {0}'s location is invalid "
                                            "(should be in main directory)"
