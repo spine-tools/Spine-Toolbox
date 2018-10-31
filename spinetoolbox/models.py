@@ -877,24 +877,45 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
+        self.row_defaults = []
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
+        self.rowsInserted.connect(self.receive_rows_inserted)
+        self.columnsInserted.connect(self.receive_columns_inserted)
+
+    def set_row_defaults(self, data, roles):
+        """Set row defaults for each role in roles to data.
+
+        Args:
+            data (list)
+            roles (list)
+        """
+        if not data or not roles:
+            return
+        self.row_defaults.extend([{} for j in range(len(data) - len(self.row_defaults))])
+        for j, default in enumerate(data):
+            for role in roles:
+                self.row_defaults[j][role] = default
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
-        """In models with a last empty row, insert an empty row
-        in case the last one has been filled with any visible data."""
+        """In models with a last empty row, insert a new last empty row in case
+        the previous one has been filled with any data other than the defaults."""
         if not self.has_empty_row:
             return
         last_row = self.rowCount() - 1
-        last_row_data = list()
         for column in range(self.columnCount()):
             try:
-                last_row_data.append(self._data[last_row][column][Qt.DisplayRole])
-            except KeyError:
-                continue
-        if any(last_row_data):
-            self.insertRows(self.rowCount(), 1)
+                default = self.row_defaults[column]
+            except IndexError:
+                # No default for this column, check if any data
+                if self._data[last_row][column]:
+                    self.insertRows(self.rowCount(), 1)
+                break
+            # Check if data is different from default
+            if self._data[last_row][column] != default:
+                self.insertRows(self.rowCount(), 1)
+                break
 
     @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
     def receive_rows_about_to_be_removed(self, parent, first, last):
@@ -906,7 +927,31 @@ class MinimalTableModel(QAbstractTableModel):
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
 
+    @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
+    def receive_rows_inserted(self, parent, first, last):
+        """In models with row defaults, set default data in newly inserted rows."""
+        for column in range(self.columnCount()):
+            try:
+                default = self.row_defaults[column]
+            except IndexError:
+                break
+            for row in range(first, last + 1):
+                self._data[row][column] = {**default}
+
+    @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
+    def receive_columns_inserted(self, parent, first, last):
+        """In models with row defaults, set default data in newly inserted columns."""
+        self.row_defaults.extend([{} for j in range(self.columnCount() - len(self.row_defaults))])
+        for column in range(first, last + 1):
+            try:
+                default = self.row_defaults[column]
+            except IndexError:
+                break
+            for row in range(self.rowCount()):
+                self._data[row][column] = {**default}
+
     def clear(self):
+        """Clear all data in model."""
         self.beginResetModel()
         self._data = list()
         self.endResetModel()
@@ -959,12 +1004,10 @@ class MinimalTableModel(QAbstractTableModel):
         """Set horizontal header labels."""
         if not labels:
             return
-        self.header = list()
+        self.header = [{} for j in range(len(labels))]
         for j, value in enumerate(labels):
-            if j >= self.columnCount():
-                self.header.append({})
-            # self.setHeaderData(j, Qt.Horizontal, value, role=Qt.EditRole)
             self.header[j][Qt.DisplayRole] = value
+            self.header[j][Qt.EditRole] = value
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
@@ -1149,7 +1192,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginInsertColumns(parent, column, column + count - 1)
         for j in range(count):
             for i in range(self.rowCount()):
-                # Notice if insert index > rowCount(), new object is inserted to end
                 self._data[i].insert(column + j, {})
                 self._flags[i].insert(column + j, self.default_flags)
         self.endInsertColumns()
@@ -1211,7 +1253,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def batch_remove_rows(self, row_set, parent=QModelIndex()):
+    def remove_row_set(self, row_set, parent=QModelIndex()):
         """Removes a set of rows under parent.
 
         Args:
@@ -2776,6 +2818,8 @@ class JSONModel(MinimalTableModel):
         last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
         new_json = [self.index(i, 0).data() for i in range(last_data_row)]
         new_json.extend(self._json)  # Whatever remains unfetched
+        if not new_json:
+            return None
         return "[" + ", ".join(new_json) + "]"
 
 

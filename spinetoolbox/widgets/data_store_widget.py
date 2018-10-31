@@ -1340,7 +1340,7 @@ class DataStoreForm(QMainWindow):
             parameter_value_ids.add(source_index.data(Qt.EditRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            self.object_parameter_value_model.batch_remove_rows(source_row_set)
+            self.object_parameter_value_model.remove_row_set(source_row_set)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter vales.")
         except SpineDBAPIError as e:
@@ -1359,7 +1359,7 @@ class DataStoreForm(QMainWindow):
             parameter_value_ids.add(source_index.data(Qt.EditRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            self.relationship_parameter_value_model.batch_remove_rows(source_row_set)
+            self.relationship_parameter_value_model.remove_row_set(source_row_set)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter vales.")
         except SpineDBAPIError as e:
@@ -1382,7 +1382,7 @@ class DataStoreForm(QMainWindow):
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.object_parameter_model.batch_remove_rows(source_row_set)
+            self.object_parameter_model.remove_row_set(source_row_set)
             self.object_parameter_value_model.remove_items("parameter", *parameter_names)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
@@ -1406,7 +1406,7 @@ class DataStoreForm(QMainWindow):
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.relationship_parameter_model.batch_remove_rows(source_row_set)
+            self.relationship_parameter_model.remove_row_set(source_row_set)
             self.relationship_parameter_value_model.remove_items("parameter", *parameter_names)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
