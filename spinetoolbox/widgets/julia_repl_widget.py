@@ -109,16 +109,16 @@ class JuliaREPLWidget(RichJupyterWidget):
         self._toolbox.msg.emit("\tJulia version is {0}".format(julia_version))
         kernel_name = "julia-" + ".".join(julia_version.split(".")[0:2])
         if self.kernel_name is not None and self.kernel_name != kernel_name:
-            self._toolbox.msg.emit("\tJulia version has changed in settings. "
-                                   "New kernel specification is {0}".format(kernel_name))
+            self._toolbox.msg_warning.emit("\tJulia version has changed in settings. "
+                                           "New kernel specification is {0}".format(kernel_name))
         return kernel_name
 
     def start_jupyter_kernel(self):
         """Start the julia jupyter kernel.
 
         Returns:
-            True if the kernel is started, or in process of being started (through IJulia installation)
-            False if the kernel cannot be started and the user chooses not to install IJulia
+            True if the kernel is started, or in process of being started (installing/reconfiguring IJulia)
+            False if the kernel cannot be started and the user chooses not to install/reconfigure IJulia
         """
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
@@ -127,6 +127,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self._toolbox.msg.emit("*** Using previously started Julia REPL ***")
             return True
         self.kernel_name = kernel_name
+        self.kernel_execution_state = None
         kernel_specs = find_kernel_specs()
         julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
         if self.kernel_name in julia_kernel_names:
@@ -139,7 +140,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Start a new Jupyter kernel with a presumably correct kernel specification.
 
         Returns:
-            True if the kernel is started, or in process of being started (through IJulia reconfiguration)
+            True if the kernel is started, or in process of being started (reconfiguring IJulia)
             False if the kernel cannot be started and the user chooses not to reconfigure IJulia
         """
         self.starting = True
@@ -285,9 +286,9 @@ class JuliaREPLWidget(RichJupyterWidget):
     def _handle_kernel_restarted(self, died=True):
         """Called when the kernel is restarted, i.e., when time to dead has elapsed."""
         super()._handle_kernel_restarted(died=died)
-        restart_count = self.kernel_manager._restarter._restart_count
-        if not restart_count:
+        if not died:
             return
+        restart_count = self.kernel_manager._restarter._restart_count
         restart_limit = self.kernel_manager._restarter.restart_limit
         self._toolbox.msg_warning.emit("\tFailed to start Julia Jupyter kernel "
                                        "(attempt {0} of {1})".format(restart_count, restart_limit))
@@ -313,9 +314,9 @@ class JuliaREPLWidget(RichJupyterWidget):
             else:
                 self._toolbox.msg_error.emit("Process failed [exit code:{0}]".format(ret))
             if self.command:
-                self.command = None
                 self.execution_failed_to_start = True
                 self.execution_finished_signal.emit(-9999)
+                self.command = None
         else:
             self._toolbox.msg.emit("Julia kernel for Jupyter successfully installed.")
             self.ijulia_process_succeeded = True
@@ -351,7 +352,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                 self._toolbox.msg_success.emit("\tJulia REPL successfully started using "
                                                "the {} kernel specification".format(self.kernel_name))
                 self._control.viewport().setCursor(self.normal_cursor)
-            if self.command:
+            elif self.command and not self.running:
                 self.running = True
                 self.execute(self.command)
 
@@ -377,7 +378,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.execution_finished_signal.emit(-9999)
             return
         # Kernel is started or in process of being started
-        if self.kernel_execution_state == 'idle':
+        if self.kernel_execution_state == 'idle' and not self.running:
             self.running = True
             self.execute(self.command)
 
