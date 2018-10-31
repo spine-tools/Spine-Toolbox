@@ -143,6 +143,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
+        self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Other QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
@@ -524,6 +525,8 @@ class ToolboxUI(QMainWindow):
         if not item:
             # Set No Selection Tab active and clear item selections
             self.ui.treeView_project.clearSelection()
+            self.ui.graphicsView.scene().clearSelection()
+            self.ui.treeView_project.setCurrentIndex(QModelIndex())
             for i in range(self.ui.tabWidget_item_info.count()):
                 if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
                     self.ui.tabWidget_item_info.setCurrentIndex(i)
@@ -1244,7 +1247,6 @@ class ToolboxUI(QMainWindow):
             self._config.set("settings", "save_at_exit", "1")
         return
 
-    @busy_effect
     def closeEvent(self, event=None):
         """Method for handling application exit.
 

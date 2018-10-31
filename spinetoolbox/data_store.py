@@ -101,7 +101,10 @@ class DataStore(ProjectItem):
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_ds_name.setText(self.name)
-        self._toolbox.ui.comboBox_dialect.setCurrentText(self.selected_dialect)
+        if self.selected_dialect:
+            self._toolbox.ui.comboBox_dialect.setCurrentText(self.selected_dialect)
+        else:
+            self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
         # Set widgets enabled/disabled according to selected dialect
         if self.selected_dialect == "":
             self.enable_no_dialect()
@@ -228,7 +231,7 @@ class DataStore(ProjectItem):
     def current_reference(self):
         """Returns the current state of the reference according to user's selections.
         Used when saving the project."""
-        # Save selections if item is currently selected. This also updates its reference.
+        # Save selections if item is currently selected.
         current = self._toolbox.ui.treeView_project.currentIndex()
         current_item = self._toolbox.project_item_model.project_item(current)
         if current_item == self:
@@ -372,6 +375,8 @@ class DataStore(ProjectItem):
             # Check that dialect is not found
             if not self.check_dialect(dialect):
                 self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                return False
+            return True
 
     @busy_effect
     def install_dbapi_pip(self, dbapi):

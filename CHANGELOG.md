@@ -14,14 +14,15 @@ optimizing queries to the database.)
 - Better support for batch operations in Data store form.
 - Data store form can be fully operated by using the keyboard.
 - New options to edit items in the object tree view, including changing the objects involved in a relationship.
-- The dialogs to add/edit tree view items are not closed in case there's an error in the user choices.
-In this way you can correct your work and try again.
+- The dialogs to add/edit tree view items are not closed in case of an error, so the user can adjust their choices
+and try again.
 - Stop button now terminates tool execution.
 - New context menu options to fully expand and collapse object tree items in the Data store form.
-- The autofilter in the Data store form now can also filter work in progress rows.
-- In the Data store item controls, the path to the Sqlite file can be specified by dropping a file.
+- The autofilter in the Data store form now also filters work in progress rows.
+- In the Data store item controls, the path to the SQLite file can be specified by dropping a file.
 - Parameter and parameter value tables in the data store form now have an empty row at the end,
-which can be used to enter data more easily. 
+which can be used to enter data more easily.
+- JSON data can be visualized and edited more easily in the data store form.
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
@@ -35,7 +36,7 @@ second one.
 - Connections tab has been removed (actually, it is just hidden and can be restored with a keyboard shortcut)
 - Refresh Tools button on Templates tab has been removed as it was not needed anymore
 - Set Debug message level in Settings has been removed
- 
+
 ### Security
 
 ## [0.1.5] - 2018-09-28

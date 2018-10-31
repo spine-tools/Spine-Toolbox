@@ -415,7 +415,7 @@ class DataConnection(ProjectItem):
 
 
 class CustomPackage(Package):
-    """Custom Package class to manage datapackages."""
+    """Custom datapackage class."""
     def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
         super().__init__(descriptor, base_path, strict, storage)
 
