@@ -121,6 +121,7 @@ class ToolboxUI(QMainWindow):
         self._config = ConfigurationParser(CONFIGURATION_FILE, defaults=SETTINGS)
         self._config.load()
 
+    # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
         """Connect signals."""
         # Event log signals
@@ -206,6 +207,7 @@ class ToolboxUI(QMainWindow):
         self.msg.emit("New project created")
         self.save_project()
 
+    # noinspection PyUnusedLocal
     @Slot(name="open_project")
     def open_project(self, load_path=None):
         """Load project from a save file (.proj) file.
@@ -417,10 +419,7 @@ class ToolboxUI(QMainWindow):
         # Data Stores
         self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
-        # TODO: Which icon?
         self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # icon_provider = QFileIconProvider()
-        # self.ui.toolButton_browse.setIcon(icon_provider.icon(QFileIconProvider.Folder))
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
@@ -850,20 +849,23 @@ class ToolboxUI(QMainWindow):
         # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
-            logging.error("Failed to open editor for {0}".format(file_path))
             self.msg_error.emit("Tool main program file <b>{0}</b> not found."
                                 .format(file_path))
+            return
+        fname, ext = os.path.splitext(os.path.split(file_path)[1])
+        if ext in [".bat", ".exe"]:
+            self.msg_warning.emit("Sorry, opening files with extension <b>{0}</b> not supported. "
+                                  "Please open the file manually.".format(ext))
             return
         main_program_url = "file:///" + file_path
         # Open Tool template main program file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
         if not res:
-            logging.error("Failed to open editor for {0}".format(main_program_url))
             filename, file_extension = os.path.splitext(file_path)
             self.msg_error.emit("Unable to open Tool template main program file {0}. "
                                 "Make sure that <b>{1}</b> "
-                                "files are associated with an editor. For example on Windows "
+                                "files are associated with an editor. E.g. on Windows "
                                 "10, go to Control Panel -> Default Programs to do this."
                                 .format(filename, file_extension))
         return

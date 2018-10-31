@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>766</height>
+    <height>779</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -156,12 +156,18 @@
          <property name="placeholderText">
           <string>Add main program file here...</string>
          </property>
+         <property name="clearButtonEnabled">
+          <bool>true</bool>
+         </property>
         </widget>
        </item>
        <item>
         <widget class="QToolButton" name="toolButton_add_main_program">
-         <property name="text">
-          <string>...</string>
+         <property name="maximumSize">
+          <size>
+           <width>22</width>
+           <height>22</height>
+          </size>
          </property>
         </widget>
        </item>
@@ -206,7 +212,7 @@
        <item row="0" column="0">
         <layout class="QVBoxLayout" name="verticalLayout">
          <property name="spacing">
-          <number>0</number>
+          <number>6</number>
          </property>
          <item>
           <widget class="SourcesTreeView" name="treeView_sourcefiles">
@@ -247,7 +253,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_2">
            <item>
-            <widget class="QToolButton" name="toolButton_plus_includes">
+            <widget class="QToolButton" name="toolButton_add_source_files">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -256,14 +262,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -274,19 +280,34 @@
               </font>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source code files and directories that your program requires in order to run. &lt;span style=&quot; font-weight:600;&quot;&gt;Start with the main program file&lt;/span&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source code &lt;span style=&quot; font-weight:600;&quot;&gt;files&lt;/span&gt; that your program requires in order to run.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+            </widget>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_add_source_dirs">
+             <property name="minimumSize">
+              <size>
+               <width>22</width>
+               <height>22</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>22</width>
+               <height>22</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source code &lt;span style=&quot; font-weight:600;&quot;&gt;directory&lt;/span&gt; and all its contents.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QToolButton" name="toolButton_minus_includes">
+            <widget class="QToolButton" name="toolButton_minus_source_files">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -295,14 +316,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -318,14 +339,10 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
-            <spacer name="horizontalSpacer_4">
+            <spacer name="horizontalSpacer_15">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
@@ -344,7 +361,7 @@
        <item row="0" column="1">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <property name="spacing">
-          <number>0</number>
+          <number>6</number>
          </property>
          <item>
           <widget class="QTreeView" name="treeView_inputfiles">
@@ -391,14 +408,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -414,10 +431,6 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
@@ -430,14 +443,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -453,14 +466,10 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
-            <spacer name="horizontalSpacer_6">
+            <spacer name="horizontalSpacer_8">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
@@ -479,7 +488,7 @@
        <item row="1" column="0">
         <layout class="QVBoxLayout" name="verticalLayout_4">
          <property name="spacing">
-          <number>0</number>
+          <number>6</number>
          </property>
          <item>
           <widget class="QTreeView" name="treeView_inputfiles_opt">
@@ -517,14 +526,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -540,10 +549,6 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
@@ -556,14 +561,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -579,14 +584,10 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
-            <spacer name="horizontalSpacer_7">
+            <spacer name="horizontalSpacer_10">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
@@ -605,7 +606,7 @@
        <item row="1" column="1">
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
-          <number>0</number>
+          <number>6</number>
          </property>
          <item>
           <widget class="QTreeView" name="treeView_outputfiles">
@@ -643,14 +644,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -666,10 +667,6 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
@@ -682,14 +679,14 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>20</width>
-               <height>20</height>
+               <width>22</width>
+               <height>22</height>
               </size>
              </property>
              <property name="font">
@@ -705,14 +702,10 @@
              <property name="text">
               <string/>
              </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
-             </property>
             </widget>
            </item>
            <item>
-            <spacer name="horizontalSpacer_5">
+            <spacer name="horizontalSpacer_13">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
@@ -863,8 +856,9 @@
   <tabstop>lineEdit_main_program</tabstop>
   <tabstop>toolButton_add_main_program</tabstop>
   <tabstop>lineEdit_args</tabstop>
-  <tabstop>toolButton_plus_includes</tabstop>
-  <tabstop>toolButton_minus_includes</tabstop>
+  <tabstop>toolButton_add_source_files</tabstop>
+  <tabstop>toolButton_add_source_dirs</tabstop>
+  <tabstop>toolButton_minus_source_files</tabstop>
   <tabstop>toolButton_plus_inputfiles</tabstop>
   <tabstop>toolButton_minus_inputfiles</tabstop>
   <tabstop>toolButton_plus_inputfiles_opt</tabstop>

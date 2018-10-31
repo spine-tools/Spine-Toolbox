@@ -61,6 +61,15 @@ class ToolTemplateWidget(QWidget):
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
         self.ui.toolButton_add_main_program.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.toolButton_add_source_files.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
+        self.ui.toolButton_add_source_dirs.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
+        self.ui.toolButton_minus_source_files.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
+        self.ui.toolButton_plus_inputfiles.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
+        self.ui.toolButton_minus_inputfiles.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
+        self.ui.toolButton_plus_inputfiles_opt.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
+        self.ui.toolButton_minus_inputfiles_opt.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
+        self.ui.toolButton_plus_outputfiles.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
+        self.ui.toolButton_minus_outputfiles.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
         self.ui.treeView_sourcefiles.setModel(self.sourcefiles_model)
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
@@ -102,18 +111,19 @@ class ToolTemplateWidget(QWidget):
         self.ui.lineEdit_name.setFocus()
         self.ui.label_mainpath.setText(self.program_path)
         # Add includes popup menu
-        self.add_includes_popup_menu = AddIncludesPopupMenu(self)
-        self.ui.toolButton_plus_includes.setMenu(self.add_includes_popup_menu)
-        self.ui.toolButton_plus_includes.setStyleSheet('QToolButton::menu-indicator { image: none; }')
+        self.add_source_files_popup_menu = AddIncludesPopupMenu(self)
+        self.ui.toolButton_add_source_files.setMenu(self.add_source_files_popup_menu)
+        self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
         self.connect_signals()
 
     def connect_signals(self):
         """Connect signals to slots."""
         self.ui.toolButton_add_main_program.clicked.connect(self.browse_main_program)
-        self.ui.toolButton_plus_includes.clicked.connect(self.show_add_includes_dialog)
+        self.ui.toolButton_add_source_files.clicked.connect(self.show_add_source_files_dialog)
+        self.ui.toolButton_add_source_dirs.clicked.connect(self.show_add_source_dirs_dialog)
         self.ui.treeView_sourcefiles.files_dropped.connect(self.add_dropped_includes)
         self.ui.treeView_sourcefiles.doubleClicked.connect(self.open_includes_file)
-        self.ui.toolButton_minus_includes.clicked.connect(self.remove_includes)
+        self.ui.toolButton_minus_source_files.clicked.connect(self.remove_source_files)
         self.ui.toolButton_plus_inputfiles.clicked.connect(self.add_inputfiles)
         self.ui.toolButton_minus_inputfiles.clicked.connect(self.remove_inputfiles)
         self.ui.toolButton_plus_inputfiles_opt.clicked.connect(self.add_inputfiles_opt)
@@ -189,7 +199,7 @@ class ToolTemplateWidget(QWidget):
                 self.outputfiles_model.appendRow(qitem)
 
     @Slot(bool, name="browse_main_program")
-    def browse_main_program(self, checked):
+    def browse_main_program(self, checked=False):
         """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(self._toolbox, "Add main program file", APPLICATION_PATH, "*.*")
@@ -197,15 +207,16 @@ class ToolTemplateWidget(QWidget):
         if not file_path:  # Cancel button clicked
             return
         folder_path = os.path.split(file_path)[0]
-        self.program_path = folder_path
+        self.program_path = os.path.abspath(folder_path)
         # Update UI
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-    @Slot(name="new_include")
-    def new_include(self):
+    @Slot(name="new_source_file")
+    def new_source_file(self):
         """Let user create a new source file for this tool template."""
         path = self.program_path if self.program_path else APPLICATION_PATH
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         dir_path = QFileDialog.getSaveFileName(self, "Create source file", path, "*.*")
         file_path = dir_path[0]
         if file_path == '':  # Cancel button clicked
@@ -214,15 +225,31 @@ class ToolTemplateWidget(QWidget):
         open(file_path, 'w').close()
         self.add_single_include(file_path)
 
-    @Slot(name="show_add_includes_dialog")
-    def show_add_includes_dialog(self):
+    @Slot(bool, name="show_add_source_files_dialog")
+    def show_add_source_files_dialog(self, checked=False):
         """Let user select source files for this tool template."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         path = self.program_path if self.program_path else APPLICATION_PATH
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self, "Add source file", path, "*.*")
         file_paths = answer[0]
         if not file_paths:  # Cancel button clicked
             return
+        for path in file_paths:
+            if not self.add_single_include(path):
+                continue
+
+    @Slot(bool, name="show_add_source_dirs_dialog")
+    def show_add_source_dirs_dialog(self, checked=False):
+        """Let user select a source directory for this tool template.
+        All files and sub-directories will be added to the source files.
+        """
+        path = self.program_path if self.program_path else APPLICATION_PATH
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, "Select a directory to add to source files", path)
+        file_paths = list()
+        for root, dirs, files in os.walk(answer):
+            for file in files:
+                file_paths.append(os.path.abspath(os.path.join(root, file)))
         for path in file_paths:
             if not self.add_single_include(path):
                 continue
@@ -236,15 +263,15 @@ class ToolTemplateWidget(QWidget):
     def add_single_include(self, path):
         """Add file path to Source files list."""
         dirname, file_pattern = os.path.split(path)
-        logging.debug("includes_main_path:{0}".format(self.program_path))
+        logging.debug("program path:{0}".format(self.program_path))
         logging.debug("{0}, {1}".format(dirname, file_pattern))
         if not self.program_path:
             self.program_path = dirname
             self.ui.label_mainpath.setText(self.program_path)
             path_to_add = file_pattern
         else:
-            # check if path is a descendant of main dir
-            common_prefix = os.path.commonprefix([os.path.abspath(self.program_path), os.path.abspath(path)])  # TODO: Is os.path.abspath() the answer?
+            # check if path is a descendant of main dir. TODO: Is os.path.abspath() the answer?
+            common_prefix = os.path.commonprefix([os.path.abspath(self.program_path), os.path.abspath(path)])
             logging.debug("common_prefix:{0}".format(common_prefix))
             if common_prefix != self.program_path:
                 self.statusbar.showMessage("Source file {0}'s location is invalid "
@@ -271,13 +298,19 @@ class ToolTemplateWidget(QWidget):
             return
         else:
             includes_file = self.sourcefiles_model.itemFromIndex(index).text()
+            fname, ext = os.path.splitext(includes_file)
+            if ext in [".bat", ".exe"]:
+                self._toolbox.msg_warning.emit("Sorry, opening files with extension <b>{0}</b> not implemented. "
+                                               "Please open the file manually.".format(ext))
+                return
             url = "file:///" + os.path.join(self.program_path, includes_file)
+            # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
                 self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
-    @Slot(name="remove_includes")
-    def remove_includes(self):
+    @Slot(bool, name="remove_source_files")
+    def remove_source_files(self, checked=False):
         """Remove selected source files from include list.
         Removes all files if nothing is selected.
         """
@@ -298,39 +331,40 @@ class ToolTemplateWidget(QWidget):
                 if self.ui.lineEdit_main_program.text().strip() == "":
                     self.program_path = None
                     self.ui.label_mainpath.clear()
-            elif 0 in rows:  # main program was removed
-                # new main is the first one still in the list
-                # TODO: isn't it better to pick the new main as the one with the smallest path?
-                dirname = os.path.dirname(self.sourcefiles_model.item(0).text())
-                new_main_path = os.path.join(self.program_path, dirname)
-                old_main_path = self.program_path
-                row = 0
-                while True:
-                    if row == self.sourcefiles_model.rowCount():
-                        break
-                    path = self.sourcefiles_model.item(row).text()
-                    old_path = os.path.join(old_main_path, path)
-                    if os.path.commonprefix([new_main_path, old_path]) == new_main_path:
-                        # path is still valid (update item and increase row counter)
-                        new_path = os.path.relpath(old_path, new_main_path)
-                        index = self.sourcefiles_model.index(row, 0)
-                        self.sourcefiles_model.setData(index, new_path)
-                        row = row + 1
-                        continue
-                    # path is no longer valid (remove item and don't increase row counter)
-                    self.sourcefiles_model.removeRow(row)
-                self.program_path = new_main_path
-                self.ui.label_mainpath.setText(self.program_path)
-            self.statusbar.showMessage("Selected (and invalid) includes removed", 3000)
+            # elif 0 in rows:  # main program was removed
+            #     # new main is the first one still in the list
+            #     # TODO: isn't it better to pick the new main as the one with the smallest path?
+            #     dirname = os.path.dirname(self.sourcefiles_model.item(0).text())
+            #     new_main_path = os.path.join(self.program_path, dirname)
+            #     old_main_path = self.program_path
+            #     row = 0
+            #     while True:
+            #         if row == self.sourcefiles_model.rowCount():
+            #             break
+            #         path = self.sourcefiles_model.item(row).text()
+            #         old_path = os.path.join(old_main_path, path)
+            #         if os.path.commonprefix([new_main_path, old_path]) == new_main_path:
+            #             # path is still valid (update item and increase row counter)
+            #             new_path = os.path.relpath(old_path, new_main_path)
+            #             index = self.sourcefiles_model.index(row, 0)
+            #             self.sourcefiles_model.setData(index, new_path)
+            #             row = row + 1
+            #             continue
+            #         # path is no longer valid (remove item and don't increase row counter)
+            #         self.sourcefiles_model.removeRow(row)
+            #     self.program_path = new_main_path
+            #     self.ui.label_mainpath.setText(self.program_path)
+            self.statusbar.showMessage("Selected source files removed", 3000)
 
-    @Slot(name="add_inputfiles")
-    def add_inputfiles(self):
+    @Slot(bool, name="add_inputfiles")
+    def add_inputfiles(self, checked=False):
         """Let user select input files for this tool template."""
         msg = "Add an input file or a directory required by your program.\n" \
               "Examples:\n" \
               "data.csv -> File is copied to the same work directory as the main program.\n" \
               "input/data.csv -> Creates subdirectory input\ to the work directory and copies the file there.\n" \
               "output/ -> Creates an empty directory into the work directory."
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add input item", msg)
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
@@ -338,8 +372,8 @@ class ToolTemplateWidget(QWidget):
         qitem = QStandardItem(file_name)
         self.inputfiles_model.appendRow(qitem)
 
-    @Slot(name="remove_inputfiles")
-    def remove_inputfiles(self):
+    @Slot(bool, name="remove_inputfiles")
+    def remove_inputfiles(self, checked=False):
         """Remove selected input files from list.
         Removes all files if nothing is selected.
         """
@@ -355,9 +389,10 @@ class ToolTemplateWidget(QWidget):
                 self.inputfiles_model.removeRow(row)
             self.statusbar.showMessage("Selected input files removed", 3000)
 
-    @Slot(name="add_inputfiles_opt")
-    def add_inputfiles_opt(self):
+    @Slot(bool, name="add_inputfiles_opt")
+    def add_inputfiles_opt(self, checked=False):
         """Let user select optional input files for this tool template."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add optional input item", "Optional input file name (eg. other.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
@@ -365,8 +400,8 @@ class ToolTemplateWidget(QWidget):
         qitem = QStandardItem(file_name)
         self.inputfiles_opt_model.appendRow(qitem)
 
-    @Slot(name="remove_inputfiles_opt")
-    def remove_inputfiles_opt(self):
+    @Slot(bool, name="remove_inputfiles_opt")
+    def remove_inputfiles_opt(self, checked=False):
         """Remove selected optional input files from list.
         Removes all files if nothing is selected.
         """
@@ -382,9 +417,10 @@ class ToolTemplateWidget(QWidget):
                 self.inputfiles_opt_model.removeRow(row)
             self.statusbar.showMessage("Selected optional input files removed", 3000)
 
-    @Slot(name="add_outputfiles")
-    def add_outputfiles(self):
+    @Slot(bool, name="add_outputfiles")
+    def add_outputfiles(self, checked=False):
         """Let user select output files for this tool template."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add output item", "Output file name (eg. results.csv):")
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
@@ -392,8 +428,8 @@ class ToolTemplateWidget(QWidget):
         qitem = QStandardItem(file_name)
         self.outputfiles_model.appendRow(qitem)
 
-    @Slot(name="remove_outputfiles")
-    def remove_outputfiles(self):
+    @Slot(bool, name="remove_outputfiles")
+    def remove_outputfiles(self, checked=False):
         """Remove selected output files from list.
         Removes all files if nothing is selected.
         """
@@ -466,10 +502,11 @@ class ToolTemplateWidget(QWidget):
             # logging.debug("Updating definition for tool template '{}'".format(tool.name))
             self._toolbox.update_tool_template(row, tool)
         else:
+            # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
             answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
             if answer[0] == '':  # Cancel button clicked
                 return False
-            def_file = os.path.abspath(answer[0])  # TODO: maybe check that extension is .json?
+            def_file = os.path.abspath(answer[0])
             tool.set_def_path(def_file)
             self._toolbox.add_tool_template(tool)
         # Save path of main program file relative to definition file in case they differ

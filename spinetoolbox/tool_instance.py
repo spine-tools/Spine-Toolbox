@@ -161,7 +161,7 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("<b>{0}</b> failed to start. Make sure that "
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
                                              "Julia is installed properly on your computer."
                                              .format(self.tool_process.program()))
             else:
@@ -187,7 +187,7 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("<b>{0}</b> failed to start. Make sure that "
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
                                              "GAMS is installed properly on your computer "
                                              "and GAMS directory is given in Settings (F1)."
                                              .format(self.tool_process.program()))
@@ -214,7 +214,7 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.executable_tool_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("<b>{0}</b> failed to start.".format(self.tool_process.program()))
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]

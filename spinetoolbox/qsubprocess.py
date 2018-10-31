@@ -123,7 +123,7 @@ class QSubProcess(QObject):
             process_error (QProcess::ProcessError): Process error number
         """
         if process_error == QProcess.FailedToStart:
-            self._toolbox.msg_error.emit("Failed to start")
+            # self._toolbox.msg_error.emit("Failed to start")
             self.process_failed_to_start = True
         elif process_error == QProcess.Timedout:
             self._toolbox.msg_error.emit("Timed out")

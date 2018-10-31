@@ -304,9 +304,9 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         super().__init__(parent)
         self._parent = parent
         # Open a tool template file
-        self.add_action("New file", self._parent.new_include)
+        self.add_action("New file", self._parent.new_source_file)
         self.addSeparator()
-        self.add_action("Open files...", self._parent.show_add_includes_dialog)
+        self.add_action("Open files...", self._parent.show_add_source_files_dialog)
 
 
 class QOkMenu(QMenu):
