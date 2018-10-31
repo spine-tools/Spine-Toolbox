@@ -524,8 +524,6 @@ class ToolboxUI(QMainWindow):
         if not item:
             # Set No Selection Tab active and clear item selections
             self.ui.treeView_project.clearSelection()
-            self.ui.graphicsView.scene().clearSelection()
-            self.ui.treeView_project.setCurrentIndex(QModelIndex())
             for i in range(self.ui.tabWidget_item_info.count()):
                 if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
                     self.ui.tabWidget_item_info.setCurrentIndex(i)
