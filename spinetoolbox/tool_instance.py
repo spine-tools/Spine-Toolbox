@@ -215,6 +215,8 @@ class ToolInstance(QObject):
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
                 self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
+                self.instance_finished_signal.emit(ret)
+                return
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -249,7 +251,8 @@ class ToolInstance(QObject):
                         + "'>results directory</a>"
         self._toolbox.msg.emit("*** Saving Tool output files to {0} ***".format(result_anchor))
         if not self.outputfiles:
-            self._toolbox.msg_warning.emit("\tNo files to save. You can add output files to Tool template to archive them.")
+            self._toolbox.msg_warning.emit("\tNo files to save. You can add output "
+                                           "files to Tool template to archive them.")
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if len(saved_files) == 0:

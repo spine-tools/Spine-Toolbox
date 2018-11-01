@@ -72,9 +72,10 @@ class QSubProcess(QObject):
         self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
             self.process_failed = True
+            self.process_failed_to_start = True
             self._process.deleteLater()
             self._process = None
-            self.subprocess_finished_signal.emit(0)
+            self.subprocess_finished_signal.emit(-9998)
 
     def wait_for_finished(self, msecs=30000):
         """Wait for subprocess to finish.
@@ -134,10 +135,13 @@ class QSubProcess(QObject):
         """
         if process_error == QProcess.FailedToStart:
             # self._toolbox.msg_error.emit("Failed to start")
+            self.process_failed = True
             self.process_failed_to_start = True
         elif process_error == QProcess.Timedout:
+            self.process_failed = True
             self._toolbox.msg_error.emit("Timed out")
         elif process_error == QProcess.Crashed:
+            self.process_failed = True
             self._toolbox.msg_error.emit("Process crashed")
         elif process_error == QProcess.WriteError:
             self._toolbox.msg_error.emit("Process WriteError")
@@ -177,8 +181,7 @@ class QSubProcess(QObject):
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
             self._toolbox.msg.emit("\tProcess finished")
         else:
-            self._toolbox.msg_error.emit("Unknown QProcess exit status")
-            logging.error("Unknown exit from QProcess '{0}'".format(exit_status))
+            self._toolbox.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
             exit_code = -1
         if not exit_code == 0:
             self.process_failed = True
