@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 ToolInstance class definition.
@@ -92,7 +84,7 @@ class ToolInstance(QObject):
             if file_pattern:
                 for src_file in glob.glob(os.path.join(src_dir, file_pattern)):
                     dst_file = os.path.join(dst_dir, os.path.basename(src_file))
-                    logging.debug("Copying file {} to {}".format(src_file, dst_file))
+                    # logging.debug("Copying file {} to {}".format(src_file, dst_file))
                     try:
                         shutil.copyfile(src_file, dst_file)
                         n_copied_files += 1
@@ -128,6 +120,10 @@ class ToolInstance(QObject):
             # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
             # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
             self.tool_process.start_process(workdir=self.basedir)
+        elif self.tool_template.tooltype == "executable":
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
+            self.tool_process.start_process(workdir=self.basedir)
 
     def julia_repl_tool_finished(self, ret):
         """Run when Julia tool using REPL has finished processing.
@@ -138,9 +134,9 @@ class ToolInstance(QObject):
         self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)  # Disconnect after exec.
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
-                self._toolbox.msg_warning.emit("\tThe execution will proceed without the Julia REPL.")
-                self._toolbox.msg.emit("*** Running Tool template <b>{0}</b> without REPL ***"
-                                 .format(self.tool_template.name))
+                # TODO: This should be a choice given to the user. It's a bit confusing now.
+                self._toolbox.msg.emit("")
+                self._toolbox.msg_warning.emit("\tExecuting Tool template in a subprocess instead")
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
@@ -165,8 +161,9 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
-                                             "Julia is installed properly on your computer.")
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
+                                             "Julia is installed properly on your computer."
+                                             .format(self.tool_process.program()))
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -190,9 +187,10 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("Sub-process failed to start. Make sure that "
-                                       "GAMS is installed properly on your computer "
-                                       "and GAMS directory is given in Settings (F1).")
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
+                                             "GAMS is installed properly on your computer "
+                                             "and GAMS directory is given in Settings (F1)."
+                                             .format(self.tool_process.program()))
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -201,6 +199,32 @@ class ToolInstance(QObject):
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tGAMS Tool template finished successfully. Return code:{0}".format(ret))
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.save_output_files(ret)
+
+    @Slot(int, name="executable_tool_finished")
+    def executable_tool_finished(self, ret):
+        """Run when an executable tool has finished processing. Copies output of tool
+        to project output directory.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.executable_tool_finished)
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
+                self.instance_finished_signal.emit(ret)
+                return
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tExecutable Tool template finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -217,7 +241,7 @@ class ToolInstance(QObject):
             create_dir(result_path)
         except OSError:
             self._toolbox.msg_error.emit("\tError creating timestamped output directory. "
-                                   "Tool output files not copied. Check folder permissions.")
+                                         "Tool output files not copied. Check folder permissions.")
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
             return
@@ -227,7 +251,8 @@ class ToolInstance(QObject):
                         + "'>results directory</a>"
         self._toolbox.msg.emit("*** Saving Tool output files to {0} ***".format(result_anchor))
         if not self.outputfiles:
-            self._toolbox.msg_warning.emit("\tNo files to save. You can add output files to Tool template to archive them.")
+            self._toolbox.msg_warning.emit("\tNo files to save. You can add output "
+                                           "files to Tool template to archive them.")
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if len(saved_files) == 0:
@@ -251,15 +276,6 @@ class ToolInstance(QObject):
         """Terminate tool process execution."""
         if not self.tool_process:
             return
-        try:
-            self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)
-        except AttributeError:
-            pass
-        try:
-            self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)
-            self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)
-        except AttributeError:
-            pass
         self.tool_process.terminate_process()
 
     def remove(self):
@@ -277,19 +293,19 @@ class ToolInstance(QObject):
             """
             failed_files = list()
             saved_files = list()
-            logging.debug("Saving result files to <{0}>".format(target_dir))
+            # logging.debug("Saving result files to <{0}>".format(target_dir))
             for pattern in self.outputfiles:
                 # Check for wildcards in pattern
                 if ('*' in pattern) or ('?' in pattern):
                     for fname in glob.glob(pattern):
-                        logging.debug("Match for pattern <{0}> found. Saving file {1}".format(pattern, fname))
+                        # logging.debug("Match for pattern <{0}> found. Saving file {1}".format(pattern, fname))
                         shutil.copy(fname, target_dir)
                         saved_files.append(fname)
                 else:
                     if not os.path.isfile(pattern):
                         failed_files.append(pattern)
                         continue
-                    logging.debug("Saving file {0}".format(pattern))
+                    # logging.debug("Saving file {0}".format(pattern))
                     shutil.copy(pattern, target_dir)
                     saved_files.append(pattern)
             return saved_files, failed_files

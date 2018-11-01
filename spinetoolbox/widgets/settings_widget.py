@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Widget for controlling user settings.
@@ -127,7 +119,7 @@ class SettingsWidget(QWidget):
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
-        logging_level = self._configs.get("settings", "logging_level")
+        commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
@@ -145,10 +137,14 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
         else:  # default
             self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
-        if logging_level == "2":
-            self.ui.checkBox_debug_messages.setCheckState(Qt.Checked)
-        else:
-            self.ui.checkBox_debug_messages.setCheckState(Qt.Unchecked)
+        if commit_at_exit == "0":  # Not needed but makes the code more readable.
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
+        elif commit_at_exit == "1":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        elif commit_at_exit == "2":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+        else:  # default
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         if datetime:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if not proj_dir:
@@ -175,7 +171,7 @@ class SettingsWidget(QWidget):
         a = int(self.ui.checkBox_open_previous_project.checkState())
         b = int(self.ui.checkBox_exit_prompt.checkState())
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
-        c = str(int(self.ui.checkBox_debug_messages.checkState()))
+        g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
         gams_path = self.ui.lineEdit_gams_path.text()
@@ -197,13 +193,11 @@ class SettingsWidget(QWidget):
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "save_at_exit", f)
-        self._configs.set("settings", "logging_level", c)
+        self._configs.set("settings", "commit_at_exit", g)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.set("settings", "gams_path", gams_path)
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)
-        # Set logging level
-        self._toolbox.set_debug_level(c)
         # Update project settings
         self.update_project_settings()
         self._configs.save()
@@ -222,7 +216,7 @@ class SettingsWidget(QWidget):
         if not self.orig_work_dir == work_dir:
             if not self._project.change_work_dir(work_dir):
                 self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
-                                            .format(work_dir))
+                                             .format(work_dir))
             else:
                 save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():

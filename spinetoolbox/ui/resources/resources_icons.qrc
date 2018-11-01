@@ -4,6 +4,17 @@
   </qresource>
   <qresource prefix="icons">
     <file>minus_object_icon.png</file>
+    <file>import_ds.png</file>
+    <file>close.png</file>
+    <file>export_ds.png</file>
+    <file>edit_object_icon.png</file>
+    <file>refresh.png</file>
+    <file>edit_relationship_icon.png</file>
+    <file>paste.png</file>
+    <file>copy.png</file>
+    <file>fully_expand.png</file>
+    <file>fully_collapse.png</file>
+    <file>find_next.png</file>
     <file>minus_relationship_icon.png</file>
     <file>minus_object_parameter_icon.png</file>
     <file>minus_relationship_parameter_icon.png</file>
@@ -24,7 +35,6 @@
     <file>keys.png</file>
     <file>plus.png</file>
     <file>minus.png</file>
-    <file>refresh_tools.png</file>
     <file>add_tool.png</file>
     <file>remove_tool.png</file>
     <file>remove_all.png</file>

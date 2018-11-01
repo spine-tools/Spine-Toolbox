@@ -84,6 +84,14 @@ widgets.custom\_qgraphicsview module
     :undoc-members:
     :show-inheritance:
 
+widgets.custom\_qlineedit module
+--------------------------------
+
+.. automodule:: widgets.custom_qlineedit
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.custom\_qtableview module
 ---------------------------------
 
@@ -104,22 +112,6 @@ widgets.custom\_qtreeview module
 --------------------------------
 
 .. automodule:: widgets.custom_qtreeview
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.data\_connection\_subwindow\_widget module
---------------------------------------------------
-
-.. automodule:: widgets.data_connection_subwindow_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.data\_store\_subwindow\_widget module
----------------------------------------------
-
-.. automodule:: widgets.data_store_subwindow_widget
     :members:
     :undoc-members:
     :show-inheritance:
@@ -172,14 +164,6 @@ widgets.spine\_datapackage\_widget module
     :undoc-members:
     :show-inheritance:
 
-widgets.tool\_subwindow\_widget module
---------------------------------------
-
-.. automodule:: widgets.tool_subwindow_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 widgets.tool\_template\_widget module
 -------------------------------------
 
@@ -192,14 +176,6 @@ widgets.toolbars module
 -----------------------
 
 .. automodule:: widgets.toolbars
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.view\_subwindow\_widget module
---------------------------------------
-
-.. automodule:: widgets.view_subwindow_widget
     :members:
     :undoc-members:
     :show-inheritance:

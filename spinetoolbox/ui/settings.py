@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 # -*- coding: utf-8 -*-
 
@@ -77,9 +69,6 @@ class Ui_SettingsForm(object):
         self.checkBox_save_at_exit.setTristate(True)
         self.checkBox_save_at_exit.setObjectName("checkBox_save_at_exit")
         self.verticalLayout_6.addWidget(self.checkBox_save_at_exit)
-        self.checkBox_debug_messages = QtWidgets.QCheckBox(self.groupBox_general)
-        self.checkBox_debug_messages.setObjectName("checkBox_debug_messages")
-        self.verticalLayout_6.addWidget(self.checkBox_debug_messages)
         self.checkBox_datetime = QtWidgets.QCheckBox(self.groupBox_general)
         self.checkBox_datetime.setObjectName("checkBox_datetime")
         self.verticalLayout_6.addWidget(self.checkBox_datetime)
@@ -136,6 +125,15 @@ class Ui_SettingsForm(object):
         self.pushButton_browse_julia.setObjectName("pushButton_browse_julia")
         self.gridLayout_2.addWidget(self.pushButton_browse_julia, 3, 1, 1, 1)
         self.verticalLayout.addWidget(self.groupBox_julia)
+        self.groupBox_data_store = QtWidgets.QGroupBox(SettingsForm)
+        self.groupBox_data_store.setObjectName("groupBox_data_store")
+        self.verticalLayout_4 = QtWidgets.QVBoxLayout(self.groupBox_data_store)
+        self.verticalLayout_4.setObjectName("verticalLayout_4")
+        self.checkBox_commit_at_exit = QtWidgets.QCheckBox(self.groupBox_data_store)
+        self.checkBox_commit_at_exit.setTristate(True)
+        self.checkBox_commit_at_exit.setObjectName("checkBox_commit_at_exit")
+        self.verticalLayout_4.addWidget(self.checkBox_commit_at_exit)
+        self.verticalLayout.addWidget(self.groupBox_data_store)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem)
         self.horizontalLayout_2.addLayout(self.verticalLayout)
@@ -237,14 +235,14 @@ class Ui_SettingsForm(object):
         QtCore.QMetaObject.connectSlotsByName(SettingsForm)
         SettingsForm.setTabOrder(self.checkBox_open_previous_project, self.checkBox_exit_prompt)
         SettingsForm.setTabOrder(self.checkBox_exit_prompt, self.checkBox_save_at_exit)
-        SettingsForm.setTabOrder(self.checkBox_save_at_exit, self.checkBox_debug_messages)
-        SettingsForm.setTabOrder(self.checkBox_debug_messages, self.checkBox_datetime)
+        SettingsForm.setTabOrder(self.checkBox_save_at_exit, self.checkBox_datetime)
         SettingsForm.setTabOrder(self.checkBox_datetime, self.lineEdit_gams_path)
         SettingsForm.setTabOrder(self.lineEdit_gams_path, self.pushButton_browse_gams)
         SettingsForm.setTabOrder(self.pushButton_browse_gams, self.checkBox_use_repl)
         SettingsForm.setTabOrder(self.checkBox_use_repl, self.lineEdit_julia_path)
         SettingsForm.setTabOrder(self.lineEdit_julia_path, self.pushButton_browse_julia)
-        SettingsForm.setTabOrder(self.pushButton_browse_julia, self.textEdit_project_description)
+        SettingsForm.setTabOrder(self.pushButton_browse_julia, self.checkBox_commit_at_exit)
+        SettingsForm.setTabOrder(self.checkBox_commit_at_exit, self.textEdit_project_description)
         SettingsForm.setTabOrder(self.textEdit_project_description, self.lineEdit_work_dir)
         SettingsForm.setTabOrder(self.lineEdit_work_dir, self.pushButton_browse_work)
         SettingsForm.setTabOrder(self.pushButton_browse_work, self.pushButton_ok)
@@ -259,8 +257,6 @@ class Ui_SettingsForm(object):
         self.checkBox_exit_prompt.setText(QtWidgets.QApplication.translate("SettingsForm", "Show confirm exit prompt", None, -1))
         self.checkBox_save_at_exit.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Unchecked: Does not save project and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Saves project and does not show message box</p><p><br/></p></body></html>", None, -1))
         self.checkBox_save_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Save project at exit", None, -1))
-        self.checkBox_debug_messages.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>If checked, debug messages are shown in console. If unchecked, only error messages are shown.</p></body></html>", None, -1))
-        self.checkBox_debug_messages.setText(QtWidgets.QApplication.translate("SettingsForm", "Show Debug messages", None, -1))
         self.checkBox_datetime.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>If checked, date and time string is appended into Event Log messages</p></body></html>", None, -1))
         self.checkBox_datetime.setText(QtWidgets.QApplication.translate("SettingsForm", "Show date and time in Event Log messages", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("SettingsForm", "Project directory", None, -1))
@@ -275,6 +271,9 @@ class Ui_SettingsForm(object):
         self.lineEdit_julia_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using Julia executable in system path", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Path to Julia executable", None, -1))
         self.pushButton_browse_julia.setText(QtWidgets.QApplication.translate("SettingsForm", "Browse", None, -1))
+        self.groupBox_data_store.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Data store", None, -1))
+        self.checkBox_commit_at_exit.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None, -1))
+        self.checkBox_commit_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Commit session at treeview exit", None, -1))
         self.groupBox_project.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Project", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("SettingsForm", "Name", None, -1))
         self.lineEdit_project_name.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>You can rename project from main window menu <span style=\" font-weight:600;\">File -&gt; Save As...</span></p></body></html>", None, -1))
@@ -284,8 +283,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:7.8pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave this empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))

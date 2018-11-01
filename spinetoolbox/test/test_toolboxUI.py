@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Unit tests for ToolboxUI class.
@@ -164,7 +156,7 @@ class TestToolboxUI(unittest.TestCase):
         # Add Data Store item
         ds_name = "DS"
         with mock.patch("data_store.create_dir") as mock_create_dir:
-            ds_item = DataStore(self.mw, ds_name, "", references=None, x=0, y=0)
+            ds_item = DataStore(self.mw, ds_name, "", reference=None, x=0, y=0)
         retval = self.mw.add_item_to_model("Data Stores", ds_name, ds_item)
         self.assertTrue(retval)
         # Check that new item is found from project_item_model
@@ -205,8 +197,7 @@ class TestToolboxUI(unittest.TestCase):
 
         # Add View item
         view_name = "View"
-        with mock.patch("view.create_dir") as mock_create_dir:
-            view_item = View(self.mw, view_name, "", 0, 0)
+        view_item = View(self.mw, view_name, "", 0, 0)
         retval = self.mw.add_item_to_model("Views", view_name, view_item)
         self.assertTrue(retval)
         # Check that new item is found from project_item_model

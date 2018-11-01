@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Custom item delegates.
@@ -23,10 +15,13 @@ Custom item delegates.
 :author: M. Marin (KTH)
 :date:   1.9.2018
 """
-from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication
+from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
+from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
+    QTextEdit
 from PySide2.QtGui import QPen
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor
+from widgets.custom_qtableview import JSONEditor
+import logging
 
 
 class LineEditDelegate(QItemDelegate):
@@ -35,22 +30,22 @@ class LineEditDelegate(QItemDelegate):
     Attributes:
         parent (QMainWindow): either data store or spine datapackage widget
     """
+    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+
     def __init__(self, parent):
         super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return CustomLineEditor. Set up a validator depending on datatype."""
-        return CustomLineEditor(parent, index)
+        return CustomLineEditor(parent)
 
     def setEditorData(self, editor, index):
         """Init the line editor with previous data from the index."""
-        data = index.data(Qt.EditRole)
-        if data:
-            editor.setText(str(data))
+        editor.set_data(index.data(Qt.EditRole))
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `closeEditor` signal."""
-        pass
+        """Send signal."""
+        self.commit_model_data.emit(index, editor.data())
 
 
 class CheckBoxDelegate(QItemDelegate):
@@ -128,72 +123,71 @@ class DataStoreDelegate(QItemDelegate):
     """A custom delegate for the parameter value models and views in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
+    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+
+    def __init__(self, parent, db_map):
         super().__init__(parent)
         self._parent = parent
-        self.db_map = parent.db_map
-
-    def setEditorData(self, editor, index):
-        """Do nothing."""
-        if isinstance(editor, CustomComboEditor):
-            editor.showPopup()
-        elif isinstance(editor, CustomLineEditor):
-            data = editor.index().data(Qt.EditRole)
-            if data:
-                editor.setText(str(data))
+        self.db_map = db_map
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `commitData` signal."""
-        pass
+        """Send signal."""
+        self.commit_model_data.emit(index, editor.data())
 
 
-class HighlightFrameDelegate(QItemDelegate):
-    """A delegate that paints a blue frame around the row.
+class JSONDelegate(QItemDelegate):
+    """A delegate that handles JSON data.
 
     Attributes:
-        parent (QMainWindow): either data store or spine datapackage widget
+        parent (QTableView): widget where the delegate is installed
     """
     def __init__(self, parent):
         super().__init__(parent)
-        self.highlight_pen = QPen(parent.palette().highlight(), 1)
 
-    def paint(self, painter, option, index):
-        """Paint a blue frame on the work in progress rows."""
-        super().paint(painter, option, index)
-        model = index.model()
-        if model.is_work_in_progress(index.row()):
-            pen = painter.pen()
-            painter.setPen(self.highlight_pen)
-            x1, y1, x2, y2 = option.rect.getCoords()
-            painter.drawLine(x1, y1, x2, y1)
-            painter.drawLine(x1, y2, x2, y2)
-            if index.column() == 0:
-                painter.drawLine(x1+1, y1, x1+1, y2)
-            if index.column() == model.columnCount()-1:
-                painter.drawLine(x2, y1, x2, y2)
-            painter.setPen(pen)
+    def updateEditorGeometry(self, editor, option, index):
+        """Adjust dimensions of CustomTextEditor for editing the JSON data."""
+        super().updateEditorGeometry(editor, option, index)
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'json':
+            x = option.rect.x()
+            y = option.rect.y()
+            width = max(self._parent.columnWidth(index.column()), editor.width())
+            height = editor.height()
+            if y + editor.default_row_height + height > self._parent.height():
+                y -= height - editor.default_row_height
+            editor.setGeometry(x, y, width, height)
 
 
-class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
     """A delegate for the object parameter value model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
-    def createEditor(self, parent, option, proxy_index):
+    def createEditor(self, parent, option, index):
         """Return editor."""
-        model = proxy_index.model().sourceModel()
-        index = proxy_index.model().mapToSource(proxy_index)
-        h = model.horizontal_header_labels().index
-        if index.column() == h('object_class_name'):
+        header = index.model().horizontal_header_labels()
+        h = header.index
+        if header[index.column()] in ('object_class_name', 'parameter_name'):
+            return CustomComboEditor(parent)
+        elif header[index.column()] == 'json':
+            return JSONEditor(parent)
+        else:
+            return CustomLineEditor(parent)
+
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
+        h = header.index
+        if header[index.column()] == 'object_class_name':
             object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-            return CustomComboEditor(parent, proxy_index, object_class_name_list)
-        elif index.column() == h('object_name'):
+            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+        elif header[index.column()] == 'object_name':
             parameter_name = index.sibling(index.row(), h('parameter_name')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
             if parameter:
@@ -204,8 +198,8 @@ class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
                 object_class_id = object_class.id if object_class else None
                 object_list = self.db_map.object_list(class_id=object_class_id)
             object_name_list = [x.name for x in object_list]
-            return CustomComboEditor(parent, proxy_index, object_name_list)
-        elif index.column() == h('parameter_name'):
+            editor.set_data(index.data(Qt.EditRole), object_name_list)
+        elif header[index.column()] == 'parameter_name':
             object_name = index.sibling(index.row(), h('object_name')).data(Qt.DisplayRole)
             object_ = self.db_map.single_object(name=object_name).one_or_none()
             if object_:
@@ -217,70 +211,91 @@ class ObjectParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
                 object_class_id = object_class.id if object_class else None
                 parameter_list = self.db_map.object_parameter_list(object_class_id=object_class_id)
                 parameter_name_list = [x.parameter_name for x in parameter_list]
-            return CustomComboEditor(parent, proxy_index, parameter_name_list)
+            editor.set_data(index.data(Qt.EditRole), parameter_name_list)
+        elif header[index.column()] == 'json':
+            editor.set_data(index.data(Qt.EditRole))
         else:
-            return CustomLineEditor(parent, proxy_index)
+            editor.set_data(index.data(Qt.EditRole))
 
 
-class ObjectParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class ObjectParameterDelegate(DataStoreDelegate):
     """A delegate for the object parameter model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
-    def createEditor(self, parent, option, proxy_index):
+    def createEditor(self, parent, option, index):
         """Return editor."""
-        model = proxy_index.model().sourceModel()
-        index = proxy_index.model().mapToSource(proxy_index)
-        header = model.horizontal_header_labels()
-        h = header.index
-        if not index.column() == h('object_class_name'):
-            return CustomLineEditor(parent, proxy_index)
-        object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-        return CustomComboEditor(parent, proxy_index, object_class_name_list)
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'object_class_name':
+            return CustomComboEditor(parent)
+        return CustomLineEditor(parent)
+
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'object_class_name':
+            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+        else:
+            editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
     """A delegate for the relationship parameter value model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
-    def createEditor(self, parent, option, proxy_index):
+    def createEditor(self, parent, option, index):
         """Return editor."""
-        model = proxy_index.model().sourceModel()
-        index = proxy_index.model().mapToSource(proxy_index)
-        header = model.horizontal_header_labels()
+        header = index.model().horizontal_header_labels()
+        h = header.index
+        if header[index.column()] in ('relationship_class_name', 'parameter_name'):
+            return CustomComboEditor(parent)
+        elif header[index.column()].startswith('object_name_'):
+            return CustomComboEditor(parent)
+        elif header[index.column()] == 'json':
+            return JSONEditor(parent)
+        else:
+            return CustomLineEditor(parent)
+
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
         h = header.index
         if header[index.column()] == 'relationship_class_name':
             relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
-            return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
+            editor.set_data(index.data(Qt.EditRole), relationship_class_name_list)
         elif header[index.column()].startswith('object_name_'):
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
                 one_or_none()
             if not relationship_class:
-                return None
+                editor.set_data(index.data(Qt.EditRole), [])
+                return
             # Get object class
             dimension = int(header[index.column()].split('object_name_')[1]) - 1
             object_class_name_list = relationship_class.object_class_name_list.split(',')
             try:
                 object_class_name = object_class_name_list[dimension]
             except IndexError:
-                return None
+                editor.set_data(index.data(Qt.EditRole), [])
+                return
             object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
             if not object_class:
-                return None
+                editor.set_data(index.data(Qt.EditRole), [])
+                return
             # Get object name list
             object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
-            return CustomComboEditor(parent, proxy_index, object_name_list)
+            editor.set_data(index.data(Qt.EditRole), object_name_list)
         elif header[index.column()] == 'parameter_name':
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
@@ -310,95 +325,119 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, HighlightFrameDelega
                     parameter_list = self.db_map.relationship_parameter_list(
                         relationship_class_id=relationship_class.id)
                     parameter_name_list = [x.parameter_name for x in parameter_list]
-            return CustomComboEditor(parent, proxy_index, parameter_name_list)
+            editor.set_data(index.data(Qt.EditRole), parameter_name_list)
+        elif header[index.column()] == 'json':
+            editor.set_data(index.data(Qt.EditRole))
         else:
-            return CustomLineEditor(parent, proxy_index)
+            editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterDelegate(DataStoreDelegate, HighlightFrameDelegate):
+class RelationshipParameterDelegate(DataStoreDelegate):
     """A delegate for the object parameter model and view in DataStoreForm.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
-    def createEditor(self, parent, option, proxy_index):
+    def createEditor(self, parent, option, index):
         """Return editor."""
-        model = proxy_index.model().sourceModel()
-        index = proxy_index.model().mapToSource(proxy_index)
-        header = model.horizontal_header_labels()
-        h = header.index
-        if not index.column() == h('relationship_class_name'):
-            return CustomLineEditor(parent, proxy_index)
-        relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
-        return CustomComboEditor(parent, proxy_index, relationship_class_name_list)
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'relationship_class_name':
+            return CustomComboEditor(parent)
+        return CustomLineEditor(parent)
 
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'relationship_class_name':
+            relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
+            editor.set_data(index.data(Qt.EditRole), relationship_class_name_list)
+        else:
+            editor.set_data(index.data(Qt.EditRole))
 
 class AddObjectsDelegate(DataStoreDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
-        model = index.model()
-        header = model.horizontal_header_labels()
-        h = header.index
-        if index.column() != h('object class name'):
-            return CustomLineEditor(parent, index)
-        object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-        return CustomComboEditor(parent, index, object_class_name_list)
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'object class name':
+            return CustomComboEditor(parent)
+        return CustomLineEditor(parent)
+
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'object class name':
+            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+        else:
+            editor.set_data(index.data(Qt.EditRole))
 
 
 class AddRelationshipClassesDelegate(DataStoreDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
-        model = index.model()
-        header = model.horizontal_header_labels()
-        h = header.index
-        if index.column() == h('relationship class name'):
-            return CustomLineEditor(parent, index)
-        object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-        return CustomComboEditor(parent, index, object_class_name_list)
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'relationship class name':
+            return CustomLineEditor(parent)
+        return CustomComboEditor(parent)
+
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'relationship class name':
+            editor.set_data(index.data(Qt.EditRole))
+        else:
+            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
 
 
 class AddRelationshipsDelegate(DataStoreDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (QTableView): widget where the delegate is installed
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_map):
+        super().__init__(parent, db_map)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
-        model = index.model()
-        header = model.horizontal_header_labels()
-        h = header.index
-        if index.column() == h('relationship name'):
-            return CustomLineEditor(parent, index)
-        object_class_name = header[index.column()].split(' ', 1)[0]
-        object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
-        if not object_class:
-            object_name_list = list()
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'relationship name':
+            return CustomLineEditor(parent)
+        return CustomComboEditor(parent)
+
+    def setEditorData(self, editor, index):
+        """Set editor data."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'relationship name':
+            editor.set_data(index.data(Qt.EditRole))
         else:
-            object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
-        return CustomComboEditor(parent, index, object_name_list)
+            object_class_name = header[index.column()].split(' ', 1)[0]
+            object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
+            if not object_class:
+                object_name_list = list()
+            else:
+                object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
+            editor.set_data(index.data(Qt.EditRole), object_name_list)
 
 
 class ResourceNameDelegate(QItemDelegate):
@@ -407,30 +446,34 @@ class ResourceNameDelegate(QItemDelegate):
     Attributes:
         parent (SpineDatapackageWidget): spine datapackage widget
     """
+    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
 
     def createEditor(self, parent, option, index):
         """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
-        items = self._parent.object_class_name_list
-        return CustomComboEditor(parent, index, items)
+        return CustomComboEditor(parent)
 
     def setEditorData(self, editor, index):
-        """Show pop up as soon as editing starts."""
-        editor.showPopup()
+        """Set editor data."""
+        items = self._parent.object_class_name_list
+        editor.set_data(index.data(Qt.EditRole), items)
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `commitData` signal."""
-        pass
+        """Send signal."""
+        self.commit_model_data.emit(index, editor.data())
 
 
-class ForeignKeysDelegate(HighlightFrameDelegate):
+class ForeignKeysDelegate(QItemDelegate):
     """A QComboBox delegate with checkboxes.
 
     Attributes:
         parent (SpineDatapackageWidget): spine datapackage widget
     """
+    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
@@ -439,46 +482,36 @@ class ForeignKeysDelegate(HighlightFrameDelegate):
 
     def createEditor(self, parent, option, index):
         """Return editor."""
-        self.selected_resource_name = self._parent.selected_resource_name
-        model = index.model()
-        header = [model.headerData(j, Qt.Horizontal, Qt.DisplayRole) for j in range(model.columnCount())]
-        h = header.index
-        if index.column() == h('fields'):
-            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
-            field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
-            return CustomSimpleToolButtonEditor(parent, index, field_names, current_field_names)
-        elif index.column() == h('reference resource'):
-            return CustomComboEditor(parent, index, self.datapackage.resource_names)
-        elif index.column() == h('reference fields'):
-            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
-            reference_resource_name = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
-            reference_resource = self.datapackage.get_resource(reference_resource_name)
-            if not reference_resource:
-                return None
-            field_names = reference_resource.schema.field_names
-            return CustomSimpleToolButtonEditor(parent, index, field_names, current_field_names)
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'fields':
+            return CustomSimpleToolButtonEditor(parent)
+        elif header[index.column()] == 'reference resource':
+            return CustomComboEditor(parent)
+        elif header[index.column()] == 'reference fields':
+            return CustomSimpleToolButtonEditor(parent)
         else:
             return None
 
     def setEditorData(self, editor, index):
-        """Do nothing."""
-        pass
+        """Set editor data."""
+        self.selected_resource_name = self._parent.selected_resource_name
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'fields':
+            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
+            field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
+            editor.set_data(field_names, current_field_names)
+        elif header[index.column()] == 'reference resource':
+            editor.set_data(index.data(Qt.EditRole), self.datapackage.resource_names)
+        elif header[index.column()] == 'reference fields':
+            current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
+            reference_resource_name = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
+            reference_resource = self.datapackage.get_resource(reference_resource_name)
+            if not reference_resource:
+                field_names = []
+            else:
+                field_names = reference_resource.schema.field_names
+            editor.set_data(field_names, current_field_names)
 
     def setModelData(self, editor, model, index):
-        """Do nothing."""
-        pass
-
-    def eventFilter(self, editor, event):
-        """Setup editor in show event, and wrap it up in hide events."""
-        if event.type() == QEvent.ShowToParent:
-            if isinstance(editor, CustomComboEditor):
-                editor.showPopup()
-            elif isinstance(editor, CustomSimpleToolButtonEditor):
-                editor.click()
-            return True
-        elif event.type() == QEvent.HideToParent:
-            if isinstance(editor, CustomSimpleToolButtonEditor):
-                self.commitData.emit(editor)
-                self.closeEditor.emit(editor, QAbstractItemDelegate.NoHint)
-                return True
-        return super().eventFilter(editor, event)
+        """Send signal."""
+        self.commit_model_data.emit(index, editor.data())

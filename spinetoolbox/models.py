@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Classes for handling models in PySide2's model/view framework.
@@ -26,26 +18,214 @@ Note: These are Spine Toolbox internal data models.
 :date:   23.1.2018
 """
 
-import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 import os
-from collections import Counter
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel,\
-    QSortFilterProxyModel
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
+    QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
-from spinedatabase_api import SpineDBAPIError
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
-class ProjectItemModel(QStandardItemModel):
-    """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views."""
-    def __init__(self, toolbox=None):
+class ProjectItemModel(QAbstractItemModel):
+    """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views.
+
+    Attributes:
+        toolbox (ToolboxUI): QMainWindow instance
+        root (ProjectItem): Root item for the project item tree
+    """
+    def __init__(self, toolbox, root):
+        """Class constructor."""
         super().__init__()
         self._toolbox = toolbox
+        self._root = root
+
+    def root(self):
+        """Returns root project item."""
+        return self._root
+
+    def rowCount(self, parent=QModelIndex()):
+        """Reimplemented rowCount method.
+
+        Args:
+            parent (QModelIndex): Index of parent item whose children are counted.
+
+        Returns:
+            int: Number of children of given parent
+        """
+        if not parent.isValid():  # Number of category items (children of root)
+            return self.root().child_count()
+        elif parent.internalPointer().is_category:  # Number of project items in the category
+            return parent.internalPointer().child_count()
+        else:
+            return 0
+
+    def columnCount(self, parent=QModelIndex()):
+        """Returns model column count."""
+        return 1
+
+    def flags(self, index):
+        """Returns flags for the item at given index
+
+        Args:
+            index (QModelIndex): Flags of item at this index.
+        """
+        if not index.internalPointer().is_category:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+        else:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def parent(self, index=QModelIndex()):
+        """Returns index of the parent of given index.
+
+        Args:
+            index (QModelIndex): Index of item whose parent is returned
+
+        Returns:
+            QModelIndex: Index of parent item
+        """
+        item = self.project_item(index)
+        parent_item = item.parent()
+        if not parent_item:
+            return QModelIndex()
+        if parent_item == self.root():
+            return QModelIndex()
+        # logging.debug("parent_item: {0}".format(parent_item.name))
+        return self.createIndex(parent_item.row(), 0, parent_item)
+
+    def index(self, row, column, parent=QModelIndex()):
+        """Returns index of item with given row, column, and parent.
+
+        Args:
+            row (int): Item row
+            column (int): Item column
+            parent (QModelIndex): Parent item index
+
+        Returns:
+            QModelIndex: Item index
+        """
+        if row < 0 or row >= self.rowCount(parent):
+            return QModelIndex()
+        if column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        parent_item = self.project_item(parent)
+        child = parent_item.child(row)
+        if not child:
+            return QModelIndex()
+        else:
+            return self.createIndex(row, column, child)
+
+    def data(self, index, role=None):
+        """Returns data in the given index according to requested role.
+
+        Args:
+            index (QModelIndex): Index to query
+            role (int): Role to return
+
+        Returns:
+            Data depending on role.
+        """
+        if not index.isValid():
+            return None
+        project_item = index.internalPointer()
+        if role == Qt.DisplayRole:
+            return project_item.name
+        else:
+            return None
+
+    def project_item(self, index):
+        """Returns project item at given index.
+
+        Args:
+            index (QModelIndex): Index of project item
+
+        Returns:
+            ProjectItem: Item at given index or root project item if index is not valid
+        """
+        if not index.isValid():
+            return self.root()
+        return index.internalPointer()
+
+    def find_category(self, category_name):
+        """Returns the index of the given category name.
+
+        Args:
+            category_name (str): Name of category item to find
+
+        Returns:
+             QModelIndex of a category item or None if it was not found
+        """
+        category_names = [category.name for category in self.root().children()]
+        # logging.debug("Category names:{0}".format(category_names))
+        try:
+            row = category_names.index(category_name)
+        except ValueError:
+            logging.error("Category name {0} not found in {1}".format(category_name, category_names))
+            return None
+        return self.index(row, 0, QModelIndex())
+
+    def find_item(self, name):
+        """Returns the QModelIndex of the project item with the given name
+
+        Args:
+            name (str): The searched project item (long) name
+
+        Returns:
+            QModelIndex of a project item with the given name or None if not found
+        """
+        for category in self.root().children():
+            # logging.debug("Looking for {0} in category {1}".format(name, category.name))
+            category_index = self.find_category(category.name)
+            start_index = self.index(0, 0, category_index)
+            matching_index = self.match(start_index, Qt.DisplayRole, name,
+                                        1, Qt.MatchFixedString | Qt.MatchRecursive)
+            if len(matching_index) == 0:
+                pass  # no match in this category
+            elif len(matching_index) == 1:
+                # logging.debug("Found item:{0}".format(matching_index[0].internalPointer().name))
+                return matching_index[0]
+        return None
+
+    def insert_item(self, item, parent=QModelIndex()):
+        """Add new item to model. Fails if parent_item is not a category item or root item.
+        Inserts new item as the last item.
+
+        Args:
+            item (ProjectItem): Project item to add to model
+            parent (QModelIndex): Parent project item
+
+        Returns:
+            True if successful, False otherwise
+        """
+        parent_item = self.project_item(parent)
+        row = self.rowCount(parent)  # parent.child_count()
+        # logging.debug("Inserting item on row:{0} under parent:{1}".format(row, parent_item.name))
+        self.beginInsertRows(parent, row, row)
+        retval = parent_item.add_child(item)
+        self.endInsertRows()
+        return retval
+
+    def remove_item(self, item, parent=QModelIndex()):
+        """Remove item from model.
+
+        Args:
+            item (ProjectItem): Project item to remove
+            parent (QModelIndex): Parent of item that is to be removed
+
+        Returns:
+            bool: True if item removed successfully, False if item removing failed
+        """
+        parent_item = self.project_item(parent)
+        row = item.row()
+        self.beginRemoveRows(parent, row, row)
+        retval = parent_item.remove_child(row)
+        self.endRemoveRows()
+        return retval
 
     def setData(self, index, value, role=Qt.EditRole):
+        # TODO: Test this. Should this emit dataChanged signal at some point?
         """Change name of item in index to value.
         # TODO: If the item is a Data Store the reference sqlite path must be updated.
 
@@ -59,7 +239,7 @@ class ProjectItemModel(QStandardItemModel):
         """
         if not role == Qt.EditRole:
             return super().setData(index, value, role)
-        item = self.data(index, Qt.UserRole)
+        item = index.internalPointer()
         old_name = item.name
         if value.strip() == '' or value == old_name:
             return False
@@ -70,8 +250,7 @@ class ProjectItemModel(QStandardItemModel):
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
             return False
         # Check if project item with the same name already exists
-        taken_names = self.return_item_names()
-        if value in taken_names:
+        if self.find_item(value):
             msg = "Project item <b>{0}</b> already exists".format(value)
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
@@ -79,13 +258,11 @@ class ProjectItemModel(QStandardItemModel):
         # Check that no existing project item short name matches the new item's short name.
         # This is to prevent two project items from using the same folder.
         new_short_name = value.lower().replace(' ', '_')
-        for taken_name in taken_names:
-            taken_short_name = taken_name.lower().replace(' ', '_')
-            if new_short_name == taken_short_name:
-                msg = "Project item using directory <b>{0}</b> already exists".format(taken_short_name)
-                # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-                QMessageBox.information(self._toolbox, "Invalid name", msg)
-                return False
+        if self._toolbox.project_item_model.short_name_reserved(new_short_name):
+            msg = "Project item using directory <b>{0}</b> already exists".format(new_short_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Invalid name", msg)
+            return False
         # Get old data dir which will be renamed
         try:
             old_data_dir = item.data_dir  # Full path
@@ -100,21 +277,7 @@ class ProjectItemModel(QStandardItemModel):
         # Rename item project directory
         if not rename_dir(self._toolbox, old_data_dir, new_data_dir):
             return False
-        # Find item from project refs list
-        project_refs = self._toolbox.project_refs
-        item_ref = None
-        for ref in project_refs:
-            if ref.name == old_name:
-                ref_index = project_refs.index(ref)
-                item_ref = project_refs.pop(ref_index)
-                break
-        # Change name for item in project ref list
-        item_ref.set_name(value)
-        self._toolbox.project_refs.append(item_ref)
-        # Update DisplayRole of the QStardardItem in Project QTreeView
-        q_item = self.find_item(old_name, Qt.MatchExactly | Qt.MatchRecursive)
-        q_item.setData(value, Qt.DisplayRole)
-        # Rename project item contained in the QStandardItem
+        # Rename project item
         item.set_name(value)
         # Update project item directory variable
         item.data_dir = new_data_dir
@@ -123,10 +286,14 @@ class ProjectItemModel(QStandardItemModel):
             item.data_dir_watcher.removePaths(item.data_dir_watcher.directories())
             item.data_dir_watcher.addPath(item.data_dir)
         # If item is a Tool, also output_dir must be updated
-        if item.item_type == "Tool":
+        elif item.item_type == "Tool":
             item.output_dir = os.path.join(item.data_dir, TOOL_OUTPUT_DIR)
-        # Update name in the subwindow widget
-        item.get_widget().set_name_label(value)
+        # If item is a Data Store and an SQLite path is set, give the user a notice that this must be updated manually
+        elif item.item_type == "Data Store":
+            if not self._toolbox.ui.lineEdit_SQLite_file.text().strip() == "":
+                self._toolbox.msg_warning.emit("Note: Path to SQLite file may need updating.")
+        # Update name label in tab
+        item.update_name_label()
         # Update name item of the QGraphicsItem
         item.get_icon().update_name_item(value)
         # Change old item names in connection model headers to the new name
@@ -138,83 +305,82 @@ class ProjectItemModel(QStandardItemModel):
         self._toolbox.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
         return True
 
-    def n_items(self, typ):
-        """Returns the number of items in the project according to type.
+    def items(self, category_name=None):
+        """Returns a list of items in model according to category name. If no category name given,
+        returns all items in a list.
 
         Args:
-            typ (str): Type of item to count. "all" returns the number of items in project.
+            category_name (str): Item category. Data Connections, Data Stores, Tools or Views permitted.
+
+        Returns:
+            :obj:'list' of :obj:'ProjectItem': Depending on category_name argument, returns all items or only
+            items according to category. An empty list is returned if there are no items in the given category
+            or if an unknown category name was given.
         """
-        n = 0
-        top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if typ == "all":
-                if top_level_item.hasChildren():
-                    n = n + top_level_item.rowCount()
-            elif typ == "Data Stores":
-                if top_level_item.data(Qt.DisplayRole) == "Data Stores":
-                    n = top_level_item.rowCount()
-            elif typ == "Data Connections":
-                if top_level_item.data(Qt.DisplayRole) == "Data Connections":
-                    n = top_level_item.rowCount()
-            elif typ == "Tools":
-                if top_level_item.data(Qt.DisplayRole) == "Tools":
-                    n = top_level_item.rowCount()
-            elif typ == "Views":
-                if top_level_item.data(Qt.DisplayRole) == "Views":
-                    n = top_level_item.rowCount()
-            else:
-                logging.error("Unknown type: {0}".format(typ))
-        return n
+        if not category_name:
+            items = list()
+            for category in self.root().children():
+                items += category.children()
+            return items
+        else:
+            category_item = self.find_category(category_name)
+            if not category_item:
+                logging.error("Category item '{0}' not found".format(category_name))
+                return list()
+            return category_item.internalPointer().children()
+
+    def n_items(self):
+        """Return the number of all project items in the model excluding category items and root."""
+        return len(self.items())
+
+    def return_item_names(self):
+        """Returns the names of all items in a list."""
+        return [item.name for item in self.items()]
 
     def new_item_index(self, category):
-        """Get index where a new item is appended according to category."""
+        """Get index where a new item is appended according to category. This is needed for
+        appending the connection model.
+
+        Args:
+            category (str): Display Role of the parent
+
+        Returns:
+            Number of items according to category
+        """
+        n_data_stores = self.rowCount(self.find_category("Data Stores"))
+        n_data_connections = self.rowCount(self.find_category("Data Connections"))
+        n_tools = self.rowCount(self.find_category("Tools"))
+        n_views = self.rowCount(self.find_category("Views"))
         if category == "Data Stores":
             # Return number of data stores
-            return self.n_items("Data Stores") - 1
+            return n_data_stores - 1
         elif category == "Data Connections":
             # Return number of data stores + data connections - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") - 1
+            return n_data_stores + n_data_connections - 1
         elif category == "Tools":
             # Return number of data stores + data connections + tools - 1
-            return self.n_items("Data Stores") + self.n_items("Data Connections") + self.n_items("Tools") - 1
+            return n_data_stores + n_data_connections + n_tools - 1
         elif category == "Views":
             # Return total number of items - 1
-            return self.n_items("all") - 1
+            return self.n_items() - 1
         else:
             logging.error("Unknown category:{0}".format(category))
             return 0
 
-    def find_item(self, name, match_flags=Qt.MatchExactly):
-        """Find item by name in project model (column 0)
+    def short_name_reserved(self, short_name):
+        """Check if folder name derived from the name of the given item is in use.
 
         Args:
-            name (str): Item name to find
-            match_flags (QFlags): Or combination of Qt.MatchFlag types. Use Qt.MatchExactly | Qt.MatchRecursive
-                to find project items by name.
+            short_name (str): Item short name
 
         Returns:
-            Matching QStandardItem or None if item not found or more than one item with the same name found.
+            bool: True if short name is taken, False if it is available.
         """
-        found_items = self.findItems(name, match_flags, column=0)
-        if len(found_items) == 0:
-            # logging.debug("Item '{0}' not found in project model".format(name))
-            return None
-        if len(found_items) > 1:
-            logging.error("More than one item with name '{0}' found".format(name))
-            return None
-        return found_items[0]
-
-    def return_item_names(self):
-        """Returns the names of all items in a list."""
-        item_names = list()
-        top_level_items = self.findItems('*', Qt.MatchWildcard, column=0)
-        for top_level_item in top_level_items:
-            if top_level_item.hasChildren():
-                n_children = top_level_item.rowCount()
-                for i in range(n_children):
-                    child = top_level_item.child(i, 0)
-                    item_names.append(child.data(Qt.DisplayRole))
-        return item_names
+        project_items = self.items()
+        for item in project_items:
+            if item.short_name == short_name:
+                return True
+        return False
 
 
 class ToolTemplateModel(QAbstractListModel):
@@ -329,8 +495,10 @@ class ToolTemplateModel(QAbstractListModel):
             row (int): Row of tool template
 
         Returns:
-            ToolTemplate from tool template list
+            ToolTemplate from tool template list or None if given row is zero
         """
+        if row == 0:
+            return None
         return self._tools[row]
 
     def find_tool_template(self, name):
@@ -348,7 +516,7 @@ class ToolTemplateModel(QAbstractListModel):
         return None
 
     def tool_template_row(self, name):
-        """Returns the index (row) on which the given template lives or -1 if not found."""
+        """Returns the row on which the given template is located or -1 if it is not found."""
         for i in range(len(self._tools)):
             if isinstance(self._tools[i], str):
                 continue
@@ -358,7 +526,8 @@ class ToolTemplateModel(QAbstractListModel):
         return -1
 
     def tool_template_index(self, name):
-        """Returns the index (QModelIndex) on which the given template lives or -1 if not found."""
+        """Returns the QModelIndex on which a tool template with
+        the given name is located or None if it is not found."""
         row = self.tool_template_row(name)
         if row == -1:
             return QModelIndex()
@@ -579,21 +748,21 @@ class ConnectionModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def append_item(self, item, index):
-        """Embiggen connections table for a new item.
+    def append_item(self, name, index):
+        """Embiggen connections table by a new item.
 
         Args:
-            item (QStandardItem): New item
+            name (str): New item name
             index (int): Table row and column where the new item is appended
 
         Returns:
             True if successful, False otherwise
         """
-        item_name = item.data(Qt.UserRole).name
-        # logging.debug("Appending item {0} on row and column: {1}".format(item_name, index))
+        # item_name = item.name
+        # logging.debug("Appending item {0} on row and column: {1}".format(name, index))
         # logging.debug("Appending {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
-        self.header.insert(index, item_name)
+        self.header.insert(index, name)
         if not self.insertRows(index, 1, parent=QModelIndex()):
             return False
         if not self.insertColumns(index, 1, parent=QModelIndex()):
@@ -602,20 +771,19 @@ class ConnectionModel(QAbstractTableModel):
         #               .format(self.rowCount(), self.columnCount(), self.connections))
         return True
 
-    def remove_item(self, item):
+    def remove_item(self, name):
         """Remove project item from connections table.
 
         Args:
-            item: Removed item
+            name (str): Name of removed item
 
         Returns:
             True if successful, False otherwise
         """
-        item_name = item.data(Qt.UserRole).name
         try:
-            item_index = self.header.index(item_name)
+            item_index = self.header.index(name)
         except ValueError:
-            logging.error("{0} not found in connection table header list".format(item_name))
+            logging.error("{0} not found in connection table header list".format(name))
             return False
         # logging.debug("Removing {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
@@ -623,7 +791,7 @@ class ConnectionModel(QAbstractTableModel):
             return False
         if not self.removeColumns(item_index, 1, parent=QModelIndex()):
             return False
-        self.header.remove(item_name)
+        self.header.remove(name)
         # logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections))
         return True
@@ -700,9 +868,7 @@ class ConnectionModel(QAbstractTableModel):
 class MinimalTableModel(QAbstractTableModel):
     """Table model for outlining simple tabular data."""
 
-    row_with_data_inserted = Signal(QModelIndex, int, name="row_with_data_inserted")
-
-    def __init__(self, toolbox=None):
+    def __init__(self, toolbox=None, can_grow=False, has_empty_row=False):
         """Initialize class"""
         super().__init__()
         self._toolbox = toolbox  # QMainWindow
@@ -710,12 +876,89 @@ class MinimalTableModel(QAbstractTableModel):
         self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
-        self.can_grow = False
+        self.can_grow = can_grow
+        self.has_empty_row = has_empty_row
+        self.row_defaults = []
+        self.dataChanged.connect(self.receive_data_changed)
+        self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
+        self.rowsInserted.connect(self.receive_rows_inserted)
+        self.columnsInserted.connect(self.receive_columns_inserted)
+
+    def set_row_defaults(self, data, roles):
+        """Set row defaults for each role in roles to data.
+
+        Args:
+            data (list)
+            roles (list)
+        """
+        if not data or not roles:
+            return
+        self.row_defaults.extend([{} for j in range(len(data) - len(self.row_defaults))])
+        for j, default in enumerate(data):
+            for role in roles:
+                self.row_defaults[j][role] = default
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
+    def receive_data_changed(self, top_left, bottom_right, roles):
+        """In models with a last empty row, insert a new last empty row in case
+        the previous one has been filled with any data other than the defaults."""
+        if not self.has_empty_row:
+            return
+        last_row = self.rowCount() - 1
+        for column in range(self.columnCount()):
+            try:
+                default = self.row_defaults[column]
+            except IndexError:
+                # No default for this column, check if any data
+                if self._data[last_row][column]:
+                    self.insertRows(self.rowCount(), 1)
+                break
+            # Check if data is different from default
+            if self._data[last_row][column] != default:
+                self.insertRows(self.rowCount(), 1)
+                break
+
+    @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
+    def receive_rows_about_to_be_removed(self, parent, first, last):
+        """In models with a last empty row, insert a new empty row
+        in case the current one is being deleted."""
+        if not self.has_empty_row:
+            return
+        last_row = self.rowCount() - 1
+        if last_row in range(first, last + 1):
+            self.insertRows(self.rowCount(), 1)
+
+    @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
+    def receive_rows_inserted(self, parent, first, last):
+        """In models with row defaults, set default data in newly inserted rows."""
+        for column in range(self.columnCount()):
+            try:
+                default = self.row_defaults[column]
+            except IndexError:
+                break
+            for row in range(first, last + 1):
+                self._data[row][column] = {**default}
+
+    @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
+    def receive_columns_inserted(self, parent, first, last):
+        """In models with row defaults, set default data in newly inserted columns."""
+        self.row_defaults.extend([{} for j in range(self.columnCount() - len(self.row_defaults))])
+        for column in range(first, last + 1):
+            try:
+                default = self.row_defaults[column]
+            except IndexError:
+                break
+            for row in range(self.rowCount()):
+                self._data[row][column] = {**default}
 
     def clear(self):
+        """Clear all data in model."""
         self.beginResetModel()
         self._data = list()
         self.endResetModel()
+        if not self.has_empty_row:
+            return
+        self.insertRows(self.rowCount(), 1)
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -739,7 +982,10 @@ class MinimalTableModel(QAbstractTableModel):
 
     def columnCount(self, *args, **kwargs):
         """Number of columns in the model."""
-        return len(self.header)
+        try:
+            return len(self._data[0])
+        except IndexError:
+            return len(self.header)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Get headers."""
@@ -759,12 +1005,10 @@ class MinimalTableModel(QAbstractTableModel):
         """Set horizontal header labels."""
         if not labels:
             return
-        self.header = list()
+        self.header = [{} for j in range(len(labels))]
         for j, value in enumerate(labels):
-            if j >= self.columnCount():
-                self.header.append({})
-            # self.setHeaderData(j, Qt.Horizontal, value, role=Qt.EditRole)
             self.header[j][Qt.DisplayRole] = value
+            self.header[j][Qt.EditRole] = value
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
@@ -798,17 +1042,16 @@ class MinimalTableModel(QAbstractTableModel):
         return False
 
     def index(self, row, column, parent=QModelIndex()):
-        if row is None or column is None:
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
             return QModelIndex()
         if self.can_grow:
-            last_row = self.rowCount(parent) - 1
-            last_column = self.columnCount(parent) - 1
-            if row > last_row:
-                for i in range(row - last_row):
-                    self.insertRows(self.rowCount(parent), 1, parent)
-            if column > last_column:
-                for j in range(column - last_column):
-                    self.insertColumns(self.columnCount(parent), 1, parent)
+            index = super().index(row, column, parent)
+            while not index.isValid():
+                self.insertRows(self.rowCount(parent), 1, parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
         return super().index(row, column, parent)
 
     def data(self, index, role=Qt.DisplayRole):
@@ -826,7 +1069,7 @@ class MinimalTableModel(QAbstractTableModel):
         try:
             return self._data[index.row()][index.column()][role]
         except IndexError:
-            logging.debug(index)
+            logging.error(index)
             return None
         except KeyError:
             return None
@@ -871,14 +1114,32 @@ class MinimalTableModel(QAbstractTableModel):
         return [self.row_data(row, role) for row in range(self.rowCount())]
 
     def setData(self, index, value, role=Qt.EditRole):
+        """Set data in model."""
         if not index.isValid():
             return False
-        roles = [role]
-        self._data[index.row()][index.column()][role] = value
-        if role == Qt.EditRole:
-            self._data[index.row()][index.column()][Qt.DisplayRole] = value
-            roles.append(Qt.DisplayRole)
-        self.dataChanged.emit(index, index, roles)
+        if role != Qt.EditRole:
+            self._data[index.row()][index.column()][role] = value
+            self.dataChanged.emit(index, index, [role])
+            return True
+        return self.batch_set_data([index], [value])
+
+    def batch_set_data(self, indexes, data):
+        """Batch set data for indexes."""
+        if not indexes:
+            return False
+        if len(indexes) != len(data):
+            return False
+        for k, index in enumerate(indexes):
+            if not index.isValid():
+                continue
+            self._data[index.row()][index.column()][Qt.EditRole] = data[k]
+            self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
+        # Find square envelope of indexes to emit dataChanged
+        top = min(ind.row() for ind in indexes)
+        bottom = max(ind.row() for ind in indexes)
+        left = min(ind.column() for ind in indexes)
+        right = max(ind.column() for ind in indexes)
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -895,6 +1156,8 @@ class MinimalTableModel(QAbstractTableModel):
             True if rows were inserted successfully, False otherwise
         """
         if row < 0 or row > self.rowCount():
+            return False
+        if count < 1:
             return False
         self.beginInsertRows(parent, row, row + count - 1)
         for i in range(count):
@@ -925,10 +1188,11 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if column < 0 or column > self.columnCount():
             return False
+        if count < 1:
+            return False
         self.beginInsertColumns(parent, column, column + count - 1)
         for j in range(count):
             for i in range(self.rowCount()):
-                # Notice if insert index > rowCount(), new object is inserted to end
                 self._data[i].insert(column + j, {})
                 self._flags[i].insert(column + j, self.default_flags)
         self.endInsertColumns()
@@ -945,7 +1209,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if row < 0 or row > self.rowCount():
+        if row < 0 or row >= self.rowCount():
             return False
         if not count == 1:
             logging.error("Remove 1 row at a time")
@@ -967,7 +1231,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if columns were removed successfully, False otherwise
         """
-        if column < 0 or column > self.columnCount():
+        if column < 0 or column >= self.columnCount():
             return False
         if not count == 1:
             logging.error("Remove 1 column at a time")
@@ -990,36 +1254,50 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
+    def remove_row_set(self, row_set, parent=QModelIndex()):
+        """Removes a set of rows under parent.
+
+        Args:
+            row_set (set): Set of integer row numbers to remove
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if rows were removed successfully, False otherwise
+        """
+        try:
+            first = min(row_set)
+            last = max(row_set)
+        except ValueError:
+            return False
+        if first < 0 or last >= self.rowCount():
+            return False
+        self.beginRemoveRows(parent, first, last)
+        for row in reversed(sorted(row_set)):
+            removed_data_row = self._data.pop(row)
+            removed_flags_data_row = self._flags.pop(row)
+        self.endRemoveRows()
+        return True
+
     def reset_model(self, new_data=None):
         """Reset model."""
         self.beginResetModel()
         self._data = list()
         self._flags = list()
-        if new_data:
-            for line in new_data:
-                new_row = list()
-                new_flags_row = list()
-                for value in line:
-                    new_dict = {
-                        Qt.EditRole: value,
-                        Qt.DisplayRole: value
-                    }
-                    new_row.append(new_dict)
-                    new_flags_row.append(self.default_flags)
-                self._data.append(new_row)
-                self._flags.append(new_flags_row)
-        top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
+        for line in new_data:
+            new_row = list()
+            new_flags_row = list()
+            for value in line:
+                new_dict = {}
+                new_dict[Qt.EditRole] = value
+                new_dict[Qt.DisplayRole] = value
+                new_row.append(new_dict)
+                new_flags_row.append(self.default_flags)
+            self._data.append(new_row)
+            self._flags.append(new_flags_row)
         self.endResetModel()
-
-    def insert_row_with_data(self, row, row_data, role=Qt.EditRole, parent=QModelIndex()):
-        if not self.insertRows(row, 1, parent):
-            return False
-        for column, value in enumerate(row_data):
-            self.setData(self.index(row, column), value, role)
-        self.row_with_data_inserted.emit(parent, row)
-        return True
+        if not self.has_empty_row:
+            return
+        self.insertRows(self.rowCount(), 1)
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1029,8 +1307,10 @@ class ObjectTreeModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(data_store_form)
         self.db_map = data_store_form.db_map
+        self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
 
@@ -1048,9 +1328,41 @@ class ObjectTreeModel(QStandardItemModel):
             item_type = index.data(Qt.UserRole)
             if item_type.startswith('object'):
                 return self.object_icon
-            else:
+            elif item_type.startswith('relationship'):
                 return self.relationship_icon
+            elif item_type == 'root':
+                return self.spine_icon
         return super().data(index, role)
+
+    def forward_sweep(self, index, call=None):
+        """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if not self.hasChildren(index):
+            return
+        current = index
+        back_to_parent = False  # True if moving back to the parent index
+        while True:
+            if call:
+                call(current)
+            if not back_to_parent:
+                # Try and visit first child
+                next_ = self.index(0, 0, current)
+                if next_.isValid():
+                    back_to_parent = False
+                    current = next_
+                    continue
+            # Try and visit next sibling
+            next_ = current.sibling(current.row() + 1, 0)
+            if next_.isValid():
+                back_to_parent = False
+                current = next_
+                continue
+            # Go back to parent
+            next_ = self.parent(current)
+            if next_ != index:
+                back_to_parent = True
+                current = next_
+                continue
+            break
 
     def build_tree(self, db_name):
         """Create root item and object class items. This triggers a recursion
@@ -1061,20 +1373,20 @@ class ObjectTreeModel(QStandardItemModel):
         object_list = [x for x in self.db_map.object_list()]
         wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
-        root_item = QStandardItem(db_name)
-        root_item.setData('root', Qt.UserRole)
+        self.root_item = QStandardItem(db_name)
+        self.root_item.setData('root', Qt.UserRole)
         object_class_item_list = list()
         for object_class in object_class_list:
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
-            object_class_item.setData(object_class._asdict(), Qt.UserRole+1)
+            object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_item_list = list()
             for object_ in object_list:
                 if object_.class_id != object_class.id:
                     continue
                 object_item = QStandardItem(object_.name)
                 object_item.setData('object', Qt.UserRole)
-                object_item.setData(object_._asdict(), Qt.UserRole+1)
+                object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1082,7 +1394,7 @@ class ObjectTreeModel(QStandardItemModel):
                         continue
                     relationship_class_item = QStandardItem(wide_relationship_class.name)
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
-                    relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole+1)
+                    relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
@@ -1090,10 +1402,9 @@ class ObjectTreeModel(QStandardItemModel):
                             continue
                         if object_.id not in [int(x) for x in wide_relationship.object_id_list.split(",")]:
                             continue
-                        relationship_item = QStandardItem(wide_relationship.name)
+                        relationship_item = QStandardItem(wide_relationship.object_name_list)
                         relationship_item.setData('relationship', Qt.UserRole)
-                        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole+1)
-                        relationship_item.setData(wide_relationship.object_name_list, Qt.ToolTipRole)
+                        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
                     relationship_class_item_list.append(relationship_class_item)
@@ -1101,74 +1412,51 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item_list.append(object_item)
             object_class_item.appendRows(object_item_list)
             object_class_item_list.append(object_class_item)
-        root_item.appendRows(object_class_item_list)
-        self.appendRow(root_item)
-        return root_item
+        self.root_item.appendRows(object_class_item_list)
+        self.appendRow(self.root_item)
 
     def new_object_class_item(self, object_class):
-        """Returns new object class item.
-
-        Args:
-            object_class (dict)
-        """
-        object_class_item = QStandardItem(object_class['name'])
+        """Returns new object class item."""
+        object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
-        object_class_item.setData(object_class, Qt.UserRole+1)
+        object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
         return object_class_item
 
     def new_object_item(self, object_):
-        """Returns new object item.
-
-        Args:
-            object_ (dict)
-        """
-        object_item = QStandardItem(object_['name'])
+        """Returns new object item."""
+        object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
-        object_item.setData(object_, Qt.UserRole+1)
+        object_item.setData(object_._asdict(), Qt.UserRole + 1)
         relationship_class_item_list = list()
-        for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_["class_id"]):
-            relationship_class_item = self.new_relationship_class_item(wide_relationship_class._asdict(), object_)
+        for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
+            relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
             relationship_class_item_list.append(relationship_class_item)
         object_item.appendRows(relationship_class_item_list)
         return object_item
 
     def new_relationship_class_item(self, wide_relationship_class, object_):
-        """Returns new relationship class item.
-
-        Args:
-            wide_relationship_class (dict): relationship class in wide format
-            object_ (dict): object which is the parent item in the tree
-        """
-        relationship_class_item = QStandardItem(wide_relationship_class['name'])
-        relationship_class_item.setData(wide_relationship_class, Qt.UserRole+1)
+        """Returns new relationship class item."""
+        relationship_class_item = QStandardItem(wide_relationship_class.name)
+        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
-        relationship_class_item.setData(wide_relationship_class['object_class_name_list'], Qt.ToolTipRole)
+        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
         return relationship_class_item
 
     def new_relationship_item(self, wide_relationship):
-        """Returns new relationship item.
-
-        Args:
-            wide_relationship (dict)
-        """
-        relationship_item = QStandardItem(wide_relationship['name'])
+        """Returns new relationship item."""
+        relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
-        relationship_item.setData(wide_relationship, Qt.UserRole+1)
-        relationship_item.setData(wide_relationship['object_name_list'], Qt.ToolTipRole)
+        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
         return relationship_item
 
     def add_object_class(self, object_class):
-        """Add object class item to the model.
-
-        Args:
-            object_class (dict)
-        """
+        """Add object class item to the model."""
         object_class_item = self.new_object_class_item(object_class)
         root_item = self.invisibleRootItem().child(0)
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['display_order'] >= object_class['display_order']:
+            visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
+            if visited_object_class['display_order'] >= object_class.display_order:
                 root_item.insertRow(i, QStandardItem())
                 root_item.setChild(i, 0, object_class_item)
                 return
@@ -1177,22 +1465,18 @@ class ObjectTreeModel(QStandardItemModel):
         root_item.setChild(row, 0, object_class_item)
 
     def add_object(self, object_):
-        """Add object item to the model.
-
-        Args:
-            object_ (dict)
-        """
+        """Add object item to the model."""
         # find object class item among the children of the root
         root_item = self.invisibleRootItem().child(0)
         object_class_item = None
         for i in range(root_item.rowCount()):
             visited_object_class_item = root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole+1)
-            if visited_object_class['id'] == object_['class_id']:
+            visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
+            if visited_object_class['id'] == object_.class_id:
                 object_class_item = visited_object_class_item
                 break
         if not object_class_item:
-            logging.debug("Object class item not found in model. This is probably a bug.")
+            logging.error("Object class item not found in model. This is probably a bug.")
             return
         object_item = self.new_object_item(object_)
         object_class_item.appendRow(object_item)
@@ -1202,86 +1486,164 @@ class ObjectTreeModel(QStandardItemModel):
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'root':
-                continue
             if not visited_type == 'object':
                 continue
-            visited_object = visited_item.data(Qt.UserRole+1)
-            object_class_id_list = wide_relationship_class['object_class_id_list']
+            visited_object = visited_item.data(Qt.UserRole + 1)
+            object_class_id_list = wide_relationship_class.object_class_id_list
             if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
             visited_item.appendRow(relationship_class_item)
-            # TODO: Don't add duplicate relationship class if parent and child are the same?
-            # TODO: Add mirror proto relationship class?
 
     def add_relationship(self, wide_relationship):
-        """Add relationship item to model.
-
-        Args:
-            wide_relationship (dict): the relationship to add
-        """
+        """Add relationship item to model."""
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'root':
-                continue
             if not visited_type == 'relationship_class':
                 continue
-            visited_relationship_class = visited_item.data(Qt.UserRole+1)
-            if not visited_relationship_class['id'] == wide_relationship['class_id']:
+            visited_relationship_class = visited_item.data(Qt.UserRole + 1)
+            if not visited_relationship_class['id'] == wide_relationship.class_id:
                 continue
-            visited_object = visited_item.parent().data(Qt.UserRole+1)
-            object_id_list = wide_relationship['object_id_list']
+            visited_object = visited_item.parent().data(Qt.UserRole + 1)
+            object_id_list = wide_relationship.object_id_list
             if visited_object['id'] not in [int(x) for x in object_id_list.split(',')]:
                 continue
             relationship_item = self.new_relationship_item(wide_relationship)
             visited_item.appendRow(relationship_item)
 
-    def rename_item(self, new_name, curr_name, renamed_type, renamed_id):
-        """Rename all matched items."""
-        items = self.findItems(curr_name, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+    def update_object_classes(self, updated_items):
+        """Update object classes in the model."""
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'root':
+            if visited_type != 'object_class':
                 continue
-            visited = visited_item.data(Qt.UserRole+1)
-            visited_id = visited['id']
-            if visited_type == renamed_type and visited_id == renamed_id:
-                visited['name'] = new_name
-                visited_item.setData(visited, Qt.UserRole+1)
-                visited_item.setText(new_name)
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                updated_item = updated_items_dict[visited_id]
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                visited_item.setText(updated_item.name)
+            except KeyError:
+                continue
 
-    def remove_item(self, removed_type, removed_id):
+    def update_objects(self, updated_items):
+        """Update object in the model.
+        This of course means updating the object name in relationship items.
+        """
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type == 'object':
+                visited_id = visited_item.data(Qt.UserRole + 1)['id']
+                try:
+                    updated_item = updated_items_dict[visited_id]
+                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                    visited_item.setText(updated_item.name)
+                except KeyError:
+                    continue
+            elif visited_type == 'relationship':
+                relationship = visited_item.data(Qt.UserRole + 1)
+                object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
+                object_name_list = relationship['object_name_list'].split(",")
+                found = False
+                for i, id in enumerate(object_id_list):
+                    try:
+                        updated_item = updated_items_dict[id]
+                        object_name_list[i] = updated_item.name
+                        found = True
+                    except KeyError:
+                        continue
+                if found:
+                    str_object_name_list = ",".join(object_name_list)
+                    relationship['object_name_list'] = str_object_name_list
+                    visited_item.setText(str_object_name_list)
+                    visited_item.setData(relationship, Qt.UserRole + 1)
+
+    def update_relationship_classes(self, updated_items):
+        """Update relationship classes in the model."""
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship_class':
+                continue
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                updated_item = updated_items_dict[visited_id]
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                visited_item.setText(updated_item.name)
+            except KeyError:
+                continue
+
+    def update_relationships(self, updated_items):
+        """Update relationships in the model.
+        This may require moving rows if the objects in the relationship have changed."""
+        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        updated_items_dict = {x.id: x for x in updated_items}
+        ids_to_add = set()
+        for visited_item in reversed(items):
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != "relationship":
+                continue
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                updated_item = updated_items_dict[visited_id]
+                # Handle changes in object path
+                visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
+                updated_object_id_list = updated_item.object_id_list
+                if visited_object_id_list != updated_object_id_list:
+                    visited_index = self.indexFromItem(visited_item)
+                    self.removeRows(visited_index.row(), 1, visited_index.parent())
+                    ids_to_add.add(visited_id)
+                else:
+                    visited_item.setText(updated_item.object_name_list)
+                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+            except KeyError:
+                continue
+        for id in ids_to_add:
+            self.add_relationship(updated_items_dict[id])
+
+    def remove_items(self, removed_type, *removed_ids):
         """Remove all matched items and their orphans."""
+        # TODO: try and remove all rows at once, if possible
+        removed_name_dict = dict()
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
-            visited = visited_item.data(Qt.UserRole+1)
+            visited = visited_item.data(Qt.UserRole + 1)
             if visited_type == 'root':
                 continue
             # Get visited id
             visited_id = visited['id']
             visited_index = self.indexFromItem(visited_item)
-            if visited_type == removed_type and visited_id == removed_id:
+            if visited_type == removed_type and visited_id in removed_ids:
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
+                removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
             # When removing an object class, also remove relationship classes that involve it
             if removed_type == 'object_class' and visited_type == 'relationship_class':
                 object_class_id_list = visited['object_class_id_list']
-                if removed_id in [int(x) for x in object_class_id_list.split(',')]:
+                if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
+                    removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
             # When removing an object, also remove relationships that involve it
             if removed_type == 'object' and visited_type == 'relationship':
                 object_id_list = visited['object_id_list']
-                if removed_id in [int(x) for x in object_id_list.split(',')]:
+                if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
+                    removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
+        return removed_name_dict
 
     def next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
         if index.data(Qt.UserRole) != 'relationship':
             return None
-        relationship = index.data(Qt.UserRole+1)
-        items = self.findItems(relationship['name'], Qt.MatchExactly | Qt.MatchRecursive, column=0)
+        object_name_list = index.data(Qt.DisplayRole)
+        class_id = index.data(Qt.UserRole + 1)["class_id"]
+        items = [item for item in self.findItems(object_name_list, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+                 if item.data(Qt.UserRole + 1)["class_id"] == class_id]
         position = None
         for i, item in enumerate(items):
             if index == self.indexFromItem(item):
@@ -1289,299 +1651,484 @@ class ObjectTreeModel(QStandardItemModel):
                 break
         if position is None:
             return None
-        position = (position+1) % len(items)
+        position = (position + 1) % len(items)
         return self.indexFromItem(items[position])
 
 
-class ParameterModel(MinimalTableModel):
-    """A model to use with parameter tables in DataStoreForm."""
+class DataStoreTableModel(MinimalTableModel):
+    """A model of parameter and parameter value data, used by DataStoreForm."""
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(data_store_form, can_grow=True, has_empty_row=True)
         self._data_store_form = data_store_form
         self.db_map = self._data_store_form.db_map
+        self.fixed_columns = list()
         self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
-        self.id_column = None
 
-    def set_work_in_progress(self, row, on):
-        """Add row into list of work in progress."""
-        super().setData(self.index(row, self.id_column), on, Qt.UserRole)
+    def set_fixed_columns(self, *column_names):
+        """Set the fixed_columns attribute according to the column names given as argument."""
+        header = self.horizontal_header_labels()
+        self.fixed_columns = [header.index(name) for name in column_names]
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Set data in model."""
+        if role != Qt.EditRole:
+            return super().setData(index, value, role)
+        return self.batch_set_data([index], [value])
+
+    def batch_set_data(self, indexes, data):
+        """Batch set data for indexes."""
+        if not indexes:
+            return False
+        if len(indexes) != len(data):
+            return False
+        wip_indexes = list()
+        wip_data = list()
+        non_wip_indexes = list()
+        non_wip_data = list()
+        for k, index in enumerate(indexes):
+            if not index.isValid():
+                continue
+            if self.is_work_in_progress(index.row()):
+                wip_indexes.append(index)
+                wip_data.append(data[k])
+            else:
+                non_wip_indexes.append(index)
+                non_wip_data.append(data[k])
+        wip_data_set = self.batch_set_wip_data(wip_indexes, wip_data)
+        non_wip_data_set = self.batch_set_non_wip_data(non_wip_indexes, non_wip_data)
+        if not wip_data_set and not non_wip_data_set:
+            return False
+        # Find square envelope of indexes to emit dataChanged
+        set_indexes = list()
+        if wip_data_set:
+            set_indexes.extend(wip_indexes)
+        if non_wip_data_set:
+            set_indexes.extend(non_wip_indexes)
+        top = min(ind.row() for ind in set_indexes)
+        bottom = max(ind.row() for ind in set_indexes)
+        left = min(ind.column() for ind in set_indexes)
+        right = max(ind.column() for ind in set_indexes)
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        return True
+
+    def batch_set_wip_data(self, indexes, data):
+        """Batch set work in progress data. Update model first, then see if the database
+        needs to be updated as well. Extend indexes in case ids are set."""
+        if not indexes:
+            return False
+        for k, index in enumerate(indexes):
+            self._data[index.row()][index.column()][Qt.EditRole] = data[k]
+            self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
+        items_to_add = self.items_to_add(indexes)
+        if self.add_items_to_db(items_to_add):
+            id_column = self.horizontal_header_labels().index('id')
+            indexes.extend([self.index(row, id_column) for row in items_to_add])
+        return True
+
+    def batch_set_non_wip_data(self, indexes, data):
+        """Batch set non work in progess data. Try and set data in database first, and if
+        successful set data model.
+        """
+        if not indexes:
+            return False
+        if not self.update_items_in_db(self.items_to_update(indexes, data)):
+            return False
+        for k, index in enumerate(indexes):
+            self._data[index.row()][index.column()][Qt.EditRole] = data[k]
+            self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
+        return True
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
-        return self.data(self.index(row, self.id_column), Qt.UserRole)
+        return self._flags[row][self.fixed_columns[0]] & Qt.ItemIsEditable
 
-    def make_columns_fixed(self, *column_names, skip_wip=False):
-        """Set columns as fixed so they are not editable and painted gray."""
-        self.layoutAboutToBeChanged.emit()
+    def make_columns_fixed_for_rows(self, *rows):
+        """Set fixed columns as non-editable and paint them gray."""
         header = self.horizontal_header_labels()
-        column_indices = [header.index(name) for name in column_names]
-        for row in range(self.rowCount()):
-            if skip_wip and self.is_work_in_progress(row):
-                continue
-            self.make_columns_fixed_for_row(row, *column_indices)
-        self.layoutChanged.emit()
+        for row in rows:
+            for column in self.fixed_columns:
+                self._data[row][column][Qt.BackgroundRole] = self.gray_brush
+                self._flags[row][column] = ~Qt.ItemIsEditable
+        try:
+            top_left = self.index(rows[0], self.fixed_columns[0])
+            bottom_right = self.index(rows[-1], self.fixed_columns[-1])
+            self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
+        except IndexError:
+            pass
 
-    def make_columns_fixed_for_row(self, row, *column_indices):
-        """Set background role data and flags for row and column indices."""
-        for column in column_indices:
-            self._data[row][column][Qt.BackgroundRole] = self.gray_brush
-            self._flags[row][column] = ~Qt.ItemIsEditable
-
-    def reset_model(self, model_data, id_column=None):
-        """Reset model."""
-        if id_column is None:
-            return
-        wip_row_list = [row for row in range(self.rowCount()) if self.is_work_in_progress(row)]
-        for row in wip_row_list:
-            row_data = self.row_data(row, role=Qt.DisplayRole)
-            model_data.insert(row, row_data)
+    def reset_model(self, model_data, fixed_column_names=list()):
+        """Reset model while keeping the work in progress rows."""
+        self.set_fixed_columns(*fixed_column_names)
         super().reset_model(model_data)
-        self.id_column = id_column
-        for row in wip_row_list:
-            self.set_work_in_progress(row, True)
-
-# TODO: all remove and rename item methods should operate in batch,
-# access the internal data structure directly and emit dataChanged afterwards
+        self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
 
 
-class ObjectParameterModel(ParameterModel):
-    """A model to view and edit object parameters in DataStoreForm."""
+class ParameterModel(DataStoreTableModel):
+    """A model of parameter data, used by DataStoreForm."""
+
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
-        """Initialize model from source database."""
-        object_parameter_list = self.db_map.object_parameter_list()
-        header = self.db_map.object_parameter_fields()
-        self.set_horizontal_header_labels(header)
-        model_data = [list(row._asdict().values()) for row in object_parameter_list]
-        self.reset_model(model_data, id_column=header.index('parameter_id'))
-        self.make_columns_fixed('object_class_name', skip_wip=True)
+    def items_to_update(self, indexes, values):
+        """Return a list of items (dict) to update in the database."""
+        if not indexes:
+            return
+        if len(indexes) != len(values):
+            return
+        items_to_update = dict()
+        header = self.horizontal_header_labels()
+        id_column = header.index('id')
+        for k, index in enumerate(indexes):
+            if values[k] == index.data(Qt.EditRole):
+                continue
+            row = index.row()
+            if self.is_work_in_progress(row):
+                continue
+            id = index.sibling(row, id_column).data(Qt.EditRole)
+            if not id:
+                continue
+            field_name = header[index.column()]
+            if field_name == 'parameter_name':
+                field_name = 'name'
+            item = {"id": id, field_name: values[k]}
+            items_to_update.setdefault(id, dict()).update(item)
+        return list(items_to_update.values())
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def add_items_to_db(self, items_to_add):
+        """Add items to database and make columns fixed if successful."""
+        if not items_to_add:
+            return False
+        try:
+            # TODO: Make it flexible rather than all or nothing? Anyways this would require updating database_api
+            items = list(items_to_add.values())
+            rows = list(items_to_add.keys())
+            parameters = self.db_map.add_parameters(*items)
+            id_column = self.horizontal_header_labels().index('id')
+            for i, parameter in enumerate(parameters):
+                self._data[rows[i]][id_column][Qt.EditRole] = parameter.id  # NOTE: DisplayRole not in use
+            self.make_columns_fixed_for_rows(*rows)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            msg = "Successfully added new parameters."
+            self._data_store_form.msg.emit(msg)
+            return True
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+        except SpineDBAPIError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+
+    def update_items_in_db(self, items_to_update):
+        """Try and update parameters in database."""
+        if not items_to_update:
+            return False
+        try:
+            self.db_map.update_parameters(*items_to_update)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            msg = "Parameters successfully updated."
+            self._data_store_form.msg.emit(msg)
+            return True
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+        except SpineDBAPIError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+
+
+class ParameterValueModel(DataStoreTableModel):
+    """A model of parameter value data, used by DataStoreForm."""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Limit the output of json array data to 8 positions."""
+        data = super().data(index, role)
+        if role != Qt.DisplayRole:
+            return data
+        if self.header[index.column()][Qt.DisplayRole] == 'json':
+            try:
+                json_data = data[1:-1].split(",")
+                if len(json_data) <= 8:
+                    return data
+                new_data = [x.strip() for x in json_data[0:8]]
+                return "[" + ", ".join(new_data) + "..."
+            except TypeError:
+                return data
+        return data
+
+    def items_to_update(self, indexes, values):
+        """Return a list of items (dict) to update in the database."""
+        if not indexes:
+            return
+        if len(indexes) != len(values):
+            return
+        items_to_update = dict()
+        header = self.horizontal_header_labels()
+        id_column = header.index('id')
+        for k, index in enumerate(indexes):
+            if values[k] == index.data(Qt.EditRole):
+                continue
+            row = index.row()
+            if self.is_work_in_progress(row):
+                continue
+            id = index.sibling(row, id_column).data(Qt.EditRole)
+            if not id:
+                continue
+            field_name = header[index.column()]
+            item = {"id": id, field_name: values[k]}
+            items_to_update.setdefault(id, dict()).update(item)
+        return list(items_to_update.values())
+
+    def add_items_to_db(self, items_to_add):
+        """Add parameter values to database and make columns fixed if successful."""
+        if not items_to_add:
+            return False
+        try:
+            items = list(items_to_add.values())
+            rows = list(items_to_add.keys())
+            parameter_values = self.db_map.add_parameter_values(*items)
+            id_column = self.horizontal_header_labels().index('id')
+            for i, parameter_value in enumerate(parameter_values):
+                self._data[rows[i]][id_column][Qt.EditRole] = parameter_value.id
+            self.make_columns_fixed_for_rows(*rows)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            msg = "Successfully added new parameter values."
+            self._data_store_form.msg.emit(msg)
+            return True
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+        except SpineDBAPIError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+
+    def update_items_in_db(self, items_to_update):
+        """Try and update parameter values in database."""
+        if not items_to_update:
+            return False
+        try:
+            self.db_map.update_parameter_values(*items_to_update)
+            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            msg = "Parameter values successfully updated."
+            self._data_store_form.msg.emit(msg)
+            return True
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+        except SpineDBAPIError as e:
+            self._data_store_form.msg_error.emit(e.msg)
+            return False
+
+
+class ObjectParameterModel(ParameterModel):
+    """A model of object parameter data, used by DataStoreForm."""
+    def __init__(self, data_store_form=None):
+        """Initialize class."""
+        super().__init__(data_store_form)
+
+    def init_model(self, skip_fields=["object_class_id"]):
+        """Initialize model from source database."""
+        item_list = self.db_map.object_parameter_list()
+        field_list = self.db_map.object_parameter_fields()
+        header = [x for x in field_list if x not in skip_fields]
+        self.set_horizontal_header_labels(header)
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
+        self.reset_model(model_data, fixed_column_names=['id', 'object_class_name'])
+
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type != "object_class":
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in range(self.rowCount()):
-            index = self.index(row, column)
-            if self.data(index, Qt.DisplayRole) == curr_name:
-                super().setData(index, new_name, Qt.EditRole)
+            try:
+                curr_name = self._data[row][column][Qt.DisplayRole]
+                new_name = names_dict[curr_name]
+                self._data[row][column][Qt.EditRole] = new_name
+                self._data[row][column][Qt.DisplayRole] = new_name
+            except KeyError:
+                continue
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type != "object_class":
             return
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in reversed(range(self.rowCount())):
-            index = self.index(row, column)
-            if self.data(index, Qt.DisplayRole) == removed_name:
+            try:
+                name = self._data[row][column][Qt.DisplayRole]
+            except KeyError:
+                continue
+            if name in removed_names:
                 super().removeRows(row, 1)
 
-    def setData(self, index, value, role=Qt.EditRole):
-        """Try an set data in the database first, if it passes, insert it in the model."""
-        if not index.isValid():
-            return False
-        if role != Qt.EditRole:
-            return super().setData(index, value, role)
-        row = index.row()
+    def items_to_add(self, indexes):
+        """Return a dictionary of rows (int) to items (dict) to add to the db."""
+        items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
-        h = header.index
-        if self.is_work_in_progress(row):
-            if header[index.column()] == 'object_class_name':
-                object_class_name = value
-                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            elif header[index.column()] == 'parameter_name':
-                object_class_name = index.sibling(row, h('object_class_name')).data(Qt.DisplayRole)
-                parameter_name = value
-            else:
-                return super().setData(index, value, role)
-            # Check if we're ready to put something in the db
-            if object_class_name and parameter_name:
-                # Pack all remaining fields in case the user 'misbehaves'
-                # and edit those before entering the parameter name
-                kwargs = {}
-                for column in range(h('parameter_name')+1, self.columnCount()):
-                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
-                try:
-                    object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
-                    parameter = self.db_map.add_parameter(
-                        object_class_id=object_class.id, name=parameter_name, **kwargs)
-                    self.set_work_in_progress(row, False)
-                    column_indices = [h(x) for x in ('object_class_name', 'parameter_id')]
-                    self.make_columns_fixed_for_row(row, *column_indices)
-                    super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
-                    super().setData(index, value, role)
-                    msg = "Successfully added new parameter."
-                    self._data_store_form.msg.emit(msg)
-                    return True
-                except SpineDBAPIError as e:
-                    self._data_store_form.msg_error.emit(e.msg)
-                    return False
-            else:
-                super().setData(index, value, role)
-        else:
-            parameter_id = index.sibling(row, h('parameter_id')).data(Qt.EditRole)
-            if not parameter_id:
-                return False
-            field_name = header[index.column()]
-            if field_name == 'parameter_name':
-                field_name = 'name'
+        object_class_name_column = header.index('object_class_name')
+        parameter_name_column = header.index('parameter_name')
+        # Query db and build ad-hoc dicts
+        object_class_dict = {x.name: x.id for x in self.db_map.object_class_list()}
+        for row in {ind.row() for ind in indexes}:
+            if not self.is_work_in_progress(row):
+                continue
+            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            if not parameter_name:
+                continue
             try:
-                self.db_map.update_parameter(parameter_id, field_name, value)
-                super().setData(index, value, role)
-                msg = "Parameter successfully updated."
-                self._data_store_form.msg.emit(msg)
-                return True
-            except SpineDBAPIError as e:
-                self._data_store_form.msg.emit(e.msg)
-                return False
+                object_class_id = object_class_dict[object_class_name]
+                item = {
+                    "object_class_id": object_class_id,
+                    "name": parameter_name
+                }
+                for column in range(parameter_name_column + 1, self.columnCount()):
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+                items_to_add[row] = item
+            except KeyError:
+                pass
+        return items_to_add
 
 
 class RelationshipParameterModel(ParameterModel):
-    """A model to view and edit relationship parameters in DataStoreForm."""
+    """A model of relationship parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, skip_fields=["relationship_class_id", 'object_class_id_list']):
         """Initialize model from source database."""
-        relationship_parameter_list = self.db_map.relationship_parameter_list()
-        header = self.db_map.relationship_parameter_fields()
+        item_list = self.db_map.relationship_parameter_list()
+        field_list = self.db_map.relationship_parameter_fields()
+        header = [x for x in field_list if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [list(row._asdict().values()) for row in relationship_parameter_list]
-        self.reset_model(model_data, id_column=header.index('parameter_id'))
-        self.make_columns_fixed('relationship_class_name', 'object_class_name_list', skip_wip=True)
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
+        self.reset_model(model_data, fixed_column_names=['id', 'relationship_class_name', 'object_class_name_list'])
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object_class"):
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "relationship_class":
             column = header_index("relationship_class_name")
             for row in range(self.rowCount()):
-                index = self.index(row, column)
-                if self.data(index, Qt.DisplayRole) == curr_name:
-                    super().setData(index, new_name, Qt.EditRole)
+                try:
+                    curr_name = self._data[row][column][Qt.DisplayRole]
+                    new_name = names_dict[curr_name]
+                    self._data[row][column][Qt.EditRole] = new_name
+                    self._data[row][column][Qt.DisplayRole] = new_name
+                except KeyError:
+                    continue
         elif renamed_type == "object_class":
             column = header_index("object_class_name_list")
             for row in range(self.rowCount()):
-                index = self.index(row, column)
-                object_class_name_list = self.data(index, Qt.DisplayRole).split(",")
+                object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
                 for i, object_class_name in enumerate(object_class_name_list):
-                    if object_class_name == curr_name:
-                        object_class_name_list[i] = new_name
-                super().setData(index, ",".join(object_class_name_list), Qt.EditRole)
+                    try:
+                        object_class_name_list[i] = names_dict[object_class_name]
+                    except KeyError:
+                        continue
+                self._data[row][column][Qt.EditRole] = ",".join(object_class_name_list)
+                self._data[row][column][Qt.DisplayRole] = ",".join(object_class_name_list)
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object_class"):
             return
         header_index = self.horizontal_header_labels().index
         if removed_type == "relationship_class":
             column = header_index("relationship_class_name")
             for row in reversed(range(self.rowCount())):
-                index = self.index(row, column)
-                if self.data(index, Qt.DisplayRole) == removed_name:
+                try:
+                    name = self._data[row][column][Qt.DisplayRole]
+                except KeyError:
+                    continue
+                if name in removed_names:
                     super().removeRows(row, 1)
         elif removed_type == "object_class":
             column = header_index("object_class_name_list")
             for row in reversed(range(self.rowCount())):
-                index = self.index(row, column)
-                object_class_name_list = self.data(index, Qt.DisplayRole).split(",")
+                try:
+                    object_class_name_list = self._data[row][column][Qt.DisplayRole].split(",")
+                except KeyError:
+                    continue
                 for object_class_name in object_class_name_list:
-                    if object_class_name == removed_name:
+                    if object_class_name in removed_names:
                         super().removeRows(row, 1)
                         break
 
-    def setData(self, index, value, role=Qt.EditRole):
-        """Try an set data in the database first, if it passes, insert it in the model.
-        """
-        if not index.isValid():
-            return False
-        if role != Qt.EditRole:
-            return super().setData(index, value, role)
-        row = index.row()
+    def items_to_add(self, indexes):
+        """Return a dictionary of rows (int) to items (dict) to add to the db.
+        Also extend the given list of indexes if some are autoset."""
+        items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
-        h = header.index
-        if self.is_work_in_progress(row):
-            if header[index.column()] == 'relationship_class_name':
-                relationship_class_name = value
-                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-                # Autocomplete object class name list
-                relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                    one_or_none()
-                if relationship_class:
-                    sibling = index.sibling(row, h('object_class_name_list'))
-                    super().setData(sibling, relationship_class.object_class_name_list, Qt.EditRole)
-            elif header[index.column()] == 'parameter_name':
-                relationship_class_name = index.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-                parameter_name = value
-            else:
-                return super().setData(index, value, role)
-            # Check if we're ready to put something in the db
-            if relationship_class_name and parameter_name:
-                # Pack all remaining fields in case the user 'misbehaves'
-                # and edit those before entering the parameter name
-                kwargs = {}
-                for column in range(h('parameter_name')+1, self.columnCount()):
-                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+        relationship_class_name_column = header.index('relationship_class_name')
+        parameter_name_column = header.index('parameter_name')
+        object_class_name_list_column = header.index('object_class_name_list')
+        # Query db and build ad-hoc dicts
+        relationship_class_dict = {x.name: {'id': x.id, 'object_class_name_list': x.object_class_name_list}
+                                   for x in self.db_map.wide_relationship_class_list()}
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
+            if not self.is_work_in_progress(row):
+                continue
+            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
+            object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            # Autoset the object_class_name_list if possible and needed
+            if relationship_class_name and not object_class_name_list:
                 try:
-                    relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                        one_or_none()
-                    parameter = self.db_map.add_parameter(
-                        relationship_class_id=relationship_class.id, name=parameter_name, **kwargs)
-                    self.set_work_in_progress(row, False)
-                    column_indices = [h(x) for x in ('relationship_class_name', 'parameter_id')]
-                    self.make_columns_fixed_for_row(row, *column_indices)
-                    super().setData(index.sibling(row, h('parameter_id')), parameter.id, Qt.EditRole)
-                    super().setData(index, value, role)
-                    msg = "Successfully added new parameter."
-                    self._data_store_form.msg.emit(msg)
-                    return True
-                except SpineDBAPIError as e:
-                    self._data_store_form.msg_error.emit(e.msg)
-                    return False
-            else:
-                super().setData(index, value, role)
-        else:
-            parameter_id = index.sibling(row, h('parameter_id')).data(Qt.EditRole)
-            if not parameter_id:
-                return False
-            field_name = header[index.column()]
-            if field_name == 'parameter_name':
-                field_name = 'name'
+                    object_class_name_list = relationship_class_dict[relationship_class_name]['object_class_name_list']
+                    self._data[row][object_class_name_list_column][Qt.EditRole] = object_class_name_list
+                    self._data[row][object_class_name_list_column][Qt.DisplayRole] = object_class_name_list
+                    # Append index to indexes, so we can emit dataChanged with it later
+                    indexes.append(self.index(row, object_class_name_list_column))
+                except KeyError:
+                    pass
+            if not parameter_name:
+                continue
             try:
-                self.db_map.update_parameter(parameter_id, field_name, value)
-                super().setData(index, value, role)
-                msg = "Parameter successfully updated."
-                self._data_store_form.msg.emit(msg)
-                return True
-            except SpineDBAPIError as e:
-                self._data_store_form.msg.emit(e.msg)
-                return False
+                relationship_class_id = relationship_class_dict[relationship_class_name]['id']
+                item = {
+                    "relationship_class_id": relationship_class_id,
+                    "name": parameter_name
+                }
+                for column in range(parameter_name_column + 1, self.columnCount()):
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+                items_to_add[row] = item
+            except KeyError:
+                pass
+        return items_to_add
 
 
-class ObjectParameterValueModel(ParameterModel):
-    """A model to view and edit object parameter values in DataStoreForm."""
+class ObjectParameterValueModel(ParameterValueModel):
+    """A model of object parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
 
-    def init_model(self):
+    def init_model(self, skip_fields=['object_class_id', 'object_id', 'parameter_id']):
         """Initialize model from source database."""
-        object_parameter_value_list = self.db_map.object_parameter_value_list()
-        header = self.db_map.object_parameter_value_fields()
+        item_list = self.db_map.object_parameter_value_list()
+        field_list = self.db_map.object_parameter_value_fields()
+        header = [x for x in field_list if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [list(row._asdict().values()) for row in object_parameter_value_list]
-        self.reset_model(model_data, id_column=header.index('parameter_value_id'))
-        self.make_columns_fixed('object_class_name', 'object_name', 'parameter_name', skip_wip=True)
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
+        self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("object_class", "object", "parameter"):
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object_class":
             column = header_index("object_class_name")
@@ -1590,11 +2137,15 @@ class ObjectParameterValueModel(ParameterModel):
         elif renamed_type == "parameter":
             column = header_index("parameter_name")
         for row in range(self.rowCount()):
-            index = self.index(row, column)
-            if self.data(index, Qt.DisplayRole) == curr_name:
-                super().setData(index, new_name, Qt.EditRole)
+            try:
+                curr_name = self._data[row][column][Qt.DisplayRole]
+                new_name = names_dict[curr_name]
+                self._data[row][column][Qt.EditRole] = new_name
+                self._data[row][column][Qt.DisplayRole] = new_name
+            except KeyError:
+                continue
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("object_class", "object", "parameter"):
             return
         header_index = self.horizontal_header_labels().index
@@ -1605,95 +2156,83 @@ class ObjectParameterValueModel(ParameterModel):
         elif removed_type == "parameter":
             column = header_index("parameter_name")
         for row in reversed(range(self.rowCount())):
-            index = self.index(row, column)
-            if self.data(index, Qt.DisplayRole) == removed_name:
+            try:
+                name = self._data[row][column][Qt.DisplayRole]
+            except KeyError:
+                continue
+            if name in removed_names:
                 super().removeRows(row, 1)
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid():
-            return False
-        if role != Qt.EditRole:
-            return super().setData(index, value, role)
-        row = index.row()
+    def items_to_add(self, indexes):
+        """Return a dictionary of rows (int) to items (dict) to add to the db.
+        Also extend the given list of indexes if some are autoset."""
+        items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
-        h = header.index
-        if self.is_work_in_progress(row):
-            if header[index.column()] == 'object_name':
-                object_name = value
-                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            elif header[index.column()] == 'parameter_name':
-                object_name = index.sibling(row, h('object_name')).data(Qt.DisplayRole)
-                parameter_name = value
-            else:
-                return super().setData(index, value, role)
-            object_ = self.db_map.single_object(name=object_name).one_or_none()
-            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
-            # Try and fill up object_class_name automatically
-            object_class = None
-            if object_:
-                object_class = self.db_map.single_object_class(id=object_.class_id).one_or_none()
-            if parameter:
-                object_class = self.db_map.single_object_class(id=parameter.object_class_id).one_or_none()
-            if object_class:
-                super().setData(index.sibling(row, h('object_class_name')), object_class.name, Qt.EditRole)
-            # Check if we're ready to put something in the db
-            if object_ and parameter:
-                # Pack all remaining fields in case the user 'misbehaves'
-                # and edit those before entering the parameter name
-                kwargs = {}
-                for column in range(h('parameter_name')+1, self.columnCount()):
-                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
+        object_class_name_column = header.index('object_class_name')
+        object_name_column = header.index('object_name')
+        parameter_name_column = header.index('parameter_name')
+        # Query db and build ad-hoc dicts
+        object_class_lookup_dict = {x.id: x.name for x in self.db_map.object_class_list()}
+        object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self.db_map.object_list()}
+        parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
+                          for x in self.db_map.parameter_list()}
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
+            if not self.is_work_in_progress(row):
+                continue
+            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
+            object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            # Autoset the object_class_name if possible and needed
+            if (object_name or parameter_name) and not object_class_name:
                 try:
-                    parameter_value = self.db_map.add_parameter_value(
-                        object_id=object_.id,
-                        parameter_id=parameter.id,
-                        **kwargs
-                    )
-                    self.set_work_in_progress(row, False)
-                    column_indices = list()
-                    for x in ('object_class_name', 'object_name', 'parameter_name', 'parameter_value_id'):
-                        column_indices.append(h(x))
-                    self.make_columns_fixed_for_row(row, *column_indices)
-                    super().setData(index, value, role)
-                    super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                    msg = "Successfully added new parameter value."
-                    self._data_store_form.msg.emit(msg)
-                    return True
-                except SpineDBAPIError as e:
-                    self._data_store_form.msg_error.emit(e.msg)
-                    return False
-            else:
-                super().setData(index, value, role)
-        else:
-            parameter_value_id = index.sibling(row, h('parameter_value_id')).data(Qt.EditRole)
-            if not parameter_value_id:
-                return False
-            field_name = header[index.column()]
+                    object_class_id = object_dict[object_name]['class_id']
+                except KeyError:
+                    try:
+                        object_class_id = parameter_dict[parameter_name]['object_class_id']
+                    except KeyError:
+                        object_class_id = None
+                try:
+                    object_class_name = object_class_lookup_dict[object_class_id]
+                    self._data[row][object_class_name_column][Qt.EditRole] = object_class_name
+                    self._data[row][object_class_name_column][Qt.DisplayRole] = object_class_name
+                    # Append index to indexes, so we can emit dataChanged with it later
+                    indexes.append(self.index(row, object_class_name_column))
+                except KeyError:
+                    pass
             try:
-                self.db_map.update_parameter_value(parameter_value_id, field_name, value)
-                super().setData(index, value, role)
-                msg = "Parameter value successfully updated."
-                self._data_store_form.msg.emit(msg)
-            except SpineDBAPIError as e:
-                self._data_store_form.msg.emit(e.msg)
+                object_id = object_dict[object_name]['id']
+                parameter_id = parameter_dict[parameter_name]['id']
+                item = {
+                    "object_id": object_id,
+                    "parameter_id": parameter_id
+                }
+                for column in range(parameter_name_column + 1, self.columnCount()):
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+                items_to_add[row] = item
+            except KeyError:
+                pass
+        return items_to_add
 
 
-class RelationshipParameterValueModel(ParameterModel):
-    """A model to view and edit relationship parameter values in DataStoreForm."""
+class RelationshipParameterValueModel(ParameterValueModel):
+    """A model of relationship parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
         self.object_name_header = list()
 
-    def init_model(self):
+    def init_model(self, skip_fields=['relationship_class_id', 'object_id_list', 'parameter_id']):
         """Initialize model from source database."""
-        relationship_parameter_value_list = self.db_map.relationship_parameter_value_list()
-        # Compute header labels: split single 'object_name_list' column into several 'object_name' columns
-        header = self.db_map.relationship_parameter_value_fields()
+        item_list = self.db_map.relationship_parameter_value_list()
+        field_list = self.db_map.relationship_parameter_value_fields()
+        header = [x for x in field_list if x not in skip_fields]
+        # Split single 'object_name_list' column into several 'object_name' columns
         relationship_class_list = self.db_map.wide_relationship_class_list()
         max_dim_count = max(
-            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=0)
-        self.object_name_header = ["object_name_" + str(i+1) for i in range(max_dim_count)]
+            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
+        self.object_name_header = ["object_name_" + str(i + 1) for i in range(max_dim_count)]
         object_name_list_index = header.index("object_name_list")
         header.pop(object_name_list_index)
         for i, x in enumerate(self.object_name_header):
@@ -1701,8 +2240,8 @@ class RelationshipParameterValueModel(ParameterModel):
         self.set_horizontal_header_labels(header)
         # Compute model data: split single 'object_name_list' value into several 'object_name' values
         model_data = list()
-        for row in relationship_parameter_value_list:
-            row_values_list = list(row._asdict().values())
+        for row in item_list:
+            row_values_list = [v for k, v in row._asdict().items() if k not in skip_fields]
             object_name_list = row_values_list.pop(object_name_list_index).split(',')
             for i in range(max_dim_count):
                 try:
@@ -1711,40 +2250,52 @@ class RelationshipParameterValueModel(ParameterModel):
                     value = None
                 row_values_list.insert(object_name_list_index + i, value)
             model_data.append(row_values_list)
-        self.reset_model(model_data, id_column=header.index('parameter_value_id'))
-        self.make_columns_fixed('relationship_class_name', *self.object_name_header, 'parameter_name', skip_wip=True)
+        fixed_column_names = ['id', 'relationship_class_name', *self.object_name_header, 'parameter_name']
+        self.reset_model(model_data, fixed_column_names=fixed_column_names)
 
-    def rename_item(self, new_name, curr_name, renamed_type):
+    def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object", "parameter"):
             return
+        names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object":
             columns = [header_index(x) for x in self.object_name_header]
             for row in range(self.rowCount()):
                 for column in columns:
-                    index = self.index(row, column)
-                    if self.data(index, Qt.DisplayRole) == curr_name:
-                        super().setData(index, new_name, Qt.EditRole)
+                    try:
+                        curr_name = self._data[row][column][Qt.DisplayRole]
+                        new_name = names_dict[curr_name]
+                        self._data[row][column][Qt.EditRole] = new_name
+                        self._data[row][column][Qt.DisplayRole] = new_name
+                    except KeyError:
+                        continue
         elif renamed_type in ("relationship_class", "parameter"):
             if renamed_type in "relationship_class":
                 column = header_index("relationship_class_name")
             elif renamed_type in "parameter":
                 column = header_index("parameter_name")
             for row in range(self.rowCount()):
-                index = self.index(row, column)
-                if self.data(index, Qt.DisplayRole) == curr_name:
-                    super().setData(index, new_name, Qt.EditRole)
+                try:
+                    curr_name = self._data[row][column][Qt.DisplayRole]
+                    new_name = names_dict[curr_name]
+                    self._data[row][column][Qt.EditRole] = new_name
+                    self._data[row][column][Qt.DisplayRole] = new_name
+                except KeyError:
+                    continue
 
-    def remove_item(self, removed_type, removed_name):
+    def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object", "parameter"):
             return
         header_index = self.horizontal_header_labels().index
         if removed_type == "object":
             columns = [header_index(x) for x in self.object_name_header]
-            for row in range(self.rowCount()):
+            for row in reversed(range(self.rowCount())):
                 for column in columns:
-                    index = self.index(row, column)
-                    if self.data(index, Qt.DisplayRole) == removed_name:
+                    try:
+                        name = self._data[row][column][Qt.DisplayRole]
+                    except KeyError:
+                        continue
+                    if name in removed_names:
                         super().removeRows(row, 1)
                         break
         elif removed_type in ("relationship_class", "parameter"):
@@ -1752,15 +2303,18 @@ class RelationshipParameterValueModel(ParameterModel):
                 column = header_index("relationship_class_name")
             elif removed_type in "parameter":
                 column = header_index("parameter_name")
-            for row in range(self.rowCount()):
-                index = self.index(row, column)
-                if self.data(index, Qt.DisplayRole) == removed_name:
+            for row in reversed(range(self.rowCount())):
+                try:
+                    name = self._data[row][column][Qt.DisplayRole]
+                except KeyError:
+                    continue
+                if name in removed_names:
                     super().removeRows(row, 1)
 
     def extend_object_name_header(self, max_dim_count):
         """Extend object name header to fit new max dimension count."""
         curr_dim_count = len(self.object_name_header)
-        object_name_header_ext = ["object_name_" + str(i+1) for i in range(curr_dim_count, max_dim_count)]
+        object_name_header_ext = ["object_name_" + str(i + 1) for i in range(curr_dim_count, max_dim_count)]
         if object_name_header_ext:
             header = self.horizontal_header_labels()
             section = header.index(self.object_name_header[-1]) + 1
@@ -1768,139 +2322,138 @@ class RelationshipParameterValueModel(ParameterModel):
             self.insert_horizontal_header_labels(section, object_name_header_ext)
             self.object_name_header.extend(object_name_header_ext)
 
-    def relationship_on_the_fly(self, relationship_class, index, value):
-        """Return a relationship retrieved or created for the current index."""
-        if not relationship_class:
-            return None
-        if not index.isValid():
-            return None
+    def batch_set_wip_data(self, indexes, data):
+        """Batch set work in progress data. Update model first, then see if the database
+        needs to be updated as well."""
+        if not indexes:
+            return False
+        for k, index in enumerate(indexes):
+            self._data[index.row()][index.column()][Qt.EditRole] = data[k]
+            self._data[index.row()][index.column()][Qt.DisplayRole] = data[k]
+        relationships_on_the_fly = self.relationships_on_the_fly(indexes)
+        self.add_items_to_db(self.items_to_add(indexes, relationships_on_the_fly))
+        return True
+
+    def relationships_on_the_fly(self, indexes):
+        """Return a dict of row (int) to relationship items (KeyedTuple),
+        either retrieved or added on the fly.
+        Also extend the given list of indexes if some are autoset.
+        """
+        relationships_on_the_fly = dict()
+        relationships_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
-        h = header.index
-        object_id_list = list()
-        object_name_list = list()
-        object_class_count = len(relationship_class.object_class_id_list.split(','))
-        for j in range(h('object_name_1'), h('object_name_1') + object_class_count):
-            if j == index.column():
-                object_name = value
-            else:
-                object_name = index.sibling(index.row(), j).data(Qt.DisplayRole)
-            if not object_name:
-                return None
-            object_ = self.db_map.single_object(name=object_name).one_or_none()
-            if not object_:
-                logging.debug("Couldn't find object '{}', something is wrong.".format(object_name))
-                return None
-            object_id_list.append(object_.id)
-            object_name_list.append(object_name)
-        # Try and retrieve an existing relationship
-        relationship = self.db_map.single_wide_relationship(
-            class_id=relationship_class.id, object_name_list=",".join(object_name_list)).one_or_none()
-        if relationship:
-            msg = "Successfully retrieved relationship '{}'.".format(relationship.name)
-            self._data_store_form.msg.emit(msg)
-            return relationship
-        # Try and insert new relationship
-        relationship_name = "__".join(object_name_list)
-        base_relationship_name = relationship_name
-        i = 0
-        while True:
-            other_relationship = self.db_map.single_wide_relationship(name=relationship_name).one_or_none()
-            if not other_relationship:
-                break
-            relationship_name = base_relationship_name + str(i)
-            i += 1
+        relationship_class_name_column = header.index('relationship_class_name')
+        object_name_1_column = header.index('object_name_1')
+        parameter_name_column = header.index('parameter_name')
+        # Query db and build ad-hoc dicts
+        relationship_class_lookup_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}
+        relationship_class_dict = {x.name: {'id': x.id, 'object_class_id_list': x.object_class_id_list}
+                                   for x in self.db_map.wide_relationship_class_list()}
+        parameter_dict = {x.name: {'id': x.id, 'relationship_class_id': x.relationship_class_id}
+                          for x in self.db_map.parameter_list()}
+        relationship_dict = {x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
+                             for x in self.db_map.wide_relationship_list()}
+        object_dict = {x.name: x.id for x in self.db_map.object_list()}
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
+            if not self.is_work_in_progress(row):
+                continue
+            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            # Autoset the relationship_class_name if possible and needed
+            if parameter_name and not relationship_class_name:
+                try:
+                    relationship_class_id = parameter_dict[parameter_name]['relationship_class_id']
+                    try:
+                        relationship_class_name = relationship_class_lookup_dict[relationship_class_id]
+                        self._data[row][relationship_class_name_column][Qt.EditRole] = relationship_class_name
+                        self._data[row][relationship_class_name_column][Qt.DisplayRole] = relationship_class_name
+                        # Append index to indexes, so we can emit dataChanged with it later
+                        indexes.append(self.index(row, relationship_class_name_column))
+                    except KeyError:
+                        pass
+                except KeyError:
+                    pass
+            try:
+                relationship_class = relationship_class_dict[relationship_class_name]
+            except KeyError:
+                continue
+            object_id_list = list()
+            object_name_list = list()
+            object_class_count = len(relationship_class['object_class_id_list'].split(','))
+            for j in range(object_name_1_column, object_name_1_column + object_class_count):
+                object_name = self.index(row, j).data(Qt.DisplayRole)
+                try:
+                    object_id = object_dict[object_name]
+                    object_id_list.append(object_id)
+                    object_name_list.append(object_name)
+                except KeyError:
+                    break
+            if len(object_id_list) < object_class_count or len(object_name_list) < object_class_count:
+                continue
+            try:
+                value = (relationship_class['id'], object_id_list)
+                index = list(relationship_dict.values()).index(value)
+                relationship_id = list(relationship_dict.keys())[index]
+                relationships_on_the_fly[row] = relationship_id
+                continue
+            except ValueError:  # (relationship_class_id, object_id_list) not found in relationship_dict
+                relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
+                relationship = {
+                    "name": relationship_name,
+                    "object_id_list": object_id_list,
+                    "class_id": relationship_class['id']
+                }
+                relationships_to_add[row] = relationship
+        relationships_on_the_fly.update(self.new_relationships(relationships_to_add))
+        return relationships_on_the_fly
+
+    def new_relationships(self, relationships_to_add):
+        """Add relationships to database on the fly."""
+        if not relationships_to_add:
+            return {}
         try:
-            relationship = self.db_map.add_wide_relationship(
-                name=relationship_name,
-                object_id_list=object_id_list,
-                class_id=relationship_class.id
-            )
-            self._data_store_form.object_tree_model.add_relationship(relationship._asdict())
-            msg = "Successfully added new relationship '{}'.".format(relationship.name)
+            items = list(relationships_to_add.values())
+            rows = list(relationships_to_add.keys())
+            relationships = self.db_map.add_wide_relationships(*items)
+            msg = "Successfully added new relationships on the fly."
             self._data_store_form.msg.emit(msg)
-            return relationship
+            return dict(zip(rows, [x.id for x in relationships]))
+        except SpineIntegrityError as e:
+            self._data_store_form.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._data_store_form.msg_error.emit(e.msg)
-            return None
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid():
-            return False
-        if role != Qt.EditRole:
-            return super().setData(index, value, role)
-        row = index.row()
+    def items_to_add(self, indexes, relationships_on_the_fly):
+        """Return a dictionary of rows (int) to items (dict) to add to the db."""
+        items_to_add = dict()
+        # Get column numbers
         header = self.horizontal_header_labels()
-        h = header.index
-        if self.is_work_in_progress(row):
-            if header[index.column()] == 'relationship_class_name':
-                relationship_class_name = value
-                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            elif header[index.column()].startswith('object_name'):
-                relationship_class_name = index.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-                object_name = value
-                parameter_name = index.sibling(row, h('parameter_name')).data(Qt.DisplayRole)
-            elif header[index.column()] == 'parameter_name':
-                relationship_class_name = index.sibling(row, h('relationship_class_name')).data(Qt.DisplayRole)
-                parameter_name = value
-            else:
-                return super().setData(index, value, role)
-            relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
-            # Try and fill up relationship_class_name automatically
-            if not relationship_class and parameter:
-                relationship_class = self.db_map.single_wide_relationship_class(id=parameter.relationship_class_id).\
-                    one_or_none()
-                if relationship_class:
-                    ind = index.sibling(row, h('relationship_class_name'))
-                    super().setData(ind, relationship_class.name, Qt.EditRole)
-            relationship = self.relationship_on_the_fly(relationship_class, index, value)
-            # Check if we're ready to put something in the db
-            if relationship and parameter:
-                # Pack all remaining fields in case the user 'misbehaves'
-                # and edit those before entering the parameter name
-                kwargs = {}
-                for column in range(h('parameter_name')+1, self.columnCount()):
-                    kwargs[header[column]] = index.sibling(row, column).data(Qt.DisplayRole)
-                try:
-                    parameter_value = self.db_map.add_parameter_value(
-                        relationship_id=relationship.id,
-                        parameter_id=parameter.id,
-                        **kwargs
-                    )
-                    self.set_work_in_progress(row, False)
-                    column_indices = list()
-                    for x in self._data_store_form.object_name_header:
-                        column_indices.append(h(x))
-                    for x in ('relationship_class_name', 'parameter_name', 'parameter_value_id'):
-                        column_indices.append(h(x))
-                    self.make_columns_fixed_for_row(row, *column_indices)
-                    super().setData(index, value, role)
-                    super().setData(index.sibling(row, h('parameter_value_id')), parameter_value.id, Qt.EditRole)
-                    msg = "Successfully added new parameter value."
-                    self._data_store_form.msg.emit(msg)
-                    return True
-                except SpineDBAPIError as e:
-                    self._data_store_form.msg_error.emit(e.msg)
-                    return False
-            else:
-                super().setData(index, value, role)
-        else:
-            parameter_value_id = index.sibling(row, h('parameter_value_id')).data(Qt.EditRole)
-            if not parameter_value_id:
-                return False
-            field_name = header[index.column()]
+        parameter_name_column = header.index('parameter_name')
+        # Query db and build ad-hoc dicts
+        parameter_dict = {x.name: x.id for x in self.db_map.parameter_list()}
+        for row in {ind.row() for ind in indexes}:
+            if not self.is_work_in_progress(row):
+                continue
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             try:
-                self.db_map.update_parameter_value(parameter_value_id, field_name, value)
-                super().setData(index, value, role)
-                msg = "Parameter value successfully updated."
-                self._data_store_form.msg.emit(msg)
-            except SpineDBAPIError as e:
-                self._data_store_form.msg.emit(e.msg)
+                relationship_id = relationships_on_the_fly[row]
+                parameter_id = parameter_dict[parameter_name]
+                item = {
+                    "relationship_id": relationship_id,
+                    "parameter_id": parameter_id
+                }
+                for column in range(parameter_name_column + 1, self.columnCount()):
+                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+                items_to_add[row] = item
+            except KeyError:
+                pass
+        return items_to_add
 
 
-class ParameterProxy(QSortFilterProxyModel):
-    """A custom sort filter proxy model which implementes a subfilter mechanism."""
+class AutoFilterProxy(QSortFilterProxyModel):
+    """A custom sort filter proxy model which implementes a two-level filter."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -1909,111 +2462,136 @@ class ParameterProxy(QSortFilterProxyModel):
         self.bold_font.setBold(True)
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
-        self.rejected_column_list = list()
-        self.subrule_dict = dict()
+        self.rule_dict = dict()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
-        self.filter_role = self.filterRole()
+        self.filter_is_valid = True  # Set it to False when filter needs to be applied
+
+    def index(self, row, column, parent=QModelIndex()):
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        if self.sourceModel().can_grow:
+            index = super().index(row, column, parent)
+            source_parent = self.mapToSource(parent)
+            while not index.isValid():
+                self.sourceModel().insertRows(
+                    self.sourceModel().rowCount(source_parent), 1, source_parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
+        return super().index(row, column, parent)
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
+
+    def horizontal_header_labels(self):
+        return [self.headerData(i, Qt.Horizontal) for i in range(self.columnCount())]
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         if orientation == Qt.Horizontal:
             self.header_index = self.sourceModel().horizontal_header_labels().index
 
+    def batch_set_data(self, proxy_indexes, values):
+        source_indexes = [self.mapToSource(ind) for ind in proxy_indexes]
+        return self.sourceModel().batch_set_data(source_indexes, values)
+
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
-        # TODO: This is so HighlightFrameDelegate works. Find a better way?
         return self.sourceModel().is_work_in_progress(self.map_row_to_source(row))
 
     def map_row_to_source(self, row):
         return self.mapToSource(self.index(row, 0)).row()
 
-    def reject_column(self, *names):
-        """Add rejected columns."""
-        for name in names:
-            self.rejected_column_list.append(self.header_index(name))
+    def autofilter_values(self, column):
+        """Return values for the autofilter menu of `column`."""
+        values = set()
+        source_model = self.sourceModel()
+        data = source_model._data
+        for source_row in range(source_model.rowCount()):
+            # Skip values rejected by filter if row is not wip
+            if not source_model.is_work_in_progress(source_row) \
+                    and not self.filter_accepts_row(source_row, QModelIndex()):
+                continue
+            # Skip values rejected by autofilters from *other* columns
+            if not self.autofilter_accepts_row(source_row, QModelIndex(), skip_source_column=[column]):
+                continue
+            try:
+                value = data[source_row][column][self.filterRole()]
+            except KeyError:
+                value = ""
+            if value is None:
+                value = ""
+            values.add(value)
+        # Get values currently filtered in this column
+        try:
+            filtered_values = self.rule_dict[column]
+        except KeyError:
+            filtered_values = set()
+        return values, filtered_values
 
-    def add_subrule(self, **kwargs):
-        """Add POSITIVE subrules by taking the kwargs as individual statements (key = value).
+    def add_rule(self, **kwargs):
+        """Add positive rules by taking the kwargs as individual statements (key = value).
         Positive rules trigger a violation if met."""
+        self.filter_is_valid = False
         for key, value in kwargs.items():
             source_column = self.header_index(key)
-            self.subrule_dict[source_column] = value
+            self.rule_dict[source_column] = value
+        if value:
+            self.sourceModel().setHeaderData(source_column, Qt.Horizontal, self.italic_font, Qt.FontRole)
+        else:
+            self.sourceModel().setHeaderData(source_column, Qt.Horizontal, None, Qt.FontRole)
 
-    def remove_subrule(self, *args):
-        """Remove subrules."""
-        for field_name in args:
-            source_column = self.header_index(field_name)
-            try:
-                del self.subrule_dict[source_column]
-                self.sourceModel().setHeaderData(source_column, Qt.Horizontal, None, Qt.FontRole)
-            except KeyError:
-                pass
-
-    def subfilter_accepts_row(self, source_row, source_parent, skip_source_column=list()):
+    def autofilter_accepts_row(self, source_row, source_parent, skip_source_column=list()):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false.
-        All subrules need to pass.
+        All rules need to pass.
         """
-        for source_column, value in self.subrule_dict.items():
+        for source_column, value in self.rule_dict.items():
             if source_column in skip_source_column:
                 continue
-            data = self.sourceModel()._data[source_row][source_column][self.filter_role]
-            if data is None:
-                return False
+            try:
+                data = self.sourceModel()._data[source_row][source_column][self.filterRole()]
+            except KeyError:
+                data = ""
+            if data == None:
+                data = ""
             if data in value:
                 return False
         return True
 
     def filter_accepts_row(self, source_row, source_parent):
-        """Override this method in subclasses."""
+        """Reimplement this method in subclasses."""
         return True
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false."""
+        if not self.autofilter_accepts_row(source_row, source_parent):
+            return False
         if self.sourceModel().is_work_in_progress(source_row):
             return True
-        try:
-            return self.filter_accepts_row(source_row, source_parent) \
-                and self.subfilter_accepts_row(source_row, source_parent)
-        except KeyError:
-            # KeyError means the row is brand new, let it pass
-            return True
-
-    def filterAcceptsColumn(self, source_column, source_parent):
-        """Returns true if the item in the column indicated by the given source_column
-        and source_parent should be included in the model; otherwise returns false.
-        """
-        if not self.rejected_column_list:
-            return True
-        return source_column not in self.rejected_column_list
+        return self.filter_accepts_row(source_row, source_parent)
 
     def apply_filter(self):
         """Trigger filtering."""
+        if self.filter_is_valid:
+            return
         self.layoutAboutToBeChanged.emit()
         self.invalidateFilter()
         self.layoutChanged.emit()
-        # Italize header in case the subrule is met
-        #for column in self.subrule_dict:
-        #    self.sourceModel().setHeaderData(column, Qt.Horizontal, self.italic_font, Qt.FontRole)
+        self.filter_is_valid = True
 
-    def clear_filter(self):
-        """Clear all rules, unbold all bolded items."""
-        self.rejected_column_list = list()
-        # for rule_dict in self.rule_dict_list:
-        #     for source_column in rule_dict:
-        #         for source_row in range(self.sourceModel().rowCount()):
-        #             source_index = self.sourceModel().index(source_row, source_column)
-        #             self.sourceModel().setData(source_index, None, Qt.FontRole)
-        self.subrule_dict = dict()
+    def clear_autofilter(self):
+        """Clear all rules."""
+        for column in self.rule_dict:
+            self.sourceModel().setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
+        self.rule_dict = dict()
 
 
-class ObjectParameterProxy(ParameterProxy):
-    """"""
+class ObjectParameterProxy(AutoFilterProxy):
+    """A model to filter object parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2029,24 +2607,28 @@ class ObjectParameterProxy(ParameterProxy):
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
         row_data = self.sourceModel()._data[source_row]
-        if self.object_class_name:
-            object_class_name = row_data[self.object_class_name_column][self.filter_role]
+        if self.object_class_name is not None:
+            try:
+                object_class_name = row_data[self.object_class_name_column][self.filterRole()]
+            except KeyError:
+                object_class_name = None
             if object_class_name != self.object_class_name:
                 return False
             row_data[self.object_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def clear_filter(self):
-        """Clear filter."""
-        super().clear_filter()
-        data = self.sourceModel()._data
-        for row_data in data:
+    def set_object_class_name(self, name):
+        if name == self.object_class_name:
+            return
+        self.object_class_name = name
+        self.filter_is_valid = False
+        self.clear_autofilter()
+        for row_data in self.sourceModel()._data:
             row_data[self.object_class_name_column][Qt.FontRole] = None
-        self.object_class_name = None
 
 
 class ObjectParameterValueProxy(ObjectParameterProxy):
-    """"""
+    """A model to filter object parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2064,29 +2646,32 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
         if not super().filter_accepts_row(source_row, source_parent):
             return False
         row_data = self.sourceModel()._data[source_row]
-        if self.object_name:
-            object_name = row_data[self.object_name_column][self.filter_role]
+        if self.object_name is not None:
+            try:
+                object_name = row_data[self.object_name_column][self.filterRole()]
+            except KeyError:
+                object_name = None
             if object_name != self.object_name:
                 return False
             row_data[self.object_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def clear_filter(self):
-        """Clear filter."""
-        super().clear_filter()
-        data = self.sourceModel()._data
-        for row_data in data:
+    def set_object_name(self, name):
+        if name == self.object_name:
+            return
+        self.object_name = name
+        self.filter_is_valid = False
+        self.clear_autofilter()
+        for row_data in self.sourceModel()._data:
             row_data[self.object_name_column][Qt.FontRole] = None
-        self.object_name = None
 
 
-class RelationshipParameterProxy(ParameterProxy):
-    """"""
+class RelationshipParameterProxy(AutoFilterProxy):
+    """A model to filter relationship parameter data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
-        self.relationship_class_name = None
-        self.relationship_class_name_list = list()
+        self.relationship_class_name_list = None
         self.relationship_class_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -2098,37 +2683,34 @@ class RelationshipParameterProxy(ParameterProxy):
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
         row_data = self.sourceModel()._data[source_row]
-        if self.relationship_class_name_list:
-            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
-            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
+        if self.relationship_class_name_list is not None:
+            try:
+                relationship_class_name = row_data[self.relationship_class_name_column][self.filterRole()]
+            except KeyError:
+                relationship_class_name = None
             if relationship_class_name not in self.relationship_class_name_list:
-                return False
-            row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
-        elif self.relationship_class_name:
-            relationship_class_name = row_data[self.relationship_class_name_column][self.filter_role]
-            if relationship_class_name != self.relationship_class_name:
                 return False
             row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def clear_filter(self):
-        """Clear filter."""
-        super().clear_filter()
-        data = self.sourceModel()._data
-        for row_data in data:
+    def set_relationship_class_name_list(self, name_list):
+        if name_list == self.relationship_class_name_list:
+            return
+        self.relationship_class_name_list = name_list
+        self.filter_is_valid = False
+        self.clear_autofilter()
+        for row_data in self.sourceModel()._data:
             row_data[self.relationship_class_name_column][Qt.FontRole] = None
-        self.relationship_class_name = None
-        self.relationship_class_name_list = list()
 
 
 class RelationshipParameterValueProxy(RelationshipParameterProxy):
-    """"""
+    """A model to filter relationship parameter value data, used by DataStoreForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
-        self.object_name = None
-        self.object_name_list = list()
+        self.object_name_list = None
         self.object_name_columns = list()
+        self.object_count = 0
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -2144,39 +2726,106 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
         row_data = self.sourceModel()._data[source_row]
         object_name_list = list()
         for j in self.object_name_columns:
-            object_name = row_data[j][self.filter_role]
+            try:
+                object_name = row_data[j][self.filterRole()]
+            except KeyError:
+                break
             if not object_name:
                 break
             object_name_list.append(object_name)
         # Now check filter
-        if self.object_name:
-            found = False
-            for j, object_name in enumerate(object_name_list):
-                if self.object_name == object_name:
+        if self.object_name_list is not None:
+            if len(self.object_name_list) == 1:
+                found = False
+                for j, object_name in enumerate(object_name_list):
+                    if self.object_name_list[0] == object_name:
+                        row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+                        found = True
+                if not found:
+                    return False
+            elif len(self.object_name_list) > 1:
+                if self.object_name_list != object_name_list:
+                    return False
+                for j in range(len(object_name_list)):
                     row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
-                    found = True
-            if not found:
-                return False
-        elif self.object_name_list:
-            if self.object_name_list != object_name_list:
-                return False
-            for j in range(len(object_name_list)):
-                row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+        # If this row passes, update the object count
+        self.object_count = max(self.object_count, len(object_name_list))
         return True
 
-    def clear_filter(self):
-        """Clear filter."""
-        super().clear_filter()
-        data = self.sourceModel()._data
-        for row_data in data:
+    def set_object_name_list(self, name_list):
+        self.object_count = 0
+        if name_list == self.object_name_list:
+            return
+        self.object_name_list = name_list
+        self.filter_is_valid = False
+        self.clear_autofilter()
+        for row_data in self.sourceModel()._data:
             for j in self.object_name_columns:
                 row_data[j][Qt.FontRole] = None
-        self.object_name = None
-        self.object_name_list = list()
+
+
+class JSONModel(MinimalTableModel):
+    """A model of JSON array data, used by DataStoreForm.
+    TODO: Handle the JSON object data type.
+
+    Attributes:
+        parent (JSONEditor): the parent widget
+        stride (int): The number of elements to fetch
+    """
+    def __init__(self, parent, stride=256):
+        """Initialize class"""
+        super().__init__(parent, can_grow=True)
+        self._json = list()
+        self.set_horizontal_header_labels(["json"])
+        self._stride = stride
+
+    def reset_model(self, json, flags=None, has_empty_row=True):
+        """Store JSON array into a list.
+        Initialize `stride` rows.
+        """
+        if json:
+            self._json = [x.strip() for x in json[1:-1].split(",")]
+        if flags:
+            self.default_flags = flags
+        self.has_empty_row = has_empty_row
+        data = list()
+        for i in range(self._stride):
+            try:
+                data.append([self._json.pop(0)])
+            except IndexError:
+                break
+        super().reset_model(data)
+
+    def canFetchMore(self, parent):
+        return len(self._json) > 0
+
+    def fetchMore(self, parent):
+        """Pop data from the _json attribute and add it to the model."""
+        data = list()
+        count = 0
+        for i in range(self._stride):
+            try:
+                data.append(self._json.pop(0))
+                count += 1
+            except IndexError:
+                break
+        last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+        self.insertRows(last_data_row, count)
+        indexes = [self.index(last_data_row + i, 0) for i in range(count)]
+        self.batch_set_data(indexes, data)
+
+    def json(self):
+        """Return data into JSON array."""
+        last_data_row = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+        new_json = [self.index(i, 0).data() for i in range(last_data_row)]
+        new_json.extend(self._json)  # Whatever remains unfetched
+        if not new_json:
+            return None
+        return "[" + ", ".join(new_json) + "]"
 
 
 class DatapackageResourcesModel(QStandardItemModel):
-    """A class to hold datapackage resources and show them in a tableview."""
+    """A model of datapackage resource data, used by SpineDatapackageWidget."""
     def __init__(self, spine_datapackage_widget=None):
         """Initialize class"""
         super().__init__(spine_datapackage_widget)
@@ -2207,7 +2856,7 @@ class DatapackageResourcesModel(QStandardItemModel):
 
 
 class DatapackageFieldsModel(QStandardItemModel):
-    """A class to hold schema fields and show them in a treeview."""
+    """A model of datapackage field data, used by SpineDatapackageWidget."""
     def __init__(self, spine_datapackage_widget=None):
         """Initialize class"""
         super().__init__(spine_datapackage_widget)
@@ -2231,13 +2880,14 @@ class DatapackageFieldsModel(QStandardItemModel):
 
 
 class DatapackageForeignKeysModel(MinimalTableModel):
-    """A class to hold schema foreign keys and show them in a treeview."""
+    """A model of datapackage foreign key data, used by SpineDatapackageWidget."""
     def __init__(self, parent=None):
         """Initialize class"""
-        super().__init__(parent)
+        super().__init__(parent, has_empty_row=True)
         # TODO: Change parent (attribute name) to something else
         self.schema = None
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
+        self.clear()
 
     def reset_model(self, schema):
         self.schema = schema
@@ -2248,9 +2898,3 @@ class DatapackageForeignKeysModel(MinimalTableModel):
             reference_fields = foreign_key['reference']['fields']
             data.append([fields, reference_resource, reference_fields])
         super().reset_model(data)
-
-    def insert_empty_row(self, row):
-        self.insertRow(row)
-        self.set_work_in_progress(row, True)
-        for column in range(self.columnCount()):
-            self.setData(self.index(row, column), None, Qt.EditRole)

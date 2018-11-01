@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Widget shown to user when opening a 'datapackage.json' file
@@ -68,7 +60,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.setupUi(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
-        self.ui.toolButton_insert_foreign_key.setDefaultAction(self.ui.actionInsert_foreign_key)
         self.ui.toolButton_remove_foreign_keys.setDefaultAction(self.ui.actionRemove_foreign_keys)
         self.load_resource_data()
         # Add status bar to form
@@ -102,15 +93,15 @@ class SpineDatapackageWidget(QMainWindow):
         # Delegates
         # Resource data
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.commitData.connect(self.update_resource_data)
+        lineedit_delegate.commit_model_data.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Resource name
         resource_name_delegate = ResourceNameDelegate(self)
-        resource_name_delegate.commitData.connect(self.update_resource_name)
+        resource_name_delegate.commit_model_data.connect(self.update_resource_name)
         self.ui.treeView_resources.setItemDelegateForColumn(0, resource_name_delegate)
         # Field name
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.commitData.connect(self.update_field_name)
+        lineedit_delegate.commit_model_data.connect(self.update_field_name)
         self.ui.treeView_fields.setItemDelegateForColumn(0, lineedit_delegate)
         # Primary key
         checkbox_delegate = CheckBoxDelegate(self)
@@ -119,14 +110,13 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Foreign keys
         foreign_keys_delegate = ForeignKeysDelegate(self)
-        foreign_keys_delegate.commitData.connect(self.update_foreign_keys)
+        foreign_keys_delegate.commit_model_data.connect(self.update_foreign_keys)
         self.ui.treeView_foreign_keys.setItemDelegate(foreign_keys_delegate)
         # Selected resource changed
         self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.reset_resource_models)
         # Actions
         self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
-        self.ui.actionInsert_foreign_key.triggered.connect(self.insert_foreign_key_row)
         self.ui.actionRemove_foreign_keys.triggered.connect(self.remove_foreign_key_rows)
         # Rows inserted or Data changed
         self.resources_model.rowsInserted.connect(self.resources_model_rows_inserted)
@@ -228,23 +218,19 @@ class SpineDatapackageWidget(QMainWindow):
         self.resource_data_model.reset_model(table)
         self.ui.tableView_resource_data.resizeColumnsToContents()
 
-    @Slot("QWidget", name="update_resource_data")
-    def update_resource_data(self, editor):
+    @Slot("QModelIndex", "QVariant", name="update_resource_data")
+    def update_resource_data(self, index, new_value):
         """Update resource data with newly edited data."""
-        index = editor.index()
-        new_value = editor.text()
         if not self.resource_data_model.setData(index, new_value, Qt.EditRole):
             return
         self.ui.tableView_resource_data.resizeColumnsToContents()
         self.resource_tables[self.selected_resource_name][index.row()][index.column()] = new_value
 
-    @Slot("QWidget", name="update_resource_name")
-    def update_resource_name(self, editor):
+    @Slot("QModelIndex", "QVariant", name="update_resource_name")
+    def update_resource_name(self, index, new_name):
         """Update resources model and descriptor with new resource name."""
-        new_name = editor.currentText()
         if not new_name:
             return
-        index = editor.index()
         old_name = index.data(Qt.DisplayRole)
         if not self.resources_model.setData(index, new_name, Qt.EditRole):
             return
@@ -257,13 +243,11 @@ class SpineDatapackageWidget(QMainWindow):
         self.selected_resource_name = new_name
         self.datapackage.rename_resource(old_name, new_name)
 
-    @Slot("QWidget", name="update_field_name")
-    def update_field_name(self, editor):
+    @Slot("QModelIndex", "QVariant", name="update_field_name")
+    def update_field_name(self, index, new_name):
         """Called when line edit delegate wants to edit field name data.
         Update name in fields_model, resource_data_model's header and datapackage descriptor.
         """
-        index = editor.index()
-        new_name = editor.text()
         # Save old name to look up field
         old_name = index.data(Qt.DisplayRole)
         if not self.fields_model.setData(index, new_name, Qt.EditRole):
@@ -290,11 +274,6 @@ class SpineDatapackageWidget(QMainWindow):
             self.fields_model.setData(index, False, Qt.EditRole)
             self.datapackage.remove_from_primary_key(self.selected_resource_name, field_name)
 
-    @Slot(name="insert_foreign_key_row")
-    def insert_foreign_key_row(self):
-        row = self.ui.treeView_foreign_keys.currentIndex().row()+1
-        self.foreign_keys_model.insert_empty_row(row)
-
     @Slot(name="remove_foreign_key_rows")
     def remove_foreign_key_rows(self):
         selection = self.ui.treeView_foreign_keys.selectionModel().selection()
@@ -307,10 +286,8 @@ class SpineDatapackageWidget(QMainWindow):
         for row in reversed(list(row_set)):
             self.foreign_keys_model.removeRows(row, 1)
 
-    @Slot("QWidget", name="update_foreign_keys")
-    def update_foreign_keys(self, editor):
-        index = editor.index()
-        value = editor.text()
+    @Slot("QModelIndex", "QVariant", name="update_foreign_keys")
+    def update_foreign_keys(self, index, value):
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
     def closeEvent(self, event=None):

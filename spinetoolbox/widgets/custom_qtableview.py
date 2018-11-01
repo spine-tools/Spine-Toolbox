@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Class for a custom QTableView that allows copy-paste, and maybe some other feature we may think of.
@@ -26,21 +18,20 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 
 from PySide2.QtWidgets import QTableView, QApplication, QAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
-from PySide2.QtGui import QKeySequence
+from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
 from widgets.custom_menus import QOkMenu
+from models import JSONModel
 
 
-class CustomQTableView(QTableView):
+class CopyPasteTableView(QTableView):
     """Custom QTableView class with copy-paste functionality.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
-
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
-        # self.editing = False
         QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
         self.clipboard_text = QApplication.clipboard().text()
 
@@ -76,7 +67,9 @@ class CustomQTableView(QTableView):
             for j in range(first.left(), first.right()+1):
                 if h_header.isSectionHidden(j):
                     continue
-                row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+                data = self.model().index(i, j).data(Qt.DisplayRole)
+                str_data = str(data) if data is not None else ""
+                row.append(str_data)
             rows.append("\t".join(row))
         content = "\n".join(rows)
         QApplication.clipboard().setText(content)
@@ -96,23 +89,29 @@ class CustomQTableView(QTableView):
         if not text:
             return False
         selection = self.selectionModel().selection()
-        if not selection:
+        if selection.isEmpty():
             return False
         first = selection.first()
         data = [line.split('\t') for line in text.split('\n')]
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
-        for i in range(first.top(), first.bottom()+1):
+        indexes = list()
+        values = list()
+        for i in range(first.top(), first.bottom() + 1):
             if v_header.isSectionHidden(i):
                 continue
-            for j in range(first.left(), first.right()+1):
+            for j in range(first.left(), first.right() + 1):
                 if h_header.isSectionHidden(j):
                     continue
                 index = self.model().index(i, j)
-                ii = i % len(data)
-                jj = j % len(data[ii])
-                value = data[ii][jj]
-                self.model().setData(index, value, Qt.EditRole)
+                if index.flags() & Qt.ItemIsEditable:
+                    ii = (i - first.top()) % len(data)
+                    jj = (j - first.left()) % len(data[ii])
+                    value = data[ii][jj]
+                    indexes.append(index)
+                    values.append(value)
+        self.model().batch_set_data(indexes, values)
+        return True
 
     def paste_normal(self, text):
         """Paste clipboard data, overwritting cells if needed"""
@@ -122,10 +121,11 @@ class CustomQTableView(QTableView):
         top_left_index = self.currentIndex()
         if not top_left_index.isValid():
             return False
-        self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
         row = top_left_index.row()
+        indexes = list()
+        values = list()
         for line in data:
             if not line:
                 continue
@@ -134,33 +134,21 @@ class CustomQTableView(QTableView):
             column = top_left_index.column()
             for value in line:
                 if not value:
+                    column += 1
                     continue
                 if h_header.isSectionHidden(column):
                     column += 1
-                sibling = top_left_index.sibling(row, column)
-                if sibling.flags() & Qt.ItemIsEditable:
-                    self.model().setData(sibling, value, Qt.EditRole)
-                    self.selectionModel().select(sibling, QItemSelectionModel.Select)
+                index = self.model().index(row, column)  # NOTE: This should make the model grow if needed
+                if index.flags() & Qt.ItemIsEditable:
+                    indexes.append(index)
+                    values.append(value)
                 column += 1
             row += 1
+        self.model().batch_set_data(indexes, values)
         return True
 
-    # TODO: This below was intended to improve navigation while setting edit trigger on current changed.
-    # But it's too try-hard. Better edit on double click like excel, which is what most people are used to anyways
-    # def moveCursor(self, cursor_action, modifiers):
-    #     """Don't move to next index if the self.editing flag is set.
-    #     """
-    #     if self.editing and cursor_action == self.CursorAction.MoveNext:
-    #         self.editing = False
-    #         return self.currentIndex()
-    #     return super().moveCursor(cursor_action, modifiers)
 
-    # def edit(self, index, trigger, event):
-    #     self.editing = True
-    #     return super().edit(index, trigger, event)
-
-
-class ParameterTableView(CustomQTableView):
+class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 
     Attributes:
@@ -168,7 +156,6 @@ class ParameterTableView(CustomQTableView):
     """
 
     filter_changed = Signal("QObject", "int", "QStringList", name="filter_changed")
-    filter_triggered = Signal("QObject", name="filter_triggered")
 
     def __init__(self, parent):
         """Initialize the class."""
@@ -199,28 +186,10 @@ class ParameterTableView(CustomQTableView):
         self.action_all.triggered.connect(self.action_all_triggered)
         filter_menu.addAction(self.action_all)
         filter_menu.addSeparator()
-        # Get values from model, after the application of all filters and subfilters from other columns
-        values = list()
-        source_model = model.sourceModel()
-        for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter
-            if not model.filter_accepts_row(source_row, QModelIndex()):
-                continue
-            # Skip values rejected by subfilters from *other* columns
-            if not model.subfilter_accepts_row(source_row, QModelIndex(), skip_source_column=[self.filter_column]):
-                continue
-            data = source_model.index(source_row, self.filter_column).data(Qt.DisplayRole)
-            if data is None:
-                continue
-            values.append(data)
-        # Get values currently filtered in this column
-        try:
-            filtered_values = model.subrule_dict[self.filter_column]
-        except KeyError:
-            filtered_values = list()
+        values, filtered_values = model.autofilter_values(self.filter_column)
         # Add filter actions
         self.filter_action_list = list()
-        for i, value in enumerate(sorted(list(set(values)))):
+        for i, value in enumerate(sorted(list(values))):
             action = QAction(str(value), self)
             action.setCheckable(True)
             action.triggered.connect(self.update_action_all_checked)
@@ -253,11 +222,78 @@ class ParameterTableView(CustomQTableView):
         for action in self.filter_action_list:
             action.setChecked(checked)
 
-    @Slot(name="apply_filter")
+    @Slot(name="update_and_apply_filter")
     def update_and_apply_filter(self):
-        """Called when user clicks Ok in a filter. Emit `filter_triggered` signal."""
+        """Called when user clicks Ok in a filter. Emit `filter_changed` signal."""
         filter_text_list = list()
         for action in self.filter_action_list:
             if not action.isChecked():
                 filter_text_list.append(action.text())
         self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)
+
+
+class JSONEditor(CopyPasteTableView):
+    """A custom CopyPasteTableView to edit JSON data.
+
+    Attributes:
+        parent (QWidget): the widget that wants to edit the data
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        self.setMinimumSize(200, 200)
+        self.json_model = JSONModel(self)
+        self.setModel(self.json_model)
+        self.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.horizontalHeader().setStretchLastSection(True)
+
+    def set_data(self, data, flags=None, has_empty_row=True):
+        self.json_model.reset_model(data, flags=flags, has_empty_row=has_empty_row)
+
+    def data(self):
+        return self.json_model.json()
+
+
+class JSONPopupTableView(AutoFilterCopyPasteTableView):
+    """Custom QTableView class with a JSON popup.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent=parent)
+        self._json_popup = JSONEditor(self)
+        self._json_popup.json_model.set_horizontal_header_labels(["json (preview)"])
+        self._json_popup.hide()
+
+    def edit(self, index, trigger, event):
+        self._json_popup.hide()
+        return super().edit(index, trigger, event)
+
+    def leaveEvent(self, event):
+        self._json_popup.hide()
+        super().leaveEvent(event)
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        pos = event.pos()
+        index = self.indexAt(pos)
+        header = self.model().horizontal_header_labels()
+        if header[index.column()] == 'json':
+            index_data = index.data(Qt.EditRole)
+            if index_data:
+                x = self.columnViewportPosition(index.column() + 1) + self.verticalHeader().width()
+                y = self.rowViewportPosition(index.row()) + self.horizontalHeader().height()
+                if y + self._json_popup.height() > self.height():
+                    y -= self._json_popup.height() - self._json_popup.default_row_height
+                self._json_popup.move(x, y)
+                self._json_popup.set_data(index_data, flags=~Qt.ItemIsEditable, has_empty_row=False)
+                self._json_popup.show()
+                event.accept()
+            else:
+                self._json_popup.hide()
+                event.ignore()
+        else:
+            self._json_popup.hide()
+            event.ignore()

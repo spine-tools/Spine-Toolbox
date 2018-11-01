@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Widget to show Network Map Form.
@@ -38,6 +30,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from scipy.spatial.distance import cdist
 from scipy.sparse.csgraph import dijkstra
 from scipy.optimize import minimize
+import logging
 
 
 class NetworkMapForm(QWidget):
@@ -50,6 +43,9 @@ class NetworkMapForm(QWidget):
     def __init__(self, toolbox, view, mapping, settings_path=""):
         """Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        # Set logging level for matplotlib logger
+        mpl_logger = logging.getLogger("matplotlib")
+        mpl_logger.setLevel(logging.WARNING)
         self._view = view
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()

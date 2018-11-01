@@ -3,7 +3,7 @@
 
 printf '\n'
 echo "<Script for Building Spine Toolbox GUI>
-Copyright (C) <2017-2018>  <VTT Technical Research Centre of Finland>
+Copyright (C) <2017-2018>  <Spine project consortium>
 This program comes with ABSOLUTELY NO WARRANTY; for details see 'about'.
 box in the application. This is free software, and you are welcome to
 redistribute it under certain conditions; See files COPYING and

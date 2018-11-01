@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017- 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Spine Toolbox default configurations.
@@ -28,7 +20,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.1.5"
+SPINE_TOOLBOX_VERSION = "0.1.7"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -73,7 +65,7 @@ else:
     JULIA_EXECUTABLE = "julia.exe"
 
 # Tool types
-TOOL_TYPES = ['GAMS', 'Julia']
+TOOL_TYPES = ["GAMS", "Julia", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
@@ -98,7 +90,8 @@ SETTINGS = {"project_directory": "",
             "gams_path": "",
             "use_repl": "true",
             "julia_path": "",
-            "save_at_exit": "1"}
+            "save_at_exit": "1",
+            "commit_at_exit": "1"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \
@@ -159,3 +152,6 @@ TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
 HEADER_POINTSIZE = 8
 # Draw border on all QWidgets when in focus
 # TT_FOCUS_SS = ":focus {border: 1px groove;}"
+
+JL_REPL_TIME_TO_DEAD = 5.0
+JL_REPL_RESTART_LIMIT = 3

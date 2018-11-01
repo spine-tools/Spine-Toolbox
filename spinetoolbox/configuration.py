@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Module for handling Spine Toolbox configuration files.
@@ -72,7 +64,7 @@ class ConfigurationParser(object):
         try:
             value = self.parser.get(section, option)
         except configparser.NoOptionError:
-            logging.debug("Option '{}' not found in conf file".format(option))
+            # logging.debug("Option '{}' not found in conf file".format(option))
             value = ''
         return value
 
@@ -155,5 +147,5 @@ class ConfigurationParser(object):
             destination (str): Destination configuration section.
         """
         for option in self.parser.options(source):
-            logging.debug("Copy option: %s" % self.get(source, option))
+            # logging.debug("Copy option: %s" % self.get(source, option))
             self.set(destination, option, self.get(source, option))

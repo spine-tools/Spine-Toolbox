@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Tool template classes.
@@ -261,5 +253,59 @@ class JuliaTool(ToolTemplate):
         if kwargs is not None:
             # Return an executable model instance
             return JuliaTool(toolbox=toolbox, path=path, **kwargs)
+        else:
+            return None
+
+
+class ExecutableTool(ToolTemplate):
+    """Class for Executable tool templates.
+
+    Attributes:
+        name (str): Tool name
+        description (str): Tool description
+        path (str): Path to main script file
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main script file.
+        inputfiles (list): List of required data files
+        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+        outputfiles (list, optional): List of output files (wildcards may be used)
+        cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
+    """
+    def __init__(self, toolbox, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
+                 outputfiles=None, cmdline_args=None):
+        """Class constructor."""
+        super().__init__(toolbox, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
+                         cmdline_args)
+        main_file = includes[0]
+        # TODO: This does not do anything because main_file is always just file name
+        self.main_dir, self.main_prgm = os.path.split(main_file)
+        self.options = OrderedDict()
+        self.return_codes = {
+            0: "Normal exit",
+            1: "Error happened"
+        }
+
+    def __repr__(self):
+        """Remove this if not necessary."""
+        return "ExecutableTool('{}')".format(self.name)
+
+    @staticmethod
+    def load(toolbox, path, data):
+        """Create an ExecutableTool according to a tool specification.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            path (str): Base path to tool files
+            data (dict): Tool specification
+
+        Returns:
+            ExecutableTool instance or None if there was a problem in the tool specification.
+        """
+        kwargs = ExecutableTool.check_definition(toolbox, data)
+        if kwargs is not None:
+            # Return an executable model instance
+            return ExecutableTool(toolbox=toolbox, path=path, **kwargs)
         else:
             return None

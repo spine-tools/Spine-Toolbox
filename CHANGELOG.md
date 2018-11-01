@@ -7,15 +7,38 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 This section is for upcoming changes.
 
 ### Added
+- New option to refresh the Data store form and get latest changes from the database.
+- Several performance enhancements in Data store form (accessing internal data more efficiently,
+optimizing queries to the database.)
+- Now the Data store form offers to commit pending changes at exit.
+- Better support for batch operations in Data store form.
+- Data store form can be fully operated by using the keyboard.
+- New options to edit items in the object tree view, including changing the objects involved in a relationship.
+- The dialogs to add/edit tree view items are not closed in case of an error, so the user can adjust their choices
+and try again.
+- Stop button now terminates tool execution.
+- New context menu options to fully expand and collapse object tree items in the Data store form.
+- The autofilter in the Data store form now also filters work in progress rows.
+- In the Data store item controls, the path to the SQLite file can be specified by dropping a file.
+- Parameter and parameter value tables in the data store form now have an empty row at the end,
+which can be used to enter data more easily.
+- JSON data can be visualized and edited more easily in the data store form.
+- Tools can now execute (Windows) batch files and other executables (.exe). Linux support pending.
 
 ### Fixed
+- Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
+second one.
+- Work folder is not created for Tools if the Tool template requirements are not met.
+- Result folder is not created if the Tool template fails to start
 
 ### Changed
 
 ### Deprecated
 
 ### Removed
-- Connections tab on the main window is useless and will be removed.
+- Connections tab has been removed (actually, it is just hidden and can be restored with a keyboard shortcut)
+- Refresh Tools button on Templates tab has been removed as it was not needed anymore
+- Set Debug message level in Settings has been removed
 
 ### Security
 
@@ -50,7 +73,8 @@ package from now on.
 previous version, the first database in the list of saved references will be loaded for each Data Store.
 - In the Data store form, the object tree view presents all relationship classes at the same level,
 regardless of how many object classes are involved. The same applies for relationships and objects.
-- In the Data Store form, the relationship parameter value view now has different columns for each object involved.
+- In the Data Store form, the relationship parameter value view now has different columns for each object
+in the relationship.
 
 ## [0.1] - 2018-08-20
 

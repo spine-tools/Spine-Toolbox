@@ -9,6 +9,7 @@ spinetoolbox/build/
 spinetoolbox/dist/
 docs/build/
 tool_templates/Swedish_hydro/
+tool_templates/executables/
 projects/
 work/
 resources_icons_rc.py

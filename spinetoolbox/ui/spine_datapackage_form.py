@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 # -*- coding: utf-8 -*-
 
@@ -78,7 +70,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(6)
         self.verticalLayout.setContentsMargins(1, 1, 1, 1)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.tableView_resource_data = CustomQTableView(self.tab_data)
+        self.tableView_resource_data = CopyPasteTableView(self.tab_data)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -128,10 +120,6 @@ class Ui_MainWindow(object):
         self.toolButton_remove_foreign_keys.setEnabled(True)
         self.toolButton_remove_foreign_keys.setObjectName("toolButton_remove_foreign_keys")
         self.horizontalLayout.addWidget(self.toolButton_remove_foreign_keys)
-        self.toolButton_insert_foreign_key = QtWidgets.QToolButton(self.tab_schema)
-        self.toolButton_insert_foreign_key.setEnabled(True)
-        self.toolButton_insert_foreign_key.setObjectName("toolButton_insert_foreign_key")
-        self.horizontalLayout.addWidget(self.toolButton_insert_foreign_key)
         self.verticalLayout_4.addLayout(self.horizontalLayout)
         self.treeView_foreign_keys = QtWidgets.QTreeView(self.tab_schema)
         self.treeView_foreign_keys.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
@@ -167,18 +155,13 @@ class Ui_MainWindow(object):
         icon.addPixmap(QtGui.QPixmap(":/icons/minus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRemove_foreign_keys.setIcon(icon)
         self.actionRemove_foreign_keys.setObjectName("actionRemove_foreign_keys")
-        self.actionInsert_foreign_key = QtWidgets.QAction(MainWindow)
-        icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/icons/plus.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionInsert_foreign_key.setIcon(icon1)
-        self.actionInsert_foreign_key.setObjectName("actionInsert_foreign_key")
         self.menuFile.addAction(self.actionSave_datapackage)
         self.menuFile.addAction(self.actionQuit)
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(MainWindow)
         self.tabWidget_resources.setCurrentIndex(0)
-        self.tabWidget_data_schema.setCurrentIndex(1)
+        self.tabWidget_data_schema.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -191,7 +174,6 @@ class Ui_MainWindow(object):
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Fields", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Foreign keys", None, -1))
         self.toolButton_remove_foreign_keys.setText(QtWidgets.QApplication.translate("MainWindow", "...", None, -1))
-        self.toolButton_insert_foreign_key.setText(QtWidgets.QApplication.translate("MainWindow", "...", None, -1))
         self.tabWidget_data_schema.setTabText(self.tabWidget_data_schema.indexOf(self.tab_schema), QtWidgets.QApplication.translate("MainWindow", "Schema", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
         self.actionSave_datapackage.setText(QtWidgets.QApplication.translate("MainWindow", "Save descriptor", None, -1))
@@ -210,7 +192,6 @@ class Ui_MainWindow(object):
         self.actionLoad_datapackage.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+L", None, -1))
         self.actionRemove_foreign_keys.setText(QtWidgets.QApplication.translate("MainWindow", "Remove foreign keys", None, -1))
         self.actionRemove_foreign_keys.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Remove selected foreign keys.", None, -1))
-        self.actionInsert_foreign_key.setText(QtWidgets.QApplication.translate("MainWindow", "Insert foreign key", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView
+from widgets.custom_qtableview import CopyPasteTableView
 import resources_icons_rc

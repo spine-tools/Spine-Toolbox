@@ -31,51 +31,56 @@ choose the SQL dialect API (pymysql, pyodbc psycopg2, and cx_Oracle) they want t
 be installed in Spine Toolbox when needed. Sphinx, recommonmark, and cx_Freeze packages 
 are needed for building the user guide and for deploying the application.
 
-### Installing requirements on Python 3.5+
+### Installing requirements
 
-The first official release of PySide2 module was released in June, 2018. To learn more about 
-the release, check out the [blog post](http://blog.qt.io/blog/2018/06/13/qt-python-5-11-released/)
-on the official Qt for Python pages.
+Run
 
-To install PySide2 with pip, run
+    pip install -r requirements.txt
 
-    pip install pyside2
+If everything goes well, you can now run Spine Toolbox.
 
-It is also possible to build PySide2 from sources. Instructions for doing so can be found in
-[here](https://wiki.qt.io/Qt_for_Python/GettingStarted). All other requirements,
-except cx_Freeze (v6.0b1) and spinedatabase_api, can be installed from PyPi with pip.
-For example, to install the datapackage module, run
+To install optional requirements run
 
-    pip install datapackage
+    pip install -r optional-requirements.txt
 
-To install cx_Freeze, download the correct wheel for your OS, for example,
-`cx_Freeze-6.0b1-cp36-cp36m-win_amd64.whl` from
-[here](https://pypi.org/project/cx_Freeze/6.0b1/#files) and install by running
+If there are problems in starting Spine Toolbox, the first thing you should check is that you 
+don't have Qt, PyQt, and PySide2 packages installed in the same environment. These do not play 
+nice together and create conflicts. Also, make sure that you do not have multiple PySide2 versions
+installed in the same environment. So, please create a virtual environment and try installing 
+the requirements again if you run into problems.
 
-    pip install cx_Freeze-6.0b1-cp36-cp36m-win_amd64.whl
+Package `spinedatabase_api` is being actively developed by the Spine project so you should keep 
+the package up-to-date. To upgrade spinedatabase_api to the newest version, run
 
-To install spinedatabase_api run
+    pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git#spinedatabase_api
 
-    pip install git+https://gitlab.vtt.fi/spine/data
+### Installing requirements for Anaconda & Miniconda Python
 
-To update spinedatabase_api run
+The recommended way to install dependencies using Anaconda or Miniconda is:
 
-    pip install --upgrade git+https://gitlab.vtt.fi/spine/data
+1. Create a new environment by typing in Anaconda prompt
 
+        conda create -n spinetoolbox python=3.7
 
-### Installing requirements for Anaconda & Miniconda Python (3.5+)
+2. Activate the new environment
 
-PySide2 for Qt 5.6.2 and pyodbc are available on the conda-forge
-channel. Datapackage 1.2.3 is available on the manulero channel.
-You can install all requirements by running
+        conda activate spinetoolbox
 
-    conda install -c conda-forge -c manulero --file requirements.txt
+3. Then install requirements using pip
 
-in the Spine Toolbox root folder.
+        pip install -r requirements.txt
 
-Alternatively, create a separate environment for Spine Toolbox with
+4. And finally to install optional requirements run
 
-	conda create --name spinetoolbox -c conda-forge -c manulero "python>=3.5" --file requirements.txt
+        pip install -r optional-requirements.txt
+
+in Spine Toolbox root folder.
+
+**Note: Using the *conda-forge* channel for installing the requirements is not recommended.**
+
+The required `qtconsole` package from *conda-forge* channel also
+installs `qt` and `PyQt` packages. Since this is a PySide2 application, those are 
+not needed and there is a chance of conflicts between the packages.
 
 ## Contribution Guide
 

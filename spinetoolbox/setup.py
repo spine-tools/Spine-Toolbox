@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 CX-FREEZE setup file for Spine Toolbox.
@@ -45,6 +37,10 @@ def main(argv):
     tk86t_dll = os.path.join(python_dir, "DLLs", "tk86t.dll")
     # Path to built documentation (No need for sources)
     doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
+    # Change log
+    changelog_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "CHANGELOG.md"))
+    # Readme
+    readme_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "README.md"))
     # Set Windows .msi installer default install path to C:\SpineToolbox-version
     systemdrive = os.environ['SYSTEMDRIVE']
     default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
@@ -63,8 +59,9 @@ def main(argv):
                                           "qtconsole.client", "sqlalchemy.sql.default_comparator",
                                           "sqlalchemy.ext.baked", "numpy.core._methods",
                                           "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
-                                          "scipy.spatial.ckdtree", "pymysql", "pyodbc", "cx_Oracle", "psycopg2"],
-                             "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll],
+                                          "scipy.spatial.ckdtree"],
+                             "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll,
+                                               changelog_file, readme_file],
                              "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}
     # This does not show logging messages

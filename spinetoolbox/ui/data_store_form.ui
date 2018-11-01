@@ -1,23 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 -->
 <ui version="4.0">
  <class>MainWindow</class>
@@ -226,7 +218,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_object_parameter_value">
+                <widget class="JSONPopupTableView" name="tableView_object_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -238,6 +230,9 @@
                    <weight>50</weight>
                    <bold>false</bold>
                   </font>
+                 </property>
+                 <property name="mouseTracking">
+                  <bool>true</bool>
                  </property>
                  <property name="contextMenuPolicy">
                   <enum>Qt::CustomContextMenu</enum>
@@ -329,7 +324,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_object_parameter">
+                <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -453,12 +448,15 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_relationship_parameter_value">
+                <widget class="JSONPopupTableView" name="tableView_relationship_parameter_value">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
+                 </property>
+                 <property name="mouseTracking">
+                  <bool>true</bool>
                  </property>
                  <property name="contextMenuPolicy">
                   <enum>Qt::CustomContextMenu</enum>
@@ -547,7 +545,7 @@
                 </layout>
                </item>
                <item>
-                <widget class="ParameterTableView" name="tableView_relationship_parameter">
+                <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -609,6 +607,7 @@
     <property name="title">
      <string>Session</string>
     </property>
+    <addaction name="actionRefresh"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
    </widget>
@@ -628,6 +627,18 @@
     <addaction name="actionAdd_object_parameter_values"/>
     <addaction name="actionAdd_relationship_parameters"/>
     <addaction name="actionAdd_relationship_parameter_values"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_object_classes"/>
+    <addaction name="actionEdit_objects"/>
+    <addaction name="actionEdit_relationship_classes"/>
+    <addaction name="actionEdit_relationships"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove_object_tree_items"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove_object_parameters"/>
+    <addaction name="actionRemove_object_parameter_values"/>
+    <addaction name="actionRemove_relationship_parameters"/>
+    <addaction name="actionRemove_relationship_parameter_values"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -644,6 +655,9 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCommit">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
@@ -656,6 +670,9 @@
    </property>
   </action>
   <action name="actionRollback">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
@@ -668,6 +685,10 @@
    </property>
   </action>
   <action name="actionQuit">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
+   </property>
    <property name="text">
     <string>Close</string>
    </property>
@@ -760,7 +781,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+     <normaloff>:/icons/import_ds.png</normaloff>:/icons/import_ds.png</iconset>
    </property>
    <property name="text">
     <string>Import</string>
@@ -770,6 +791,13 @@
    </property>
   </action>
   <action name="actionExport">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/export_ds.png</normaloff>:/icons/export_ds.png</iconset>
+   </property>
    <property name="text">
     <string>Export</string>
    </property>
@@ -783,6 +811,13 @@
    </property>
   </action>
   <action name="actionCopy">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
+   </property>
    <property name="text">
     <string>Copy</string>
    </property>
@@ -791,6 +826,13 @@
    </property>
   </action>
   <action name="actionPaste">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/paste.png</normaloff>:/icons/paste.png</iconset>
+   </property>
    <property name="text">
     <string>Paste</string>
    </property>
@@ -817,6 +859,9 @@
    </property>
   </action>
   <action name="actionRemove_object_parameter_values">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
@@ -844,6 +889,9 @@
    </property>
   </action>
   <action name="actionRemove_relationship_parameter_values">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
@@ -853,6 +901,9 @@
    </property>
   </action>
   <action name="actionRemove_object_parameters">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_object_parameter_icon.png</normaloff>:/icons/minus_object_parameter_icon.png</iconset>
@@ -862,12 +913,72 @@
    </property>
   </action>
   <action name="actionRemove_relationship_parameters">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_relationship_parameter_icon.png</normaloff>:/icons/minus_relationship_parameter_icon.png</iconset>
    </property>
    <property name="text">
     <string>Remove relationship parameter definitions</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
+   </property>
+   <property name="text">
+    <string>Refresh</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Return</string>
+   </property>
+  </action>
+  <action name="actionEdit_object_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit object classes</string>
+   </property>
+  </action>
+  <action name="actionEdit_relationship_classes">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit relationship classes</string>
+   </property>
+  </action>
+  <action name="actionEdit_objects">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit objects</string>
+   </property>
+  </action>
+  <action name="actionEdit_relationships">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Edit relationships</string>
+   </property>
+  </action>
+  <action name="actionRemove_object_tree_items">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/minus_object_icon.png</normaloff>:/icons/minus_object_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove object tree items</string>
    </property>
   </action>
  </widget>
@@ -878,7 +989,12 @@
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>ParameterTableView</class>
+   <class>AutoFilterCopyPasteTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>JSONPopupTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>
