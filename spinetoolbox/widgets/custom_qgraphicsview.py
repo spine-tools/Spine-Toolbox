@@ -53,7 +53,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.make_link_drawer()
         self.init_scene()
 
-    @Slot("QList", name='scene_changed')
+    @Slot("QList<QRectF>", name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Resize scene as it changes."""
         # logging.debug("scene changed. {0}".format(changed_qrects))

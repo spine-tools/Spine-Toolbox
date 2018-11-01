@@ -476,8 +476,7 @@ class ToolboxUI(QMainWindow):
         for selected_item in self.ui.graphicsView.scene().selectedItems():
             selected_item.setSelected(False)  # Clear QGraphicsItem selections
         if not current.isValid():  # Current item is root
-            # Happens when a project item is removed and then the user
-            # tries to select another project item of the same type
+            self.msg_error.emit("Current selected item is the root item. This should not happen.")
             return
         if not current.parent().isValid():  # Current is category
             if not previous:  # Previous is None
@@ -526,7 +525,6 @@ class ToolboxUI(QMainWindow):
             # Set No Selection Tab active and clear item selections
             self.ui.treeView_project.clearSelection()
             self.ui.graphicsView.scene().clearSelection()
-            self.ui.treeView_project.setCurrentIndex(QModelIndex())
             for i in range(self.ui.tabWidget_item_info.count()):
                 if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
                     self.ui.tabWidget_item_info.setCurrentIndex(i)
@@ -772,8 +770,6 @@ class ToolboxUI(QMainWindow):
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
                     return
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
-        # Activate No Selection tab
-        self.activate_item_tab()
         return
 
     @Slot("QUrl", name="open_anchor")
