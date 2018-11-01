@@ -476,7 +476,8 @@ class ToolboxUI(QMainWindow):
         for selected_item in self.ui.graphicsView.scene().selectedItems():
             selected_item.setSelected(False)  # Clear QGraphicsItem selections
         if not current.isValid():  # Current item is root
-            self.msg_error.emit("Current selected item is the root item. This should not happen.")
+            # Happens when a project item is removed and then the user
+            # tries to select another project item of the same type
             return
         if not current.parent().isValid():  # Current is category
             if not previous:  # Previous is None
@@ -524,6 +525,8 @@ class ToolboxUI(QMainWindow):
         if not item:
             # Set No Selection Tab active and clear item selections
             self.ui.treeView_project.clearSelection()
+            self.ui.graphicsView.scene().clearSelection()
+            self.ui.treeView_project.setCurrentIndex(QModelIndex())
             for i in range(self.ui.tabWidget_item_info.count()):
                 if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
                     self.ui.tabWidget_item_info.setCurrentIndex(i)
