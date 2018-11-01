@@ -24,12 +24,15 @@ and try again.
 which can be used to enter data more easily.
 - JSON data can be visualized and edited more easily in the data store form.
 - Tools can now execute (Windows) batch files and other executables (.exe). Linux support pending.
+- About Qt dialog added to Help menu
 
 ### Fixed
 - Clicking on the open treeview button while the Data store form is open now raises it, rather than opening a
 second one.
 - Work folder is not created for Tools if the Tool template requirements are not met.
-- Result folder is not created if the Tool template fails to start
+- Result folder is not created if the Tool template fails to start.
+- The embedded Julia REPL now uses the Julia that is given in application Settings (F1). 
+Previously, this used the default Julia of your OS.
 
 ### Changed
 

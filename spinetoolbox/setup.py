@@ -37,10 +37,11 @@ def main(argv):
     tk86t_dll = os.path.join(python_dir, "DLLs", "tk86t.dll")
     # Path to built documentation (No need for sources)
     doc_path = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build"))
-    # Change log
+    # Paths to files that should be included (Changelog, readme, licence files)
     changelog_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "CHANGELOG.md"))
-    # Readme
     readme_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "README.md"))
+    copying_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING"))
+    copying_lesser_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING.LESSER"))
     # Set Windows .msi installer default install path to C:\SpineToolbox-version
     systemdrive = os.environ['SYSTEMDRIVE']
     default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
@@ -61,7 +62,7 @@ def main(argv):
                                           "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
                                           "scipy.spatial.ckdtree"],
                              "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll,
-                                               changelog_file, readme_file],
+                                               changelog_file, readme_file, copying_file, copying_lesser_file],
                              "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}
     # This does not show logging messages
