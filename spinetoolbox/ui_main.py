@@ -493,6 +493,12 @@ class ToolboxUI(QMainWindow):
                 ret = previous_item.deactivate()
                 if not ret:
                     self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
+                # Show No Selection tab because the item has been deactivated anyway
+                for i in range(self.ui.tabWidget_item_info.count()):
+                    if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
+                        self.ui.tabWidget_item_info.setCurrentIndex(i)
+                        break
+                self.ui.dockWidget_item.setWindowTitle("Nothing selected")
             return
         current_item = self.project_item_model.project_item(current)
         if not previous:
@@ -722,6 +728,11 @@ class ToolboxUI(QMainWindow):
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
+        for i in range(self.ui.tabWidget_item_info.count()):
+            if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
+                self.ui.tabWidget_item_info.setCurrentIndex(i)
+                break
+        self.ui.dockWidget_item.setWindowTitle("Nothing selected")
 
     def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.
