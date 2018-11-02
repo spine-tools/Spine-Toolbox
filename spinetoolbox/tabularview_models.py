@@ -24,9 +24,8 @@ Spine Toolbox grid view
 :date:   1.11.2018
 """
 
-from PySide2.QtWidgets import QApplication, QTableView, QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QListWidget, QAbstractItemView, QListWidgetItem, QLabel, QLayout, QMenu, QPushButton, QTreeView, QHeaderView, QAction
-from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QItemSelectionModel, Slot, QSortFilterProxyModel, QPoint, QItemSelection, QAbstractItemModel
-from PySide2.QtGui import QStandardItemModel, QColor, QKeySequence, QDropEvent
+from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel
+from PySide2.QtGui import QColor
 import operator
 
 
@@ -128,29 +127,38 @@ class PivotTableModel(QAbstractTableModel):
     indexEntriesChanged = Signal(object, dict, dict) #signals when enteties in each index has changed
     def __init__(self, data, index_names, index_type, parent = None):
         super(PivotTableModel, self).__init__(parent)
+        
+        # stores edited and deleted data
         self._edit_data = {}
         self._data_deleted = set()
-        
-        self._key_getter = []
-        self._data = []
+        # operator.itemgetter placeholder
+        self._key_getter = lambda *x: () 
+        # actual data as a dict
+        self._data = {}
+        # row and column indexes of current pivot
         self._data_index = []
         self._data_columns = []
+        # sets of column and row indexes of current pivot for comparisions
         self._data_index_set = set()
         self._data_columns_set = set()
-        self._data_header = []
+        # dictionary wiht index name to index in self.index_names
         self._index_ind = {}
+        
+        # number of rows and columns of top left corner where index names are displayed
         self._num_headers_row = 0
         self._num_headers_column = 0
+        # list of list that stores the top left corner data
+        self._data_header = []
         
         # name and type of indexes
-        self.index_names = []
+        self.index_names = ()
         self.index_type = {}
         
         # the pivot of the model
         self.frozen_index = ()
-        self.pivot_index = []
-        self.pivot_columns = []
-        self.pivot_frozen = []
+        self.pivot_index = ()
+        self.pivot_columns = ()
+        self.pivot_frozen = ()
         
         # index values for each index and for a tuple of indexes
         self.index_entries = {}
@@ -173,7 +181,7 @@ class PivotTableModel(QAbstractTableModel):
         
         self.set_new_data(data, index_names, index_type)
 
-    def set_new_data(self, data, index_names, index_type, index_entries = {}, valid_index_values = {}, tuple_index_entries = {}):
+    def set_new_data(self, data, index_names, index_type, index=(), columns=(), frozen=(), frozen_value=() , valid_index_values={}, tuple_index_entries={}):
         """set the data of the model, index names and any additional indexes that don't have data, valid index values.
         """
         if len(index_names) != len(index_type):
@@ -182,16 +190,28 @@ class PivotTableModel(QAbstractTableModel):
             raise ValueError('data inner lists be of length >= len(index_names) + 1')
         if not all(t in [str, int] for t in index_type):
             raise ValueError('index_type can only contain str or int type')
+
+        if not index + columns + frozen:
+            # no pivot given, set default pivot
+            index = tuple(index_names)
+            columns = ()
+            frozen = ()
+            frozen_value = ()
+        else:
+            #check given pivot
+            pivot_error = self.is_invalid_pivot(index, columns, frozen, frozen_value, index_names)
+            if pivot_error:
+                raise pivot_error
+            
         #self.beginResetModel()
         self.valid_index_values = valid_index_values
         self._edit_data = {}
         self._index_ind = {index: ind for ind, index in enumerate(index_names)}
+        # create data dict with keys as long as index_names
         self._data = {tuple(d[:len(index_names)]):d[len(index_names)] for d in data}
         key = tuple(self._index_ind[i] for i in index_names)
         self._key_getter = tuple_itemgetter(operator.itemgetter(*key), len(key))
-        self.pivot_index = index_names
-        self.pivot_columns = []
-        self.index_names = index_names
+        self.index_names = tuple(index_names)
         self.index_type = {index_names[i]: it for i, it in enumerate(index_type)}
         self.index_entries = {}
         self.tuple_index_entries = {}
@@ -199,15 +219,16 @@ class PivotTableModel(QAbstractTableModel):
         self.added_tuple_index_entries = {}
         self.deleted_tuple_index_entries = {}
         self.deleted_index_entries = {}
+        self.pivot_index = tuple(index)
+        self.pivot_columns = tuple(columns)
+        self.pivot_frozen = tuple(frozen)
+        self.frozen_value = tuple(frozen_value)
+        
         # get all index values from data
         for i, c in enumerate(self.index_names):
             self.index_entries[c] = set(d[i] for d in self._data.keys())
             self.added_index_entries[c] = set()
             self.deleted_index_entries[c] = set()
-        # add aditional indexes not in data
-        for k, v in index_entries.items():
-            if k in self.index_entries:
-                self.index_entries[k].update(v)
         # add tuple entries
         for k, v in tuple_index_entries.items():
             keys = tuple(self._index_ind[i] for i in k)
@@ -215,7 +236,7 @@ class PivotTableModel(QAbstractTableModel):
             self.tuple_index_entries[k] = set(getter(key) for key in self._data.keys())
             self.tuple_index_entries[k].update(v)
 
-        self.setPivot(self.pivot_index, self.pivot_columns, [], ())
+        self.setPivot(index, columns, frozen, frozen_value)
 
     def set_frozen_value(self, value):
         """Sets the value of the frozen indexes"""
@@ -226,32 +247,40 @@ class PivotTableModel(QAbstractTableModel):
             return
         self.frozen_value = tuple(value)
         self.setPivot(self.pivot_index, self.pivot_columns, self.pivot_frozen, value)
+    
+    def is_invalid_pivot(self, index, columns, frozen, frozen_value, index_names):
+        error = None
+        if not all(i in index_names for i in frozen):
+            error = ValueError("'frozen' contains values that doesn't match with current 'index_names'")
+        if not all(i in index_names for i in index):
+            error = ValueError("'index' contains values that doesn't match with current 'index_names'")
+        if not all(c in index_names for c in columns):
+            error = ValueError("'columns' contains values that doesn't match with current 'index_names'")
+        if len(set(index + columns + frozen)) != len(index_names):
+            error = ValueError("'index', 'columns' and 'forzen' must contain all unqiue variables in 'index_names' without duplicates")
+        if len(frozen) != len(frozen_value):
+            error = ValueError("'frozen_value' must be same length as 'frozen'")
+        return error
 
     def setPivot(self, index, columns, frozen, frozen_value):
         """Sets pivot for current data"""
-        if not all(i in self.index_names for i in frozen):
-            raise ValueError("'frozen' contains values that doesn't match with current 'index_names'")
-        if not all(i in self.index_names for i in index):
-            raise ValueError("'index' contains values that doesn't match with current 'index_names'")
-        if not all(c in self.index_names for c in columns):
-            raise ValueError("'columns' contains values that doesn't match with current 'index_names'")
-        if len(set(index + columns + frozen)) != len(self.index_names):
-            raise ValueError("'index', 'columns' and 'forzen' must contain all unqiue variables in 'index_names' without duplicates")
-        if len(frozen) != len(frozen_value):
-            raise ValueError("'frozen_value' must be same length as 'frozen'")
-        
+        pivot_error = self.is_invalid_pivot(index, columns, frozen, frozen_value, self.index_names)
+        if pivot_error:
+            raise pivot_error
+
         self.beginResetModel()
         self.pivot_index = index
         self.pivot_columns = columns
         self.pivot_frozen = frozen
         self.frozen_value = tuple(frozen_value)
         # set key_getter so that you will get a correct key for _data when doing
-        # _key_getter(row_key + col_key)
+        # _key_getter(row_key + col_key + frozen_value)
         order = tuple(self._index_ind[i] for i in self.pivot_index + self.pivot_columns + self.pivot_frozen)
         order = tuple(sorted(range(len(order)),key=order.__getitem__))
         self._key_getter = tuple_itemgetter(operator.itemgetter(*order), len(order))
         
-        # find unique set of tuples for row and column headers
+        # find unique set of tuples for row and column headers from data with given pivot
+        # row indexes
         if len(self.pivot_index) > 0:
             keys = tuple(self._index_ind[i] for i in self.pivot_index)
             ind_getter = tuple_itemgetter(operator.itemgetter(*keys), len(keys))
@@ -263,6 +292,7 @@ class PivotTableModel(QAbstractTableModel):
                 index_values = set(ind_getter(k) for k in self._data.keys() if all(ind_getter(k)))
         else:
             index_values = [()]
+        # column indexes
         if len(self.pivot_columns) > 0:
             keys = tuple(self._index_ind[i] for i in self.pivot_columns)
             col_getter = tuple_itemgetter(operator.itemgetter(*keys), len(keys))
@@ -275,11 +305,12 @@ class PivotTableModel(QAbstractTableModel):
         else:
             column_values = [()]
 
-        # keep unique values and sort
+        # keep unique values
         self._data_index_set = set(index_values)
         self._data_columns_set = set(column_values)
 
-        # add tuple entries
+        # add tuple entries to row and column indexes if given
+        # only add tuples where all indexes are found in pivot + frozen_value
         for k in self.tuple_index_entries.keys():
             # row items
             if set(k).issubset(self.pivot_frozen + self.pivot_index) and not set(self.pivot_frozen).issuperset(k):
@@ -343,6 +374,7 @@ class PivotTableModel(QAbstractTableModel):
                     self.index_entries[name].update(new_entries[name])
         
         # remove duplicates with none type
+        # row indexes
         tuples_with_none = [t for t in self._data_columns_set if not all(t)]
         # find set of indices which contain all not none elements
         index_without_none = set(tuple(i for i, item in enumerate(index_tuple) if item != None) for index_tuple in tuples_with_none)
@@ -354,6 +386,7 @@ class PivotTableModel(QAbstractTableModel):
             self._data_columns_set.difference_update(remove_index)
             
         # remove duplicates with none type
+        # column indexes
         tuples_with_none = [t for t in self._data_index_set if not all(t)]
         # find which index that is not None
         index_without_none = set(tuple(i for i, item in enumerate(index_tuple) if item != None) for index_tuple in tuples_with_none)
@@ -364,41 +397,25 @@ class PivotTableModel(QAbstractTableModel):
             remove_index = set(t for t in none_index if getter(t) in existing_index)
             self._data_index_set.difference_update(remove_index)
             
-
-        #recalc entries
-#        none_index = tuple(None for _ in self.pivot_columns)
-#        for i, c in enumerate(self.pivot_columns):
-#            if self.index_entries[c]:
-#                nodata_index = self.index_entries[c].difference(set(d[i] for d in self._data_columns_set))
-#                if nodata_index:
-#                    end_i = min(i+1,len(none_index))
-#                    nodata_index = [none_index[0:i] + (index,) + none_index[end_i:] for index in nodata_index]
-#                    self._data_columns_set.update(set(nodata_index))
-#        none_index = tuple(None for _ in self.pivot_index)
-#        for i, c in enumerate(self.pivot_index):
-#            if self.index_entries[c]:
-#                nodata_index = self.index_entries[c].difference(set(d[i] for d in self._data_index_set))
-#                if nodata_index:
-#                    end_i = min(i+1,len(none_index))
-#                    nodata_index = [none_index[0:i] + (index,) + none_index[end_i:] for index in nodata_index]
-#                    self._data_index_set.update(set(nodata_index))
         
-        
-        
-        # sort list of tuples where tuple values can be None
-        self._data_index = sorted(list(self._data_index_set), key=lambda x:tuple((i is None, i) for i in x))
-        self._data_columns = sorted(list(self._data_columns_set), key=lambda x:tuple((i is None, i) for i in x))
+        _data_columns_none_set = set(t for t in self._data_columns_set if not all(t))
+        _data_index_none_set = set(t for t in self._data_index_set if not all(t))
         self._data_columns_set = set(t for t in self._data_columns_set if all(t))
         self._data_index_set = set(t for t in self._data_index_set if all(t))
+        # sort indexes without Nones
+        self._data_index = sorted(self._data_index_set)
+        self._data_columns = sorted(self._data_columns_set)
+        # add indexes where tuple values can be None
+        self._data_index.extend(sorted(_data_index_none_set, key=lambda x:tuple((i is None, i) for i in x)))
+        self._data_columns.extend(sorted(_data_columns_none_set, key=lambda x:tuple((i is None, i) for i in x)))
         
+        # update top left corner data
         self._update_header_data()
         
-        # reset invalid data, don't keep old values.
+        # set invalid data to indexes with none in them.
         self._invalid_row = {i + self._num_headers_row: key for i, key in enumerate(self._data_index) if not all(key)}
         self._invalid_column = {i + self._num_headers_column: key for i, key in enumerate(self._data_columns) if not all(key)}
         self._invalid_data = {}
-        
-        
         
         self.endResetModel()
         top_left = self.index(0, 0)
@@ -526,12 +543,12 @@ class PivotTableModel(QAbstractTableModel):
             for i, key in reversed(list(enumerate(self._data_index))):
                 if key in delete_values_index:
                     del_key = self._data_index.pop(i)
-                    self._data_index_set.remove(del_key)
+                    self._data_index_set.discard(del_key)
         if delete_values_column:
             for i, key in reversed(list(enumerate(self._data_columns))):
                 if key in delete_values_column:
                     del_key = self._data_columns.pop(i)
-                    self._data_columns_set.remove(del_key)
+                    self._data_columns_set.discard(del_key)
         self.endResetModel()
     
     def delete_index_values(self, delete_indexes):
@@ -602,6 +619,8 @@ class PivotTableModel(QAbstractTableModel):
 
     def delete_row_col(self, delete_indexes, direction):
         """Delete one ore more rows/columns from current view"""
+        # TODO: this currently removes all data for selected row or col even if
+        #       those are hidden. Change so only visible values are removed
         if not delete_indexes:
             return
         if direction == "row":
