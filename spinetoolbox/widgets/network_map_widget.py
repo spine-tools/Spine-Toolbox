@@ -50,10 +50,15 @@ class NetworkMapForm(QWidget):
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.network_map = NetworkMap(mapping, settings_path)
+        self.network_map = NetworkMap(toolbox, mapping, settings_path)
         # self.button = QPushButton('Plot')
         # self.button.clicked.connect(self.plot)
+
+    def show(self):
+        if not self.network_map.make_map():
+            return
         self.ui.horizontalLayout_network_map_placeholder.addWidget(self.network_map.qt_canvas)
+        super().show()
 
     def plot(self):
         self.network_map.make_map()
@@ -62,8 +67,9 @@ class NetworkMapForm(QWidget):
 class NetworkMap:
     """Class for making network plots, see documentation and methods for more info."""
 
-    def __init__(self, mapping, settings_path=""):
+    def __init__(self, toolbox, mapping, settings_path=""):
         """ Initialize class."""
+        self._toolbox = toolbox
         self.mapping = mapping
         # Class attributes
         self.settings = None
@@ -73,23 +79,7 @@ class NetworkMap:
         self.sets_variable = None
         self.sets_variable_lim = None
         self.node_set = None
-        self.node_color = None
-        self.node_name_color = None
-        self.node_length = None
-        self.node_lw = None
-        self.node_name_fs = None
         self.conn_set = None
-        self.conn_lw = None
-        self.conn_color = None
-        self.arrow_scaling = None
-        self.interactive = None
-        self.picker_node = None
-        self.picker_conn = None
-        self.significant_figures = None
-        self.info_fc = None
-        self.info_ec = None
-        self.info_lw = None
-        self.equal_aspect = None
         self.x = None
         self.y = None
         self.x_min = None
@@ -143,7 +133,6 @@ class NetworkMap:
         self.conn_parameter_keys = None
         self.init_settings(settings_path)
         self.init_network_data()
-        self.make_map()
 
     # noinspection PyMethodMayBeStatic
     def text_angle(self, x1, y1, x2, y2):
@@ -243,7 +232,7 @@ class NetworkMap:
     def init_network_data(self):
         """Initialize node and conn data to plot, by querying mapping."""
         conn_node_node_relationship_class = self.mapping.single_wide_relationship_class(
-            name='connection__node__node').one_or_none()
+            name=self.settings['connection_node_node']).one_or_none()
         if not conn_node_node_relationship_class:
             return
         # Iterate connection__node__node to get the names
@@ -263,7 +252,7 @@ class NetworkMap:
         self.node_info_param = self.settings['node_info_parameter']
         # Node parameters
         self.node_parameter_dict = {}
-        node_object_class = self.mapping.single_object_class(name='node').one_or_none()
+        node_object_class = self.mapping.single_object_class(name=self.settings['node']).one_or_none()
         if not node_object_class:
             return
         self.node_parameter_dict = {}
@@ -273,7 +262,9 @@ class NetworkMap:
             for node_name in self.node_name_list:
                 node = self.mapping.single_object(name=node_name).one_or_none()
                 parameter_value = self.mapping.single_object_parameter_value(
-                        parameter_id=parameter.id, object_id=node.id).one_or_none()
+                    parameter_id=parameter.id, object_id=node.id).one_or_none()
+                if not parameter_value:
+                    continue
                 node_parameter_value_list.append(parameter_value.value)
             self.node_parameter_dict[parameter.name] = arr(node_parameter_value_list)
         self.node_parameter_keys = sorted(list(self.node_parameter_dict.keys()))
@@ -282,7 +273,7 @@ class NetworkMap:
         self.conn_status = np.ones(len(self.conn_name_list), int)
         self.conn_info_param = self.settings['conn_info_parameter']
         # Connection parameters
-        conn_object_class = self.mapping.single_object_class(name='connection').one_or_none()
+        conn_object_class = self.mapping.single_object_class(name=self.settings['connection']).one_or_none()
         if not conn_object_class:
             return
         self.conn_parameter_dict = {}
@@ -292,7 +283,9 @@ class NetworkMap:
             for conn_name in self.conn_name_list:
                 conn = self.mapping.single_object(name=conn_name).one_or_none()
                 parameter_value = self.mapping.single_object_parameter_value(
-                        parameter_id=parameter.id, object_id=conn.id).one_or_none()
+                    parameter_id=parameter.id, object_id=conn.id).one_or_none()
+                if not parameter_value:
+                    continue
                 conn_parameter_value_list.append(parameter_value.value)
             self.conn_parameter_dict[parameter.name] = arr(conn_parameter_value_list)
         self.conn_parameter_keys = sorted(list(self.conn_parameter_dict.keys()))
@@ -355,11 +348,14 @@ class NetworkMap:
         # FIXME: somehow the 200 limit here need to be set by user, or configuration
         large = False  # for now # len(self.node_name_list) >= 200 # large network -> somewhat different settings
         settings = dict()
+        settings['node'] = 'node'
+        settings['connection'] = 'connection'
+        settings['connection_node_node'] = 'connection__node__node'
         settings['node_info_parameter'] = []  # parameters to be displayed in interactive mode
         settings['conn_info_parameter'] = []  # For now # self.conn_parameter_keys.copy()
         settings['current_tab'] = 0  # tab shown in settings window
         settings['xy_params'] = None  # parameters that directly gives coordinates
-        settings['xy_type'] = 1  # 1,2,3 for new layout, from parameters and previous
+        settings['xy_type'] = 1  # 1, 2, 3 for new layout, from parameters, and previous
         settings['set_var'] = None  # parameter used for making different sets with different plot design
         settings['set_var_func'] = 'min'  # conn sets depend on set_var_func(set_var_to_node, set_var_from_node)
         settings['set_var_lim'] = []  # break points for sets
@@ -419,16 +415,18 @@ class NetworkMap:
     def make_map(self):
         """Make map and show it."""
         self.compute_unique_conns()
-        self.setup_plot()
         # layout
         if self.settings['xy_type'] == 1:
-            self.calculate_layout()
+            if not self.calculate_layout():
+                self._toolbox.msg_error.emit("Unable to calculate layout. Maybe the network is not fully connected?")
+                return False
         elif self.settings['xy_type'] == 2:
             self.x = self.node_parameter_dict[self.settings['xy_params'][0]]
             self.y = self.node_parameter_dict[self.settings['xy_params'][1]]
         elif self.settings['xy_type'] == 3:
             self.x = self.settings['x_coordinate']
             self.y = self.settings['y_coordinate']
+        self.setup_plot()
         # map properties and initiate plot
         self.set_map_properties()
         self.init_plot()
@@ -458,10 +456,10 @@ class NetworkMap:
         # * show map and save coordinates
         self.qt_canvas = FigureCanvas(self.fig)
         self.mpl_id = [self.fig.canvas.mpl_connect('close_event', self.handle_close)]
-        if self.interactive:
+        if self.settings['interactive']:
             self.annot = self.ax.annotate("", xy=(0, 0), xytext=(-100, 20), textcoords="offset points",
-                                          bbox=dict(boxstyle="round", fc=self.info_fc, ec=self.info_ec,
-                                                    lw=self.info_lw),
+                                          bbox=dict(boxstyle="round", fc=self.settings['info_fc'], ec=self.settings['info_ec'],
+                                                    lw=self.settings['info_lw']),
                                           arrowprops=dict(arrowstyle="->"), zorder=100, fontsize=8)
             self.annot.set_visible(False)
             self.mpl_id.append(self.fig.canvas.mpl_connect('pick_event', self.display_info))
@@ -474,6 +472,7 @@ class NetworkMap:
             self.new_pos = []  # to redo a move
             self.interactive_info_display = 1
             # print("\nInformation mode:\nClick on nodes and conn for info\nPress 'm' to change to layout edit mode")
+        return True
 
     def compute_unique_conns(self):
         """Compute unique conns and related info."""
@@ -508,29 +507,12 @@ class NetworkMap:
         else:
             var = self.node_parameter_dict[set_var]
             self.node_set = arr([find(v >= arr(set_var_lim))[0] if v >= set_var_lim[-1] else -1 for v in var])
-        self.node_color = self.settings['node_color']
-        self.node_name_color = self.settings['node_name_color']
-        self.node_length = self.settings['node_length']
-        self.node_lw = self.settings['node_lw']
-        self.node_name_fs = self.settings['node_name_fs']
         # Connection settings
         if set_var is None or len(set_var_lim) == 0:
             self.conn_set = np.zeros(len(self.from_node_index_arr), int)  # all shown and same symbols
         else:
             var_conn = set_var_func(set_var[self.from_node_index_arr], set_var[self.to_node_index_arr])
             self.conn_set = arr([find(v >= arr(set_var_lim))[0] if v >= set_var_lim[-1] else -1 for v in var_conn])
-        self.conn_lw = self.settings['conn_lw']
-        self.conn_color = self.settings['conn_color']
-        self.arrow_scaling = self.settings['arrow_scaling']  # size of flow arrows (1 for default)
-        # Interactive plot settings
-        self.interactive = self.settings['interactive']  # interactive map mode
-        self.picker_node = self.settings['picker_node']  # tolerance for interactive picking
-        self.picker_conn = self.settings['picker_conn']
-        self.significant_figures = self.settings['significant_figures']  # when info is displayed
-        self.info_fc = self.settings['info_fc']  # color for info box (SPINE)
-        self.info_ec = self.settings['info_ec']  # color info-box edge
-        self.info_lw = self.settings['info_lw']  # info-box edge width
-        self.equal_aspect = self.settings['equal_aspect']
 
     def calculate_layout(self):
         """Layout of grid (node coordinates).
@@ -561,6 +543,9 @@ class NetworkMap:
         rescale_iter = self.settings['rescale_iter']
         largest_dim = self.settings['largest_dim']
         d = self.calculate_distance(self.node, node1, node2, conn_v, node_v, conn_exp, node_exp)
+        if not np.isfinite(d).all():
+            return False
+        d = d / np.max(d) * 100  # normalise so system diameter = 100 units
         # Calculate coordinates with multidimensional scaling (mostly default settings)
         xy = self.VSGD_MDS(d, heavy, self.node, iterations, min_d, w_exp, rescale_iter)
         # Possibly switch dimensions (default is landscape-like orientation)
@@ -573,6 +558,7 @@ class NetworkMap:
         else:
             self.x = xy[:, 0]
             self.y = xy[:, 1]
+        return True
 
     def aggregate_conns(self):
         """Aggregate parallel conns."""
@@ -606,7 +592,6 @@ class NetworkMap:
         val[val == 0] = 1e-6  # ...which are now 1/1e6 of smallest non-zero but not too small
         dist[ind1, ind2] = dist[ind2, ind1] = val
         d = dijkstra(dist, directed=False)  # shortest path between all bus-pairs
-        d = d / np.max(d) * 100  # normalise so system diameter = 100 units
         return d
 
     # noinspection PyMethodMayBeStatic
@@ -666,7 +651,7 @@ class NetworkMap:
     # noinspection PyMethodMayBeStatic
     def VSGD_MDS(self, d, heavy, bus, iterations, min_d, w_exp, rescale_iter):
         """Find layout with multidimensional scaling using vectorised stochastic gradient descent."""
-        d[d <= np.max(d)*min_d] = np.max(d)*min_d  # not too small distances
+        d[d <= np.max(d) * min_d] = np.max(d) * min_d  # not too small distances
         N = len(d)
         mask = np.ones((N, N)) == 1 - np.tril(np.ones((N, N)))  # upper triangular except diagonal
         X = np.random.rand(N, 2) * 100 - 50  # random layout with diameter 100
@@ -679,7 +664,7 @@ class NetworkMap:
             X[h_ind, :] = h_xy
             bw = np.ones(len(bus))  # bus weight
             bw[h_ind] = h_weight
-        w = d**w_exp  # bus-pair weights (lower for distant buses)
+        w = d ** w_exp  # bus-pair weights (lower for distant buses)
         stepmax = 1/np.min(w[mask])
         stepmin = 1/np.max(w[mask])
         lambda1 = -np.log(stepmin/stepmax) / (iterations - 1)  # exponential decay of allowed adjustment
@@ -720,7 +705,7 @@ class NetworkMap:
         self.sub_borders = [0.01, 0.99, 0.01, 0.99]  # bottom, top, left, right for subplots
         # Default heat map properties
         gp = max(self.N, 300) * 100  # ~100*N grid points in heat maps
-        self.x_grid_points = (gp**0.5 * (self.x_range/self.y_range)**0.5).astype(int)
+        self.x_grid_points = (gp ** 0.5 * (self.x_range / self.y_range) ** 0.5).astype(int)
         self.y_grid_points = (gp / self.x_grid_points).astype(int)
 
     def set_conn_colors(self):
@@ -799,13 +784,13 @@ class NetworkMap:
         """
         fig_size = self.settings['fig_size']
         if type(fig_size) in [float, int]:  # fig height given
-            fs = (fig_size*self.x_range/self.y_range, fig_size)
+            fs = (fig_size * self.x_range / self.y_range, fig_size)
             self.fig, self.ax = plt.subplots(figsize=fs)
         elif len(fig_size) == 2:
-            if self.x_range/self.y_range > fig_size[0]/fig_size[1]:  # width limits size
-                fs = (fig_size[0], fig_size[0]*self.y_range/self.x_range)
+            if self.x_range / self.y_range > fig_size[0] / fig_size[1]:  # width limits size
+                fs = (fig_size[0], fig_size[0] * self.y_range / self.x_range)
             else:  # height limits size
-                fs = (fig_size[1]*self.x_range/self.y_range, fig_size[1])
+                fs = (fig_size[1] * self.x_range / self.y_range, fig_size[1])
             self.fig, self.ax = plt.subplots(figsize=fs)
         else:  # [x,y,dx,dy] given
             self.fig, self.ax = plt.subplots()
@@ -820,7 +805,7 @@ class NetworkMap:
         self.ax.tick_params(axis='both', which='both', bottom=False, labelbottom=False,
                             top=False, labeltop=False, left=False, labelleft=False,
                             right=False, labelright=False)
-        if self.equal_aspect:
+        if self.settings['equal_aspect']:
             self.ax.set_aspect('equal')
 
     def add_topo(self):
@@ -833,8 +818,8 @@ class NetworkMap:
         self.node_text_index = []
         # nodes + labels
         for s in np.unique(self.node_set[self.node_set >= 0]):
-            l, lw, c = self.node_length[s], self.node_lw[s], self.node_color[s]
-            fs, c2 = self.node_name_fs[s], self.node_name_color[s]
+            l, lw, c = self.settings['node_length'][s], self.settings['node_lw'][s], self.settings['node_color'][s]
+            fs, c2 = self.settings['node_name_fs'][s], self.settings['node_name_color'][s]
             ind = find((self.node_set == s) & (self.node_status == 1))
             # x, y, text = self.x[ind], self.y[ind], self.node_name_list[ind]
             x, y, text = self.x, self.y, self.node_name_list
@@ -852,26 +837,26 @@ class NetworkMap:
             self.segments_index.append(ind)
             if l == 0:  # dots
                 self.segments.append(np.column_stack((x, y)))
-                self.segments_object.append(self.ax.plot(x, y, ms=lw**2, marker='o', ls='', c=c,
+                self.segments_object.append(self.ax.plot(x, y, ms=lw ** 2, marker='o', ls='', c=c,
                                                          zorder=10, label=label, picker=5, gid=gid)[0])
             else:  # node bars
-                dx = l/200*self.x_range
+                dx = l / 200 * self.x_range
                 segments = [[(xs - dx, ys), (xs + dx, ys)] for xs, ys in zip(x, y)]
                 self.segments.append(segments)
                 lc = mcoll.LineCollection(segments, colors=c, linewidths=lw, label=label,
-                                          picker=self.picker_node, gid=gid, zorder=10)
+                                          picker=self.settings['picker_node'], gid=gid, zorder=10)
                 self.segments_object.append(self.ax.add_collection(lc))
             # node text
             if fs > 0:
                 dy = lw * self.y_range / 2000  # displacement of text
                 self.node_text_index.extend(list(ind))
                 for n in range(len(ind)):
-                    self.node_text.append(self.ax.text(x[n], y[n]+dy, text[n], va='bottom', ha='center',
+                    self.node_text.append(self.ax.text(x[n], y[n] + dy, text[n], va='bottom', ha='center',
                                                        color=c2, size=fs, zorder=15))
         # conns
         for s in np.unique(self.conn_set[self.conn_set >= 0]):
             ind = find((self.conn_set == s) & (self.conn_status > 0))
-            lw, c = self.conn_lw[s], self.conn_color[s]
+            lw, c = self.settings['conn_lw'][s], self.settings['conn_color'][s]
             if self.conn_colored is not None:
                 c = self.conn_colored[ind]  # color depending on some variable
             if self.conn_widthed is not None:
@@ -885,7 +870,8 @@ class NetworkMap:
             for x1, y1, x2, y2 in zip(self.x[ind1], self.y[ind1], self.x[ind2], self.y[ind2]):
                 segments.append([(x1, y1), (x2, y2)])
             self.segments.append(segments)
-            lc = mcoll.LineCollection(segments, colors=c, linewidths=lw, gid=gid, zorder=5, picker=self.picker_conn)
+            lc = mcoll.LineCollection(
+                segments, colors=c, linewidths=lw, gid=gid, zorder=5, picker=self.settings['picker_conn'])
             self.segments_object.append(self.ax.add_collection(lc))
 
     def add_arrows(self, var, para_func):
@@ -897,7 +883,7 @@ class NetworkMap:
 
         self.arrows_drawn = True
         var = self.conn_parameter_dict[var]
-        sc = self.arrow_scaling / np.max(np.abs(var))**0.5 * self.y_range * 0.015  # scale for arrow size
+        sc = self.settings['arrow_scaling'] / np.max(np.abs(var))**0.5 * self.y_range * 0.015  # scale for arrow size
         ind1, ind2 = self.from_node_index_arr, self.to_node_index_arr  # indices of node1,node2 in node
         for n in range(len(self.unique_conns)):
             conns = find(self.parallel_ind == n)  # all parallel conns between current nodes
@@ -917,7 +903,7 @@ class NetworkMap:
             if hasattr(self, 'conn_colored'):  # conn color based on parameter
                 c = self.conn_colored[conns[0]]
             else:  # conn color for sets
-                c = self.conn_color[self.conn_set[conns[0]]]
+                c = self.settings['conn_color'][self.conn_set[conns[0]]]
             hw = abs(v)**0.5 * sc
             dx = (x2-x1) / 2
             dy = (y2-y1) / 2
@@ -933,7 +919,7 @@ class NetworkMap:
         """Add heatmap, clim e.g. [0.9, 1.1], cmap e.g. 'jet','viridis'."""
         if hasattr(self, 'heatmap'):
             hm = np.flipud(self.heatmap)
-            aspect = 'equal' if self.equal_aspect else 'auto'
+            aspect = 'equal' if self.settings['equal_aspect'] else 'auto'
             if clim is None:
                 self.hm = self.ax.imshow(hm, extent=self.extent, cmap=cmap, zorder=0, aspect=aspect)
             else:
@@ -973,8 +959,8 @@ class NetworkMap:
             cbaxes_conn = self.fig.add_axes(pos_cb_conn)
             cbar_conn = mpl.colorbar.ColorbarBase(cbaxes_conn, cmap=cmap, norm=norm, ticks=[0, 1])
             cbar_conn.ax.set_xlabel(var, size=9)
-            y1 = str_sig(min(self.conn_parameter_dict[var]), self.significant_figures)
-            y2 = str_sig(max(self.conn_parameter_dict[var]), self.significant_figures)
+            y1 = str_sig(min(self.conn_parameter_dict[var]), self.settings['significant_figures'])
+            y2 = str_sig(max(self.conn_parameter_dict[var]), self.settings['significant_figures'])
             cbar_conn.ax.set_yticklabels([y1, y2])
             cbar_conn.ax.tick_params(labelsize=9)
 
@@ -1045,12 +1031,13 @@ class NetworkMap:
             return
         else:
             self.event_id = ind
+        significant_figures = self.settings['significant_figures']
         if 'node' in ind:
             # FIXME: don't access arrays by numerical index, too error prone
             n = int(ind[4:])  # node index
             info = self.node_name_list[n] + '\n'
             for var in self.node_info_param:
-                info += '\n%s: %s' % (var, str_sig(self.node_parameter_dict[var][n], self.significant_figures))
+                info += '\n%s: %s' % (var, str_sig(self.node_parameter_dict[var][n], significant_figures))
             info += self.node_info[n]
             x, y = self.x[n], self.y[n]
         elif 'conn' in ind:
@@ -1060,7 +1047,7 @@ class NetworkMap:
             if parallel:
                 info += 'parallel conn, press "n" to see next\n'
             for var in self.conn_info_param:
-                info += '\n%s: %s' % (var, str_sig(self.conn_parameter_dict[var][n], self.significant_figures))
+                info += '\n%s: %s' % (var, str_sig(self.conn_parameter_dict[var][n], significant_figures))
             info += self.conn_info[n]
             xx = [self.x[self.from_node_index_arr[n]], self.x[self.to_node_index_arr[n]]]
             yy = [self.y[self.from_node_index_arr[n]], self.y[self.to_node_index_arr[n]]]
