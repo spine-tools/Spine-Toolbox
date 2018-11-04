@@ -200,17 +200,17 @@
   <customwidget>
    <class>CustomQTableView</class>
    <extends>QTableView</extends>
-   <header>custom_timeserie_qtableview.h</header>
+   <header>widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>FrozenTableView</class>
    <extends>QTableView</extends>
-   <header>custom_timeserie_qtableview.h</header>
+   <header>widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>TestListView</class>
    <extends>QListWidget</extends>
-   <header location="global">custom_timeserie_qtableview.h</header>
+   <header>widgets/custom_qlistview.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

@@ -2897,3 +2897,51 @@ class DatapackageForeignKeysModel(MinimalTableModel):
             reference_fields = foreign_key['reference']['fields']
             data.append([fields, reference_resource, reference_fields])
         super().reset_model(data)
+
+
+class TableModel(QAbstractItemModel):
+    def __init__(self, headers = [], data = []):
+    # def __init__(self, tasks=[[]]):
+        super(TableModel, self).__init__()
+        self._data = data
+        self._headers = headers
+    
+    def parent(self, child = QModelIndex()):
+        return QModelIndex()
+
+    def index(self, row, column, parent = QModelIndex()):
+        return self.createIndex(row, column, parent)
+    
+    def set_data(self, data, headers):
+        if data and len(data[0]) != len(headers):
+            raise ValueError("'data[0]' must be same length as 'headers'")
+        self.beginResetModel()
+        self._data = data
+        self._headers = headers
+        self.endResetModel()
+        top_left = self.index(0, 0)
+        bottom_right = self.index(self.rowCount(), self.columnCount())
+        self.dataChanged.emit(top_left, bottom_right)
+
+    def rowCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        return len(self._data)
+
+    def columnCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
+        return len(self._headers)
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                return self._headers[section]
+
+    def row(self, index):
+        if index.isValid():
+            return self._data[index.row()]
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            return self._data[index.row()][index.column()]

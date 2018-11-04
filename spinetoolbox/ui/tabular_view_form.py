@@ -152,4 +152,5 @@ class Ui_MainWindow(object):
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
 
-from custom_timeserie_qtableview import FrozenTableView, TestListView, CustomQTableView
+from widgets.custom_qtableview import FrozenTableView, CustomQTableView
+from widgets.custom_qlistview import TestListView

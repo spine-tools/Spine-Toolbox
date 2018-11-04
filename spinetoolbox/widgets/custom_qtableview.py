@@ -16,11 +16,11 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-from PySide2.QtWidgets import QTableView, QApplication, QAction
+from PySide2.QtWidgets import QTableView, QApplication, QAction, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
 from widgets.custom_menus import QOkMenu
-from models import JSONModel
+from models import JSONModel, TableModel
 
 
 class CopyPasteTableView(QTableView):
@@ -297,3 +297,93 @@ class JSONPopupTableView(AutoFilterCopyPasteTableView):
         else:
             self._json_popup.hide()
             event.ignore()
+
+class FrozenTableView(QTableView):
+    def __init__(self, parent=None):
+        super(FrozenTableView, self).__init__(parent)
+        self.model = TableModel()
+        self.setSelectionBehavior(QAbstractItemView.SelectRows);
+        self.setSelectionMode(QAbstractItemView.SingleSelection);
+        self.verticalHeader().setVisible(False)
+        self.setSortingEnabled(True)
+        self.setModel(self.model)
+        self.is_updating = False
+
+    def clear(self):
+        self.model.set_data([], [])
+    
+    def get_selected_row(self):
+        if self.model.columnCount() == 0:
+            return ()
+        if self.model.rowCount() == 0:
+            return tuple(None for _ in range(self.model.columnCount()))
+        index = self.selectedIndexes()
+        if not index:
+            return tuple(None for _ in range(self.model.columnCount()))
+        else:
+            index = self.selectedIndexes()[0]
+            return self.model.row(index)
+    
+    def set_data(self, headers, values):
+        self.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
+        self.model.set_data(values, headers)
+        self.selectRow(0)
+        self.selectionModel().blockSignals(False)
+
+
+class CustomQTableView(QTableView):
+    """Custom QTableView class with copy-paste functionality.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    def __init__(self, parent = None):
+        """Initialize the class."""
+        super().__init__(parent)
+        # self.editing = False
+        self.clipboard = QApplication.clipboard()
+        self.clipboard_text = self.clipboard.text()
+        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
+
+    @Slot(name="clipboard_data_changed")
+    def clipboard_data_changed(self):
+        self.clipboard_text = self.clipboard.text()
+
+    def keyPressEvent(self, event):
+        """Copy and paste to and from clipboard in Excel-like format."""
+        if event.matches(QKeySequence.Copy):
+            selection = self.selectionModel().selection()
+            if not selection:
+                super().keyPressEvent(event)
+                return
+            # Take only the first selection in case of multiple selection.
+            first = selection.first()
+            content = ""
+            v_header = self.verticalHeader()
+            h_header = self.horizontalHeader()
+            for i in range(first.top(), first.bottom()+1):
+                if v_header.isSectionHidden(i):
+                    continue
+                row = list()
+                for j in range(first.left(), first.right()+1):
+                    if h_header.isSectionHidden(j):
+                        continue
+                    row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+                content += "\t".join(row)
+                content += "\n"
+            self.clipboard.setText(content)
+        elif event.matches(QKeySequence.Paste):
+            if not self.clipboard_text:
+                super().keyPressEvent(event)
+                return
+            top_left_index = self.currentIndex()
+            if not top_left_index.isValid():
+                super().keyPressEvent(event)
+                return
+            data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
+            self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
+            self.model().paste_data(top_left_index, data)
+        else:
+            super().keyPressEvent(event)
+
