@@ -31,7 +31,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
 import spinedatabase_api
-
+from widgets.tabular_view_widget import TabularViewForm
 
 class DataStore(ProjectItem):
     """Data Store class.
@@ -60,6 +60,7 @@ class DataStore(ProjectItem):
         self.selected_username = ""
         self.selected_password = ""
         self.data_store_treeview = None
+        self.data_store_tabularview = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -524,13 +525,36 @@ class DataStore(ProjectItem):
 
     @Slot(bool, name="open_tabularview")
     def open_tabularview(self, checked=False):
-        """Open reference in Data Store tabular view.
-        Not implemented."""
-        self._toolbox.msg_warning.emit("Not implemented.")
+        """Open reference in Data Store tabular view."""
+        if self.data_store_tabularview:
+            self.data_store_tabularview.raise_()
+            return
+        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
+            self._toolbox.msg_warning.emit("Please select dialect first")
+            return
+        reference = self.make_reference()
+        if not reference:
+            return
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            db_map = spinedatabase_api.DiffDatabaseMapping(db_url, username)
+        except spinedatabase_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        self.data_store_tabularview = TabularViewForm(self, db_map, database)
+        self.data_store_tabularview.destroyed.connect(self.data_store_tabularview_destroyed)
+        self.data_store_tabularview.show()
 
     @Slot(name="data_store_treeview_destroyed")
     def data_store_treeview_destroyed(self):
         self.data_store_treeview = None
+        
+    @Slot(name="data_store_tabularview_destroyed")
+    def data_store_tabularview_destroyed(self):
+        print("destroyed")
+        self.data_store_tabularview = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
