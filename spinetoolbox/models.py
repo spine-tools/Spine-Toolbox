@@ -2222,7 +2222,11 @@ class RelationshipParameterValueModel(ParameterValueModel):
         super().__init__(data_store_form)
         self.object_name_header = list()
 
-    def init_model(self, skip_fields=['relationship_class_id', 'object_id_list', 'parameter_id']):
+    def init_model(
+            self,
+            skip_fields=[
+                'relationship_class_id', 'object_class_id_list', 'object_class_name_list',
+                'object_id_list', 'parameter_id']):
         """Initialize model from source database."""
         item_list = self.db_map.relationship_parameter_value_list()
         field_list = self.db_map.relationship_parameter_value_fields()
