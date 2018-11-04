@@ -237,6 +237,8 @@ class DataStoreForm(QMainWindow):
         self.ui.menuSession.aboutToShow.connect(self.receive_menu_about_to_show)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
+        # Others
+        self.relationship_parameter_value_proxy.layoutChanged.connect(self.hide_unused_object_name_columns)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -677,10 +679,9 @@ class DataStoreForm(QMainWindow):
         else:
             self.relationship_parameter_proxy.apply_filter()
 
-    @Slot(name="show_hide_object_name_columns")
-    def show_hide_object_name_columns(self):
-        """Show/hide object name columns in relationship parameter value view."""
-        # TODO: Connect layoutChanged of tableView_relationship_parameter_value to this slot
+    @Slot(name="hide_unused_object_name_columns")
+    def hide_unused_object_name_columns(self):
+        """Hide unused object name columns in relationship parameter value view."""
         max_object_count = len(self.relationship_parameter_value_model.object_name_header)
         object_count = self.relationship_parameter_value_proxy.object_count
         if not object_count:
@@ -892,7 +893,7 @@ class DataStoreForm(QMainWindow):
                 new_names.append(object_class.name)
             except StopIteration:
                 continue
-        self.rename_items_in_tables('object_class', new_names, curr_names)
+        self.rename_items_in_parameter_models('object_class', new_names, curr_names)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
@@ -922,7 +923,7 @@ class DataStoreForm(QMainWindow):
                 new_names.append(object_.name)
             except StopIteration:
                 continue
-        self.rename_items_in_tables('object', new_names, curr_names)
+        self.rename_items_in_parameter_models('object', new_names, curr_names)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
@@ -941,7 +942,7 @@ class DataStoreForm(QMainWindow):
 
     @busy_effect
     def update_relationship_classes(self, wide_relationship_classes, orig_kwargs_list):
-        """Update object classes."""
+        """Update relationship classes."""
         self.object_tree_model.update_relationship_classes(wide_relationship_classes)
         new_names = list()
         curr_names = list()
@@ -952,7 +953,7 @@ class DataStoreForm(QMainWindow):
                 new_names.append(wide_relationship_class.name)
             except StopIteration:
                 continue
-        self.rename_items_in_tables('relationship_class', new_names, curr_names)
+        self.rename_items_in_parameter_models('relationship_class', new_names, curr_names)
         self.set_commit_rollback_actions_enabled(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
@@ -982,25 +983,20 @@ class DataStoreForm(QMainWindow):
 
     @busy_effect
     def update_relationships(self, wide_relationships, orig_kwargs_list):
-        """Update object classes."""
+        """Update relationships."""
         self.object_tree_model.update_relationships(wide_relationships)
-        # NOTE: we don't need to call rename_items_in_tables here, for now
+        # NOTE: we don't need to call rename_items_in_parameter_models here, for now
         self.set_commit_rollback_actions_enabled(True)
         relationship_name_list = "', '".join([x.name for x in wide_relationships])
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
-    def rename_items_in_tables(self, renamed_type, new_names, curr_names):
-        """Rename items in parameter and parameter value models."""
+    def rename_items_in_parameter_models(self, renamed_type, new_names, curr_names):
+        """Rename items in parameter definition and value models."""
         self.object_parameter_model.rename_items(renamed_type, new_names, curr_names)
         self.object_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
         self.relationship_parameter_model.rename_items(renamed_type, new_names, curr_names)
         self.relationship_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
-        # TODO: Update name_sets in all these models before applying the filter
-        self.object_parameter_proxy.apply_filter()
-        self.object_parameter_value_proxy.apply_filter()
-        self.relationship_parameter_proxy.apply_filter()
-        self.relationship_parameter_value_proxy.apply_filter()
 
     @busy_effect
     def remove_object_tree_items(self):
