@@ -78,7 +78,7 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.open_treeview
+        s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.call_open_treeview
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
@@ -494,21 +494,26 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    # @busy_effect
-    @Slot(bool, name="open_treeview")
-    def open_treeview(self, checked=False):
+    @Slot(bool, name="call_open_treeview")
+    def call_open_treeview(self, checked=False):
+        """Call method to open the treeview."""
+        # NOTE: This is just so we can use @busy_effect with the open_treeview method
+        self.open_treeview()
+
+    @busy_effect
+    def open_treeview(self):
         """Open reference in Data Store form."""
-        # TODO: How to make busy_effect work with the new style of connecting&disconnecting signals?
-        # TODO: check if the reference has changed, in which case we need to create a new form.
-        if self.data_store_treeview:
-            self.data_store_treeview.raise_()
-            return
-        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
-            self._toolbox.msg_warning.emit("Please select dialect first")
-            return
         reference = self.make_reference()
         if not reference:
             return
+        if self.data_store_treeview:
+            # If the url hasn't changed, just raise the current form
+            if self.data_store_treeview.db_map.db_url == reference['url']:
+                self.data_store_treeview.raise_()
+                return
+            # Disconnect signal or else the slot gets called after we've created the new form
+            self.data_store_treeview.destroyed.disconnect(self.data_store_treeview_destroyed)
+            self.data_store_treeview.close()
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
