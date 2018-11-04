@@ -58,7 +58,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 25))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -402,6 +402,15 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setSpacing(6)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
+        self.pushButton_ds_open_tabularview = QtWidgets.QPushButton(self.tab_data_store)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_ds_open_tabularview.sizePolicy().hasHeightForWidth())
+        self.pushButton_ds_open_tabularview.setSizePolicy(sizePolicy)
+        self.pushButton_ds_open_tabularview.setMaximumSize(QtCore.QSize(120, 23))
+        self.pushButton_ds_open_tabularview.setObjectName("pushButton_ds_open_tabularview")
+        self.horizontalLayout_7.addWidget(self.pushButton_ds_open_tabularview)
         self.pushButton_ds_open_treeview = QtWidgets.QPushButton(self.tab_data_store)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -950,7 +959,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_info.setCurrentIndex(4)
+        self.tabWidget_item_info.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -989,8 +998,9 @@ class Ui_MainWindow(object):
         self.label_password.setText(QtWidgets.QApplication.translate("MainWindow", "Password", None, -1))
         self.label_dsn.setText(QtWidgets.QApplication.translate("MainWindow", "DSN", None, -1))
         self.label_path.setText(QtWidgets.QApplication.translate("MainWindow", "Path", None, -1))
+        self.pushButton_ds_open_tabularview.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular view", None, -1))
         self.pushButton_ds_open_treeview.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
-        self.pushButton_ds_open_treeview.setText(QtWidgets.QApplication.translate("MainWindow", "Open treeview", None, -1))
+        self.pushButton_ds_open_treeview.setText(QtWidgets.QApplication.translate("MainWindow", "Tree view", None, -1))
         self.pushButton_ds_open_directory.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
         self.pushButton_ds_open_directory.setText(QtWidgets.QApplication.translate("MainWindow", "Open directory...", None, -1))
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_data_store), QtWidgets.QApplication.translate("MainWindow", "Data Store", None, -1))
@@ -1072,7 +1082,7 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc

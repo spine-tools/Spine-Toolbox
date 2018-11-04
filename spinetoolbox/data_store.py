@@ -79,6 +79,7 @@ class DataStore(ProjectItem):
         s = dict()
         s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
         s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.open_treeview
+        s[self._toolbox.ui.pushButton_ds_open_tabularview.clicked] = self.open_tabularview
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
@@ -497,7 +498,7 @@ class DataStore(ProjectItem):
     # @busy_effect
     @Slot(bool, name="open_treeview")
     def open_treeview(self, checked=False):
-        """Open reference in Data Store form."""
+        """Open reference in Data Store tree view."""
         # TODO: How to make busy_effect work with the new style of connecting&disconnecting signals?
         # TODO: check if the reference has changed, in which case we need to create a new form.
         if self.data_store_treeview:
@@ -520,6 +521,12 @@ class DataStore(ProjectItem):
         self.data_store_treeview = DataStoreForm(self, db_map, database)
         self.data_store_treeview.destroyed.connect(self.data_store_treeview_destroyed)
         self.data_store_treeview.show()
+
+    @Slot(bool, name="open_tabularview")
+    def open_tabularview(self, checked=False):
+        """Open reference in Data Store tabular view.
+        Not implemented."""
+        self._toolbox.msg_warning.emit("Not implemented.")
 
     @Slot(name="data_store_treeview_destroyed")
     def data_store_treeview_destroyed(self):
