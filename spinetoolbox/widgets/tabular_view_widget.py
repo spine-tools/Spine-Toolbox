@@ -37,6 +37,7 @@ import json
 import operator
 from collections import namedtuple
 from sqlalchemy.sql import literal_column
+from widgets.custom_qtableview import FrozenTableView, CustomQTableView
 
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
@@ -221,166 +222,6 @@ class CheckableComboBox(QComboBox):
             item.setCheckState(Qt.Checked)
             item.setData(list_item, Qt.UserRole)
 
-# TODO: rename this class to something better
-class TestListView(QListWidget):
-    afterDrop = Signal(object, QDropEvent)
-    allowedDragLists = []
-    
-    def __init__(self, parent=None):
-        super(TestListView, self).__init__(parent)
-        self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDefaultDropAction(Qt.MoveAction)
-        self.setDragDropOverwriteMode(False)
-        self.setAcceptDrops(True)
-        self.setDropIndicatorShown(True)
-        self.setDragEnabled(True)
-
-    def dragEnterEvent(self, event):
-        if event.source() == self or event.source() in self.allowedDragLists:
-            event.accept()
-
-    def dropEvent(self, event):
-        if event.source() == self or event.source() in self.allowedDragLists:
-            super(TestListView, self).dropEvent(event)
-            self.afterDrop.emit(self, event)
-
-
-class TableModel(QAbstractItemModel):
-    def __init__(self, headers = [], data = []):
-    # def __init__(self, tasks=[[]]):
-        super(TableModel, self).__init__()
-        self._data = data
-        self._headers = headers
-    
-    def parent(self, child = QModelIndex()):
-        return QModelIndex()
-
-    def index(self, row, column, parent = QModelIndex()):
-        return self.createIndex(row, column, parent)
-    
-    def set_data(self, data, headers):
-        if data and len(data[0]) != len(headers):
-            raise ValueError("'data[0]' must be same length as 'headers'")
-        self.beginResetModel()
-        self._data = data
-        self._headers = headers
-        self.endResetModel()
-        top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount(), self.columnCount())
-        self.dataChanged.emit(top_left, bottom_right)
-
-    def rowCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self._data)
-
-    def columnCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self._headers)
-
-    def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
-                return self._headers[section]
-
-    def row(self, index):
-        if index.isValid():
-            return self._data[index.row()]
-
-    def data(self, index, role):
-        if role == Qt.DisplayRole:
-            return self._data[index.row()][index.column()]
-
-
-class FrozenTableView(QTableView):
-    def __init__(self, parent=None):
-        super(FrozenTableView, self).__init__(parent)
-        self.model = TableModel()
-        self.setSelectionBehavior(QAbstractItemView.SelectRows);
-        self.setSelectionMode(QAbstractItemView.SingleSelection);
-        self.verticalHeader().setVisible(False)
-        self.setSortingEnabled(True)
-        self.setModel(self.model)
-        self.is_updating = False
-
-    def clear(self):
-        self.model.set_data([], [])
-    
-    def get_selected_row(self):
-        if self.model.columnCount() == 0:
-            return ()
-        if self.model.rowCount() == 0:
-            return tuple(None for _ in range(self.model.columnCount()))
-        index = self.selectedIndexes()
-        if not index:
-            return tuple(None for _ in range(self.model.columnCount()))
-        else:
-            index = self.selectedIndexes()[0]
-            return self.model.row(index)
-    
-    def set_data(self, headers, values):
-        self.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
-        self.model.set_data(values, headers)
-        self.selectRow(0)
-        self.selectionModel().blockSignals(False)
-
-
-class CustomQTableView(QTableView):
-    """Custom QTableView class with copy-paste functionality.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent = None):
-        """Initialize the class."""
-        super().__init__(parent)
-        # self.editing = False
-        self.clipboard = QApplication.clipboard()
-        self.clipboard_text = self.clipboard.text()
-        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
-
-    @Slot(name="clipboard_data_changed")
-    def clipboard_data_changed(self):
-        self.clipboard_text = self.clipboard.text()
-
-    def keyPressEvent(self, event):
-        """Copy and paste to and from clipboard in Excel-like format."""
-        if event.matches(QKeySequence.Copy):
-            selection = self.selectionModel().selection()
-            if not selection:
-                super().keyPressEvent(event)
-                return
-            # Take only the first selection in case of multiple selection.
-            first = selection.first()
-            content = ""
-            v_header = self.verticalHeader()
-            h_header = self.horizontalHeader()
-            for i in range(first.top(), first.bottom()+1):
-                if v_header.isSectionHidden(i):
-                    continue
-                row = list()
-                for j in range(first.left(), first.right()+1):
-                    if h_header.isSectionHidden(j):
-                        continue
-                    row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
-                content += "\t".join(row)
-                content += "\n"
-            self.clipboard.setText(content)
-        elif event.matches(QKeySequence.Paste):
-            if not self.clipboard_text:
-                super().keyPressEvent(event)
-                return
-            top_left_index = self.currentIndex()
-            if not top_left_index.isValid():
-                super().keyPressEvent(event)
-                return
-            data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
-            self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
-            self.model().paste_data(top_left_index, data)
-        else:
-            super().keyPressEvent(event)
 
 class TabularViewForm(QMainWindow):
     """A widget to show and edit Spine objects in a data store.
@@ -391,7 +232,7 @@ class TabularViewForm(QMainWindow):
         database (str): The database name
     """
 
-    def __init__(self):
+    def __init__(self, data_store, db_map, database):
         super().__init__(flags=Qt.Window)
         # TODO: the filter comboboxes are hacked togheter, might not work on all OS:s, build a panel with list that pops up instead.
         # TODO: change the list_select_class to something nicer
@@ -404,8 +245,12 @@ class TabularViewForm(QMainWindow):
         self.ui.setupUi(self)
         #self.ui.setupUi(self)
         
-        self.db_map = DiffDatabaseMapping("sqlite:///C:/repos/spinetoolbox/projects/hydro_test/data/hydro.sqlite", "test")
-        self.database = 'hydro.sqlite'
+        
+        #self.db_map = DiffDatabaseMapping("sqlite:///C:/repos/spinetoolbox/projects/hydro_test/data/hydro.sqlite", "test")
+        #self.database = 'hydro.sqlite'
+        self.db_map = db_map
+        self.database = database
+        self._data_store = data_store
         
         # current state of ui
         self.current_class_type = ''
