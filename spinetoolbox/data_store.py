@@ -23,7 +23,7 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
-from widgets.data_store_widget import DataStoreForm
+from widgets.tree_view_widget import TreeViewForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
@@ -59,7 +59,7 @@ class DataStore(ProjectItem):
         self.selected_db = ""
         self.selected_username = ""
         self.selected_password = ""
-        self.data_store_treeview = None
+        self.tree_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -506,14 +506,14 @@ class DataStore(ProjectItem):
         reference = self.make_reference()
         if not reference:
             return
-        if self.data_store_treeview:
+        if self.tree_view_form:
             # If the url hasn't changed, just raise the current form
-            if self.data_store_treeview.db_map.db_url == reference['url']:
-                self.data_store_treeview.raise_()
+            if self.tree_view_form.db_map.db_url == reference['url']:
+                self.tree_view_form.raise_()
                 return
             # Disconnect signal or else the slot gets called after we've created the new form
-            self.data_store_treeview.destroyed.disconnect(self.data_store_treeview_destroyed)
-            self.data_store_treeview.close()
+            self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
+            self.tree_view_form.close()
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
@@ -522,13 +522,13 @@ class DataStore(ProjectItem):
         except spinedatabase_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.data_store_treeview = DataStoreForm(self, db_map, database)
-        self.data_store_treeview.destroyed.connect(self.data_store_treeview_destroyed)
-        self.data_store_treeview.show()
+        self.tree_view_form = TreeViewForm(self, db_map, database)
+        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
+        self.tree_view_form.show()
 
-    @Slot(name="data_store_treeview_destroyed")
-    def data_store_treeview_destroyed(self):
-        self.data_store_treeview = None
+    @Slot(name="tree_view_form_destroyed")
+    def tree_view_form_destroyed(self):
+        self.tree_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):

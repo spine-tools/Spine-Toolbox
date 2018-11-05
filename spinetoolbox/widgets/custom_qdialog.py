@@ -40,7 +40,7 @@ class AddItemsDialog(QDialog):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
     """
     def __init__(self, parent):
         super().__init__(parent)
@@ -103,7 +103,7 @@ class AddObjectClassesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
     """
     def __init__(self, parent):
         super().__init__(parent)
@@ -160,7 +160,7 @@ class AddObjectsDialog(AddItemsDialog):
     """A dialog to query user's preferences for new objects.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         class_id (int): default object class id
     """
     def __init__(self, parent, class_id=None):
@@ -217,7 +217,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         object_class_one_id (int): default object class id to put in dimension '1'
     """
     def __init__(self, parent, object_class_one_id=None):
@@ -346,7 +346,7 @@ class AddRelationshipsDialog(AddItemsDialog):
     """A dialog to query user's preferences for new relationships.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         relationship_class_id (int): default relationship class id
         object_id (int): default object id
         object_class_id (int): default object class id
@@ -526,7 +526,7 @@ class EditItemsDialog(QDialog):
     """A dialog to query user's preferences for updating items.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         orig_kwargs_list (list): orignal key word arguments
     """
     def __init__(self, parent, orig_kwargs_list):
@@ -558,7 +558,7 @@ class EditObjectClassesDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         orig_kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
     """
     def __init__(self, parent, orig_kwargs_list):
@@ -624,7 +624,7 @@ class EditObjectsDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating objects.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         orig_kwargs_list (list): list of dictionaries corresponding to objects to edit/update
     """
     def __init__(self, parent, orig_kwargs_list):
@@ -687,7 +687,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating relationship classes.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         orig_kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
     """
     def __init__(self, parent, orig_kwargs_list):
@@ -745,7 +745,7 @@ class EditRelationshipsDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating relationships.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         orig_kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
         relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
     """
@@ -837,7 +837,7 @@ class CommitDialog(QDialog):
     """A dialog to query user's preferences for new parameter values.
 
     Attributes:
-        parent (DataStoreForm): data store widget
+        parent (TreeViewForm): data store widget
         database (str): database name
     """
     def __init__(self, parent, database):

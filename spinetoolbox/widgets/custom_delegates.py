@@ -119,8 +119,8 @@ class CheckBoxDelegate(QItemDelegate):
         return QRect(checkbox_point, checkbox_rect.size())
 
 
-class DataStoreDelegate(QItemDelegate):
-    """A custom delegate for the parameter value models and views in DataStoreForm.
+class TreeViewDelegate(QItemDelegate):
+    """A custom delegate for the parameter value models and views in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -160,8 +160,8 @@ class JSONDelegate(QItemDelegate):
             editor.setGeometry(x, y, width, height)
 
 
-class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
-    """A delegate for the object parameter value model and view in DataStoreForm.
+class ObjectParameterValueDelegate(TreeViewDelegate, JSONDelegate):
+    """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -218,8 +218,8 @@ class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class ObjectParameterDelegate(DataStoreDelegate):
-    """A delegate for the object parameter model and view in DataStoreForm.
+class ObjectParameterDelegate(TreeViewDelegate):
+    """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -244,8 +244,8 @@ class ObjectParameterDelegate(DataStoreDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
-    """A delegate for the relationship parameter value model and view in DataStoreForm.
+class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
+    """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -332,8 +332,8 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterDelegate(DataStoreDelegate):
-    """A delegate for the object parameter model and view in DataStoreForm.
+class RelationshipParameterDelegate(TreeViewDelegate):
+    """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -357,7 +357,7 @@ class RelationshipParameterDelegate(DataStoreDelegate):
         else:
             editor.set_data(index.data(Qt.EditRole))
 
-class AddObjectsDelegate(DataStoreDelegate):
+class AddObjectsDelegate(TreeViewDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
@@ -383,7 +383,7 @@ class AddObjectsDelegate(DataStoreDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class AddRelationshipClassesDelegate(DataStoreDelegate):
+class AddRelationshipClassesDelegate(TreeViewDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
@@ -409,7 +409,7 @@ class AddRelationshipClassesDelegate(DataStoreDelegate):
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
 
 
-class AddRelationshipsDelegate(DataStoreDelegate):
+class AddRelationshipsDelegate(TreeViewDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:

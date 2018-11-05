@@ -1654,8 +1654,8 @@ class ObjectTreeModel(QStandardItemModel):
         return self.indexFromItem(items[position])
 
 
-class DataStoreTableModel(MinimalTableModel):
-    """A model of parameter and parameter value data, used by DataStoreForm."""
+class TreeViewTableModel(MinimalTableModel):
+    """A model of parameter and parameter value data, used by TreeViewForm."""
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
@@ -1764,8 +1764,8 @@ class DataStoreTableModel(MinimalTableModel):
         self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
 
 
-class ParameterModel(DataStoreTableModel):
-    """A model of parameter data, used by DataStoreForm."""
+class ParameterModel(TreeViewTableModel):
+    """A model of parameter data, used by TreeViewForm."""
 
     def __init__(self, data_store_form=None):
         """Initialize class."""
@@ -1838,8 +1838,8 @@ class ParameterModel(DataStoreTableModel):
             return False
 
 
-class ParameterValueModel(DataStoreTableModel):
-    """A model of parameter value data, used by DataStoreForm."""
+class ParameterValueModel(TreeViewTableModel):
+    """A model of parameter value data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -1925,7 +1925,7 @@ class ParameterValueModel(DataStoreTableModel):
 
 
 class ObjectParameterModel(ParameterModel):
-    """A model of object parameter data, used by DataStoreForm."""
+    """A model of object parameter data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -1998,7 +1998,7 @@ class ObjectParameterModel(ParameterModel):
 
 
 class RelationshipParameterModel(ParameterModel):
-    """A model of relationship parameter data, used by DataStoreForm."""
+    """A model of relationship parameter data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2110,7 +2110,7 @@ class RelationshipParameterModel(ParameterModel):
 
 
 class ObjectParameterValueModel(ParameterValueModel):
-    """A model of object parameter value data, used by DataStoreForm."""
+    """A model of object parameter value data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2216,7 +2216,7 @@ class ObjectParameterValueModel(ParameterValueModel):
 
 
 class RelationshipParameterValueModel(ParameterValueModel):
-    """A model of relationship parameter value data, used by DataStoreForm."""
+    """A model of relationship parameter value data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2592,7 +2592,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
 
 class ObjectParameterProxy(AutoFilterProxy):
-    """A model to filter object parameter data, used by DataStoreForm."""
+    """A model to filter object parameter data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2644,7 +2644,7 @@ class ObjectParameterProxy(AutoFilterProxy):
 
 
 class ObjectParameterValueProxy(ObjectParameterProxy):
-    """A model to filter object parameter value data, used by DataStoreForm."""
+    """A model to filter object parameter value data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2698,7 +2698,7 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
 
 
 class RelationshipParameterProxy(AutoFilterProxy):
-    """A model to filter relationship parameter data, used by DataStoreForm."""
+    """A model to filter relationship parameter data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2779,7 +2779,7 @@ class RelationshipParameterProxy(AutoFilterProxy):
 
 
 class RelationshipParameterValueProxy(RelationshipParameterProxy):
-    """A model to filter relationship parameter value data, used by DataStoreForm."""
+    """A model to filter relationship parameter value data, used by TreeViewForm."""
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
@@ -2879,7 +2879,7 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
 
 
 class JSONModel(MinimalTableModel):
-    """A model of JSON array data, used by DataStoreForm.
+    """A model of JSON array data, used by TreeViewForm.
     TODO: Handle the JSON object data type.
 
     Attributes:

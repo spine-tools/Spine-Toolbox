@@ -157,7 +157,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in Data store form.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (DataStoreForm)
+        parent (QWidget): Parent for menu widget (TreeViewForm)
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -218,7 +218,7 @@ class ParameterContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter (value) items in Data Store.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (DataStoreForm)
+        parent (QWidget): Parent for menu widget (TreeViewForm)
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
