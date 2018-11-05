@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -294,8 +294,11 @@
      <x>0</x>
      <y>0</y>
      <width>921</width>
-     <height>27</height>
+     <height>26</height>
     </rect>
+   </property>
+   <property name="nativeMenuBar">
+    <bool>false</bool>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
