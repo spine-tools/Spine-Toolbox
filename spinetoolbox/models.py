@@ -2224,9 +2224,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
 
     def init_model(
             self,
-            skip_fields=[
-                'relationship_class_id', 'object_class_id_list', 'object_class_name_list',
-                'object_id_list', 'parameter_id']):
+            skip_fields=['relationship_class_id', 'object_class_id_list', 'object_id_list', 'parameter_id']):
         """Initialize model from source database."""
         item_list = self.db_map.relationship_parameter_value_list()
         field_list = self.db_map.relationship_parameter_value_fields()
@@ -2598,7 +2596,7 @@ class ObjectParameterProxy(AutoFilterProxy):
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
-        self.object_class_name = None
+        self.object_class_name_set = set()
         self.object_class_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -2610,20 +2608,35 @@ class ObjectParameterProxy(AutoFilterProxy):
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
         row_data = self.sourceModel()._data[source_row]
-        if self.object_class_name is not None:
+        if self.object_class_name_set:
             try:
                 object_class_name = row_data[self.object_class_name_column][self.filterRole()]
             except KeyError:
                 object_class_name = None
-            if object_class_name != self.object_class_name:
+            if object_class_name not in self.object_class_name_set:
                 return False
             row_data[self.object_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def set_object_class_name(self, name):
-        if name == self.object_class_name:
+    def clear_object_class_name_set(self):
+        if not self.object_class_name_set:
             return
-        self.object_class_name = name
+        self.object_class_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_class_name_set(self, names):
+        if self.object_class_name_set.issuperset(names):
+            return
+        self.object_class_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_class_name_set(self, names):
+        if self.object_class_name_set.isdisjoint(names):
+            return
+        self.object_class_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2635,7 +2648,7 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
-        self.object_name = None
+        self.object_name_set = set()
         self.object_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -2649,20 +2662,35 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
         if not super().filter_accepts_row(source_row, source_parent):
             return False
         row_data = self.sourceModel()._data[source_row]
-        if self.object_name is not None:
+        if self.object_name_set:
             try:
                 object_name = row_data[self.object_name_column][self.filterRole()]
             except KeyError:
                 object_name = None
-            if object_name != self.object_name:
+            if object_name not in self.object_name_set:
                 return False
             row_data[self.object_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def set_object_name(self, name):
-        if name == self.object_name:
+    def clear_object_name_set(self):
+        if not self.object_name_set:
             return
-        self.object_name = name
+        self.object_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_name_set(self, names):
+        if self.object_name_set.issuperset(names):
+            return
+        self.object_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_name_set(self, names):
+        if self.object_name_set.isdisjoint(names):
+            return
+        self.object_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2674,32 +2702,76 @@ class RelationshipParameterProxy(AutoFilterProxy):
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
-        self.relationship_class_name_list = None
+        self.relationship_class_name_set = set()
+        self.object_class_name_set = set()
         self.relationship_class_name_column = None
+        self.object_class_name_list_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
             self.relationship_class_name_column = self.header_index("relationship_class_name")
+            self.object_class_name_list_column = self.header_index("object_class_name_list")
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
         row_data = self.sourceModel()._data[source_row]
-        if self.relationship_class_name_list is not None:
+        if self.relationship_class_name_set:
             try:
                 relationship_class_name = row_data[self.relationship_class_name_column][self.filterRole()]
             except KeyError:
                 relationship_class_name = None
-            if relationship_class_name not in self.relationship_class_name_list:
+            if relationship_class_name not in self.relationship_class_name_set:
+                return False
+            row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
+        if self.object_class_name_set:
+            try:
+                object_class_name_list = row_data[self.object_class_name_list_column][self.filterRole()].split(",")
+            except KeyError:
+                object_class_name_list = []
+            if self.object_class_name_set.isdisjoint(object_class_name_list):
                 return False
             row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def set_relationship_class_name_list(self, name_list):
-        if name_list == self.relationship_class_name_list:
+    def clear_relationship_class_name_set(self):
+        if not self.relationship_class_name_set:
             return
-        self.relationship_class_name_list = name_list
+        self.relationship_class_name_set.clear()
+        self.invalidate_filter()
+
+    def update_relationship_class_name_set(self, names):
+        if self.relationship_class_name_set.issuperset(names):
+            return
+        self.relationship_class_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_relationship_class_name_set(self, names):
+        if self.relationship_class_name_set.isdisjoint(names):
+            return
+        self.relationship_class_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def clear_object_class_name_set(self):
+        if not self.object_class_name_set:
+            return
+        self.object_class_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_class_name_set(self, names):
+        if self.object_class_name_set.issuperset(names):
+            return
+        self.object_class_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_class_name_set(self, names):
+        if self.object_class_name_set.isdisjoint(names):
+            return
+        self.object_class_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2711,7 +2783,8 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
     def __init__(self, data_store_form=None):
         """Initialize class."""
         super().__init__(data_store_form)
-        self.object_name_list = None
+        self.object_name_set = set()
+        self.object_name_list_set = set()  # Set of lists
         self.object_name_columns = list()
         self.object_count = 0
 
@@ -2737,29 +2810,67 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                 break
             object_name_list.append(object_name)
         # Now check filter
-        if self.object_name_list is not None:
-            if len(self.object_name_list) == 1:
-                found = False
-                for j, object_name in enumerate(object_name_list):
-                    if self.object_name_list[0] == object_name:
-                        row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
-                        found = True
-                if not found:
-                    return False
-            elif len(self.object_name_list) > 1:
-                if self.object_name_list != object_name_list:
-                    return False
-                for j in range(len(object_name_list)):
+        if self.object_name_list_set:
+            if ",".join(object_name_list) not in self.object_name_list_set:
+                return False
+            for j in range(len(object_name_list)):
+                row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+        if self.object_name_set:
+            found = False
+            for j, object_name in enumerate(object_name_list):
+                if object_name in self.object_name_set:
                     row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+                    found = True
+            if not found:
+                return False
         # If this row passes, update the object count
         self.object_count = max(self.object_count, len(object_name_list))
         return True
 
-    def set_object_name_list(self, name_list):
+    def clear_object_name_set(self):
         self.object_count = 0
-        if name_list == self.object_name_list:
+        if not self.object_name_set:
             return
-        self.object_name_list = name_list
+        self.object_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_name_set(self, names):
+        self.object_count = 0
+        if self.object_name_set.issuperset(names):
+            return
+        self.object_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_name_set(self, names):
+        self.object_count = 0
+        if self.object_name_set.isdisjoint(names):
+            return
+        self.object_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def clear_object_name_list_set(self):
+        self.object_count = 0
+        if not self.object_name_list_set:
+            return
+        self.object_name_list_set.clear()
+        self.invalidate_filter()
+
+    def update_object_name_list_set(self, name_lists):
+        self.object_count = 0
+        if self.object_name_list_set.issuperset(name_lists):
+            return
+        self.object_name_list_set.update(name_lists)
+        self.invalidate_filter()
+
+    def diff_update_object_name_list_set(self, name_lists):
+        self.object_count = 0
+        if self.object_name_list_set.isdisjoint(name_lists):
+            return
+        self.object_name_list_set.difference_update(name_lists)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
+        self.object_count = 0
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
