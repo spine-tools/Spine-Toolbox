@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Widget to show Data Store Form.
+Widget to show Data Store tree view form.
 
 :author: M. Marin (KTH)
 :date:   21.4.2018
@@ -44,7 +44,7 @@ from datapackage_import_export import import_datapackage
 from helpers import busy_effect
 
 
-class DataStoreForm(QMainWindow):
+class TreeViewForm(QMainWindow):
     """A widget to show and edit Spine objects in a data store.
 
     Attributes:
