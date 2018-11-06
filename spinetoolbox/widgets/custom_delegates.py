@@ -173,7 +173,7 @@ class ObjectParameterValueDelegate(TreeViewDelegate, JSONDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         h = header.index
-        if header[index.column()] in ('object_class_name', 'parameter_name'):
+        if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
             return JSONEditor(parent)
