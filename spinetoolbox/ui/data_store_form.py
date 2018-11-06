@@ -272,7 +272,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.splitter_tree_parameter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 27))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 26))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -517,6 +517,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import JSONPopupTableView, AutoFilterCopyPasteTableView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
 from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc
