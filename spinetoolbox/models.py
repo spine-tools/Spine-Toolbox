@@ -1300,13 +1300,51 @@ class MinimalTableModel(QAbstractTableModel):
         self.insertRows(self.rowCount(), 1)
 
 
+class FlatObjectTreeModel(QStandardItemModel):
+    """Another class to hold Spine data structure in a treeview.
+    It only has two levels:
+        - object class
+            - object
+    """
+    def __init__(self, graph_view_form):
+        """Initialize class"""
+        super().__init__(graph_view_form)
+        self.db_map = graph_view_form.db_map
+
+    def build_tree(self):
+        """Populate tree."""
+        self.clear()
+        object_class_list = [x for x in self.db_map.object_class_list()]
+        object_list = [x for x in self.db_map.object_list()]
+        for object_class in object_class_list:
+            pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
+            if pixmap.isNull():
+                pixmap = QPixmap(":/icons/object_icon.png")
+            object_class_name_item = QStandardItem(object_class.name)
+            object_class_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            object_class_name_item.setFlags(object_class_name_item.flags() & ~Qt.ItemIsEditable)
+            object_class_status_item = QStandardItem()
+            object_class_status_item.setData(True, Qt.EditRole)
+            for object_ in object_list:
+                if object_.class_id != object_class.id:
+                    continue
+                object_name_item = QStandardItem(object_.name)
+                object_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
+                object_name_item.setFlags(~Qt.ItemIsEditable)
+                object_status_item = QStandardItem()
+                object_status_item.setData(True, Qt.EditRole)
+                object_class_name_item.appendRow([object_name_item, object_status_item])
+            self.invisibleRootItem().appendRow([object_class_name_item, object_class_status_item])
+        self.setHorizontalHeaderLabels(['name', 'status'])
+
+
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview."""
 
-    def __init__(self, data_store_form):
+    def __init__(self, tree_view_form):
         """Initialize class"""
-        super().__init__(data_store_form)
-        self.db_map = data_store_form.db_map
+        super().__init__(tree_view_form)
+        self.db_map = tree_view_form.db_map
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
@@ -1324,14 +1362,6 @@ class ObjectTreeModel(QStandardItemModel):
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class'):
                 return self.bold_font
-        if role == Qt.DecorationRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type.startswith('object'):
-                return self.object_icon
-            elif item_type.startswith('relationship'):
-                return self.relationship_icon
-            elif item_type == 'root':
-                return self.spine_icon
         return super().data(index, role)
 
     def forward_sweep(self, index, call=None):
@@ -1365,9 +1395,7 @@ class ObjectTreeModel(QStandardItemModel):
             break
 
     def build_tree(self, db_name):
-        """Create root item and object class items. This triggers a recursion
-        that builds up the tree.
-        """
+        """Populate tree."""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
@@ -1375,11 +1403,13 @@ class ObjectTreeModel(QStandardItemModel):
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
+        self.root_item.setData(self.spine_icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+            object_class_item.setData(self.object_icon, Qt.DecorationRole)
             object_item_list = list()
             for object_ in object_list:
                 if object_.class_id != object_class.id:
@@ -1387,6 +1417,7 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item = QStandardItem(object_.name)
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
+                object_item.setData(self.object_icon, Qt.DecorationRole)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1396,6 +1427,7 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+                    relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
                         if wide_relationship.class_id != wide_relationship_class.id:
@@ -1405,6 +1437,7 @@ class ObjectTreeModel(QStandardItemModel):
                         relationship_item = QStandardItem(wide_relationship.object_name_list)
                         relationship_item.setData('relationship', Qt.UserRole)
                         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+                        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
                     relationship_class_item_list.append(relationship_class_item)
@@ -1420,6 +1453,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+        object_class_item.setData(self.object_icon, Qt.DecorationRole)
         return object_class_item
 
     def new_object_item(self, object_):
@@ -1427,6 +1461,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
+        object_item.setData(self.object_icon, Qt.DecorationRole)
         relationship_class_item_list = list()
         for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
@@ -1440,6 +1475,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
         return relationship_class_item
 
     def new_relationship_item(self, wide_relationship):
@@ -1447,6 +1483,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
         return relationship_item
 
     def add_object_class(self, object_class):
@@ -1658,13 +1695,13 @@ class ObjectTreeModel(QStandardItemModel):
 class TreeViewTableModel(MinimalTableModel):
     """A model of parameter and parameter value data, used by TreeViewForm."""
 
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form, can_grow=True, has_empty_row=True)
-        self._data_store_form = data_store_form
-        self.db_map = self._data_store_form.db_map
+        super().__init__(tree_view_form, can_grow=True, has_empty_row=True)
+        self._tree_view_form = tree_view_form
+        self.db_map = self._tree_view_form.db_map
         self.fixed_columns = list()
-        self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
+        self.gray_brush = self._tree_view_form.palette().button() if self._tree_view_form else QBrush(Qt.lightGray)
 
     def set_fixed_columns(self, *column_names):
         """Set the fixed_columns attribute according to the column names given as argument."""
@@ -1768,9 +1805,9 @@ class TreeViewTableModel(MinimalTableModel):
 class ParameterModel(TreeViewTableModel):
     """A model of parameter data, used by TreeViewForm."""
 
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def items_to_update(self, indexes, values):
         """Return a list of items (dict) to update in the database."""
@@ -1810,15 +1847,15 @@ class ParameterModel(TreeViewTableModel):
             for i, parameter in enumerate(parameters):
                 self._data[rows[i]][id_column][Qt.EditRole] = parameter.id  # NOTE: DisplayRole not in use
             self.make_columns_fixed_for_rows(*rows)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
     def update_items_in_db(self, items_to_update):
@@ -1827,23 +1864,23 @@ class ParameterModel(TreeViewTableModel):
             return False
         try:
             self.db_map.update_parameters(*items_to_update)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameters successfully updated."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
 
 class ParameterValueModel(TreeViewTableModel):
     """A model of parameter value data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the output of json array data to 8 positions."""
@@ -1896,15 +1933,15 @@ class ParameterValueModel(TreeViewTableModel):
             for i, parameter_value in enumerate(parameter_values):
                 self._data[rows[i]][id_column][Qt.EditRole] = parameter_value.id
             self.make_columns_fixed_for_rows(*rows)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
     def update_items_in_db(self, items_to_update):
@@ -1913,23 +1950,23 @@ class ParameterValueModel(TreeViewTableModel):
             return False
         try:
             self.db_map.update_parameter_values(*items_to_update)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameter values successfully updated."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
 
 class ObjectParameterModel(ParameterModel):
     """A model of object parameter data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def init_model(self, skip_fields=["object_class_id"]):
         """Initialize model from source database."""
@@ -2000,9 +2037,9 @@ class ObjectParameterModel(ParameterModel):
 
 class RelationshipParameterModel(ParameterModel):
     """A model of relationship parameter data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def init_model(self, skip_fields=["relationship_class_id", 'object_class_id_list']):
         """Initialize model from source database."""
@@ -2112,9 +2149,9 @@ class RelationshipParameterModel(ParameterModel):
 
 class ObjectParameterValueModel(ParameterValueModel):
     """A model of object parameter value data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def init_model(self, skip_fields=['object_class_id', 'object_id', 'parameter_id']):
         """Initialize model from source database."""
@@ -2218,9 +2255,9 @@ class ObjectParameterValueModel(ParameterValueModel):
 
 class RelationshipParameterValueModel(ParameterValueModel):
     """A model of relationship parameter value data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.object_name_header = list()
 
     def init_model(
@@ -2420,12 +2457,12 @@ class RelationshipParameterValueModel(ParameterValueModel):
             rows = list(relationships_to_add.keys())
             relationships = self.db_map.add_wide_relationships(*items)
             msg = "Successfully added new relationships on the fly."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
 
     def items_to_add(self, indexes, relationships_on_the_fly):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
@@ -2456,9 +2493,9 @@ class RelationshipParameterValueModel(ParameterValueModel):
 
 class AutoFilterProxy(QSortFilterProxyModel):
     """A custom sort filter proxy model which implementes a two-level filter."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.header_index = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
@@ -2594,9 +2631,9 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
 class ObjectParameterProxy(AutoFilterProxy):
     """A model to filter object parameter data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.object_class_name_set = set()
         self.object_class_name_column = None
 
@@ -2646,9 +2683,9 @@ class ObjectParameterProxy(AutoFilterProxy):
 
 class ObjectParameterValueProxy(ObjectParameterProxy):
     """A model to filter object parameter value data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.object_name_set = set()
         self.object_name_column = None
 
@@ -2700,9 +2737,9 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
 
 class RelationshipParameterProxy(AutoFilterProxy):
     """A model to filter relationship parameter data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.relationship_class_name_set = set()
         self.object_class_name_set = set()
         self.relationship_class_name_column = None
@@ -2781,9 +2818,9 @@ class RelationshipParameterProxy(AutoFilterProxy):
 
 class RelationshipParameterValueProxy(RelationshipParameterProxy):
     """A model to filter relationship parameter value data, used by TreeViewForm."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.object_name_set = set()
         self.object_name_list_set = set()  # Set of lists
         self.object_name_columns = list()

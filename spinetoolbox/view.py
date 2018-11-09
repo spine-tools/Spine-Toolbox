@@ -143,7 +143,7 @@ class View(ProjectItem):
                 index = self._toolbox.ui.treeView_view.model().index(0, 0)
                 self._toolbox.ui.treeView_view.setCurrentIndex(index)
             else:
-                self._toolbox.msg_warning.emit("Please select a reference to plot")
+                self._toolbox.msg_warning.emit("Please select a reference to view")
                 return
         reference = self._references[index.row()]
         db_url = reference['url']
@@ -154,7 +154,7 @@ class View(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        graph_view_form = GraphViewForm(self._toolbox, self, mapping)
+        graph_view_form = GraphViewForm(self, mapping, database)
         graph_view_form.show()
 
     def add_reference_header(self):

@@ -20,8 +20,8 @@ import os
 from ui.graph_view_form import Ui_Form
 from PySide2.QtWidgets import QWidget, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsPixmapItem, \
     QGraphicsLineItem
-from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen
-from PySide2.QtCore import Qt
+from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen, QColor
+from PySide2.QtCore import Qt, Slot
 import numpy as np
 from numpy import flatnonzero as find
 from numpy import atleast_1d as arr
@@ -29,6 +29,8 @@ from scipy.spatial.distance import cdist
 from scipy.sparse.csgraph import dijkstra
 from scipy.optimize import minimize
 import logging
+from models import FlatObjectTreeModel
+from widgets.custom_delegates import CheckBoxDelegate
 
 
 class GraphViewForm(QWidget):
@@ -38,26 +40,47 @@ class GraphViewForm(QWidget):
         view (View): View instance that owns this form
     """
 
-    def __init__(self, toolbox, view, mapping):
+    def __init__(self, view, db_map, database):
         """Initialize class."""
-        super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        super().__init__(parent=view._toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
         self._view = view
-        self._toolbox = toolbox
-        self.mapping = mapping
+        self.db_map = db_map
         self.max_d = 0
         self.spacing_factor = 1.0
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
+        self.setWindowTitle("Data store graph view    -- {} --".format(database))
         self._scene = QGraphicsScene()
-        self.font = QFont("", 32)
+        self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
         self.ui.graphicsView.setScene(self._scene)
         self.object_name_list = list()
+        self.pixmap_dict = {}
         self.arc_name_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         self.init_graph_data()
+        self.object_tree_model = FlatObjectTreeModel(self)
+        self.object_tree_model.build_tree()
+        self.ui.treeView.setModel(self.object_tree_model)
+        self.ui.treeView.setItemDelegateForColumn(1, CheckBoxDelegate(self))
+        self.ui.treeView.resizeColumnToContents(0)
+        self.connect_signals()
+
+    def connect_signals(self):
+        """Connect signals."""
+        self.ui.treeView.itemDelegateForColumn(1).commit_data.connect(self.status_data_changed)
+
+    @Slot("QModelIndex", name="status_data_changed")
+    def status_data_changed(self, index):
+        """Called when checkbox delegate wants to edit status data."""
+        if self.object_tree_model.data(index, Qt.EditRole):  # Current status:
+            self.object_tree_model.setData(index, False, Qt.EditRole)
+            self.object_tree_model.setData(index, False, Qt.DisplayRole)
+        else:
+            self.object_tree_model.setData(index, True, Qt.EditRole)
+            self.object_tree_model.setData(index, True, Qt.DisplayRole)
 
     def resizeEvent(self, event):
         """Scale view so the scene fits best in it."""
@@ -78,17 +101,23 @@ class GraphViewForm(QWidget):
         super().show()
 
     def init_graph_data(self):
-        """Initialize vertex and edge data by querying mapping."""
+        """Initialize vertex and edge data by querying db_map."""
         self.object_name_list = list()
-        for object_class in self.mapping.object_class_list():
+        self.pixmap_dict = {}
+        for object_class in self.db_map.object_class_list():
             if object_class.name not in ("unit", "node"):
                 continue
-            for object_ in self.mapping.object_list(class_id=object_class.id):
+            for object_ in self.db_map.object_list(class_id=object_class.id):
                 self.object_name_list.append(object_.name)
+                pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
+                if not pixmap.isNull():
+                    self.pixmap_dict[object_.name] = pixmap
+                else:
+                    self.pixmap_dict[object_.name] = QPixmap(":/icons/object_icon.png")
         self.arc_name_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
-        for relationship in self.mapping.wide_relationship_list():
+        for relationship in self.db_map.wide_relationship_list():
             accepted_object_name_list = list()
             ignored_object_name_list = list()
             for name in relationship.object_name_list.split(","):
@@ -165,16 +194,17 @@ class GraphViewForm(QWidget):
         d = self.shortest_path_matrix()
         x, y = self.layout(d)
         object_items = list()
-        for i, vertex in enumerate(self.object_name_list):
-            object_item = ObjectItem(x[i], y[i], 2 * self.font.pointSize())
-            text_item = CustomTextItem(vertex, self.font)
+        for i, object_name in enumerate(self.object_name_list):
+            pixmap = self.pixmap_dict[object_name]
+            object_item = ObjectItem(pixmap, x[i], y[i], 2 * self.font.pointSize())
+            text_item = CustomTextItem(object_name, self.font)
             object_item.set_text_item(text_item)
             self._scene.addItem(object_item)
             self._scene.addItem(text_item)
             object_items.append(object_item)
-        for i, j, arc in zip(self.src_ind_list, self.dst_ind_list, self.arc_name_list):
+        for i, j, arc_name in zip(self.src_ind_list, self.dst_ind_list, self.arc_name_list):
             arc_item = ArcItem(x[i], y[i], x[j], y[j], self.font.pointSize() / 3)
-            text_item = CustomTextItem(arc, self.font)
+            text_item = CustomTextItem(arc_name, self.font)
             arc_item.set_text_item(text_item)
             self._scene.addItem(arc_item)
             self._scene.addItem(text_item)
@@ -188,14 +218,15 @@ class ObjectItem(QGraphicsPixmapItem):
     """Object item that is drawn into QGraphicsScene.
 
     Attributes:
+        pixmap (QPixmap): pixmap to use
         x (float): x-coordinate of initial position
         y (float): y-coordinate of initial position
         size (int): custom size
     """
-    def __init__(self, x, y, size):
+    def __init__(self, pixmap, x, y, size):
         super().__init__()
         self.size = size
-        self.setPixmap(QPixmap(":/icons/object_icon.png").scaled(self.size, self.size))
+        self.setPixmap(pixmap.scaled(self.size, self.size))
         self.setPos(x - 0.5 * self.size, y - 0.5 * self.size)
         self.text_item = None
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
@@ -226,23 +257,6 @@ class ObjectItem(QGraphicsPixmapItem):
             item.set_destination(self.x() + 0.5 * self.size, self.y() + 0.5 * self.size)
 
 
-class CustomTextItem(QGraphicsSimpleTextItem):
-    """Text item that is drawn into QGraphicsScene.
-
-    Attributes:
-        text (str): text to show
-        font (QFont): font to display the text
-    """
-    def __init__(self, text, font):
-        """Init class."""
-        super().__init__(text)
-        font.setWeight(QFont.Black)
-        self.setFont(font)
-        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
-        self.setPen(outline_pen)
-        self.setZValue(1)
-
-
 class ArcItem(QGraphicsLineItem):
     """Arc item that is drawn into QGraphicsScene.
 
@@ -256,7 +270,7 @@ class ArcItem(QGraphicsLineItem):
         super().__init__(x1, y1, x2, y2)
         self.text_item = None
         self.width = width
-        pen = QPen()
+        pen = QPen(QColor(64, 64, 64))
         pen.setWidth(self.width)
         pen.setCapStyle(Qt.RoundCap)
         self.setPen(pen)
@@ -295,3 +309,20 @@ class ArcItem(QGraphicsLineItem):
     def hoverLeaveEvent(self, event):
         """Hide text on hover."""
         self.text_item.hide()
+
+
+class CustomTextItem(QGraphicsSimpleTextItem):
+    """Text item that is drawn into QGraphicsScene.
+
+    Attributes:
+        text (str): text to show
+        font (QFont): font to display the text
+    """
+    def __init__(self, text, font):
+        """Init class."""
+        super().__init__(text)
+        font.setWeight(QFont.Black)
+        self.setFont(font)
+        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        self.setPen(outline_pen)
+        self.setZValue(1)
