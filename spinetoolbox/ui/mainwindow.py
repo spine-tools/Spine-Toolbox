@@ -58,8 +58,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 26))
-        self.menubar.setNativeMenuBar(False)
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -1021,7 +1020,7 @@ class Ui_MainWindow(object):
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_tool), QtWidgets.QApplication.translate("MainWindow", "Tool", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
         self.pushButton_open_network_map.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
-        self.pushButton_open_network_map.setText(QtWidgets.QApplication.translate("MainWindow", "Graph view", None, -1))
+        self.pushButton_open_network_map.setText(QtWidgets.QApplication.translate("MainWindow", "Open map", None, -1))
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_view), QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.label_no_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Select a project item to view its information here", None, -1))
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_no_selection), QtWidgets.QApplication.translate("MainWindow", "No Selection", None, -1))
@@ -1072,8 +1071,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc

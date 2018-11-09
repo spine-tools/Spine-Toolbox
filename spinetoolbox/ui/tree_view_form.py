@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tree_view_form.ui',
-# licensing of '../spinetoolbox/ui/tree_view_form.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/data_store_form.ui',
+# licensing of '../spinetoolbox/ui/data_store_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -272,7 +272,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.splitter_tree_parameter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 789, 27))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -517,6 +517,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
 from widgets.custom_qtreeview import ObjectTreeView
-from widgets.custom_qtableview import JSONPopupTableView, AutoFilterCopyPasteTableView
 import resources_icons_rc
