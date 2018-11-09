@@ -24,7 +24,7 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInp
     QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap
-from ui.data_store_form import Ui_MainWindow
+from ui.tree_view_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu

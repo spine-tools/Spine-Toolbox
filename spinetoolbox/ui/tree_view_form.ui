@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -597,7 +597,7 @@
      <x>0</x>
      <y>0</y>
      <width>789</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="nativeMenuBar">

@@ -69,10 +69,10 @@ CALL pyside2-uic ../spinetoolbox/ui/add_view.ui -o ../spinetoolbox/ui/add_view.p
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_view.py.o > ..\spinetoolbox\ui\add_view.py
 del ..\spinetoolbox\ui\add_view.py.o
 
-ECHO building data_store_form.py
-CALL pyside2-uic ../spinetoolbox/ui/data_store_form.ui -o ../spinetoolbox/ui/data_store_form.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\data_store_form.py.o > ..\spinetoolbox\ui\data_store_form.py
-del ..\spinetoolbox\ui\data_store_form.py.o
+ECHO building tree_view_form.py
+CALL pyside2-uic ../spinetoolbox/ui/tree_view_form.ui -o ../spinetoolbox/ui/tree_view_form.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tree_view_form.py.o > ..\spinetoolbox\ui\tree_view_form.py
+del ..\spinetoolbox\ui\tree_view_form.py.o
 
 ECHO building edit_data_items.py
 CALL pyside2-uic ../spinetoolbox/ui/edit_data_items.ui -o ../spinetoolbox/ui/edit_data_items.py.o
@@ -128,7 +128,7 @@ CALL append_license_xml ..\spinetoolbox\ui\add_relationship_classes.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_relationships.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
-CALL append_license_xml ..\spinetoolbox\ui\data_store_form.ui
+CALL append_license_xml ..\spinetoolbox\ui\tree_view_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\edit_data_items.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\network_map_form.ui
@@ -148,7 +148,7 @@ CALL append_license_py ..\spinetoolbox\ui\add_relationship_classes.py
 CALL append_license_py ..\spinetoolbox\ui\add_relationships.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
-CALL append_license_py ..\spinetoolbox\ui\data_store_form.py
+CALL append_license_py ..\spinetoolbox\ui\tree_view_form.py
 CALL append_license_py ..\spinetoolbox\ui\edit_data_items.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\network_map_form.py
