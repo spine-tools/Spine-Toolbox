@@ -1,10 +1,24 @@
 # Changelog
-All **notable** changes to this project will be documented in this file from v0.1 onwards.
+All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 This section is for upcoming changes.
+
+### Added
+
+### Fixed
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Security
+
+## [0.1.7] - 2018-11-01
 
 ### Added
 - New option to refresh the data store tree view and get latest changes from the database.
@@ -25,23 +39,20 @@ and try again.
 which can be used to enter data more easily.
 - JSON data can be visualized and edited more easily in the data store tree view.
 - Tools can now execute (Windows) batch files and other executables (.exe). Linux support pending.
+- About Qt dialog added to Help menu
 
 ### Fixed
 - Clicking on the open treeview button while the data store tree view is open now raises it, rather than opening a
 second one.
 - Work folder is not created for Tools if the Tool template requirements are not met.
-- Result folder is not created if the Tool template fails to start
-
-### Changed
-
-### Deprecated
+- Result folder is not created if the Tool template fails to start.
+- The embedded Julia REPL now uses the Julia that is given in application Settings (F1). 
+Previously, this used the default Julia of your OS.
 
 ### Removed
 - Connections tab has been removed (actually, it is just hidden and can be restored with a keyboard shortcut)
 - Refresh Tools button on Templates tab has been removed as it was not needed anymore
 - Set Debug message level in Settings has been removed
-
-### Security
 
 ## [0.1.5] - 2018-09-28
 

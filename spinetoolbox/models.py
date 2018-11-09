@@ -227,6 +227,7 @@ class ProjectItemModel(QAbstractItemModel):
     def setData(self, index, value, role=Qt.EditRole):
         # TODO: Test this. Should this emit dataChanged signal at some point?
         """Change name of item in index to value.
+        # TODO: If the item is a Data Store the reference sqlite path must be updated.
 
         Args:
             index (QModelIndex): Item index
