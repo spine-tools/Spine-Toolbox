@@ -1021,7 +1021,7 @@ class Ui_MainWindow(object):
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_tool), QtWidgets.QApplication.translate("MainWindow", "Tool", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
         self.pushButton_open_network_map.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
-        self.pushButton_open_network_map.setText(QtWidgets.QApplication.translate("MainWindow", "Open map", None, -1))
+        self.pushButton_open_network_map.setText(QtWidgets.QApplication.translate("MainWindow", "Graph view", None, -1))
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_view), QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.label_no_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Select a project item to view its information here", None, -1))
         self.tabWidget_item_info.setTabText(self.tabWidget_item_info.indexOf(self.tab_no_selection), QtWidgets.QApplication.translate("MainWindow", "No Selection", None, -1))

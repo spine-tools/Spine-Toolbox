@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from project_item import ProjectItem
 from spinedatabase_api import DatabaseMapping, SpineDBAPIError
-from widgets.network_map_widget import NetworkMapForm
+from widgets.graph_view_widget import GraphViewForm
 from graphics_items import ViewImage
 from helpers import busy_effect, create_dir
 from config import HEADER_POINTSIZE
@@ -65,8 +65,8 @@ class View(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.treeView_view.doubleClicked] = self.open_network_map
-        s[self._toolbox.ui.pushButton_open_network_map.clicked] = self.open_network_map
+        s[self._toolbox.ui.treeView_view.doubleClicked] = self.open_graph_view
+        s[self._toolbox.ui.pushButton_open_network_map.clicked] = self.open_graph_view
         return s
 
     def activate(self):
@@ -129,8 +129,8 @@ class View(ProjectItem):
         self.populate_reference_list(self._references)
 
     @busy_effect
-    @Slot("QModelIndex", name="open_network_map")
-    def open_network_map(self, index=None):
+    @Slot("QModelIndex", name="open_graph_view")
+    def open_graph_view(self, index=None):
         """Open reference in Network Map form."""
         if not index:
             index = self._toolbox.ui.treeView_view.currentIndex()
@@ -154,8 +154,8 @@ class View(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        network_map_form = NetworkMapForm(self._toolbox, self, mapping)
-        network_map_form.show()
+        graph_view_form = GraphViewForm(self._toolbox, self, mapping)
+        graph_view_form.show()
 
     def add_reference_header(self):
         """Add header to reference model."""
