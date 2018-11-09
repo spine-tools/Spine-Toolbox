@@ -112,7 +112,7 @@ class TreeViewForm(QMainWindow):
         self.setup_buttons()
         self.connect_signals()
         self.restore_ui()
-        self.setWindowTitle("Spine Data Store    -- {} --".format(self.database))
+        self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
