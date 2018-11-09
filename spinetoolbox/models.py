@@ -1852,9 +1852,9 @@ class ParameterValueModel(TreeViewTableModel):
         if self.header[index.column()][Qt.DisplayRole] == 'json':
             try:
                 json_data = data[1:-1].split(",")
-                if len(json_data) <= 8:
+                if len(json_data) <= 1:
                     return data
-                new_data = [x.strip() for x in json_data[0:8]]
+                new_data = [x.strip() for x in json_data[0:1]]
                 return "[" + ", ".join(new_data) + "..."
             except TypeError:
                 return data

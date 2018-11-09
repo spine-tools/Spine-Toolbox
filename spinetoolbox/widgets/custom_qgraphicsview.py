@@ -18,7 +18,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Signal, Slot, Qt, QRectF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
@@ -291,6 +291,40 @@ class CustomQGraphicsView(QGraphicsView):
         """Make the scene at least as big as the viewport."""
         super().resizeEvent(event)
         self.resize_scene(recenter=True)
+
+class ZoomQGraphicsView(QGraphicsView):
+    """A QGraphicsView with zoom actions."""
+
+    def __init__(self, parent):
+        """Init class."""
+        super().__init__(parent)
+        self._zoom_factor_base = 1.0015
+        self.target_viewport_pos = None
+        self.target_scene_pos = QPointF(0, 0)
+
+    def mouseMoveEvent(self, event):
+        """Register mouse position to recenter the scene after zoom."""
+        super().mouseMoveEvent(event)
+        if self.target_viewport_pos is not None:
+            delta = self.target_viewport_pos - event.pos()
+            if delta.manhattanLength() <= 3:
+                return
+        self.target_viewport_pos = event.pos()
+        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        if event.orientation() != Qt.Vertical:
+            event.ignore()
+            return
+        event.accept()
+        angle = event.angleDelta().y()
+        factor = self._zoom_factor_base ** angle
+        self.scale(factor, factor)
+        self.centerOn(self.target_scene_pos)
+        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+        self.centerOn(self.mapToScene(viewport_center))
 
 
 class CustomQGraphicsScene(QGraphicsScene):
