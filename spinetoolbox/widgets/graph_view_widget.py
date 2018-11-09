@@ -18,7 +18,7 @@ Widget to show graph view form.
 
 import os
 from ui.graph_view_form import Ui_Form
-from PySide2.QtWidgets import QWidget, QGraphicsScene, QGraphicsItem, QGraphicsTextItem, QGraphicsPixmapItem, \
+from PySide2.QtWidgets import QWidget, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsPixmapItem, \
     QGraphicsLineItem
 from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen
 from PySide2.QtCore import Qt
@@ -45,6 +45,7 @@ class GraphViewForm(QWidget):
         self._toolbox = toolbox
         self.mapping = mapping
         self.max_d = 0
+        self.spacing_factor = 1.0
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -112,7 +113,7 @@ class GraphViewForm(QWidget):
         max_length = max([self.font_metric.width(x) for x in self.object_name_list])
         min_length = min([self.font_metric.width(x) for x in self.object_name_list])
         avg_length = (max_length + min_length) / 2
-        dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = avg_length  # NOTE: All relationships have the same 'weight'
+        dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = self.spacing_factor * max_length  # NOTE: All relationships have the same 'weight'
         d = dijkstra(dist, directed=False)  # shortest path between all bus-pairs
         # Remove infinites and zeros
         d[d == np.inf] = np.max(d[d != np.inf])
@@ -165,12 +166,18 @@ class GraphViewForm(QWidget):
         x, y = self.layout(d)
         object_items = list()
         for i, vertex in enumerate(self.object_name_list):
-            object_item = ObjectItem(x[i], y[i], vertex, self.font)
+            object_item = ObjectItem(x[i], y[i], 2 * self.font.pointSize())
+            text_item = CustomTextItem(vertex, self.font)
+            object_item.set_text_item(text_item)
             self._scene.addItem(object_item)
+            self._scene.addItem(text_item)
             object_items.append(object_item)
         for i, j, arc in zip(self.src_ind_list, self.dst_ind_list, self.arc_name_list):
-            arc_item = ArcItem(x[i], y[i], x[j], y[j], arc, self.font)
+            arc_item = ArcItem(x[i], y[i], x[j], y[j], self.font.pointSize() / 3)
+            text_item = CustomTextItem(arc, self.font)
+            arc_item.set_text_item(text_item)
             self._scene.addItem(arc_item)
+            self._scene.addItem(text_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
         self.max_d = np.max(d)
@@ -183,22 +190,23 @@ class ObjectItem(QGraphicsPixmapItem):
     Attributes:
         x (float): x-coordinate of initial position
         y (float): y-coordinate of initial position
-        text (str): Text to show next to the item.
-        font (QFont): font to display the text
+        size (int): custom size
     """
-    def __init__(self, x, y, text, font):
+    def __init__(self, x, y, size):
         super().__init__()
-        self.size = 2 * font.pointSize()
+        self.size = size
         self.setPixmap(QPixmap(":/icons/object_icon.png").scaled(self.size, self.size))
         self.setPos(x - 0.5 * self.size, y - 0.5 * self.size)
-        self.text_item = QGraphicsTextItem(self)
-        self.text_item.setPos(0.75 * self.size, 0.5 * self.size)
-        self.text_item.setFont(font)
-        self.text_item.setHtml("<div style='background:rgba(255, 255, 255, 50%);'>" + text + "</div>")
+        self.text_item = None
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
+        self.setZValue(-1)
+
+    def set_text_item(self, item):
+        self.text_item = item
+        self.text_item.setPos(self.x() + 0.75 * self.size, self.y() + 0.5 * self.size)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -209,12 +217,30 @@ class ObjectItem(QGraphicsPixmapItem):
         self.outgoing_arc_items.append(arc_item)
 
     def mouseMoveEvent(self, event):
-        """Reset position of incoming and outgoing arcs."""
+        """Reset position of text, incoming and outgoing arcs."""
         super().mouseMoveEvent(event)
+        self.text_item.setPos(self.x() + 0.75 * self.size, self.y() + 0.5 * self.size)
         for item in self.outgoing_arc_items:
             item.set_source(self.x() + 0.5 * self.size, self.y() + 0.5 * self.size)
         for item in self.incoming_arc_items:
             item.set_destination(self.x() + 0.5 * self.size, self.y() + 0.5 * self.size)
+
+
+class CustomTextItem(QGraphicsSimpleTextItem):
+    """Text item that is drawn into QGraphicsScene.
+
+    Attributes:
+        text (str): text to show
+        font (QFont): font to display the text
+    """
+    def __init__(self, text, font):
+        """Init class."""
+        super().__init__(text)
+        font.setWeight(QFont.Black)
+        self.setFont(font)
+        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        self.setPen(outline_pen)
+        self.setZValue(1)
 
 
 class ArcItem(QGraphicsLineItem):
@@ -223,22 +249,23 @@ class ArcItem(QGraphicsLineItem):
     Attributes:
         x1, y1 (float): source position
         x2, y2 (float): destination position
-        text (str): Text to show next to the item.
-        font (QFont): font to display the text
+        width (int): Preferred line width
     """
-    def __init__(self, x1, y1, x2, y2, text, font):
+    def __init__(self, x1, y1, x2, y2, width):
         """Init class."""
         super().__init__(x1, y1, x2, y2)
-        self.text_item = QGraphicsTextItem(text, self)
-        self.text_item.setFont(font)
-        self.width = font.pointSize() / 3
+        self.text_item = None
+        self.width = width
         pen = QPen()
         pen.setWidth(self.width)
         pen.setCapStyle(Qt.RoundCap)
         self.setPen(pen)
-        self.text_item.hide()
         self.setAcceptHoverEvents(True)
-        self.setZValue(-1)
+        self.setZValue(-2)
+
+    def set_text_item(self, item):
+        self.text_item = item
+        self.text_item.hide()
 
     def set_source(self, x, y):
         """Reset the source point. Used when moving ObjectItems around."""
