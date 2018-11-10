@@ -17,8 +17,8 @@ Widget to show graph view form.
 """
 
 import os
-from ui.graph_view_form import Ui_Form
-from PySide2.QtWidgets import QWidget, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsPixmapItem, \
+from ui.graph_view_form import Ui_MainWindow
+from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsPixmapItem, \
     QGraphicsLineItem
 from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen, QColor
 from PySide2.QtCore import Qt, Slot
@@ -33,7 +33,7 @@ from models import FlatObjectTreeModel
 from widgets.custom_delegates import CheckBoxDelegate
 
 
-class GraphViewForm(QWidget):
+class GraphViewForm(QMainWindow):
     """A widget to show the graph view.
 
     Attributes:
@@ -42,13 +42,12 @@ class GraphViewForm(QWidget):
 
     def __init__(self, view, db_map, database):
         """Initialize class."""
-        super().__init__(parent=view._toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        super().__init__(flags=Qt.Window)  # Setting the parent inherits the stylesheet
         self._view = view
         self.db_map = db_map
-        self.max_d = 0
         self.spacing_factor = 1.0
         # Setup UI from Qt Designer file
-        self.ui = Ui_Form()
+        self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("Data store graph view    -- {} --".format(database))
         self._scene = QGraphicsScene()
@@ -60,60 +59,69 @@ class GraphViewForm(QWidget):
         self.arc_name_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
-        self.init_graph_data()
         self.object_tree_model = FlatObjectTreeModel(self)
-        self.object_tree_model.build_tree()
+        self.object_tree_model.build_tree(database)
         self.ui.treeView.setModel(self.object_tree_model)
         self.ui.treeView.setItemDelegateForColumn(1, CheckBoxDelegate(self))
         self.ui.treeView.resizeColumnToContents(0)
+        self.ui.treeView.resizeColumnToContents(1)
+        self.ui.treeView.expand(self.object_tree_model.root_item.index())
+        self.ui.treeView.header().swapSections(0, 1)
         self.connect_signals()
+        self.add_toggle_view_actions()
+        self.build_graph()
+
+    def show(self):
+        """Adjust splitter so that object tree is pretty visible."""
+        super().show()
+        length = self.ui.treeView.header().length()
+        sizes = self.ui.splitter_tree_graph.sizes()
+        self.ui.splitter_tree_graph.setSizes([length, sizes[1] - (length - sizes[0])])
 
     def connect_signals(self):
         """Connect signals."""
         self.ui.treeView.itemDelegateForColumn(1).commit_data.connect(self.status_data_changed)
+        self.ui.actionBuild.triggered.connect(self.build_graph)
+
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        pass
+
+    @Slot("bool", name="build_graph")
+    def build_graph(self, checked=True):
+        self.init_graph_data()
+        self.make_graph()
+        self.ui.graphicsView.scale_to_fit_scene()
 
     @Slot("QModelIndex", name="status_data_changed")
     def status_data_changed(self, index):
         """Called when checkbox delegate wants to edit status data."""
-        if self.object_tree_model.data(index, Qt.EditRole):  # Current status:
-            self.object_tree_model.setData(index, False, Qt.EditRole)
-            self.object_tree_model.setData(index, False, Qt.DisplayRole)
-        else:
-            self.object_tree_model.setData(index, True, Qt.EditRole)
-            self.object_tree_model.setData(index, True, Qt.DisplayRole)
-
-    def resizeEvent(self, event):
-        """Scale view so the scene fits best in it."""
-        old_size = event.oldSize()
-        if not old_size.isEmpty():
-            old_limit = min(old_size.height(), old_size.width())
-            old_factor = old_limit / self.max_d
-            self.ui.graphicsView.scale(1 / old_factor, 1 / old_factor)
-        size = event.size()
-        limit = min(size.height(), size.width())
-        factor = limit / self.max_d
-        self.ui.graphicsView.scale(factor, factor)
-
-    def show(self):
-        """Make graph when showing."""
-        if not self.make_graph():
-            return
-        super().show()
+        status = self.object_tree_model.data(index, Qt.EditRole)
+        def set_status(index):
+            sibling = index.sibling(index.row(), 1)
+            sibling.model().setData(sibling, not status, Qt.EditRole)
+        parent = index.sibling(index.row(), 0)
+        self.object_tree_model.forward_sweep(parent, call=set_status)
 
     def init_graph_data(self):
         """Initialize vertex and edge data by querying db_map."""
         self.object_name_list = list()
         self.pixmap_dict = {}
-        for object_class in self.db_map.object_class_list():
-            if object_class.name not in ("unit", "node"):
+        root_item = self.object_tree_model.root_item
+        for i in range(root_item.rowCount()):
+            object_class_name_item = root_item.child(i, 0)
+            object_class_status_item = root_item.child(i, 1)
+            pixmap = object_class_name_item.data(Qt.DecorationRole).pixmap(2 * self.font.pointSize())
+            if not object_class_status_item.data(Qt.EditRole):
                 continue
-            for object_ in self.db_map.object_list(class_id=object_class.id):
-                self.object_name_list.append(object_.name)
-                pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
-                if not pixmap.isNull():
-                    self.pixmap_dict[object_.name] = pixmap
-                else:
-                    self.pixmap_dict[object_.name] = QPixmap(":/icons/object_icon.png")
+            for j in range(object_class_name_item.rowCount()):
+                object_name_item = object_class_name_item.child(j, 0)
+                object_status_item = object_class_name_item.child(j, 1)
+                if not object_status_item.data(Qt.EditRole):
+                    continue
+                object_name = object_name_item.data(Qt.EditRole)
+                self.object_name_list.append(object_name)
+                self.pixmap_dict[object_name] = pixmap
         self.arc_name_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
@@ -136,17 +144,18 @@ class GraphViewForm(QWidget):
     def shortest_path_matrix(self):
         """Return the shortest-path matrix."""
         N = len(self.object_name_list)
-        dist = np.zeros((N, N))  # distances
+        dist = np.zeros((N, N))
         src_ind = arr(self.src_ind_list)
         dst_ind = arr(self.dst_ind_list)
-        max_length = max([self.font_metric.width(x) for x in self.object_name_list])
-        min_length = min([self.font_metric.width(x) for x in self.object_name_list])
-        avg_length = (max_length + min_length) / 2
-        dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = self.spacing_factor * max_length  # NOTE: All relationships have the same 'weight'
-        d = dijkstra(dist, directed=False)  # shortest path between all bus-pairs
+        max_length = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
+        try:
+            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = self.spacing_factor * max_length
+        except IndexError:
+            return None
+        d = dijkstra(dist, directed=False)
         # Remove infinites and zeros
         d[d == np.inf] = np.max(d[d != np.inf])
-        d[d == 0] = avg_length * 1e-6
+        d[d == 0] = max_length * 1e-6
         return d
 
     def sets(self, N):
@@ -191,7 +200,18 @@ class GraphViewForm(QWidget):
 
     def make_graph(self):
         """Make graph."""
+        self._scene.clear()
         d = self.shortest_path_matrix()
+        if d is None:
+            text = """
+                Check the boxes on the left pane
+                to choose which objects to show.
+                Once you're ready, press Ctrl+B to build the graph.
+            """
+            text_item = CustomTextItem(text, self.font)
+            self._scene.addItem(text_item)
+            self.ui.graphicsView.max_d = self.font_metric.width("Check the boxes on the left pane")
+            return
         x, y = self.layout(d)
         object_items = list()
         for i, object_name in enumerate(self.object_name_list):
@@ -210,8 +230,7 @@ class GraphViewForm(QWidget):
             self._scene.addItem(text_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
-        self.max_d = np.max(d)
-        return True
+        self.ui.graphicsView.max_d = np.max(d)
 
 
 class ObjectItem(QGraphicsPixmapItem):

@@ -301,6 +301,7 @@ class ZoomQGraphicsView(QGraphicsView):
         self._zoom_factor_base = 1.0015
         self.target_viewport_pos = None
         self.target_scene_pos = QPointF(0, 0)
+        self.max_d = None
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
@@ -325,6 +326,31 @@ class ZoomQGraphicsView(QGraphicsView):
         delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
         viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
         self.centerOn(self.mapToScene(viewport_center))
+
+    def resizeEvent(self, event):
+        """Scale view so the scene fits best in it."""
+        super().resizeEvent(event)
+        if self.max_d is None:
+            return
+        old_size = event.oldSize()
+        if not old_size.isEmpty():
+            old_limit = min(old_size.height(), old_size.width())
+            old_factor = old_limit / self.max_d
+            self.scale(1 / old_factor, 1 / old_factor)
+        size = event.size()
+        limit = min(size.height(), size.width())
+        factor = limit / self.max_d
+        self.scale(factor, factor)
+
+    def scale_to_fit_scene(self, size=None):
+        """Scale view so the scene fits best in it."""
+        if self.max_d is None:
+            return
+        self.resetTransform()
+        size = self.size()
+        limit = min(size.height(), size.width())
+        factor = limit / self.max_d
+        self.scale(factor, factor)
 
 
 class CustomQGraphicsScene(QGraphicsScene):

@@ -1310,10 +1310,47 @@ class FlatObjectTreeModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
+        self.root_item = None
+        self.initial_status = False
 
-    def build_tree(self):
+    def forward_sweep(self, index, call=None):
+        """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if not self.hasChildren(index):
+            if call:
+                call(index)
+            return
+        current = index
+        back_to_parent = False  # True if moving back to the parent index
+        while True:
+            if call:
+                call(current)
+            if not back_to_parent:
+                # Try and visit first child
+                next_ = self.index(0, 0, current)
+                if next_.isValid():
+                    back_to_parent = False
+                    current = next_
+                    continue
+            # Try and visit next sibling
+            next_ = current.sibling(current.row() + 1, 0)
+            if next_.isValid():
+                back_to_parent = False
+                current = next_
+                continue
+            # Go back to parent
+            next_ = self.parent(current)
+            if next_ != index:
+                back_to_parent = True
+                current = next_
+                continue
+            break
+
+    def build_tree(self, database):
         """Populate tree."""
         self.clear()
+        pixmap = QPixmap(":/icons/Spine_db_icon.png")
+        self.root_item = QStandardItem(database)
+        self.root_item.setData(QIcon(pixmap), Qt.DecorationRole)
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
         for object_class in object_class_list:
@@ -1324,7 +1361,7 @@ class FlatObjectTreeModel(QStandardItemModel):
             object_class_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
             object_class_name_item.setFlags(object_class_name_item.flags() & ~Qt.ItemIsEditable)
             object_class_status_item = QStandardItem()
-            object_class_status_item.setData(True, Qt.EditRole)
+            object_class_status_item.setData(self.initial_status, Qt.EditRole)
             for object_ in object_list:
                 if object_.class_id != object_class.id:
                     continue
@@ -1332,10 +1369,13 @@ class FlatObjectTreeModel(QStandardItemModel):
                 object_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
                 object_name_item.setFlags(~Qt.ItemIsEditable)
                 object_status_item = QStandardItem()
-                object_status_item.setData(True, Qt.EditRole)
+                object_status_item.setData(self.initial_status, Qt.EditRole)
                 object_class_name_item.appendRow([object_name_item, object_status_item])
-            self.invisibleRootItem().appendRow([object_class_name_item, object_class_status_item])
-        self.setHorizontalHeaderLabels(['name', 'status'])
+            self.root_item.appendRow([object_class_name_item, object_class_status_item])
+        root_status_item = QStandardItem()
+        root_status_item.setData(self.initial_status, Qt.EditRole)
+        self.appendRow([self.root_item, root_status_item])
+        self.setHorizontalHeaderLabels(['name', 'show?'])
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1367,6 +1407,8 @@ class ObjectTreeModel(QStandardItemModel):
     def forward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
         if not self.hasChildren(index):
+            if call:
+                call(index)
             return
         current = index
         back_to_parent = False  # True if moving back to the parent index

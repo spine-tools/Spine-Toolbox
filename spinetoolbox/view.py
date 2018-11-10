@@ -46,6 +46,7 @@ class View(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "View"
+        self.graph_view_form = None
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
@@ -143,7 +144,7 @@ class View(ProjectItem):
                 index = self._toolbox.ui.treeView_view.model().index(0, 0)
                 self._toolbox.ui.treeView_view.setCurrentIndex(index)
             else:
-                self._toolbox.msg_warning.emit("Please select a reference to plot")
+                self._toolbox.msg_warning.emit("Please select a reference to view")
                 return
         reference = self._references[index.row()]
         db_url = reference['url']
@@ -154,8 +155,8 @@ class View(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        graph_view_form = GraphViewForm(self._toolbox, self, mapping)
-        graph_view_form.show()
+        self.graph_view_form = GraphViewForm(self, mapping, database)
+        self.graph_view_form.show()
 
     def add_reference_header(self):
         """Add header to reference model."""
