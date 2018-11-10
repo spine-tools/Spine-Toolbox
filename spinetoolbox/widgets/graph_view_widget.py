@@ -16,21 +16,18 @@ Widget to show graph view form.
 :date:   5.11.2018
 """
 
-import os
+import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsPixmapItem, \
     QGraphicsLineItem
 from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen, QColor
 from PySide2.QtCore import Qt, Slot
 import numpy as np
-from numpy import flatnonzero as find
 from numpy import atleast_1d as arr
-from scipy.spatial.distance import cdist
 from scipy.sparse.csgraph import dijkstra
-from scipy.optimize import minimize
-import logging
 from models import FlatObjectTreeModel
 from widgets.custom_delegates import CheckBoxDelegate
+from helpers import busy_effect
 
 
 class GraphViewForm(QMainWindow):
@@ -50,10 +47,8 @@ class GraphViewForm(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("Data store graph view    -- {} --".format(database))
-        self._scene = QGraphicsScene()
         self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
-        self.ui.graphicsView.setScene(self._scene)
         self.object_name_list = list()
         self.pixmap_dict = {}
         self.arc_name_list = list()
@@ -87,6 +82,7 @@ class GraphViewForm(QMainWindow):
         """Add toggle view actions to View menu."""
         pass
 
+    @busy_effect
     @Slot("bool", name="build_graph")
     def build_graph(self, checked=True):
         self.init_graph_data()
@@ -95,29 +91,50 @@ class GraphViewForm(QMainWindow):
 
     @Slot("QModelIndex", name="status_data_changed")
     def status_data_changed(self, index):
-        """Called when checkbox delegate wants to edit status data."""
+        """Called when checkbox delegate wants to edit 'show?' data."""
+        self.ui.treeView.setEnabled(False)
         status = self.object_tree_model.data(index, Qt.EditRole)
-        def set_status(index):
+        if status == "True":
+            new_status = "False"
+        else:
+            new_status = "True"
+        def set_status(index, model=self.object_tree_model):
+            """Set new satatus for index."""
             sibling = index.sibling(index.row(), 1)
-            sibling.model().setData(sibling, not status, Qt.EditRole)
+            model.setData(sibling, new_status, Qt.EditRole)
+        def update_status(index, model=self.object_tree_model):
+            """Update status according to children."""
+            if not model.hasChildren(index):
+                return
+            children_status = list()
+            for i in range(model.rowCount(index)):
+                child = model.index(i, 1, index)
+                children_status.append(child.data(Qt.EditRole))
+            sibling = index.sibling(index.row(), 1)
+            if all(x == "True" for x in children_status):
+                model.setData(sibling, 'True', Qt.EditRole)
+            elif all(x == "False" for x in children_status):
+                model.setData(sibling, 'False', Qt.EditRole)
+            else:
+                model.setData(sibling, 'Unknown', Qt.EditRole)
         parent = index.sibling(index.row(), 0)
         self.object_tree_model.forward_sweep(parent, call=set_status)
+        self.object_tree_model.backward_sweep(parent, call=update_status)
+        self.build_graph()
+        self.ui.treeView.setEnabled(True)
 
     def init_graph_data(self):
-        """Initialize vertex and edge data by querying db_map."""
+        """Initialize graph data by querying db_map."""
         self.object_name_list = list()
         self.pixmap_dict = {}
         root_item = self.object_tree_model.root_item
         for i in range(root_item.rowCount()):
             object_class_name_item = root_item.child(i, 0)
-            object_class_status_item = root_item.child(i, 1)
             pixmap = object_class_name_item.data(Qt.DecorationRole).pixmap(2 * self.font.pointSize())
-            if not object_class_status_item.data(Qt.EditRole):
-                continue
             for j in range(object_class_name_item.rowCount()):
                 object_name_item = object_class_name_item.child(j, 0)
                 object_status_item = object_class_name_item.child(j, 1)
-                if not object_status_item.data(Qt.EditRole):
+                if object_status_item.data(Qt.EditRole) == "False":
                     continue
                 object_name = object_name_item.data(Qt.EditRole)
                 self.object_name_list.append(object_name)
@@ -144,22 +161,25 @@ class GraphViewForm(QMainWindow):
     def shortest_path_matrix(self):
         """Return the shortest-path matrix."""
         N = len(self.object_name_list)
+        if not N:
+            return None
         dist = np.zeros((N, N))
         src_ind = arr(self.src_ind_list)
         dst_ind = arr(self.dst_ind_list)
-        max_length = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
+        max_sep = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
         try:
-            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = self.spacing_factor * max_length
+            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = self.spacing_factor * max_sep
         except IndexError:
-            return None
+            pass
         d = dijkstra(dist, directed=False)
         # Remove infinites and zeros
-        d[d == np.inf] = np.max(d[d != np.inf])
-        d[d == 0] = max_length * 1e-6
+        # d[d == np.inf] = np.max(d[d != np.inf])
+        d[d == np.inf] = self.spacing_factor * max_sep * 3
+        d[d == 0] = self.spacing_factor * max_sep * 1e-6
         return d
 
     def sets(self, N):
-        """Make sets of bus pairs (indices)."""
+        """Return sets of vertex pairs indices."""
         sets = []
         for n in range(1, N):
             pairs = np.zeros((N - n, 2), int)  # pairs on diagonal n
@@ -174,9 +194,11 @@ class GraphViewForm(QMainWindow):
                 sets.append(s2)
         return sets
 
-    def layout(self, matrix, iterations=10, weight_exp=-2, initial_diameter=100):
-        """Return x, y coordinates, using VSGD-MS."""
+    def vertex_coordinates(self, matrix, iterations=10, weight_exp=-2, initial_diameter=100):
+        """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
         N = len(matrix)
+        if N == 1:
+            return [0], [0]
         mask = np.ones((N, N)) == 1 - np.tril(np.ones((N, N)))  # Upper triangular except diagonal
         layout = np.random.rand(N, 2) * initial_diameter - initial_diameter / 2  # Random layout with diameter 100
         weights = matrix ** weight_exp  # bus-pair weights (lower for distant buses)
@@ -200,37 +222,34 @@ class GraphViewForm(QMainWindow):
 
     def make_graph(self):
         """Make graph."""
-        self._scene.clear()
+        scene = QGraphicsScene()
+        self.ui.graphicsView.setScene(scene)
         d = self.shortest_path_matrix()
         if d is None:
             text = """
-                Check the boxes on the left pane
-                to choose which objects to show.
-                Once you're ready, press Ctrl+B to build the graph.
+                Check boxes on the left pane to show objects here.
             """
             text_item = CustomTextItem(text, self.font)
-            self._scene.addItem(text_item)
-            self.ui.graphicsView.max_d = self.font_metric.width("Check the boxes on the left pane")
+            scene.addItem(text_item)
             return
-        x, y = self.layout(d)
+        x, y = self.vertex_coordinates(d)
         object_items = list()
         for i, object_name in enumerate(self.object_name_list):
             pixmap = self.pixmap_dict[object_name]
             object_item = ObjectItem(pixmap, x[i], y[i], 2 * self.font.pointSize())
             text_item = CustomTextItem(object_name, self.font)
             object_item.set_text_item(text_item)
-            self._scene.addItem(object_item)
-            self._scene.addItem(text_item)
+            scene.addItem(object_item)
+            scene.addItem(text_item)
             object_items.append(object_item)
         for i, j, arc_name in zip(self.src_ind_list, self.dst_ind_list, self.arc_name_list):
             arc_item = ArcItem(x[i], y[i], x[j], y[j], self.font.pointSize() / 3)
             text_item = CustomTextItem(arc_name, self.font)
             arc_item.set_text_item(text_item)
-            self._scene.addItem(arc_item)
-            self._scene.addItem(text_item)
+            scene.addItem(arc_item)
+            scene.addItem(text_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
-        self.ui.graphicsView.max_d = np.max(d)
 
 
 class ObjectItem(QGraphicsPixmapItem):

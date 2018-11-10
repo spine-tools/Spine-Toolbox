@@ -56,7 +56,6 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QList<QRectF>", name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Resize scene as it changes."""
-        # logging.debug("scene changed. {0}".format(changed_qrects))
         self.resize_scene()
 
     def make_new_scene(self):
@@ -73,14 +72,6 @@ class CustomQGraphicsView(QGraphicsView):
         """
         self._scene.changed.connect(self.scene_changed)
         self.resize_scene(recenter=True)
-        # TODO: try to make a nice scene background, or remove if nothing seems good
-        # pixmap = QPixmap(":/symbols/Spine_symbol.png").scaled(64, 64)
-        # painter = QPainter(pixmap)
-        # alpha = QPixmap(pixmap.size())
-        # alpha.fill(QColor(255, 255, 255, 255-24))
-        # painter.drawPixmap(0, 0, alpha)
-        # painter.end()
-        # self.setBackgroundBrush(QBrush(pixmap))
 
     def resize_scene(self, recenter=False):
         """Make the scene at least as big as the viewport."""
@@ -301,7 +292,6 @@ class ZoomQGraphicsView(QGraphicsView):
         self._zoom_factor_base = 1.0015
         self.target_viewport_pos = None
         self.target_scene_pos = QPointF(0, 0)
-        self.max_d = None
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
@@ -330,26 +320,28 @@ class ZoomQGraphicsView(QGraphicsView):
     def resizeEvent(self, event):
         """Scale view so the scene fits best in it."""
         super().resizeEvent(event)
-        if self.max_d is None:
-            return
+        scene_rect = self.sceneRect()
+        scene_extent = max(scene_rect.width(), scene_rect.height())
         old_size = event.oldSize()
         if not old_size.isEmpty():
-            old_limit = min(old_size.height(), old_size.width())
-            old_factor = old_limit / self.max_d
+            old_extent = min(old_size.height(), old_size.width())
+            old_factor = old_extent / scene_extent
             self.scale(1 / old_factor, 1 / old_factor)
         size = event.size()
-        limit = min(size.height(), size.width())
-        factor = limit / self.max_d
+        extent = min(size.height(), size.width())
+        factor = extent / scene_extent
         self.scale(factor, factor)
 
-    def scale_to_fit_scene(self, size=None):
+    def scale_to_fit_scene(self):
         """Scale view so the scene fits best in it."""
-        if self.max_d is None:
+        if not self.isVisible():
             return
+        scene_rect = self.sceneRect()
+        scene_extent = max(scene_rect.width(), scene_rect.height())
         self.resetTransform()
         size = self.size()
-        limit = min(size.height(), size.width())
-        factor = limit / self.max_d
+        extent = min(size.height(), size.width())
+        factor = extent / scene_extent
         self.scale(factor, factor)
 
 

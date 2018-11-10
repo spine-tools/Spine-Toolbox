@@ -68,18 +68,22 @@ class CheckBoxDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         """Paint a checkbox without the label."""
-        checked = True
+        checked = "True"
         if index.data() == "False" or not index.data():
-            checked = False
+            checked = "False"
+        elif index.data() == "Unknown":
+            checked = "Unknown"
         checkbox_style_option = QStyleOptionButton()
         if (index.flags() & Qt.ItemIsEditable) > 0:
             checkbox_style_option.state |= QStyle.State_Enabled
         else:
             checkbox_style_option.state |= QStyle.State_ReadOnly
-        if checked:
+        if checked == "True":
             checkbox_style_option.state |= QStyle.State_On
-        else:
+        elif checked == "False":
             checkbox_style_option.state |= QStyle.State_Off
+        elif checked == "Unknown":
+            checkbox_style_option.state |= QStyle.State_NoChange
         checkbox_style_option.rect = self.get_checkbox_rect(option)
         # noinspection PyArgumentList
         QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)

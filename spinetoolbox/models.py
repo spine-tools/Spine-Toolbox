@@ -1311,13 +1311,26 @@ class FlatObjectTreeModel(QStandardItemModel):
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
         self.root_item = None
-        self.initial_status = False
+        self.initial_status = "False"
+
+    def backward_sweep(self, index, call=None):
+        """Sweep the tree from the given index towards the root, and apply `call` on each."""
+        current = index
+        while True:
+            if call:
+                call(current)
+            # Try and visit parent
+            next_ = current.parent()
+            if not next_.isValid():
+                break
+            current = next_
+            continue
 
     def forward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if call:
+            call(index)
         if not self.hasChildren(index):
-            if call:
-                call(index)
             return
         current = index
         back_to_parent = False  # True if moving back to the parent index
@@ -1406,9 +1419,9 @@ class ObjectTreeModel(QStandardItemModel):
 
     def forward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if call:
+            call(index)
         if not self.hasChildren(index):
-            if call:
-                call(index)
             return
         current = index
         back_to_parent = False  # True if moving back to the parent index
