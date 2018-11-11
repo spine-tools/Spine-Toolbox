@@ -68,6 +68,8 @@ class CheckBoxDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         """Paint a checkbox without the label."""
+        if (option.state & QStyle.State_Selected):
+            painter.fillRect(option.rect, option.palette.highlight())
         checked = "True"
         if index.data() == "False" or not index.data():
             checked = "False"
@@ -104,7 +106,6 @@ class CheckBoxDelegate(QItemDelegate):
         if event.type() == QEvent.MouseButtonRelease:
             if self.checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
                 # Change the checkbox-state
-                # self.setModelData(None, model, index)
                 self.commit_data.emit(index)
                 self.checkbox_pressed = False
                 return True
@@ -118,9 +119,9 @@ class CheckBoxDelegate(QItemDelegate):
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
         checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
-        checkbox_point = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
-                                option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
-        return QRect(checkbox_point, checkbox_rect.size())
+        checkbox_center = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
+                                 option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
+        return QRect(checkbox_center, checkbox_rect.size())
 
 
 class TreeViewDelegate(QItemDelegate):

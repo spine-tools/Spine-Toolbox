@@ -317,6 +317,7 @@ class ZoomQGraphicsView(QGraphicsView):
     def gentle_zoom(self, angle):
         """Perform the zoom."""
         if self.zooming:
+            logging.debug("Trying to zoom again while still zooming.")
             return
         self.zooming = True
         factor = self._zoom_factor_base ** angle

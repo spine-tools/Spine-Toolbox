@@ -151,11 +151,11 @@ class View(ProjectItem):
         database = reference['database']
         username = reference['username']
         try:
-            mapping = DatabaseMapping(db_url, username)
+            db_map = DatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        graph_view_form = GraphViewForm(self, mapping, database)
+        graph_view_form = GraphViewForm(self, db_map, database)
         graph_view_form.show()
         self.graph_view_form_refs.append(graph_view_form)
 

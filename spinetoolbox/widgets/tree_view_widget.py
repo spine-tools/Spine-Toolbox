@@ -1385,10 +1385,10 @@ class TreeViewForm(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("dataStoreWidget/windowSize")
-        window_pos = self.qsettings.value("dataStoreWidget/windowPosition")
-        splitter_tree_parameter_state = self.qsettings.value("dataStoreWidget/splitterTreeParameterState")
-        window_maximized = self.qsettings.value("dataStoreWidget/windowMaximized", defaultValue='false')  # returns str
+        window_size = self.qsettings.value("treeViewWidget/windowSize")
+        window_pos = self.qsettings.value("treeViewWidget/windowPosition")
+        splitter_tree_parameter_state = self.qsettings.value("treeViewWidget/splitterTreeParameterState")
+        window_maximized = self.qsettings.value("treeViewWidget/windowMaximized", defaultValue='false')  # returns str
         n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)
@@ -1463,14 +1463,14 @@ class TreeViewForm(QMainWindow):
         """
         # save qsettings
         self.qsettings.setValue(
-            "dataStoreWidget/splitterTreeParameterState",
+            "treeViewWidget/splitterTreeParameterState",
             self.ui.splitter_tree_parameter.saveState())
-        self.qsettings.setValue("dataStoreWidget/windowSize", self.size())
-        self.qsettings.setValue("dataStoreWidget/windowPosition", self.pos())
+        self.qsettings.setValue("treeViewWidget/windowSize", self.size())
+        self.qsettings.setValue("treeViewWidget/windowPosition", self.pos())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("dataStoreWidget/windowMaximized", True)
+            self.qsettings.setValue("treeViewWidget/windowMaximized", True)
         else:
-            self.qsettings.setValue("dataStoreWidget/windowMaximized", False)
+            self.qsettings.setValue("treeViewWidget/windowMaximized", False)
         self.close_editors()
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
