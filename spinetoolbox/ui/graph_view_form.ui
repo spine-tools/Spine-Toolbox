@@ -84,10 +84,10 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionBuild">
    <property name="text">
-    <string>Build</string>
+    <string>Rebuild</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+B</string>
+    <string>F5</string>
    </property>
   </action>
  </widget>

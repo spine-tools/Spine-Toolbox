@@ -72,7 +72,7 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
         self.menuGraph.setTitle(QtWidgets.QApplication.translate("MainWindow", "Graph", None, -1))
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
-        self.actionBuild.setText(QtWidgets.QApplication.translate("MainWindow", "Build", None, -1))
-        self.actionBuild.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+B", None, -1))
+        self.actionBuild.setText(QtWidgets.QApplication.translate("MainWindow", "Rebuild", None, -1))
+        self.actionBuild.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F5", None, -1))
 
 from widgets.custom_qgraphicsview import ZoomQGraphicsView

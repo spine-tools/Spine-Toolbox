@@ -18,9 +18,9 @@ Widget to show graph view form.
 
 import logging
 from ui.graph_view_form import Ui_MainWindow
-from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, QGraphicsPixmapItem, \
-    QGraphicsLineItem
-from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen, QColor
+from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem, \
+    QGraphicsPixmapItem, QGraphicsLineItem, QGraphicsRectItem
+from PySide2.QtGui import QPixmap, QFont, QFontMetrics, QPen, QColor, QBrush, QPainterPath
 from PySide2.QtCore import Qt, Slot
 import numpy as np
 from numpy import atleast_1d as arr
@@ -51,7 +51,9 @@ class GraphViewForm(QMainWindow):
         self.font_metric = QFontMetrics(self.font)
         self.object_name_list = list()
         self.pixmap_dict = {}
-        self.arc_name_list = list()
+        self.arc_relationship_class_name_list = list()
+        self.arc_object_names_list = list()
+        self.arc_object_pixmaps_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         self.object_tree_model = FlatObjectTreeModel(self)
@@ -116,7 +118,7 @@ class GraphViewForm(QMainWindow):
             elif all(x == "False" for x in children_status):
                 model.setData(sibling, 'False', Qt.EditRole)
             else:
-                model.setData(sibling, 'Unknown', Qt.EditRole)
+                model.setData(sibling, 'Depends', Qt.EditRole)
         parent = index.sibling(index.row(), 0)
         self.object_tree_model.forward_sweep(parent, call=set_status)
         self.object_tree_model.backward_sweep(parent, call=update_status)
@@ -133,15 +135,17 @@ class GraphViewForm(QMainWindow):
             pixmap = object_class_name_item.data(Qt.DecorationRole).pixmap(2 * self.font.pointSize())
             for j in range(object_class_name_item.rowCount()):
                 object_name_item = object_class_name_item.child(j, 0)
-                object_status_item = object_class_name_item.child(j, 1)
-                if object_status_item.data(Qt.EditRole) == "False":
-                    continue
                 object_name = object_name_item.data(Qt.EditRole)
-                self.object_name_list.append(object_name)
                 self.pixmap_dict[object_name] = pixmap
-        self.arc_name_list = list()
+                object_status_item = object_class_name_item.child(j, 1)
+                if object_status_item.data(Qt.EditRole) == "True":
+                    self.object_name_list.append(object_name)
+        self.arc_relationship_class_name_list = list()
+        self.arc_object_names_list = list()
+        self.arc_object_pixmaps_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
+        relationship_class_name_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}
         for relationship in self.db_map.wide_relationship_list():
             accepted_object_name_list = list()
             ignored_object_name_list = list()
@@ -150,11 +154,13 @@ class GraphViewForm(QMainWindow):
                     accepted_object_name_list.append(name)
                 else:
                     ignored_object_name_list.append(name)
-            arc_name = ", ".join(ignored_object_name_list)
+            relationship_class_name = relationship_class_name_dict[relationship.class_id]
             for i in range(len(accepted_object_name_list) - 1):
                 src_object_name = accepted_object_name_list[i]
                 dst_object_name = accepted_object_name_list[i + 1]
-                self.arc_name_list.append(arc_name)
+                self.arc_relationship_class_name_list.append(relationship_class_name)
+                self.arc_object_names_list.append(ignored_object_name_list)
+                self.arc_object_pixmaps_list.append([self.pixmap_dict[x] for x in ignored_object_name_list])
                 self.src_ind_list.append(self.object_name_list.index(src_object_name))
                 self.dst_ind_list.append(self.object_name_list.index(dst_object_name))
 
@@ -226,56 +232,70 @@ class GraphViewForm(QMainWindow):
         self.ui.graphicsView.setScene(scene)
         d = self.shortest_path_matrix()
         if d is None:
-            text = """
+            msg = """
                 Check boxes on the left pane to show objects here.
             """
-            text_item = CustomTextItem(text, self.font)
-            scene.addItem(text_item)
+            msg_item = CustomTextItem(msg, self.font)
+            scene.addItem(msg_item)
             return
         x, y = self.vertex_coordinates(d)
         object_items = list()
         for i, object_name in enumerate(self.object_name_list):
             pixmap = self.pixmap_dict[object_name]
             object_item = ObjectItem(pixmap, x[i], y[i], 2 * self.font.pointSize())
-            text_item = CustomTextItem(object_name, self.font)
-            object_item.set_text_item(text_item)
+            label_item = ObjectLabelItem(object_name, self.font, QColor(224, 224, 224, 128))
+            object_item.set_label_item(label_item)
             scene.addItem(object_item)
-            scene.addItem(text_item)
+            scene.addItem(label_item)
             object_items.append(object_item)
-        for i, j, arc_name in zip(self.src_ind_list, self.dst_ind_list, self.arc_name_list):
+        for k in range(len(self.src_ind_list)):
+            i = self.src_ind_list[k]
+            j = self.dst_ind_list[k]
+            relationship_class_name = self.arc_relationship_class_name_list[k]
+            object_names = self.arc_object_names_list[k]
+            object_pixmaps = self.arc_object_pixmaps_list[k]
             arc_item = ArcItem(x[i], y[i], x[j], y[j], self.font.pointSize() / 3)
-            text_item = CustomTextItem(arc_name, self.font)
-            arc_item.set_text_item(text_item)
+            arc_label_item = ArcLabelItem(
+                relationship_class_name, object_pixmaps, object_names,
+                2 * self.font.pointSize(), self.font, QColor(224, 224, 224, 224))
+            arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
-            scene.addItem(text_item)
+            scene.addItem(arc_label_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
 
 
 class ObjectItem(QGraphicsPixmapItem):
-    """Object item that is drawn into QGraphicsScene.
+    """Object item to use with GraphViewForm.
 
     Attributes:
         pixmap (QPixmap): pixmap to use
-        x (float): x-coordinate of initial position
-        y (float): y-coordinate of initial position
-        size (int): custom size
+        x (float): x-coordinate of central point
+        y (float): y-coordinate of central point
+        extent (int): extent
     """
-    def __init__(self, pixmap, x, y, size):
+    def __init__(self, pixmap, x, y, extent):
         super().__init__()
-        self.size = size
-        self.setPixmap(pixmap.scaled(self.size, self.size))
-        self.setPos(x - 0.5 * self.size, y - 0.5 * self.size)
-        self.text_item = None
+        self.extent = extent
+        self.setPixmap(pixmap.scaled(self.extent, self.extent))
+        self.setPos(x - 0.5 * self.extent, y - 0.5 * self.extent)
+        self.label_item = None
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
+        self.setAcceptHoverEvents(True)
         self.setZValue(-1)
 
-    def set_text_item(self, item):
-        self.text_item = item
-        self.text_item.setPos(self.x() + 0.75 * self.size, self.y() + 0.5 * self.size)
+    def shape(self):
+        """Return shape."""
+        path = QPainterPath()
+        path.addRect(self.boundingRect())
+        return path
+
+    def set_label_item(self, item):
+        self.label_item = item
+        self.label_item.setPos(self.x() + self.extent, self.y())
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -288,15 +308,29 @@ class ObjectItem(QGraphicsPixmapItem):
     def mouseMoveEvent(self, event):
         """Reset position of text, incoming and outgoing arcs."""
         super().mouseMoveEvent(event)
-        self.text_item.setPos(self.x() + 0.75 * self.size, self.y() + 0.5 * self.size)
+        self.label_item.setPos(self.x() + self.extent, self.y())
         for item in self.outgoing_arc_items:
-            item.set_source(self.x() + 0.5 * self.size, self.y() + 0.5 * self.size)
+            item.set_source_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
         for item in self.incoming_arc_items:
-            item.set_destination(self.x() + 0.5 * self.size, self.y() + 0.5 * self.size)
+            item.set_destination_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+
+    def hoverEnterEvent(self, event):
+        """Show text on hover."""
+        for item in self.incoming_arc_items:
+            item.is_dst_hovered = True
+        for item in self.outgoing_arc_items:
+            item.is_src_hovered = True
+
+    def hoverLeaveEvent(self, event):
+        """Hide text on hover."""
+        for item in self.incoming_arc_items:
+            item.is_dst_hovered = False
+        for item in self.outgoing_arc_items:
+            item.is_src_hovered = False
 
 
 class ArcItem(QGraphicsLineItem):
-    """Arc item that is drawn into QGraphicsScene.
+    """Arc item to use with GraphViewForm.
 
     Attributes:
         x1, y1 (float): source position
@@ -306,8 +340,10 @@ class ArcItem(QGraphicsLineItem):
     def __init__(self, x1, y1, x2, y2, width):
         """Init class."""
         super().__init__(x1, y1, x2, y2)
-        self.text_item = None
+        self.label_item = None
         self.width = width
+        self.is_src_hovered = False
+        self.is_dst_hovered = False
         pen = QPen(QColor(64, 64, 64))
         pen.setWidth(self.width)
         pen.setCapStyle(Qt.RoundCap)
@@ -315,11 +351,11 @@ class ArcItem(QGraphicsLineItem):
         self.setAcceptHoverEvents(True)
         self.setZValue(-2)
 
-    def set_text_item(self, item):
-        self.text_item = item
-        self.text_item.hide()
+    def set_label_item(self, item):
+        self.label_item = item
+        self.label_item.hide()
 
-    def set_source(self, x, y):
+    def set_source_point(self, x, y):
         """Reset the source point. Used when moving ObjectItems around."""
         x1 = x
         y1 = y
@@ -327,7 +363,7 @@ class ArcItem(QGraphicsLineItem):
         y2 = self.line().y2()
         self.setLine(x1, y1, x2, y2)
 
-    def set_destination(self, x, y):
+    def set_destination_point(self, x, y):
         """Reset the destination point. Used when moving ObjectItems around."""
         x1 = self.line().x1()
         y1 = self.line().y1()
@@ -336,21 +372,76 @@ class ArcItem(QGraphicsLineItem):
         self.setLine(x1, y1, x2, y2)
 
     def hoverEnterEvent(self, event):
-        """Show text on hover."""
-        self.text_item.setPos(event.pos().x(), event.pos().y())
-        self.text_item.show()
+        """Show label if src and dst are not hovered."""
+        self.label_item.setPos(event.pos().x(), event.pos().y())
+        if self.is_src_hovered or self.is_dst_hovered:
+            return
+        self.label_item.show()
 
     def hoverMoveEvent(self, event):
-        """Reset text position."""
-        self.text_item.setPos(event.pos().x(), event.pos().y())
+        """Show label if src and dst are not hovered."""
+        self.label_item.setPos(event.pos().x(), event.pos().y())
+        if self.is_src_hovered or self.is_dst_hovered:
+            return
+        self.label_item.show()
 
     def hoverLeaveEvent(self, event):
-        """Hide text on hover."""
-        self.text_item.hide()
+        """Hide label."""
+        self.label_item.hide()
+
+
+class ObjectLabelItem(QGraphicsRectItem):
+    """Label item for objects to use with GraphViewForm.
+
+    Attributes:
+        object_name (str): object name
+        font (QFont): font to display the text
+        color (QColor): color to paint the label
+    """
+    def __init__(self, object_name, font, color):
+        super().__init__()
+        self.title_item = CustomTextItem(object_name, font)
+        self.title_item.setParentItem(self)
+        self.setRect(self.childrenBoundingRect())
+        self.setBrush(QBrush(color))
+        self.setPen(Qt.NoPen)
+        self.setZValue(0)
+
+
+class ArcLabelItem(QGraphicsRectItem):
+    """Label item for arcs to use with GraphViewForm.
+
+    Attributes:
+        relationship_class_name (str): relationship class name
+        object_pixmaps (list): object pixmaps
+        object_names (list): object names
+        extent (int): extent of object items
+        font (QFont): font to display the text
+        color (QColor): color to paint the label
+    """
+    def __init__(self, relationship_class_name, object_pixmaps, object_names, extent, font, color):
+        super().__init__()
+        self.title_item = CustomTextItem(relationship_class_name, font)
+        self.title_item.setParentItem(self)
+        self.object_items = []
+        y_offset = self.title_item.boundingRect().height()
+        for k in range(len(object_pixmaps)):
+            object_pixmap = object_pixmaps[k]
+            object_name = object_names[k]
+            object_item = ObjectItem(object_pixmap, .5 * extent, y_offset + (k + .5) * extent, extent)
+            object_item.setParentItem(self)
+            label_item = ObjectLabelItem(object_name, font, Qt.transparent)
+            label_item.setParentItem(self)
+            object_item.set_label_item(label_item)
+            self.object_items.append(object_item)
+        self.setRect(self.childrenBoundingRect())
+        self.setBrush(QBrush(color))
+        self.setPen(Qt.NoPen)
+        self.setZValue(1)
 
 
 class CustomTextItem(QGraphicsSimpleTextItem):
-    """Text item that is drawn into QGraphicsScene.
+    """Custom text item to use with GraphViewForm.
 
     Attributes:
         text (str): text to show
@@ -363,4 +454,3 @@ class CustomTextItem(QGraphicsSimpleTextItem):
         self.setFont(font)
         outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
         self.setPen(outline_pen)
-        self.setZValue(1)

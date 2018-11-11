@@ -71,8 +71,8 @@ class CheckBoxDelegate(QItemDelegate):
         checked = "True"
         if index.data() == "False" or not index.data():
             checked = "False"
-        elif index.data() == "Unknown":
-            checked = "Unknown"
+        elif index.data() == "Depends":
+            checked = "Depends"
         checkbox_style_option = QStyleOptionButton()
         if (index.flags() & Qt.ItemIsEditable) > 0:
             checkbox_style_option.state |= QStyle.State_Enabled
@@ -82,7 +82,7 @@ class CheckBoxDelegate(QItemDelegate):
             checkbox_style_option.state |= QStyle.State_On
         elif checked == "False":
             checkbox_style_option.state |= QStyle.State_Off
-        elif checked == "Unknown":
+        elif checked == "Depends":
             checkbox_style_option.state |= QStyle.State_NoChange
         checkbox_style_option.rect = self.get_checkbox_rect(option)
         # noinspection PyArgumentList

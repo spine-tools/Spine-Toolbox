@@ -1312,6 +1312,8 @@ class FlatObjectTreeModel(QStandardItemModel):
         self.db_map = graph_view_form.db_map
         self.root_item = None
         self.initial_status = "False"
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
 
     def backward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the root, and apply `call` on each."""
@@ -1372,6 +1374,7 @@ class FlatObjectTreeModel(QStandardItemModel):
                 pixmap = QPixmap(":/icons/object_icon.png")
             object_class_name_item = QStandardItem(object_class.name)
             object_class_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            object_class_name_item.setData(self.bold_font, Qt.FontRole)
             object_class_name_item.setFlags(object_class_name_item.flags() & ~Qt.ItemIsEditable)
             object_class_status_item = QStandardItem()
             object_class_status_item.setData(self.initial_status, Qt.EditRole)
@@ -1411,10 +1414,6 @@ class ObjectTreeModel(QStandardItemModel):
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class') and not self.hasChildren(index):
                 return QBrush(Qt.gray)
-        if role == Qt.FontRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type.endswith('class'):
-                return self.bold_font
         return super().data(index, role)
 
     def forward_sweep(self, index, call=None):
@@ -1465,6 +1464,7 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_class_item.setData(self.object_icon, Qt.DecorationRole)
+            object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
             for object_ in object_list:
                 if object_.class_id != object_class.id:
@@ -1483,6 +1483,7 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
                     relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
+                    relationship_class_item.setData(self.bold_font, Qt.FontRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
                         if wide_relationship.class_id != wide_relationship_class.id:
@@ -1509,6 +1510,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
         object_class_item.setData(self.object_icon, Qt.DecorationRole)
+        object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
     def new_object_item(self, object_):
@@ -1531,6 +1533,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
         relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
+        relationship_class_item.setData(self.bold_font, Qt.FontRole)
         return relationship_class_item
 
     def new_relationship_item(self, wide_relationship):
