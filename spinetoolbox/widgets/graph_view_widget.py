@@ -53,7 +53,6 @@ class GraphViewForm(QMainWindow):
         self.pixmap_dict = {}
         self.arc_relationship_class_name_list = list()
         self.arc_object_names_list = list()
-        self.arc_object_pixmaps_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         self.object_tree_model = FlatObjectTreeModel(self)
@@ -142,27 +141,28 @@ class GraphViewForm(QMainWindow):
                     self.object_name_list.append(object_name)
         self.arc_relationship_class_name_list = list()
         self.arc_object_names_list = list()
-        self.arc_object_pixmaps_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         relationship_class_name_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}
         for relationship in self.db_map.wide_relationship_list():
-            accepted_object_name_list = list()
-            ignored_object_name_list = list()
-            for name in relationship.object_name_list.split(","):
-                if name in self.object_name_list:
-                    accepted_object_name_list.append(name)
-                else:
-                    ignored_object_name_list.append(name)
             relationship_class_name = relationship_class_name_dict[relationship.class_id]
-            for i in range(len(accepted_object_name_list) - 1):
-                src_object_name = accepted_object_name_list[i]
-                dst_object_name = accepted_object_name_list[i + 1]
+            object_name_list = relationship.object_name_list.split(",")
+            for i in range(len(object_name_list)):
+                src_object_name = object_name_list[i]
+                try:
+                    dst_object_name = object_name_list[i + 1]
+                except IndexError:
+                    dst_object_name = object_name_list[0]
+                try:
+                    src_ind = self.object_name_list.index(src_object_name)
+                    dst_ind = self.object_name_list.index(dst_object_name)
+                except ValueError:
+                    continue
+                self.src_ind_list.append(src_ind)
+                self.dst_ind_list.append(dst_ind)
                 self.arc_relationship_class_name_list.append(relationship_class_name)
-                self.arc_object_names_list.append(ignored_object_name_list)
-                self.arc_object_pixmaps_list.append([self.pixmap_dict[x] for x in ignored_object_name_list])
-                self.src_ind_list.append(self.object_name_list.index(src_object_name))
-                self.dst_ind_list.append(self.object_name_list.index(dst_object_name))
+                arc_object_names = [x for x in object_name_list if x not in (src_object_name, dst_object_name)]
+                self.arc_object_names_list.append(arc_object_names)
 
     def shortest_path_matrix(self):
         """Return the shortest-path matrix."""
@@ -253,10 +253,9 @@ class GraphViewForm(QMainWindow):
             j = self.dst_ind_list[k]
             relationship_class_name = self.arc_relationship_class_name_list[k]
             object_names = self.arc_object_names_list[k]
-            object_pixmaps = self.arc_object_pixmaps_list[k]
-            arc_item = ArcItem(x[i], y[i], x[j], y[j], self.font.pointSize() / 3)
+            arc_item = ArcItem(x[i], y[i], x[j], y[j], .5 * self.font.pointSize())
             arc_label_item = ArcLabelItem(
-                relationship_class_name, object_pixmaps, object_names,
+                relationship_class_name, [self.pixmap_dict[x] for x in object_names], object_names,
                 2 * self.font.pointSize(), self.font, QColor(224, 224, 224, 224))
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
@@ -350,6 +349,14 @@ class ArcItem(QGraphicsLineItem):
         self.setPen(pen)
         self.setAcceptHoverEvents(True)
         self.setZValue(-2)
+        self.shape_item = QGraphicsLineItem(x1, y1, x2, y2)
+        shape_pen = QPen()
+        shape_pen.setWidth(3 * self.width)
+        self.shape_item.setPen(shape_pen)
+        self.shape_item.hide()
+
+    def shape(self):
+        return self.shape_item.shape()
 
     def set_label_item(self, item):
         self.label_item = item
@@ -362,6 +369,7 @@ class ArcItem(QGraphicsLineItem):
         x2 = self.line().x2()
         y2 = self.line().y2()
         self.setLine(x1, y1, x2, y2)
+        self.shape_item.setLine(x1, y1, x2, y2)
 
     def set_destination_point(self, x, y):
         """Reset the destination point. Used when moving ObjectItems around."""
@@ -370,6 +378,7 @@ class ArcItem(QGraphicsLineItem):
         x2 = x
         y2 = y
         self.setLine(x1, y1, x2, y2)
+        self.shape_item.setLine(x1, y1, x2, y2)
 
     def hoverEnterEvent(self, event):
         """Show label if src and dst are not hovered."""
