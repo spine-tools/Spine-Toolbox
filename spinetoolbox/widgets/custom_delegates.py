@@ -59,7 +59,7 @@ class CheckBoxDelegate(QItemDelegate):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.checkbox_pressed = False
+        self.mouse_press_point = QPoint()
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -101,15 +101,16 @@ class CheckBoxDelegate(QItemDelegate):
             return True
         if event.type() == QEvent.MouseButtonPress:
             if event.button() == Qt.LeftButton and self.get_checkbox_rect(option).contains(event.pos()):
-                self.checkbox_pressed = True
+                self.mouse_press_point = event.pos()
                 return True
         if event.type() == QEvent.MouseButtonRelease:
-            if self.checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+            checkbox_rect = self.get_checkbox_rect(option)
+            if checkbox_rect.contains(self.mouse_press_point) and checkbox_rect.contains(event.pos()):
                 # Change the checkbox-state
                 self.commit_data.emit(index)
-                self.checkbox_pressed = False
+                self.mouse_press_point = QPoint()
                 return True
-            self.checkbox_pressed = False
+            self.mouse_press_point = QPoint()
         return False
 
     def setModelData(self, editor, model, index):
