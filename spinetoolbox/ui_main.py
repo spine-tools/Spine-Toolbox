@@ -16,6 +16,7 @@ Class for main application GUI functions.
 :date:   14.12.2017
 """
 
+import sys
 import os
 import locale
 import logging
@@ -41,10 +42,13 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
+    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS, \
+    REQUIRED_SPINE_DBAPI_VERSION
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
+import qsubprocess
+import spinedatabase_api
 
 
 class ToolboxUI(QMainWindow):
@@ -111,6 +115,7 @@ class ToolboxUI(QMainWindow):
         self.add_toggle_view_actions()
         self.init_conf()
         self.connect_signals()
+        self.check_spinedatabase_api_version()
         self.init_project()
         # Initialize widgets that are shared among multiple project items
         self.init_shared_widgets()
@@ -203,7 +208,7 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(self, name, description, self._config)
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
-        self.ui.textBrowser_eventlog.clear()
+        # self.ui.textBrowser_eventlog.clear()
         self.msg.emit("New project created")
         self.save_project()
 
@@ -273,7 +278,7 @@ class ToolboxUI(QMainWindow):
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear QTextBrowsers
-        self.ui.textBrowser_eventlog.clear()
+        # self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         # Populate project model with items read from JSON file
         self.init_models(tool_template_paths)
@@ -1193,6 +1198,40 @@ class ToolboxUI(QMainWindow):
             pass
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
+
+    def check_spinedatabase_api_version(self):
+        """Check if spinedatabase_api is the right version and install if needed."""
+        self.msg.emit("Checking <b>spinedatabase_api</b> version...")
+        try:
+            current_version = spinedatabase_api.__version__
+            if current_version == REQUIRED_SPINE_DBAPI_VERSION:
+                self.msg.emit("<b>spinedatabase_api</b> version is {0}".format(current_version))
+                return True
+            self.msg_error.emit("<b>spinedatabase_api</b> version is {0}, "
+                                "but {1} is needed".format(current_version, REQUIRED_SPINE_DBAPI_VERSION))
+        except AttributeError:
+            self.msg_error.emit("Unable to retrieve <b>spinedatabase_api</b> version")
+        return self.install_spinedatabase_api()
+
+    def install_spinedatabase_api(self):
+        """Install required spinedatabase_api version."""
+        self.msg.emit("Installing <b>spinedatabase_api</b> version {}".format(REQUIRED_SPINE_DBAPI_VERSION))
+        program = sys.executable
+        args = list()
+        args.append("-m")
+        args.append("pip")
+        args.append("install")
+        args.append("--upgrade")
+        args.append("git+https://github.com/Spine-project/Spine-Database-API.git@v{0}".\
+            format(REQUIRED_SPINE_DBAPI_VERSION))  # NOTE: This assumes there's a tag called, e.g, v0.0.9
+        pip_install = qsubprocess.QSubProcess(self, program, args, silent=True)
+        pip_install.start_process()
+        if pip_install.wait_for_finished():
+            self.msg_success.emit("<b>spinedatabase_api</b> version {} successfully installed".\
+                format(REQUIRED_SPINE_DBAPI_VERSION))
+            return True
+        self.msg_error.emit("Installing <b>spinedatabase_api</b> failed")
+        return False
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.
