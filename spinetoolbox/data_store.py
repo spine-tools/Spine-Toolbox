@@ -16,6 +16,7 @@ Module for data store class.
 :date:   18.12.2017
 """
 
+import sys
 import os
 import getpass
 import logging
@@ -30,7 +31,7 @@ from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-import spinedatabase_api
+from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
 
 
 class DataStore(ProjectItem):
@@ -361,20 +362,20 @@ class DataStore(ProjectItem):
             msg.exec_()  # Show message box
             if msg.clickedButton() == pip_button:
                 if not self.install_dbapi_pip(dbapi):
-                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                     return False
             elif msg.clickedButton() == conda_button:
                 if not self.install_dbapi_conda(dbapi):
-                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                     return False
             else:
-                self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                 msg = "Unable to use dialect '{}'.".format(dialect)
                 self._toolbox.msg_error.emit(msg)
                 return False
             # Check that dialect is not found
             if not self.check_dialect(dialect):
-                self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                 return False
             return True
 
@@ -382,8 +383,10 @@ class DataStore(ProjectItem):
     def install_dbapi_pip(self, dbapi):
         """Install DBAPI using pip."""
         self._toolbox.msg.emit("Installing module <b>{0}</b> using pip".format(dbapi))
-        program = "pip"
+        program = sys.executable
         args = list()
+        args.append("-m")
+        args.append("pip")
         args.append("install")
         args.append("{0}".format(dbapi))
         pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
@@ -401,7 +404,6 @@ class DataStore(ProjectItem):
             import conda.cli
         except ImportError:
             self._toolbox.msg_error.emit("Conda not found. Installing {0} failed.".format(dbapi))
-            self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
         try:
             self._toolbox.msg.emit("Installing module <b>{0}</b> using Conda".format(dbapi))
@@ -410,7 +412,6 @@ class DataStore(ProjectItem):
             return True
         except Exception as e:
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
-            self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
 
     def make_reference(self):
@@ -518,8 +519,8 @@ class DataStore(ProjectItem):
         database = reference['database']
         username = reference['username']
         try:
-            db_map = spinedatabase_api.DiffDatabaseMapping(db_url, username)
-        except spinedatabase_api.SpineDBAPIError as e:
+            db_map = DiffDatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
         self.tree_view_form = TreeViewForm(self, db_map, database)
@@ -593,7 +594,7 @@ class DataStore(ProjectItem):
         except OSError:
             pass
         url = "sqlite:///" + filename
-        spinedatabase_api.create_new_spine_database(url)
+        create_new_spine_database(url)
         username = getpass.getuser()
         self._reference = {
             'database': database,

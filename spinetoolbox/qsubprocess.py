@@ -92,11 +92,12 @@ class QSubProcess(QObject):
             self._process.close()
             self._process = None
             return False
-        out = str(self._process.readAllStandardOutput().data(), "utf-8")
-        if out is not None:
-            self.output = out.strip()
-        self._process.deleteLater()
-        self._process = None
+        if self._silent:
+            out = str(self._process.readAllStandardOutput().data(), "utf-8")
+            if out is not None:
+                self.output = out.strip()
+            self._process.deleteLater()
+            self._process = None
         return True
 
     @Slot(name="process_started")
