@@ -16,7 +16,6 @@ Functions to import and export from excel to spine database.
 :date:   21.8.2018
 """
 
-# TODO: Add docstrings to all functions
 # TODO: PEP8: Do not use bare except. Too broad exception clause
 
 from collections import namedtuple
@@ -28,9 +27,9 @@ from spinedatabase_api import SpineDBAPIError
 import logging
 
 
-SheetData = namedtuple("SheetData",["sheet_name","class_name","object_classes",
-                                    "parameters","parameter_values","objects",
-                                    "class_type"])
+SheetData = namedtuple("SheetData", ["sheet_name", "class_name", "object_classes",
+                                     "parameters", "parameter_values", "objects",
+                                     "class_type"])
 
 
 def import_xlsx_to_db(db, filepath):
@@ -112,10 +111,10 @@ def get_objects_and_parameters(db):
                             db.Parameter.name,
                             db.ParameterValue.value,
                             db.ParameterValue.json).\
-                        filter(db.ParameterValue.object_id == db.Object.id,
-                               db.ObjectClass.id == db.Object.class_id,
-                               db.ParameterValue.parameter_id == db.Parameter.id).\
-                        all()
+        filter(db.ParameterValue.object_id == db.Object.id,
+               db.ObjectClass.id == db.Object.class_id,
+               db.ParameterValue.parameter_id == db.Parameter.id).\
+        all()
 
     # get all parameter definitions
     par = db.session.query(db.ObjectClass.name, db.Parameter.name).\
@@ -244,30 +243,17 @@ def stack_list_of_tuples(data, headers, key_cols, value_cols):
         (List[namedtuple]): List of namedtuples whit fields given by headers
         and 'parameter' and 'value' which contains stacked values
     """
-
     value_names = [headers[n] for n in value_cols]
     key_names = [headers[n] for n in key_cols]
-
     new_tuple_names = key_names + ["parameter", "value"]
-
     NewDataTuple = namedtuple("Data", new_tuple_names)
-    # TODO: Comment needed
     # takes unstacked data and duplicates columns in key_cols and then zips
     # them with values in value_cols
-    new_data_list = [list(
-          map(NewDataTuple._make,
-              [a+[b]+[c] for a, b, c in
-                   zip([[dl[k] for k in key_cols]]*len(value_cols),
-                       value_names,
-                       [dl[vk] for vk in value_cols]
-                       )
-                   ]
-              )
-        )
-    for dl in data]
-
+    new_data_list = [list(map(
+            NewDataTuple._make,
+            [a+[b]+[c] for a, b, c in zip([[dl[k] for k in key_cols]]*len(value_cols),
+                                          value_names, [dl[vk] for vk in value_cols])])) for dl in data]
     new_data_list = [item for sublist in new_data_list for item in sublist]
-
     return new_data_list
 
 
@@ -284,12 +270,10 @@ def unpack_json_parameters(data, json_index):
 
         out_data += [a + [b] + [c] for a, b, c in
                      zip(key_cols, range(0, len(json_data), 1), json_data)]
-
     return out_data
 
 
 def pack_json_parameters(data, key_cols, value_col, index_col=None):
-
     out_data = []
     # group by keys cols
     keyfunc = lambda x: [x[k] for k in key_cols]
@@ -324,8 +308,8 @@ def get_unstacked_relationships(db):
     data_json = sorted(data_json, key=keyfunc)
     parsed_json = []
     # json data, split by relationship class
-    for k,v in groupby(data_json, key=keyfunc):
-        json_vals  = []
+    for k, v in groupby(data_json, key=keyfunc):
+        json_vals = []
         for row in v:
             rel_list = row[1].split(',')
             parameter = row[2]
@@ -333,7 +317,8 @@ def get_unstacked_relationships(db):
                 val = json.loads(row[3].replace("\n", ""))
                 json_vals.append([rel_list+[parameter], val])
             except:
-                logging.error("error parsing json value for parameter: {} for relationship {}".format(parameter, row[1]))
+                logging.error("error parsing json value for parameter: {} for relationship {}"
+                              .format(parameter, row[1]))
         if json_vals:
             object_classes = class_2_obj_list[k]
             parsed_json.append([k, object_classes, json_vals])
@@ -371,21 +356,21 @@ def get_unstacked_objects(db):
     parsed_json = []
     data_json = sorted(data_json, key=keyfunc)
     for k, v in groupby(data_json, key=keyfunc):
-        json_vals  = []
+        json_vals = []
         for row in v:
             obj = row[1]
             parameter = row[2]
             try:
                 val = json.loads(row[3].replace("\n", ""))
-                json_vals.append([[obj,parameter], val])
+                json_vals.append([[obj, parameter], val])
             except:
                 logging.error("error parsing json value for parameter: {} for object {}".format(parameter, obj))
         if json_vals:
             parsed_json.append([k, [k], json_vals])
 
     stacked_obj = []
-    data = sorted(data, key = keyfunc)
-    for k,v in groupby(data, key = keyfunc):
+    data = sorted(data, key=keyfunc)
+    for k, v in groupby(data, key=keyfunc):
         values = list(v)
         obj = unstack_list_of_tuples(values, ["object_class", "object", "parameter", "value"], [0, 1], 2, 3)
         if len(obj) > 0:
@@ -403,8 +388,9 @@ def write_relationships_to_xlsx(wb, relationship_data):
     Writes one sheet per relationship class.
 
     Args:
-        wb (openpyxl.workbook): excel workbook to write too.
-        relationship_data (List[List]): List of lists containing relationship data give by function get_unstacked_relationships
+        wb (openpyxl.Workbook): excel workbook to write too.
+        relationship_data (List[List]): List of lists containing relationship
+        data give by function get_unstacked_relationships
     """
     for rel in relationship_data:
         ws = wb.create_sheet()
@@ -444,11 +430,11 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
     Writes one sheet per relationship/object class.
 
     Args:
-        wb (openpyxl.workbook): excel workbook to write too.
-        data (List[List]): List of lists containing json data give by function get_unstacked_objects and get_unstacked_relationships
+        wb (openpyxl.Workbook): excel workbook to write too.
+        data (List[List]): List of lists containing json data give by function
+        get_unstacked_objects and get_unstacked_relationships
         sheet_type (str): str with value "relationship" or "object" telling if data is for a relationship or object
     """
-
     for d in data:
         ws = wb.create_sheet()
 
@@ -457,6 +443,7 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
         elif sheet_type == "object":
             sheet_title = "json_"
         else:
+            # TODO: There should be a value for sheet_title if sheet_type is not object nor relationship. See next line
             pass
 
         # sheet name can only be 31 chars log
@@ -477,7 +464,7 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
 
         title_rows = d[1]+["json parameter"]
         for c, val in enumerate(title_rows):
-            ws.cell(row = 4+c, column = 1).value = val
+            ws.cell(row=4+c, column=1).value = val
 
         start_row = 4 + len(title_rows)
         for col, obj_list in enumerate(d[2]):
@@ -493,7 +480,7 @@ def write_objects_to_xlsx(wb, object_data):
     Writes one sheet per relationship/object class.
 
     Args:
-        wb (openpyxl.workbook): excel workbook to write too.
+        wb (openpyxl.Workbook): excel workbook to write too.
         object_data (List[List]): List of lists containing relationship data give by function get_unstacked_objects
     """
 
@@ -533,17 +520,13 @@ def export_spine_database_to_xlsx(db, filepath):
         db (spinedatabase_api.DatabaseMapping): database mapping for database.
         filepath (str): str with filepath to save excel file to.
     """
-
     obj_data, obj_json_data = get_unstacked_objects(db)
     rel_data, rel_json_data = get_unstacked_relationships(db)
-
     wb = Workbook()
-
     write_relationships_to_xlsx(wb, rel_data)
     write_objects_to_xlsx(wb, obj_data)
     write_json_array_to_xlsx(wb, obj_json_data, "object")
     write_json_array_to_xlsx(wb, rel_json_data, "relationship")
-
     wb.save(filepath)
     wb.close()
 
@@ -603,7 +586,7 @@ def read_spine_xlsx(filepath):
     rel_data, el = merge_spine_xlsx_data(rel_data + rel_json_data)
     error_log = error_log + el
 
-    return (obj_data, rel_data, error_log)
+    return obj_data, rel_data, error_log
 
 
 def merge_spine_xlsx_data(data):
@@ -623,7 +606,7 @@ def merge_spine_xlsx_data(data):
         values = list(values)
         if len(values) < 2:
             if len(values) > 0:
-                #only one sheet
+                # only one sheet
                 new_data.append(values[0])
             continue
         else:
@@ -635,13 +618,15 @@ def merge_spine_xlsx_data(data):
             objects = values[0].objects
             class_type = values[0].class_type
 
-            #skip first sheet
+            # skip first sheet
             iter_values = iter(values)
             next(iter_values)
             for v in iter_values:
                 # make sure that the new sheet has same object_classes that first
                 if v.object_classes != object_classes:
-                    error_log.append(["sheet",v.sheet_name,"sheet {} as different object_classes than sheet {} for class {}".format(v.sheet_name, sheet_name, class_name)])
+                    error_log.append(["sheet", v.sheet_name, "sheet {} as different "
+                                                             "object_classes than sheet {} for class {}"
+                                     .format(v.sheet_name, sheet_name, class_name)])
                     continue
                 parameters = parameters + v.parameters
                 objects = objects + v.objects
@@ -653,7 +638,7 @@ def merge_spine_xlsx_data(data):
             if len(object_classes) > 1:
                 keyfunc = lambda x: [x[i] for i,_ in enumerate(object_classes)]
                 objects = sorted(objects, key=keyfunc)
-                objects = list(k for k,_ in groupby(objects, key=keyfunc))
+                objects = list(k for k, _ in groupby(objects, key=keyfunc))
             else:
                 objects = list(set(objects))
 
@@ -799,6 +784,7 @@ def read_parameter_sheet(ws):
         dim = 1
     elif sheet_type == "relationship":
         dim = ws['D2'].value
+    # TODO: There should be a value for 'dim' if sheet_type is not object nor relationship. See next line
 
     # object classes
     object_classes = read_2d(ws, 4, 4, 1, dim)[0]
@@ -812,12 +798,12 @@ def read_parameter_sheet(ws):
         elif c >= dim:
             parameters.append(cell.value)
 
-    #get data
+    # get data
     data = read_2d(ws, 5, len(ws['A']), 1, dim + len(parameters))
 
-    keyfunc = lambda x: [x[i] for i,_  in enumerate(object_classes)]
+    keyfunc = lambda x: [x[i] for i, _ in enumerate(object_classes)]
 
-    #remove data where not all dimensions exists
+    # remove data where not all dimensions exists
     data = [d for d in data if not None in keyfunc(d)]
 
     data_parameter = []
@@ -832,10 +818,10 @@ def read_parameter_sheet(ws):
         data_parameter = [d for d in data_parameter if d.value is not None]
 
     # find unique relationships from data
-    data = sorted(data, key = keyfunc)
-    objects = list(k for k,_ in groupby(data, key = keyfunc))
+    data = sorted(data, key=keyfunc)
+    objects = list(k for k, _ in groupby(data, key=keyfunc))
     if dim == 1:
-        # flattern list if only one object per row
+        # flatten list if only one object per row
         objects = [item for sublist in objects for item in sublist]
 
     return SheetData(sheet_name=ws.title,
@@ -847,7 +833,7 @@ def read_parameter_sheet(ws):
                      class_type=sheet_type)
 
 
-def read_2d(ws,start_row = 1,end_row = 1,start_col = 1,end_col = 1):
+def read_2d(ws, start_row=1, end_row=1, start_col=1, end_col=1):
     """Reads a 2d area from worksheet into a list of lists where each line is
     the inner list.
 
@@ -878,6 +864,7 @@ def max_col_in_row(ws, row=1):
     Returns:
         (Integer) column index of last cell with value.
     """
+    # TODO: Does this work if ws[row] is empty? In that case 'cell' is not initialized.
     for cell in reversed(ws[row]):
         if cell.value is not None:
             break
@@ -938,7 +925,7 @@ def export_object_parameters_spine_db(db, data):
     # check if the parameters object class exists in db.
     error_log = [["object_parameter", p[1],
                   "object_class '{}' did not exist in database".format(p[0])]
-                for p in parameters if p[0] not in obj_class_name_2_id.keys()]
+                 for p in parameters if p[0] not in obj_class_name_2_id.keys()]
 
     parameters = [[obj_class_name_2_id[p[0]], p[0], p[1]] for p in parameters
                   if p[0] in obj_class_name_2_id.keys()]
@@ -1053,8 +1040,8 @@ def export_object_parameter_values(db, data):
     error_log = []
     update_parameters = []
     insert_parameters = []
-    ParVal = namedtuple("ParVal",["id", "object_id", "parameter_id",
-                                  "name", "value", "key", "parameter_type"])
+    ParVal = namedtuple("ParVal", ["id", "object_id", "parameter_id",
+                                   "name", "value", "key", "parameter_type"])
     for p in parameter_values:
         # check if parameter value object class doesn't exists in db
         if p[0] not in obj_class_name_2_id.keys():
@@ -1178,7 +1165,7 @@ def export_relationship_class_to_spine_db(db, data):
     import_log = []
     try:
         db.add_wide_relationship_classes(*valid_rel_classes)
-        import_log = import_log + [["relationship_class", r['name']]  for r in valid_rel_classes]
+        import_log = import_log + [["relationship_class", r['name']] for r in valid_rel_classes]
     except SpineDBAPIError as e:
         error_log = error_log + [["relationship_class", r['name'], e.msg] for r in valid_rel_classes]
 
