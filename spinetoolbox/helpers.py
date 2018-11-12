@@ -22,10 +22,34 @@ import os
 import time
 import shutil
 import glob
+import spinedatabase_api
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QCursor
-from config import DEFAULT_PROJECT_DIR
+from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+
+
+def spinedatabase_api_version_check():
+    """Check if spinedatabase_api is the right version and explain how to installed if it is not."""
+    logging.info("Checking spinedatabase_api version...")
+    try:
+        current_version = spinedatabase_api.__version__
+        if current_version == REQUIRED_SPINE_DBAPI_VERSION:
+            logging.info("spinedatabase_api version is {0}".format(current_version))
+            return True
+    except AttributeError:
+        current_version = "not reported"
+    logging.error(
+"""
+Spine Toolbox failed to start because spinedatabase_api is not the correct version.
+(Required version is {0}, whereas current is {1})
+The solution is to install spinedatabase_api v{0} and start Spine Toolbox again.
+To install spinedatabase_api v{0}, run
+
+    pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git@v{0}
+
+""".format(REQUIRED_SPINE_DBAPI_VERSION, current_version))
+    return False
 
 
 def busy_effect(func):
