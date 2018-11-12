@@ -125,7 +125,12 @@ class View(ProjectItem):
     def refresh(self):
         """Update the list of references that this item is viewing."""
         input_items = self.find_input_items()
-        self._references = [item.reference() for item in input_items if item.reference()]
+        self._references = list()
+        for item in input_items:
+            reference = item.current_reference()
+            if not reference:
+                continue
+            self._references.append(reference)
         # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
 

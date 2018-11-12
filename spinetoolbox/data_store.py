@@ -71,7 +71,6 @@ class DataStore(ProjectItem):
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
         self.load_reference(reference)
-        # TODO: try and create reference from first sqlite file in data directory?
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
@@ -164,8 +163,6 @@ class DataStore(ProjectItem):
         if not file_path:  # Cancel button clicked
             return
         filename = os.path.split(file_path)[1]
-        if filename.endswith(".sqlite"):
-            filename = filename[:-len(".sqlite")]
         # Update UI
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
@@ -237,30 +234,57 @@ class DataStore(ProjectItem):
         current_item = self._toolbox.project_item_model.project_item(current)
         if current_item == self:
             self.save_selections()
-        # NOTE: Another option would be to update the current item's reference directly from the ui,
-        # but that'd require another method.
-        self.update_reference()
+        self.save_reference()
         return self._reference
 
-    def update_reference(self):
+    def save_reference(self):
         """Update reference from selections."""
-        # TODO: Updating an SQLite reference is the only one that is implemented.
         if not self.selected_dialect:
-            self._reference = {
-                'database': '',
-                'username': '',
-                'url': ''
-            }
-        if self.selected_dialect == 'sqlite':
-            database = os.path.basename(self.selected_sqlite_file)
+            self._reference = None
+            return
+        if self.selected_dialect == 'mssql':
+            if not self.selected_dsn:
+                return None
+            dsn = self.selected_dsn
             username = self.selected_username
+            password = self.selected_password
+            url = 'mssql+pyodbc://'
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += '@' + dsn
+            database = dsn
+        elif self.selected_dialect == 'sqlite':
             sqlite_file = self.selected_sqlite_file
+            if not sqlite_file:
+                return None
+            if not os.path.isfile(sqlite_file):
+                return None
             url = 'sqlite:///{0}'.format(sqlite_file)
+            database = os.path.basename(self.selected_sqlite_file)
+            username = getpass.getuser()
         else:
-            # TODO: This needs more work
+            host = self.selected_host
+            if not host:
+                return None
             database = self.selected_db
+            if not database:
+                return None
+            port = self.selected_port
             username = self.selected_username
-            url = ""
+            password = self.selected_password
+            dbapi = SQL_DIALECT_API[dialect]
+            url = "+".join([dialect, dbapi]) + "://"
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += "@" + host
+            if port:
+                url += ":" + port
+            url += "/" + database
+        # Save reference
         self._reference = {
             'database': database,
             'username': username,
@@ -293,7 +317,7 @@ class DataStore(ProjectItem):
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(0)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
         self._toolbox.ui.lineEdit_SQLite_file.setEnabled(True)
         self._toolbox.ui.toolButton_browse.setEnabled(True)
         self._toolbox.ui.lineEdit_host.setEnabled(False)
@@ -305,7 +329,7 @@ class DataStore(ProjectItem):
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(0)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
         self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
         self._toolbox.ui.toolButton_browse.setEnabled(False)
         self._toolbox.ui.lineEdit_host.setEnabled(True)
@@ -579,9 +603,6 @@ class DataStore(ProjectItem):
         database = answer[0]
         if not database:
             return
-        # Remove .sqlite extension from given name if present so that it is not duplicated
-        if database.endswith(".sqlite"):
-            database = database[:-len(".sqlite")]
         filename = os.path.join(self.data_dir, database + ".sqlite")
         if os.path.isfile(filename):
             msg = "File <b>{}</b> already in <b>{}</b> project directory.<br/><br/>Overwrite?"\
@@ -601,7 +622,7 @@ class DataStore(ProjectItem):
             'username': username,
             'url': url
         }
-        # Update UI. NOTE: this assumes fresh Spine dbs are always created with the item selected. How can you do it in another way??
+        # Update UI
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
         self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(filename))
