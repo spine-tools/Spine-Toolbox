@@ -27,11 +27,12 @@ and bug fixes you need to
 version of the source code to your computer.
 
 Step-by-step instructions:
+
 1. Clone either the `master` or `dev` branch onto your computer
 2. Install Python (3.5->)
 3. Install requirements (see below)
 4. Go to directory `\spinetoolbox` and run
-
+  
 
     python spinetoolbox.py
 
@@ -101,13 +102,24 @@ To upgrade `spinedatabase_api` manually, run
     pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
 Or run `upgrade_spinedatabase_api.bat` on Windows or `upgrade_spinedatabase_api.sh` 
-on Linux. The scripts are located in the `/bin` directory.
+on Linux and Mac OS X. The scripts are located in the `/bin` directory.
 
 **Note:** You don't need to clone or download the `spinedatabase_api` source code. 
 *pip* takes care of installing the latest version from GitHub to your system 
 automatically.
 
+### Upgrading all dependencies
+
+You can upgrade all required packages for Spine Toolbox to the newest available 
+version with a single command
+
+    pip install --upgrade -r requirements.txt
+
+You may want to do this occasionally if it has been a long time (i.e. several months) 
+since you first installed the requirements.
+
 ## Building the User Guide
+
 Source files for the User Guide can be found in `/docs/source` directory. You can build 
 HTML pages from the source files by using `/bin/build_doc.bat` (Windows) or 
 `/bin/build_doc.sh` (Linux) scripts. After running the script, the index page can be 
