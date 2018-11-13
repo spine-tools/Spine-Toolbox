@@ -18,10 +18,10 @@ Spine Toolbox application main file.
 
 import sys
 import logging
-import spinedatabase_api
 from PySide2.QtWidgets import QApplication
 from ui_main import ToolboxUI
 from helpers import spinedatabase_api_version_check
+
 
 def main(argv):
     """Launch application.
@@ -29,7 +29,6 @@ def main(argv):
     Args:
         argv (list): Command line arguments
     """
-
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
