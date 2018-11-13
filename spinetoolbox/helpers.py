@@ -31,18 +31,18 @@ from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
 
 def spinedatabase_api_version_check():
     """Check if spinedatabase_api is the correct version and explain how to upgrade if it is not."""
-    logging.info("Checking spinedatabase_api version...")
+    print("INFO: Checking spinedatabase_api version...")
     try:
         current_version = spinedatabase_api.__version__
         current_split = [int(x) for x in current_version.split(".")]
         required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
         if current_split >= required_split:
-            logging.info("spinedatabase_api version is {0}".format(current_version))
+            print("INFO: spinedatabase_api version is {0}".format(current_version))
             return True
     except AttributeError:
         current_version = "not reported"
-    logging.error(
-        """
+    print(
+        """ERROR:
         Spine Toolbox failed to start because spinedatabase_api is not the correct version.
         (Required version is {0}, whereas current is {1})
         Please upgrade spinedatabase_api to v{0} and start Spine Toolbox again.
