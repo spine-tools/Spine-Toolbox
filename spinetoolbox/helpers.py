@@ -31,26 +31,26 @@ from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
 
 def spinedatabase_api_version_check():
     """Check if spinedatabase_api is the correct version and explain how to upgrade if it is not."""
-    print("INFO: Checking spinedatabase_api version...")
     try:
         current_version = spinedatabase_api.__version__
         current_split = [int(x) for x in current_version.split(".")]
         required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
         if current_split >= required_split:
-            print("INFO: spinedatabase_api version is {0}".format(current_version))
             return True
     except AttributeError:
         current_version = "not reported"
     print(
         """ERROR:
-        Spine Toolbox failed to start because spinedatabase_api is not the correct version.
+        Spine Toolbox failed to start because spinedatabase_api is outdated.
         (Required version is {0}, whereas current is {1})
         Please upgrade spinedatabase_api to v{0} and start Spine Toolbox again.
-        To install or upgrade it, run
 
-            pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git@v{0}
+        To upgrade, run script 'upgrade_spinedatabase_api.bat' in the '/bin' folder.
 
-        Or run upgrade script in bin/upgrade_spinedatabase_api
+        Or upgrade it manually by running,
+
+            pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
+
         """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version))
     return False
 
