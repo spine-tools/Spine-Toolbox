@@ -1463,6 +1463,7 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+            object_class_item.setData(object_class.description, Qt.ToolTipRole)
             object_class_item.setData(self.object_icon, Qt.DecorationRole)
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
@@ -1472,6 +1473,7 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item = QStandardItem(object_.name)
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
+                object_item.setData(object_.description, Qt.ToolTipRole)
                 object_item.setData(self.object_icon, Qt.DecorationRole)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
@@ -1509,6 +1511,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+        object_class_item.setData(object_class.description, Qt.ToolTipRole)
         object_class_item.setData(self.object_icon, Qt.DecorationRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
@@ -1518,6 +1521,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
+        object_item.setData(object_.description, Qt.ToolTipRole)
         object_item.setData(self.object_icon, Qt.DecorationRole)
         relationship_class_item_list = list()
         for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
