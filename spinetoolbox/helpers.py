@@ -34,7 +34,9 @@ def spinedatabase_api_version_check():
     logging.info("Checking spinedatabase_api version...")
     try:
         current_version = spinedatabase_api.__version__
-        if current_version >= REQUIRED_SPINE_DBAPI_VERSION:  # Check if its at least the required version
+        current_split = [int(x) for x in current_version.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
+        if current_split >= required_split:
             logging.info("spinedatabase_api version is {0}".format(current_version))
             return True
     except AttributeError:
