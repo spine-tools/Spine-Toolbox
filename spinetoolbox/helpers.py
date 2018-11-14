@@ -16,6 +16,7 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
+import sys
 import logging
 import datetime
 import os
@@ -39,19 +40,20 @@ def spinedatabase_api_version_check():
             return True
     except AttributeError:
         current_version = "not reported"
+    script = "upgrade_spinedatabase_api.bat" if sys.platform == "win32" else "upgrade_spinedatabase_api.sh"
     print(
         """ERROR:
         Spine Toolbox failed to start because spinedatabase_api is outdated.
         (Required version is {0}, whereas current is {1})
         Please upgrade spinedatabase_api to v{0} and start Spine Toolbox again.
 
-        To upgrade, run script 'upgrade_spinedatabase_api.bat' in the '/bin' folder.
+        To upgrade, run script '{2}' in the '/bin' folder.
 
         Or upgrade it manually by running,
 
             pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-        """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version))
+        """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version, script))
     return False
 
 

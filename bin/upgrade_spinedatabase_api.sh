@@ -19,13 +19,13 @@ then
   printf '\n'
   echo "Upgrading from 'master' branch"
   printf '\n'
-  pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git@master
+  pip3 install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git@master
 elif [ $1 = "dev" ]
 then
   printf '\n'
   echo "Upgrading from 'dev' branch"
   printf '\n'
-  pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git@dev
+  pip3 install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git@dev
 else
   printf '\n'
   echo "Unknown argument $1. Please see USAGE."
