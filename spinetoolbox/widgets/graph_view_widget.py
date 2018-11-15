@@ -268,6 +268,7 @@ class GraphViewForm(QMainWindow):
             """
             msg_item = CustomTextItem(msg, self.font)
             scene.addItem(msg_item)
+            self._has_graph = False
             return
         x, y = self.vertex_coordinates(d)
         object_items = list()
@@ -297,30 +298,45 @@ class GraphViewForm(QMainWindow):
             scene.addItem(arc_label_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
+        self._has_graph = True
 
     @Slot("QPoint", "int", "QPixmap", name="show_add_object_form")
     def show_add_object_form(self, pos, class_id, pixmap):
-        scene = self.ui.graphicsView.scene()
+        if self._has_graph:
+            scene = self.ui.graphicsView.scene()
+        else:
+            scene = QGraphicsScene()
+            self.ui.graphicsView.setScene(scene)
+        # Add transparent rect item the size of the scene
         view_rect = self.ui.graphicsView.viewport().rect()
         top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
         bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
         scene_rect = QRectF(top_left, bottom_right)
         rect_item = scene.addRect(scene_rect, Qt.NoPen)
         rect_item.setZValue(-100)
+        # Add temp object item as a marker
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         self.temp_object_item = ObjectItem(pixmap, scene_pos.x(), scene_pos.y(), 2 * self.font.pointSize())
         scene.addItem(self.temp_object_item)
         self._has_graph = True
-        dialog = AddObjectsDialog(self, class_id=class_id)
+        dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
+        dialog.rejected.connect(lambda: scene.removeItem(self.temp_object_item))
         dialog.show()
 
     def add_objects(self, objects):
         """Insert new objects."""
         scene = self.ui.graphicsView.scene()
-        for object_ in objects:
-            self.object_tree_model.add_object(object_)
+        pixmap = self.temp_object_item.pixmap()
+        x = self.temp_object_item.x()
+        y = self.temp_object_item.y()
+        extent = self.temp_object_item.extent
+        scene.removeItem(self.temp_object_item)
+        for k, object_ in enumerate(objects):
+            self.object_tree_model.add_object(object_, flat=True)
+            object_item = ObjectItem(pixmap, x + .5 * extent, y + (k + .5) * extent, extent)
             label_item = ObjectLabelItem(object_.name, self.font, QColor(224, 224, 224, 128))
-            self.temp_object_item.set_label_item(label_item)
+            object_item.set_label_item(label_item)
+            scene.addItem(object_item)
             scene.addItem(label_item)
 
     def restore_ui(self):
