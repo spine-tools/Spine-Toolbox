@@ -316,7 +316,7 @@ def get_unstacked_relationships(db):
             try:
                 val = json.loads(row[3].replace("\n", ""))
                 json_vals.append([rel_list+[parameter], val])
-            except:
+            except json.JSONDecodeError:
                 logging.error("error parsing json value for parameter: {} for relationship {}"
                               .format(parameter, row[1]))
         if json_vals:
@@ -363,7 +363,7 @@ def get_unstacked_objects(db):
             try:
                 val = json.loads(row[3].replace("\n", ""))
                 json_vals.append([[obj, parameter], val])
-            except:
+            except json.JSONDecodeError:
                 logging.error("error parsing json value for parameter: {} for object {}".format(parameter, obj))
         if json_vals:
             parsed_json.append([k, [k], json_vals])
@@ -435,21 +435,21 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
         get_unstacked_objects and get_unstacked_relationships
         sheet_type (str): str with value "relationship" or "object" telling if data is for a relationship or object
     """
-    for d in data:
-        ws = wb.create_sheet()
-
+    for i, d in enumerate(data):
         if sheet_type == "relationship":
             sheet_title = "json_"
         elif sheet_type == "object":
             sheet_title = "json_"
         else:
-            # TODO: There should be a value for sheet_title if sheet_type is not object nor relationship. See next line
-            pass
-
+            raise ValueError("sheet_type must be a str with value 'relationship' or 'object'")
+            
+        ws = wb.create_sheet()
         # sheet name can only be 31 chars log
         title = sheet_title + d[0]
         if len(title) < 32:
             ws.title = title
+        else:
+            ws.title = '{}_json{}'.format(sheet_type, i)
 
         ws['A1'] = "Sheet type"
         ws['A2'] = sheet_type
@@ -484,7 +484,7 @@ def write_objects_to_xlsx(wb, object_data):
         object_data (List[List]): List of lists containing relationship data give by function get_unstacked_objects
     """
 
-    for obj in object_data:
+    for i, obj in enumerate(object_data):
         ws = wb.create_sheet()
 
         # try setting the sheetname to object class name
@@ -492,6 +492,8 @@ def write_objects_to_xlsx(wb, object_data):
         title = "obj_" + obj[0]
         if len(title) < 32:
             ws.title = title
+        else:
+            ws.title = "object_class{}".format(i)
 
         ws['A1'] = "Sheet type"
         ws['A2'] = "object"
@@ -544,6 +546,7 @@ def read_spine_xlsx(filepath):
     rel_data = []
     obj_json_data = []
     rel_json_data = []
+    error_log = []
 
     # read all sheets
     for s in sheets:
@@ -564,8 +567,9 @@ def read_spine_xlsx(filepath):
                     rel_data.append(data)
                 else:
                     obj_data.append(data)
-            except:
-                print(s)
+            except Exception as e:
+                error_log.append(["sheet", ws.title,
+                                  "Error reading sheet {}: {}".format(ws.title, e)])
         elif sheet_data == "json array":
             # read sheet with data type: 'json array'
             try:
@@ -574,12 +578,12 @@ def read_spine_xlsx(filepath):
                     rel_json_data.append(data)
                 else:
                     obj_json_data.append(data)
-            except:
-                print(s)
+            except Exception as e:
+                error_log.append(["sheet", ws.title,
+                                  "Error reading sheet {}: {}".format(ws.title, e)])
     wb.close()
 
     # merge sheets that have the same class.
-    error_log = []
     obj_data, el = merge_spine_xlsx_data(obj_data + obj_json_data)
     error_log = error_log + el
 
@@ -685,8 +689,16 @@ def validate_sheet(ws):
             return False
         if not rel_dimension > 1:
             return False
-        rel_row = read_2d(ws, 4, 4, 1, rel_dimension)
+        if sheet_data.lower() == 'parameter':
+            rel_row = read_2d(ws, 4, 4, 1, rel_dimension)[0]
+        else: 
+            rel_row = read_2d(ws, 4, 4 + rel_dimension - 1, 1, 1)
+            rel_row = [r[0] for r in rel_row]
         if None in rel_row:
+            return False
+        if not all(isinstance(r, str) for r in rel_row):
+            return False
+        if not all(r for r in rel_row):
             return False
     elif sheet_type.lower() == "object":
         obj_name = ws['C2'].value
@@ -694,6 +706,8 @@ def validate_sheet(ws):
             return False
         if not obj_name:
             return False
+    else:
+        return False
     return True
 
 
@@ -742,9 +756,15 @@ def read_json_sheet(ws, sheet_type):
             if r > 2 and r < 3+dim:
                 # get object path
                 obj_path.append(cell.value)
+                if cell.value is None:
+                    # invalid column, skip
+                    break
             elif r == 3+dim:
                 # get parameter name
                 parameter = [cell.value]
+                if cell.value is None:
+                    # invalid column, skip
+                    break
             elif r > 3+dim:
                 # get values until first empty cell
                 if cell.value is None:
@@ -784,7 +804,8 @@ def read_parameter_sheet(ws):
         dim = 1
     elif sheet_type == "relationship":
         dim = ws['D2'].value
-    # TODO: There should be a value for 'dim' if sheet_type is not object nor relationship. See next line
+    else:
+        raise ValueError("sheet_type must be a str with value 'relationship' or 'object'")
 
     # object classes
     object_classes = read_2d(ws, 4, 4, 1, dim)[0]
