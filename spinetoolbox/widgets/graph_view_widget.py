@@ -18,9 +18,9 @@ Widget to show graph view form.
 
 import logging
 from ui.graph_view_form import Ui_MainWindow
-from PySide2.QtWidgets import QMainWindow, QGraphicsScene
+from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog
 from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication
-from PySide2.QtCore import Qt, Slot, QSettings, QRectF, QItemSelection, QItemSelectionModel
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QRectF, QItemSelection, QItemSelectionModel
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
@@ -40,7 +40,11 @@ class GraphViewForm(QMainWindow):
 
     Attributes:
         view (View): View instance that owns this form
+        db_map (DiffDatabaseMapping): The object relational database mapping
+        database (str): The database name
     """
+    msg = Signal(str, name="msg")
+    msg_error = Signal(str, name="msg_error")
 
     def __init__(self, view, db_map, database):
         """Initialize class."""
@@ -49,6 +53,7 @@ class GraphViewForm(QMainWindow):
         self.db_map = db_map
         self._spacing_factor = 1.0
         self._has_graph = False
+        self.database = database
         self.temp_object_item = None
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -68,18 +73,22 @@ class GraphViewForm(QMainWindow):
         self.src_ind_list = list()
         self.dst_ind_list = list()
         self.object_tree_model = ObjectTreeModel(self)
-        self.object_tree_model.build_flat_tree(database)
         self.object_class_list_model = ObjectClassListModel(self)
-        self.object_class_list_model.populate_list()
-        self.ui.treeView.setModel(self.object_tree_model)
-        self.ui.listView_object.setModel(self.object_class_list_model)
-        self.ui.treeView.resizeColumnToContents(0)
-        self.ui.treeView.expand(self.object_tree_model.root_item.index())
-        # self.ui.treeView.header().swapSections(0, 1)
+        self.init_models()
         self.connect_signals()
         self.restore_ui()
         self.add_toggle_view_actions()
+        self.set_commit_rollback_actions_enabled(False)
         self.build_graph()
+
+    def init_models(self):
+        """Initialize models and their respective views."""
+        self.object_tree_model.build_flat_tree(self.database)
+        self.object_class_list_model.populate_list()
+        self.ui.treeView.setModel(self.object_tree_model)
+        self.ui.treeView.resizeColumnToContents(0)
+        self.ui.treeView.expand(self.object_tree_model.root_item.index())
+        self.ui.listView_object.setModel(self.object_class_list_model)
 
     def show(self):
         """Make sure object tree is somewhat visible."""
@@ -93,14 +102,83 @@ class GraphViewForm(QMainWindow):
 
     def connect_signals(self):
         """Connect signals."""
+        self.msg.connect(self.add_message)
+        self.msg_error.connect(self.add_error_message)
         self.ui.treeView.selectionModel().selectionChanged.connect(self.receive_item_tree_selection_changed)
         self.ui.actionBuild.triggered.connect(self.build_graph)
         self.ui.graphicsView.object_dropped.connect(self.show_add_object_form)
+        self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
+        self.ui.actionRollback.triggered.connect(self.rollback_session)
+        self.ui.actionRefresh.triggered.connect(self.refresh_session)
+
+    @Slot(str, name="add_message")
+    def add_message(self, msg):
+        """Append regular message to status bar.
+
+        Args:
+            msg (str): String to show in QStatusBar
+        """
+        current_msg = self.ui.statusbar.currentMessage()
+        self.ui.statusbar.showMessage(" ".join([current_msg, msg]), 5000)
+
+    @Slot(str, name="add_error_message")
+    def add_error_message(self, msg):
+        """Show error message.
+
+        Args:
+            msg (str): String to show in QErrorMessage
+        """
+        self.err_msg.showMessage(msg)
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_tree.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_list.toggleViewAction())
+
+    def set_commit_rollback_actions_enabled(self, on):
+        self.ui.actionCommit.setEnabled(on)
+        self.ui.actionRollback.setEnabled(on)
+
+    @Slot(name="show_commit_session_dialog")
+    def show_commit_session_dialog(self):
+        """Query user for a commit message and commit changes to source database."""
+        if not self.db_map.has_pending_changes():
+            self.msg.emit("Nothing to commit yet.")
+            return
+        dialog = CommitDialog(self, self.database)
+        answer = dialog.exec_()
+        if answer != QDialog.Accepted:
+            return
+        self.commit_session(dialog.commit_msg)
+
+    @busy_effect
+    def commit_session(self, commit_msg):
+        try:
+            self.db_map.commit_session(commit_msg)
+            self.set_commit_rollback_actions_enabled(False)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        msg = "All changes committed successfully."
+        self.msg.emit(msg)
+
+    @Slot(name="rollback_session")
+    def rollback_session(self):
+        try:
+            self.db_map.rollback_session()
+            self.set_commit_rollback_actions_enabled(False)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return
+        msg = "All changes since last commit rolled back successfully."
+        self.msg.emit(msg)
+        self.init_models()
+
+    @Slot(name="refresh_session")
+    def refresh_session(self):
+        msg = "Session refreshed."
+        self.msg.emit(msg)
+        self.init_models()
 
     @busy_effect
     @Slot("bool", name="build_graph")
@@ -261,10 +339,10 @@ class GraphViewForm(QMainWindow):
         d = self.shortest_path_matrix()
         if d is None:
             msg = """
-                Select items in the Item tree to show them here.
-                You can select multiple items by holding the 'Ctrl' key.
-
-                Drag items from the Item list and drop them here to create new items.
+                <p>Select items in the <b>Item tree</b> to show them here.</p>
+                <p>You can select multiple items by holding the 'Ctrl' key.</p>
+                <br>
+                <p>Drag items from the <b>Item list</b> and drop them here to create new ones.</p>
             """
             msg_item = CustomTextItem(msg, self.font)
             scene.addItem(msg_item)
@@ -338,6 +416,9 @@ class GraphViewForm(QMainWindow):
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
             scene.addItem(label_item)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
+        self.msg.emit(msg)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

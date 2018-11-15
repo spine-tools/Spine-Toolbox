@@ -86,8 +86,17 @@
     </widget>
     <addaction name="menuDock_Widgets"/>
    </widget>
+   <widget class="QMenu" name="menuSession">
+    <property name="title">
+     <string>Session</string>
+    </property>
+    <addaction name="actionRefresh"/>
+    <addaction name="actionCommit"/>
+    <addaction name="actionRollback"/>
+   </widget>
    <addaction name="menuGraph"/>
    <addaction name="menuView"/>
+   <addaction name="menuSession"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QDockWidget" name="dockWidget_item_list">
@@ -284,6 +293,42 @@
     <string>todos</string>
    </property>
   </action>
+  <action name="actionRefresh">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
+   </property>
+   <property name="text">
+    <string>Refresh</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Return</string>
+   </property>
+  </action>
+  <action name="actionCommit">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
+   </property>
+   <property name="text">
+    <string>Commit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
+  </action>
+  <action name="actionRollback">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
+   </property>
+   <property name="text">
+    <string>Rollback</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Backspace</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -297,6 +342,8 @@
    <header>widgets/custom_qlistview.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="resources/resources_icons.qrc"/>
+ </resources>
  <connections/>
 </ui>

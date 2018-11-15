@@ -21,7 +21,7 @@ import os
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
-    QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle
+    QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QGraphicsTextItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, QFont
 from math import atan2, degrees, sin, cos, pi
 
@@ -1208,7 +1208,7 @@ class ArcLabelItem(QGraphicsRectItem):
         self.setZValue(1)
 
 
-class CustomTextItem(QGraphicsSimpleTextItem):
+class CustomTextItem(QGraphicsTextItem):
     """Custom text item to use with GraphViewForm.
 
     Attributes:
@@ -1217,8 +1217,9 @@ class CustomTextItem(QGraphicsSimpleTextItem):
     """
     def __init__(self, text, font):
         """Init class."""
-        super().__init__(text)
+        super().__init__()
+        self.setHtml(text)
         font.setWeight(QFont.Black)
         self.setFont(font)
-        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
-        self.setPen(outline_pen)
+        # outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        # self.setPen(outline_pen)

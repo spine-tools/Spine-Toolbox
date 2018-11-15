@@ -49,7 +49,7 @@ class TreeViewForm(QMainWindow):
 
     Attributes:
         data_store (DataStore): The DataStore instance that owns this form
-        db_map (DatabaseMapping): The object relational database mapping
+        db_map (DiffDatabaseMapping): The object relational database mapping
         database (str): The database name
     """
     msg = Signal(str, name="msg")
@@ -159,7 +159,7 @@ class TreeViewForm(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        # Event log signals
+        # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
         # Menu actions
