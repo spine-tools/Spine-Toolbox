@@ -58,7 +58,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 25))
+        self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
@@ -719,7 +720,7 @@ class Ui_MainWindow(object):
         self.label_view_name.setWordWrap(True)
         self.label_view_name.setObjectName("label_view_name")
         self.verticalLayout_12.addWidget(self.label_view_name)
-        self.treeView_view = ReferencesTreeView(self.tab_view)
+        self.treeView_view = QtWidgets.QTreeView(self.tab_view)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_view.setFont(font)
@@ -1071,8 +1072,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

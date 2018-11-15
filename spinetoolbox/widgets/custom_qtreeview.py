@@ -23,7 +23,7 @@ from PySide2.QtGui import QPixmap, QDrag
 
 
 class ObjectTreeView(QTreeView):
-    """Custom QTreeView class for object tree in Data Store form.
+    """Custom QTreeView class for object tree in TreeViewForm.
 
     Attributes:
         parent (QWidget): The parent of this view

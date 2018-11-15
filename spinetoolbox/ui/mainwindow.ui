@@ -112,7 +112,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -1588,7 +1588,7 @@ color: rgb(255, 255, 255);</string>
           </widget>
          </item>
          <item>
-          <widget class="ReferencesTreeView" name="treeView_view">
+          <widget class="QTreeView" name="treeView_view">
            <property name="font">
             <font>
              <pointsize>10</pointsize>
