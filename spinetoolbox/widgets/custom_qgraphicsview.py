@@ -22,7 +22,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
-from widgets.custom_qlistview import ObjectClassListView
+from widgets.custom_qlistview import DragListView
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -332,6 +332,8 @@ class GraphViewGraphicsView(QGraphicsView):
         super().resizeEvent(event)
         scene_rect = self.sceneRect()
         scene_extent = max(scene_rect.width(), scene_rect.height())
+        if not scene_extent:
+            return
         old_size = event.oldSize()
         if not old_size.isEmpty():
             old_extent = min(old_size.height(), old_size.width())
@@ -348,6 +350,8 @@ class GraphViewGraphicsView(QGraphicsView):
             return
         scene_rect = self.sceneRect()
         scene_extent = max(scene_rect.width(), scene_rect.height())
+        if not scene_extent:
+            return
         self.resetTransform()
         size = self.size()
         extent = min(size.height(), size.width())
@@ -364,31 +368,31 @@ class GraphViewGraphicsView(QGraphicsView):
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not ObjectClassListView."""
+        only if drag source is not DragListView."""
         event.accept()
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not ObjectClassListView."""
+        only if drag source is not DragListView."""
         event.accept()
         source = event.source()
-        if not isinstance(source, ObjectClassListView):
+        if not isinstance(source, DragListView):
             super().dragEnterEvent(event)
 
     def dragMoveEvent(self, event):
         """Accept event. Then call the super class method
-        only if drag source is not ObjectClassListView."""
+        only if drag source is not DragListView."""
         event.accept()
         source = event.source()
-        if not isinstance(source, ObjectClassListView):
+        if not isinstance(source, DragListView):
             super().dragMoveEvent(event)
 
     def dropEvent(self, event):
-        """Only accept drops when the source is an instance of ObjectClassListView.
+        """Only accept drops when the source is an instance of DragListView.
         Capture text from event's mimedata and emit signal.
         """
         source = event.source()
-        if not isinstance(source, ObjectClassListView):
+        if not isinstance(source, DragListView):
             super().dropEvent(event)
             return
         event.acceptProposedAction()
