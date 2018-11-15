@@ -18,7 +18,8 @@ Widget to show graph view form.
 
 import logging
 from ui.graph_view_form import Ui_MainWindow
-from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, QAction
+from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
+    QAction, QGraphicsRectItem
 from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication, QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QRectF, QItemSelection, QItemSelectionModel, QSize
 import numpy as np
@@ -29,7 +30,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
-from models import ObjectTreeModel, ObjectClassListModel
+from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, ObjectLabelItem, ArcLabelItem, CustomTextItem
 from helpers import busy_effect
 from config import STATUSBAR_SS
@@ -53,6 +54,7 @@ class GraphViewForm(QMainWindow):
         self.db_map = db_map
         self._spacing_factor = 1.0
         self._has_graph = False
+        self._scene_bg = None
         self.database = database
         self.temp_object_item = None
         self.err_msg = QErrorMessage(self)
@@ -75,7 +77,12 @@ class GraphViewForm(QMainWindow):
         self.dst_ind_list = list()
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
+        self.relationship_class_list_model = RelationshipClassListModel(self)
+        self.ui.treeView.setModel(self.object_tree_model)
+        self.ui.listView_object_class.setModel(self.object_class_list_model)
+        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.init_models()
+        self.setup_views()
         self.connect_signals()
         self.restore_ui()
         self.add_toggle_view_actions()
@@ -86,11 +93,22 @@ class GraphViewForm(QMainWindow):
         """Initialize models and their respective views."""
         self.object_tree_model.build_flat_tree(self.database)
         self.object_class_list_model.populate_list()
-        self.ui.treeView.setModel(self.object_tree_model)
+        self.relationship_class_list_model.populate_list()
         self.ui.treeView.resizeColumnToContents(0)
         self.ui.treeView.expand(self.object_tree_model.root_item.index())
-        self.ui.listView_object_class.setModel(self.object_class_list_model)
-        # Setup a button for 'New object class' item)
+
+    def setup_views(self):
+        """Adjust grid width to largest item; setup 'Add more' action and button."""
+        # object class
+        width_list = list()
+        for item in self.object_class_list_model.findItems("*", Qt.MatchWildcard):
+            data = item.data(Qt.DisplayRole)
+            font = item.data(Qt.FontRole)
+            width = QFontMetrics(font).width(data)
+            width_list.append(width)
+        width = max(width_list)
+        height = self.ui.listView_object_class.gridSize().height()
+        self.ui.listView_object_class.setGridSize(QSize(width, height))
         index = self.object_class_list_model.add_more_index
         action = QAction()
         icon = QIcon(":/icons/plus_object_icon.png")
@@ -106,16 +124,31 @@ class GraphViewForm(QMainWindow):
         button.setMinimumHeight(height)
         self.ui.listView_object_class.setIndexWidget(index, button)
         action.triggered.connect(self.show_add_object_classes_form)
-
-    def show(self):
-        """Make sure object tree is somewhat visible."""
-        super().show()
-        length = self.ui.treeView.header().length()
-        return
-        # FIXME
-        sizes = self.ui.splitter_tree_graph.sizes()
-        if sizes[0] < length:
-            self.ui.splitter_tree_graph.setSizes([length, sizes[1] - (length - sizes[0])])
+        # relationship class
+        width_list = list()
+        for item in self.relationship_class_list_model.findItems("*", Qt.MatchWildcard):
+            data = item.data(Qt.DisplayRole)
+            font = item.data(Qt.FontRole)
+            width = QFontMetrics(font).width(data)
+            width_list.append(width)
+        width = max(width_list)
+        height = self.ui.listView_relationship_class.gridSize().height()
+        self.ui.listView_relationship_class.setGridSize(QSize(width, height))
+        index = self.relationship_class_list_model.add_more_index
+        action = QAction()
+        icon = QIcon(":/icons/plus_relationship_icon.png")
+        action.setIcon(icon)
+        action.setText(index.data(Qt.DisplayRole))
+        button = QToolButton()
+        button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        button.setDefaultAction(action)
+        button.setIconSize(self.ui.listView_relationship_class.iconSize())
+        height = self.ui.listView_relationship_class.iconSize().height()
+        height += QFontMetrics(self.ui.listView_relationship_class.font()).lineSpacing()
+        height += 4  # Some extra room
+        button.setMinimumHeight(height)
+        self.ui.listView_relationship_class.setIndexWidget(index, button)
+        action.triggered.connect(self.show_add_relationship_classes_form)
 
     def connect_signals(self):
         """Connect signals."""
@@ -201,17 +234,16 @@ class GraphViewForm(QMainWindow):
     @Slot("bool", name="build_graph")
     def build_graph(self, checked=True):
         self.init_graph_data()
-        self.make_graph()
-        self.ui.graphicsView.scale_to_fit_scene()
+        self._has_graph = self.make_graph()
+        if self._has_graph:
+            self.ui.graphicsView.scale_to_fit_scene()
 
     @Slot("QItemSelection", "QItemSelection", name="receive_item_tree_selection_changed")
     def receive_item_tree_selection_changed(self, selected, deselected):
         """Select or deselect all children when selecting or deselecting the parent."""
         current = self.sender().currentIndex()
-        if self.sender().isSelected(current):
-            selected.select(self.sender().currentIndex(), self.sender().currentIndex())
-        else:
-            deselected.select(self.sender().currentIndex(), self.sender().currentIndex())
+        current_is_selected = self.sender().isSelected(current)
+        # Deselect children of newly deselected items
         new_selection = QItemSelection()
         for index in deselected.indexes():
             if not self.object_tree_model.hasChildren(index):
@@ -221,6 +253,10 @@ class GraphViewForm(QMainWindow):
             bottom = self.object_tree_model.index(row_count - 1, 0, index)
             new_selection.merge(QItemSelection(top, bottom), QItemSelectionModel.Select)
         self.sender().select(new_selection, QItemSelectionModel.Deselect)
+        # Select children of newly selected items (and of current item, if selected)
+        if current_is_selected:
+            self.sender().select(current, QItemSelectionModel.Select)
+            selected.select(current, current)
         new_selection = QItemSelection()
         for index in selected.indexes():
             if not self.object_tree_model.hasChildren(index):
@@ -351,20 +387,10 @@ class GraphViewForm(QMainWindow):
 
     def make_graph(self):
         """Make graph."""
-        scene = QGraphicsScene()
-        self.ui.graphicsView.setScene(scene)
+        scene = self.new_scene()
         d = self.shortest_path_matrix()
         if d is None:
-            msg = """
-                <p>Select items in the <b>Item tree</b> to show them here.</p>
-                <p>You can select multiple items by holding the 'Ctrl' key.</p>
-                <br>
-                <p>Drag items from the <b>Item list</b> and drop them here to create new ones.</p>
-            """
-            msg_item = CustomTextItem(msg, self.font)
-            scene.addItem(msg_item)
-            self._has_graph = False
-            return
+            return False
         x, y = self.vertex_coordinates(d)
         object_items = list()
         for i in range(len(self.object_name_list)):
@@ -395,7 +421,40 @@ class GraphViewForm(QMainWindow):
             scene.addItem(arc_label_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
-        self._has_graph = True
+        return True
+
+    def new_scene(self):
+        """A new scene with a background."""
+        self._scene_bg = QGraphicsRectItem()
+        self._scene_bg.setPen(Qt.NoPen)
+        self._scene_bg.setZValue(-100)
+        scene = QGraphicsScene()
+        self.ui.graphicsView.setScene(scene)
+        scene.addItem(self._scene_bg)
+        scene.changed.connect(self.handle_scene_changed)
+        return scene
+
+    @Slot("QList<QRectF>", name="handle_scene_changed")
+    def handle_scene_changed(self, region):
+        """Make a new scene with usage instructions if previous is empty,
+        where empty means the only item is the bg.
+        """
+        if len(self.ui.graphicsView.scene().items()) > 1:
+            return
+        scene = self.new_scene()
+        msg = """
+            <html>
+            <ul>
+            <li>Select classes and objects in the 'Item tree' to show them here.
+            <br>You can select multiple items by holding the 'Ctrl' key.</li>
+            <li>Drag icons from the 'Item list' and drop them here to add new items.</li>
+            </ul>
+            </html>
+        """
+        msg_item = CustomTextItem(msg, self.font)
+        scene.addItem(msg_item)
+        self._has_graph = False
+        self.ui.graphicsView.scale_to_fit_scene()
 
     @Slot(name="show_add_object_classes_form")
     def show_add_object_classes_form(self):
@@ -412,26 +471,38 @@ class GraphViewForm(QMainWindow):
         msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
 
+    def show_add_relationship_classes_form(self):
+        """Show dialog to let user select preferences for new relationship class."""
+        dialog = AddRelationshipClassesDialog(self)
+        dialog.show()
+
+    def add_relationship_classes(self, wide_relationship_classes):
+        """Insert new relationship classes."""
+        dim_count_list = list()
+        for wide_relationship_class in wide_relationship_classes:
+            self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
+        self.msg.emit(msg)
+
     @Slot("QPoint", "int", "QPixmap", name="show_add_object_form")
     def show_add_object_form(self, pos, class_id, pixmap):
         if self._has_graph:
             scene = self.ui.graphicsView.scene()
         else:
-            scene = QGraphicsScene()
-            self.ui.graphicsView.setScene(scene)
-        # Add transparent rect item the size of the scene
+            scene = self.new_scene()
+        # Make scene background the size of the scene
         view_rect = self.ui.graphicsView.viewport().rect()
         top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
         bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
-        scene_rect = QRectF(top_left, bottom_right)
-        rect_item = scene.addRect(scene_rect, Qt.NoPen)
-        rect_item.setZValue(-100)
+        rectf = QRectF(top_left, bottom_right)
+        self._scene_bg.setRect(rectf)
         # Add temp object item as a marker
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         extent = 2 * self.font.pointSize()
         self.temp_object_item = ObjectItem(pixmap.scaled(extent, extent), scene_pos.x(), scene_pos.y())
         scene.addItem(self.temp_object_item)
-        self._has_graph = True
         dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
         dialog.rejected.connect(lambda: scene.removeItem(self.temp_object_item))
         dialog.show()
@@ -455,6 +526,7 @@ class GraphViewForm(QMainWindow):
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
+        self._has_graph = True
 
     def restore_ui(self):
         """Restore UI state from previous session."""

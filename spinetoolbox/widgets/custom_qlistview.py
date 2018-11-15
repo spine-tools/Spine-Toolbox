@@ -21,8 +21,8 @@ from PySide2.QtGui import QIcon, QPixmap, QDrag
 from PySide2.QtCore import Qt, QMimeData
 
 
-class ObjectClassListView(QListView):
-    """Custom QListView class for object class list in GraphViewForm.
+class DragListView(QListView):
+    """Custom QListView class with dragging support.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -47,7 +47,7 @@ class ObjectClassListView(QListView):
                 return
             self.drag_start_pos = event.pos()
             self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
-            self.object_class_id = index.data(Qt.UserRole)
+            self.object_class_id = index.data(Qt.UserRole + 1)['id']
 
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""
