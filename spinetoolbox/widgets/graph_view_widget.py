@@ -18,9 +18,9 @@ Widget to show graph view form.
 
 import logging
 from ui.graph_view_form import Ui_MainWindow
-from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog
-from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QRectF, QItemSelection, QItemSelectionModel
+from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, QAction
+from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication, QIcon
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QRectF, QItemSelection, QItemSelectionModel, QSize
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
@@ -55,6 +55,7 @@ class GraphViewForm(QMainWindow):
         self._has_graph = False
         self.database = database
         self.temp_object_item = None
+        self.err_msg = QErrorMessage(self)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -88,7 +89,23 @@ class GraphViewForm(QMainWindow):
         self.ui.treeView.setModel(self.object_tree_model)
         self.ui.treeView.resizeColumnToContents(0)
         self.ui.treeView.expand(self.object_tree_model.root_item.index())
-        self.ui.listView_object.setModel(self.object_class_list_model)
+        self.ui.listView_object_class.setModel(self.object_class_list_model)
+        # Setup a button for 'New object class' item)
+        index = self.object_class_list_model.add_more_index
+        action = QAction()
+        icon = QIcon(":/icons/plus_object_icon.png")
+        action.setIcon(icon)
+        action.setText(index.data(Qt.DisplayRole))
+        button = QToolButton()
+        button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        button.setDefaultAction(action)
+        button.setIconSize(self.ui.listView_object_class.iconSize())
+        height = self.ui.listView_object_class.iconSize().height()
+        height += QFontMetrics(self.ui.listView_object_class.font()).lineSpacing()
+        height += 4  # Some extra room
+        button.setMinimumHeight(height)
+        self.ui.listView_object_class.setIndexWidget(index, button)
+        action.triggered.connect(self.show_add_object_classes_form)
 
     def show(self):
         """Make sure object tree is somewhat visible."""
@@ -353,8 +370,9 @@ class GraphViewForm(QMainWindow):
         for i in range(len(self.object_name_list)):
             object_name = self.object_name_list[i]
             object_class_name = self.object_class_name_list[i]
-            pixmap = self.object_tree_model.pixmap_dict[object_class_name]
-            object_item = ObjectItem(pixmap, x[i], y[i], 2 * self.font.pointSize())
+            icon = self.object_tree_model.icon_dict[object_class_name]
+            extent = 2 * self.font.pointSize()
+            object_item = ObjectItem(icon.pixmap(extent).scaled(extent, extent), x[i], y[i])
             label_item = ObjectLabelItem(object_name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
@@ -367,16 +385,32 @@ class GraphViewForm(QMainWindow):
             object_names = self.arc_object_names_list[k]
             object_class_names = self.arc_object_class_names_list[k]
             arc_item = ArcItem(x[i], y[i], x[j], y[j], .5 * self.font.pointSize())
-            pixmaps = [self.object_tree_model.pixmap_dict[x] for x in object_class_names]
+            extent = 2 * self.font.pointSize()
+            icon_dict = self.object_tree_model.icon_dict
+            pixmaps = [icon_dict[x].pixmap(extent).scaled(extent, extent) for x in object_class_names]
             arc_label_item = ArcLabelItem(
-                relationship_class_name, pixmaps, object_names,
-                2 * self.font.pointSize(), self.font, QColor(224, 224, 224, 224))
+                relationship_class_name, pixmaps, object_names, self.font, QColor(224, 224, 224, 224))
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
             scene.addItem(arc_label_item)
             object_items[i].add_outgoing_arc_item(arc_item)
             object_items[j].add_incoming_arc_item(arc_item)
         self._has_graph = True
+
+    @Slot(name="show_add_object_classes_form")
+    def show_add_object_classes_form(self):
+        """Show dialog to let user select preferences for new object classes."""
+        dialog = AddObjectClassesDialog(self)
+        dialog.show()
+
+    def add_object_classes(self, object_classes):
+        """Insert new object classes."""
+        for object_class in object_classes:
+            self.object_tree_model.add_object_class(object_class)
+            self.object_class_list_model.add_object_class(object_class)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
+        self.msg.emit(msg)
 
     @Slot("QPoint", "int", "QPixmap", name="show_add_object_form")
     def show_add_object_form(self, pos, class_id, pixmap):
@@ -394,7 +428,8 @@ class GraphViewForm(QMainWindow):
         rect_item.setZValue(-100)
         # Add temp object item as a marker
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        self.temp_object_item = ObjectItem(pixmap, scene_pos.x(), scene_pos.y(), 2 * self.font.pointSize())
+        extent = 2 * self.font.pointSize()
+        self.temp_object_item = ObjectItem(pixmap.scaled(extent, extent), scene_pos.x(), scene_pos.y())
         scene.addItem(self.temp_object_item)
         self._has_graph = True
         dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
@@ -407,11 +442,12 @@ class GraphViewForm(QMainWindow):
         pixmap = self.temp_object_item.pixmap()
         x = self.temp_object_item.x()
         y = self.temp_object_item.y()
-        extent = self.temp_object_item.extent
+        width = self.temp_object_item.pixmap().width()
+        height = self.temp_object_item.pixmap().height()
         scene.removeItem(self.temp_object_item)
         for k, object_ in enumerate(objects):
             self.object_tree_model.add_object(object_, flat=True)
-            object_item = ObjectItem(pixmap, x + .5 * extent, y + (k + .5) * extent, extent)
+            object_item = ObjectItem(pixmap, x + .5 * width, y + (k + .5) * height)
             label_item = ObjectLabelItem(object_.name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)

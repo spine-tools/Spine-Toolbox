@@ -1316,20 +1316,42 @@ class ObjectClassListModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
+        self.add_more_index = None
 
     def populate_list(self):
         """Popultate model."""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         for object_class in object_class_list:
-            pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
-            if pixmap.isNull():
-                pixmap = QPixmap(":/icons/object_icon.png")
-            object_class_name_item = QStandardItem(object_class.name)
-            object_class_name_item.setData(object_class.id, Qt.UserRole)
-            object_class_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
-            self.appendRow(object_class_name_item)
-        self.setHorizontalHeaderLabels(['Object class name'])
+            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if icon.pixmap(1, 1).isNull():
+                icon = QIcon(":/icons/object_icon.png")
+            object_class_item = QStandardItem(object_class.name)
+            object_class_item.setData(object_class.id, Qt.UserRole)
+            object_class_item.setData(object_class.display_order, Qt.UserRole + 1)
+            object_class_item.setData(icon, Qt.DecorationRole)
+            self.appendRow(object_class_item)
+        add_more_item = QStandardItem()
+        add_more_item.setData("Add more...", Qt.DisplayRole)
+        self.appendRow(add_more_item)
+        self.add_more_index = self.indexFromItem(add_more_item)
+
+    def add_object_class(self, object_class):
+        """Add object class item to model."""
+        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = QIcon(":/icons/object_icon.png")
+        object_class_item = QStandardItem(object_class.name)
+        object_class_item.setData(object_class.id, Qt.UserRole)
+        object_class_item.setData(object_class.display_order, Qt.UserRole + 1)
+        object_class_item.setData(icon, Qt.DecorationRole)
+        for i in range(self.rowCount()):
+            visited_index = self.index(i, 0)
+            visited_display_order = visited_index.data(Qt.UserRole + 1)
+            if visited_display_order >= object_class.display_order:
+                self.insertRow(i, object_class_item)
+                return
+        self.insertRow(self.rowCount() - 1, object_class_item)
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1342,9 +1364,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
-        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
+        self.icon_dict = {}
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
@@ -1402,26 +1422,26 @@ class ObjectTreeModel(QStandardItemModel):
     def build_flat_tree(self, db_name):
         """Build flat tree, only with object classes and objects."""
         self.clear()
-        self.pixmap_dict = {}
+        self.icon_dict = {}
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
         wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
-        pixmap = QPixmap(":/icons/Spine_db_icon.png")
-        self.root_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        icon = QIcon(":/icons/Spine_db_icon.png")
+        self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
-            if pixmap.isNull():
-                pixmap = QPixmap(":/icons/object_icon.png")
-            self.pixmap_dict[object_class.name] = pixmap
+            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if icon.pixmap(1, 1).isNull():
+                icon = QIcon(":/icons/object_icon.png")
+            self.icon_dict[object_class.name] = icon
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_class_item.setData(object_class.description, Qt.ToolTipRole)
-            object_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            object_class_item.setData(icon, Qt.DecorationRole)
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
             for object_ in object_list:
@@ -1431,7 +1451,7 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(QIcon(pixmap), Qt.DecorationRole)
+                object_item.setData(icon, Qt.DecorationRole)
                 object_item_list.append(object_item)
             object_class_item.appendRows(object_item_list)
             object_class_item_list.append(object_class_item)
@@ -1441,26 +1461,26 @@ class ObjectTreeModel(QStandardItemModel):
     def build_tree(self, db_name):
         """Build tree."""
         self.clear()
-        self.pixmap_dict = {}
+        self.icon_dict = {}
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
         wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
-        pixmap = QPixmap(":/icons/Spine_db_icon.png")
-        self.root_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        icon = QIcon(":/icons/Spine_db_icon.png")
+        self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
-            if pixmap.isNull():
-                pixmap = QPixmap(":/icons/object_icon.png")
-            self.pixmap_dict[object_class.name] = pixmap
+            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if icon.pixmap(1, 1).isNull():
+                icon = QIcon(":/icons/object_icon.png")
+            self.icon_dict[object_class.name] = icon
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_class_item.setData(object_class.description, Qt.ToolTipRole)
-            object_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            object_class_item.setData(icon, Qt.DecorationRole)
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
             for object_ in object_list:
@@ -1470,7 +1490,7 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(QIcon(pixmap), Qt.DecorationRole)
+                object_item.setData(icon, Qt.DecorationRole)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1508,10 +1528,10 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
         object_class_item.setData(object_class.description, Qt.ToolTipRole)
-        pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
-        if pixmap.isNull():
-            pixmap = QPixmap(":/icons/object_icon.png")
-        object_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = QIcon(":/icons/object_icon.png")
+        object_class_item.setData(icon, Qt.DecorationRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
@@ -1521,10 +1541,10 @@ class ObjectTreeModel(QStandardItemModel):
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
         object_item.setData(object_.description, Qt.ToolTipRole)
-        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
-        if pixmap.isNull():
-            pixmap = QPixmap(":/icons/object_icon.png")
-        object_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = QIcon(":/icons/object_icon.png")
+        object_item.setData(icon, Qt.DecorationRole)
         if flat:
             return object_item
         relationship_class_item_list = list()
