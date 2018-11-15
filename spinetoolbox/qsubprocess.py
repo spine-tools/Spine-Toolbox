@@ -119,7 +119,8 @@ class QSubProcess(QObject):
             self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
             if not self._silent:
-                self._toolbox.msg_warning.emit("\tProcess messages are printed to the Subprocess Output tab")
+                self._toolbox.msg_warning.emit("\tExecution is in progress. See Process Log for messages "
+                                               "(stdout&stderr)")
         elif new_state == QProcess.NotRunning:
             # logging.debug("QProcess is not running")
             pass

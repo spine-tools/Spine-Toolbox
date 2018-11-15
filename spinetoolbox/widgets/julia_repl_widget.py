@@ -89,7 +89,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Return the name of the julia kernel specification, according to julia executable from settings.
         Return None if julia version can't be determined.
         """
-        self._toolbox.msg.emit("\tFinding out Julia version...")
+        self._toolbox.msg.emit("\tInitializing Julia...")
         julia_dir = self._toolbox._config.get("settings", "julia_path")
         if not julia_dir == '':
             self.julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
@@ -102,7 +102,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("\tCouldn't determine julia version. "
+            self._toolbox.msg_error.emit("\tCouldn't determine Julia version. "
                                          "Make sure that Julia is installed properly on your computer "
                                          "and try again.")
             return None
@@ -154,7 +154,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.setup_client()
             return True
         except FileNotFoundError:
-            self._toolbox.msg_error.emit("\tCouldn't find the julia executable specified by the Jupyter kernel.")
+            self._toolbox.msg_error.emit("\tCouldn't find the Julia executable specified by the Jupyter kernel.")
             return self.handle_repl_failed_to_start()
         except NoSuchKernel:  # TODO: in which case this exactly happens
             self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find the specified Julia Jupyter kernel.")
@@ -339,6 +339,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                                                "the {} kernel specification".format(self.kernel_name))
                 self._control.viewport().setCursor(self.normal_cursor)
             elif self.command and not self.running:
+                self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
                 self.running = True
                 self.execute(self.command)
 
@@ -365,6 +366,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         # Kernel is started or in process of being started
         if self.kernel_execution_state == 'idle' and not self.running:
+            self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
             self.running = True
             self.execute(self.command)
 

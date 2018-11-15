@@ -473,7 +473,7 @@ class ToolboxUI(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="selected_item_changed")
     def selected_item_changed(self, current, previous):
         """Disconnect signals of previous item, connect signals of current item
-        and update tab of the new item."""
+        and show correct properties tab for the current item."""
         for selected_item in self.ui.graphicsView.scene().selectedItems():
             selected_item.setSelected(False)  # Clear QGraphicsItem selections
         if not current.isValid():  # Current item is root
@@ -495,11 +495,11 @@ class ToolboxUI(QMainWindow):
                 if not ret:
                     self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
                 # Show No Selection tab because the item has been deactivated anyway
-                for i in range(self.ui.tabWidget_item_info.count()):
-                    if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                        self.ui.tabWidget_item_info.setCurrentIndex(i)
+                for i in range(self.ui.tabWidget_item_properties.count()):
+                    if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                        self.ui.tabWidget_item_properties.setCurrentIndex(i)
                         break
-                self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+                self.ui.dockWidget_item.setWindowTitle("Properties")
             return
         current_item = self.project_item_model.project_item(current)
         if not previous:
@@ -523,7 +523,8 @@ class ToolboxUI(QMainWindow):
         self.activate_item_tab(current_item)
 
     def activate_item_tab(self, item=None):
-        """Show project item tab according to item type. If no item given, sets the No Selection tab active.
+        """Show project item properties tab according to item type.
+        If no item given, sets the No Selection tab active.
 
         Args:
             item (ProjectItem): Instance of a project item
@@ -532,19 +533,19 @@ class ToolboxUI(QMainWindow):
             # Set No Selection Tab active and clear item selections
             self.ui.treeView_project.clearSelection()
             self.ui.graphicsView.scene().clearSelection()
-            for i in range(self.ui.tabWidget_item_info.count()):
-                if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                    self.ui.tabWidget_item_info.setCurrentIndex(i)
+            for i in range(self.ui.tabWidget_item_properties.count()):
+                if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                    self.ui.tabWidget_item_properties.setCurrentIndex(i)
                     break
-            self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+            self.ui.dockWidget_item.setWindowTitle("Properties")
         else:
             # Find tab index according to item type
-            for i in range(self.ui.tabWidget_item_info.count()):
-                if self.ui.tabWidget_item_info.tabText(i) == item.item_type:
-                    self.ui.tabWidget_item_info.setCurrentIndex(i)
+            for i in range(self.ui.tabWidget_item_properties.count()):
+                if self.ui.tabWidget_item_properties.tabText(i) == item.item_type:
+                    self.ui.tabWidget_item_properties.setCurrentIndex(i)
                     break
             # Set QDockWidget title to selected item's type
-            self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
+            self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -729,11 +730,11 @@ class ToolboxUI(QMainWindow):
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind, delete_item=True)
         self.msg.emit("All {0} items removed from project".format(n))
-        for i in range(self.ui.tabWidget_item_info.count()):
-            if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                self.ui.tabWidget_item_info.setCurrentIndex(i)
+        for i in range(self.ui.tabWidget_item_properties.count()):
+            if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+        self.ui.dockWidget_item.setWindowTitle("Properties")
 
     def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.
@@ -906,7 +907,7 @@ class ToolboxUI(QMainWindow):
         self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
         self.addAction(self.show_item_tabbar)
         self.addAction(self.show_connections_tab)
-        self.ui.tabWidget_item_info.tabBar().hide()  # Hide project item info QTabBar
+        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide project item info QTabBar
         self.connections_tab = self.ui.tabWidget.widget(2)
         self.ui.tabWidget.removeTab(2)  # Remove connections tab
 
@@ -921,10 +922,10 @@ class ToolboxUI(QMainWindow):
 
     def toggle_tabbar_visibility(self):
         """Shows or hides the tab bar in project item info tab widget. For debugging purposes."""
-        if self.ui.tabWidget_item_info.tabBar().isVisible():
-            self.ui.tabWidget_item_info.tabBar().hide()
+        if self.ui.tabWidget_item_properties.tabBar().isVisible():
+            self.ui.tabWidget_item_properties.tabBar().hide()
         else:
-            self.ui.tabWidget_item_info.tabBar().show()
+            self.ui.tabWidget_item_properties.tabBar().show()
 
     def toggle_connections_tab_visibility(self):
         """Shows or hides connections tab in the project item QTreeView. For debugging purposes."""
