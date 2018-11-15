@@ -34,6 +34,7 @@ import ui.add_objects
 import ui.add_relationship_classes
 import ui.add_relationships
 import ui.edit_data_items
+from helpers import busy_effect
 
 
 class AddItemsDialog(QDialog):
@@ -127,6 +128,7 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.ui.tableView.horizontalHeader().resizeSection(1, 200)  # description
         super().resize_tableview()
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         kwargs_list = list()
@@ -190,6 +192,7 @@ class AddObjectsDialog(AddItemsDialog):
         header.resizeSection(2, 200)
         super().resize_tableview()
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         kwargs_list = list()
@@ -310,6 +313,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         relationship_class_name = "__".join(object_class_name_list)
         self.model.setData(index.sibling(row, name_column), relationship_class_name, Qt.EditRole)
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         wide_kwargs_list = list()
@@ -489,6 +493,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         relationship_name = "__".join(object_name_list)
         self.model.setData(index.sibling(row, name_column), relationship_name, Qt.EditRole)
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         wide_kwargs_list = list()
@@ -598,6 +603,7 @@ class EditObjectClassesDialog(EditItemsDialog):
         header.resizeSection(1, 200)
         super().resize_tableview()
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
         kwargs_list = list()
@@ -661,6 +667,7 @@ class EditObjectsDialog(EditItemsDialog):
         header.resizeSection(1, 200)
         super().resize_tableview()
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
         kwargs_list = list()
@@ -720,6 +727,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
         header.resizeSection(0, 200)
         super().resize_tableview()
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
         kwargs_list = list()
@@ -796,6 +804,7 @@ class EditRelationshipsDialog(EditItemsDialog):
         header = self.ui.tableView.horizontalHeader()
         super().resize_tableview()
 
+    @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
         kwargs_list = list()

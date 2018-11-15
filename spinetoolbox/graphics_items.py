@@ -1030,13 +1030,10 @@ class ObjectItem(QGraphicsPixmapItem):
         pixmap (QPixmap): pixmap to use
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
-        extent (int): extent
     """
-    def __init__(self, pixmap, x, y, extent):
-        super().__init__()
-        self.extent = extent
-        self.setPixmap(pixmap.scaled(self.extent, self.extent))
-        self.setPos(x - 0.5 * self.extent, y - 0.5 * self.extent)
+    def __init__(self, pixmap, x, y):
+        super().__init__(pixmap)
+        self.setPos(x - 0.5 * self.pixmap().width(), y - 0.5 * self.pixmap().height())
         self.label_item = None
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -1053,7 +1050,7 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def set_label_item(self, item):
         self.label_item = item
-        self.label_item.setPos(self.x() + self.extent, self.y())
+        self.label_item.setPos(self.x() + self.pixmap().width(), self.y())
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1066,11 +1063,11 @@ class ObjectItem(QGraphicsPixmapItem):
     def mouseMoveEvent(self, event):
         """Reset position of text, incoming and outgoing arcs."""
         super().mouseMoveEvent(event)
-        self.label_item.setPos(self.x() + self.extent, self.y())
+        self.label_item.setPos(self.x() + self.pixmap().width(), self.y())
         for item in self.outgoing_arc_items:
-            item.set_source_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+            item.set_source_point(self.x() + 0.5 * self.pixmap().width(), self.y() + 0.5 * self.pixmap().height())
         for item in self.incoming_arc_items:
-            item.set_destination_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+            item.set_destination_point(self.x() + 0.5 * self.pixmap().width(), self.y() + 0.5 * self.pixmap().height())
 
     def hoverEnterEvent(self, event):
         """Show text on hover."""
@@ -1183,11 +1180,10 @@ class ArcLabelItem(QGraphicsRectItem):
         relationship_class_name (str): relationship class name
         object_pixmaps (list): object pixmaps
         object_names (list): object names
-        extent (int): extent of object items
         font (QFont): font to display the text
         color (QColor): color to paint the label
     """
-    def __init__(self, relationship_class_name, object_pixmaps, object_names, extent, font, color):
+    def __init__(self, relationship_class_name, object_pixmaps, object_names, font, color):
         super().__init__()
         self.title_item = CustomTextItem(relationship_class_name, font)
         self.title_item.setParentItem(self)
@@ -1196,7 +1192,9 @@ class ArcLabelItem(QGraphicsRectItem):
         for k in range(len(object_pixmaps)):
             object_pixmap = object_pixmaps[k]
             object_name = object_names[k]
-            object_item = ObjectItem(object_pixmap, .5 * extent, y_offset + (k + .5) * extent, extent)
+            width = object_pixmap.width()
+            height = object_pixmap.height()
+            object_item = ObjectItem(object_pixmap, .5 * width, y_offset + (k + .5) * height)
             object_item.setParentItem(self)
             label_item = ObjectLabelItem(object_name, font, Qt.transparent)
             label_item.setParentItem(self)

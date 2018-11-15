@@ -39,8 +39,13 @@ class ObjectClassListView(QListView):
         """Register drag start position"""
         super().mousePressEvent(event)
         if event.button() == Qt.LeftButton:
-            self.drag_start_pos = event.pos()
             index = self.indexAt(event.pos())
+            if not index.isValid():
+                self.drag_start_pos = None
+                self.pixmap = None
+                self.object_class_id = None
+                return
+            self.drag_start_pos = event.pos()
             self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
             self.object_class_id = index.data(Qt.UserRole)
 
@@ -59,8 +64,13 @@ class ObjectClassListView(QListView):
         drag.setMimeData(mimeData)
         drag.setHotSpot(self.pixmap.rect().center())
         dropAction = drag.exec_()
+        self.drag_start_pos = None
+        self.pixmap = None
+        self.object_class_id = None
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
         super().mouseReleaseEvent(event)
         self.drag_start_pos = None
+        self.pixmap = None
+        self.object_class_id = None
