@@ -372,7 +372,7 @@ class GraphViewForm(QMainWindow):
             object_class_name = self.object_class_name_list[i]
             icon = self.object_tree_model.icon_dict[object_class_name]
             extent = 2 * self.font.pointSize()
-            object_item = ObjectItem(icon.pixamp(extent, extent), x[i], y[i])
+            object_item = ObjectItem(icon.pixmap(extent).scaled(extent, extent), x[i], y[i])
             label_item = ObjectLabelItem(object_name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
@@ -385,10 +385,11 @@ class GraphViewForm(QMainWindow):
             object_names = self.arc_object_names_list[k]
             object_class_names = self.arc_object_class_names_list[k]
             arc_item = ArcItem(x[i], y[i], x[j], y[j], .5 * self.font.pointSize())
-            icons = [self.object_tree_model.icon_dict[x] for x in object_class_names]
+            extent = 2 * self.font.pointSize()
+            icon_dict = self.object_tree_model.icon_dict
+            pixmaps = [icon_dict[x].pixmap(extent).scaled(extent, extent) for x in object_class_names]
             arc_label_item = ArcLabelItem(
-                relationship_class_name, icons, object_names,
-                2 * self.font.pointSize(), self.font, QColor(224, 224, 224, 224))
+                relationship_class_name, pixmaps, object_names, self.font, QColor(224, 224, 224, 224))
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
             scene.addItem(arc_label_item)
