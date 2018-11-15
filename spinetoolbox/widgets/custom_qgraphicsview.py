@@ -288,7 +288,7 @@ class CustomQGraphicsView(QGraphicsView):
 class GraphViewGraphicsView(QGraphicsView):
     """A QGraphicsView to use with the GraphViewForm."""
 
-    object_dropped = Signal("QPoint", "int", "QPixmap", name="object_dropped")
+    item_dropped = Signal("QPoint", "QString", name="item_dropped")
 
     def __init__(self, parent):
         """Init class."""
@@ -330,6 +330,8 @@ class GraphViewGraphicsView(QGraphicsView):
     def resizeEvent(self, event):
         """Scale view so the scene fits best in it."""
         super().resizeEvent(event)
+        return
+        # NOTE: Is this below what's causing trouble? Cause actually we don't really need it
         scene_rect = self.sceneRect()
         scene_extent = max(scene_rect.width(), scene_rect.height())
         if not scene_extent:
@@ -342,6 +344,7 @@ class GraphViewGraphicsView(QGraphicsView):
         size = event.size()
         extent = min(size.height(), size.width())
         factor = extent / scene_extent
+        logging.debug("[resizeEvent] Scaling graphics view by a factor of {0}".format(factor))
         self.scale(factor, factor)
 
     def scale_to_fit_scene(self):
@@ -356,9 +359,11 @@ class GraphViewGraphicsView(QGraphicsView):
         size = self.size()
         extent = min(size.height(), size.width())
         factor = extent / scene_extent
+        logging.debug("[scale_to_fit_scene] Scaling graphics view by a factor of {0}".format(factor))
         self.scale(factor, factor)
 
-    def scaled(self, sx, sy):
+    def scale(self, sx, sy):
+        logging.debug("[scale] Scaling graphics view by {0}, {1}".format(sx, sy))
         if self.scaling:
             logging.debug("Trying to scale while scaling.")
             return
@@ -396,10 +401,9 @@ class GraphViewGraphicsView(QGraphicsView):
             super().dropEvent(event)
             return
         event.acceptProposedAction()
-        object_class_id = int(event.mimeData().text())
+        text = event.mimeData().text()
         pos = event.pos()
-        pixmap = event.source().pixmap
-        self.object_dropped.emit(pos, object_class_id, pixmap)
+        self.item_dropped.emit(pos, text)
 
 
 class CustomQGraphicsScene(QGraphicsScene):

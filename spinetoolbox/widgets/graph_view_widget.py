@@ -88,6 +88,7 @@ class GraphViewForm(QMainWindow):
         self.add_toggle_view_actions()
         self.set_commit_rollback_actions_enabled(False)
         self.build_graph()
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
     def init_models(self):
         """Initialize models and their respective views."""
@@ -117,11 +118,8 @@ class GraphViewForm(QMainWindow):
         button = QToolButton()
         button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         button.setDefaultAction(action)
-        button.setIconSize(self.ui.listView_object_class.iconSize())
-        height = self.ui.listView_object_class.iconSize().height()
-        height += QFontMetrics(self.ui.listView_object_class.font()).lineSpacing()
-        height += 4  # Some extra room
-        button.setMinimumHeight(height)
+        button.setIconSize(QSize(32, 32))
+        button.setFixedSize(64, 56)
         self.ui.listView_object_class.setIndexWidget(index, button)
         action.triggered.connect(self.show_add_object_classes_form)
         # relationship class
@@ -142,11 +140,8 @@ class GraphViewForm(QMainWindow):
         button = QToolButton()
         button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         button.setDefaultAction(action)
-        button.setIconSize(self.ui.listView_relationship_class.iconSize())
-        height = self.ui.listView_relationship_class.iconSize().height()
-        height += QFontMetrics(self.ui.listView_relationship_class.font()).lineSpacing()
-        height += 4  # Some extra room
-        button.setMinimumHeight(height)
+        button.setIconSize(QSize(32, 32))
+        button.setFixedSize(64, 56)
         self.ui.listView_relationship_class.setIndexWidget(index, button)
         action.triggered.connect(self.show_add_relationship_classes_form)
 
@@ -156,7 +151,7 @@ class GraphViewForm(QMainWindow):
         self.msg_error.connect(self.add_error_message)
         self.ui.treeView.selectionModel().selectionChanged.connect(self.receive_item_tree_selection_changed)
         self.ui.actionBuild.triggered.connect(self.build_graph)
-        self.ui.graphicsView.object_dropped.connect(self.show_add_object_form)
+        self.ui.graphicsView.item_dropped.connect(self.handle_item_dropped)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
@@ -182,8 +177,8 @@ class GraphViewForm(QMainWindow):
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_tree.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_list.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
 
     def set_commit_rollback_actions_enabled(self, on):
         self.ui.actionCommit.setEnabled(on)
@@ -241,8 +236,9 @@ class GraphViewForm(QMainWindow):
     @Slot("QItemSelection", "QItemSelection", name="receive_item_tree_selection_changed")
     def receive_item_tree_selection_changed(self, selected, deselected):
         """Select or deselect all children when selecting or deselecting the parent."""
-        current = self.sender().currentIndex()
-        current_is_selected = self.sender().isSelected(current)
+        model = self.ui.treeView.selectionModel()
+        current = model.currentIndex()
+        current_is_selected = model.isSelected(current)
         # Deselect children of newly deselected items
         new_selection = QItemSelection()
         for index in deselected.indexes():
@@ -252,10 +248,10 @@ class GraphViewForm(QMainWindow):
             top = self.object_tree_model.index(0, 0, index)
             bottom = self.object_tree_model.index(row_count - 1, 0, index)
             new_selection.merge(QItemSelection(top, bottom), QItemSelectionModel.Select)
-        self.sender().select(new_selection, QItemSelectionModel.Deselect)
+        model.select(new_selection, QItemSelectionModel.Deselect)
         # Select children of newly selected items (and of current item, if selected)
         if current_is_selected:
-            self.sender().select(current, QItemSelectionModel.Select)
+            model.select(current, QItemSelectionModel.Select)
             selected.select(current, current)
         new_selection = QItemSelection()
         for index in selected.indexes():
@@ -265,7 +261,7 @@ class GraphViewForm(QMainWindow):
             top = self.object_tree_model.index(0, 0, index)
             bottom = self.object_tree_model.index(row_count - 1, 0, index)
             new_selection.merge(QItemSelection(top, bottom), QItemSelectionModel.Select)
-        self.sender().select(new_selection, QItemSelectionModel.Select)
+        model.select(new_selection, QItemSelectionModel.Select)
         self.build_graph()
 
     def init_graph_data(self):
@@ -444,10 +440,16 @@ class GraphViewForm(QMainWindow):
         scene = self.new_scene()
         msg = """
             <html>
+            <style type="text/css">
+                ul {
+                margin-left: 40px;
+                padding-left: 40px;
+                }
+                </style>
             <ul>
-            <li>Select classes and objects in the 'Item tree' to show them here.
+            <li>Select classes and objects in the 'Object tree' to show them here.
             <br>You can select multiple items by holding the 'Ctrl' key.</li>
-            <li>Drag icons from the 'Item list' and drop them here to add new items.</li>
+            <li>Drag icons from the 'Item palette' and drop them here to add new items.</li>
             </ul>
             </html>
         """
@@ -486,8 +488,8 @@ class GraphViewForm(QMainWindow):
         msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
 
-    @Slot("QPoint", "int", "QPixmap", name="show_add_object_form")
-    def show_add_object_form(self, pos, class_id, pixmap):
+    @Slot("QPoint", "QString", name="handle_item_dropped")
+    def handle_item_dropped(self, pos, text):
         if self._has_graph:
             scene = self.ui.graphicsView.scene()
         else:
@@ -498,14 +500,23 @@ class GraphViewForm(QMainWindow):
         bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
         rectf = QRectF(top_left, bottom_right)
         self._scene_bg.setRect(rectf)
-        # Add temp object item as a marker
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        extent = 2 * self.font.pointSize()
-        self.temp_object_item = ObjectItem(pixmap.scaled(extent, extent), scene_pos.x(), scene_pos.y())
-        scene.addItem(self.temp_object_item)
-        dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
-        dialog.rejected.connect(lambda: scene.removeItem(self.temp_object_item))
-        dialog.show()
+        data = eval(text)
+        if data["type"] == "object_class":
+            # Add temp object item as a marker
+            class_id = data["id"]
+            class_name = data["name"]
+            extent = 2 * self.font.pointSize()
+            pixmap = self.object_tree_model.icon_dict[class_name].pixmap(extent)
+            self.temp_object_item = ObjectItem(pixmap.scaled(extent, extent), scene_pos.x(), scene_pos.y())
+            scene.addItem(self.temp_object_item)
+            dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
+            dialog.rejected.connect(lambda: scene.removeItem(self.temp_object_item))
+            dialog.show()
+        elif data["type"] == "relationship_class":
+            relationship_class_id = data["id"]
+            dialog = AddRelationshipsDialog(self, relationship_class_id=relationship_class_id, force_default=True)
+            dialog.show()
 
     def add_objects(self, objects):
         """Insert new objects."""
