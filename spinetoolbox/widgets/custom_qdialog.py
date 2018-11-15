@@ -51,7 +51,6 @@ class AddItemsDialog(QDialog):
         self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
         self.model._force_default = force_default
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         self.icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
         self.font_metric = QFontMetrics(QFont("", 0))
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -108,8 +107,8 @@ class AddObjectClassesDialog(AddItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
     """
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, force_default=False):
+        super().__init__(parent, force_default=force_default)
         self.object_class_list = self._parent.db_map.object_class_list()
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
@@ -176,8 +175,8 @@ class AddObjectsDialog(AddItemsDialog):
         default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
-        self.model.set_default_row([self.default_class_name], [Qt.DisplayRole, Qt.EditRole])
-        self.model.set_default_row([self.object_icon], [Qt.DecorationRole])
+        self.model.set_default_row([self.default_class_name])
+        # self.model.set_default_row(["hola"])
         self.model.clear()
         self.resize_tableview()
 
@@ -191,6 +190,29 @@ class AddObjectsDialog(AddItemsDialog):
         header.resizeSection(1, 150)
         header.resizeSection(2, 200)
         super().resize_tableview()
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
+    def model_data_changed(self, top_left, bottom_right, roles):
+        """Set decoration role data."""
+        if Qt.EditRole not in roles:
+            return
+        object_class_name_column = self.model.horizontal_header_labels().index('object class name')
+        top = top_left.row()
+        left = top_left.column()
+        bottom = bottom_right.row()
+        right = bottom_right.column()
+        for row in range(top, bottom + 1):
+            for column in range(left, right + 1):
+                if column != object_class_name_column:
+                    continue
+                index = self.model.index(row, column)
+                object_class_name = index.data(Qt.DisplayRole)
+                if not object_class_name:
+                    return
+                icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
+                if icon.pixmap(1, 1).isNull():
+                    icon = self.object_icon
+                self.model.setData(index, icon, Qt.DecorationRole)
 
     @busy_effect
     def accept(self):
@@ -226,8 +248,8 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         parent (TreeViewForm): data store widget
         object_class_one_id (int): default object class id to put in dimension '1'
     """
-    def __init__(self, parent, object_class_one_id=None):
-        super().__init__(parent)
+    def __init__(self, parent, object_class_one_id=None, force_default=False):
+        super().__init__(parent, force_default=force_default)
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
@@ -239,8 +261,8 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 self.object_class_one_name = object_class_one.name
         self.model.set_horizontal_header_labels(
             ['object class 1 name', 'object class 2 name', 'relationship class name'])
-        self.model.set_default_row([self.object_class_one_name], [Qt.DisplayRole, Qt.EditRole])
-        self.model.set_default_row([self.object_icon] * self.number_of_dimensions, [Qt.DecorationRole])
+        self.model.set_default_row([self.object_class_one_name])
+        self.model.untracked_columns = [self.model.columnCount() - 1]
         self.model.clear()
         self.resize_tableview()
 
@@ -274,9 +296,9 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         self.number_of_dimensions += 1
         column_name = "object class {} name".format(self.number_of_dimensions)
         self.model.insert_horizontal_header_labels(column, [column_name])
-        self.model.set_default_row([self.object_icon] * self.number_of_dimensions, [Qt.DecorationRole])
         self.model.insertColumns(column, 1)
         self.ui.tableView.resizeColumnToContents(column)
+        self.model.untracked_columns = [self.model.columnCount() - 1]
 
     def remove_column(self):
         self.number_of_dimensions -= 1
@@ -284,6 +306,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         self.model.header.pop(column)
         self.model.row_defaults.pop(column)
         self.model.removeColumns(column, 1)
+        self.model.untracked_columns = [self.model.columnCount() - 1]
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
     def model_data_changed(self, top_left, bottom_right, roles):
@@ -299,6 +322,13 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 if column == relationship_class_name_column:
                     continue
                 index = self.model.index(row, column)
+                object_class_name = index.data(Qt.DisplayRole)
+                if not object_class_name:
+                    continue
+                icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
+                if icon.pixmap(1, 1).isNull():
+                    icon = self.object_icon
+                self.model.setData(index, icon, Qt.DecorationRole)
                 self.compose_relationship_class_name(row)
 
     def compose_relationship_class_name(self, row):
@@ -358,8 +388,8 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_id (int): default object id
         object_class_id (int): default object class id
     """
-    def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None):
-        super().__init__(parent)
+    def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None, force_default=False):
+        super().__init__(parent, force_default=force_default)
         self.relationship_class_list = \
             [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
         self.relationship_class = None
@@ -372,7 +402,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.setup_ui(ui.add_relationships.Ui_Dialog())
         self.ui.toolButton_remove_rows.setEnabled(False)
         self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self.ui.tableView, parent.db_map))
-        self.init_relationship_class()
+        self.init_relationship_class(force_default)
         # Add status bar to form
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
@@ -382,18 +412,23 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.connect_signals()
         self.reset_model()
 
-    def init_relationship_class(self):
-        """Populate combobox and initialize relationship class if needed."""
+    def init_relationship_class(self, force_default):
+        """Populate combobox and initialize relationship class if any."""
         relationship_class_name_list = [x.name for x in self.relationship_class_list]
-        self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
-        self.ui.comboBox_relationship_class.setCurrentIndex(-1)
+        if not force_default:
+            self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
+            self.ui.comboBox_relationship_class.setCurrentIndex(-1)
         self.relationship_class = self._parent.db_map.\
             single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
         if not self.relationship_class:
+            # Default not found
             return
         try:
-            combo_index = relationship_class_name_list.index(self.relationship_class.name)
-            self.ui.comboBox_relationship_class.setCurrentIndex(combo_index)
+            if not force_default:
+                combo_index = relationship_class_name_list.index(self.relationship_class.name)
+                self.ui.comboBox_relationship_class.setCurrentIndex(combo_index)
+                return
+            self.ui.comboBox_relationship_class.addItem(self.relationship_class.name)
         except ValueError:
             pass
 
@@ -436,12 +471,12 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_class_name_list = self.relationship_class.object_class_name_list.split(',')
         header = [*[x + " name" for x in object_class_name_list], 'relationship name']
         self.model.set_horizontal_header_labels(header)
+        self.model.untracked_columns = [len(header) - 1]
         self.reset_default_object_column()
         if self.default_object_name and self.default_object_column is not None:
             defaults = [None for i in range(len(header) - 1)]
             defaults[self.default_object_column] = self.default_object_name
-            self.model.set_default_row(defaults, [Qt.DisplayRole, Qt.EditRole])
-        self.model.set_default_row([self.object_icon] * (len(header) - 1), [Qt.DecorationRole])
+            self.model.set_default_row(defaults)
         self.model.clear()
         self.resize_tableview()
         self.ui.toolButton_remove_rows.setEnabled(True)

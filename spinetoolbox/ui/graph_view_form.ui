@@ -99,9 +99,9 @@
    <addaction name="menuSession"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QDockWidget" name="dockWidget_item_list">
+  <widget class="QDockWidget" name="dockWidget_item_palette">
    <property name="windowTitle">
-    <string>Item list</string>
+    <string>Item palette</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -153,11 +153,16 @@
          </property>
          <item>
           <widget class="QLabel" name="label">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+            </font>
+           </property>
            <property name="frameShadow">
             <enum>QFrame::Sunken</enum>
            </property>
            <property name="text">
-            <string>&lt;b&gt;Object class&lt;/b&gt;</string>
+            <string>Object class</string>
            </property>
           </widget>
          </item>
@@ -260,8 +265,15 @@
          </property>
          <item>
           <widget class="QLabel" name="label_2">
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
            <property name="text">
-            <string>&lt;b&gt;Relationship class&lt;/b&gt;</string>
+            <string>Relationship class</string>
            </property>
           </widget>
          </item>
@@ -329,9 +341,9 @@
     </layout>
    </widget>
   </widget>
-  <widget class="QDockWidget" name="dockWidget_item_tree">
+  <widget class="QDockWidget" name="dockWidget_object_tree">
    <property name="windowTitle">
-    <string>Item tree</string>
+    <string>Object tree</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>

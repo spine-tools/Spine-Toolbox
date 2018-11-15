@@ -22,7 +22,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, QPainter
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
@@ -883,26 +883,23 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        self.default_row = []  # A row of default values to prefill any newly inserted row
+        self.untracked_columns = []  # Columns not to track when checking for empty row
+        self.default_row = []  # A row of default values to put in any newly inserted row
         self._force_default = False  # Whether or not default values are editable
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
         self.rowsInserted.connect(self.receive_rows_inserted)
         self.columnsInserted.connect(self.receive_columns_inserted)
 
-    def set_default_row(self, data, roles):
-        """Set row defaults for each role in roles to data.
+    def set_default_row(self, data):
+        """Set default row.
 
         Args:
             data (list)
-            roles (list)
         """
-        if not data or not roles:
+        if not data:
             return
-        self.default_row.extend([{} for j in range(len(data) - len(self.default_row))])
-        for j, default in enumerate(data):
-            for role in roles:
-                self.default_row[j][role] = default
+        self.default_row = data.copy()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
@@ -912,15 +909,23 @@ class MinimalTableModel(QAbstractTableModel):
             return
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):
+            if column in self.untracked_columns:
+                continue
+            try:
+                data = self._data[last_row][column][Qt.DisplayRole]
+            except KeyError:
+                # No data in this column, just continue
+                continue
             try:
                 default = self.default_row[column]
             except IndexError:
                 # No default for this column, check if any data
-                if self._data[last_row][column]:
-                    self.insertRows(self.rowCount(), 1)
+                if not data:
+                    continue
+                self.insertRows(self.rowCount(), 1)
                 break
-            # Check if data is different from default
-            if self._data[last_row][column] != default:
+            # Both data and default found, check if they differ
+            if data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
 
@@ -937,29 +942,44 @@ class MinimalTableModel(QAbstractTableModel):
     @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
     def receive_rows_inserted(self, parent, first, last):
         """In models with row defaults, set default data in newly inserted rows."""
+        last_column = 0
         for column in range(self.columnCount()):
+            last_column = column
             try:
                 default = self.default_row[column]
             except IndexError:
                 break
             for row in range(first, last + 1):
-                self._data[row][column] = {**default}
+                self._data[row][column][Qt.EditRole] = default
+                self._data[row][column][Qt.DisplayRole] = default
                 if self._force_default:
                     self._flags[row][column] &= ~Qt.ItemIsEditable
+        if last_column == 0:
+            return
+        top_left = self.index(first, 0)
+        bottom_right = self.index(last, last_column)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
     def receive_columns_inserted(self, parent, first, last):
         """In models with row defaults, set default data in newly inserted columns."""
-        self.default_row.extend([{} for j in range(self.columnCount() - len(self.default_row))])
+        last_column = 0
         for column in range(first, last + 1):
+            last_column = column
             try:
                 default = self.default_row[column]
             except IndexError:
                 break
             for row in range(self.rowCount()):
-                self._data[row][column] = {**default}
+                self._data[row][column][Qt.EditRole] = default
+                self._data[row][column][Qt.DisplayRole] = default
                 if self._force_default:
                     self._flags[row][column] &= ~Qt.ItemIsEditable
+        if last_column == first:
+            return
+        top_left = self.index(0, first)
+        bottom_right = self.index(self.rowCount() - 1, last_column)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     def clear(self):
         """Clear all data in model."""
@@ -1328,7 +1348,8 @@ class ObjectClassListModel(QStandardItemModel):
             if icon.pixmap(1, 1).isNull():
                 icon = self.object_icon
             object_class_item = QStandardItem(object_class.name)
-            object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+            data = {"type": "object_class", **object_class._asdict()}
+            object_class_item.setData(data, Qt.UserRole + 1)
             object_class_item.setData(icon, Qt.DecorationRole)
             self.appendRow(object_class_item)
         add_more_item = QStandardItem()
@@ -1342,7 +1363,8 @@ class ObjectClassListModel(QStandardItemModel):
         if icon.pixmap(1, 1).isNull():
             icon = self.object_icon
         object_class_item = QStandardItem(object_class.name)
-        object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+        data = {"type": "object_class", **object_class._asdict()}
+        object_class_item.setData(data, Qt.UserRole + 1)
         object_class_item.setData(icon, Qt.DecorationRole)
         for i in range(self.rowCount()):
             visited_index = self.index(i, 0)
@@ -1360,17 +1382,43 @@ class RelationshipClassListModel(QStandardItemModel):
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
         self.add_more_index = None
-        self.relationship_icon = QIcon(":/icons/relationship_icon.png")
+        self.object_pixmap = QPixmap(":/icons/object_icon.png")
+
+    def relationship_pixmap(self, object_class_name_list):
+        """A pixmap rendered by painting several object pixmaps side by side."""
+        pixmap_1d = list()
+        for object_class_name in object_class_name_list:
+            pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
+            if pixmap.isNull():
+                pixmap = self.object_pixmap
+            pixmap_1d.append(pixmap.scaled(32, 32))
+        step = 2
+        pixmap_2d = [pixmap_1d[i:i + step] for i in range(0, len(pixmap_1d), step)]
+        relationship_pixmap = QPixmap(80, 32 * max(len(pixmap_2d), step))
+        relationship_pixmap.fill(Qt.transparent)
+        painter = QPainter(relationship_pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        x_offset = 16
+        y_offset = -8
+        for i, pixmap_d in enumerate(pixmap_2d):
+            for j, pixmap in enumerate(pixmap_d):
+                if j % 2 != 0:
+                    painter.drawPixmap(32 * i + x_offset, 32 * j + y_offset, pixmap)
+                else:
+                    painter.drawPixmap(32 * i, 32 * j, pixmap)
+        painter.end()
+        return relationship_pixmap
 
     def populate_list(self):
         """Populate model."""
         self.clear()
         relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         for relationship_class in relationship_class_list:
-            icon = self.relationship_icon
+            pixmap = self.relationship_pixmap(relationship_class.object_class_name_list.split(","))
             relationship_class_item = QStandardItem(relationship_class.name)
-            relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
-            relationship_class_item.setData(icon, Qt.DecorationRole)
+            data = {"type": "relationship_class", **relationship_class._asdict()}
+            relationship_class_item.setData(data, Qt.UserRole + 1)
+            relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
             self.appendRow(relationship_class_item)
         add_more_item = QStandardItem()
         add_more_item.setData("Add more...", Qt.DisplayRole)
@@ -1381,7 +1429,8 @@ class RelationshipClassListModel(QStandardItemModel):
         """Add relationship class."""
         icon = self.relationship_icon
         relationship_class_item = QStandardItem(relationship_class.name)
-        relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
+        data = {"type": "relationship_class", **relationship_class._asdict()}
+        relationship_class_item.setData(data, Qt.UserRole + 1)
         relationship_class_item.setData(icon, Qt.DecorationRole)
         self.insertRow(self.rowCount() - 1, relationship_class_item)
 

@@ -33,7 +33,7 @@ class DragListView(QListView):
         super().__init__(parent=parent)
         self.drag_start_pos = None
         self.pixmap = None
-        self.object_class_id = None
+        self.mime_data = None
 
     def mousePressEvent(self, event):
         """Register drag start position"""
@@ -43,11 +43,13 @@ class DragListView(QListView):
             if not index.isValid():
                 self.drag_start_pos = None
                 self.pixmap = None
-                self.object_class_id = None
+                self.mime_data = None
                 return
             self.drag_start_pos = event.pos()
             self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
-            self.object_class_id = index.data(Qt.UserRole + 1)['id']
+            data = index.data(Qt.UserRole + 1)
+            self.mime_data = QMimeData()
+            self.mime_data.setText(str(data))
 
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""
@@ -59,18 +61,16 @@ class DragListView(QListView):
             return
         drag = QDrag(self)
         drag.setPixmap(self.pixmap)
-        mimeData = QMimeData()
-        mimeData.setText(str(self.object_class_id))
-        drag.setMimeData(mimeData)
+        drag.setMimeData(self.mime_data)
         drag.setHotSpot(self.pixmap.rect().center())
         dropAction = drag.exec_()
         self.drag_start_pos = None
         self.pixmap = None
-        self.object_class_id = None
+        self.mime_data = None
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
         super().mouseReleaseEvent(event)
         self.drag_start_pos = None
         self.pixmap = None
-        self.object_class_id = None
+        self.mime_data = None
