@@ -41,12 +41,14 @@ class AddItemsDialog(QDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
+        force_default (bool): if True, defaults are non-editable
     """
-    def __init__(self, parent):
+    def __init__(self, parent, force_default=False):
         super().__init__(parent)
         self._parent = parent
         self.ui = None
         self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
+        self.model._force_default = force_default
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
         self.icon_width = qApp.style().pixelMetric(QStyle.PM_ListViewIconSize)
@@ -162,9 +164,10 @@ class AddObjectsDialog(AddItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
         class_id (int): default object class id
+        force_default (bool): if True, defaults are non-editable
     """
     def __init__(self, parent, class_id=None, force_default=False):
-        super().__init__(parent)
+        super().__init__(parent, force_default=force_default)
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddObjectsDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
@@ -173,7 +176,6 @@ class AddObjectsDialog(AddItemsDialog):
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.model.set_default_row([self.default_class_name], [Qt.DisplayRole, Qt.EditRole])
         self.model.set_default_row([self.object_icon], [Qt.DecorationRole])
-        self.model._force_default = force_default
         self.model.clear()
         self.resize_tableview()
 

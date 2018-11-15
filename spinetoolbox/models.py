@@ -866,20 +866,25 @@ class ConnectionModel(QAbstractTableModel):
 
 
 class MinimalTableModel(QAbstractTableModel):
-    """Table model for outlining simple tabular data."""
+    """Table model for outlining simple tabular data.
 
-    def __init__(self, toolbox=None, can_grow=False, has_empty_row=False):
+    Attributes:
+        parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
+        can_grow (bool): if True, the model grows automatically when setting data beyond its limits
+        has_empty_row (bool): if True, the model always has an empty row at the bottom
+    """
+    def __init__(self, parent=None, can_grow=False, has_empty_row=False):
         """Initialize class"""
         super().__init__()
-        self._toolbox = toolbox  # QMainWindow
+        self._parent = parent
         self._data = list()
         self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        self.default_row = []
-        self._force_default = False
+        self.default_row = []  # A row of default values to prefill any newly inserted row
+        self._force_default = False  # Whether or not default values are editable
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
         self.rowsInserted.connect(self.receive_rows_inserted)
