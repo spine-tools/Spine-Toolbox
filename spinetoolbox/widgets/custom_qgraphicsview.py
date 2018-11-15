@@ -22,6 +22,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
+from widgets.custom_qlistview import ObjectClassListView
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -284,8 +285,10 @@ class CustomQGraphicsView(QGraphicsView):
         self.resize_scene(recenter=True)
 
 
-class ZoomQGraphicsView(QGraphicsView):
-    """A QGraphicsView with zoom actions."""
+class GraphViewGraphicsView(QGraphicsView):
+    """A QGraphicsView to use with the GraphViewForm."""
+
+    object_dropped = Signal("QPoint", "int", "QPixmap", name="object_dropped")
 
     def __init__(self, parent):
         """Init class."""
@@ -293,7 +296,7 @@ class ZoomQGraphicsView(QGraphicsView):
         self._zoom_factor_base = 1.0015
         self.target_viewport_pos = None
         self.target_scene_pos = QPointF(0, 0)
-        self.zooming = False
+        self.scaling = False
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
@@ -316,17 +319,13 @@ class ZoomQGraphicsView(QGraphicsView):
 
     def gentle_zoom(self, angle):
         """Perform the zoom."""
-        if self.zooming:
-            logging.debug("Trying to zoom again while still zooming.")
-            return
-        self.zooming = True
         factor = self._zoom_factor_base ** angle
         self.scale(factor, factor)
         self.centerOn(self.target_scene_pos)
         delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
         viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
         self.centerOn(self.mapToScene(viewport_center))
-        self.zooming = False
+        self.scaling = False
 
     def resizeEvent(self, event):
         """Scale view so the scene fits best in it."""
@@ -355,9 +354,53 @@ class ZoomQGraphicsView(QGraphicsView):
         factor = extent / scene_extent
         self.scale(factor, factor)
 
+    def scaled(self, sx, sy):
+        if self.scaling:
+            logging.debug("Trying to scale while scaling.")
+            return
+        self.scaling = True
+        super().scale(sx, sy)
+        self.scaling = False
+
+    def dragLeaveEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not ObjectClassListView."""
+        event.accept()
+
+    def dragEnterEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not ObjectClassListView."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, ObjectClassListView):
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not ObjectClassListView."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, ObjectClassListView):
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        """Only accept drops when the source is an instance of ObjectClassListView.
+        Capture text from event's mimedata and emit signal.
+        """
+        source = event.source()
+        if not isinstance(source, ObjectClassListView):
+            super().dropEvent(event)
+            return
+        event.acceptProposedAction()
+        object_class_id = int(event.mimeData().text())
+        pos = event.pos()
+        pixmap = event.source().pixmap
+        self.object_dropped.emit(pos, object_class_id, pixmap)
+
 
 class CustomQGraphicsScene(QGraphicsScene):
-    """A scene that handles drag and drop events."""
+    """A scene that handles drag and drop events of DraggableWidget sources."""
+
     files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
 
     def __init__(self, parent, toolbox):
@@ -370,9 +413,6 @@ class CustomQGraphicsScene(QGraphicsScene):
         """Accept event. Then call the super class method
         only if drag source is not a DraggableWidget (from Add Item toolbar)."""
         event.accept()
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dragLeaveEvent(event)
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method

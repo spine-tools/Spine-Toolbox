@@ -53,12 +53,14 @@ class CheckBoxDelegate(QItemDelegate):
 
     Attributes:
         parent (QMainWindow): either toolbox or spine datapackage widget
+        centered (bool): whether or not the checkbox should be center-aligned in the widget
     """
 
     commit_data = Signal("QModelIndex", name="commit_data")
 
-    def __init__(self, parent):
+    def __init__(self, parent, centered=True):
         super().__init__(parent)
+        self._centered = centered
         self.mouse_press_point = QPoint()
 
     def createEditor(self, parent, option, index):
@@ -120,9 +122,13 @@ class CheckBoxDelegate(QItemDelegate):
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
         checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
-        checkbox_center = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
-                                 option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
-        return QRect(checkbox_center, checkbox_rect.size())
+        if self._centered:
+            checkbox_anchor = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
+                                     option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
+        else:
+            checkbox_anchor = QPoint(option.rect.x() + checkbox_rect.width() / 2,
+                                     option.rect.y() + checkbox_rect.height() / 2)
+        return QRect(checkbox_anchor, checkbox_rect.size())
 
 
 class TreeViewDelegate(QItemDelegate):

@@ -21,7 +21,7 @@ import os
 from PySide2.QtCore import Qt, Slot, Signal
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from project_item import ProjectItem
-from spinedatabase_api import DatabaseMapping, SpineDBAPIError
+from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError
 from widgets.graph_view_widget import GraphViewForm
 from graphics_items import ViewImage
 from helpers import busy_effect, create_dir
@@ -156,7 +156,7 @@ class View(ProjectItem):
         database = reference['database']
         username = reference['username']
         try:
-            db_map = DatabaseMapping(db_url, username)
+            db_map = DiffDatabaseMapping(db_url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
