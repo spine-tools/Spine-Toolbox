@@ -878,13 +878,14 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        self.row_defaults = []
+        self.default_row = []
+        self._force_default = False
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
         self.rowsInserted.connect(self.receive_rows_inserted)
         self.columnsInserted.connect(self.receive_columns_inserted)
 
-    def set_row_defaults(self, data, roles):
+    def set_default_row(self, data, roles):
         """Set row defaults for each role in roles to data.
 
         Args:
@@ -893,10 +894,10 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not data or not roles:
             return
-        self.row_defaults.extend([{} for j in range(len(data) - len(self.row_defaults))])
+        self.default_row.extend([{} for j in range(len(data) - len(self.default_row))])
         for j, default in enumerate(data):
             for role in roles:
-                self.row_defaults[j][role] = default
+                self.default_row[j][role] = default
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
@@ -907,7 +908,7 @@ class MinimalTableModel(QAbstractTableModel):
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):
             try:
-                default = self.row_defaults[column]
+                default = self.default_row[column]
             except IndexError:
                 # No default for this column, check if any data
                 if self._data[last_row][column]:
@@ -933,23 +934,27 @@ class MinimalTableModel(QAbstractTableModel):
         """In models with row defaults, set default data in newly inserted rows."""
         for column in range(self.columnCount()):
             try:
-                default = self.row_defaults[column]
+                default = self.default_row[column]
             except IndexError:
                 break
             for row in range(first, last + 1):
                 self._data[row][column] = {**default}
+                if self._force_default:
+                    self._flags[row][column] &= ~Qt.ItemIsEditable
 
     @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
     def receive_columns_inserted(self, parent, first, last):
         """In models with row defaults, set default data in newly inserted columns."""
-        self.row_defaults.extend([{} for j in range(self.columnCount() - len(self.row_defaults))])
+        self.default_row.extend([{} for j in range(self.columnCount() - len(self.default_row))])
         for column in range(first, last + 1):
             try:
-                default = self.row_defaults[column]
+                default = self.default_row[column]
             except IndexError:
                 break
             for row in range(self.rowCount()):
                 self._data[row][column] = {**default}
+                if self._force_default:
+                    self._flags[row][column] &= ~Qt.ItemIsEditable
 
     def clear(self):
         """Clear all data in model."""
@@ -1505,7 +1510,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
-    def new_object_item(self, object_, object_class_name):
+    def new_object_item(self, object_, object_class_name, flat=False):
         """Returns new object item."""
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
@@ -1515,6 +1520,8 @@ class ObjectTreeModel(QStandardItemModel):
         if pixmap.isNull():
             pixmap = QPixmap(":/icons/object_icon.png")
         object_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        if flat:
+            return object_item
         relationship_class_item_list = list()
         for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
@@ -1554,7 +1561,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.insertRow(row, QStandardItem())
         self.root_item.setChild(row, 0, object_class_item)
 
-    def add_object(self, object_):
+    def add_object(self, object_, flat=False):
         """Add object item to the model."""
         # find object class item among the children of the root
         object_class_item = None
@@ -1568,7 +1575,7 @@ class ObjectTreeModel(QStandardItemModel):
             logging.error("Object class item not found in model. This is probably a bug.")
             return
         object_class_name = object_class_item.data(Qt.DisplayRole)
-        object_item = self.new_object_item(object_, object_class_name)
+        object_item = self.new_object_item(object_, object_class_name, flat=flat)
         object_class_item.appendRow(object_item)
 
     def add_relationship_class(self, wide_relationship_class):
