@@ -54,16 +54,16 @@ def main(argv):
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {"packages": [],
-                             "excludes": ["scipy.spatial.cKDTree"],
-                             "includes": ["atexit", "idna.idnadata", "pygments.lexers.python",
-                                          "pygments.lexers.shell", "pygments.lexers.julia",
-                                          "qtconsole.client", "sqlalchemy.sql.default_comparator",
-                                          "sqlalchemy.ext.baked", "numpy.core._methods",
-                                          "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
-                                          "scipy.spatial.ckdtree"],
-                             "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll,
-                                               changelog_file, readme_file, copying_file, copying_lesser_file],
-                             "include_msvcr": True}
+                         "excludes": ["scipy.spatial.cKDTree"],
+                         "includes": ["atexit", "idna.idnadata", "pygments.lexers.python",
+                                      "pygments.lexers.shell", "pygments.lexers.julia",
+                                      "qtconsole.client", "sqlalchemy.sql.default_comparator",
+                                      "sqlalchemy.ext.baked", "numpy.core._methods",
+                                      "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
+                                      "scipy.spatial.ckdtree", "pymysql"],
+                         "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll,
+                                           changelog_file, readme_file, copying_file, copying_lesser_file],
+                         "include_msvcr": True}
     bdist_msi_options = {"initial_target_dir": default_install_dir}
     # This does not show logging messages
     # base = "Win32GUI" if sys.platform == "win32" else None
