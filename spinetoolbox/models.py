@@ -25,7 +25,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QA
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, QPainter
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir
+from helpers import rename_dir, relationship_pixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
@@ -1384,37 +1384,12 @@ class RelationshipClassListModel(QStandardItemModel):
         self.add_more_index = None
         self.object_pixmap = QPixmap(":/icons/object_icon.png")
 
-    def relationship_pixmap(self, object_class_name_list):
-        """A pixmap rendered by painting several object pixmaps side by side."""
-        pixmap_1d = list()
-        for object_class_name in object_class_name_list:
-            pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
-            if pixmap.isNull():
-                pixmap = self.object_pixmap
-            pixmap_1d.append(pixmap.scaled(32, 32))
-        step = 2
-        pixmap_2d = [pixmap_1d[i:i + step] for i in range(0, len(pixmap_1d), step)]
-        relationship_pixmap = QPixmap(80, 32 * max(len(pixmap_2d), step))
-        relationship_pixmap.fill(Qt.transparent)
-        painter = QPainter(relationship_pixmap)
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        x_offset = 16
-        y_offset = -8
-        for i, pixmap_d in enumerate(pixmap_2d):
-            for j, pixmap in enumerate(pixmap_d):
-                if j % 2 != 0:
-                    painter.drawPixmap(32 * i + x_offset, 32 * j + y_offset, pixmap)
-                else:
-                    painter.drawPixmap(32 * i, 32 * j, pixmap)
-        painter.end()
-        return relationship_pixmap
-
     def populate_list(self):
         """Populate model."""
         self.clear()
         relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         for relationship_class in relationship_class_list:
-            pixmap = self.relationship_pixmap(relationship_class.object_class_name_list.split(","))
+            pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
             relationship_class_item = QStandardItem(relationship_class.name)
             data = {"type": "relationship_class", **relationship_class._asdict()}
             relationship_class_item.setData(data, Qt.UserRole + 1)
@@ -1555,15 +1530,15 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-            if icon.pixmap(1, 1).isNull():
-                icon = self.object_icon
-            self.icon_dict[object_class.name] = icon
+            object_icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if object_icon.pixmap(1, 1).isNull():
+                object_icon = self.object_icon
+            self.icon_dict[object_class.name] = object_icon
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_class_item.setData(object_class.description, Qt.ToolTipRole)
-            object_class_item.setData(icon, Qt.DecorationRole)
+            object_class_item.setData(object_icon, Qt.DecorationRole)
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
             for object_ in object_list:
@@ -1573,7 +1548,7 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(icon, Qt.DecorationRole)
+                object_item.setData(object_icon, Qt.DecorationRole)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1583,7 +1558,9 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                    relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
+                    pixmap = relationship_pixmap(wide_relationship_class.object_class_name_list.split(","))
+                    relationship_icon = QIcon(pixmap)
+                    relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
                     relationship_class_item.setData(self.bold_font, Qt.FontRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
@@ -1594,7 +1571,7 @@ class ObjectTreeModel(QStandardItemModel):
                         relationship_item = QStandardItem(wide_relationship.object_name_list)
                         relationship_item.setData('relationship', Qt.UserRole)
                         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-                        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
+                        relationship_item.setData(relationship_icon, Qt.DecorationRole)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
                     relationship_class_item_list.append(relationship_class_item)
