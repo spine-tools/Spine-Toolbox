@@ -56,6 +56,7 @@ class Ui_MainWindow(object):
         self.treeView_object.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_object.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_object.setIconSize(QtCore.QSize(20, 20))
         self.treeView_object.setObjectName("treeView_object")
         self.verticalLayout_3.addWidget(self.treeView_object)
         self.layoutWidget_2 = QtWidgets.QWidget(self.splitter_tree_parameter)
@@ -517,6 +518,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

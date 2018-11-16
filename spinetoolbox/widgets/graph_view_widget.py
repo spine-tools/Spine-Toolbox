@@ -109,7 +109,7 @@ class GraphViewForm(QMainWindow):
             width_list.append(width)
         width = max(width_list)
         height = self.ui.listView_object_class.gridSize().height()
-        self.ui.listView_object_class.setGridSize(QSize(width, height))
+        #self.ui.listView_object_class.setGridSize(QSize(width, height))
         index = self.object_class_list_model.add_more_index
         action = QAction()
         icon = QIcon(":/icons/plus_object_icon.png")
@@ -131,7 +131,7 @@ class GraphViewForm(QMainWindow):
             width_list.append(width)
         width = max(width_list)
         height = self.ui.listView_relationship_class.gridSize().height()
-        self.ui.listView_relationship_class.setGridSize(QSize(width, height))
+        #self.ui.listView_relationship_class.setGridSize(QSize(width, height))
         index = self.relationship_class_list_model.add_more_index
         action = QAction()
         icon = QIcon(":/icons/plus_relationship_icon.png")
@@ -266,7 +266,11 @@ class GraphViewForm(QMainWindow):
         self.build_graph()
 
     def init_graph_data(self):
-        """Initialize graph data by querying db_map."""
+        """Initialize graph data by querying db_map.
+
+        Returns:
+            True if graph data changed, False otherwise
+        """
         last_object_name_list = self.object_name_list.copy()
         self.object_name_list = list()
         self.object_class_name_list = list()
@@ -282,7 +286,7 @@ class GraphViewForm(QMainWindow):
                 if selection_model.isSelected(index):
                     self.object_name_list.append(object_name)
                     self.object_class_name_list.append(object_class_name)
-        if last_object_name_list == self.object_name_list:
+        if last_object_name_list and last_object_name_list == self.object_name_list:
             return False
         self.arc_relationship_class_name_list = list()
         self.arc_object_names_list = list()
@@ -580,6 +584,5 @@ class GraphViewForm(QMainWindow):
         else:
             self.qsettings.setValue("graphViewWidget/windowMaximized", False)
         self.db_map.close()
-        self._view.graph_view_form_refs.remove(self)
         if event:
             event.accept()

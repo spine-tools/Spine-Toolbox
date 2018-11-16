@@ -46,7 +46,7 @@ class View(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "View"
-        self.graph_view_form_refs = list()
+        self.graph_view_form_refs = {}
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
@@ -153,6 +153,12 @@ class View(ProjectItem):
                 return
         reference = self._references[index.row()]
         db_url = reference['url']
+        try:
+            graph_view_form = self.graph_view_form_refs[db_url]
+            graph_view_form.raise_()
+            return
+        except KeyError:
+            pass
         database = reference['database']
         username = reference['username']
         try:
@@ -162,7 +168,8 @@ class View(ProjectItem):
             return
         graph_view_form = GraphViewForm(self, db_map, database)
         graph_view_form.show()
-        self.graph_view_form_refs.append(graph_view_form)
+        graph_view_form.destroyed.connect(lambda : self.graph_view_form_refs.pop(db_url))
+        self.graph_view_form_refs[db_url] = graph_view_form
 
     def add_reference_header(self):
         """Add header to reference model."""

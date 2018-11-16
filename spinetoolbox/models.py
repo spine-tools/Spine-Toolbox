@@ -1351,6 +1351,7 @@ class ObjectClassListModel(QStandardItemModel):
             data = {"type": "object_class", **object_class._asdict()}
             object_class_item.setData(data, Qt.UserRole + 1)
             object_class_item.setData(icon, Qt.DecorationRole)
+            object_class_item.setData(object_class.name, Qt.ToolTipRole)
             self.appendRow(object_class_item)
         add_more_item = QStandardItem()
         add_more_item.setData("Add more...", Qt.DisplayRole)
@@ -1366,6 +1367,7 @@ class ObjectClassListModel(QStandardItemModel):
         data = {"type": "object_class", **object_class._asdict()}
         object_class_item.setData(data, Qt.UserRole + 1)
         object_class_item.setData(icon, Qt.DecorationRole)
+        object_class_item.setData(object_class.name, Qt.ToolTipRole)
         for i in range(self.rowCount()):
             visited_index = self.index(i, 0)
             visited_display_order = visited_index.data(Qt.UserRole + 1)['display_order']
@@ -1394,6 +1396,7 @@ class RelationshipClassListModel(QStandardItemModel):
             data = {"type": "relationship_class", **relationship_class._asdict()}
             relationship_class_item.setData(data, Qt.UserRole + 1)
             relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
             self.appendRow(relationship_class_item)
         add_more_item = QStandardItem()
         add_more_item.setData("Add more...", Qt.DisplayRole)
@@ -1407,6 +1410,7 @@ class RelationshipClassListModel(QStandardItemModel):
         data = {"type": "relationship_class", **relationship_class._asdict()}
         relationship_class_item.setData(data, Qt.UserRole + 1)
         relationship_class_item.setData(icon, Qt.DecorationRole)
+        relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
         self.insertRow(self.rowCount() - 1, relationship_class_item)
 
 

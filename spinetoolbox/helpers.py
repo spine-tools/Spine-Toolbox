@@ -276,9 +276,9 @@ def rename_dir(widget, old_dir, new_dir):
 
 def relationship_pixmap(object_class_name_list):
     """A pixmap rendered by painting several object pixmaps together."""
-    extent = 36
-    x_step = 26
-    y_offset = 26
+    extent = 64
+    x_step = 56
+    y_offset = 50
     pixmap_list = list()
     for object_class_name in object_class_name_list:
         pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
@@ -286,7 +286,7 @@ def relationship_pixmap(object_class_name_list):
             pixmap = QPixmap(":/icons/object_icon.png")
         pixmap_list.append(pixmap.scaled(extent, extent))
     pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)]
-    combo_width = len(pixmap_list) * extent / 2
+    combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
     combo_height = extent + y_offset
     combo_extent = max(combo_width, combo_height)
     x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0

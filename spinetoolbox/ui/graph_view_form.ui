@@ -220,7 +220,7 @@
            </property>
            <property name="gridSize">
             <size>
-             <width>112</width>
+             <width>128</width>
              <height>64</height>
             </size>
            </property>
@@ -319,7 +319,7 @@
            </property>
            <property name="gridSize">
             <size>
-             <width>256</width>
+             <width>128</width>
              <height>64</height>
             </size>
            </property>

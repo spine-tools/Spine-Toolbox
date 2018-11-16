@@ -1202,7 +1202,7 @@ class ToolboxUI(QMainWindow):
             if data_store.tree_view_form:
                 data_store.tree_view_form.close()
         for view in self.project_item_model.items("Views"):
-            for graph_view_form in view.graph_view_form_refs:
+            for graph_view_form in view.graph_view_form_refs.values():
                 graph_view_form.close()
 
     def show_confirm_exit(self):
