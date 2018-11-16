@@ -1475,6 +1475,5 @@ class TreeViewForm(QMainWindow):
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
         self.db_map.close()
-        self._data_store.tree_view_form = None
         if event:
             event.accept()

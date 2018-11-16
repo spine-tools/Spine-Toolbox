@@ -584,6 +584,5 @@ class GraphViewForm(QMainWindow):
         else:
             self.qsettings.setValue("graphViewWidget/windowMaximized", False)
         self.db_map.close()
-        self._view.graph_view_form_refs.remove(self)
         if event:
             event.accept()
