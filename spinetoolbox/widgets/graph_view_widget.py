@@ -228,7 +228,8 @@ class GraphViewForm(QMainWindow):
     @busy_effect
     @Slot("bool", name="build_graph")
     def build_graph(self, checked=True):
-        self.init_graph_data()
+        if not self.init_graph_data():
+            return
         self._has_graph = self.make_graph()
         if self._has_graph:
             self.ui.graphicsView.scale_to_fit_scene()
@@ -266,6 +267,7 @@ class GraphViewForm(QMainWindow):
 
     def init_graph_data(self):
         """Initialize graph data by querying db_map."""
+        last_object_name_list = self.object_name_list.copy()
         self.object_name_list = list()
         self.object_class_name_list = list()
         selection_model = self.ui.treeView.selectionModel()
@@ -280,6 +282,8 @@ class GraphViewForm(QMainWindow):
                 if selection_model.isSelected(index):
                     self.object_name_list.append(object_name)
                     self.object_class_name_list.append(object_class_name)
+        if last_object_name_list == self.object_name_list:
+            return False
         self.arc_relationship_class_name_list = list()
         self.arc_object_names_list = list()
         self.arc_object_class_names_list = list()
@@ -318,6 +322,7 @@ class GraphViewForm(QMainWindow):
                     arc_object_class_names.append(y)
                 self.arc_object_names_list.append(arc_object_names)
                 self.arc_object_class_names_list.append(arc_object_class_names)
+        return True
 
     def shortest_path_matrix(self):
         """Return the shortest-path matrix."""
@@ -361,6 +366,7 @@ class GraphViewForm(QMainWindow):
         if N == 1:
             return [0], [0]
         mask = np.ones((N, N)) == 1 - np.tril(np.ones((N, N)))  # Upper triangular except diagonal
+        np.random.seed(0)
         layout = np.random.rand(N, 2) * initial_diameter - initial_diameter / 2  # Random layout with diameter 100
         weights = matrix ** weight_exp  # bus-pair weights (lower for distant buses)
         maxstep = 1 / np.min(weights[mask])
@@ -574,5 +580,6 @@ class GraphViewForm(QMainWindow):
         else:
             self.qsettings.setValue("graphViewWidget/windowMaximized", False)
         self.db_map.close()
+        self._view.graph_view_form_refs.remove(self)
         if event:
             event.accept()

@@ -536,8 +536,6 @@ class DataStore(ProjectItem):
             if self.tree_view_form.db_map.db_url == reference['url']:
                 self.tree_view_form.raise_()
                 return
-            # Disconnect signal or else the slot gets called after we've created the new form
-            self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
         db_url = reference['url']
         database = reference['database']
@@ -548,12 +546,7 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit(e.msg)
             return
         self.tree_view_form = TreeViewForm(self, db_map, database)
-        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
         self.tree_view_form.show()
-
-    @Slot(name="tree_view_form_destroyed")
-    def tree_view_form_destroyed(self):
-        self.tree_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):

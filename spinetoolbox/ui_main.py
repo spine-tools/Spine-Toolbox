@@ -1196,6 +1196,15 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
 
+    def close_view_forms(self):
+        """Close all GraphViewForm and TreeViewForm instances opened in Data Stores and Views."""
+        for data_store in self.project_item_model.items("Data Stores"):
+            if data_store.tree_view_form:
+                data_store.tree_view_form.close()
+        for view in self.project_item_model.items("Views"):
+            for graph_view_form in view.graph_view_form_refs:
+                graph_view_form.close()
+
     def show_confirm_exit(self):
         """Shows confirm exit message box.
 
@@ -1290,6 +1299,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self.qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
+        self.close_view_forms()
         if event:
             event.accept()
         # noinspection PyArgumentList
