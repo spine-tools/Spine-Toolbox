@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -143,6 +143,7 @@
     </property>
     <addaction name="actionUser_Guide"/>
     <addaction name="actionAbout_Qt"/>
+    <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -1986,7 +1987,7 @@ color: rgb(255, 255, 255);</string>
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About Spine Toolbox</string>
+    <string>About...</string>
    </property>
    <property name="shortcut">
     <string>F12</string>
@@ -2140,7 +2141,7 @@ color: rgb(255, 255, 255);</string>
   </action>
   <action name="actionAbout_Qt">
    <property name="text">
-    <string>About Qt</string>
+    <string>About Qt...</string>
    </property>
    <property name="shortcut">
     <string>F11</string>
