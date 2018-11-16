@@ -546,12 +546,7 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit(e.msg)
             return
         self.tree_view_form = TreeViewForm(self, db_map, database)
-        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
         self.tree_view_form.show()
-
-    @Slot(name="tree_view_form_destroyed")
-    def tree_view_form_destroyed(self):
-        self.tree_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
