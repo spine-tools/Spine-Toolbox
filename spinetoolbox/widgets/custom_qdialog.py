@@ -51,6 +51,7 @@ class AddItemsDialog(QDialog):
         self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
         self.model._force_default = force_default
         self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
+        self.remove_row_icon = None  # Set in subclasses to a custom one
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def setup_ui(self, ui_dialog):
@@ -77,11 +78,10 @@ class AddItemsDialog(QDialog):
     @Slot("QModelIndex", "int", "int", name="model_rows_inserted")
     def model_rows_inserted(self, parent, first, last):
         column = self.model.columnCount() - 1
-        icon = QIcon(QPixmap(":/icons/minus_object_icon.png"))
         for row in range(first, last + 1):
             index = self.model.index(row, column, parent)
             action = QAction()
-            action.setIcon(icon)
+            action.setIcon(self.remove_row_icon)
             button = QToolButton()
             button.setDefaultAction(action)
             button.setIconSize(QSize(20, 20))
@@ -118,6 +118,7 @@ class AddObjectClassesDialog(AddItemsDialog):
     def __init__(self, parent, force_default=False):
         super().__init__(parent, force_default=force_default)
         self.object_class_list = self._parent.db_map.object_class_list()
+        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_object_icon.png"))
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.connect_signals()
@@ -143,7 +144,7 @@ class AddObjectClassesDialog(AddItemsDialog):
         else:
             display_order = self.object_class_list.all()[index - 1].display_order + 1
         for i in range(self.model.rowCount()):
-            name, description = self.model.row_data(i)
+            name, description = self.model.row_data(i)[:-1]
             if not name:
                 continue
             kwargs = {
@@ -172,6 +173,7 @@ class AddObjectsDialog(AddItemsDialog):
     """
     def __init__(self, parent, class_id=None, force_default=False):
         super().__init__(parent, force_default=force_default)
+        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_object_icon.png"))
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddObjectsDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
@@ -210,7 +212,7 @@ class AddObjectsDialog(AddItemsDialog):
         """Collect info from dialog and try to add items."""
         kwargs_list = list()
         for i in range(self.model.rowCount()):
-            class_name, name, description = self.model.row_data(i)
+            class_name, name, description = self.model.row_data(i)[:-1]
             if not class_name or not name:
                 continue
             class_ = self._parent.db_map.single_object_class(name=class_name).one_or_none()
@@ -241,6 +243,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     """
     def __init__(self, parent, object_class_one_id=None, force_default=False):
         super().__init__(parent, force_default=force_default)
+        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_relationship_icon.png"))
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self.ui.tableView, parent.db_map))
         self.connect_signals()
@@ -320,13 +323,13 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         wide_kwargs_list = list()
         name_column = self.model.columnCount() - 1
         for i in range(self.model.rowCount()):
-            row = self.model.row_data(i)
-            relationship_class_name = row[name_column]
+            row_data = self.model.row_data(i)
+            relationship_class_name = row_data[name_column]
             if not relationship_class_name:
                 continue
             object_class_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
-                object_class_name = row[column]
+                object_class_name = row_data[column]
                 if not object_class_name:
                     continue
                 object_class = self._parent.db_map.single_object_class(name=object_class_name).one_or_none()
@@ -361,6 +364,7 @@ class AddRelationshipsDialog(AddItemsDialog):
     """
     def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None, force_default=False):
         super().__init__(parent, force_default=force_default)
+        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_relationship_icon.png"))
         self.relationship_class_list = \
             [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
         self.relationship_class = None

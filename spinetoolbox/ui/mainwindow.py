@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 25))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -189,6 +189,9 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.comboBox_dialect.sizePolicy().hasHeightForWidth())
         self.comboBox_dialect.setSizePolicy(sizePolicy)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.comboBox_dialect.setFont(font)
         self.comboBox_dialect.setObjectName("comboBox_dialect")
         self.horizontalLayout_4.addWidget(self.comboBox_dialect)
         self.toolButton_spine = QtWidgets.QToolButton(self.tab_data_store)
@@ -223,6 +226,9 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.lineEdit_password, 6, 1, 1, 2)
         self.comboBox_dsn = QtWidgets.QComboBox(self.tab_data_store)
         self.comboBox_dsn.setEnabled(False)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.comboBox_dsn.setFont(font)
         self.comboBox_dsn.setObjectName("comboBox_dsn")
         self.gridLayout.addWidget(self.comboBox_dsn, 1, 1, 1, 2)
         self.horizontalLayout_5 = QtWidgets.QHBoxLayout()
@@ -263,6 +269,9 @@ class Ui_MainWindow(object):
         self.lineEdit_port.setSizePolicy(sizePolicy)
         self.lineEdit_port.setMinimumSize(QtCore.QSize(0, 20))
         self.lineEdit_port.setMaximumSize(QtCore.QSize(80, 5000))
+        font = QtGui.QFont()
+        font.setPointSize(8)
+        self.lineEdit_port.setFont(font)
         self.lineEdit_port.setPlaceholderText("")
         self.lineEdit_port.setObjectName("lineEdit_port")
         self.horizontalLayout_5.addWidget(self.lineEdit_port)
@@ -1078,8 +1087,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc
