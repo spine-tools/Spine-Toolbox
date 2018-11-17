@@ -1027,13 +1027,20 @@ class ObjectItem(QGraphicsPixmapItem):
     """Object item to use with GraphViewForm.
 
     Attributes:
-        pixmap (QPixmap): pixmap to use
+        object_class_name (str): object class name
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
+        extent(int): preferred extent
     """
-    def __init__(self, pixmap, x, y):
-        super().__init__(pixmap)
-        self.setPos(x - 0.5 * self.pixmap().width(), y - 0.5 * self.pixmap().height())
+    def __init__(self, object_class_name, x, y, extent):
+        super().__init__()
+        self._object_class_name = object_class_name
+        self._extent = extent
+        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
+        if pixmap.isNull():
+            pixmap = QPixmap(":/icons/object_icon.png")
+        self.setPixmap(pixmap.scaled(extent, extent))
+        self.setPos(x - 0.5 * extent, y - 0.5 * extent)
         self.label_item = None
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -1050,7 +1057,9 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def set_label_item(self, item):
         self.label_item = item
-        self.label_item.setPos(self.x() + self.pixmap().width(), self.y())
+        self.label_item.setPos(
+            self.x() + self.pixmap().width() / 2 - self.label_item.boundingRect().width() / 2,
+            self.y() + self.pixmap().height())
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1063,7 +1072,10 @@ class ObjectItem(QGraphicsPixmapItem):
     def mouseMoveEvent(self, event):
         """Reset position of text, incoming and outgoing arcs."""
         super().mouseMoveEvent(event)
-        self.label_item.setPos(self.x() + self.pixmap().width(), self.y())
+        if self.label_item:
+            self.label_item.setPos(
+                self.x() + self.pixmap().width() / 2 - self.label_item.boundingRect().width() / 2,
+                self.y() + self.pixmap().height())
         for item in self.outgoing_arc_items:
             item.set_source_point(self.x() + 0.5 * self.pixmap().width(), self.y() + 0.5 * self.pixmap().height())
         for item in self.incoming_arc_items:
@@ -1091,16 +1103,20 @@ class ArcItem(QGraphicsLineItem):
         x1, y1 (float): source position
         x2, y2 (float): destination position
         width (int): Preferred line width
+        color (QColor): color
+        pen_style : pen style
     """
-    def __init__(self, x1, y1, x2, y2, width):
+    def __init__(self, x1, y1, x2, y2, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine):
         """Init class."""
         super().__init__(x1, y1, x2, y2)
         self.label_item = None
         self.width = width
         self.is_src_hovered = False
         self.is_dst_hovered = False
-        pen = QPen(QColor(64, 64, 64))
+        pen = QPen()
         pen.setWidth(self.width)
+        pen.setColor(color)
+        pen.setStyle(pen_style)
         pen.setCapStyle(Qt.RoundCap)
         self.setPen(pen)
         self.setAcceptHoverEvents(True)
@@ -1117,6 +1133,7 @@ class ArcItem(QGraphicsLineItem):
     def set_label_item(self, item):
         self.label_item = item
         self.label_item.hide()
+        self.label_item.setZValue(0)
 
     def set_source_point(self, x, y):
         """Reset the source point. Used when moving ObjectItems around."""
@@ -1138,20 +1155,30 @@ class ArcItem(QGraphicsLineItem):
 
     def hoverEnterEvent(self, event):
         """Show label if src and dst are not hovered."""
-        self.label_item.setPos(event.pos().x(), event.pos().y())
+        if not self.label_item:
+            return
+        self.label_item.setPos(
+            event.scenePos().x() - self.label_item.boundingRect().x(),
+            event.scenePos().y() - self.label_item.boundingRect().y())
         if self.is_src_hovered or self.is_dst_hovered:
             return
         self.label_item.show()
 
     def hoverMoveEvent(self, event):
         """Show label if src and dst are not hovered."""
-        self.label_item.setPos(event.pos().x(), event.pos().y())
+        if not self.label_item:
+            return
+        self.label_item.setPos(
+            event.scenePos().x() - self.label_item.boundingRect().x(),
+            event.scenePos().y() - self.label_item.boundingRect().y())
         if self.is_src_hovered or self.is_dst_hovered:
             return
         self.label_item.show()
 
     def hoverLeaveEvent(self, event):
         """Hide label."""
+        if not self.label_item:
+            return
         self.label_item.hide()
 
 
@@ -1173,37 +1200,72 @@ class ObjectLabelItem(QGraphicsRectItem):
         self.setZValue(0)
 
 
-class ArcLabelItem(QGraphicsRectItem):
-    """Label item for arcs to use with GraphViewForm.
+class RelationshipItem(QGraphicsRectItem):
+    """Relationship item.
 
     Attributes:
-        relationship_class_name (str): relationship class name
-        object_pixmaps (list): object pixmaps
-        object_names (list): object names
+        object_class_name_list (list): object class names
+        object_name_list (list): object names
+        x (float): x-coordinate of central point
+        y (float): y-coordinate of central point
+        extent (int): max pixmap size
         font (QFont): font to display the text
         color (QColor): color to paint the label
+        spread_factor (int): how spread
     """
-    def __init__(self, relationship_class_name, object_pixmaps, object_names, font, color):
+    def __init__(self, object_class_name_list, object_name_list, x, y, extent, font, color,
+                 spread_factor=4, arc_pen_style=Qt.SolidLine):
         super().__init__()
-        self.title_item = CustomTextItem(relationship_class_name, font)
-        self.title_item.setParentItem(self)
-        self.object_items = []
-        y_offset = self.title_item.boundingRect().height()
-        for k in range(len(object_pixmaps)):
-            object_pixmap = object_pixmaps[k]
-            object_name = object_names[k]
-            width = object_pixmap.width()
-            height = object_pixmap.height()
-            object_item = ObjectItem(object_pixmap, .5 * width, y_offset + (k + .5) * height)
-            object_item.setParentItem(self)
-            label_item = ObjectLabelItem(object_name, font, Qt.transparent)
-            label_item.setParentItem(self)
-            object_item.set_label_item(label_item)
-            self.object_items.append(object_item)
-        self.setRect(self.childrenBoundingRect())
-        self.setBrush(QBrush(color))
+        class_name_list = object_class_name_list
+        class_name_matrix = [class_name_list[i:i + 2] for i in range(0, len(class_name_list), 2)]
+        x_offset = 0
+        x_step = spread_factor * extent
+        y_offset = spread_factor * extent
+        k = 0
+        object_items = list()
+        object_item_coords = list()
+        for class_name_row in class_name_matrix:
+            for j, class_name in enumerate(class_name_row):
+                if j % 2 == 1:
+                    x_ = x_offset + x_step / 2
+                    y_ = y_offset
+                else:
+                    x_ = x_offset
+                    y_ = 0
+                object_item = ObjectItem(class_name, x_, y_, extent)
+                object_item.setParentItem(self)
+                object_items.append(object_item)
+                object_item_coords.append((x_, y_))
+                try:
+                    object_name = object_name_list[k]
+                except IndexError:
+                    object_name = "[" + class_name + "]"
+                k += 1
+                label_item = ObjectLabelItem(object_name, font, color)
+                label_item.setParentItem(self)
+                object_item.set_label_item(label_item)
+            x_offset += x_step
+        for i in range(len(object_items)):
+            src_item = object_items[i]
+            x_src, y_src = object_item_coords[i]
+            try:
+                dst_item = object_items[i + 1]
+                x_dst, y_dst = object_item_coords[i + 1]
+            except IndexError:
+                dst_item = object_items[0]
+                x_dst, y_dst = object_item_coords[0]
+            arc_item = ArcItem(x_src, y_src, x_dst, y_dst, extent / 4, pen_style=arc_pen_style)
+            arc_item.setParentItem(self)
+            src_item.add_outgoing_arc_item(arc_item)
+            dst_item.add_incoming_arc_item(arc_item)
+        rect = self.childrenBoundingRect()
+        self.setPos(QPointF(x, y) - rect.center())
+        self.setBrush(color)
         self.setPen(Qt.NoPen)
-        self.setZValue(1)
+        self.setRect(rect)
+        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setZValue(-2)
 
 
 class CustomTextItem(QGraphicsTextItem):

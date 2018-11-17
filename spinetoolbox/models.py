@@ -1421,7 +1421,6 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.icon_dict = {}
         self.object_icon = QIcon(":/icons/object_icon.png")
         self.relationship_icon = QIcon(":/icons/relationship_icon.png")
 
@@ -1481,7 +1480,6 @@ class ObjectTreeModel(QStandardItemModel):
     def build_flat_tree(self, db_name):
         """Build flat tree, only with object classes and objects."""
         self.clear()
-        self.icon_dict = {}
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
         wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
@@ -1495,7 +1493,6 @@ class ObjectTreeModel(QStandardItemModel):
             icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
             if icon.pixmap(1, 1).isNull():
                 icon = self.object_icon
-            self.icon_dict[object_class.name] = icon
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
@@ -1520,7 +1517,6 @@ class ObjectTreeModel(QStandardItemModel):
     def build_tree(self, db_name):
         """Build tree."""
         self.clear()
-        self.icon_dict = {}
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
         wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
@@ -1534,7 +1530,6 @@ class ObjectTreeModel(QStandardItemModel):
             object_icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
             if object_icon.pixmap(1, 1).isNull():
                 object_icon = self.object_icon
-            self.icon_dict[object_class.name] = object_icon
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)

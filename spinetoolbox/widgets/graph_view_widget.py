@@ -31,7 +31,8 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
-from graphics_items import ObjectItem, ArcItem, ObjectLabelItem, ArcLabelItem, CustomTextItem
+from graphics_items import ObjectItem, RelationshipItem, ArcItem, ObjectLabelItem, \
+    CustomTextItem
 from helpers import busy_effect
 from config import STATUSBAR_SS
 
@@ -402,9 +403,8 @@ class GraphViewForm(QMainWindow):
         for i in range(len(self.object_name_list)):
             object_name = self.object_name_list[i]
             object_class_name = self.object_class_name_list[i]
-            icon = self.object_tree_model.icon_dict[object_class_name]
             extent = 2 * self.font.pointSize()
-            object_item = ObjectItem(icon.pixmap(extent).scaled(extent, extent), x[i], y[i])
+            object_item = ObjectItem(object_class_name, x[i], y[i], extent)
             label_item = ObjectLabelItem(object_name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
@@ -418,10 +418,9 @@ class GraphViewForm(QMainWindow):
             object_class_names = self.arc_object_class_names_list[k]
             arc_item = ArcItem(x[i], y[i], x[j], y[j], .5 * self.font.pointSize())
             extent = 2 * self.font.pointSize()
-            icon_dict = self.object_tree_model.icon_dict
-            pixmaps = [icon_dict[x].pixmap(extent).scaled(extent, extent) for x in object_class_names]
-            arc_label_item = ArcLabelItem(
-                relationship_class_name, pixmaps, object_names, self.font, QColor(224, 224, 224, 224))
+            arc_label_item = RelationshipItem(
+                object_class_names, object_names, 0, 0,
+                2 * self.font.pointSize(), self.font, QColor(224, 224, 224, 128), spread_factor=2)
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
             scene.addItem(arc_label_item)
@@ -431,12 +430,19 @@ class GraphViewForm(QMainWindow):
 
     def new_scene(self):
         """A new scene with a background."""
+        old_scene = self.ui.graphicsView.scene()
+        if old_scene:
+            wip_relationship_items = [x for x in old_scene.items() if isinstance(x, RelationshipItem)]
+        else:
+            wip_relationship_items = []
         self._scene_bg = QGraphicsRectItem()
         self._scene_bg.setPen(Qt.NoPen)
         self._scene_bg.setZValue(-100)
         scene = QGraphicsScene()
         self.ui.graphicsView.setScene(scene)
         scene.addItem(self._scene_bg)
+        for item in wip_relationship_items:
+            scene.addItem(item)
         scene.changed.connect(self.handle_scene_changed)
         return scene
 
@@ -513,33 +519,36 @@ class GraphViewForm(QMainWindow):
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         data = eval(text)
         if data["type"] == "object_class":
-            # Add temp object item as a marker
-            class_id = data["id"]
             class_name = data["name"]
             extent = 2 * self.font.pointSize()
-            pixmap = self.object_tree_model.icon_dict[class_name].pixmap(extent)
-            self.temp_object_item = ObjectItem(pixmap.scaled(extent, extent), scene_pos.x(), scene_pos.y())
+            self.temp_object_item = ObjectItem(class_name, scene_pos.x(), scene_pos.y(), extent)
             scene.addItem(self.temp_object_item)
-            dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
-            dialog.rejected.connect(lambda: scene.removeItem(self.temp_object_item))
-            dialog.show()
+            class_id = data["id"]
+            self.show_add_objects_form(class_id)
         elif data["type"] == "relationship_class":
-            relationship_class_id = data["id"]
-            dialog = AddRelationshipsDialog(self, relationship_class_id=relationship_class_id, force_default=True)
-            dialog.show()
+            object_class_name_list = data["object_class_name_list"].split(',')
+            extent = 2 * self.font.pointSize()
+            relationship_item = RelationshipItem(
+                object_class_name_list, [], scene_pos.x(), scene_pos.y(), extent,
+                self.font, QColor(224, 224, 224, 128))
+            scene.addItem(relationship_item)
+
+    def show_add_objects_form(self, class_id=None):
+        """Show dialog to let user select preferences for new objects."""
+        dialog = AddObjectsDialog(self, class_id=class_id)
+        dialog.show()
 
     def add_objects(self, objects):
         """Insert new objects."""
         scene = self.ui.graphicsView.scene()
-        pixmap = self.temp_object_item.pixmap()
+        object_class_name = self.temp_object_item._object_class_name
         x = self.temp_object_item.x()
         y = self.temp_object_item.y()
-        width = self.temp_object_item.pixmap().width()
-        height = self.temp_object_item.pixmap().height()
+        extent = self.temp_object_item._extent
         scene.removeItem(self.temp_object_item)
         for k, object_ in enumerate(objects):
             self.object_tree_model.add_object(object_, flat=True)
-            object_item = ObjectItem(pixmap, x + .5 * width, y + (k + .5) * height)
+            object_item = ObjectItem(object_class_name, x + .5 * extent, y + (k + .5) * extent, extent)
             label_item = ObjectLabelItem(object_.name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
