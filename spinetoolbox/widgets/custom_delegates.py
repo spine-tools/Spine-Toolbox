@@ -415,10 +415,23 @@ class AddRelationshipClassesDelegate(TreeViewDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship class name':
-            editor.set_data(index.data(Qt.EditRole))
+            data = index.data(Qt.EditRole)
+            if data:
+                editor.set_data(index.data(Qt.EditRole))
+            else:
+                editor.set_data(self.relationship_class_name(index))
         else:
             object_class_name_list = [x.name for x in self.db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+
+    def relationship_class_name(self, index):
+        """A relationship class name composed by concatenating object class names."""
+        object_class_name_list = list()
+        for column in range(index.column()):
+            object_class_name = index.sibling(index.row(), column).data(Qt.DisplayRole)
+            if object_class_name:
+                object_class_name_list.append(object_class_name)
+        return "__".join(object_class_name_list)
 
 
 class AddRelationshipsDelegate(TreeViewDelegate):
@@ -441,7 +454,10 @@ class AddRelationshipsDelegate(TreeViewDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship name':
-            editor.set_data(index.data(Qt.EditRole))
+            if data:
+                editor.set_data(index.data(Qt.EditRole))
+            else:
+                editor.set_data(self.relationship_name(index))
         else:
             object_class_name = header[index.column()].split(' ', 1)[0]
             object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
@@ -450,6 +466,15 @@ class AddRelationshipsDelegate(TreeViewDelegate):
             else:
                 object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
             editor.set_data(index.data(Qt.EditRole), object_name_list)
+
+    def relationship_name(self, index):
+        """A relationship name composed by concatenating object names."""
+        object_name_list = list()
+        for column in range(index.column()):
+            object_name = index.sibling(index.row(), column).data(Qt.DisplayRole)
+            if object_name:
+                object_name_list.append(object_name)
+        return "__".join(object_name_list)
 
 
 class ResourceNameDelegate(QItemDelegate):

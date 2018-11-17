@@ -699,7 +699,7 @@
     <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Esc</string>
+    <string>Ctrl+W</string>
    </property>
   </action>
   <action name="actionAdd_object_classes">

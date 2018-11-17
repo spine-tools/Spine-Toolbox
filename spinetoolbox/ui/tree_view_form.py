@@ -474,7 +474,7 @@ class Ui_MainWindow(object):
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
         self.actionRollback.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Backspace", None, -1))
         self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
-        self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Esc", None, -1))
+        self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
         self.actionAdd_object_classes.setText(QtWidgets.QApplication.translate("MainWindow", "Add object classes", None, -1))
         self.actionAdd_object_classes.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add object classes", None, -1))
         self.actionAdd_object_classes.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+O", None, -1))
@@ -518,6 +518,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
 import resources_icons_rc

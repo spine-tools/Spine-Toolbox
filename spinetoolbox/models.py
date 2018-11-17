@@ -883,7 +883,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        self.untracked_columns = []  # Columns not to track when checking for empty row
         self.default_row = []  # A row of default values to put in any newly inserted row
         self._force_default = False  # Whether or not default values are editable
         self.dataChanged.connect(self.receive_data_changed)
@@ -909,8 +908,6 @@ class MinimalTableModel(QAbstractTableModel):
             return
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):
-            if column in self.untracked_columns:
-                continue
             try:
                 data = self._data[last_row][column][Qt.DisplayRole]
             except KeyError:
@@ -1054,7 +1051,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels))
 
     def horizontal_header_labels(self):
-        return [self.headerData(section, Qt.Horizontal, Qt.DisplayRole) for section in range(self.columnCount())]
+        return [self.header[j][Qt.DisplayRole] for j in range(len(self.header))]
 
     def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
         """Sets the data for the given role and section in the header
