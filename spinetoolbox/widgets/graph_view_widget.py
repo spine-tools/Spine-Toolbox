@@ -21,7 +21,7 @@ from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
     QAction, QGraphicsRectItem
 from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication, QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QRectF, QItemSelection, QItemSelectionModel, QSize
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
@@ -31,8 +31,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
-from graphics_items import ObjectItem, RelationshipItem, ArcItem, ObjectLabelItem, \
-    CustomTextItem
+from graphics_items import ObjectItem, ArcItem, ObjectLabelItem, CustomTextItem
 from helpers import busy_effect
 from config import STATUSBAR_SS
 
@@ -57,7 +56,7 @@ class GraphViewForm(QMainWindow):
         self._has_graph = False
         self._scene_bg = None
         self.database = database
-        self.temp_object_item = None
+        self.object_item_placeholder = None
         self.err_msg = QErrorMessage(self)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -413,36 +412,40 @@ class GraphViewForm(QMainWindow):
         for k in range(len(self.src_ind_list)):
             i = self.src_ind_list[k]
             j = self.dst_ind_list[k]
-            relationship_class_name = self.arc_relationship_class_name_list[k]
-            object_names = self.arc_object_names_list[k]
-            object_class_names = self.arc_object_class_names_list[k]
-            arc_item = ArcItem(x[i], y[i], x[j], y[j], .5 * self.font.pointSize())
             extent = 2 * self.font.pointSize()
-            arc_label_item = RelationshipItem(
-                object_class_names, object_names, 0, 0,
-                2 * self.font.pointSize(), self.font, QColor(224, 224, 224, 128), spread_factor=2)
+            arc_item = ArcItem(object_items[i], object_items[j], .25 * extent)
+            object_class_names = self.arc_object_class_names_list[k]
+            object_names = self.arc_object_names_list[k]
+            # relationship_class_name = self.arc_relationship_class_name_list[k]
+            relationship_parts = self.relationship_parts(
+                object_class_names, object_names, extent,
+                self.font, QColor(224, 224, 224, 128), spread_factor=2)
+            arc_label_item = self.arc_label_item(QColor(224, 224, 224, 128), *relationship_parts)
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
             scene.addItem(arc_label_item)
-            object_items[i].add_outgoing_arc_item(arc_item)
-            object_items[j].add_incoming_arc_item(arc_item)
         return True
+
+    def arc_label_item(self, color, object_items, label_items, arc_items):
+        """A QGraphicsRectItem with a relationship to use as arc label"""
+        label = QGraphicsRectItem()
+        for item in object_items + label_items + arc_items:
+            item.setParentItem(label)
+        rect = label.childrenBoundingRect()
+        label.setBrush(color)
+        label.setPen(Qt.NoPen)
+        label.setRect(rect)
+        label.setZValue(-2)
+        return label
 
     def new_scene(self):
         """A new scene with a background."""
-        old_scene = self.ui.graphicsView.scene()
-        if old_scene:
-            wip_relationship_items = [x for x in old_scene.items() if isinstance(x, RelationshipItem)]
-        else:
-            wip_relationship_items = []
         self._scene_bg = QGraphicsRectItem()
         self._scene_bg.setPen(Qt.NoPen)
         self._scene_bg.setZValue(-100)
         scene = QGraphicsScene()
         self.ui.graphicsView.setScene(scene)
         scene.addItem(self._scene_bg)
-        for item in wip_relationship_items:
-            scene.addItem(item)
         scene.changed.connect(self.handle_scene_changed)
         return scene
 
@@ -455,24 +458,99 @@ class GraphViewForm(QMainWindow):
             return
         scene = self.new_scene()
         msg = """
-            <html>
-            <style type="text/css">
-                ul {
-                margin-left: 40px;
-                padding-left: 40px;
-                }
-                </style>
-            <ul>
-            <li>Select classes and objects in the 'Object tree' to show them here.
-            <br>You can select multiple items by holding the 'Ctrl' key.</li>
-            <li>Drag icons from the 'Item palette' and drop them here to add new items.</li>
-            </ul>
-            </html>
+            * Select classes and objects in the 'Object tree' to show them here.
+               You can select multiple items by holding the 'Ctrl' key.
+            * Drag icons from the 'Item palette' and drop them here to add new items.
         """
         msg_item = CustomTextItem(msg, self.font)
         scene.addItem(msg_item)
         self._has_graph = False
         self.ui.graphicsView.scale_to_fit_scene()
+
+    @Slot("QPoint", "QString", name="handle_item_dropped")
+    def handle_item_dropped(self, pos, text):
+        if self._has_graph:
+            scene = self.ui.graphicsView.scene()
+        else:
+            scene = self.new_scene()
+        # Make scene background the size of the scene
+        view_rect = self.ui.graphicsView.viewport().rect()
+        top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
+        bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
+        rectf = QRectF(top_left, bottom_right)
+        self._scene_bg.setRect(rectf)
+        scene_pos = self.ui.graphicsView.mapToScene(pos)
+        data = eval(text)
+        if data["type"] == "object_class":
+            class_name = data["name"]
+            extent = 2 * self.font.pointSize()
+            self.object_item_placeholder = ObjectItem(class_name, scene_pos.x(), scene_pos.y(), extent)
+            scene.addItem(self.object_item_placeholder)
+            class_id = data["id"]
+            self.show_add_objects_form(class_id)
+        elif data["type"] == "relationship_class":
+            object_class_name_list = data["object_class_name_list"].split(',')
+            extent = 2 * self.font.pointSize()
+            relationship_parts = self.relationship_parts(
+                object_class_name_list, [], extent,
+                self.font, QColor(224, 224, 224, 128))
+            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_parts)
+            self._has_graph = True
+
+    def add_relationship_template(self, scene, x, y, object_items, label_items, arc_items):
+        """Add relationship parts into the scene in form of a template."""
+        for item in object_items + label_items + arc_items:
+            scene.addItem(item)
+        # Move
+        rectf = QRectF()
+        for object_item in object_items:
+            rectf |= object_item.sceneBoundingRect()
+        center = rectf.center()
+        for object_item in object_items:
+            object_item.moveBy(x - center.x(), y - center.y())
+            object_item.move_related_items_by(QPointF(x, y) - center)
+        for object_item in object_items:
+            object_item.is_template = True
+
+    def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
+                           spread_factor=4, arc_pen_style=Qt.SolidLine):
+        """Lists of object, label, and arc items to form a relationship."""
+        object_items = list()
+        label_items = list()
+        arc_items = list()
+        object_class_name_matrix = [object_class_name_list[i:i + 2] for i in range(0, len(object_class_name_list), 2)]
+        x_offset = 0
+        x_step = spread_factor * extent
+        y_offset = spread_factor * extent
+        k = 0
+        for object_class_name_row in object_class_name_matrix:
+            for j, object_class_name in enumerate(object_class_name_row):
+                if j % 2 == 1:
+                    x_ = x_offset + x_step / 2
+                    y_ = y_offset
+                else:
+                    x_ = x_offset
+                    y_ = 0
+                object_item = ObjectItem(object_class_name, x_, y_, extent)
+                object_items.append(object_item)
+                try:
+                    object_name = object_name_list[k]
+                except IndexError:
+                    object_name = object_class_name
+                label_item = ObjectLabelItem(object_name, font, Qt.transparent)
+                object_item.set_label_item(label_item)
+                label_items.append(label_item)
+                k += 1
+            x_offset += x_step
+        for i in range(len(object_items)):
+            src_item = object_items[i]
+            try:
+                dst_item = object_items[i + 1]
+            except IndexError:
+                dst_item = object_items[0]
+            arc_item = ArcItem(src_item, dst_item, extent / 4, pen_style=arc_pen_style)
+            arc_items.append(arc_item)
+        return object_items, label_items, arc_items
 
     @Slot(name="show_add_object_classes_form")
     def show_add_object_classes_form(self):
@@ -504,48 +582,20 @@ class GraphViewForm(QMainWindow):
         msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
 
-    @Slot("QPoint", "QString", name="handle_item_dropped")
-    def handle_item_dropped(self, pos, text):
-        if self._has_graph:
-            scene = self.ui.graphicsView.scene()
-        else:
-            scene = self.new_scene()
-        # Make scene background the size of the scene
-        view_rect = self.ui.graphicsView.viewport().rect()
-        top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
-        bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
-        rectf = QRectF(top_left, bottom_right)
-        self._scene_bg.setRect(rectf)
-        scene_pos = self.ui.graphicsView.mapToScene(pos)
-        data = eval(text)
-        if data["type"] == "object_class":
-            class_name = data["name"]
-            extent = 2 * self.font.pointSize()
-            self.temp_object_item = ObjectItem(class_name, scene_pos.x(), scene_pos.y(), extent)
-            scene.addItem(self.temp_object_item)
-            class_id = data["id"]
-            self.show_add_objects_form(class_id)
-        elif data["type"] == "relationship_class":
-            object_class_name_list = data["object_class_name_list"].split(',')
-            extent = 2 * self.font.pointSize()
-            relationship_item = RelationshipItem(
-                object_class_name_list, [], scene_pos.x(), scene_pos.y(), extent,
-                self.font, QColor(224, 224, 224, 128))
-            scene.addItem(relationship_item)
-
     def show_add_objects_form(self, class_id=None):
         """Show dialog to let user select preferences for new objects."""
         dialog = AddObjectsDialog(self, class_id=class_id)
+        dialog.rejected.connect(lambda: self.ui.graphicsView.scene().removeItem(self.object_item_placeholder))
         dialog.show()
 
     def add_objects(self, objects):
         """Insert new objects."""
         scene = self.ui.graphicsView.scene()
-        object_class_name = self.temp_object_item._object_class_name
-        x = self.temp_object_item.x()
-        y = self.temp_object_item.y()
-        extent = self.temp_object_item._extent
-        scene.removeItem(self.temp_object_item)
+        object_class_name = self.object_item_placeholder._object_class_name
+        x = self.object_item_placeholder.x()
+        y = self.object_item_placeholder.y()
+        extent = self.object_item_placeholder._extent
+        scene.removeItem(self.object_item_placeholder)
         for k, object_ in enumerate(objects):
             self.object_tree_model.add_object(object_, flat=True)
             object_item = ObjectItem(object_class_name, x + .5 * extent, y + (k + .5) * extent, extent)
