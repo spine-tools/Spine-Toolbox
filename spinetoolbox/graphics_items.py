@@ -1040,6 +1040,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
+        self.template_friends = list()
         self._original_pos = None
         self._merge_target = None
         self._merge = False
@@ -1054,10 +1055,26 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
 
+    def make_template(self):
+        self.is_template = True
+        text_item = QGraphicsSimpleTextItem("?")
+        font = QFont("", 0.75 * self._extent)
+        font.setWeight(QFont.Black)
+        text_item.setFont(font)
+        text_item.setBrush(Qt.red)
+        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        text_item.setPen(outline_pen)
+        text_item.setParentItem(self)
+        rect = self.boundingRect()
+        text_rect = text_item.boundingRect()
+        x = rect.center().x() - text_rect.width() / 2
+        y = rect.center().y() - text_rect.height() / 2
+        text_item.setPos(x, y)
+
     def shape(self):
-        """Return shape."""
+        """Make the entire bounding rect to be the shape."""
         path = QPainterPath()
-        path.addRect(self.boundingRect())
+        path.addRect(self.boundingRect() | self.childrenBoundingRect())
         return path
 
     def set_label_item(self, item, position="under_icon"):
@@ -1097,9 +1114,8 @@ class ObjectItem(QGraphicsPixmapItem):
             if item.is_template != self.is_template:
                 if item._object_class_name == self._object_class_name:
                     self._merge_target = item
-                else:
-                    self._bounce = True
-                break
+            self._bounce = True
+            break
 
     def mouseReleaseEvent(self, event):
         """Merge, bounce, or just do nothing."""
@@ -1113,16 +1129,20 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def merge_item(self):
         if self.is_template:
-            template = self
-            instance = self._merge_target
+            from_item = self
+            onto_item = self._merge_target
         else:
-            template = self._merge_target
-            instance = self
-        template.move_related_items_by(instance.pos() - template.pos())
-        instance.incoming_arc_items.extend(template.incoming_arc_items)
-        instance.outgoing_arc_items.extend(template.outgoing_arc_items)
-        self.scene().removeItem(template.label_item)
-        self.scene().removeItem(template)
+            from_item = self._merge_target
+            onto_item = self
+        from_item.move_related_items_by(onto_item.pos() - from_item.pos())
+        for arc_item in from_item.outgoing_arc_items:
+            arc_item.src_item = onto_item
+        for arc_item in from_item.incoming_arc_items:
+            arc_item.dst_item = onto_item
+        onto_item.incoming_arc_items.extend(from_item.incoming_arc_items)
+        onto_item.outgoing_arc_items.extend(from_item.outgoing_arc_items)
+        self.scene().removeItem(from_item.label_item)
+        self.scene().removeItem(from_item)
 
     def move_related_items_by(self, pos_diff):
         """Move related items."""
@@ -1161,15 +1181,18 @@ class ArcItem(QGraphicsLineItem):
     def __init__(self, src_item, dst_item, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine):
         """Init class."""
         super().__init__()
+        self.src_item = src_item
+        self.dst_item = dst_item
+        self.width = width
+        self.label_item = None
+        self.is_src_hovered = False
+        self.is_dst_hovered = False
+        self.is_template = False
         src_x = src_item.sceneBoundingRect().center().x()
         src_y = src_item.sceneBoundingRect().center().y()
         dst_x = dst_item.sceneBoundingRect().center().x()
         dst_y = dst_item.sceneBoundingRect().center().y()
         self.setLine(src_x, src_y, dst_x, dst_y)
-        self.label_item = None
-        self.width = width
-        self.is_src_hovered = False
-        self.is_dst_hovered = False
         pen = QPen()
         pen.setWidth(self.width)
         pen.setColor(color)
@@ -1186,6 +1209,12 @@ class ArcItem(QGraphicsLineItem):
         self.shape_item.hide()
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
+
+    def make_template(self):
+        self.is_template = True
+        pen = self.pen()
+        pen.setStyle(Qt.DotLine)
+        self.setPen(pen)
 
     def shape(self):
         return self.shape_item.shape()
@@ -1248,76 +1277,12 @@ class ObjectLabelItem(QGraphicsRectItem):
     """
     def __init__(self, object_name, font, color):
         super().__init__()
-        self.title_item = CustomTextItem(object_name, font)
-        self.title_item.setParentItem(self)
+        self.text_item = CustomTextItem(object_name, font)
+        self.text_item.setParentItem(self)
         self.setRect(self.childrenBoundingRect())
         self.setBrush(QBrush(color))
         self.setPen(Qt.NoPen)
         self.setZValue(0)
-
-
-class RelationshipItem(QGraphicsRectItem):
-    """Relationship item.
-
-    Attributes:
-        object_class_name_list (list): object class names
-        object_name_list (list): object names
-        x (float): x-coordinate of central point
-        y (float): y-coordinate of central point
-        extent (int): max pixmap size
-        font (QFont): font to display the text
-        color (QColor): color to paint the label
-        spread_factor (int): how spread
-    """
-    def __init__(self, object_class_name_list, object_name_list, x, y, extent, font, color,
-                 spread_factor=4, arc_pen_style=Qt.SolidLine):
-        super().__init__()
-        self.object_items = list()
-        self.merged_object_items = set()  # Merged object items
-        class_name_list = object_class_name_list
-        class_name_matrix = [class_name_list[i:i + 2] for i in range(0, len(class_name_list), 2)]
-        x_offset = 0
-        x_step = spread_factor * extent
-        y_offset = spread_factor * extent
-        k = 0
-        for class_name_row in class_name_matrix:
-            for j, class_name in enumerate(class_name_row):
-                if j % 2 == 1:
-                    x_ = x_offset + x_step / 2
-                    y_ = y_offset
-                else:
-                    x_ = x_offset
-                    y_ = 0
-                object_item = ObjectItem(class_name, x_, y_, extent)
-                object_item.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
-                object_item.setFlag(QGraphicsItem.ItemIsMovable, enabled=False)
-                object_item.setParentItem(self)
-                self.object_items.append(object_item)
-                try:
-                    object_name = object_name_list[k]
-                except IndexError:
-                    object_name = class_name
-                label_item = ObjectLabelItem(object_name, font, Qt.transparent)
-                label_item.setParentItem(self)
-                object_item.set_label_item(label_item)
-                k += 1
-            x_offset += x_step
-        for i in range(len(self.object_items)):
-            src_item = self.object_items[i]
-            try:
-                dst_item = self.object_items[i + 1]
-            except IndexError:
-                dst_item = self.object_items[0]
-            arc_item = ArcItem(src_item, dst_item, extent / 4, pen_style=arc_pen_style)
-            arc_item.setParentItem(self)
-        rect = self.childrenBoundingRect()
-        self.setPos(QPointF(x, y) - rect.center())
-        self.setBrush(color)
-        self.setPen(Qt.NoPen)
-        self.setRect(rect)
-        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
-        self.setZValue(-2)
 
 
 class CustomTextItem(QGraphicsSimpleTextItem):

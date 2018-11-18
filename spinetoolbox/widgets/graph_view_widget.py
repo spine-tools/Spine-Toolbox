@@ -58,15 +58,6 @@ class GraphViewForm(QMainWindow):
         self.database = database
         self.object_item_placeholder = None
         self.err_msg = QErrorMessage(self)
-        # Setup UI from Qt Designer file
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
-        # Set up status bar
-        self.ui.statusbar.setFixedHeight(20)
-        self.ui.statusbar.setSizeGripEnabled(False)
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.setWindowTitle("Data store graph view    -- {} --".format(database))
         self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
         self.object_name_list = list()
@@ -75,9 +66,19 @@ class GraphViewForm(QMainWindow):
         self.arc_object_names_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
+        self.object_template_inds = list()
+        self.arc_template_inds = list()
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
+        # Setup UI from Qt Designer file
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        # Set up status bar
+        self.ui.statusbar.setFixedHeight(20)
+        self.ui.statusbar.setSizeGripEnabled(False)
+        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.treeView.setModel(self.object_tree_model)
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
@@ -88,6 +89,7 @@ class GraphViewForm(QMainWindow):
         self.add_toggle_view_actions()
         self.set_commit_rollback_actions_enabled(False)
         self.build_graph()
+        self.setWindowTitle("Data store graph view    -- {} --".format(database))
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def init_models(self):
@@ -326,6 +328,59 @@ class GraphViewForm(QMainWindow):
                     arc_object_class_names.append(y)
                 self.arc_object_names_list.append(arc_object_names)
                 self.arc_object_class_names_list.append(arc_object_class_names)
+        # Add template items hanging around
+        scene = self.ui.graphicsView.scene()
+        self.object_template_inds = list()
+        self.arc_template_inds = list()
+        if scene:
+            object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.is_template]
+            object_ind = len(self.object_name_list)
+            object_ind_dict = {}
+            for item in object_items:
+                object_class_name = item._object_class_name
+                self.object_name_list.append(object_class_name)
+                self.object_class_name_list.append(object_class_name)
+                object_ind_dict[item] = object_ind
+                self.object_template_inds.append(object_ind)
+                object_ind += 1
+            arc_ind = len(self.arc_object_names_list)
+            arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
+            for item in arc_items:
+                src_item = item.src_item
+                dst_item = item.dst_item
+                try:
+                    src_ind = object_ind_dict[src_item]
+                except KeyError:
+                    try:
+                        src_object_name = src_item.label_item.text_item.text()
+                        src_ind = self.object_name_list.index(src_object_name)
+                    except ValueError:
+                        object_class_name = src_item._object_class_name
+                        self.object_name_list.append(src_object_name)
+                        self.object_class_name_list.append(object_class_name)
+                        src_ind = object_ind
+                        object_ind_dict[src_item] = object_ind
+                        object_ind += 1
+                try:
+                    dst_ind = object_ind_dict[dst_item]
+                except KeyError:
+                    try:
+                        dst_object_name = dst_item.label_item.text_item.text()
+                        dst_ind = self.object_name_list.index(dst_object_name)
+                    except ValueError:
+                        object_class_name = dst_item._object_class_name
+                        self.object_name_list.append(dst_object_name)
+                        self.object_class_name_list.append(object_class_name)
+                        dst_ind = object_ind
+                        object_ind_dict[dst_item] = object_ind
+                        object_ind += 1
+                self.src_ind_list.append(src_ind)
+                self.dst_ind_list.append(dst_ind)
+                self.arc_relationship_class_name_list.append("")
+                self.arc_object_names_list.append("")
+                self.arc_object_class_names_list.append("")
+                self.arc_template_inds.append(arc_ind)
+                arc_ind += 1
         return True
 
     def shortest_path_matrix(self):
@@ -404,6 +459,8 @@ class GraphViewForm(QMainWindow):
             object_class_name = self.object_class_name_list[i]
             extent = 2 * self.font.pointSize()
             object_item = ObjectItem(object_class_name, x[i], y[i], extent)
+            if i in self.object_template_inds:
+                object_item.make_template()
             label_item = ObjectLabelItem(object_name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
@@ -416,6 +473,8 @@ class GraphViewForm(QMainWindow):
             arc_item = ArcItem(object_items[i], object_items[j], .25 * extent)
             object_class_names = self.arc_object_class_names_list[k]
             object_names = self.arc_object_names_list[k]
+            if k in self.arc_template_inds:
+                arc_item.make_template()
             # relationship_class_name = self.arc_relationship_class_name_list[k]
             relationship_parts = self.relationship_parts(
                 object_class_names, object_names, extent,
@@ -510,7 +569,9 @@ class GraphViewForm(QMainWindow):
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
         for object_item in object_items:
-            object_item.is_template = True
+            object_item.make_template()
+        for arc_item in arc_items:
+            arc_item.make_template()
 
     def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
                            spread_factor=4, arc_pen_style=Qt.SolidLine):
