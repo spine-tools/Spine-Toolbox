@@ -16,16 +16,45 @@ General helper functions and classes.
 :date:   10.1.2018
 """
 
+import sys
 import logging
 import datetime
 import os
 import time
 import shutil
 import glob
+import spinedatabase_api
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QCursor
-from config import DEFAULT_PROJECT_DIR
+from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+
+
+def spinedatabase_api_version_check():
+    """Check if spinedatabase_api is the correct version and explain how to upgrade if it is not."""
+    try:
+        current_version = spinedatabase_api.__version__
+        current_split = [int(x) for x in current_version.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
+        if current_split >= required_split:
+            return True
+    except AttributeError:
+        current_version = "not reported"
+    script = "upgrade_spinedatabase_api.bat" if sys.platform == "win32" else "upgrade_spinedatabase_api.sh"
+    print(
+        """ERROR:
+        Spine Toolbox failed to start because spinedatabase_api is outdated.
+        (Required version is {0}, whereas current is {1})
+        Please upgrade spinedatabase_api to v{0} and start Spine Toolbox again.
+
+        To upgrade, run script '{2}' in the '/bin' folder.
+
+        Or upgrade it manually by running,
+
+            pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
+
+        """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version, script))
+    return False
 
 
 def busy_effect(func):

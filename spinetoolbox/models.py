@@ -1300,13 +1300,107 @@ class MinimalTableModel(QAbstractTableModel):
         self.insertRows(self.rowCount(), 1)
 
 
+class FlatObjectTreeModel(QStandardItemModel):
+    """Another class to hold Spine data structure in a treeview.
+    It only has two levels:
+        - object class
+            - object
+    """
+    def __init__(self, graph_view_form):
+        """Initialize class"""
+        super().__init__(graph_view_form)
+        self.db_map = graph_view_form.db_map
+        self.root_item = None
+        self.initial_status = "False"
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+
+    def backward_sweep(self, index, call=None):
+        """Sweep the tree from the given index towards the root, and apply `call` on each."""
+        current = index
+        while True:
+            if call:
+                call(current)
+            # Try and visit parent
+            next_ = current.parent()
+            if not next_.isValid():
+                break
+            current = next_
+            continue
+
+    def forward_sweep(self, index, call=None):
+        """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if call:
+            call(index)
+        if not self.hasChildren(index):
+            return
+        current = index
+        back_to_parent = False  # True if moving back to the parent index
+        while True:
+            if call:
+                call(current)
+            if not back_to_parent:
+                # Try and visit first child
+                next_ = self.index(0, 0, current)
+                if next_.isValid():
+                    back_to_parent = False
+                    current = next_
+                    continue
+            # Try and visit next sibling
+            next_ = current.sibling(current.row() + 1, 0)
+            if next_.isValid():
+                back_to_parent = False
+                current = next_
+                continue
+            # Go back to parent
+            next_ = self.parent(current)
+            if next_ != index:
+                back_to_parent = True
+                current = next_
+                continue
+            break
+
+    def build_tree(self, database):
+        """Populate tree."""
+        self.clear()
+        pixmap = QPixmap(":/icons/Spine_db_icon.png")
+        self.root_item = QStandardItem(database)
+        self.root_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        object_class_list = [x for x in self.db_map.object_class_list()]
+        object_list = [x for x in self.db_map.object_list()]
+        for object_class in object_class_list:
+            pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
+            if pixmap.isNull():
+                pixmap = QPixmap(":/icons/object_icon.png")
+            object_class_name_item = QStandardItem(object_class.name)
+            object_class_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            object_class_name_item.setData(self.bold_font, Qt.FontRole)
+            object_class_name_item.setFlags(object_class_name_item.flags() & ~Qt.ItemIsEditable)
+            object_class_status_item = QStandardItem()
+            object_class_status_item.setData(self.initial_status, Qt.EditRole)
+            for object_ in object_list:
+                if object_.class_id != object_class.id:
+                    continue
+                object_name_item = QStandardItem(object_.name)
+                object_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
+                object_name_item.setFlags(~Qt.ItemIsEditable)
+                object_status_item = QStandardItem()
+                object_status_item.setData(self.initial_status, Qt.EditRole)
+                object_class_name_item.appendRow([object_name_item, object_status_item])
+            self.root_item.appendRow([object_class_name_item, object_class_status_item])
+        root_status_item = QStandardItem()
+        root_status_item.setData(self.initial_status, Qt.EditRole)
+        self.appendRow([self.root_item, root_status_item])
+        self.setHorizontalHeaderLabels(['name', 'show?'])
+
+
 class ObjectTreeModel(QStandardItemModel):
     """A class to hold Spine data structure in a treeview."""
 
-    def __init__(self, data_store_form):
+    def __init__(self, tree_view_form):
         """Initialize class"""
-        super().__init__(data_store_form)
-        self.db_map = data_store_form.db_map
+        super().__init__(tree_view_form)
+        self.db_map = tree_view_form.db_map
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
@@ -1320,22 +1414,12 @@ class ObjectTreeModel(QStandardItemModel):
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class') and not self.hasChildren(index):
                 return QBrush(Qt.gray)
-        if role == Qt.FontRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type.endswith('class'):
-                return self.bold_font
-        if role == Qt.DecorationRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type.startswith('object'):
-                return self.object_icon
-            elif item_type.startswith('relationship'):
-                return self.relationship_icon
-            elif item_type == 'root':
-                return self.spine_icon
         return super().data(index, role)
 
     def forward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
+        if call:
+            call(index)
         if not self.hasChildren(index):
             return
         current = index
@@ -1365,9 +1449,7 @@ class ObjectTreeModel(QStandardItemModel):
             break
 
     def build_tree(self, db_name):
-        """Create root item and object class items. This triggers a recursion
-        that builds up the tree.
-        """
+        """Populate tree."""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
@@ -1375,11 +1457,15 @@ class ObjectTreeModel(QStandardItemModel):
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
+        self.root_item.setData(self.spine_icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+            object_class_item.setData(object_class.description, Qt.ToolTipRole)
+            object_class_item.setData(self.object_icon, Qt.DecorationRole)
+            object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
             for object_ in object_list:
                 if object_.class_id != object_class.id:
@@ -1387,6 +1473,8 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item = QStandardItem(object_.name)
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
+                object_item.setData(object_.description, Qt.ToolTipRole)
+                object_item.setData(self.object_icon, Qt.DecorationRole)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1396,6 +1484,8 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+                    relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
+                    relationship_class_item.setData(self.bold_font, Qt.FontRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
                         if wide_relationship.class_id != wide_relationship_class.id:
@@ -1405,6 +1495,7 @@ class ObjectTreeModel(QStandardItemModel):
                         relationship_item = QStandardItem(wide_relationship.object_name_list)
                         relationship_item.setData('relationship', Qt.UserRole)
                         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+                        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
                     relationship_class_item_list.append(relationship_class_item)
@@ -1420,6 +1511,9 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+        object_class_item.setData(object_class.description, Qt.ToolTipRole)
+        object_class_item.setData(self.object_icon, Qt.DecorationRole)
+        object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
     def new_object_item(self, object_):
@@ -1427,6 +1521,8 @@ class ObjectTreeModel(QStandardItemModel):
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
+        object_item.setData(object_.description, Qt.ToolTipRole)
+        object_item.setData(self.object_icon, Qt.DecorationRole)
         relationship_class_item_list = list()
         for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
@@ -1440,6 +1536,8 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
+        relationship_class_item.setData(self.bold_font, Qt.FontRole)
         return relationship_class_item
 
     def new_relationship_item(self, wide_relationship):
@@ -1447,6 +1545,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
         return relationship_item
 
     def add_object_class(self, object_class):
@@ -1655,16 +1754,16 @@ class ObjectTreeModel(QStandardItemModel):
         return self.indexFromItem(items[position])
 
 
-class DataStoreTableModel(MinimalTableModel):
-    """A model of parameter and parameter value data, used by DataStoreForm."""
+class TreeViewTableModel(MinimalTableModel):
+    """A model of parameter and parameter value data, used by TreeViewForm."""
 
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form, can_grow=True, has_empty_row=True)
-        self._data_store_form = data_store_form
-        self.db_map = self._data_store_form.db_map
+        super().__init__(tree_view_form, can_grow=True, has_empty_row=True)
+        self._tree_view_form = tree_view_form
+        self.db_map = self._tree_view_form.db_map
         self.fixed_columns = list()
-        self.gray_brush = self._data_store_form.palette().button() if self._data_store_form else QBrush(Qt.lightGray)
+        self.gray_brush = self._tree_view_form.palette().button() if self._tree_view_form else QBrush(Qt.lightGray)
 
     def set_fixed_columns(self, *column_names):
         """Set the fixed_columns attribute according to the column names given as argument."""
@@ -1765,12 +1864,12 @@ class DataStoreTableModel(MinimalTableModel):
         self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
 
 
-class ParameterModel(DataStoreTableModel):
-    """A model of parameter data, used by DataStoreForm."""
+class ParameterModel(TreeViewTableModel):
+    """A model of parameter data, used by TreeViewForm."""
 
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def items_to_update(self, indexes, values):
         """Return a list of items (dict) to update in the database."""
@@ -1810,15 +1909,15 @@ class ParameterModel(DataStoreTableModel):
             for i, parameter in enumerate(parameters):
                 self._data[rows[i]][id_column][Qt.EditRole] = parameter.id  # NOTE: DisplayRole not in use
             self.make_columns_fixed_for_rows(*rows)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
     def update_items_in_db(self, items_to_update):
@@ -1827,23 +1926,23 @@ class ParameterModel(DataStoreTableModel):
             return False
         try:
             self.db_map.update_parameters(*items_to_update)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameters successfully updated."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
 
-class ParameterValueModel(DataStoreTableModel):
-    """A model of parameter value data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+class ParameterValueModel(TreeViewTableModel):
+    """A model of parameter value data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the output of json array data to 8 positions."""
@@ -1853,9 +1952,9 @@ class ParameterValueModel(DataStoreTableModel):
         if self.header[index.column()][Qt.DisplayRole] == 'json':
             try:
                 json_data = data[1:-1].split(",")
-                if len(json_data) <= 8:
+                if len(json_data) <= 1:
                     return data
-                new_data = [x.strip() for x in json_data[0:8]]
+                new_data = [x.strip() for x in json_data[0:1]]
                 return "[" + ", ".join(new_data) + "..."
             except TypeError:
                 return data
@@ -1896,15 +1995,15 @@ class ParameterValueModel(DataStoreTableModel):
             for i, parameter_value in enumerate(parameter_values):
                 self._data[rows[i]][id_column][Qt.EditRole] = parameter_value.id
             self.make_columns_fixed_for_rows(*rows)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
     def update_items_in_db(self, items_to_update):
@@ -1913,23 +2012,23 @@ class ParameterValueModel(DataStoreTableModel):
             return False
         try:
             self.db_map.update_parameter_values(*items_to_update)
-            self._data_store_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameter values successfully updated."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return True
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
             return False
 
 
 class ObjectParameterModel(ParameterModel):
-    """A model of object parameter data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model of object parameter data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def init_model(self, skip_fields=["object_class_id"]):
         """Initialize model from source database."""
@@ -1999,10 +2098,10 @@ class ObjectParameterModel(ParameterModel):
 
 
 class RelationshipParameterModel(ParameterModel):
-    """A model of relationship parameter data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model of relationship parameter data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def init_model(self, skip_fields=["relationship_class_id", 'object_class_id_list']):
         """Initialize model from source database."""
@@ -2111,10 +2210,10 @@ class RelationshipParameterModel(ParameterModel):
 
 
 class ObjectParameterValueModel(ParameterValueModel):
-    """A model of object parameter value data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model of object parameter value data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
 
     def init_model(self, skip_fields=['object_class_id', 'object_id', 'parameter_id']):
         """Initialize model from source database."""
@@ -2217,13 +2316,15 @@ class ObjectParameterValueModel(ParameterValueModel):
 
 
 class RelationshipParameterValueModel(ParameterValueModel):
-    """A model of relationship parameter value data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model of relationship parameter value data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.object_name_header = list()
 
-    def init_model(self, skip_fields=['relationship_class_id', 'object_id_list', 'parameter_id']):
+    def init_model(
+            self,
+            skip_fields=['relationship_class_id', 'object_class_id_list', 'object_id_list', 'parameter_id']):
         """Initialize model from source database."""
         item_list = self.db_map.relationship_parameter_value_list()
         field_list = self.db_map.relationship_parameter_value_fields()
@@ -2418,12 +2519,12 @@ class RelationshipParameterValueModel(ParameterValueModel):
             rows = list(relationships_to_add.keys())
             relationships = self.db_map.add_wide_relationships(*items)
             msg = "Successfully added new relationships on the fly."
-            self._data_store_form.msg.emit(msg)
+            self._tree_view_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
         except SpineIntegrityError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
-            self._data_store_form.msg_error.emit(e.msg)
+            self._tree_view_form.msg_error.emit(e.msg)
 
     def items_to_add(self, indexes, relationships_on_the_fly):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
@@ -2454,9 +2555,9 @@ class RelationshipParameterValueModel(ParameterValueModel):
 
 class AutoFilterProxy(QSortFilterProxyModel):
     """A custom sort filter proxy model which implementes a two-level filter."""
-    def __init__(self, data_store_form=None):
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
+        super().__init__(tree_view_form)
         self.header_index = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
@@ -2591,11 +2692,11 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
 
 class ObjectParameterProxy(AutoFilterProxy):
-    """A model to filter object parameter data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model to filter object parameter data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
-        self.object_class_name = None
+        super().__init__(tree_view_form)
+        self.object_class_name_set = set()
         self.object_class_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -2607,20 +2708,35 @@ class ObjectParameterProxy(AutoFilterProxy):
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
         row_data = self.sourceModel()._data[source_row]
-        if self.object_class_name is not None:
+        if self.object_class_name_set:
             try:
                 object_class_name = row_data[self.object_class_name_column][self.filterRole()]
             except KeyError:
                 object_class_name = None
-            if object_class_name != self.object_class_name:
+            if object_class_name not in self.object_class_name_set:
                 return False
             row_data[self.object_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def set_object_class_name(self, name):
-        if name == self.object_class_name:
+    def clear_object_class_name_set(self):
+        if not self.object_class_name_set:
             return
-        self.object_class_name = name
+        self.object_class_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_class_name_set(self, names):
+        if self.object_class_name_set.issuperset(names):
+            return
+        self.object_class_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_class_name_set(self, names):
+        if self.object_class_name_set.isdisjoint(names):
+            return
+        self.object_class_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2628,11 +2744,11 @@ class ObjectParameterProxy(AutoFilterProxy):
 
 
 class ObjectParameterValueProxy(ObjectParameterProxy):
-    """A model to filter object parameter value data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model to filter object parameter value data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
-        self.object_name = None
+        super().__init__(tree_view_form)
+        self.object_name_set = set()
         self.object_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -2646,20 +2762,35 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
         if not super().filter_accepts_row(source_row, source_parent):
             return False
         row_data = self.sourceModel()._data[source_row]
-        if self.object_name is not None:
+        if self.object_name_set:
             try:
                 object_name = row_data[self.object_name_column][self.filterRole()]
             except KeyError:
                 object_name = None
-            if object_name != self.object_name:
+            if object_name not in self.object_name_set:
                 return False
             row_data[self.object_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def set_object_name(self, name):
-        if name == self.object_name:
+    def clear_object_name_set(self):
+        if not self.object_name_set:
             return
-        self.object_name = name
+        self.object_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_name_set(self, names):
+        if self.object_name_set.issuperset(names):
+            return
+        self.object_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_name_set(self, names):
+        if self.object_name_set.isdisjoint(names):
+            return
+        self.object_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2667,36 +2798,80 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
 
 
 class RelationshipParameterProxy(AutoFilterProxy):
-    """A model to filter relationship parameter data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model to filter relationship parameter data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
-        self.relationship_class_name_list = None
+        super().__init__(tree_view_form)
+        self.relationship_class_name_set = set()
+        self.object_class_name_set = set()
         self.relationship_class_name_column = None
+        self.object_class_name_list_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
             self.relationship_class_name_column = self.header_index("relationship_class_name")
+            self.object_class_name_list_column = self.header_index("object_class_name_list")
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
         row_data = self.sourceModel()._data[source_row]
-        if self.relationship_class_name_list is not None:
+        if self.relationship_class_name_set:
             try:
                 relationship_class_name = row_data[self.relationship_class_name_column][self.filterRole()]
             except KeyError:
                 relationship_class_name = None
-            if relationship_class_name not in self.relationship_class_name_list:
+            if relationship_class_name not in self.relationship_class_name_set:
+                return False
+            row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
+        if self.object_class_name_set:
+            try:
+                object_class_name_list = row_data[self.object_class_name_list_column][self.filterRole()].split(",")
+            except KeyError:
+                object_class_name_list = []
+            if self.object_class_name_set.isdisjoint(object_class_name_list):
                 return False
             row_data[self.relationship_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def set_relationship_class_name_list(self, name_list):
-        if name_list == self.relationship_class_name_list:
+    def clear_relationship_class_name_set(self):
+        if not self.relationship_class_name_set:
             return
-        self.relationship_class_name_list = name_list
+        self.relationship_class_name_set.clear()
+        self.invalidate_filter()
+
+    def update_relationship_class_name_set(self, names):
+        if self.relationship_class_name_set.issuperset(names):
+            return
+        self.relationship_class_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_relationship_class_name_set(self, names):
+        if self.relationship_class_name_set.isdisjoint(names):
+            return
+        self.relationship_class_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def clear_object_class_name_set(self):
+        if not self.object_class_name_set:
+            return
+        self.object_class_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_class_name_set(self, names):
+        if self.object_class_name_set.issuperset(names):
+            return
+        self.object_class_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_class_name_set(self, names):
+        if self.object_class_name_set.isdisjoint(names):
+            return
+        self.object_class_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2704,11 +2879,12 @@ class RelationshipParameterProxy(AutoFilterProxy):
 
 
 class RelationshipParameterValueProxy(RelationshipParameterProxy):
-    """A model to filter relationship parameter value data, used by DataStoreForm."""
-    def __init__(self, data_store_form=None):
+    """A model to filter relationship parameter value data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None):
         """Initialize class."""
-        super().__init__(data_store_form)
-        self.object_name_list = None
+        super().__init__(tree_view_form)
+        self.object_name_set = set()
+        self.object_name_list_set = set()  # Set of lists
         self.object_name_columns = list()
         self.object_count = 0
 
@@ -2734,29 +2910,67 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
                 break
             object_name_list.append(object_name)
         # Now check filter
-        if self.object_name_list is not None:
-            if len(self.object_name_list) == 1:
-                found = False
-                for j, object_name in enumerate(object_name_list):
-                    if self.object_name_list[0] == object_name:
-                        row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
-                        found = True
-                if not found:
-                    return False
-            elif len(self.object_name_list) > 1:
-                if self.object_name_list != object_name_list:
-                    return False
-                for j in range(len(object_name_list)):
+        if self.object_name_list_set:
+            if ",".join(object_name_list) not in self.object_name_list_set:
+                return False
+            for j in range(len(object_name_list)):
+                row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+        if self.object_name_set:
+            found = False
+            for j, object_name in enumerate(object_name_list):
+                if object_name in self.object_name_set:
                     row_data[self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+                    found = True
+            if not found:
+                return False
         # If this row passes, update the object count
         self.object_count = max(self.object_count, len(object_name_list))
         return True
 
-    def set_object_name_list(self, name_list):
+    def clear_object_name_set(self):
         self.object_count = 0
-        if name_list == self.object_name_list:
+        if not self.object_name_set:
             return
-        self.object_name_list = name_list
+        self.object_name_set.clear()
+        self.invalidate_filter()
+
+    def update_object_name_set(self, names):
+        self.object_count = 0
+        if self.object_name_set.issuperset(names):
+            return
+        self.object_name_set.update(names)
+        self.invalidate_filter()
+
+    def diff_update_object_name_set(self, names):
+        self.object_count = 0
+        if self.object_name_set.isdisjoint(names):
+            return
+        self.object_name_set.difference_update(names)
+        self.invalidate_filter()
+
+    def clear_object_name_list_set(self):
+        self.object_count = 0
+        if not self.object_name_list_set:
+            return
+        self.object_name_list_set.clear()
+        self.invalidate_filter()
+
+    def update_object_name_list_set(self, name_lists):
+        self.object_count = 0
+        if self.object_name_list_set.issuperset(name_lists):
+            return
+        self.object_name_list_set.update(name_lists)
+        self.invalidate_filter()
+
+    def diff_update_object_name_list_set(self, name_lists):
+        self.object_count = 0
+        if self.object_name_list_set.isdisjoint(name_lists):
+            return
+        self.object_name_list_set.difference_update(name_lists)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
+        self.object_count = 0
         self.filter_is_valid = False
         self.clear_autofilter()
         for row_data in self.sourceModel()._data:
@@ -2765,7 +2979,7 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
 
 
 class JSONModel(MinimalTableModel):
-    """A model of JSON array data, used by DataStoreForm.
+    """A model of JSON array data, used by TreeViewForm.
     TODO: Handle the JSON object data type.
 
     Attributes:

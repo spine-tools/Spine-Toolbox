@@ -156,7 +156,7 @@ class DataConnection(ProjectItem):
         self.populate_data_list(data_files)
 
     @Slot(bool, name="open_directory")
-    def open_directory(self, checked):
+    def open_directory(self, checked=False):
         """Open file explorer in Data Connection data directory."""
         url = "file:///" + self.data_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -165,7 +165,7 @@ class DataConnection(ProjectItem):
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(bool, name="add_references")
-    def add_references(self, checked):
+    def add_references(self, checked=False):
         """Let user select references to files for this data connection."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self._toolbox, "Add file references", APPLICATION_PATH, "*.*")
@@ -180,7 +180,7 @@ class DataConnection(ProjectItem):
         self.populate_reference_list(self.references)
 
     @Slot(bool, name="remove_references")
-    def remove_references(self, checked):
+    def remove_references(self, checked=False):
         """Remove selected references from reference list.
         Removes all references if nothing is selected.
         """
@@ -197,7 +197,7 @@ class DataConnection(ProjectItem):
         self.populate_reference_list(self.references)
 
     @Slot(bool, name="copy_to_project")
-    def copy_to_project(self, checked):
+    def copy_to_project(self, checked=False):
         """Copy files in the file reference list to project and update Data QTreeView."""
         if not self.references:
             self._toolbox.msg_warning.emit("No files to copy")
@@ -253,7 +253,7 @@ class DataConnection(ProjectItem):
                     self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
     @Slot(bool, name="call_infer_datapackage")
-    def call_infer_datapackage(self, checked):
+    def call_infer_datapackage(self, checked=False):
         """Infer datapackage from CSV files in data directory."""
         data_files = self.data_files()
         if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:

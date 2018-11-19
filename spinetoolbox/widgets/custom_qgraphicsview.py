@@ -18,7 +18,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Signal, Slot, Qt, QRectF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
@@ -56,7 +56,6 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QList<QRectF>", name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Resize scene as it changes."""
-        # logging.debug("scene changed. {0}".format(changed_qrects))
         self.resize_scene()
 
     def make_new_scene(self):
@@ -73,14 +72,6 @@ class CustomQGraphicsView(QGraphicsView):
         """
         self._scene.changed.connect(self.scene_changed)
         self.resize_scene(recenter=True)
-        # TODO: try to make a nice scene background, or remove if nothing seems good
-        # pixmap = QPixmap(":/symbols/Spine_symbol.png").scaled(64, 64)
-        # painter = QPainter(pixmap)
-        # alpha = QPixmap(pixmap.size())
-        # alpha.fill(QColor(255, 255, 255, 255-24))
-        # painter.drawPixmap(0, 0, alpha)
-        # painter.end()
-        # self.setBackgroundBrush(QBrush(pixmap))
 
     def resize_scene(self, recenter=False):
         """Make the scene at least as big as the viewport."""
@@ -291,6 +282,78 @@ class CustomQGraphicsView(QGraphicsView):
         """Make the scene at least as big as the viewport."""
         super().resizeEvent(event)
         self.resize_scene(recenter=True)
+
+
+class ZoomQGraphicsView(QGraphicsView):
+    """A QGraphicsView with zoom actions."""
+
+    def __init__(self, parent):
+        """Init class."""
+        super().__init__(parent)
+        self._zoom_factor_base = 1.0015
+        self.target_viewport_pos = None
+        self.target_scene_pos = QPointF(0, 0)
+        self.zooming = False
+
+    def mouseMoveEvent(self, event):
+        """Register mouse position to recenter the scene after zoom."""
+        super().mouseMoveEvent(event)
+        if self.target_viewport_pos is not None:
+            delta = self.target_viewport_pos - event.pos()
+            if delta.manhattanLength() <= 3:
+                return
+        self.target_viewport_pos = event.pos()
+        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        if event.orientation() != Qt.Vertical:
+            event.ignore()
+            return
+        event.accept()
+        angle = event.angleDelta().y()
+        self.gentle_zoom(angle)
+
+    def gentle_zoom(self, angle):
+        """Perform the zoom."""
+        if self.zooming:
+            logging.debug("Trying to zoom again while still zooming.")
+            return
+        self.zooming = True
+        factor = self._zoom_factor_base ** angle
+        self.scale(factor, factor)
+        self.centerOn(self.target_scene_pos)
+        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+        self.centerOn(self.mapToScene(viewport_center))
+        self.zooming = False
+
+    def resizeEvent(self, event):
+        """Scale view so the scene fits best in it."""
+        super().resizeEvent(event)
+        scene_rect = self.sceneRect()
+        scene_extent = max(scene_rect.width(), scene_rect.height())
+        old_size = event.oldSize()
+        if not old_size.isEmpty():
+            old_extent = min(old_size.height(), old_size.width())
+            old_factor = old_extent / scene_extent
+            self.scale(1 / old_factor, 1 / old_factor)
+        size = event.size()
+        extent = min(size.height(), size.width())
+        factor = extent / scene_extent
+        self.scale(factor, factor)
+
+    def scale_to_fit_scene(self):
+        """Scale view so the scene fits best in it."""
+        if not self.isVisible():
+            return
+        scene_rect = self.sceneRect()
+        scene_extent = max(scene_rect.width(), scene_rect.height())
+        self.resetTransform()
+        size = self.size()
+        extent = min(size.height(), size.width())
+        factor = extent / scene_extent
+        self.scale(factor, factor)
 
 
 class CustomQGraphicsScene(QGraphicsScene):

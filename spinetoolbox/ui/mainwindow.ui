@@ -66,10 +66,16 @@
        <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
+       <enum>QFrame::Plain</enum>
+      </property>
+      <property name="lineWidth">
+       <number>1</number>
       </property>
       <property name="text">
-       <string>Main View</string>
+       <string>Design View</string>
+      </property>
+      <property name="margin">
+       <number>2</number>
       </property>
      </widget>
     </item>
@@ -115,6 +121,9 @@
      <height>21</height>
     </rect>
    </property>
+   <property name="nativeMenuBar">
+    <bool>false</bool>
+   </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
      <string>File</string>
@@ -134,6 +143,7 @@
     </property>
     <addaction name="actionUser_Guide"/>
     <addaction name="actionAbout_Qt"/>
+    <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -239,7 +249,7 @@
     </size>
    </property>
    <property name="windowTitle">
-    <string>Subprocess Output</string>
+    <string>Process Log</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
@@ -299,7 +309,7 @@
     </size>
    </property>
    <property name="windowTitle">
-    <string>Item Info</string>
+    <string>Properties</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -322,7 +332,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTabWidget" name="tabWidget_item_info">
+      <widget class="QTabWidget" name="tabWidget_item_properties">
        <property name="currentIndex">
         <number>4</number>
        </property>
@@ -361,6 +371,12 @@
            <property name="styleSheet">
             <string notr="true">background-color: rgb(0,255, 255);
 color: rgb(255, 255, 255);</string>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="lineWidth">
+            <number>1</number>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1635,7 +1651,7 @@ color: rgb(255, 255, 255);</string>
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Open map</string>
+              <string>Graph view</string>
              </property>
             </widget>
            </item>
@@ -1651,7 +1667,10 @@ color: rgb(255, 255, 255);</string>
          <item>
           <widget class="QLabel" name="label_no_selection">
            <property name="text">
-            <string>Select a project item to view its information here</string>
+            <string>Select a project item to view its properties</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
            </property>
           </widget>
          </item>
@@ -1664,7 +1683,7 @@ color: rgb(255, 255, 255);</string>
   </widget>
   <widget class="QDockWidget" name="dockWidget_julia_repl">
    <property name="windowTitle">
-    <string>Julia REPL</string>
+    <string>Julia Console</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
@@ -1968,7 +1987,7 @@ color: rgb(255, 255, 255);</string>
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About Spine Toolbox</string>
+    <string>About...</string>
    </property>
    <property name="shortcut">
     <string>F12</string>
@@ -2122,7 +2141,7 @@ color: rgb(255, 255, 255);</string>
   </action>
   <action name="actionAbout_Qt">
    <property name="text">
-    <string>About Qt</string>
+    <string>About Qt...</string>
    </property>
    <property name="shortcut">
     <string>F11</string>

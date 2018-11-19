@@ -20,6 +20,7 @@ import sys
 import logging
 from PySide2.QtWidgets import QApplication
 from ui_main import ToolboxUI
+from helpers import spinedatabase_api_version_check
 
 
 def main(argv):
@@ -28,10 +29,11 @@ def main(argv):
     Args:
         argv (list): Command line arguments
     """
-
     logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s: %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
+    if not spinedatabase_api_version_check():
+        return 0
     app = QApplication(argv)
     window = ToolboxUI()
     window.show()

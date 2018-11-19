@@ -59,7 +59,7 @@ class CheckBoxDelegate(QItemDelegate):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.checkbox_pressed = False
+        self.mouse_press_point = QPoint()
 
     def createEditor(self, parent, option, index):
         """Important, otherwise an editor is created if the user clicks in this cell.
@@ -68,18 +68,24 @@ class CheckBoxDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         """Paint a checkbox without the label."""
-        checked = True
+        if (option.state & QStyle.State_Selected):
+            painter.fillRect(option.rect, option.palette.highlight())
+        checked = "True"
         if index.data() == "False" or not index.data():
-            checked = False
+            checked = "False"
+        elif index.data() == "Depends":
+            checked = "Depends"
         checkbox_style_option = QStyleOptionButton()
         if (index.flags() & Qt.ItemIsEditable) > 0:
             checkbox_style_option.state |= QStyle.State_Enabled
         else:
             checkbox_style_option.state |= QStyle.State_ReadOnly
-        if checked:
+        if checked == "True":
             checkbox_style_option.state |= QStyle.State_On
-        else:
+        elif checked == "False":
             checkbox_style_option.state |= QStyle.State_Off
+        elif checked == "Depends":
+            checkbox_style_option.state |= QStyle.State_NoChange
         checkbox_style_option.rect = self.get_checkbox_rect(option)
         # noinspection PyArgumentList
         QApplication.style().drawControl(QStyle.CE_CheckBox, checkbox_style_option, painter)
@@ -95,16 +101,16 @@ class CheckBoxDelegate(QItemDelegate):
             return True
         if event.type() == QEvent.MouseButtonPress:
             if event.button() == Qt.LeftButton and self.get_checkbox_rect(option).contains(event.pos()):
-                self.checkbox_pressed = True
+                self.mouse_press_point = event.pos()
                 return True
         if event.type() == QEvent.MouseButtonRelease:
-            if self.checkbox_pressed and self.get_checkbox_rect(option).contains(event.pos()):
+            checkbox_rect = self.get_checkbox_rect(option)
+            if checkbox_rect.contains(self.mouse_press_point) and checkbox_rect.contains(event.pos()):
                 # Change the checkbox-state
-                # self.setModelData(None, model, index)
                 self.commit_data.emit(index)
-                self.checkbox_pressed = False
+                self.mouse_press_point = QPoint()
                 return True
-            self.checkbox_pressed = False
+            self.mouse_press_point = QPoint()
         return False
 
     def setModelData(self, editor, model, index):
@@ -114,13 +120,13 @@ class CheckBoxDelegate(QItemDelegate):
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
         checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
-        checkbox_point = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
-                                option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
-        return QRect(checkbox_point, checkbox_rect.size())
+        checkbox_center = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
+                                 option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
+        return QRect(checkbox_center, checkbox_rect.size())
 
 
-class DataStoreDelegate(QItemDelegate):
-    """A custom delegate for the parameter value models and views in DataStoreForm.
+class TreeViewDelegate(QItemDelegate):
+    """A custom delegate for the parameter value models and views in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -160,8 +166,8 @@ class JSONDelegate(QItemDelegate):
             editor.setGeometry(x, y, width, height)
 
 
-class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
-    """A delegate for the object parameter value model and view in DataStoreForm.
+class ObjectParameterValueDelegate(TreeViewDelegate, JSONDelegate):
+    """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -173,7 +179,7 @@ class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         h = header.index
-        if header[index.column()] in ('object_class_name', 'parameter_name'):
+        if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
             return JSONEditor(parent)
@@ -218,8 +224,8 @@ class ObjectParameterValueDelegate(DataStoreDelegate, JSONDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class ObjectParameterDelegate(DataStoreDelegate):
-    """A delegate for the object parameter model and view in DataStoreForm.
+class ObjectParameterDelegate(TreeViewDelegate):
+    """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -244,8 +250,8 @@ class ObjectParameterDelegate(DataStoreDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
-    """A delegate for the relationship parameter value model and view in DataStoreForm.
+class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
+    """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -332,8 +338,8 @@ class RelationshipParameterValueDelegate(DataStoreDelegate, JSONDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterDelegate(DataStoreDelegate):
-    """A delegate for the object parameter model and view in DataStoreForm.
+class RelationshipParameterDelegate(TreeViewDelegate):
+    """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
         parent (QTableView): widget where the delegate is installed
@@ -357,7 +363,7 @@ class RelationshipParameterDelegate(DataStoreDelegate):
         else:
             editor.set_data(index.data(Qt.EditRole))
 
-class AddObjectsDelegate(DataStoreDelegate):
+class AddObjectsDelegate(TreeViewDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
@@ -383,7 +389,7 @@ class AddObjectsDelegate(DataStoreDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class AddRelationshipClassesDelegate(DataStoreDelegate):
+class AddRelationshipClassesDelegate(TreeViewDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
@@ -409,7 +415,7 @@ class AddRelationshipClassesDelegate(DataStoreDelegate):
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
 
 
-class AddRelationshipsDelegate(DataStoreDelegate):
+class AddRelationshipsDelegate(TreeViewDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:

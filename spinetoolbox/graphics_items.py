@@ -21,8 +21,8 @@ import os
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
-    QGraphicsItemAnimation, QGraphicsPixmapItem, QStyle
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient
+    QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle
+from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, QFont
 from math import atan2, degrees, sin, cos, pi
 
 
@@ -1021,3 +1021,204 @@ class LinkDrawer(QGraphicsPathItem):
             path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
+
+
+class ObjectItem(QGraphicsPixmapItem):
+    """Object item to use with GraphViewForm.
+
+    Attributes:
+        pixmap (QPixmap): pixmap to use
+        x (float): x-coordinate of central point
+        y (float): y-coordinate of central point
+        extent (int): extent
+    """
+    def __init__(self, pixmap, x, y, extent):
+        super().__init__()
+        self.extent = extent
+        self.setPixmap(pixmap.scaled(self.extent, self.extent))
+        self.setPos(x - 0.5 * self.extent, y - 0.5 * self.extent)
+        self.label_item = None
+        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.incoming_arc_items = list()
+        self.outgoing_arc_items = list()
+        self.setAcceptHoverEvents(True)
+        self.setZValue(-1)
+
+    def shape(self):
+        """Return shape."""
+        path = QPainterPath()
+        path.addRect(self.boundingRect())
+        return path
+
+    def set_label_item(self, item):
+        self.label_item = item
+        self.label_item.setPos(self.x() + self.extent, self.y())
+
+    def add_incoming_arc_item(self, arc_item):
+        """Add an ArcItem to the list of incoming arcs."""
+        self.incoming_arc_items.append(arc_item)
+
+    def add_outgoing_arc_item(self, arc_item):
+        """Add an ArcItem to the list of outgoing arcs."""
+        self.outgoing_arc_items.append(arc_item)
+
+    def mouseMoveEvent(self, event):
+        """Reset position of text, incoming and outgoing arcs."""
+        super().mouseMoveEvent(event)
+        self.label_item.setPos(self.x() + self.extent, self.y())
+        for item in self.outgoing_arc_items:
+            item.set_source_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+        for item in self.incoming_arc_items:
+            item.set_destination_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+
+    def hoverEnterEvent(self, event):
+        """Show text on hover."""
+        for item in self.incoming_arc_items:
+            item.is_dst_hovered = True
+        for item in self.outgoing_arc_items:
+            item.is_src_hovered = True
+
+    def hoverLeaveEvent(self, event):
+        """Hide text on hover."""
+        for item in self.incoming_arc_items:
+            item.is_dst_hovered = False
+        for item in self.outgoing_arc_items:
+            item.is_src_hovered = False
+
+
+class ArcItem(QGraphicsLineItem):
+    """Arc item to use with GraphViewForm.
+
+    Attributes:
+        x1, y1 (float): source position
+        x2, y2 (float): destination position
+        width (int): Preferred line width
+    """
+    def __init__(self, x1, y1, x2, y2, width):
+        """Init class."""
+        super().__init__(x1, y1, x2, y2)
+        self.label_item = None
+        self.width = width
+        self.is_src_hovered = False
+        self.is_dst_hovered = False
+        pen = QPen(QColor(64, 64, 64))
+        pen.setWidth(self.width)
+        pen.setCapStyle(Qt.RoundCap)
+        self.setPen(pen)
+        self.setAcceptHoverEvents(True)
+        self.setZValue(-2)
+        self.shape_item = QGraphicsLineItem(x1, y1, x2, y2)
+        shape_pen = QPen()
+        shape_pen.setWidth(3 * self.width)
+        self.shape_item.setPen(shape_pen)
+        self.shape_item.hide()
+
+    def shape(self):
+        return self.shape_item.shape()
+
+    def set_label_item(self, item):
+        self.label_item = item
+        self.label_item.hide()
+
+    def set_source_point(self, x, y):
+        """Reset the source point. Used when moving ObjectItems around."""
+        x1 = x
+        y1 = y
+        x2 = self.line().x2()
+        y2 = self.line().y2()
+        self.setLine(x1, y1, x2, y2)
+        self.shape_item.setLine(x1, y1, x2, y2)
+
+    def set_destination_point(self, x, y):
+        """Reset the destination point. Used when moving ObjectItems around."""
+        x1 = self.line().x1()
+        y1 = self.line().y1()
+        x2 = x
+        y2 = y
+        self.setLine(x1, y1, x2, y2)
+        self.shape_item.setLine(x1, y1, x2, y2)
+
+    def hoverEnterEvent(self, event):
+        """Show label if src and dst are not hovered."""
+        self.label_item.setPos(event.pos().x(), event.pos().y())
+        if self.is_src_hovered or self.is_dst_hovered:
+            return
+        self.label_item.show()
+
+    def hoverMoveEvent(self, event):
+        """Show label if src and dst are not hovered."""
+        self.label_item.setPos(event.pos().x(), event.pos().y())
+        if self.is_src_hovered or self.is_dst_hovered:
+            return
+        self.label_item.show()
+
+    def hoverLeaveEvent(self, event):
+        """Hide label."""
+        self.label_item.hide()
+
+
+class ObjectLabelItem(QGraphicsRectItem):
+    """Label item for objects to use with GraphViewForm.
+
+    Attributes:
+        object_name (str): object name
+        font (QFont): font to display the text
+        color (QColor): color to paint the label
+    """
+    def __init__(self, object_name, font, color):
+        super().__init__()
+        self.title_item = CustomTextItem(object_name, font)
+        self.title_item.setParentItem(self)
+        self.setRect(self.childrenBoundingRect())
+        self.setBrush(QBrush(color))
+        self.setPen(Qt.NoPen)
+        self.setZValue(0)
+
+
+class ArcLabelItem(QGraphicsRectItem):
+    """Label item for arcs to use with GraphViewForm.
+
+    Attributes:
+        relationship_class_name (str): relationship class name
+        object_pixmaps (list): object pixmaps
+        object_names (list): object names
+        extent (int): extent of object items
+        font (QFont): font to display the text
+        color (QColor): color to paint the label
+    """
+    def __init__(self, relationship_class_name, object_pixmaps, object_names, extent, font, color):
+        super().__init__()
+        self.title_item = CustomTextItem(relationship_class_name, font)
+        self.title_item.setParentItem(self)
+        self.object_items = []
+        y_offset = self.title_item.boundingRect().height()
+        for k in range(len(object_pixmaps)):
+            object_pixmap = object_pixmaps[k]
+            object_name = object_names[k]
+            object_item = ObjectItem(object_pixmap, .5 * extent, y_offset + (k + .5) * extent, extent)
+            object_item.setParentItem(self)
+            label_item = ObjectLabelItem(object_name, font, Qt.transparent)
+            label_item.setParentItem(self)
+            object_item.set_label_item(label_item)
+            self.object_items.append(object_item)
+        self.setRect(self.childrenBoundingRect())
+        self.setBrush(QBrush(color))
+        self.setPen(Qt.NoPen)
+        self.setZValue(1)
+
+
+class CustomTextItem(QGraphicsSimpleTextItem):
+    """Custom text item to use with GraphViewForm.
+
+    Attributes:
+        text (str): text to show
+        font (QFont): font to display the text
+    """
+    def __init__(self, text, font):
+        """Init class."""
+        super().__init__(text)
+        font.setWeight(QFont.Black)
+        self.setFont(font)
+        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        self.setPen(outline_pen)

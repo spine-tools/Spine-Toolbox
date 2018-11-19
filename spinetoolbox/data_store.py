@@ -16,6 +16,7 @@ Module for data store class.
 :date:   18.12.2017
 """
 
+import sys
 import os
 import getpass
 import logging
@@ -23,14 +24,14 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
-from widgets.data_store_widget import DataStoreForm
+from widgets.tree_view_widget import TreeViewForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-import spinedatabase_api
+from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
 
 
 class DataStore(ProjectItem):
@@ -59,7 +60,7 @@ class DataStore(ProjectItem):
         self.selected_db = ""
         self.selected_username = ""
         self.selected_password = ""
-        self.data_store_treeview = None
+        self.tree_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -70,7 +71,6 @@ class DataStore(ProjectItem):
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
         self.load_reference(reference)
-        # TODO: try and create reference from first sqlite file in data directory?
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
@@ -78,7 +78,7 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.open_treeview
+        s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.call_open_treeview
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
@@ -163,8 +163,6 @@ class DataStore(ProjectItem):
         if not file_path:  # Cancel button clicked
             return
         filename = os.path.split(file_path)[1]
-        if filename.endswith(".sqlite"):
-            filename = filename[:-len(".sqlite")]
         # Update UI
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
@@ -236,30 +234,57 @@ class DataStore(ProjectItem):
         current_item = self._toolbox.project_item_model.project_item(current)
         if current_item == self:
             self.save_selections()
-        # NOTE: Another option would be to update the current item's reference directly from the ui,
-        # but that'd require another method.
-        self.update_reference()
+        self.save_reference()
         return self._reference
 
-    def update_reference(self):
+    def save_reference(self):
         """Update reference from selections."""
-        # TODO: Updating an SQLite reference is the only one that is implemented.
         if not self.selected_dialect:
-            self._reference = {
-                'database': '',
-                'username': '',
-                'url': ''
-            }
-        if self.selected_dialect == 'sqlite':
-            database = os.path.basename(self.selected_sqlite_file)
+            self._reference = None
+            return
+        if self.selected_dialect == 'mssql':
+            if not self.selected_dsn:
+                return None
+            dsn = self.selected_dsn
             username = self.selected_username
+            password = self.selected_password
+            url = 'mssql+pyodbc://'
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += '@' + dsn
+            database = dsn
+        elif self.selected_dialect == 'sqlite':
             sqlite_file = self.selected_sqlite_file
+            if not sqlite_file:
+                return None
+            if not os.path.isfile(sqlite_file):
+                return None
             url = 'sqlite:///{0}'.format(sqlite_file)
+            database = os.path.basename(self.selected_sqlite_file)
+            username = getpass.getuser()
         else:
-            # TODO: This needs more work
+            host = self.selected_host
+            if not host:
+                return None
             database = self.selected_db
+            if not database:
+                return None
+            port = self.selected_port
             username = self.selected_username
-            url = ""
+            password = self.selected_password
+            dbapi = SQL_DIALECT_API[dialect]
+            url = "+".join([dialect, dbapi]) + "://"
+            if username:
+                url += username
+            if password:
+                url += ":" + password
+            url += "@" + host
+            if port:
+                url += ":" + port
+            url += "/" + database
+        # Save reference
         self._reference = {
             'database': database,
             'username': username,
@@ -292,7 +317,7 @@ class DataStore(ProjectItem):
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(0)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
         self._toolbox.ui.lineEdit_SQLite_file.setEnabled(True)
         self._toolbox.ui.toolButton_browse.setEnabled(True)
         self._toolbox.ui.lineEdit_host.setEnabled(False)
@@ -304,7 +329,7 @@ class DataStore(ProjectItem):
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(0)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
         self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
         self._toolbox.ui.toolButton_browse.setEnabled(False)
         self._toolbox.ui.lineEdit_host.setEnabled(True)
@@ -361,20 +386,20 @@ class DataStore(ProjectItem):
             msg.exec_()  # Show message box
             if msg.clickedButton() == pip_button:
                 if not self.install_dbapi_pip(dbapi):
-                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                     return False
             elif msg.clickedButton() == conda_button:
                 if not self.install_dbapi_conda(dbapi):
-                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                     return False
             else:
-                self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                 msg = "Unable to use dialect '{}'.".format(dialect)
                 self._toolbox.msg_error.emit(msg)
                 return False
             # Check that dialect is not found
             if not self.check_dialect(dialect):
-                self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
+                self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                 return False
             return True
 
@@ -382,8 +407,10 @@ class DataStore(ProjectItem):
     def install_dbapi_pip(self, dbapi):
         """Install DBAPI using pip."""
         self._toolbox.msg.emit("Installing module <b>{0}</b> using pip".format(dbapi))
-        program = "pip"
+        program = sys.executable
         args = list()
+        args.append("-m")
+        args.append("pip")
         args.append("install")
         args.append("{0}".format(dbapi))
         pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
@@ -401,7 +428,6 @@ class DataStore(ProjectItem):
             import conda.cli
         except ImportError:
             self._toolbox.msg_error.emit("Conda not found. Installing {0} failed.".format(dbapi))
-            self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
         try:
             self._toolbox.msg.emit("Installing module <b>{0}</b> using Conda".format(dbapi))
@@ -410,7 +436,6 @@ class DataStore(ProjectItem):
             return True
         except Exception as e:
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
-            self._toolbox.ui.comboBox_dialect.setCurrentIndex(0)
             return False
 
     def make_reference(self):
@@ -494,36 +519,41 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    # @busy_effect
-    @Slot(bool, name="open_treeview")
-    def open_treeview(self, checked=False):
+    @Slot(bool, name="call_open_treeview")
+    def call_open_treeview(self, checked=False):
+        """Call method to open the treeview."""
+        # NOTE: This is just so we can use @busy_effect with the open_treeview method
+        self.open_treeview()
+
+    @busy_effect
+    def open_treeview(self):
         """Open reference in Data Store form."""
-        # TODO: How to make busy_effect work with the new style of connecting&disconnecting signals?
-        # TODO: check if the reference has changed, in which case we need to create a new form.
-        if self.data_store_treeview:
-            self.data_store_treeview.raise_()
-            return
-        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
-            self._toolbox.msg_warning.emit("Please select dialect first")
-            return
         reference = self.make_reference()
         if not reference:
             return
+        if self.tree_view_form:
+            # If the url hasn't changed, just raise the current form
+            if self.tree_view_form.db_map.db_url == reference['url']:
+                self.tree_view_form.raise_()
+                return
+            # Disconnect signal or else the slot gets called after we've created the new form
+            self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
+            self.tree_view_form.close()
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
         try:
-            db_map = spinedatabase_api.DiffDatabaseMapping(db_url, username)
-        except spinedatabase_api.SpineDBAPIError as e:
+            db_map = DiffDatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.data_store_treeview = DataStoreForm(self, db_map, database)
-        self.data_store_treeview.destroyed.connect(self.data_store_treeview_destroyed)
-        self.data_store_treeview.show()
+        self.tree_view_form = TreeViewForm(self, db_map, database)
+        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
+        self.tree_view_form.show()
 
-    @Slot(name="data_store_treeview_destroyed")
-    def data_store_treeview_destroyed(self):
-        self.data_store_treeview = None
+    @Slot(name="tree_view_form_destroyed")
+    def tree_view_form_destroyed(self):
+        self.tree_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
@@ -573,9 +603,6 @@ class DataStore(ProjectItem):
         database = answer[0]
         if not database:
             return
-        # Remove .sqlite extension from given name if present so that it is not duplicated
-        if database.endswith(".sqlite"):
-            database = database[:-len(".sqlite")]
         filename = os.path.join(self.data_dir, database + ".sqlite")
         if os.path.isfile(filename):
             msg = "File <b>{}</b> already in <b>{}</b> project directory.<br/><br/>Overwrite?"\
@@ -588,14 +615,14 @@ class DataStore(ProjectItem):
         except OSError:
             pass
         url = "sqlite:///" + filename
-        spinedatabase_api.create_new_spine_database(url)
+        create_new_spine_database(url)
         username = getpass.getuser()
         self._reference = {
             'database': database,
             'username': username,
             'url': url
         }
-        # Update UI. NOTE: this assumes fresh Spine dbs are always created with the item selected. How can you do it in another way??
+        # Update UI
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
         self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(filename))
