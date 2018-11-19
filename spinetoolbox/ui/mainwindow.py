@@ -416,16 +416,25 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setSpacing(6)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
-        self.pushButton_ds_open_treeview = QtWidgets.QPushButton(self.tab_data_store)
+        self.pushButton_ds_tree_view = QtWidgets.QPushButton(self.tab_data_store)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.pushButton_ds_open_treeview.sizePolicy().hasHeightForWidth())
-        self.pushButton_ds_open_treeview.setSizePolicy(sizePolicy)
-        self.pushButton_ds_open_treeview.setMinimumSize(QtCore.QSize(0, 0))
-        self.pushButton_ds_open_treeview.setMaximumSize(QtCore.QSize(120, 23))
-        self.pushButton_ds_open_treeview.setObjectName("pushButton_ds_open_treeview")
-        self.horizontalLayout_7.addWidget(self.pushButton_ds_open_treeview)
+        sizePolicy.setHeightForWidth(self.pushButton_ds_tree_view.sizePolicy().hasHeightForWidth())
+        self.pushButton_ds_tree_view.setSizePolicy(sizePolicy)
+        self.pushButton_ds_tree_view.setMinimumSize(QtCore.QSize(0, 0))
+        self.pushButton_ds_tree_view.setMaximumSize(QtCore.QSize(120, 23))
+        self.pushButton_ds_tree_view.setObjectName("pushButton_ds_tree_view")
+        self.horizontalLayout_7.addWidget(self.pushButton_ds_tree_view)
+        self.pushButton_ds_graph_view = QtWidgets.QPushButton(self.tab_data_store)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_ds_graph_view.sizePolicy().hasHeightForWidth())
+        self.pushButton_ds_graph_view.setSizePolicy(sizePolicy)
+        self.pushButton_ds_graph_view.setMaximumSize(QtCore.QSize(120, 23))
+        self.pushButton_ds_graph_view.setObjectName("pushButton_ds_graph_view")
+        self.horizontalLayout_7.addWidget(self.pushButton_ds_graph_view)
         spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_7.addItem(spacerItem1)
         self.pushButton_ds_open_directory = QtWidgets.QPushButton(self.tab_data_store)
@@ -1005,8 +1014,9 @@ class Ui_MainWindow(object):
         self.label_password.setText(QtWidgets.QApplication.translate("MainWindow", "Password", None, -1))
         self.label_dsn.setText(QtWidgets.QApplication.translate("MainWindow", "DSN", None, -1))
         self.label_path.setText(QtWidgets.QApplication.translate("MainWindow", "Path", None, -1))
-        self.pushButton_ds_open_treeview.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
-        self.pushButton_ds_open_treeview.setText(QtWidgets.QApplication.translate("MainWindow", "Open treeview", None, -1))
+        self.pushButton_ds_tree_view.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
+        self.pushButton_ds_tree_view.setText(QtWidgets.QApplication.translate("MainWindow", "Tree view", None, -1))
+        self.pushButton_ds_graph_view.setText(QtWidgets.QApplication.translate("MainWindow", "Graph view", None, -1))
         self.pushButton_ds_open_directory.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Store directory in file browser</p></body></html>", None, -1))
         self.pushButton_ds_open_directory.setText(QtWidgets.QApplication.translate("MainWindow", "Open directory...", None, -1))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_data_store), QtWidgets.QApplication.translate("MainWindow", "Data Store", None, -1))
@@ -1087,8 +1097,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

@@ -1120,8 +1120,10 @@ class ToolboxUI(QMainWindow):
         d = self.project_item_model.project_item(ind)
         if option == "Open directory...":
             d.open_directory()  # Open data_dir of Data Connection or Data Store
-        elif option == "Open treeview...":
-            d.open_treeview()  # Open treeview of Data Store
+        elif option == "Open tree view...":
+            d.open_tree_view()  # Open tree view of Data Store
+        elif option == "Open graph view...":
+            d.open_graph_view()  # Open graph view of Data Store
         elif option == "Execute":
             d.execute()
         elif option == "Results...":
@@ -1201,6 +1203,8 @@ class ToolboxUI(QMainWindow):
         for data_store in self.project_item_model.items("Data Stores"):
             if data_store.tree_view_form:
                 data_store.tree_view_form.close()
+            if data_store.graph_view_form:
+                data_store.graph_view_form.close()
         for view in self.project_item_model.items("Views"):
             for graph_view_form in view.graph_view_form_refs.values():
                 graph_view_form.close()

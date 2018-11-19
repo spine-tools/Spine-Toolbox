@@ -186,7 +186,14 @@ class Ui_MainWindow(object):
         icon2.addPixmap(QtGui.QPixmap(":/icons/nok.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRollback.setIcon(icon2)
         self.actionRollback.setObjectName("actionRollback")
+        self.actionClose = QtWidgets.QAction(MainWindow)
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/icons/close.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionClose.setIcon(icon3)
+        self.actionClose.setObjectName("actionClose")
         self.menuGraph.addAction(self.actionBuild)
+        self.menuGraph.addSeparator()
+        self.menuGraph.addAction(self.actionClose)
         self.menuView.addAction(self.menuDock_Widgets.menuAction())
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
@@ -218,6 +225,8 @@ class Ui_MainWindow(object):
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
         self.actionRollback.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Backspace", None, -1))
+        self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
+        self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
 from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsview import GraphViewGraphicsView

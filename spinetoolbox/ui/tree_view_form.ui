@@ -653,7 +653,7 @@
     <addaction name="actionImport"/>
     <addaction name="actionExport"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
+    <addaction name="actionClose"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -690,7 +690,7 @@
     <string>Ctrl+Backspace</string>
    </property>
   </action>
-  <action name="actionQuit">
+  <action name="actionClose">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>

@@ -19,7 +19,7 @@ Widget to show graph view form.
 import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
-    QAction, QGraphicsRectItem
+    QAction, QGraphicsRectItem, QMessageBox, QCheckBox
 from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication, QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
@@ -41,17 +41,18 @@ class GraphViewForm(QMainWindow):
     """A widget to show the graph view.
 
     Attributes:
-        view (View): View instance that owns this form
+        owner (View or Data Store): View or DataStore instance
         db_map (DiffDatabaseMapping): The object relational database mapping
         database (str): The database name
+        read_only (bool): Whether or not the form should be editable
     """
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
 
-    def __init__(self, view, db_map, database, read_only=False):
+    def __init__(self, owner, db_map, database, read_only=False):
         """Initialize class."""
         super().__init__(flags=Qt.Window)  # Setting the parent inherits the stylesheet
-        self._view = view
+        self._owner = owner
         self.db_map = db_map
         self.database = database
         self.read_only = read_only
@@ -93,7 +94,7 @@ class GraphViewForm(QMainWindow):
         self.connect_signals()
         self.restore_ui()
         self.add_toggle_view_actions()
-        self.set_commit_rollback_actions_enabled(False)
+        self.init_commit_rollback_actions()
         self.build_graph()
         self.setWindowTitle("Data store graph view    -- {} --".format(database))
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -158,6 +159,7 @@ class GraphViewForm(QMainWindow):
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
         self.ui.treeView.selectionModel().selectionChanged.connect(self.receive_item_tree_selection_changed)
+        self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionBuild.triggered.connect(self.build_graph)
         self.ui.graphicsView.item_dropped.connect(self.handle_item_dropped)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
@@ -194,6 +196,13 @@ class GraphViewForm(QMainWindow):
     def set_commit_rollback_actions_enabled(self, on):
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
+
+    def init_commit_rollback_actions(self):
+        if not self.read_only:
+            self.set_commit_rollback_actions_enabled(False)
+        else:
+            self.ui.menuSession.removeAction(self.ui.actionCommit)
+            self.ui.menuSession.removeAction(self.ui.actionRollback)
 
     @Slot(name="show_commit_session_dialog")
     def show_commit_session_dialog(self):
@@ -728,11 +737,12 @@ class GraphViewForm(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("graphViewWidget/windowSize")
-        window_state = self.qsettings.value("graphViewWidget/windowState")
-        window_pos = self.qsettings.value("graphViewWidget/windowPosition")
-        window_maximized = self.qsettings.value("graphViewWidget/windowMaximized", defaultValue='false')
-        n_screens = self.qsettings.value("graphViewWidget/n_screens", defaultValue=1)
+        graph_view_widget = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
+        window_size = self.qsettings.value("{0}/windowSize".format(graph_view_widget))
+        window_state = self.qsettings.value("{0}/windowState".format(graph_view_widget))
+        window_pos = self.qsettings.value("{0}/windowPosition".format(graph_view_widget))
+        window_maximized = self.qsettings.value("{0}/windowMaximized".format(graph_view_widget), defaultValue='false')
+        n_screens = self.qsettings.value("{0}/n_screens".format(graph_view_widget), defaultValue=1)
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -746,6 +756,42 @@ class GraphViewForm(QMainWindow):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
+    def show_commit_session_prompt(self):
+        """Shows the commit session message box."""
+        config = self._owner._toolbox._config
+        commit_at_exit = config.get("settings", "commit_at_exit")
+        if commit_at_exit == "0":
+            # Don't commit session and don't show message box
+            return
+        elif commit_at_exit == "1":  # Default
+            # Show message box
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Commit pending changes")
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setInformativeText("WARNING: If you choose not to commit, all changes will be lost.")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            chk = chkbox.checkState()
+            if answer == QMessageBox.Yes:
+                self.show_commit_session_dialog()
+                if chk == 2:
+                    # Save preference into config file
+                    config.set("settings", "commit_at_exit", "2")
+            else:
+                if chk == 2:
+                    # Save preference into config file
+                    config.set("settings", "commit_at_exit", "0")
+        elif commit_at_exit == "2":
+            # Commit session and don't show message box
+            self.show_commit_session_dialog()
+        else:
+            config.set("settings", "commit_at_exit", "1")
+        return
+
     def closeEvent(self, event=None):
         """Handle close window.
 
@@ -753,13 +799,16 @@ class GraphViewForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("graphViewWidget/windowSize", self.size())
-        self.qsettings.setValue("graphViewWidget/windowPosition", self.pos())
-        self.qsettings.setValue("graphViewWidget/windowState", self.saveState(version=1))
+        graph_view_widget = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
+        self.qsettings.setValue("{0}/windowSize".format(graph_view_widget), self.size())
+        self.qsettings.setValue("{0}/windowPosition".format(graph_view_widget), self.pos())
+        self.qsettings.setValue("{0}/windowState".format(graph_view_widget), self.saveState(version=1))
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("graphViewWidget/windowMaximized", True)
+            self.qsettings.setValue("{0}/windowMaximized".format(graph_view_widget), True)
         else:
-            self.qsettings.setValue("graphViewWidget/windowMaximized", False)
+            self.qsettings.setValue("{0}/windowMaximized".format(graph_view_widget), False)
+        if self.db_map.has_pending_changes():
+            self.show_commit_session_prompt()
         self.db_map.close()
         if event:
             event.accept()

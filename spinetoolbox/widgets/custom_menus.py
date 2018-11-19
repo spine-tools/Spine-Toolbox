@@ -80,7 +80,8 @@ class ProjectItemContextMenu(CustomContextMenu):
         if d.item_type == "Data Connection":
             self.add_action("Open directory...")
         elif d.item_type == "Data Store":
-            self.add_action("Open treeview...")
+            self.add_action("Open tree view...")
+            self.add_action("Open graph view...")
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Execute")

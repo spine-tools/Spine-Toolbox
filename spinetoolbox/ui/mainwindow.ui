@@ -871,7 +871,7 @@ color: rgb(255, 255, 255);</string>
             <number>6</number>
            </property>
            <item>
-            <widget class="QPushButton" name="pushButton_ds_open_treeview">
+            <widget class="QPushButton" name="pushButton_ds_tree_view">
              <property name="sizePolicy">
               <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -894,7 +894,26 @@ color: rgb(255, 255, 255);</string>
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Open treeview</string>
+              <string>Tree view</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_ds_graph_view">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>120</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="text">
+              <string>Graph view</string>
              </property>
             </widget>
            </item>

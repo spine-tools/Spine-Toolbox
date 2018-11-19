@@ -25,6 +25,7 @@ from PySide2.QtCore import Slot, QUrl
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
 from widgets.tree_view_widget import TreeViewForm
+from widgets.graph_view_widget import GraphViewForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
@@ -61,6 +62,7 @@ class DataStore(ProjectItem):
         self.selected_username = ""
         self.selected_password = ""
         self.tree_view_form = None
+        self.graph_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -78,7 +80,8 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_ds_open_treeview.clicked] = self.call_open_treeview
+        s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.call_open_tree_view
+        s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
@@ -519,15 +522,15 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    @Slot(bool, name="call_open_treeview")
-    def call_open_treeview(self, checked=False):
+    @Slot(bool, name="call_open_tree_view")
+    def call_open_tree_view(self, checked=False):
         """Call method to open the treeview."""
-        # NOTE: This is just so we can use @busy_effect with the open_treeview method
-        self.open_treeview()
+        # NOTE: This is just so we can use @busy_effect with the open_tree_view method
+        self.open_tree_view()
 
     @busy_effect
-    def open_treeview(self):
-        """Open reference in Data Store form."""
+    def open_tree_view(self):
+        """Open reference in tree view form."""
         reference = self.make_reference()
         if not reference:
             return
@@ -536,6 +539,7 @@ class DataStore(ProjectItem):
             if self.tree_view_form.db_map.db_url == reference['url']:
                 self.tree_view_form.raise_()
                 return
+            self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
         db_url = reference['url']
         database = reference['database']
@@ -546,12 +550,47 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit(e.msg)
             return
         self.tree_view_form = TreeViewForm(self, db_map, database)
-        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
         self.tree_view_form.show()
+        self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
     @Slot(name="tree_view_form_destroyed")
     def tree_view_form_destroyed(self):
         self.tree_view_form = None
+
+    @Slot(bool, name="call_open_graph_view")
+    def call_open_graph_view(self, checked=False):
+        """Call method to open the treeview."""
+        # NOTE: This is just so we can use @busy_effect with the open_graph_view method
+        self.open_graph_view()
+
+    @busy_effect
+    def open_graph_view(self):
+        """Open reference in graph view form."""
+        reference = self.make_reference()
+        if not reference:
+            return
+        if self.graph_view_form:
+            # If the url hasn't changed, just raise the current form
+            if self.graph_view_form.db_map.db_url == reference['url']:
+                self.graph_view_form.raise_()
+                return
+            self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
+            self.graph_view_form.close()
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            db_map = DiffDatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        self.graph_view_form.show()
+        self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
+
+    @Slot(name="graph_view_form_destroyed")
+    def graph_view_form_destroyed(self):
+        self.graph_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
