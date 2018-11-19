@@ -1040,11 +1040,12 @@ class ObjectItem(QGraphicsPixmapItem):
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
-        self.template_friends = list()
+        self.template_id_dim = {}  # NOTE: for a template item this should have one and only one entry
         self._original_pos = None
         self._merge_target = None
         self._merge = False
         self._bounce = False
+        self.add_relationship = None  # Method to call for adding relationship
         pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
         if pixmap.isNull():
             pixmap = QPixmap(":/icons/object_icon.png")
@@ -1055,14 +1056,17 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
 
-    def make_template(self):
+    def make_template(self, id, dimension, add_relationship):
+        """Make this object a template for a relationship."""
         self.is_template = True
+        self.template_id_dim[id] = dimension
+        self.add_relationship = add_relationship
         text_item = QGraphicsSimpleTextItem("?")
         font = QFont("", 0.75 * self._extent)
         font.setWeight(QFont.Black)
         text_item.setFont(font)
-        text_item.setBrush(Qt.red)
-        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        text_item.setBrush(Qt.white)
+        outline_pen = QPen(Qt.black, 8, Qt.SolidLine)
         text_item.setPen(outline_pen)
         text_item.setParentItem(self)
         rect = self.boundingRect()
@@ -1114,6 +1118,7 @@ class ObjectItem(QGraphicsPixmapItem):
             if item.is_template != self.is_template:
                 if item._object_class_name == self._object_class_name:
                     self._merge_target = item
+                    break
             self._bounce = True
             break
 
@@ -1121,28 +1126,50 @@ class ObjectItem(QGraphicsPixmapItem):
         """Merge, bounce, or just do nothing."""
         super().mouseReleaseEvent(event)
         if self._merge_target:
-            self.merge_item()
-        elif self._bounce:
+            if not self.merge_item():
+                self._bounce = True
+        if self._bounce:
             self.move_related_items_by(self._original_pos - self.pos())
             self.setPos(self._original_pos)
             self._original_pos = None
 
     def merge_item(self):
+        """Mege this item with the one from the _merge_target attribute.
+        Try and create a relationship if needed."""
         if self.is_template:
-            from_item = self
-            onto_item = self._merge_target
+            template = self
+            instance = self._merge_target
         else:
-            from_item = self._merge_target
-            onto_item = self
-        from_item.move_related_items_by(onto_item.pos() - from_item.pos())
-        for arc_item in from_item.outgoing_arc_items:
-            arc_item.src_item = onto_item
-        for arc_item in from_item.incoming_arc_items:
-            arc_item.dst_item = onto_item
-        onto_item.incoming_arc_items.extend(from_item.incoming_arc_items)
-        onto_item.outgoing_arc_items.extend(from_item.outgoing_arc_items)
-        self.scene().removeItem(from_item.label_item)
-        self.scene().removeItem(from_item)
+            template = self._merge_target
+            instance = self
+        template_buddies = template.template_buddies()
+        # Add template id-dimension to instance. We'll remove it if needed
+        instance.template_id_dim.update(template.template_id_dim)
+        if not [x for x in template_buddies if x.is_template and x != template]:
+            # The only template left is the one we're merging
+            template_id = list(template.template_id_dim)[0]
+            relationship_items = [x if x != template else instance for x in template_buddies]
+            if not template.add_relationship(template_id, relationship_items):
+                del instance.template_id_dim[template_id]
+                return False
+        template.move_related_items_by(instance.pos() - template.pos())
+        for arc_item in template.outgoing_arc_items:
+            arc_item.src_item = instance
+        for arc_item in template.incoming_arc_items:
+            arc_item.dst_item = instance
+        instance.incoming_arc_items.extend(template.incoming_arc_items)
+        instance.outgoing_arc_items.extend(template.outgoing_arc_items)
+        self.scene().removeItem(template.label_item)
+        self.scene().removeItem(template)
+        return True
+
+    def template_buddies(self):
+        """A list of all object items in the same template."""
+        if not self.is_template:  # NOTE: This shouldn't happen
+            logging.debug("template_buddies method shouldn't be called on a non-template item.")
+            return []
+        template_id = list(self.template_id_dim)[0]  # NOTE: a template item should have one and only one template
+        return [x for x in self.scene().items() if isinstance(x, ObjectItem) and template_id in x.template_id_dim]
 
     def move_related_items_by(self, pos_diff):
         """Move related items."""
@@ -1188,6 +1215,7 @@ class ArcItem(QGraphicsLineItem):
         self.is_src_hovered = False
         self.is_dst_hovered = False
         self.is_template = False
+        self.template_id = None
         src_x = src_item.sceneBoundingRect().center().x()
         src_y = src_item.sceneBoundingRect().center().y()
         dst_x = dst_item.sceneBoundingRect().center().x()
@@ -1210,10 +1238,18 @@ class ArcItem(QGraphicsLineItem):
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
 
-    def make_template(self):
+    def make_template(self, template_id):
         self.is_template = True
+        self.template_id = template_id
         pen = self.pen()
         pen.setStyle(Qt.DotLine)
+        self.setPen(pen)
+
+    def remove_template(self):
+        self.is_template = False
+        self.template_id = None
+        pen = self.pen()
+        pen.setStyle(Qt.SolidLine)
         self.setPen(pen)
 
     def shape(self):
@@ -1298,5 +1334,6 @@ class CustomTextItem(QGraphicsSimpleTextItem):
         self.setText(text)
         font.setWeight(QFont.Black)
         self.setFont(font)
-        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        self.setBrush(Qt.black)
+        outline_pen = QPen(Qt.white, 4, Qt.SolidLine)
         self.setPen(outline_pen)

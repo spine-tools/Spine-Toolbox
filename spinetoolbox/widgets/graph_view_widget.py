@@ -22,6 +22,7 @@ from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessag
     QAction, QGraphicsRectItem
 from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication, QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
@@ -66,8 +67,10 @@ class GraphViewForm(QMainWindow):
         self.arc_object_names_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
-        self.object_template_inds = list()
-        self.arc_template_inds = list()
+        self.template_id = 1
+        self.relationship_class_dict = {}  # template_id => relationship_class_name, relationship_class_id
+        self.object_template_id_dim_tuples = {}
+        self.arc_template_ids = {}
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
@@ -276,7 +279,6 @@ class GraphViewForm(QMainWindow):
         last_object_name_list = self.object_name_list.copy()
         self.object_name_list = list()
         self.object_class_name_list = list()
-        selection_model = self.ui.treeView.selectionModel()
         root_item = self.object_tree_model.root_item
         for i in range(root_item.rowCount()):
             object_class_name_item = root_item.child(i, 0)
@@ -285,7 +287,7 @@ class GraphViewForm(QMainWindow):
                 object_name_item = object_class_name_item.child(j, 0)
                 object_name = object_name_item.data(Qt.EditRole)
                 index = self.object_tree_model.indexFromItem(object_name_item)
-                if selection_model.isSelected(index):
+                if self.ui.treeView.selectionModel().isSelected(index):
                     self.object_name_list.append(object_name)
                     self.object_class_name_list.append(object_class_name)
         if last_object_name_list and last_object_name_list == self.object_name_list:
@@ -330,21 +332,21 @@ class GraphViewForm(QMainWindow):
                 self.arc_object_class_names_list.append(arc_object_class_names)
         # Add template items hanging around
         scene = self.ui.graphicsView.scene()
-        self.object_template_inds = list()
-        self.arc_template_inds = list()
         if scene:
             object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.is_template]
             object_ind = len(self.object_name_list)
+            self.object_template_id_dim_tuples = {}
             object_ind_dict = {}
             for item in object_items:
                 object_class_name = item._object_class_name
                 self.object_name_list.append(object_class_name)
                 self.object_class_name_list.append(object_class_name)
                 object_ind_dict[item] = object_ind
-                self.object_template_inds.append(object_ind)
+                self.object_template_id_dim_tuples[object_ind] = list(item.template_id_dim.items())[0]
                 object_ind += 1
-            arc_ind = len(self.arc_object_names_list)
             arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
+            arc_ind = len(self.arc_object_names_list)
+            self.arc_template_ids = {}
             for item in arc_items:
                 src_item = item.src_item
                 dst_item = item.dst_item
@@ -379,28 +381,27 @@ class GraphViewForm(QMainWindow):
                 self.arc_relationship_class_name_list.append("")
                 self.arc_object_names_list.append("")
                 self.arc_object_class_names_list.append("")
-                self.arc_template_inds.append(arc_ind)
+                self.arc_template_ids[arc_ind] = item.template_id
                 arc_ind += 1
         return True
 
-    def shortest_path_matrix(self):
+    def shortest_path_matrix(self, object_name_list, src_ind_list, dst_ind_list, length):
         """Return the shortest-path matrix."""
-        N = len(self.object_name_list)
+        N = len(object_name_list)
         if not N:
             return None
         dist = np.zeros((N, N))
-        src_ind = arr(self.src_ind_list)
-        dst_ind = arr(self.dst_ind_list)
-        max_sep = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
+        src_ind = arr(src_ind_list)
+        dst_ind = arr(dst_ind_list)
+        max_sep = max([self.font_metric.width(x) for x in object_name_list], default=0)
         try:
-            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = self._spacing_factor * max_sep
+            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = length
         except IndexError:
             pass
         d = dijkstra(dist, directed=False)
         # Remove infinites and zeros
-        # d[d == np.inf] = np.max(d[d != np.inf])
-        d[d == np.inf] = self._spacing_factor * max_sep * 3
-        d[d == 0] = self._spacing_factor * max_sep * 1e-6
+        d[d == np.inf] = length * 3
+        d[d == 0] = length * 1e-6
         return d
 
     def sets(self, N):
@@ -449,7 +450,9 @@ class GraphViewForm(QMainWindow):
     def make_graph(self):
         """Make graph."""
         scene = self.new_scene()
-        d = self.shortest_path_matrix()
+        max_length = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
+        length = self._spacing_factor * max_length
+        d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, length)
         if d is None:
             return False
         x, y = self.vertex_coordinates(d)
@@ -459,8 +462,11 @@ class GraphViewForm(QMainWindow):
             object_class_name = self.object_class_name_list[i]
             extent = 2 * self.font.pointSize()
             object_item = ObjectItem(object_class_name, x[i], y[i], extent)
-            if i in self.object_template_inds:
-                object_item.make_template()
+            try:
+                id, dimension = self.object_template_id_dim_tuples[i]
+                object_item.make_template(id, dimension, self.add_relationship)
+            except KeyError:
+                pass
             label_item = ObjectLabelItem(object_name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
@@ -473,12 +479,15 @@ class GraphViewForm(QMainWindow):
             arc_item = ArcItem(object_items[i], object_items[j], .25 * extent)
             object_class_names = self.arc_object_class_names_list[k]
             object_names = self.arc_object_names_list[k]
-            if k in self.arc_template_inds:
-                arc_item.make_template()
+            try:
+                id = self.arc_template_ids[k]
+                arc_item.make_template(id)
+            except KeyError:
+                pass
             # relationship_class_name = self.arc_relationship_class_name_list[k]
             relationship_parts = self.relationship_parts(
                 object_class_names, object_names, extent,
-                self.font, QColor(224, 224, 224, 128), spread_factor=2)
+                self.font, QColor(224, 224, 224, 128), spread= 4 * self.font.pointSize())
             arc_label_item = self.arc_label_item(QColor(224, 224, 224, 128), *relationship_parts)
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
@@ -549,15 +558,18 @@ class GraphViewForm(QMainWindow):
             self.show_add_objects_form(class_id)
         elif data["type"] == "relationship_class":
             object_class_name_list = data["object_class_name_list"].split(',')
+            object_name_list = object_class_name_list
             extent = 2 * self.font.pointSize()
             relationship_parts = self.relationship_parts(
-                object_class_name_list, [], extent,
-                self.font, QColor(224, 224, 224, 128))
+                object_class_name_list, object_name_list, extent,
+                self.font, QColor(224, 224, 224, 128), arc_pen_style=Qt.DotLine)
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_parts)
             self._has_graph = True
+            self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
+            self.template_id += 1
 
     def add_relationship_template(self, scene, x, y, object_items, label_items, arc_items):
-        """Add relationship parts into the scene in form of a template."""
+        """Add relationship parts into the scene to form a 'relationship template'."""
         for item in object_items + label_items + arc_items:
             scene.addItem(item)
         # Move
@@ -568,41 +580,76 @@ class GraphViewForm(QMainWindow):
         for object_item in object_items:
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
-        for object_item in object_items:
-            object_item.make_template()
+        for dimension, object_item in enumerate(object_items):
+            object_item.make_template(self.template_id, dimension, self.add_relationship)
         for arc_item in arc_items:
-            arc_item.make_template()
+            arc_item.make_template(self.template_id)
+
+    @busy_effect
+    def add_relationship(self, template_id, object_items):
+        """Try and add relationship given a template id and a list of object items."""
+        object_id_list = list()
+        object_name_list = list()
+        object_dimensions = [x.template_id_dim[template_id] for x in object_items]
+        for dimension in object_dimensions:
+            item = object_items[dimension]
+            object_name = item.label_item.text_item.text()
+            if not object_name:
+                logging.debug("can't find name {}".format(object_name))
+                return False
+            object_ = self.db_map.single_object(name=object_name).one_or_none()
+            if not object_:
+                logging.debug("can't find object {}".format(object_name))
+                return False
+            object_id_list.append(object_.id)
+            object_name_list.append(object_name)
+        if len(object_id_list) < 2:
+            logging.debug("too short {}".format(len(object_id_list)))
+            return False
+        name = self.relationship_class_dict[template_id]["name"] + "_" + "__".join(object_name_list)
+        class_id = self.relationship_class_dict[template_id]["id"]
+        wide_kwargs = {
+            'name': name,
+            'object_id_list': object_id_list,
+            'class_id': class_id
+        }
+        try:
+            wide_relationship = self.db_map.add_wide_relationships(*[wide_kwargs])[0]
+            items = self.ui.graphicsView.scene().items()
+            arc_items = [x for x in items if isinstance(x, ArcItem) and x.template_id == template_id]
+            for item in arc_items:
+                item.remove_template()
+            msg = "Successfully added new relationship '{}'.".format(wide_relationship.name)
+            self.msg.emit(msg)
+            return True
+        except SpineIntegrityError as e:
+            self.msg_error.emit(e.msg)
+            return False
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+            return False
 
     def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
-                           spread_factor=4, arc_pen_style=Qt.SolidLine):
+                           spread=None, arc_pen_style=Qt.SolidLine):
         """Lists of object, label, and arc items to form a relationship."""
         object_items = list()
         label_items = list()
         arc_items = list()
-        object_class_name_matrix = [object_class_name_list[i:i + 2] for i in range(0, len(object_class_name_list), 2)]
-        x_offset = 0
-        x_step = spread_factor * extent
-        y_offset = spread_factor * extent
-        k = 0
-        for object_class_name_row in object_class_name_matrix:
-            for j, object_class_name in enumerate(object_class_name_row):
-                if j % 2 == 1:
-                    x_ = x_offset + x_step / 2
-                    y_ = y_offset
-                else:
-                    x_ = x_offset
-                    y_ = 0
-                object_item = ObjectItem(object_class_name, x_, y_, extent)
-                object_items.append(object_item)
-                try:
-                    object_name = object_name_list[k]
-                except IndexError:
-                    object_name = object_class_name
-                label_item = ObjectLabelItem(object_name, font, Qt.transparent)
-                object_item.set_label_item(label_item)
-                label_items.append(label_item)
-                k += 1
-            x_offset += x_step
+        src_ind_list = list(range(len(object_name_list)))
+        dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
+        if not spread:
+            max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
+            spread = self._spacing_factor * max_length
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        if d is None:
+            return [], [], []
+        x, y = self.vertex_coordinates(d)
+        for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
+            object_item = ObjectItem(object_class_name, x_, y_, extent)
+            object_items.append(object_item)
+            label_item = ObjectLabelItem(object_name, font, color)
+            object_item.set_label_item(label_item)
+            label_items.append(label_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
             try:

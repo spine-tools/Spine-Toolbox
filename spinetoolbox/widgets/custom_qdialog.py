@@ -321,7 +321,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     def accept(self):
         """Collect info from dialog and try to add items."""
         wide_kwargs_list = list()
-        name_column = self.model.columnCount() - 1
+        name_column = self.model.horizontal_header_labels().index("relationship class name")
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
             relationship_class_name = row_data[name_column]
@@ -458,7 +458,7 @@ class AddRelationshipsDialog(AddItemsDialog):
     def accept(self):
         """Collect info from dialog and try to add items."""
         wide_kwargs_list = list()
-        name_column = self.model.columnCount() - 1
+        name_column = self.model.horizontal_header_labels().index("relationship name")
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
             relationship_name = row_data[name_column]

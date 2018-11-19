@@ -454,8 +454,9 @@ class AddRelationshipsDelegate(TreeViewDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship name':
+            data = index.data(Qt.EditRole)
             if data:
-                editor.set_data(index.data(Qt.EditRole))
+                editor.set_data(data)
             else:
                 editor.set_data(self.relationship_name(index))
         else:
