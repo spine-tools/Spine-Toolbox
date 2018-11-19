@@ -1070,7 +1070,7 @@ class ObjectItem(QGraphicsPixmapItem):
         x = rect.center().x() - question_rect.width() / 2
         y = rect.center().y() - question_rect.height() / 2
         question_item.setPos(x, y)
-        self.setToolTip("<html>Drag & Drop this onto a <b>{}</b> object "
+        self.setToolTip("<html>Drag-and-drop this onto a <b>{}</b> object "
                         "(or viceversa) to complete this relationship.".format(self._object_class_name))
 
     def shape(self):

@@ -248,32 +248,6 @@ class GraphViewForm(QMainWindow):
     @Slot("QItemSelection", "QItemSelection", name="receive_item_tree_selection_changed")
     def receive_item_tree_selection_changed(self, selected, deselected):
         """Select or deselect all children when selecting or deselecting the parent."""
-        model = self.ui.treeView.selectionModel()
-        current = model.currentIndex()
-        current_is_selected = model.isSelected(current)
-        # Deselect children of newly deselected items
-        new_selection = QItemSelection()
-        for index in deselected.indexes():
-            if not self.object_tree_model.hasChildren(index):
-                continue
-            row_count = self.object_tree_model.rowCount(index)
-            top = self.object_tree_model.index(0, 0, index)
-            bottom = self.object_tree_model.index(row_count - 1, 0, index)
-            new_selection.merge(QItemSelection(top, bottom), QItemSelectionModel.Select)
-        model.select(new_selection, QItemSelectionModel.Deselect)
-        # Select children of newly selected items (and of current item, if selected)
-        if current_is_selected:
-            model.select(current, QItemSelectionModel.Select)
-            selected.select(current, current)
-        new_selection = QItemSelection()
-        for index in selected.indexes():
-            if not self.object_tree_model.hasChildren(index):
-                continue
-            row_count = self.object_tree_model.rowCount(index)
-            top = self.object_tree_model.index(0, 0, index)
-            bottom = self.object_tree_model.index(row_count - 1, 0, index)
-            new_selection.merge(QItemSelection(top, bottom), QItemSelectionModel.Select)
-        model.select(new_selection, QItemSelectionModel.Select)
         self.build_graph()
 
     def init_graph_data(self):
@@ -286,14 +260,19 @@ class GraphViewForm(QMainWindow):
         self.object_name_list = list()
         self.object_class_name_list = list()
         root_item = self.object_tree_model.root_item
+        index = self.object_tree_model.indexFromItem(root_item)
+        is_root_selected = self.ui.treeView.selectionModel().isSelected(index)
         for i in range(root_item.rowCount()):
-            object_class_name_item = root_item.child(i, 0)
-            object_class_name = object_class_name_item.data(Qt.EditRole)
-            for j in range(object_class_name_item.rowCount()):
-                object_name_item = object_class_name_item.child(j, 0)
-                object_name = object_name_item.data(Qt.EditRole)
-                index = self.object_tree_model.indexFromItem(object_name_item)
-                if self.ui.treeView.selectionModel().isSelected(index):
+            object_class_item = root_item.child(i, 0)
+            object_class_name = object_class_item.data(Qt.EditRole)
+            index = self.object_tree_model.indexFromItem(object_class_item)
+            is_object_class_selected = self.ui.treeView.selectionModel().isSelected(index)
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                object_name = object_item.data(Qt.EditRole)
+                index = self.object_tree_model.indexFromItem(object_item)
+                is_object_selected = self.ui.treeView.selectionModel().isSelected(index)
+                if is_root_selected or is_object_class_selected or is_object_selected:
                     self.object_name_list.append(object_name)
                     self.object_class_name_list.append(object_class_name)
         if last_object_name_list and last_object_name_list == self.object_name_list:
@@ -441,6 +420,11 @@ class GraphViewForm(QMainWindow):
         heavy_ind = arr(heavy_ind_list)
         heavy_pos = arr(heavy_pos_list)
         if heavy_ind.any():
+            # Shift random layout to the center of heavy position
+            shift = np.mean(matrix[heavy_ind, :][:, heavy_ind], axis=0)
+            layout[:, 0] += shift[0]
+            layout[:, 1] += shift[1]
+            # Apply heavy positions
             layout[heavy_ind, :] = heavy_pos
         weights = matrix ** weight_exp  # bus-pair weights (lower for distant buses)
         maxstep = 1 / np.min(weights[mask])
@@ -460,6 +444,7 @@ class GraphViewForm(QMainWindow):
                 layout[v1, :] += dx1  # update position
                 layout[v2, :] += dx2
                 if heavy_ind.any():
+                    # Apply heavy positions
                     layout[heavy_ind, :] = heavy_pos
         return layout[:, 0], layout[:, 1]
 
@@ -544,10 +529,10 @@ class GraphViewForm(QMainWindow):
         if len(self.ui.graphicsView.scene().items()) > 1:
             return
         scene = self.new_scene()
-        msg = "\t  - Select classes and objects in the 'Object tree' to show them here.\t\n" \
+        msg = "\t• Select items in the 'Object tree' to show objects here.\t\n" \
             + "\t\tYou can select multiple ones by holding the 'Ctrl' key.\t\n\n"
         if not self.read_only:
-            msg += "\t  - Drag icons from the 'Item palette' and drop them here to add new.\t\n"
+            msg += "\t• Drag icons from the 'Item palette' and drop them here to add new.\t\n"
         msg_item = CustomTextItem(msg, self.font)
         scene.addItem(msg_item)
         self._has_graph = False
@@ -643,7 +628,7 @@ class GraphViewForm(QMainWindow):
             for item in arc_items:
                 item.remove_template()
                 item.template_id = None
-            self.set_commit_rollback_actions_enabled(False)
+            self.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new relationship '{}'.".format(wide_relationship.name)
             self.msg.emit(msg)
             return True
