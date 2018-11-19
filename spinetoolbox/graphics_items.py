@@ -1027,13 +1027,15 @@ class ObjectItem(QGraphicsPixmapItem):
     """Object item to use with GraphViewForm.
 
     Attributes:
+        graph_view_form (GraphViewForm): 'owner'
         object_class_name (str): object class name
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
         extent(int): preferred extent
     """
-    def __init__(self, object_class_name, x, y, extent):
+    def __init__(self, graph_view_form, object_class_name, x, y, extent):
         super().__init__()
+        self._graph_view_form = graph_view_form
         self._object_class_name = object_class_name
         self._extent = extent
         self.label_item = None
@@ -1045,7 +1047,6 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge_target = None
         self._merge = False
         self._bounce = False
-        self.add_relationship = None  # Method to call for adding relationship
         pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
         if pixmap.isNull():
             pixmap = QPixmap(":/icons/object_icon.png")
@@ -1056,10 +1057,9 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
 
-    def make_template(self, add_relationship):
+    def make_template(self):
         """Make this object a template for a relationship."""
         self.is_template = True
-        self.add_relationship = add_relationship
         font = QFont("", 0.75 * self._extent)
         brush = QBrush(Qt.white)
         outline_pen = QPen(Qt.black, 8, Qt.SolidLine)
@@ -1149,7 +1149,7 @@ class ObjectItem(QGraphicsPixmapItem):
             # The only template left is the one we're merging
             template_id = list(template.template_id_dim)[0]
             relationship_items = [x if x != template else instance for x in template_buddies]
-            if not template.add_relationship(template_id, relationship_items):
+            if not self._graph_view_form.add_relationship(template_id, relationship_items):
                 del instance.template_id_dim[template_id]
                 return False
         template.move_related_items_by(instance.pos() - template.pos())
@@ -1194,20 +1194,40 @@ class ObjectItem(QGraphicsPixmapItem):
         for item in self.outgoing_arc_items:
             item.is_src_hovered = False
 
+    def contextMenuEvent(self, e):
+        """Show context menu.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        e.accept()
+        self.setSelected(True)
+        self._graph_view_form.show_object_item_context_menu(e.screenPos())
+
+    def set_all_visible(self, on):
+        """Set visible attribute for this item and all related ones."""
+        if self.label_item:
+            self.label_item.setVisible(on)
+        for item in self.incoming_arc_items + self.outgoing_arc_items:
+            item.setVisible(on)
+        self.setVisible(on)
+
 
 class ArcItem(QGraphicsLineItem):
     """Arc item to use with GraphViewForm.
 
     Attributes:
+        graph_view_form (GraphViewForm): 'owner'
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
         color (QColor): color
         pen_style : pen style
     """
-    def __init__(self, src_item, dst_item, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine):
+    def __init__(self, graph_view_form, src_item, dst_item, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine):
         """Init class."""
         super().__init__()
+        self._graph_view_form = graph_view_form
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width

@@ -293,6 +293,7 @@ class GraphViewGraphicsView(QGraphicsView):
     def __init__(self, parent):
         """Init class."""
         super().__init__(parent)
+        self._graph_view_form = None
         self._zoom_factor_base = 1.0015
         self.target_viewport_pos = None
         self.target_scene_pos = QPointF(0, 0)
@@ -404,6 +405,21 @@ class GraphViewGraphicsView(QGraphicsView):
         text = event.mimeData().text()
         pos = event.pos()
         self.item_dropped.emit(pos, text)
+
+    def contextMenuEvent(self, e):
+        """Show context menu.
+
+        Args:
+            e (QContextMenuEvent): Context menu event
+        """
+        super().contextMenuEvent(e)
+        if e.isAccepted():
+            return
+        if not self._graph_view_form:
+            e.ignore()
+            return
+        e.accept()
+        self._graph_view_form.show_graph_view_context_menu(e.globalPos())
 
 
 class CustomQGraphicsScene(QGraphicsScene):

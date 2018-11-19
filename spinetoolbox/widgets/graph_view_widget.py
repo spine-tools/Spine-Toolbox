@@ -31,6 +31,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
+from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, LabelItem, CustomTextItem
 from helpers import busy_effect
@@ -78,9 +79,13 @@ class GraphViewForm(QMainWindow):
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
+        self.object_item_context_menu = None
+        self.graph_view_context_menu = None
+        self.hidden_items = list()
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.graphicsView._graph_view_form = self
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
@@ -96,7 +101,8 @@ class GraphViewForm(QMainWindow):
         self.add_toggle_view_actions()
         self.init_commit_rollback_actions()
         self.build_graph()
-        self.setWindowTitle("Data store graph view    -- {} --".format(database))
+        title = database + " (read only) " if read_only else database
+        self.setWindowTitle("Data store graph view    -- {} --".format(title))
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def init_models(self):
@@ -248,8 +254,7 @@ class GraphViewForm(QMainWindow):
     @busy_effect
     @Slot("bool", name="build_graph")
     def build_graph(self, checked=True):
-        if not self.init_graph_data():
-            return
+        self.init_graph_data()
         self._has_graph = self.make_graph()
         if self._has_graph:
             self.ui.graphicsView.scale_to_fit_scene()
@@ -265,7 +270,7 @@ class GraphViewForm(QMainWindow):
         Returns:
             True if graph data changed, False otherwise
         """
-        last_object_name_list = self.object_name_list.copy()
+        hidden_object_names = [x.label_item.text for x in self.hidden_items]
         self.object_name_list = list()
         self.object_class_name_list = list()
         root_item = self.object_tree_model.root_item
@@ -279,13 +284,13 @@ class GraphViewForm(QMainWindow):
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
                 object_name = object_item.data(Qt.EditRole)
+                if object_name in hidden_object_names:
+                    continue
                 index = self.object_tree_model.indexFromItem(object_item)
                 is_object_selected = self.ui.treeView.selectionModel().isSelected(index)
                 if is_root_selected or is_object_class_selected or is_object_selected:
                     self.object_name_list.append(object_name)
                     self.object_class_name_list.append(object_class_name)
-        if last_object_name_list and last_object_name_list == self.object_name_list:
-            return False
         self.arc_relationship_class_name_list = list()
         self.arc_object_names_list = list()
         self.arc_object_class_names_list = list()
@@ -376,7 +381,6 @@ class GraphViewForm(QMainWindow):
                 self.arc_object_class_names_list.append("")
                 self.arc_template_ids[arc_ind] = item.template_id
                 arc_ind += 1
-        return True
 
     def shortest_path_matrix(self, object_name_list, src_ind_list, dst_ind_list, length):
         """Return the shortest-path matrix."""
@@ -471,11 +475,11 @@ class GraphViewForm(QMainWindow):
             object_name = self.object_name_list[i]
             object_class_name = self.object_class_name_list[i]
             extent = 2 * self.font.pointSize()
-            object_item = ObjectItem(object_class_name, x[i], y[i], extent)
+            object_item = ObjectItem(self, object_class_name, x[i], y[i], extent)
             try:
                 template_id_dim = self.template_id_dims[i]
                 if self.is_template[i]:
-                    object_item.make_template(self.add_relationship)
+                    object_item.make_template()
                 object_item.template_id_dim = template_id_dim
             except KeyError:
                 pass
@@ -488,7 +492,7 @@ class GraphViewForm(QMainWindow):
             i = self.src_ind_list[k]
             j = self.dst_ind_list[k]
             extent = 2 * self.font.pointSize()
-            arc_item = ArcItem(object_items[i], object_items[j], .25 * extent)
+            arc_item = ArcItem(self, object_items[i], object_items[j], .25 * extent)
             object_class_names = self.arc_object_class_names_list[k]
             object_names = self.arc_object_names_list[k]
             try:
@@ -564,7 +568,7 @@ class GraphViewForm(QMainWindow):
         if data["type"] == "object_class":
             class_name = data["name"]
             extent = 2 * self.font.pointSize()
-            self.object_item_placeholder = ObjectItem(class_name, scene_pos.x(), scene_pos.y(), extent)
+            self.object_item_placeholder = ObjectItem(self, class_name, scene_pos.x(), scene_pos.y(), extent)
             scene.addItem(self.object_item_placeholder)
             class_id = data["id"]
             self.show_add_objects_form(class_id)
@@ -593,7 +597,7 @@ class GraphViewForm(QMainWindow):
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
         for dimension, object_item in enumerate(object_items):
-            object_item.make_template(self.add_relationship)
+            object_item.make_template()
             object_item.template_id_dim[self.template_id] = dimension
         for arc_item in arc_items:
             arc_item.make_template()
@@ -664,7 +668,7 @@ class GraphViewForm(QMainWindow):
             return [], [], []
         x, y = self.vertex_coordinates(d)
         for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
-            object_item = ObjectItem(object_class_name, x_, y_, extent)
+            object_item = ObjectItem(self, object_class_name, x_, y_, extent)
             object_items.append(object_item)
             label_item = LabelItem(object_name, font, color)
             object_item.set_label_item(label_item, position=object_label_position)
@@ -675,7 +679,7 @@ class GraphViewForm(QMainWindow):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(src_item, dst_item, extent / 4, pen_style=arc_pen_style)
+            arc_item = ArcItem(self, src_item, dst_item, extent / 4, pen_style=arc_pen_style)
             arc_items.append(arc_item)
         return object_items, label_items, arc_items
 
@@ -725,7 +729,7 @@ class GraphViewForm(QMainWindow):
         scene.removeItem(self.object_item_placeholder)
         for k, object_ in enumerate(objects):
             self.object_tree_model.add_object(object_, flat=True)
-            object_item = ObjectItem(object_class_name, x + .5 * extent, y + (k + .5) * extent, extent)
+            object_item = ObjectItem(self, object_class_name, x + .5 * extent, y + (k + .5) * extent, extent)
             label_item = LabelItem(object_.name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
@@ -755,6 +759,46 @@ class GraphViewForm(QMainWindow):
         if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
+
+    def show_graph_view_context_menu(self, global_pos):
+        """Show context menu for graphics view."""
+        self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
+        option = self.graph_view_context_menu.get_action()
+        scene = self.ui.graphicsView.scene()
+        if option == "Rebuild graph":
+            self.build_graph()
+        elif option == "Show hidden items":
+            if scene:
+                object_items = [x for x in scene.items() if isinstance(x, ObjectItem)]
+                for item in self.hidden_items:
+                    if item not in object_items:
+                        self.hidden_items = list()
+                        self.build_graph()
+                        break
+                    item.set_all_visible(True)
+        else:
+            pass
+        self.graph_view_context_menu.deleteLater()
+        self.graph_view_context_menu = None
+
+    def show_object_item_context_menu(self, global_pos):
+        """Show context menu for object_item."""
+        self.object_item_context_menu = ObjectItemContextMenu(self, global_pos)
+        option = self.object_item_context_menu.get_action()
+        scene = self.ui.graphicsView.scene()
+        if scene:
+            object_items = [x for x in scene.selectedItems() if isinstance(x, ObjectItem)]
+            if option == "Hide":
+                self.hidden_items.extend(object_items)
+                for item in object_items:
+                    item.set_all_visible(False)
+            elif option == "Hide and rebuild graph":
+                self.hidden_items.extend(object_items)
+                self.build_graph()
+            else:
+                pass
+        self.object_item_context_menu.deleteLater()
+        self.object_item_context_menu = None
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
