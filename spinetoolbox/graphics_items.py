@@ -1056,10 +1056,9 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
 
-    def make_template(self, id, dimension, add_relationship):
+    def make_template(self, add_relationship):
         """Make this object a template for a relationship."""
         self.is_template = True
-        self.template_id_dim[id] = dimension
         self.add_relationship = add_relationship
         text_item = QGraphicsSimpleTextItem("?")
         font = QFont("", 0.75 * self._extent)
@@ -1238,16 +1237,14 @@ class ArcItem(QGraphicsLineItem):
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
 
-    def make_template(self, template_id):
+    def make_template(self):
         self.is_template = True
-        self.template_id = template_id
         pen = self.pen()
         pen.setStyle(Qt.DotLine)
         self.setPen(pen)
 
     def remove_template(self):
         self.is_template = False
-        self.template_id = None
         pen = self.pen()
         pen.setStyle(Qt.SolidLine)
         self.setPen(pen)
@@ -1303,17 +1300,18 @@ class ArcItem(QGraphicsLineItem):
         self.label_item.hide()
 
 
-class ObjectLabelItem(QGraphicsRectItem):
-    """Label item for objects to use with GraphViewForm.
+class LabelItem(QGraphicsRectItem):
+    """Label item to use with GraphViewForm.
 
     Attributes:
-        object_name (str): object name
+        name (str): name
         font (QFont): font to display the text
         color (QColor): color to paint the label
     """
-    def __init__(self, object_name, font, color):
+    def __init__(self, name, font, color):
         super().__init__()
-        self.text_item = CustomTextItem(object_name, font)
+        self.name = name
+        self.text_item = CustomTextItem(name, font)
         self.text_item.setParentItem(self)
         self.setRect(self.childrenBoundingRect())
         self.setBrush(QBrush(color))
