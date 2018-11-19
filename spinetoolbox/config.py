@@ -20,7 +20,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.1.7"
+SPINE_TOOLBOX_VERSION = "0.1.71"
 REQUIRED_SPINE_DBAPI_VERSION = "0.0.10"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
