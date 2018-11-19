@@ -57,13 +57,13 @@ class GraphViewForm(QMainWindow):
         self.db_map = db_map
         self.database = database
         self.read_only = read_only
-        self._spacing_factor = 1.0
         self._has_graph = False
         self._scene_bg = None
         self.object_item_placeholder = None
         self.err_msg = QErrorMessage(self)
         self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
+        self._min_spread = self.font_metric.width("spread")
         self.object_name_list = list()
         self.object_class_name_list = list()
         self.arc_relationship_class_name_list = list()
@@ -382,7 +382,7 @@ class GraphViewForm(QMainWindow):
                 self.arc_template_ids[arc_ind] = item.template_id
                 arc_ind += 1
 
-    def shortest_path_matrix(self, object_name_list, src_ind_list, dst_ind_list, length):
+    def shortest_path_matrix(self, object_name_list, src_ind_list, dst_ind_list, spread):
         """Return the shortest-path matrix."""
         N = len(object_name_list)
         if not N:
@@ -392,13 +392,13 @@ class GraphViewForm(QMainWindow):
         dst_ind = arr(dst_ind_list)
         max_sep = max([self.font_metric.width(x) for x in object_name_list], default=0)
         try:
-            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = length
+            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = spread
         except IndexError:
             pass
         d = dijkstra(dist, directed=False)
         # Remove infinites and zeros
-        d[d == np.inf] = length * 3
-        d[d == 0] = length * 1e-6
+        d[d == np.inf] = spread * 3
+        d[d == 0] = spread * 1e-6
         return d
 
     def sets(self, N):
@@ -465,8 +465,8 @@ class GraphViewForm(QMainWindow):
         """Make graph."""
         scene = self.new_scene()
         max_length = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
-        length = self._spacing_factor * max_length
-        d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, length)
+        spread = max(self._min_spread, max_length)
+        d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, spread)
         if d is None:
             return False
         x, y = self.vertex_coordinates(d, self.heavy_positions)
@@ -504,7 +504,7 @@ class GraphViewForm(QMainWindow):
             # relationship_class_name = self.arc_relationship_class_name_list[k]
             relationship_parts = self.relationship_parts(
                 object_class_names, object_names, extent, self.font, QColor(224, 224, 224, 128),
-                spread= 4 * self.font.pointSize(), object_label_position="beside_icon")
+                object_label_position="beside_icon")
             arc_label_item = self.arc_label_item(QColor(224, 224, 224, 128), *relationship_parts)
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
@@ -653,19 +653,16 @@ class GraphViewForm(QMainWindow):
             return False
 
     def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
-                           spread=None, arc_pen_style=Qt.SolidLine, object_label_position="under_icon"):
+                           arc_pen_style=Qt.SolidLine, object_label_position="under_icon"):
         """Lists of object, label, and arc items to form a relationship."""
         object_items = list()
         label_items = list()
         arc_items = list()
         src_ind_list = list(range(len(object_name_list)))
         dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
-        if not spread:
-            max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
-            spread = self._spacing_factor * max_length
+        max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
+        spread = max(self._min_spread, max_length)
         d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
-        if d is None:
-            return [], [], []
         x, y = self.vertex_coordinates(d)
         for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
             object_item = ObjectItem(self, object_class_name, x_, y_, extent)
@@ -721,16 +718,24 @@ class GraphViewForm(QMainWindow):
 
     def add_objects(self, objects):
         """Insert new objects."""
+        for object_ in objects:
+            self.object_tree_model.add_object(object_, flat=True)
+        object_name_list = [x.name for x in objects]
+        src_ind_list = list()
+        dst_ind_list = list()
+        max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
+        spread = max(self._min_spread, max_length)
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        x, y = self.vertex_coordinates(d)
         scene = self.ui.graphicsView.scene()
         object_class_name = self.object_item_placeholder._object_class_name
-        x = self.object_item_placeholder.x()
-        y = self.object_item_placeholder.y()
+        x_offset = self.object_item_placeholder.x()
+        y_offset = self.object_item_placeholder.y()
         extent = self.object_item_placeholder._extent
         scene.removeItem(self.object_item_placeholder)
-        for k, object_ in enumerate(objects):
-            self.object_tree_model.add_object(object_, flat=True)
-            object_item = ObjectItem(self, object_class_name, x + .5 * extent, y + (k + .5) * extent, extent)
-            label_item = LabelItem(object_.name, self.font, QColor(224, 224, 224, 128))
+        for x_, y_, object_name in zip(x, y, object_name_list):
+            object_item = ObjectItem(self, object_class_name, x_offset + x_, y_offset + y_, extent)
+            label_item = LabelItem(object_name, self.font, QColor(224, 224, 224, 128))
             object_item.set_label_item(label_item)
             scene.addItem(object_item)
             scene.addItem(label_item)
