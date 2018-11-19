@@ -1381,7 +1381,6 @@ class RelationshipClassListModel(QStandardItemModel):
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
         self.add_more_index = None
-        self.object_pixmap = QPixmap(":/icons/object_icon.png")
 
     def populate_list(self):
         """Populate model."""
@@ -1402,11 +1401,11 @@ class RelationshipClassListModel(QStandardItemModel):
 
     def add_relationship_class(self, relationship_class):
         """Add relationship class."""
-        icon = self.relationship_icon
+        pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
         relationship_class_item = QStandardItem(relationship_class.name)
         data = {"type": "relationship_class", **relationship_class._asdict()}
         relationship_class_item.setData(data, Qt.UserRole + 1)
-        relationship_class_item.setData(icon, Qt.DecorationRole)
+        relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
         relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
         self.insertRow(self.rowCount() - 1, relationship_class_item)
 
