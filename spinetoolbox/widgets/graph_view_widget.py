@@ -48,15 +48,16 @@ class GraphViewForm(QMainWindow):
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
 
-    def __init__(self, view, db_map, database):
+    def __init__(self, view, db_map, database, read_only=False):
         """Initialize class."""
         super().__init__(flags=Qt.Window)  # Setting the parent inherits the stylesheet
         self._view = view
         self.db_map = db_map
+        self.database = database
+        self.read_only = read_only
         self._spacing_factor = 1.0
         self._has_graph = False
         self._scene_bg = None
-        self.database = database
         self.object_item_placeholder = None
         self.err_msg = QErrorMessage(self)
         self.font = QFont("", 64)
@@ -67,6 +68,7 @@ class GraphViewForm(QMainWindow):
         self.arc_object_names_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
+        self.heavy_positions = {}
         self.template_id = 1
         self.relationship_class_dict = {}  # template_id => relationship_class_name, relationship_class_id
         self.template_id_dims = {}
@@ -184,7 +186,10 @@ class GraphViewForm(QMainWindow):
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
+        if not self.read_only:
+            self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
+        else:
+            self.ui.dockWidget_item_palette.hide()
 
     def set_commit_rollback_actions_enabled(self, on):
         self.ui.actionCommit.setEnabled(on)
@@ -334,19 +339,21 @@ class GraphViewForm(QMainWindow):
         # Add template items hanging around
         scene = self.ui.graphicsView.scene()
         if scene:
+            self.heavy_positions = {}
             object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
             object_ind = len(self.object_name_list)
             self.template_id_dims = {}
             self.is_template = {}
             object_ind_dict = {}
             for item in object_items:
-                object_name = item.label_item.name
+                object_name = item.label_item.text
                 try:
                     found_ind = self.object_name_list.index(object_name)
                     is_template = self.is_template.get(found_ind)
                     if not is_template:
                         self.template_id_dims[found_ind] = item.template_id_dim
                         self.is_template[found_ind] = False
+                        self.heavy_positions[found_ind] = item.pos()
                         continue
                 except ValueError:
                     pass
@@ -355,6 +362,7 @@ class GraphViewForm(QMainWindow):
                 self.object_class_name_list.append(object_class_name)
                 self.template_id_dims[object_ind] = item.template_id_dim
                 self.is_template[object_ind] = item.is_template
+                self.heavy_positions[object_ind] = item.pos()
                 object_ind_dict[item] = object_ind
                 object_ind += 1
             arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
@@ -366,12 +374,12 @@ class GraphViewForm(QMainWindow):
                 try:
                     src_ind = object_ind_dict[src_item]
                 except KeyError:
-                    src_object_name = src_item.label_item.name
+                    src_object_name = src_item.label_item.text
                     src_ind = self.object_name_list.index(src_object_name)
                 try:
                     dst_ind = object_ind_dict[dst_item]
                 except KeyError:
-                    dst_object_name = dst_item.label_item.name
+                    dst_object_name = dst_item.label_item.text
                     dst_ind = self.object_name_list.index(dst_object_name)
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
@@ -417,14 +425,23 @@ class GraphViewForm(QMainWindow):
                 sets.append(s2)
         return sets
 
-    def vertex_coordinates(self, matrix, iterations=10, weight_exp=-2, initial_diameter=100):
+    def vertex_coordinates(self, matrix, heavy_positions={}, iterations=10, weight_exp=-2, initial_diameter=100):
         """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
         N = len(matrix)
         if N == 1:
             return [0], [0]
         mask = np.ones((N, N)) == 1 - np.tril(np.ones((N, N)))  # Upper triangular except diagonal
         np.random.seed(0)
-        layout = np.random.rand(N, 2) * initial_diameter - initial_diameter / 2  # Random layout with diameter 100
+        layout = np.random.rand(N, 2) * initial_diameter - initial_diameter / 2  # Random layout with initial diameter
+        heavy_ind_list = list()
+        heavy_pos_list = list()
+        for ind, pos in heavy_positions.items():
+            heavy_ind_list.append(ind)
+            heavy_pos_list.append([pos.x(), pos.y()])
+        heavy_ind = arr(heavy_ind_list)
+        heavy_pos = arr(heavy_pos_list)
+        if heavy_ind.any():
+            layout[heavy_ind, :] = heavy_pos
         weights = matrix ** weight_exp  # bus-pair weights (lower for distant buses)
         maxstep = 1 / np.min(weights[mask])
         minstep = 1 / np.max(weights[mask])
@@ -435,13 +452,15 @@ class GraphViewForm(QMainWindow):
             rand_order = np.random.permutation(N)  # we don't want to use the same pair order each iteration
             for p in sets:
                 v1, v2 = rand_order[p[:, 0]], rand_order[p[:, 1]]  # arrays of vertex1 and vertex2
-                # current distance (possibly accounting for rescaling of system)
+                # current distance (possibly accounting for system rescaling)
                 dist = ((layout[v1, 0] - layout[v2, 0]) ** 2 + (layout[v1, 1] - layout[v2, 1]) ** 2) ** 0.5
                 r = (matrix[v1, v2] - dist)[:, None] / 2 * (layout[v1] - layout[v2]) / dist[:, None]  # desired change
                 dx1 = r * np.minimum(1, weights[v1, v2] * step)[:, None]
                 dx2 = -dx1
                 layout[v1, :] += dx1  # update position
                 layout[v2, :] += dx2
+                if heavy_ind.any():
+                    layout[heavy_ind, :] = heavy_pos
         return layout[:, 0], layout[:, 1]
 
     def make_graph(self):
@@ -452,7 +471,7 @@ class GraphViewForm(QMainWindow):
         d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, length)
         if d is None:
             return False
-        x, y = self.vertex_coordinates(d)
+        x, y = self.vertex_coordinates(d, self.heavy_positions)
         object_items = list()
         for i in range(len(self.object_name_list)):
             object_name = self.object_name_list[i]
@@ -486,8 +505,8 @@ class GraphViewForm(QMainWindow):
                 pass
             # relationship_class_name = self.arc_relationship_class_name_list[k]
             relationship_parts = self.relationship_parts(
-                object_class_names, object_names, extent,
-                self.font, QColor(224, 224, 224, 128), spread= 4 * self.font.pointSize())
+                object_class_names, object_names, extent, self.font, QColor(224, 224, 224, 128),
+                spread= 4 * self.font.pointSize(), object_label_position="beside_icon")
             arc_label_item = self.arc_label_item(QColor(224, 224, 224, 128), *relationship_parts)
             arc_item.set_label_item(arc_label_item)
             scene.addItem(arc_item)
@@ -503,7 +522,7 @@ class GraphViewForm(QMainWindow):
         label.setBrush(color)
         label.setPen(Qt.NoPen)
         label.setRect(rect)
-        label.setZValue(-2)
+        # label.setZValue(-2)
         return label
 
     def new_scene(self):
@@ -525,11 +544,10 @@ class GraphViewForm(QMainWindow):
         if len(self.ui.graphicsView.scene().items()) > 1:
             return
         scene = self.new_scene()
-        msg = """
-            * Select classes and objects in the 'Object tree' to show them here.
-               You can select multiple items by holding the 'Ctrl' key.
-            * Drag icons from the 'Item palette' and drop them here to add new items.
-        """
+        msg = "\t  - Select classes and objects in the 'Object tree' to show them here.\t\n" \
+            + "\t\tYou can select multiple ones by holding the 'Ctrl' key.\t\n\n"
+        if not self.read_only:
+            msg += "\t  - Drag icons from the 'Item palette' and drop them here to add new.\t\n"
         msg_item = CustomTextItem(msg, self.font)
         scene.addItem(msg_item)
         self._has_graph = False
@@ -596,7 +614,7 @@ class GraphViewForm(QMainWindow):
         for dimension in sorted(object_dimensions):
             ind = object_dimensions.index(dimension)
             item = object_items[ind]
-            object_name = item.label_item.name
+            object_name = item.label_item.text
             if not object_name:
                 logging.debug("can't find name {}".format(object_name))
                 return False
@@ -637,7 +655,7 @@ class GraphViewForm(QMainWindow):
             return False
 
     def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
-                           spread=None, arc_pen_style=Qt.SolidLine):
+                           spread=None, arc_pen_style=Qt.SolidLine, object_label_position="under_icon"):
         """Lists of object, label, and arc items to form a relationship."""
         object_items = list()
         label_items = list()
@@ -655,7 +673,7 @@ class GraphViewForm(QMainWindow):
             object_item = ObjectItem(object_class_name, x_, y_, extent)
             object_items.append(object_item)
             label_item = LabelItem(object_name, font, color)
-            object_item.set_label_item(label_item)
+            object_item.set_label_item(label_item, position=object_label_position)
             label_items.append(label_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
@@ -728,7 +746,7 @@ class GraphViewForm(QMainWindow):
         window_size = self.qsettings.value("graphViewWidget/windowSize")
         window_state = self.qsettings.value("graphViewWidget/windowState")
         window_pos = self.qsettings.value("graphViewWidget/windowPosition")
-        window_maximized = self.qsettings.value("graphViewWidget/windowMaximized", defaultValue='false')  # returns str
+        window_maximized = self.qsettings.value("graphViewWidget/windowMaximized", defaultValue='false')
         n_screens = self.qsettings.value("graphViewWidget/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)

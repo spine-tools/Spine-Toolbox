@@ -1060,19 +1060,18 @@ class ObjectItem(QGraphicsPixmapItem):
         """Make this object a template for a relationship."""
         self.is_template = True
         self.add_relationship = add_relationship
-        text_item = QGraphicsSimpleTextItem("?")
         font = QFont("", 0.75 * self._extent)
-        font.setWeight(QFont.Black)
-        text_item.setFont(font)
-        text_item.setBrush(Qt.white)
+        brush = QBrush(Qt.white)
         outline_pen = QPen(Qt.black, 8, Qt.SolidLine)
-        text_item.setPen(outline_pen)
-        text_item.setParentItem(self)
+        question_item = CustomTextItem("?", font, brush=brush, outline_pen=outline_pen)
+        question_item.setParentItem(self)
         rect = self.boundingRect()
-        text_rect = text_item.boundingRect()
-        x = rect.center().x() - text_rect.width() / 2
-        y = rect.center().y() - text_rect.height() / 2
-        text_item.setPos(x, y)
+        question_rect = question_item.boundingRect()
+        x = rect.center().x() - question_rect.width() / 2
+        y = rect.center().y() - question_rect.height() / 2
+        question_item.setPos(x, y)
+        self.setToolTip("<html>Drag & Drop this onto a <b>{}</b> object "
+                        "(or viceversa) to complete this relationship.".format(self._object_class_name))
 
     def shape(self):
         """Make the entire bounding rect to be the shape."""
@@ -1088,6 +1087,8 @@ class ObjectItem(QGraphicsPixmapItem):
             y += self._extent
         elif position == "over_icon":
             y -= self._extent
+        elif position == "beside_icon":
+            x += self._extent / 2 + self.label_item.boundingRect().width() / 2
         self.label_item.setPos(x, y)
 
     def add_incoming_arc_item(self, arc_item):
@@ -1276,8 +1277,8 @@ class ArcItem(QGraphicsLineItem):
         if not self.label_item:
             return
         self.label_item.setPos(
-            event.scenePos().x() - self.label_item.boundingRect().x(),
-            event.scenePos().y() - self.label_item.boundingRect().y())
+            event.scenePos().x() - self.label_item.boundingRect().x() + 16,
+            event.scenePos().y() - self.label_item.boundingRect().y() + 16)
         if self.is_src_hovered or self.is_dst_hovered:
             return
         self.label_item.show()
@@ -1287,8 +1288,8 @@ class ArcItem(QGraphicsLineItem):
         if not self.label_item:
             return
         self.label_item.setPos(
-            event.scenePos().x() - self.label_item.boundingRect().x(),
-            event.scenePos().y() - self.label_item.boundingRect().y())
+            event.scenePos().x() - self.label_item.boundingRect().x() + 16,
+            event.scenePos().y() - self.label_item.boundingRect().y() + 16)
         if self.is_src_hovered or self.is_dst_hovered:
             return
         self.label_item.show()
@@ -1304,14 +1305,14 @@ class LabelItem(QGraphicsRectItem):
     """Label item to use with GraphViewForm.
 
     Attributes:
-        name (str): name
+        text (str): text
         font (QFont): font to display the text
         color (QColor): color to paint the label
     """
-    def __init__(self, name, font, color):
+    def __init__(self, text, font, color):
         super().__init__()
-        self.name = name
-        self.text_item = CustomTextItem(name, font)
+        self.text = text
+        self.text_item = CustomTextItem(text, font)
         self.text_item.setParentItem(self)
         self.setRect(self.childrenBoundingRect())
         self.setBrush(QBrush(color))
@@ -1325,13 +1326,14 @@ class CustomTextItem(QGraphicsSimpleTextItem):
     Attributes:
         text (str): text to show
         font (QFont): font to display the text
+        brush (QBrus)
+        outline_pen (QPen)
     """
-    def __init__(self, text, font):
+    def __init__(self, text, font, brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
         """Init class."""
         super().__init__()
         self.setText(text)
         font.setWeight(QFont.Black)
         self.setFont(font)
-        self.setBrush(Qt.black)
-        outline_pen = QPen(Qt.white, 4, Qt.SolidLine)
+        self.setBrush(brush)
         self.setPen(outline_pen)
