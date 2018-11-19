@@ -1302,9 +1302,7 @@ class MinimalTableModel(QAbstractTableModel):
 
 class FlatObjectTreeModel(QStandardItemModel):
     """Another class to hold Spine data structure in a treeview.
-    It only has two levels:
-        - object class
-            - object
+    It only has two levels. object class -> object.
     """
     def __init__(self, graph_view_form):
         """Initialize class"""

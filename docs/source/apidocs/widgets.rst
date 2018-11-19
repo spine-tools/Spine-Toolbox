@@ -116,10 +116,10 @@ widgets.custom\_qtreeview module
     :undoc-members:
     :show-inheritance:
 
-widgets.data\_store\_widget module
+widgets.graph\_view\_widget module
 ----------------------------------
 
-.. automodule:: widgets.data_store_widget
+.. automodule:: widgets.graph_view_widget
     :members:
     :undoc-members:
     :show-inheritance:
@@ -128,14 +128,6 @@ widgets.julia\_repl\_widget module
 ----------------------------------
 
 .. automodule:: widgets.julia_repl_widget
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.network\_map\_widget module
------------------------------------
-
-.. automodule:: widgets.network_map_widget
     :members:
     :undoc-members:
     :show-inheritance:
@@ -176,6 +168,14 @@ widgets.toolbars module
 -----------------------
 
 .. automodule:: widgets.toolbars
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.tree\_view\_widget module
+---------------------------------
+
+.. automodule:: widgets.tree_view_widget
     :members:
     :undoc-members:
     :show-inheritance:

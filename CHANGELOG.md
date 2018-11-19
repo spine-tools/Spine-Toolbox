@@ -18,6 +18,19 @@ This section is for upcoming changes.
 
 ### Security
 
+## [0.1.71] - 2018-11-19
+
+### Added
+- Added PyMySQL package, which was missing from the previous release
+- Improved Graph View for the View project item (work in progress)
+
+### Changed
+- Some main window components have been renamed
+    - Main view is now called *Design View*
+    - Julia REPL is now called *Julia Console*
+    - Subprocess Output is now called *Process Log*
+    - Project item info window is now called *Properties*
+
 ## [0.1.7] - 2018-11-01
 
 ### Added
