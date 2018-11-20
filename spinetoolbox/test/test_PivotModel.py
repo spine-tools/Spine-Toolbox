@@ -407,6 +407,16 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model.tuple_index_entries[('test3',)], set2)
     
     def test_edit_index5(self):
+        """test that tuple_index_entries is not updated when index change with invalid indexes"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries = self.tuple_index_entries)
+        set1 = set(model.tuple_index_entries[('test1','test2')])
+        set2 = set(model.tuple_index_entries[('test3',)])
+        model.edit_index([(1, 2, 'invalid types')],[1],'row')
+        self.assertEqual(model.tuple_index_entries[('test1','test2')], set1)
+        self.assertEqual(model.tuple_index_entries[('test3',)], set2)
+    
+    def test_edit_index6(self):
         """test that index_entries is updated when index change"""
         model = PivotModel()
         model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries = self.tuple_index_entries)
@@ -421,8 +431,8 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model.index_entries['test2'],set2)
         self.assertEqual(model.index_entries['test3'],set3)
     
-    def test_edit_index6(self):
-        """test that index_entries is doesn't add invalid entries"""
+    def test_edit_index7(self):
+        """test that index_entries doesn't add invalid entries when editing index"""
         model = PivotModel()
         model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries = self.tuple_index_entries)
         set1 = set(model.index_entries['test1'])
@@ -433,15 +443,15 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model.index_entries['test2'],set2)
         self.assertEqual(model.index_entries['test3'],set3)
     
-    def test_edit_index7(self):
+    def test_edit_index8(self):
         """test adding new rows"""
         model = PivotModel()
         model.set_new_data(self.data, self.index_names, self.index_types)
         row_headers = model._row_data_header.copy()
-        model.edit_index([('new1', 'new2', 10)],[6],'row')
-        self.assertEqual(model._row_data_header, row_headers + [('new1', 'new2', 10)])
+        model.edit_index([('new1', 'new2', 10), ('new1', 'new2', 11)],[6,7],'row')
+        self.assertEqual(model._row_data_header, row_headers + [('new1', 'new2', 10), ('new1', 'new2', 11)])
     
-    def test_edit_index8(self):
+    def test_edit_index9(self):
         """test adding new rows invalid rows"""
         model = PivotModel()
         model.set_new_data(self.data, self.index_names, self.index_types)
