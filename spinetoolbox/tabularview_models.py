@@ -400,8 +400,10 @@ class PivotModel():
             key_getter = self._key_getter
             invalid_first = self._invalid_row
             invalid_other = self._invalid_column
-            first_index = self._row_data_header
-            other_index = self._column_data_header
+            other_index_name = self.pivot_columns
+            other_index_headers = self._column_data_header
+            first_key_getter = self.get_row_key
+            other_key_getter = self.get_col_key
         elif direction == 'column':
             if not all(m <= len(self._column_data_header) or m < 0 for m in index):
                 raise ValueError('index must be valid index for column pivot')
@@ -413,21 +415,33 @@ class PivotModel():
             key_getter = operator.itemgetter(*order)
             invalid_first = self._invalid_column
             invalid_other = self._invalid_row
-            first_index = self._column_data_header
-            other_index = self._row_data_header
+            other_index_name = self.pivot_rows
+            other_index_headers = self._row_data_header
+            first_key_getter = self.get_col_key
+            other_key_getter = self.get_row_key
         if not mask_other_index:
             # no mask given, delete all indexes of other index
-            mask_other_index = range(len(other_index))
+            if not other_index_name:
+                mask_other_index = [0]
+            else:
+                mask_other_index = range(len(other_index_headers))
+        else:
+            # check that mask is valid
+            if not other_index_name:
+                if not len(mask_other_index) == 1 and mask_other_index[0] == 0:
+                    raise ValueError('mask_other_index contains invalid index values, no dimension in other pivot, only [0] is allowed')
+            elif not all(i >= 0 and i < len(other_index_headers) for i in mask_other_index):
+                raise ValueError('mask_other_index contains invalid index values for other pivot header')
         # delete values
         for i in index:
             i_invalid = i in invalid_first
-            key_first = first_index[i]
+            key_first = first_key_getter(i)
             for i_other in mask_other_index:
                 if i_other in invalid_other or i_invalid:
                     # delete invalid data
                     self._invalid_data.pop((i, i_other), None)
                 else:
-                    key_other = other_index[i_other]
+                    key_other = other_key_getter(i_other)
                     key = key_getter(key_first + key_other + self.frozen_value)
                     if key in self._data and key not in self._deleted_data:
                             self._deleted_data[key] = self._data[key]
