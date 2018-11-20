@@ -477,6 +477,56 @@ class TestPivotModel(unittest.TestCase):
         index_header_values = model._get_unique_index_values(('test1','test2'), ('test3',), (5,))
         self.assertEqual(index_header_values, index_set)
     
+    def test_is_valid_index1(self):
+        """test if index of correct type is valid"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        self.assertTrue(model.is_valid_index('test_str', 'test1'))
+    
+    def test_is_valid_index2(self):
+        """test if index of incorrect type is invalid"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        self.assertFalse(model.is_valid_index('should_be_int', 'test3'))
+
+    def test_is_valid_index3(self):
+        """test if index of correct value is valid when model has valid_index_values"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, valid_index_values={'test1': set(['correct_value']), 'test3': range(10)})
+        self.assertTrue(model.is_valid_index('correct_value', 'test1'))
+        self.assertTrue(model.is_valid_index(5, 'test3'))
+    
+    def test_is_valid_index4(self):
+        """test if index of incorrect value is invalid when model has valid_index_values"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, valid_index_values={'test1': set(['correct_value']), 'test3': range(10)})
+        self.assertFalse(model.is_valid_index('bad_value', 'test1'))
+        self.assertFalse(model.is_valid_index(-52, 'test3'))
+    
+    def test_is_valid_key1(self):
+        """test that a correct key is valid"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        self.assertTrue(model.is_valid_key(('valid1', 'valid2', 4),
+                                            model._row_data_header_set,
+                                            ('test1', 'test2', 'test3')))
+    
+    def test_is_valid_key2(self):
+        """test that a duplicate key is invalid"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        self.assertFalse(model.is_valid_key(('a', 'aa', 1),
+                                            model._row_data_header_set,
+                                            ('test1', 'test2', 'test3')))
+    
+    def test_is_valid_key3(self):
+        """test that akey with invalid type is invalid"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        self.assertFalse(model.is_valid_key(('a', 'aa', 'invalid_type'),
+                                            model._row_data_header_set,
+                                            ('test1', 'test2', 'test3')))
+    
         
 
 
