@@ -261,9 +261,8 @@ class ItemImage(QGraphicsItem):
             event (QKeyEvent): Key event
         """
         if event.key() == Qt.Key_Delete and self._master.isSelected():
-            name = self.name()
-            ind = self._toolbox.project_item_model.find_item(name)
-            self._toolbox.remove_item(ind, delete_item=True)
+            ind = self._toolbox.project_item_model.find_item(self.name())
+            self._toolbox.remove_item(ind, delete_item=self._toolbox._config.getboolean("settings", "delete_data"))
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item."""

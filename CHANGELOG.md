@@ -7,7 +7,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 This section is for upcoming changes.
 
 ### Added
-
+- New Setting (F1). You can now select whether to delete project item's data directory
+when removing a project item.
+ 
 ### Fixed
 
 ### Changed
