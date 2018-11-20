@@ -372,6 +372,17 @@ class GraphViewGraphicsView(QGraphicsView):
         super().scale(sx, sy)
         self.scaling = False
 
+    def mousePressEvent(self, event):
+        """Set rubber band drag mode if control pressed."""
+        if event.modifiers() & Qt.ControlModifier:
+            self.setDragMode(QGraphicsView.RubberBandDrag)
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Restablish scroll hand drag mode."""
+        super().mouseReleaseEvent(event)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
         only if drag source is not DragListView."""

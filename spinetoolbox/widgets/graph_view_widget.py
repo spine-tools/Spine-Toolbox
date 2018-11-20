@@ -502,12 +502,14 @@ class GraphViewForm(QMainWindow):
             except KeyError:
                 pass
             # relationship_class_name = self.arc_relationship_class_name_list[k]
+            scene.addItem(arc_item)
+            if not object_class_names:
+                continue
             relationship_parts = self.relationship_parts(
                 object_class_names, object_names, extent, self.font, QColor(224, 224, 224, 128),
                 object_label_position="beside_icon")
             arc_label_item = self.arc_label_item(QColor(224, 224, 224, 128), *relationship_parts)
             arc_item.set_label_item(arc_label_item)
-            scene.addItem(arc_item)
             scene.addItem(arc_label_item)
         return True
 
@@ -712,7 +714,7 @@ class GraphViewForm(QMainWindow):
 
     def show_add_objects_form(self, class_id=None):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, class_id=class_id)
+        dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
         dialog.rejected.connect(lambda: self.ui.graphicsView.scene().removeItem(self.object_item_placeholder))
         dialog.show()
 

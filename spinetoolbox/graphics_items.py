@@ -1047,6 +1047,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge_target = None
         self._merge = False
         self._bounce = False
+        self._views_cursor = {}
         pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
         if pixmap.isNull():
             pixmap = QPixmap(":/icons/object_icon.png")
@@ -1080,6 +1081,9 @@ class ObjectItem(QGraphicsPixmapItem):
         return path
 
     def set_label_item(self, item, position="under_icon"):
+        """Set label item. NOTE: Handling label items separately like this
+        (rather than using the parent item technique)
+        allows them to always be on top of other object items."""
         self.label_item = item
         x = self.x() + self._extent / 2 - self.label_item.boundingRect().width() / 2
         y = self.y()
@@ -1105,12 +1109,32 @@ class ObjectItem(QGraphicsPixmapItem):
         self._original_pos = self.pos()
 
     def mouseMoveEvent(self, event):
-        """Call move related items and check if merging into relationship is possible."""
+        """Call move related items and check for a merge target."""
         super().mouseMoveEvent(event)
-        self.move_related_items_by(event.scenePos() - event.lastScenePos())
+        object_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
+        for item in object_items:
+            item.move_related_items_by(event.scenePos() - event.lastScenePos())
+        self.check_for_merge_target(event.scenePos())
+        # Depending on the value of merge target and bounce, set the drop indicator cursor
+        for view in self.scene().views():
+            if view not in self._views_cursor:
+                self._views_cursor[view] = view.viewport().cursor()
+            if self._merge_target:
+                view.viewport().setCursor(Qt.DragCopyCursor)
+            elif self._bounce:
+                view.viewport().setCursor(Qt.ForbiddenCursor)
+            else:
+                try:
+                    view.viewport().setCursor(self._views_cursor[view])
+                except KeyError:
+                    pass
+
+    def check_for_merge_target(self, scene_pos):
+        """Check if this item is touching another item so they can merge
+        (this happens when building a relationship)."""
         self._merge_target = None
         self._bounce = False
-        for item in self.scene().items(event.scenePos()):
+        for item in self.scene().items(scene_pos):
             if item == self:
                 continue
             if not isinstance(item, ObjectItem):
@@ -1134,7 +1158,7 @@ class ObjectItem(QGraphicsPixmapItem):
             self._original_pos = None
 
     def merge_item(self):
-        """Mege this item with the one from the _merge_target attribute.
+        """Merge this item with the one from the _merge_target attribute.
         Try and create a relationship if needed."""
         if self.is_template:
             template = self
