@@ -1028,17 +1028,24 @@ class ObjectItem(QGraphicsPixmapItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
+        object_name (str): object name
         object_class_name (str): object class name
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
-        extent(int): preferred extent
+        extent (int): preferred extent
+        font (QFont): label font
+        color (QColor): label bg color
+        label_position (str)
     """
-    def __init__(self, graph_view_form, object_class_name, x, y, extent):
+    def __init__(self, graph_view_form, object_name, object_class_name, x, y, extent,
+                 label_font=QFont(), label_color=QColor(), label_position="under_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
+        self._object_name = object_name
         self._object_class_name = object_class_name
         self._extent = extent
-        self.label_item = None
+        self._label_position = label_position
+        self.label_item = ObjectLabelItem(object_name, label_font, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
@@ -1057,6 +1064,32 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+
+    def setParentItem(self, parent):
+        """Set same parent for label item."""
+        super().setParentItem(parent)
+        self.label_item.setParentItem(parent)
+        self.place_label_item()
+
+    def itemChange(self, change, value):
+        """Add label item to same scene if added as top level item."""
+        if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
+            scene = value
+            value.addItem(self.label_item)
+            self.place_label_item()
+        return super().itemChange(change, value)
+
+    def place_label_item(self):
+        """Put label item in position."""
+        x = self.x() + self._extent / 2 - self.label_item.boundingRect().width() / 2
+        y = self.y()
+        if self._label_position == "under_icon":
+            y += self._extent
+        elif self._label_position == "over_icon":
+            y -= self._extent
+        elif self._label_position == "beside_icon":
+            x += self._extent / 2 + self.label_item.boundingRect().width() / 2
+        self.label_item.setPos(x, y)
 
     def make_template(self):
         """Make this object a template for a relationship."""
@@ -1079,21 +1112,6 @@ class ObjectItem(QGraphicsPixmapItem):
         path = QPainterPath()
         path.addRect(self.boundingRect() | self.childrenBoundingRect())
         return path
-
-    def set_label_item(self, item, position="under_icon"):
-        """Set label item. NOTE: Handling label items separately like this
-        (rather than using the parent item technique)
-        allows them to always be on top of other object items."""
-        self.label_item = item
-        x = self.x() + self._extent / 2 - self.label_item.boundingRect().width() / 2
-        y = self.y()
-        if position == "under_icon":
-            y += self._extent
-        elif position == "over_icon":
-            y -= self._extent
-        elif position == "beside_icon":
-            x += self._extent / 2 + self.label_item.boundingRect().width() / 2
-        self.label_item.setPos(x, y)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1197,8 +1215,7 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def move_related_items_by(self, pos_diff):
         """Move related items."""
-        if self.label_item:
-            self.label_item.moveBy(pos_diff.x(), pos_diff.y())
+        self.label_item.moveBy(pos_diff.x(), pos_diff.y())
         for item in self.outgoing_arc_items:
             item.move_src_by(pos_diff)
         for item in self.incoming_arc_items:
@@ -1230,8 +1247,7 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def set_all_visible(self, on):
         """Set visible attribute for this item and all related ones."""
-        if self.label_item:
-            self.label_item.setVisible(on)
+        self.label_item.setVisible(on)
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             item.setVisible(on)
         self.setVisible(on)
@@ -1247,15 +1263,18 @@ class ArcItem(QGraphicsLineItem):
         width (int): Preferred line width
         color (QColor): color
         pen_style : pen style
+        label_color (QColor): color
+        label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
-    def __init__(self, graph_view_form, src_item, dst_item, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine):
+    def __init__(self, graph_view_form, src_item, dst_item, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine,
+                 label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width
-        self.label_item = None
+        self.label_item = ArcLabelItem(label_color, *label_parts)
         self.is_src_hovered = False
         self.is_dst_hovered = False
         self.is_template = False
@@ -1282,6 +1301,15 @@ class ArcItem(QGraphicsLineItem):
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
 
+    def itemChange(self, change, value):
+        """Add label item to same scene if added as top level item."""
+        if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
+            scene = value
+            value.addItem(self.label_item)
+            self.label_item.hide()
+            self.label_item.setZValue(0)
+        return super().itemChange(change, value)
+
     def make_template(self):
         self.is_template = True
         pen = self.pen()
@@ -1296,11 +1324,6 @@ class ArcItem(QGraphicsLineItem):
 
     def shape(self):
         return self.shape_item.shape()
-
-    def set_label_item(self, item):
-        self.label_item = item
-        self.label_item.hide()
-        self.label_item.setZValue(0)
 
     def move_src_by(self, pos_diff):
         """Move source point by pos_diff. Used when moving ObjectItems around."""
@@ -1318,8 +1341,6 @@ class ArcItem(QGraphicsLineItem):
 
     def hoverEnterEvent(self, event):
         """Show label if src and dst are not hovered."""
-        if not self.label_item:
-            return
         self.label_item.setPos(
             event.scenePos().x() - self.label_item.boundingRect().x() + 16,
             event.scenePos().y() - self.label_item.boundingRect().y() + 16)
@@ -1329,8 +1350,6 @@ class ArcItem(QGraphicsLineItem):
 
     def hoverMoveEvent(self, event):
         """Show label if src and dst are not hovered."""
-        if not self.label_item:
-            return
         self.label_item.setPos(
             event.scenePos().x() - self.label_item.boundingRect().x() + 16,
             event.scenePos().y() - self.label_item.boundingRect().y() + 16)
@@ -1340,13 +1359,11 @@ class ArcItem(QGraphicsLineItem):
 
     def hoverLeaveEvent(self, event):
         """Hide label."""
-        if not self.label_item:
-            return
         self.label_item.hide()
 
 
-class LabelItem(QGraphicsRectItem):
-    """Label item to use with GraphViewForm.
+class ObjectLabelItem(QGraphicsRectItem):
+    """Object label item to use with GraphViewForm.
 
     Attributes:
         text (str): text
@@ -1362,6 +1379,26 @@ class LabelItem(QGraphicsRectItem):
         self.setBrush(QBrush(color))
         self.setPen(Qt.NoPen)
         self.setZValue(0)
+
+
+class ArcLabelItem(QGraphicsRectItem):
+    """Arc label item to use with GraphViewForm.
+
+    Attributes:
+        color (QColor): color to paint the label
+        object_items (list): ObjectItem instances
+        arc_items (list): ArcItem instances
+    """
+    def __init__(self, color, object_items=[], arc_items=[]):
+        """A QGraphicsRectItem with a relationship to use as arc label"""
+        super().__init__()
+        for item in object_items + arc_items:
+            item.setParentItem(self)
+        rect = self.childrenBoundingRect()
+        self.setBrush(color)
+        self.setPen(Qt.NoPen)
+        self.setRect(rect)
+        # label.setZValue(-2)
 
 
 class CustomTextItem(QGraphicsSimpleTextItem):

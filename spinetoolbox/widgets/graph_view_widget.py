@@ -33,7 +33,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     CommitDialog
 from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
-from graphics_items import ObjectItem, ArcItem, LabelItem, CustomTextItem
+from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect
 from config import STATUSBAR_SS
 
@@ -270,7 +270,7 @@ class GraphViewForm(QMainWindow):
         Returns:
             True if graph data changed, False otherwise
         """
-        hidden_object_names = [x.label_item.text for x in self.hidden_items]
+        hidden_object_names = [x._object_name for x in self.hidden_items]
         self.object_name_list = list()
         self.object_class_name_list = list()
         root_item = self.object_tree_model.root_item
@@ -339,7 +339,7 @@ class GraphViewForm(QMainWindow):
             self.is_template = {}
             object_ind_dict = {}
             for item in object_items:
-                object_name = item.label_item.text
+                object_name = item._object_name
                 try:
                     found_ind = self.object_name_list.index(object_name)
                     is_template = self.is_template.get(found_ind)
@@ -367,12 +367,12 @@ class GraphViewForm(QMainWindow):
                 try:
                     src_ind = object_ind_dict[src_item]
                 except KeyError:
-                    src_object_name = src_item.label_item.text
+                    src_object_name = src_item._object_name
                     src_ind = self.object_name_list.index(src_object_name)
                 try:
                     dst_ind = object_ind_dict[dst_item]
                 except KeyError:
-                    dst_object_name = dst_item.label_item.text
+                    dst_object_name = dst_item._object_name
                     dst_ind = self.object_name_list.index(dst_object_name)
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
@@ -475,7 +475,9 @@ class GraphViewForm(QMainWindow):
             object_name = self.object_name_list[i]
             object_class_name = self.object_class_name_list[i]
             extent = 2 * self.font.pointSize()
-            object_item = ObjectItem(self, object_class_name, x[i], y[i], extent)
+            object_item = ObjectItem(
+                self, object_name, object_class_name, x[i], y[i], extent,
+                self.font, QColor(224, 224, 224, 128))
             try:
                 template_id_dim = self.template_id_dims[i]
                 if self.is_template[i]:
@@ -483,47 +485,29 @@ class GraphViewForm(QMainWindow):
                 object_item.template_id_dim = template_id_dim
             except KeyError:
                 pass
-            label_item = LabelItem(object_name, self.font, QColor(224, 224, 224, 128))
-            object_item.set_label_item(label_item)
             scene.addItem(object_item)
-            scene.addItem(label_item)
             object_items.append(object_item)
         for k in range(len(self.src_ind_list)):
             i = self.src_ind_list[k]
             j = self.dst_ind_list[k]
-            extent = 2 * self.font.pointSize()
-            arc_item = ArcItem(self, object_items[i], object_items[j], .25 * extent)
+            # relationship_class_name = self.arc_relationship_class_name_list[k]
             object_class_names = self.arc_object_class_names_list[k]
             object_names = self.arc_object_names_list[k]
+            extent = 2 * self.font.pointSize()
+            label_parts = self.relationship_parts(
+                object_class_names, object_names, extent, self.font, QColor(224, 224, 224, 128),
+                object_label_position="beside_icon")
+            arc_item = ArcItem(
+                self, object_items[i], object_items[j], .25 * extent,
+                label_color=QColor(224, 224, 224, 128), label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
                 arc_item.make_template()
                 arc_item.template_id = template_id
             except KeyError:
                 pass
-            # relationship_class_name = self.arc_relationship_class_name_list[k]
             scene.addItem(arc_item)
-            if not object_class_names:
-                continue
-            relationship_parts = self.relationship_parts(
-                object_class_names, object_names, extent, self.font, QColor(224, 224, 224, 128),
-                object_label_position="beside_icon")
-            arc_label_item = self.arc_label_item(QColor(224, 224, 224, 128), *relationship_parts)
-            arc_item.set_label_item(arc_label_item)
-            scene.addItem(arc_label_item)
         return True
-
-    def arc_label_item(self, color, object_items, label_items, arc_items):
-        """A QGraphicsRectItem with a relationship to use as arc label"""
-        label = QGraphicsRectItem()
-        for item in object_items + label_items + arc_items:
-            item.setParentItem(label)
-        rect = label.childrenBoundingRect()
-        label.setBrush(color)
-        label.setPen(Qt.NoPen)
-        label.setRect(rect)
-        # label.setZValue(-2)
-        return label
 
     def new_scene(self):
         """A new scene with a background."""
@@ -570,7 +554,8 @@ class GraphViewForm(QMainWindow):
         if data["type"] == "object_class":
             class_name = data["name"]
             extent = 2 * self.font.pointSize()
-            self.object_item_placeholder = ObjectItem(self, class_name, scene_pos.x(), scene_pos.y(), extent)
+            self.object_item_placeholder = ObjectItem(
+                self, None, class_name, scene_pos.x(), scene_pos.y(), extent)
             scene.addItem(self.object_item_placeholder)
             class_id = data["id"]
             self.show_add_objects_form(class_id)
@@ -586,9 +571,9 @@ class GraphViewForm(QMainWindow):
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
             self.template_id += 1
 
-    def add_relationship_template(self, scene, x, y, object_items, label_items, arc_items):
+    def add_relationship_template(self, scene, x, y, object_items, arc_items):
         """Add relationship parts into the scene to form a 'relationship template'."""
-        for item in object_items + label_items + arc_items:
+        for item in object_items + arc_items:
             scene.addItem(item)
         # Move
         rectf = QRectF()
@@ -614,7 +599,7 @@ class GraphViewForm(QMainWindow):
         for dimension in sorted(object_dimensions):
             ind = object_dimensions.index(dimension)
             item = object_items[ind]
-            object_name = item.label_item.text
+            object_name = item._object_name
             if not object_name:
                 logging.debug("can't find name {}".format(object_name))
                 return False
@@ -656,22 +641,22 @@ class GraphViewForm(QMainWindow):
 
     def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
                            arc_pen_style=Qt.SolidLine, object_label_position="under_icon"):
-        """Lists of object, label, and arc items to form a relationship."""
+        """Lists of object and arc items that form a relationship."""
         object_items = list()
-        label_items = list()
         arc_items = list()
         src_ind_list = list(range(len(object_name_list)))
         dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
         max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
         spread = max(self._min_spread, max_length)
         d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        if d is None:
+            return [], []
         x, y = self.vertex_coordinates(d)
         for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
-            object_item = ObjectItem(self, object_class_name, x_, y_, extent)
+            object_item = ObjectItem(
+                self, object_name, object_class_name, x_, y_, extent,
+                font, color, label_position=object_label_position)
             object_items.append(object_item)
-            label_item = LabelItem(object_name, font, color)
-            object_item.set_label_item(label_item, position=object_label_position)
-            label_items.append(label_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
             try:
@@ -680,7 +665,7 @@ class GraphViewForm(QMainWindow):
                 dst_item = object_items[0]
             arc_item = ArcItem(self, src_item, dst_item, extent / 4, pen_style=arc_pen_style)
             arc_items.append(arc_item)
-        return object_items, label_items, arc_items
+        return object_items, arc_items
 
     @Slot(name="show_add_object_classes_form")
     def show_add_object_classes_form(self):
@@ -736,11 +721,10 @@ class GraphViewForm(QMainWindow):
         extent = self.object_item_placeholder._extent
         scene.removeItem(self.object_item_placeholder)
         for x_, y_, object_name in zip(x, y, object_name_list):
-            object_item = ObjectItem(self, object_class_name, x_offset + x_, y_offset + y_, extent)
-            label_item = LabelItem(object_name, self.font, QColor(224, 224, 224, 128))
-            object_item.set_label_item(label_item)
+            object_item = ObjectItem(
+                self, object_name, object_class_name, x_offset + x_, y_offset + y_, extent,
+                self.font, QColor(224, 224, 224, 128))
             scene.addItem(object_item)
-            scene.addItem(label_item)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
