@@ -374,13 +374,19 @@ class PivotModel():
         if self.pivot_rows:
             return self._row_data_header[row]
         else:
-            return ()
+            if row == 0:
+                return ()
+            else:
+                raise IndexError('index out of range')
     
     def get_col_key(self, col):
         if self.pivot_columns:
             return self._column_data_header[col]
         else:
-            return ()
+            if col == 0:
+                return ()
+            else:
+                raise IndexError('index out of range')
     
     def delete_row_col_values(self, index, mask_other_index = [], direction = 'row'):
         """Deletes values for given index and mask of other index"""
