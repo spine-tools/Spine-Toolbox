@@ -82,6 +82,7 @@ class GraphViewForm(QMainWindow):
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
         self.hidden_items = list()
+        self.rejected_items = list()
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -258,6 +259,7 @@ class GraphViewForm(QMainWindow):
         self._has_graph = self.make_graph()
         if self._has_graph:
             self.ui.graphicsView.scale_to_fit_scene()
+        self.hidden_items = list()
 
     @Slot("QItemSelection", "QItemSelection", name="receive_item_tree_selection_changed")
     def receive_item_tree_selection_changed(self, selected, deselected):
@@ -270,7 +272,7 @@ class GraphViewForm(QMainWindow):
         Returns:
             True if graph data changed, False otherwise
         """
-        hidden_object_names = [x._object_name for x in self.hidden_items]
+        rejected_object_names = [x._object_name for x in self.rejected_items]
         self.object_name_list = list()
         self.object_class_name_list = list()
         root_item = self.object_tree_model.root_item
@@ -284,7 +286,7 @@ class GraphViewForm(QMainWindow):
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
                 object_name = object_item.data(Qt.EditRole)
-                if object_name in hidden_object_names:
+                if object_name in rejected_object_names:
                     continue
                 index = self.object_tree_model.indexFromItem(object_item)
                 is_object_selected = self.ui.treeView.selectionModel().isSelected(index)
@@ -755,18 +757,15 @@ class GraphViewForm(QMainWindow):
         """Show context menu for graphics view."""
         self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
         option = self.graph_view_context_menu.get_action()
-        scene = self.ui.graphicsView.scene()
-        if option == "Rebuild graph":
+        if option == "Accept all and rebuild graph":
+            self.rejected_items = list()
             self.build_graph()
         elif option == "Show hidden items":
+            scene = self.ui.graphicsView.scene()
             if scene:
-                object_items = [x for x in scene.items() if isinstance(x, ObjectItem)]
                 for item in self.hidden_items:
-                    if item not in object_items:
-                        self.hidden_items = list()
-                        self.build_graph()
-                        break
                     item.set_all_visible(True)
+                self.hidden_items = list()
         else:
             pass
         self.graph_view_context_menu.deleteLater()
@@ -783,8 +782,8 @@ class GraphViewForm(QMainWindow):
                 self.hidden_items.extend(object_items)
                 for item in object_items:
                     item.set_all_visible(False)
-            elif option == "Hide and rebuild graph":
-                self.hidden_items.extend(object_items)
+            elif option == "Reject and rebuild graph":
+                self.rejected_items.extend(object_items)
                 self.build_graph()
             else:
                 pass
