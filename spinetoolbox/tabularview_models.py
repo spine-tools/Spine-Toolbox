@@ -473,8 +473,9 @@ class PivotModel():
                     pos = [tk.index(n) for n in self.index_names if n in tk]
                     getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                     delete_values.update(set(k for k in self._data if getter(k) in indexes))
-                    # delete values from row headers
-                    if any(n in self.pivot_rows for n in tk):
+                    # delete values from headers
+                    if all(n in self.pivot_rows for n in tk):
+                        # tuple exists over rows
                         pos = [tk.index(n) for n in self.pivot_rows if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                         row_indexes = set(getter(i) for i in indexes)
@@ -482,7 +483,8 @@ class PivotModel():
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                         delete_values_row.update(set(n for n in self._row_data_header if getter(n) in row_indexes))
                     # delete values from column headers
-                    if any(n in self.pivot_columns for n in tk):
+                    if all(n in self.pivot_columns for n in tk):
+                        # tuple exists over columns
                         pos = [tk.index(n) for n in self.pivot_columns if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                         column_indexes = set(getter(i) for i in indexes)
