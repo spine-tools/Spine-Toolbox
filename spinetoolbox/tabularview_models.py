@@ -452,7 +452,7 @@ class PivotModel():
         """deletes values from keys with combination of indexes given that match tuple_index_entries"""
         # delete from tuple indexes
         delete_values = set()
-        delete_values_index = set()
+        delete_values_row = set()
         delete_values_column = set()
         for tk in self.tuple_index_entries.keys():
             for names, indexes in delete_tuples.items():
@@ -480,7 +480,7 @@ class PivotModel():
                         row_indexes = set(getter(i) for i in indexes)
                         pos = [self.pivot_rows.index(n) for n in self.pivot_rows if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
-                        delete_values_index.update(set(n for n in self._row_data_header if getter(n) in row_indexes))
+                        delete_values_row.update(set(n for n in self._row_data_header if getter(n) in row_indexes))
                     # delete values from column headers
                     if any(n in self.pivot_columns for n in tk):
                         pos = [tk.index(n) for n in self.pivot_columns if n in tk]
@@ -495,9 +495,9 @@ class PivotModel():
                 self._data.pop(k, None)
                 self._edit_data.pop(k, None)
         # delete from index headers
-        if delete_values_index:
+        if delete_values_row:
             for i, key in reversed(list(enumerate(self._row_data_header))):
-                if key in delete_values_index:
+                if key in delete_values_row:
                     del_key = self._row_data_header.pop(i)
                     self._row_data_header_set.discard(del_key)
         if delete_values_column:
@@ -509,14 +509,14 @@ class PivotModel():
     def delete_index_values(self, delete_indexes):
         """delete one ore more index value from data"""
         delete_values = {}
-        delete_values_index = {}
+        delete_values_row = {}
         delete_values_column = {}
         for k, indexes in delete_indexes.items():
             if k not in self._index_ind or not indexes:
                 continue
             dv = set(indexes)
             if k in self.pivot_rows:
-                delete_values_index[self.pivot_rows.index(k)] = dv
+                delete_values_row[self.pivot_rows.index(k)] = dv
             if k in self.pivot_columns:
                 delete_values_column[self.pivot_columns.index(k)] = dv
             # add existing entries to deleted entries
@@ -552,9 +552,9 @@ class PivotModel():
                 self._data.pop(key, None)
                 self._edit_data.pop(key, None)
         # delete from index headers
-        if delete_values_index:
+        if delete_values_row:
             for i, key in reversed(list(enumerate(self._row_data_header))):
-                for ind, values in delete_values_index.items():
+                for ind, values in delete_values_row.items():
                     if key[ind] in values:
                         del_key = self._row_data_header.pop(i)
                         self._row_data_header_set.discard(del_key)
