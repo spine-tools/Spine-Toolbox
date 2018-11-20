@@ -248,7 +248,7 @@ class GraphViewContextMenu(CustomContextMenu):
         """Class constructor."""
         super().__init__(parent)
         self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
-        self.add_action("Accept all and rebuild graph", enabled=len(parent.rejected_items) > 0)
+        self.add_action("Reset graph", enabled=parent._has_graph > 0)
         self.exec_(position)
 
 
@@ -262,8 +262,8 @@ class ObjectItemContextMenu(CustomContextMenu):
     def __init__(self, parent, position):
         """Class constructor."""
         super().__init__(parent)
-        self.add_action("Hide")
-        self.add_action("Reject and rebuild graph")
+        self.add_action("Hide selected")
+        self.add_action("Ignore selected and rebuild graph")
         self.exec_(position)
 
 

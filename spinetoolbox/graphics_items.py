@@ -1033,12 +1033,12 @@ class ObjectItem(QGraphicsPixmapItem):
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
         extent (int): preferred extent
-        font (QFont): label font
-        color (QColor): label bg color
+        label_font (QFont): label font
+        label_color (QColor): label bg color
         label_position (str)
     """
     def __init__(self, graph_view_form, object_name, object_class_name, x, y, extent,
-                 label_font=QFont(), label_color=QColor(), label_position="under_icon"):
+                 label_font=QFont(), label_color=QColor(), label_position="over_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
         self._object_name = object_name
@@ -1055,15 +1055,32 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge = False
         self._bounce = False
         self._views_cursor = {}
+        self.shade = QGraphicsRectItem()
         pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
         if pixmap.isNull():
             pixmap = QPixmap(":/icons/object_icon.png")
         self.setPixmap(pixmap.scaled(extent, extent))
         self.setZValue(-1)
-        self.setPos(x - 0.5 * extent, y - 0.5 * extent)
+        # self.setPos(x - 0.5 * extent, y - 0.5 * extent)
+        self.setPos(x, y)
+        self.setOffset(-0.5 * extent, -0.5 * extent)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+        self.shade.setRect(self.boundingRect())
+        self.shade.setBrush(graph_view_form.palette().highlight())
+        self.shade.setPen(Qt.NoPen)
+        self.shade.setParentItem(self)
+        self.shade.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+        self.shade.hide()
+
+    def paint(self, painter, option, widget=None):
+        """Try and make it more clear when an item is selected."""
+        super().paint(painter, option, widget)
+        if option.state & (QStyle.State_Selected):
+            self.shade.show()
+        else:
+            self.shade.hide()
 
     def setParentItem(self, parent):
         """Set same parent for label item."""
@@ -1081,12 +1098,12 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def place_label_item(self):
         """Put label item in position."""
-        x = self.x() + self._extent / 2 - self.label_item.boundingRect().width() / 2
-        y = self.y()
+        x = self.x() - self.label_item.boundingRect().width() / 2
+        y = self.y() + self.offset().y() + (self.boundingRect().height() - self.label_item.boundingRect().height()) / 2
         if self._label_position == "under_icon":
-            y += self._extent
-        elif self._label_position == "over_icon":
             y -= self._extent
+        elif self._label_position == "over_icon":
+            y += self._extent
         elif self._label_position == "beside_icon":
             x += self._extent / 2 + self.label_item.boundingRect().width() / 2
         self.label_item.setPos(x, y)
@@ -1110,7 +1127,8 @@ class ObjectItem(QGraphicsPixmapItem):
     def shape(self):
         """Make the entire bounding rect to be the shape."""
         path = QPainterPath()
-        path.addRect(self.boundingRect() | self.childrenBoundingRect())
+        # path.addRect(self.boundingRect() | self.childrenBoundingRect())
+        path.addRect(self.boundingRect())
         return path
 
     def add_incoming_arc_item(self, arc_item):
@@ -1266,7 +1284,7 @@ class ArcItem(QGraphicsLineItem):
         label_color (QColor): color
         label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
-    def __init__(self, graph_view_form, src_item, dst_item, width, color=QColor(64, 64, 64), pen_style=Qt.SolidLine,
+    def __init__(self, graph_view_form, src_item, dst_item, width, color, pen_style=Qt.SolidLine,
                  label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
@@ -1279,10 +1297,10 @@ class ArcItem(QGraphicsLineItem):
         self.is_dst_hovered = False
         self.is_template = False
         self.template_id = None
-        src_x = src_item.sceneBoundingRect().center().x()
-        src_y = src_item.sceneBoundingRect().center().y()
-        dst_x = dst_item.sceneBoundingRect().center().x()
-        dst_y = dst_item.sceneBoundingRect().center().y()
+        src_x = src_item.x() #sceneBoundingRect().center().x()
+        src_y = src_item.y() #sceneBoundingRect().center().y()
+        dst_x = dst_item.x() #sceneBoundingRect().center().x()
+        dst_y = dst_item.y() #sceneBoundingRect().center().y()
         self.setLine(src_x, src_y, dst_x, dst_y)
         pen = QPen()
         pen.setWidth(self.width)
