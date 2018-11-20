@@ -705,6 +705,66 @@ class TestPivotModel(unittest.TestCase):
         model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
         self.assertEqual(model._added_tuple_index_entries[('test1', 'test2')], set([('a', 'cc')]))
     
+    def test_paste_values1(self):
+        """test pasting data into data only"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        model.set_pivot(['test1','test2'], ['test3'], [], ())
+        data = [['paste1', 'paste2', None, None, None],
+                ['paste3', 'paste4', None, None, None],
+                [None, None, 'value_b_cc_3', None, None],
+                [None, None, None, 'value_c_cc_4', None],
+                [None, None, None, None, 'value_d_dd_5'],
+                [None, None, None, None, 'value_e_ee_5']]
+        model.paste_data(data=[['paste1', 'paste2'],['paste3', 'paste4']], row_mask=[0, 1], col_mask=[0, 1])
+        data_model = [[d for d in inner] for inner in model.get_pivoted_data(range(6),range(5))]
+        self.assertEqual(data_model, data)
+        
+    def test_paste_values2(self):
+        """test pasting data into row headers only"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        paste_data = [['aa_new', 9],['bb_new', 10]]
+        row_header_data = model._row_data_header.copy()
+        row_header_data[0] = ('a','aa_new', 9)
+        row_header_data[1] = ('a','bb_new', 10)
+        model.paste_data(row_start=1, row_header_data=paste_data, row_mask=[0,1])
+        self.assertEqual(model._row_data_header, row_header_data)
+    
+    def test_paste_values3(self):
+        """test pasting data into row headers only with new row"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        paste_data = [['aa_new', 9],['bb_new', 10]]
+        row_header_data = model._row_data_header.copy()
+        row_header_data[0] = ('a','aa_new', 9)
+        row_header_data.append((None,'bb_new', 10))
+        model.paste_data(row_start=1, row_header_data=paste_data, row_mask=[0,6])
+        self.assertEqual(model._row_data_header, row_header_data)
+    
+    def test_paste_values4(self):
+        """test pasting data into columns headers only"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, rows=(), columns=tuple(self.index_names))
+        paste_data = [['aa_new', 'bb_new'],[9, 10]]
+        col_header_data = model._column_data_header.copy()
+        col_header_data[0] = ('a','aa_new', 9)
+        col_header_data[1] = ('a','bb_new', 10)
+        model.paste_data(col_start=1, col_header_data=paste_data, col_mask=[0,1])
+        self.assertEqual(model._column_data_header, col_header_data)
+    
+    def test_paste_values5(self):
+        """test pasting data into columns headers only with new column"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, rows=(), columns=tuple(self.index_names))
+        paste_data = [['aa_new', 'bb_new'],[9, 10]]
+        col_header_data = model._column_data_header.copy()
+        col_header_data[0] = ('a','aa_new', 9)
+        col_header_data.append((None,'bb_new', 10))
+        model.paste_data(col_start=1, col_header_data=paste_data, col_mask=[0,6])
+        self.assertEqual(model._column_data_header, col_header_data)
+        
+
         
 
 
