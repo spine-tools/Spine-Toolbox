@@ -494,6 +494,8 @@ class PivotModel():
         if delete_values:
             # delete values from data dict
             for k in delete_values:
+                if k in self._data and k not in self._deleted_data:
+                    self._deleted_data[k] = self._data[k]
                 self._data.pop(k, None)
                 self._edit_data.pop(k, None)
         # delete from index headers
