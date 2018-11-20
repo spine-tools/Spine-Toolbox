@@ -728,7 +728,7 @@ class ToolboxUI(QMainWindow):
             return
         for name in item_names:
             ind = self.project_item_model.find_item(name)
-            self.remove_item(ind, delete_item=True)
+            self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"))
         self.msg.emit("All {0} items removed from project".format(n))
         for i in range(self.ui.tabWidget_item_properties.count()):
             if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
@@ -753,8 +753,13 @@ class ToolboxUI(QMainWindow):
         project_item = self.project_item_model.project_item(ind)
         name = project_item.name
         if check_dialog:
-            msg = "Are you sure? Item's data will be deleted from you project.\n\n" \
-                  "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            if not delete_item:
+                msg = "Are you sure? If Yes, item data directory will still be available in " \
+                      "the project directory after this operation.\n\n" \
+                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            else:
+                msg = "Are you sure? If Yes, item data directory will be deleted from your project.\n\n" \
+                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
             # noinspection PyCallByClass, PyTypeChecker
             answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -1149,7 +1154,7 @@ class ToolboxUI(QMainWindow):
                 new_name = answer[0]
                 self.project_item_model.setData(ind, new_name)
         elif option == "Remove Item":
-            self.remove_item(ind, delete_item=True, check_dialog=True)
+            self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"), check_dialog=True)
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
