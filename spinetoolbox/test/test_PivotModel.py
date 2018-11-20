@@ -642,6 +642,69 @@ class TestPivotModel(unittest.TestCase):
         model.delete_index_values({'test1': set(['a'])})
         self.assertEqual(model._added_index_entries['test1'], set(['b','c']))
     
+    def test_delete_tuple_index_values1(self):
+        """test that delete_tuple_index_values deletes data"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=self.tuple_index_entries)
+        data_dict = self.dict_data
+        deleted_data = {}
+        deleted_data[('a','aa',1)] = data_dict.pop(('a','aa',1))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._data, data_dict)
+        self.assertEqual(model._deleted_data, deleted_data)
+    
+    def test_delete_tuple_index_values2(self):
+        """test deleting index values deletes row headers"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=self.tuple_index_entries)
+        row_headers = model._row_data_header.copy()
+        row_headers.pop(0)
+        row_headers_set = set(model._row_data_header_set)
+        row_headers_set.discard(('a','aa',1))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._row_data_header, row_headers)
+        self.assertEqual(model._row_data_header_set, row_headers_set)
+    
+    def test_delete_tuple_index_values3(self):
+        """test deleting index values deletes column headers"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, rows=(), columns=tuple(self.index_names), tuple_index_entries=self.tuple_index_entries)
+        column_headers = model._column_data_header.copy()
+        column_headers.pop(0)
+        column_headers_set = set(model._column_data_header_set)
+        column_headers_set.discard(('a','aa',1))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._column_data_header, column_headers)
+        self.assertEqual(model._column_data_header_set, column_headers_set)
+    
+    def test_delete_tuple_index_values4(self):
+        """test deleting tuple index values where tuple exists over both row and column don't delete row or column values"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, rows=('test1','test3'), columns=('test2',), tuple_index_entries=self.tuple_index_entries)
+        column_headers = model._column_data_header.copy()
+        row_headers = model._row_data_header.copy()
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._column_data_header, column_headers)
+        self.assertEqual(model._row_data_header, row_headers)
+    
+    def test_delete_tuple_index_values5(self):
+        """test deleting tuple index values also deletes tuple index entries"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=self.tuple_index_entries)
+        expected_tuple_values = set([('a', 'bb'), ('a', 'cc'),('b', 'cc'), ('c', 'cc'), ('d', 'dd'), ('e', 'ee'), ('f', 'ee')])
+        deleted_tuple_values = set([('a','aa')])
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model.tuple_index_entries[('test1', 'test2')], expected_tuple_values)
+        self.assertEqual(model._deleted_tuple_index_entries[('test1', 'test2')], deleted_tuple_values)
+    
+    def test_delete_tuple_index_values6(self):
+        """test deleting tuple index values also deletes added tuple index entries"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=self.tuple_index_entries)
+        model._added_tuple_index_entries[('test1', 'test2')] = set([('a', 'aa'), ('a', 'cc')])
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._added_tuple_index_entries[('test1', 'test2')], set([('a', 'cc')]))
+    
         
 
 
