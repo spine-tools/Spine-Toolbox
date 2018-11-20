@@ -389,6 +389,21 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_parameters">
+   <property name="windowTitle">
+    <string>Parameters</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_parameters"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionBuild">
    <property name="text">
     <string>Rebuild</string>

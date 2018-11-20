@@ -1099,6 +1099,6 @@ class Ui_MainWindow(object):
 
 from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

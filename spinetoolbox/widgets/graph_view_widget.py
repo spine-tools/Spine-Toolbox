@@ -19,8 +19,8 @@ Widget to show graph view form.
 import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
-    QAction, QGraphicsRectItem, QMessageBox, QCheckBox
-from PySide2.QtGui import QFont, QFontMetrics, QColor, QGuiApplication, QIcon
+    QAction, QGraphicsRectItem, QMessageBox, QCheckBox, QTableView
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPalette
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 import numpy as np
@@ -195,6 +195,7 @@ class GraphViewForm(QMainWindow):
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameters.toggleViewAction())
         if not self.read_only:
             self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
         else:
@@ -265,6 +266,10 @@ class GraphViewForm(QMainWindow):
     def receive_item_tree_selection_changed(self, selected, deselected):
         """Select or deselect all children when selecting or deselecting the parent."""
         self.build_graph()
+
+    def receive_graph_view_selection_changed(self, selected, deselected):
+        self.ui.horizontalLayout_parameters.addWidget(QTableView(self))
+
 
     def init_graph_data(self):
         """Initialize graph data by querying db_map.
