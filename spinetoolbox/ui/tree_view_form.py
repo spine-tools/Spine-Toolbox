@@ -519,5 +519,5 @@ class Ui_MainWindow(object):
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
 from widgets.custom_qtreeview import ObjectTreeView
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView, JSONPopupTableView
+from widgets.custom_qtableview import JSONPopupTableView, AutoFilterCopyPasteTableView
 import resources_icons_rc

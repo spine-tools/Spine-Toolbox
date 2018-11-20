@@ -9,7 +9,8 @@ This section is for upcoming changes.
 ### Added
 - New Setting (F1). You can now select whether to delete project item's data directory
 when removing a project item.
- 
+- Graph View is also available from Data Store items, allowing to insert new relationships more graphically.
+
 ### Fixed
 
 ### Changed
@@ -61,7 +62,7 @@ which can be used to enter data more easily.
 second one.
 - Work folder is not created for Tools if the Tool template requirements are not met.
 - Result folder is not created if the Tool template fails to start.
-- The embedded Julia REPL now uses the Julia that is given in application Settings (F1). 
+- The embedded Julia REPL now uses the Julia that is given in application Settings (F1).
 Previously, this used the default Julia of your OS.
 
 ### Removed
