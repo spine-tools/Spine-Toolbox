@@ -459,7 +459,24 @@ class TestPivotModel(unittest.TestCase):
         model.edit_index([('new1', 'new2', 'wrong_type')],[6],'row')
         self.assertEqual(model._row_data_header, row_headers + [('new1', 'new2', 'wrong_type')])
         self.assertEqual(model._invalid_row, set([6]))
-        
+    
+    def test_get_unique_index_values1(self):
+        """test that _get_unique_index_values returns unique values for specified indexes"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        index_set = set([('a', 'aa'), ('a', 'bb'), ('b', 'cc'),
+                         ('c', 'cc'), ('d', 'dd'), ('e', 'ee')])
+        index_header_values = model._get_unique_index_values(('test1','test2'), (), ())
+        self.assertEqual(index_header_values, index_set)
+    
+    def test_get_unique_index_values2(self):
+        """test that _get_unique_index_values returns unique values for specified indexes with filter index and value"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        index_set = set([('d', 'dd'), ('e', 'ee')])
+        index_header_values = model._get_unique_index_values(('test1','test2'), ('test3',), (5,))
+        self.assertEqual(index_header_values, index_set)
+    
         
 
 
