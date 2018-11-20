@@ -550,7 +550,7 @@ class PivotModel():
                 for ind, values in delete_values.items():
                     if key[ind] in values:
                         delete_keys.append(key)
-            for k in delete_keys:
+            for key in delete_keys:
                 if key in self._data and key not in self._deleted_data:
                     self._deleted_data[key] = self._data[key]
                 self._data.pop(key, None)
@@ -589,12 +589,12 @@ class PivotModel():
             data = [row[:end_index] for row in data]
         else:
             end_index = min(len(index_names) - start_index, len(data))
-            data = [[data[row][col] for row in range(end_index - start_index)] for col in range(len(data[0]))]
+            data = [[data[row][col] for row in range(end_index - start_index + 1)] for col in range(len(data[0]))]
         
         # get header indexes that are going to be updated
         edit_index = [index_values[i] for i in mask if i < len(index_values)]
         
-        num_new = end_index - start_index
+        num_new = end_index - start_index + 1
         replace_from = start_index
         replace_to = replace_from + num_new
         # convert indexes with int type to int
@@ -602,7 +602,7 @@ class PivotModel():
             if (index_names[replace_from + c] in self._index_type
                 and self._index_type[index_names[replace_from + c]] == int):
                 for r in range(len(data)):
-                    if data[r][c].isdigit():
+                    if isinstance(data[r][c],str) and data[r][c].isdigit():
                         data[r][c] = int(data[r][c])
 
         # replace old values with pasted values
@@ -612,23 +612,20 @@ class PivotModel():
                 
         # new header values
         new_index = []
-        if len(data) > len(mask):
+        if len(data) > len(edit_index):
             none_tuple = tuple(None for _ in range(len(index_names)))
             before = none_tuple[0:replace_from]
             after = none_tuple[replace_to:]
             new_index = [before + tuple(data[row][col] for col in new_indexes) + after for row in range(len(edit_index), len(data))]
         return edit_index, new_index
 
-    def paste_data(self, row_col_index, col_row_index ,row_header_data, col_header_data, data, row_mask, col_mask):
+    def paste_data(self, row_start = 0, row_header_data = [], col_start = 0, col_header_data = [], data = [], row_mask = [], col_mask = []):
         """Paste a list of list into current view of AbstractTable"""
-        if not data or not row_header_data or not col_header_data:
-            return
-        
         if row_header_data:
-            edit_rows, add_rows = self._data_to_header(row_header_data, row_col_index, self._row_data_header, self.pivot_rows, row_mask, "row")
+            edit_rows, add_rows = self._data_to_header(row_header_data, row_start, self._row_data_header, self.pivot_rows, row_mask, "row")
             self.edit_index(edit_rows + add_rows, row_mask, "row")
         if col_header_data:
-            edit_columns, add_columns = self._data_to_header(col_header_data, col_row_index, self._column_data_header, self.pivot_columns, col_mask, "column")
+            edit_columns, add_columns = self._data_to_header(col_header_data, col_start, self._column_data_header, self.pivot_columns, col_mask, "column")
             self.edit_index(edit_columns + add_columns, col_mask, "column")
         # paste data
         if data:
