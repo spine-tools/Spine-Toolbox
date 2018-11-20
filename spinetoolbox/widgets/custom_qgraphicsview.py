@@ -62,7 +62,10 @@ class CustomQGraphicsView(QGraphicsView):
     def make_new_scene(self):
         """Make a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
-        self._scene.changed.disconnect(self.scene_changed)
+        try:
+            self._scene.changed.disconnect(self.scene_changed)
+        except RuntimeError:
+            logging.error("RuntimeError in disconnecting changed signal")
         self._scene = CustomQGraphicsScene(self, self._toolbox)
         self.setScene(self._scene)
         self._scene.addItem(self.link_drawer)

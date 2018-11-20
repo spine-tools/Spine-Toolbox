@@ -52,7 +52,7 @@ class GraphViewForm(QMainWindow):
 
     def __init__(self, owner, db_map, database, read_only=False):
         """Initialize class."""
-        super().__init__(flags=Qt.Window)  # Setting the parent inherits the stylesheet
+        super().__init__(flags=Qt.Window)
         self._owner = owner
         self.db_map = db_map
         self.database = database
@@ -63,7 +63,11 @@ class GraphViewForm(QMainWindow):
         self.err_msg = QErrorMessage(self)
         self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
-        self._min_spread = self.font_metric.width("spread")
+        self._spread = self.font_metric.width("Spine Toolbox")
+        self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
+        self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
+        self.label_color.setAlphaF(.5)
+        self.arc_color.setAlphaF(.75)
         self.object_name_list = list()
         self.object_class_name_list = list()
         self.arc_relationship_class_name_list = list()
@@ -115,17 +119,8 @@ class GraphViewForm(QMainWindow):
         self.ui.treeView.expand(self.object_tree_model.root_item.index())
 
     def setup_views(self):
-        """Adjust grid width to largest item; setup 'Add more' action and button."""
+        """Setup 'Add more' action and button."""
         # object class
-        width_list = list()
-        for item in self.object_class_list_model.findItems("*", Qt.MatchWildcard):
-            data = item.data(Qt.DisplayRole)
-            font = item.data(Qt.FontRole)
-            width = QFontMetrics(font).width(data)
-            width_list.append(width)
-        width = max(width_list)
-        height = self.ui.listView_object_class.gridSize().height()
-        #self.ui.listView_object_class.setGridSize(QSize(width, height))
         index = self.object_class_list_model.add_more_index
         action = QAction()
         icon = QIcon(":/icons/plus_object_icon.png")
@@ -139,15 +134,6 @@ class GraphViewForm(QMainWindow):
         self.ui.listView_object_class.setIndexWidget(index, button)
         action.triggered.connect(self.show_add_object_classes_form)
         # relationship class
-        width_list = list()
-        for item in self.relationship_class_list_model.findItems("*", Qt.MatchWildcard):
-            data = item.data(Qt.DisplayRole)
-            font = item.data(Qt.FontRole)
-            width = QFontMetrics(font).width(data)
-            width_list.append(width)
-        width = max(width_list)
-        height = self.ui.listView_relationship_class.gridSize().height()
-        #self.ui.listView_relationship_class.setGridSize(QSize(width, height))
         index = self.relationship_class_list_model.add_more_index
         action = QAction()
         icon = QIcon(":/icons/plus_relationship_icon.png")
@@ -256,6 +242,7 @@ class GraphViewForm(QMainWindow):
     @busy_effect
     @Slot("bool", name="build_graph")
     def build_graph(self, checked=True):
+        """Initialize graph data and build graph."""
         self.init_graph_data()
         self._has_graph = self.make_graph()
         if self._has_graph:
@@ -264,7 +251,7 @@ class GraphViewForm(QMainWindow):
 
     @Slot("QItemSelection", "QItemSelection", name="receive_item_tree_selection_changed")
     def receive_item_tree_selection_changed(self, selected, deselected):
-        """Select or deselect all children when selecting or deselecting the parent."""
+        """Call build graph."""
         self.build_graph()
 
     def receive_graph_view_selection_changed(self, selected, deselected):
@@ -272,11 +259,7 @@ class GraphViewForm(QMainWindow):
 
 
     def init_graph_data(self):
-        """Initialize graph data by querying db_map.
-
-        Returns:
-            True if graph data changed, False otherwise
-        """
+        """Initialize graph data by querying db_map."""
         rejected_object_names = [x._object_name for x in self.rejected_items]
         self.object_name_list = list()
         self.object_class_name_list = list()
@@ -397,7 +380,6 @@ class GraphViewForm(QMainWindow):
         dist = np.zeros((N, N))
         src_ind = arr(src_ind_list)
         dst_ind = arr(dst_ind_list)
-        max_sep = max([self.font_metric.width(x) for x in object_name_list], default=0)
         try:
             dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = spread
         except IndexError:
@@ -471,9 +453,7 @@ class GraphViewForm(QMainWindow):
     def make_graph(self):
         """Make graph."""
         scene = self.new_scene()
-        max_length = max([self.font_metric.width(x) for x in self.object_name_list], default=0)
-        spread = max(self._min_spread, max_length)
-        d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, spread)
+        d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, self._spread)
         if d is None:
             return False
         x, y = self.vertex_coordinates(d, self.heavy_positions)
@@ -484,7 +464,7 @@ class GraphViewForm(QMainWindow):
             extent = 2 * self.font.pointSize()
             object_item = ObjectItem(
                 self, object_name, object_class_name, x[i], y[i], extent,
-                self.font, QColor(224, 224, 224, 128))
+                label_font=self.font, label_color=self.label_color)
             try:
                 template_id_dim = self.template_id_dims[i]
                 if self.is_template[i]:
@@ -502,11 +482,11 @@ class GraphViewForm(QMainWindow):
             object_names = self.arc_object_names_list[k]
             extent = 2 * self.font.pointSize()
             label_parts = self.relationship_parts(
-                object_class_names, object_names, extent, self.font, QColor(224, 224, 224, 128),
+                object_class_names, object_names, extent, self.font,
                 object_label_position="beside_icon")
             arc_item = ArcItem(
                 self, object_items[i], object_items[j], .25 * extent,
-                label_color=QColor(224, 224, 224, 128), label_parts=label_parts)
+                self.arc_color, label_color=self.label_color, label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
                 arc_item.make_template()
@@ -572,7 +552,7 @@ class GraphViewForm(QMainWindow):
             extent = 2 * self.font.pointSize()
             relationship_parts = self.relationship_parts(
                 object_class_name_list, object_name_list, extent,
-                self.font, QColor(224, 224, 224, 128), arc_pen_style=Qt.DotLine)
+                self.font, arc_pen_style=Qt.DotLine)
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_parts)
             self._has_graph = True
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
@@ -646,23 +626,21 @@ class GraphViewForm(QMainWindow):
             self.msg_error.emit(e.msg)
             return False
 
-    def relationship_parts(self, object_class_name_list, object_name_list, extent, font, color,
+    def relationship_parts(self, object_class_name_list, object_name_list, extent, font,
                            arc_pen_style=Qt.SolidLine, object_label_position="under_icon"):
         """Lists of object and arc items that form a relationship."""
         object_items = list()
         arc_items = list()
         src_ind_list = list(range(len(object_name_list)))
         dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
-        max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
-        spread = max(self._min_spread, max_length)
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread / 2)
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
         for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
             object_item = ObjectItem(
                 self, object_name, object_class_name, x_, y_, extent,
-                font, color, label_position=object_label_position)
+                label_font=font, label_color=Qt.transparent, label_position=object_label_position)
             object_items.append(object_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
@@ -670,7 +648,7 @@ class GraphViewForm(QMainWindow):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(self, src_item, dst_item, extent / 4, pen_style=arc_pen_style)
+            arc_item = ArcItem(self, src_item, dst_item, extent / 4, self.arc_color, pen_style=arc_pen_style)
             arc_items.append(arc_item)
         return object_items, arc_items
 
@@ -717,9 +695,7 @@ class GraphViewForm(QMainWindow):
         object_name_list = [x.name for x in objects]
         src_ind_list = list()
         dst_ind_list = list()
-        max_length = max([self.font_metric.width(x) for x in object_name_list], default=0)
-        spread = max(self._min_spread, max_length)
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread)
         x, y = self.vertex_coordinates(d)
         scene = self.ui.graphicsView.scene()
         object_class_name = self.object_item_placeholder._object_class_name
@@ -730,7 +706,7 @@ class GraphViewForm(QMainWindow):
         for x_, y_, object_name in zip(x, y, object_name_list):
             object_item = ObjectItem(
                 self, object_name, object_class_name, x_offset + x_, y_offset + y_, extent,
-                self.font, QColor(224, 224, 224, 128))
+                label_font=self.font, label_color=self.label_color)
             scene.addItem(object_item)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
@@ -762,7 +738,7 @@ class GraphViewForm(QMainWindow):
         """Show context menu for graphics view."""
         self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
         option = self.graph_view_context_menu.get_action()
-        if option == "Accept all and rebuild graph":
+        if option == "Reset graph":
             self.rejected_items = list()
             self.build_graph()
         elif option == "Show hidden items":
@@ -783,11 +759,11 @@ class GraphViewForm(QMainWindow):
         scene = self.ui.graphicsView.scene()
         if scene:
             object_items = [x for x in scene.selectedItems() if isinstance(x, ObjectItem)]
-            if option == "Hide":
+            if option == "Hide selected":
                 self.hidden_items.extend(object_items)
                 for item in object_items:
                     item.set_all_visible(False)
-            elif option == "Reject and rebuild graph":
+            elif option == "Ignore selected and rebuild graph":
                 self.rejected_items.extend(object_items)
                 self.build_graph()
             else:
