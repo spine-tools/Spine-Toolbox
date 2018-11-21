@@ -23,7 +23,7 @@ import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QPixmap
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -66,6 +66,7 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(QPixmap(":/symbols/Spine_symbol.png"))
         self.ui.graphicsView.set_ui(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
