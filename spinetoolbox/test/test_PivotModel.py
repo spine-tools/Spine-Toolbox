@@ -763,6 +763,33 @@ class TestPivotModel(unittest.TestCase):
         col_header_data.append((None,'bb_new', 10))
         model.paste_data(col_start=1, col_header_data=paste_data, col_mask=[0,6])
         self.assertEqual(model._column_data_header, col_header_data)
+    
+    def test_delete_then_add_value(self):
+        """test that deleting a value and then adding it back tracks in _deleted_data and _edited_data"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, rows=(), columns=tuple(self.index_names))
+        model.set_pivoted_data([['']],[0],[0])
+        model.set_pivoted_data([['edited_val']],[0],[0])
+        self.assertEqual(model._deleted_data, {})
+        self.assertEqual(model._edit_data, {('a','aa',1): 'value_a_aa_1'})
+    
+    def test_add_new_value_then_delete(self):
+        """test that adding a value and then deleteing it tracks in _deleted_data and _edited_data"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, rows=('test1','test3'), columns=('test2',))
+        model.set_pivoted_data([['new_data']],[0],[1])
+        model.set_pivoted_data([['']],[0],[1])
+        self.assertEqual(model._deleted_data, {})
+        self.assertEqual(model._edit_data, {})
+    
+    def test_edit_value_edit_back(self):
+        """test that edit a value and editing it to original value to make sure it's not in _edit_value"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        model.set_pivoted_data([['new_data']],[0],[0])
+        model.set_pivoted_data([['value_a_aa_1']],[0],[0])
+        self.assertEqual(model._deleted_data, {})
+        self.assertEqual(model._edit_data, {})
         
 
         
