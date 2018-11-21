@@ -360,15 +360,50 @@ class PivotModel():
                     key = self._key_getter(row_key + col_key + self.frozen_value)
                     if not paste_value or paste_value.isspace():
                         # value is None or whitspace remove any existing data
-                        if key in self._data and key not in self._deleted_data:
-                            self._deleted_data[key] = self._data[key]
-                        self._data.pop(key, None)
-                        self._edit_data.pop(key, None)
+                        self._delete_data(key)
                     else:
                         # update data
-                        if key not in self._edit_data:
-                            self._edit_data[key] = self._data.get(key, None)
-                        self._data[key] = paste_value
+                        self._add_data(key, paste_value)
+
+    def _delete_data(self, key):
+        # value is None or whitspace remove any existing data
+        if key in self._edit_data:
+            # data was edited, track original value
+            if self._edit_data[key] and key not in self._deleted_data:
+                # there was data in _edit_data, store original value
+                self._deleted_data[key] = self._edit_data.pop(key)
+        else:
+            # data was not edited, track existing data
+            if key in self._data and key not in self._deleted_data:
+                self._deleted_data[key] = self._data.pop(key)
+        self._edit_data.pop(key, None)
+        self._data.pop(key, None)
+        
+
+    def _add_data(self, key, value):
+        old_value = None
+        if key in self._deleted_data:
+            # data was deleted before
+            old_value = self._deleted_data.pop(key)
+            if not old_value == value:
+                # new value, set edit data to old value
+                self._edit_data[key] = old_value
+        else:
+            # data new or edit data
+            if key in self._edit_data:
+                # data has been edited before
+                if self._edit_data[key] == value:
+                    # same value as original, delete from edit
+                    self._edit_data.pop(key)
+            else:
+                if value != self._data.get(key, None):
+                    # new value is not same as previous
+                    self._edit_data[key] = self._data.get(key, None)
+        self._data[key] = value
+    
+    def _restore_data(self, key):
+        # TODO: function to restore data to original value
+        pass
     
     def get_row_key(self, row):
         if self.pivot_rows:
@@ -443,10 +478,7 @@ class PivotModel():
                 else:
                     key_other = other_key_getter(i_other)
                     key = key_getter(key_first + key_other + self.frozen_value)
-                    if key in self._data and key not in self._deleted_data:
-                            self._deleted_data[key] = self._data[key]
-                    self._data.pop(key, None)
-                    self._edit_data.pop(key, None)
+                    self._delete_data(key)
 
     def delete_tuple_index_values(self, delete_tuples):
         """deletes values from keys with combination of indexes given that match tuple_index_entries"""
@@ -494,10 +526,7 @@ class PivotModel():
         if delete_values:
             # delete values from data dict
             for k in delete_values:
-                if k in self._data and k not in self._deleted_data:
-                    self._deleted_data[k] = self._data[k]
-                self._data.pop(k, None)
-                self._edit_data.pop(k, None)
+                self._delete_data(k)
         # delete from index headers
         if delete_values_row:
             for i, key in reversed(list(enumerate(self._row_data_header))):
@@ -551,10 +580,7 @@ class PivotModel():
                     if key[ind] in values:
                         delete_keys.append(key)
             for key in delete_keys:
-                if key in self._data and key not in self._deleted_data:
-                    self._deleted_data[key] = self._data[key]
-                self._data.pop(key, None)
-                self._edit_data.pop(key, None)
+                self._delete_data(key)
         # delete from index headers
         if delete_values_row:
             for i, key in reversed(list(enumerate(self._row_data_header))):
@@ -709,10 +735,8 @@ class PivotModel():
                         row_col_index = order_getter((i, c))
                         if c not in other_invalid_set and row_col_index in self._invalid_data:
                             key = key_getter(new_key + other_key + self.frozen_value)
-                            if key not in self._edit_data:
-                                self._edit_data[key] = None
-                            self._data[key] = self._invalid_data.pop(row_col_index)
-                            
+                            value = self._invalid_data.pop(row_col_index)
+                            self._add_data(key, value)
                 else:
                     # previous key vas valid, move data to new key
                     old_index_key = edit_index[i]
@@ -721,12 +745,9 @@ class PivotModel():
                         old_key = key_getter(old_index_key + other_key + self.frozen_value)
                         if c not in other_invalid_set and old_key in self._data:
                             key = key_getter(new_key + other_key + self.frozen_value)
-                            if old_key not in self._deleted_data:
-                                self._deleted_data[old_key] = self._data[old_key]
-                            if key not in self._edit_data:
-                                self._edit_data[key] = None
-                            self._data[key] = self._data.pop(old_key)
-                            self._edit_data.pop(old_key, None)
+                            old_val = self._data[old_key]
+                            self._delete_data(old_key)
+                            self._add_data(key, old_val)
             else:
                 # key is invalid
                 if i < len(edit_index):
@@ -741,11 +762,8 @@ class PivotModel():
                             old_key = key_getter(old_index_key + other_key + self.frozen_value)
                             if c not in other_invalid_set and old_key in self._data:
                                 row_col_index = order_getter((i, c ))
-                                if old_key not in self._deleted_data:
-                                    self._deleted_data[old_key] = self._data[old_key]
-                                self._invalid_data[row_col_index] = self._data.pop(old_key)
-                                self._edit_data.pop(old_key, None)
-                                
+                                self._invalid_data[row_col_index] = self._data[old_key]
+                                self._delete_data(old_key)
                 invalid_set.add(i)
 
         # add new values
