@@ -21,8 +21,9 @@ import os
 import shutil
 import getpass
 from project_item import ProjectItem
-from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
+from PySide2.QtWidgets import QStyle, QFileIconProvider
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
 from graphics_items import ToolImage
@@ -555,6 +556,7 @@ class Tool(ProjectItem):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.input_file_model.appendRow(qitem)
 
     def populate_output_files_list(self, items):
@@ -566,6 +568,7 @@ class Tool(ProjectItem):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.output_file_model.appendRow(qitem)
 
     def update_name_label(self):

@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 25))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -1032,11 +1032,12 @@ class Ui_MainWindow(object):
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_data_connection), QtWidgets.QApplication.translate("MainWindow", "Data Connection", None, -1))
         self.label_tool_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
         self.label_tool_template.setText(QtWidgets.QApplication.translate("MainWindow", "Template", None, -1))
+        self.comboBox_tool.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool template for this Tool</p></body></html>", None, -1))
         self.toolButton_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool template options.</p></body></html>", None, -1))
         self.label_tool_args.setText(QtWidgets.QApplication.translate("MainWindow", "Args", None, -1))
-        self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool command line arguments. Edit tool definition file to change these.</p></body></html>", None, -1))
-        self.treeView_input_files.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Edit Tool template to modify these</p></body></html>", None, -1))
-        self.treeView_output_files.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Edit Tool template to modify these</p></body></html>", None, -1))
+        self.lineEdit_tool_args.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool command line arguments. Edit Tool template to modify these.</p></body></html>", None, -1))
+        self.treeView_input_files.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Files and directories the Tool template requires in order to run. Edit Tool template to modify these.</p></body></html>", None, -1))
+        self.treeView_output_files.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Output files produced by the Tool template. Edit Tool template to modify these.</p></body></html>", None, -1))
         self.pushButton_tool_stop.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Stop execution</p></body></html>", None, -1))
         self.pushButton_tool_stop.setText(QtWidgets.QApplication.translate("MainWindow", "Stop", None, -1))
         self.pushButton_tool_results.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Open results directory in file browser", None, -1))
@@ -1097,8 +1098,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc
