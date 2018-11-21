@@ -898,7 +898,7 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not data:
             return
-        self.default_row = data.copy()
+        self.default_row = data
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
@@ -1832,9 +1832,11 @@ class ObjectTreeModel(QStandardItemModel):
         return self.indexFromItem(items[position])
 
 
-class TreeViewTableModel(MinimalTableModel):
-    """A model of parameter and parameter value data, used by TreeViewForm."""
-
+class WIPTableModel(MinimalTableModel):
+    """An editable table model. It has two type of rows, normal and wip (work in progess) rows.
+    For the former, only a subset of columns are editable. For the latter, all of them are editable.
+    Wip rows can become normal rows after sucesfully setting data for some key fields.
+    """
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form, can_grow=True, has_empty_row=True)
@@ -1846,7 +1848,12 @@ class TreeViewTableModel(MinimalTableModel):
     def set_fixed_columns(self, *column_names):
         """Set the fixed_columns attribute according to the column names given as argument."""
         header = self.horizontal_header_labels()
-        self.fixed_columns = [header.index(name) for name in column_names]
+        self.fixed_columns = []
+        for name in column_names:
+            try:
+                self.fixed_columns.append(header.index(name))
+            except ValueError:
+                pass
 
     def setData(self, index, value, role=Qt.EditRole):
         """Set data in model."""
@@ -1942,7 +1949,7 @@ class TreeViewTableModel(MinimalTableModel):
         self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
 
 
-class ParameterModel(TreeViewTableModel):
+class ParameterModel(WIPTableModel):
     """A model of parameter data, used by TreeViewForm."""
 
     def __init__(self, tree_view_form=None):
@@ -2016,7 +2023,7 @@ class ParameterModel(TreeViewTableModel):
             return False
 
 
-class ParameterValueModel(TreeViewTableModel):
+class ParameterValueModel(WIPTableModel):
     """A model of parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None):
         """Initialize class."""

@@ -19,8 +19,9 @@ Widget to show graph view form.
 import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
-    QAction, QGraphicsRectItem, QMessageBox, QCheckBox, QTableView
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPalette
+    QAction, QGraphicsRectItem, QMessageBox, QCheckBox, QVBoxLayout, QHBoxLayout, QTableView, \
+    QLabel, QWidget, QSplitter
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 import numpy as np
@@ -52,7 +53,7 @@ class GraphViewForm(QMainWindow):
 
     def __init__(self, owner, db_map, database, read_only=False):
         """Initialize class."""
-        super().__init__(flags=Qt.Window)
+        super().__init__(owner._toolbox)
         self._owner = owner
         self.db_map = db_map
         self.database = database
@@ -87,11 +88,17 @@ class GraphViewForm(QMainWindow):
         self.graph_view_context_menu = None
         self.hidden_items = list()
         self.rejected_items = list()
+        self.parameter_views = {}
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.graphicsView._graph_view_form = self
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        # Set up parameter splitter
+        self.parameter_splitter = QSplitter(self.ui.dockWidgetContents_parameters)
+        self.ui.dockWidgetContents_parameters.layout().addWidget(self.parameter_splitter)
+        area = self.dockWidgetArea(self.ui.dockWidget_parameters)
+        self.handle_parameter_dock_location_changed(area)
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
@@ -151,13 +158,14 @@ class GraphViewForm(QMainWindow):
         """Connect signals."""
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
-        self.ui.treeView.selectionModel().selectionChanged.connect(self.receive_item_tree_selection_changed)
+        self.ui.treeView.selectionModel().selectionChanged.connect(self.handle_item_tree_selection_changed)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionBuild.triggered.connect(self.build_graph)
         self.ui.graphicsView.item_dropped.connect(self.handle_item_dropped)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
+        self.ui.dockWidget_parameters.dockLocationChanged.connect(self.handle_parameter_dock_location_changed)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -177,6 +185,15 @@ class GraphViewForm(QMainWindow):
             msg (str): String to show in QErrorMessage
         """
         self.err_msg.showMessage(msg)
+
+    @Slot("Qt.DockWidgetArea", name="handle_parameter_dock_location_changed")
+    def handle_parameter_dock_location_changed(self, area):
+        """Called when the parameters dock widget location changes.
+        Adjust parameters splitter orientation accordingly."""
+        if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
+            self.parameter_splitter.setOrientation(Qt.Vertical)
+        else:
+            self.parameter_splitter.setOrientation(Qt.Horizontal)
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
@@ -249,14 +266,10 @@ class GraphViewForm(QMainWindow):
             self.ui.graphicsView.scale_to_fit_scene()
         self.hidden_items = list()
 
-    @Slot("QItemSelection", "QItemSelection", name="receive_item_tree_selection_changed")
-    def receive_item_tree_selection_changed(self, selected, deselected):
-        """Call build graph."""
+    @Slot("QItemSelection", "QItemSelection", name="handle_item_tree_selection_changed")
+    def handle_item_tree_selection_changed(self, selected, deselected):
+        """Select or deselect all children when selecting or deselecting the parent."""
         self.build_graph()
-
-    def receive_graph_view_selection_changed(self, selected, deselected):
-        self.ui.horizontalLayout_parameters.addWidget(QTableView(self))
-
 
     def init_graph_data(self):
         """Initialize graph data by querying db_map."""
@@ -505,14 +518,63 @@ class GraphViewForm(QMainWindow):
         self.ui.graphicsView.setScene(scene)
         scene.addItem(self._scene_bg)
         scene.changed.connect(self.handle_scene_changed)
+        scene.selectionChanged.connect(self.handle_scene_selection_changed)
         return scene
+
+    @Slot(name="handle_scene_selection_changed")
+    def handle_scene_selection_changed(self):
+        scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
+        object_class_name_set = set()
+        for item in scene.selectedItems():
+            if not isinstance(item, ObjectItem):
+                continue
+            object_class_name = item._object_class_name
+            object_class_name_set.add(object_class_name)
+        self.remove_old_parameter_views(object_class_name_set)
+        self.add_new_parameter_views(object_class_name_set)
+
+    def remove_old_parameter_views(self, object_class_name_set):
+        """Remove parameter views for object classes which are no longer selected."""
+        for object_class_name in [x for x in self.parameter_views if x not in object_class_name_set]:
+            view = self.parameter_views.pop(object_class_name)
+            view.parent().deleteLater()
+
+    def add_new_parameter_views(self, object_class_name_set):
+        """Remove parameter views for all selected object classes."""
+        for object_class_name in object_class_name_set:
+            try:
+                view = self.parameter_views[object_class_name]
+            except KeyError:
+                widget = QWidget(self.parameter_splitter)
+                layout = QVBoxLayout(widget)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
+                label_widget = QWidget()
+                label_layout = QHBoxLayout(label_widget)
+                label_layout.setContentsMargins(0, 0, 0, 0)
+                label_layout.setSpacing(0)
+                text_label = QLabel(object_class_name, widget)
+                text_label.setAlignment(Qt.AlignLeft)
+                pixmap_label = QLabel(widget)
+                pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
+                if pixmap.isNull():
+                    pixmap = QPixmap(":/icons/object_icon.png")
+                pixmap_label.setPixmap(pixmap.scaled(16, 16))
+                pixmap_label.setMaximumWidth(20)
+                label_layout.addWidget(pixmap_label)
+                label_layout.addWidget(text_label)
+                view = QTableView(widget)
+                layout.addWidget(label_widget)
+                layout.addWidget(view)
+                self.parameter_splitter.addWidget(widget)
+                self.parameter_views[object_class_name] = view
 
     @Slot("QList<QRectF>", name="handle_scene_changed")
     def handle_scene_changed(self, region):
         """Make a new scene with usage instructions if previous is empty,
         where empty means the only item is the bg.
         """
-        if len(self.ui.graphicsView.scene().items()) > 1:
+        if len(self.ui.graphicsView.scene().items()) > 1:  # TODO: should we use sender() here?
             return
         scene = self.new_scene()
         msg = "\t• Select items in the 'Object tree' to show objects here.\t\n" \
