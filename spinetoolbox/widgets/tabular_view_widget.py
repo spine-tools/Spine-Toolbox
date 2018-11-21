@@ -31,7 +31,7 @@ from PySide2.QtCore import Qt, QModelIndex, Signal, QItemSelectionModel, Slot, \
 from PySide2.QtGui import QStandardItemModel, QKeySequence, QDropEvent
 from ui.tabular_view_form import Ui_MainWindow
 
-from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
+from tabularview_models import PivotTableSortFilterProxy, PivotTableModel, PivotModel, QPivotTableModel
 from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError 
 import json
 import operator
@@ -279,7 +279,7 @@ class TabularViewForm(QMainWindow):
 
         # pivot model and filterproxy
         self.proxy_model = PivotTableSortFilterProxy()
-        self.model = PivotTableModel([], ["temp"], [str])
+        self.model = QPivotTableModel()
         self.proxy_model.setSourceModel(self.model)
         self.ui.pivot_table.setModel(self.proxy_model)
 
@@ -300,7 +300,7 @@ class TabularViewForm(QMainWindow):
         self.ui.list_index.afterDrop.connect(self.change_pivot)
         self.ui.list_column.afterDrop.connect(self.change_pivot)
         self.ui.list_frozen.afterDrop.connect(self.change_pivot)
-        self.model.indexEntriesChanged.connect(self.table_index_entries_changed)
+        #self.model.indexEntriesChanged.connect(self.table_index_entries_changed)
         self.ui.table_frozen.selectionModel().selectionChanged.connect(self.change_frozen_value)
         self.ui.comboBox_value_type.currentTextChanged.connect(self.select_data)
         self.ui.list_select_class.itemClicked.connect(self.change_class)
@@ -350,7 +350,7 @@ class TabularViewForm(QMainWindow):
         item = self.ui.table_frozen.get_selected_row()
         self.model.set_frozen_value(item)
         # update pivot history
-        self.class_pivot_preferences[(self.current_class_name, self.current_class_type, self.current_value_type)] = self.PivotPreferences(self.model.pivot_index, self.model.pivot_columns, self.model.pivot_frozen, self.model.frozen_value)
+        self.class_pivot_preferences[(self.current_class_name, self.current_class_type, self.current_value_type)] = self.PivotPreferences(self.model.model.pivot_rows, self.model.model.pivot_columns, self.model.model.pivot_frozen, self.model.model.frozen_value)
 
     def get_selected_class(self):
         if self.ui.list_select_class.currentItem():
@@ -659,7 +659,7 @@ class TabularViewForm(QMainWindow):
             self.db_map.update_parameter_values(*update_data)
 
     def update_filters_to_new_model(self):
-        new_names = list(self.model.index_entries)
+        new_names = list(self.model.model.index_entries)
         for i, name in enumerate(new_names):
             if i < len(self.filter):
                 # filter exists, update
@@ -672,7 +672,7 @@ class TabularViewForm(QMainWindow):
                 self.filter.append(cblist)
                 self.ui.h_layout_filter.addLayout(cblist[2])
             # update items in combobox
-            cblist[0].setItemList(self.model.index_entries[name])
+            cblist[0].setItemList(self.model.model.index_entries[name])
         # delete unused filters
         for i in reversed(range(len(new_names), max(len(new_names), len(self.filter)))):
             cblist = self.filter.pop(i)
@@ -687,14 +687,14 @@ class TabularViewForm(QMainWindow):
         self.ui.list_index.clear()
         self.ui.list_column.clear()
         self.ui.list_frozen.clear()
-        self.ui.list_index.addItems(self.model.pivot_index)
-        self.ui.list_column.addItems(self.model.pivot_columns)
-        self.ui.list_frozen.addItems(self.model.pivot_frozen)
+        self.ui.list_index.addItems(self.model.model.pivot_rows)
+        self.ui.list_column.addItems(self.model.model.pivot_columns)
+        self.ui.list_frozen.addItems(self.model.model.pivot_frozen)
     
     def update_frozen_table_to_model(self):
-        frozen = self.model.pivot_frozen
+        frozen = self.model.model.pivot_frozen
         frozen_values = self.find_frozen_values(frozen)
-        frozen_value = self.model.frozen_value
+        frozen_value = self.model.model.frozen_value
         self.ui.table_frozen.set_data(frozen, frozen_values)
         if frozen_value in frozen_values:
             # update selected row
@@ -709,7 +709,7 @@ class TabularViewForm(QMainWindow):
             self.ui.table_frozen.selectionModel().blockSignals(False)
     
     def change_class(self):
-        self.save_model()
+        #self.save_model()
         self.select_data()
 
     def select_data(self, text = ""):
@@ -791,7 +791,7 @@ class TabularViewForm(QMainWindow):
             frozen = [INDEX_NAME] if INDEX_NAME in index_names else []
             frozen_value = (1,) if frozen else ()
         # update model and views
-        self.model.set_new_data(data, index_names, index_types, index, columns, frozen, frozen_value, valid_index_values, tuple_entries)
+        self.model.set_data(data, index_names, index_types, index, columns, frozen, frozen_value, valid_index_values, tuple_entries)
         self.proxy_model.clear_filter()
         self.update_filters_to_new_model()
         self.update_pivot_lists_to_new_model()
@@ -948,18 +948,18 @@ class TabularViewForm(QMainWindow):
         elif not frozen and parent == self.ui.list_frozen or event.source() == self.ui.list_frozen:
             self.ui.table_frozen.set_data([], [])
         frozen_value = self.ui.table_frozen.get_selected_row()
-        self.model.setPivot(index, columns, frozen, frozen_value)
+        self.model.set_pivot(index, columns, frozen, frozen_value)
         # save current pivot
         self.class_pivot_preferences[(self.current_class_name, self.current_class_type, self.current_value_type)] = self.PivotPreferences(index, columns, frozen, frozen_value)
     
     def find_frozen_values(self, frozen):
         if not frozen:
             return []
-        keys = tuple(self.model._index_ind[i] for i in frozen)
+        keys = tuple(self.model.model.index_names.index(i) for i in frozen)
         getter = tuple_itemgetter(operator.itemgetter(*keys), len(keys))
-        frozen_values = set(getter(key) for key in self.model._data)
+        frozen_values = set(getter(key) for key in self.model.model._data)
         # add indexes without values
-        for k, v in self.model.tuple_index_entries.items():
+        for k, v in self.model.model.tuple_index_entries.items():
             if INDEX_NAME in frozen and INDEX_NAME not in k:
                 # add default value for index named INDEX_NAME = 1
                 k = k + (INDEX_NAME,)
