@@ -146,7 +146,8 @@ class AddObjectClassesDialog(AddItemsDialog):
         for i in range(self.model.rowCount()):
             name, description = self.model.row_data(i)[:-1]
             if not name:
-                continue
+                self._parent.msg_error.emit("Object class name missing")
+                return
             kwargs = {
                 'name': name,
                 'description': description,
@@ -213,11 +214,16 @@ class AddObjectsDialog(AddItemsDialog):
         kwargs_list = list()
         for i in range(self.model.rowCount()):
             class_name, name, description = self.model.row_data(i)[:-1]
-            if not class_name or not name:
-                continue
+            if not class_name:
+                self._parent.msg_error.emit("Object class name missing")
+                return
+            if not name:
+                self._parent.msg_error.emit("Object name missing")
+                return
             class_ = self._parent.db_map.single_object_class(name=class_name).one_or_none()
             if not class_:
-                continue
+                self._parent.msg_error.emit("Couldn't find object class '{}'".format(class_name))
+                return
             kwargs = {
                 'class_id': class_.id,
                 'name': name,
@@ -326,18 +332,22 @@ class AddRelationshipClassesDialog(AddItemsDialog):
             row_data = self.model.row_data(i)
             relationship_class_name = row_data[name_column]
             if not relationship_class_name:
-                continue
+                self._parent.msg_error.emit("Relationship class name missing")
+                return
             object_class_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_class_name = row_data[column]
                 if not object_class_name:
-                    continue
+                    self._parent.msg_error.emit("Object class name missing")
+                    return
                 object_class = self._parent.db_map.single_object_class(name=object_class_name).one_or_none()
                 if not object_class:
-                    continue
+                    self._parent.msg_error.emit("Couldn't find object class '{}'".format(object_class_name))
+                    return
                 object_class_id_list.append(object_class.id)
             if len(object_class_id_list) < 2:
-                continue
+                self._parent.msg_error.emit("Not enough dimensions (at least two are needed).")
+                return
             wide_kwargs = {
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
@@ -463,18 +473,22 @@ class AddRelationshipsDialog(AddItemsDialog):
             row_data = self.model.row_data(i)
             relationship_name = row_data[name_column]
             if not relationship_name:
-                continue
+                self._parent.msg_error.emit("Relationship name missing")
+                return
             object_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_name = row_data[column]
                 if not object_name:
-                    continue
+                    self._parent.msg_error.emit("Object name missing")
+                    return
                 object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
                 if not object_:
-                    continue
+                    self._parent.msg_error.emit("Couldn't find object '{}'".format(object_name))
+                    return
                 object_id_list.append(object_.id)
             if len(object_id_list) < 2:
-                continue
+                self._parent.msg_error.emit("Not enough dimensions (at least two are needed).")
+                return
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
@@ -557,7 +571,8 @@ class EditObjectClassesDialog(EditItemsDialog):
             id = self.id_list[i]
             name, description = self.model.row_data(i)
             if not name:
-                continue
+                self._parent.msg_error.emit("Object class name missing")
+                return
             orig_name, orig_description = self.orig_data[i]
             if name == orig_name and description == orig_description:
                 continue
@@ -567,6 +582,9 @@ class EditObjectClassesDialog(EditItemsDialog):
                 'description': description
             }
             kwargs_list.append(kwargs)
+        if not kwargs_list:
+            # No change
+            return
         try:
             object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
             self._parent.update_object_classes(object_classes, self.orig_kwargs_list)
@@ -615,7 +633,8 @@ class EditObjectsDialog(EditItemsDialog):
             id = self.id_list[i]
             name, description = self.model.row_data(i)
             if not name:
-                continue
+                self._parent.msg_error.emit("Object name missing")
+                return
             orig_name, orig_description = self.orig_data[i]
             if name == orig_name and description == orig_description:
                 continue
@@ -625,6 +644,9 @@ class EditObjectsDialog(EditItemsDialog):
                 'description': description
             }
             kwargs_list.append(kwargs)
+        if not kwargs_list:
+            # No change
+            return
         try:
             objects = self._parent.db_map.update_objects(*kwargs_list)
             self._parent.update_objects(objects, self.orig_kwargs_list)
@@ -669,7 +691,8 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             id = self.id_list[i]
             name = self.model.row_data(i)[0]
             if not name:
-                continue
+                self._parent.msg_error.emit("Relationship class name missing")
+                return
             orig_name = self.orig_data[i][0]
             if name == orig_name:
                 continue
@@ -678,6 +701,9 @@ class EditRelationshipClassesDialog(EditItemsDialog):
                 'name': name
             }
             kwargs_list.append(kwargs)
+        if not kwargs_list:
+            # No change
+            return
         try:
             wide_relationship_classes = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
             self._parent.update_relationship_classes(wide_relationship_classes, self.orig_kwargs_list)
@@ -746,18 +772,22 @@ class EditRelationshipsDialog(EditItemsDialog):
             relationship_name = row_data[name_column]
             orig_relationship_name = orig_row_data[name_column]
             if not relationship_name:
-                continue
+                self._parent.msg_error.emit("Relationship name missing")
+                return
             object_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_name = row_data[column]
                 if not object_name:
-                    continue
+                    self._parent.msg_error.emit("Object name missing")
+                    return
                 object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
                 if not object_:
-                    continue
+                    self._parent.msg_error.emit("Couldn't find object '{}'".format(object_name))
+                    return
                 object_id_list.append(object_.id)
             if len(object_id_list) < 2:
-                continue
+                self._parent.msg_error.emit("Not enough dimensions (at least two are needed).")
+                return
             if orig_relationship_name == relationship_name and orig_object_id_list == object_id_list:
                 continue
             kwargs = {
@@ -766,6 +796,9 @@ class EditRelationshipsDialog(EditItemsDialog):
                 'object_id_list': object_id_list
             }
             kwargs_list.append(kwargs)
+        if not kwargs_list:
+            # No change
+            return
         try:
             wide_relationships = self._parent.db_map.update_wide_relationships(*kwargs_list)
             self._parent.update_relationships(wide_relationships, self.orig_kwargs_list)
