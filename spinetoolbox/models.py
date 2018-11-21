@@ -1333,9 +1333,6 @@ class MinimalTableModel(QAbstractTableModel):
             self._aux_data.append(aux_data_row)
             self._flags.append(flags_row)
         self.endResetModel()
-        if not self.has_empty_row:
-            return
-        self.insertRows(self.rowCount(), 1)
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -1594,23 +1591,15 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
         object_class_item.setData(object_class.description, Qt.ToolTipRole)
-        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-        if icon.pixmap(1, 1).isNull():
-            icon = self.object_icon
-        object_class_item.setData(icon, Qt.DecorationRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
-    def new_object_item(self, object_, object_class_name, flat=False):
+    def new_object_item(self, object_, flat=False):
         """Returns new object item."""
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
         object_item.setData(object_.description, Qt.ToolTipRole)
-        icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
-        if icon.pixmap(1, 1).isNull():
-            icon = self.object_icon
-        object_item.setData(icon, Qt.DecorationRole)
         if flat:
             return object_item
         relationship_class_item_list = list()
@@ -1626,7 +1615,6 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
         relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-        relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
         return relationship_class_item
 
@@ -1635,7 +1623,6 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
         return relationship_item
 
     def add_object_class(self, object_class):
@@ -1651,6 +1638,10 @@ class ObjectTreeModel(QStandardItemModel):
         row = self.root_item.rowCount()
         self.root_item.insertRow(row, QStandardItem())
         self.root_item.setChild(row, 0, object_class_item)
+        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = self.object_icon
+        object_class_item.setData(icon, Qt.DecorationRole)
 
     def add_object(self, object_, flat=False):
         """Add object item to the model."""
@@ -1665,9 +1656,11 @@ class ObjectTreeModel(QStandardItemModel):
         if not object_class_item:
             logging.error("Object class item not found in model. This is probably a bug.")
             return
-        object_class_name = object_class_item.data(Qt.DisplayRole)
-        object_item = self.new_object_item(object_, object_class_name, flat=flat)
+        object_item = self.new_object_item(object_, flat=flat)
         object_class_item.appendRow(object_item)
+        object_class_name = object_class_item.data(Qt.DisplayRole)
+        icon = object_class_item.data(Qt.DecorationRole)
+        object_item.setData(icon, Qt.DecorationRole)
 
     def add_relationship_class(self, wide_relationship_class):
         """Add relationship class."""
@@ -1681,6 +1674,8 @@ class ObjectTreeModel(QStandardItemModel):
             if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
+            pixmap = relationship_pixmap(wide_relationship_class.object_class_name_list.split(","))
+            relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
             visited_item.appendRow(relationship_class_item)
 
     def add_relationship(self, wide_relationship):
@@ -1699,6 +1694,8 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             relationship_item = self.new_relationship_item(wide_relationship)
             visited_item.appendRow(relationship_item)
+            icon = visited_item.data(Qt.DecorationRole)
+            relationship_item.setData(icon, Qt.DecorationRole)
 
     def update_object_classes(self, updated_items):
         """Update object classes in the model."""
