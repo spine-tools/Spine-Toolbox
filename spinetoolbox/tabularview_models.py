@@ -291,9 +291,9 @@ class PivotModel():
                 return [[self._data.get(self._key_getter(self.frozen_value), None)]]
             # no data
             return [[]]
-        if any(r >= len(self._row_data_header) or r < 0 for r in row_mask):
+        if self.pivot_rows and any(r >= len(self._row_data_header) or r < 0 for r in row_mask):
             raise ValueError("row_mask contains invalid indexes to current row pivot")
-        if any(c >= len(self._column_data_header) or c < 0 for c in col_mask):
+        if self.pivot_columns and any(c >= len(self._column_data_header) or c < 0 for c in col_mask):
             raise ValueError("col_mask contains invalid indexes to current row pivot")
         data = []
         for row in row_mask:
@@ -619,16 +619,15 @@ class PivotModel():
 
         # find data that fits into index
         if direction == 'row':
-            end_index = min(len(index_names) - start_index, len(data[0]))
-            data = [row[:end_index] for row in data]
+            num_new = min(len(index_names) - start_index, len(data[0]))
+            data = [row[:num_new] for row in data]
         else:
-            end_index = min(len(index_names) - start_index, len(data))
-            data = [[data[row][col] for row in range(end_index - start_index + 1)] for col in range(len(data[0]))]
+            num_new = min(len(index_names) - start_index, len(data))
+            data = [[data[row][col] for row in range(num_new)] for col in range(len(data[0]))]
         
         # get header indexes that are going to be updated
         edit_index = [index_values[i] for i in mask if i < len(index_values)]
-        
-        num_new = end_index - start_index + 1
+
         replace_from = start_index
         replace_to = replace_from + num_new
         # convert indexes with int type to int
