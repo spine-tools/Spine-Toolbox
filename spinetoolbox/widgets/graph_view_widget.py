@@ -33,7 +33,8 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
 from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
-from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
+from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
+    ObjectParameterValueModel, ObjectParameterValueProxy
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect
 from config import STATUSBAR_SS
@@ -84,7 +85,8 @@ class GraphViewForm(QMainWindow):
         self.graph_view_context_menu = None
         self.hidden_items = list()
         self.rejected_items = list()
-        self.parameter_views = {}
+        self.parameter_value_views = {}
+        self.previous_item_selection = list()
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -103,7 +105,8 @@ class GraphViewForm(QMainWindow):
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.init_models()
-        self.setup_views()
+        self.init_parameter_models()
+        self.create_add_more_actions()
         self.connect_signals()
         self.restore_ui()
         self.add_toggle_view_actions()
@@ -114,15 +117,65 @@ class GraphViewForm(QMainWindow):
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def init_models(self):
-        """Initialize models and their respective views."""
+        """Initialize object tree, object class list, and
+        relationship class models and their respective views."""
         self.object_tree_model.build_flat_tree(self.database)
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
         self.ui.treeView.resizeColumnToContents(0)
         self.ui.treeView.expand(self.object_tree_model.root_item.index())
 
-    def setup_views(self):
-        """Adjust grid width to largest item; setup 'Add more' action and button."""
+    def init_parameter_models(self):
+        """Initialize parameter models and views."""
+        skip_fields = ['object_class_id', 'object_id', 'parameter_id', 'index']
+        parameter_value_data = {}
+        data = self.db_map.object_parameter_value_list()
+        fields = self.db_map.object_parameter_value_fields()
+        header = [x for x in fields if x not in skip_fields]
+        for row in data:
+            object_class_name = row.object_class_name
+            row_data = [v for k, v in row._asdict().items() if k not in skip_fields]
+            parameter_value_data.setdefault(object_class_name, list()).append(row_data)
+        for object_class_name, data in parameter_value_data.items():
+            widget = QWidget(self.parameter_splitter)
+            widget.hide()
+            layout = QVBoxLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            label_widget = QWidget()
+            label_layout = QHBoxLayout(label_widget)
+            label_layout.setContentsMargins(0, 0, 0, 0)
+            label_layout.setSpacing(0)
+            text_label = QLabel(object_class_name, widget)
+            text_label.setAlignment(Qt.AlignLeft)
+            pixmap_label = QLabel(widget)
+            pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
+            if pixmap.isNull():
+                pixmap = QPixmap(":/icons/object_icon.png")
+            pixmap_label.setPixmap(pixmap.scaled(16, 16))
+            pixmap_label.setMaximumWidth(20)
+            label_layout.addWidget(pixmap_label)
+            label_layout.addWidget(text_label)
+            view = QTableView(widget)
+            layout.addWidget(label_widget)
+            layout.addWidget(view)
+            self.parameter_value_views[object_class_name] = view
+            model = ObjectParameterValueModel(self)
+            model.set_horizontal_header_labels(header)
+            model.reset_model(data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
+            proxy = ObjectParameterValueProxy(self)
+            proxy.setSourceModel(model)
+            view.setModel(proxy)
+            h = model.horizontal_header_labels().index
+            view.horizontalHeader().hideSection(h('id'))
+            view.horizontalHeader().hideSection(h('object_class_name'))
+            view.resizeColumnsToContents()
+            height = QFontMetrics(QFont("", 0)).lineSpacing()
+            view.verticalHeader().setDefaultSectionSize(height)
+            view.verticalHeader().hide()
+
+    def create_add_more_actions(self):
+        """Setup 'Add more' action and button."""
         # object class
         width_list = list()
         for item in self.object_class_list_model.findItems("*", Qt.MatchWildcard):
@@ -544,50 +597,44 @@ class GraphViewForm(QMainWindow):
     @Slot(name="handle_scene_selection_changed")
     def handle_scene_selection_changed(self):
         scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
-        object_class_name_set = set()
-        for item in scene.selectedItems():
-            if not isinstance(item, ObjectItem):
+        current_items = scene.selectedItems()
+        previous_items = self.previous_item_selection
+        selected = [x for x in current_items if x not in previous_items]
+        deselected = [x for x in previous_items if x not in current_items]
+        self.previous_item_selection = current_items
+        current_object_class_names = set()
+        selected_object_names = set()
+        deselected_object_names = set()
+        for item in current_items:
+            current_object_class_names.add(item._object_class_name)
+        for item in selected:
+            selected_object_names.add(item._object_name)
+        for item in deselected:
+            deselected_object_names.add(item._object_name)
+        self.hide_parameter_views(current_object_class_names)
+        self.show_parameter_views(current_object_class_names)
+        for view in self.parameter_value_views.values():
+            if not view.isVisible():
                 continue
-            object_class_name = item._object_class_name
-            object_class_name_set.add(object_class_name)
-        self.remove_old_parameter_views(object_class_name_set)
-        self.add_new_parameter_views(object_class_name_set)
+            view.model().update_object_name_set(selected_object_names)
+            view.model().diff_update_object_name_set(deselected_object_names)
+            view.model().apply_filter()
 
-    def remove_old_parameter_views(self, object_class_name_set):
-        """Remove parameter views for object classes which are no longer selected."""
-        for object_class_name in [x for x in self.parameter_views if x not in object_class_name_set]:
-            view = self.parameter_views.pop(object_class_name)
-            view.parent().deleteLater()
+    def hide_parameter_views(self, current_object_class_names):
+        """Hide parameter views for non selected object classes."""
+        for object_class_name in [x for x in self.parameter_value_views if x not in current_object_class_names]:
+            view = self.parameter_value_views[object_class_name]
+            view.parent().hide()
 
-    def add_new_parameter_views(self, object_class_name_set):
-        """Remove parameter views for all selected object classes."""
-        for object_class_name in object_class_name_set:
+    def show_parameter_views(self, current_object_class_names):
+        """Show parameter views for selected object classes."""
+        for i, object_class_name in enumerate(current_object_class_names):
             try:
-                view = self.parameter_views[object_class_name]
+                view = self.parameter_value_views[object_class_name]
+                self.parameter_splitter.insertWidget(i, view.parent())
+                view.parent().show()
             except KeyError:
-                widget = QWidget(self.parameter_splitter)
-                layout = QVBoxLayout(widget)
-                layout.setContentsMargins(0, 0, 0, 0)
-                layout.setSpacing(0)
-                label_widget = QWidget()
-                label_layout = QHBoxLayout(label_widget)
-                label_layout.setContentsMargins(0, 0, 0, 0)
-                label_layout.setSpacing(0)
-                text_label = QLabel(object_class_name, widget)
-                text_label.setAlignment(Qt.AlignLeft)
-                pixmap_label = QLabel(widget)
-                pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
-                if pixmap.isNull():
-                    pixmap = QPixmap(":/icons/object_icon.png")
-                pixmap_label.setPixmap(pixmap.scaled(16, 16))
-                pixmap_label.setMaximumWidth(20)
-                label_layout.addWidget(pixmap_label)
-                label_layout.addWidget(text_label)
-                view = QTableView(widget)
-                layout.addWidget(label_widget)
-                layout.addWidget(view)
-                self.parameter_splitter.addWidget(widget)
-                self.parameter_views[object_class_name] = view
+                pass
 
     @Slot("QList<QRectF>", name="handle_scene_changed")
     def handle_scene_changed(self, region):

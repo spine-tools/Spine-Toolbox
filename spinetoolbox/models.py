@@ -22,7 +22,8 @@ import logging
 import os
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, QPainter
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, QPainter, \
+    QGuiApplication
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir, relationship_pixmap
@@ -1841,9 +1842,9 @@ class ObjectTreeModel(QStandardItemModel):
 
 
 class WIPTableModel(MinimalTableModel):
-    """An editable table model. It has two type of rows, normal and wip (work in progess) rows.
+    """An editable table model. It has two types of row, normal and wip (work in progess) row.
     For the former, only a subset of columns are editable. For the latter, all of them are editable.
-    Wip rows can become normal rows after sucesfully setting data for some key fields.
+    Wip rows can become normal rows after succesfully setting data for some key fields.
     """
     def __init__(self, tree_view_form=None):
         """Initialize class."""
@@ -1851,7 +1852,10 @@ class WIPTableModel(MinimalTableModel):
         self._tree_view_form = tree_view_form
         self.db_map = self._tree_view_form.db_map
         self.fixed_columns = list()
-        self.gray_brush = self._tree_view_form.palette().button() if self._tree_view_form else QBrush(Qt.lightGray)
+        if self._tree_view_form:
+            self.gray_brush = self._tree_view_form.palette().button()
+        else:
+            self.gray_brush = QGuiApplication.palette().button()
 
     def set_fixed_columns(self, *column_names):
         """Set the fixed_columns attribute according to the column names given as argument."""
@@ -2123,11 +2127,11 @@ class ObjectParameterModel(ParameterModel):
 
     def init_model(self, skip_fields=["object_class_id"]):
         """Initialize model from source database."""
-        item_list = self.db_map.object_parameter_list()
-        field_list = self.db_map.object_parameter_fields()
-        header = [x for x in field_list if x not in skip_fields]
+        data = self.db_map.object_parameter_list()
+        fields = self.db_map.object_parameter_fields()
+        header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -2195,11 +2199,11 @@ class RelationshipParameterModel(ParameterModel):
 
     def init_model(self, skip_fields=["relationship_class_id", 'object_class_id_list']):
         """Initialize model from source database."""
-        item_list = self.db_map.relationship_parameter_list()
-        field_list = self.db_map.relationship_parameter_fields()
-        header = [x for x in field_list if x not in skip_fields]
+        data = self.db_map.relationship_parameter_list()
+        fields = self.db_map.relationship_parameter_fields()
+        header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
         self.reset_model(model_data, fixed_column_names=['id', 'relationship_class_name', 'object_class_name_list'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -2304,11 +2308,11 @@ class ObjectParameterValueModel(ParameterValueModel):
 
     def init_model(self, skip_fields=['object_class_id', 'object_id', 'parameter_id']):
         """Initialize model from source database."""
-        item_list = self.db_map.object_parameter_value_list()
-        field_list = self.db_map.object_parameter_value_fields()
-        header = [x for x in field_list if x not in skip_fields]
+        data = self.db_map.object_parameter_value_list()
+        fields = self.db_map.object_parameter_value_fields()
+        header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in item_list]
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -2411,9 +2415,9 @@ class RelationshipParameterValueModel(ParameterValueModel):
             self,
             skip_fields=['relationship_class_id', 'object_class_id_list', 'object_id_list', 'parameter_id']):
         """Initialize model from source database."""
-        item_list = self.db_map.relationship_parameter_value_list()
-        field_list = self.db_map.relationship_parameter_value_fields()
-        header = [x for x in field_list if x not in skip_fields]
+        data = self.db_map.relationship_parameter_value_list()
+        fields = self.db_map.relationship_parameter_value_fields()
+        header = [x for x in fields if x not in skip_fields]
         # Split single 'object_name_list' column into several 'object_name' columns
         relationship_class_list = self.db_map.wide_relationship_class_list()
         max_dim_count = max(
@@ -2426,16 +2430,16 @@ class RelationshipParameterValueModel(ParameterValueModel):
         self.set_horizontal_header_labels(header)
         # Compute model data: split single 'object_name_list' value into several 'object_name' values
         model_data = list()
-        for row in item_list:
-            row_values_list = [v for k, v in row._asdict().items() if k not in skip_fields]
-            object_name_list = row_values_list.pop(object_name_list_index).split(',')
+        for row in data:
+            row_data = [v for k, v in row._asdict().items() if k not in skip_fields]
+            object_name_list = row_data.pop(object_name_list_index).split(',')
             for i in range(max_dim_count):
                 try:
                     value = object_name_list[i]
                 except IndexError:
                     value = None
-                row_values_list.insert(object_name_list_index + i, value)
-            model_data.append(row_values_list)
+                row_data.insert(object_name_list_index + i, value)
+            model_data.append(row_data)
         fixed_column_names = ['id', 'relationship_class_name', *self.object_name_header, 'parameter_name']
         self.reset_model(model_data, fixed_column_names=fixed_column_names)
 
@@ -2666,6 +2670,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
+        self.receive_header_data_changed()
 
     def horizontal_header_labels(self):
         return [self.headerData(i, Qt.Horizontal) for i in range(self.columnCount())]
@@ -2819,6 +2824,8 @@ class ObjectParameterProxy(AutoFilterProxy):
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
+        if not self.object_class_name_column:
+            return
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_class_name_column][Qt.FontRole] = None
 
@@ -2873,6 +2880,8 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
+        if not self.object_name_column:
+            return
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_name_column][Qt.FontRole] = None
 
@@ -2953,6 +2962,8 @@ class RelationshipParameterProxy(AutoFilterProxy):
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
+        if not self.relationship_class_name_column:
+            return
         for row_data in self.sourceModel()._aux_data:
             row_data[self.relationship_class_name_column][Qt.FontRole] = None
 
@@ -3052,6 +3063,8 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
         self.object_count = 0
         self.filter_is_valid = False
         self.clear_autofilter()
+        if not self.object_name_columns:
+            return
         for row_data in self.sourceModel()._aux_data:
             for j in self.object_name_columns:
                 row_data[j][Qt.FontRole] = None
