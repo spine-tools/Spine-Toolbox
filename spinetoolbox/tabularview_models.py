@@ -299,14 +299,14 @@ class PivotModel():
         for row in row_mask:
             data_row = []
             invalid_row = row in self._invalid_row
-            row_key = self.get_row_key(row)
+            row_key = self.row(row)
             for col in col_mask:
                 if invalid_row or col in self._invalid_column:
                     # get invalid data
                     data_row.append(self._invalid_data.get((row, col), None))
                 else:
                     # get dict data
-                    col_key = self.get_col_key(col)
+                    col_key = self.column(col)
                     key = self._key_getter(row_key + col_key + self.frozen_value)
                     data_row.append(self._data.get(key, None))
             data.append(data_row)
@@ -343,9 +343,9 @@ class PivotModel():
 
         for row, row_value in zip(row_mask, data):
             invalid_row = row in self._invalid_row
-            row_key = self.get_row_key(row)
+            row_key = self.row(row)
             for col, paste_value in zip(col_mask, row_value):
-                col_key = self.get_col_key(col)
+                col_key = self.column(col)
                 if invalid_row or col in self._invalid_column:
                     # row or col invalid, put data in invald data dict
                     invalid_index = (row, col)
@@ -405,23 +405,31 @@ class PivotModel():
         # TODO: function to restore data to original value
         pass
     
-    def get_row_key(self, row):
+    def row(self, row):
         if self.pivot_rows:
             return self._row_data_header[row]
         else:
             if row == 0:
                 return ()
             else:
-                raise IndexError('index out of range')
+                raise IndexError('index out of range for current row pivot')
     
-    def get_col_key(self, col):
+    def column(self, col):
         if self.pivot_columns:
             return self._column_data_header[col]
         else:
             if col == 0:
                 return ()
             else:
-                raise IndexError('index out of range')
+                raise IndexError('index out of range for current column pivot')
+    
+    @property
+    def rows(self):
+        return self._row_data_header
+    
+    @property
+    def columns(self):
+        return self._column_data_header
     
     def delete_row_col_values(self, index, mask_other_index = [], direction = 'row'):
         """Deletes values for given index and mask of other index"""
@@ -437,8 +445,8 @@ class PivotModel():
             invalid_other = self._invalid_column
             other_index_name = self.pivot_columns
             other_index_headers = self._column_data_header
-            first_key_getter = self.get_row_key
-            other_key_getter = self.get_col_key
+            first_key_getter = self.row
+            other_key_getter = self.column
         elif direction == 'column':
             if not all(m <= len(self._column_data_header) or m < 0 for m in index):
                 raise ValueError('index must be valid index for column pivot')
@@ -452,8 +460,8 @@ class PivotModel():
             invalid_other = self._invalid_row
             other_index_name = self.pivot_rows
             other_index_headers = self._row_data_header
-            first_key_getter = self.get_col_key
-            other_key_getter = self.get_row_key
+            first_key_getter = self.column
+            other_key_getter = self.row
         if not mask_other_index:
             # no mask given, delete all indexes of other index
             if not other_index_name:
