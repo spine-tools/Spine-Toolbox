@@ -527,56 +527,17 @@ class TestPivotModel(unittest.TestCase):
                                             model._row_data_header_set,
                                             ('test1', 'test2', 'test3')))
     
-    def test_delete_row_col_values1(self):
-        """test deleting row values"""
+    def test_delete_pivoted_values(self):
+        """test deleting pivoted values"""
         model = PivotModel()
         model.set_new_data(self.data, self.index_names, self.index_types)
         data_dict = self.dict_data
         data_dict.pop(('a','aa',1))
-        deleted_data = {('a','aa',1): 'value_a_aa_1'}
-        row_headers = model._row_data_header.copy()
-        model.delete_row_col_values([0], mask_other_index = [], direction = 'row')
+        data_dict.pop(('a','bb',2))
+        deleted_data = {('a','aa',1): 'value_a_aa_1', ('a','bb',2): 'value_a_bb_2'}
+        model.delete_pivoted_values([(0, 0), (1, 0)])
         self.assertEqual(model._data, data_dict)
         self.assertEqual(model._deleted_data, deleted_data)
-        self.assertEqual(model._row_data_header, row_headers)
-    
-    def test_delete_row_col_values2(self):
-        """test deleting column values"""
-        model = PivotModel()
-        model.set_new_data(self.data, self.index_names, self.index_types)
-        data_dict = {}
-        deleted_data = self.dict_data
-        row_headers = model._row_data_header.copy()
-        model.delete_row_col_values([0], mask_other_index = [], direction = 'column')
-        self.assertEqual(model._data, data_dict)
-        self.assertEqual(model._deleted_data, deleted_data)
-        self.assertEqual(model._row_data_header, row_headers)
-    
-    def test_delete_row_col_values3(self):
-        """test deleting column values with mask for row"""
-        model = PivotModel()
-        model.set_new_data(self.data, self.index_names, self.index_types)
-        data_dict = self.dict_data
-        deleted_data = {}
-        deleted_data[('a','aa',1)] = data_dict.pop(('a','aa',1))
-        deleted_data[('a','bb',2)] = data_dict.pop(('a','bb',2))
-        row_headers = model._row_data_header.copy()
-        model.delete_row_col_values([0], mask_other_index = [0, 1], direction = 'column')
-        self.assertEqual(model._data, data_dict)
-        self.assertEqual(model._deleted_data, deleted_data)
-        self.assertEqual(model._row_data_header, row_headers)
-    
-    def test_delete_row_col_values4(self):
-        """test deleting column values with mask for row"""
-        model = PivotModel()
-        model.set_new_data(self.data, self.index_names, self.index_types, rows = ('test1','test2'), columns = ('test3',))
-        data_dict = self.dict_data
-        deleted_data = {}
-        row_headers = model._row_data_header.copy()
-        model.delete_row_col_values([0], mask_other_index = [1,2,3,4], direction = 'row')
-        self.assertEqual(model._data, data_dict)
-        self.assertEqual(model._deleted_data, deleted_data)
-        self.assertEqual(model._row_data_header, row_headers)
 
     def test_delete_index_values1(self):
         """test deleting index values deletes data"""

@@ -431,62 +431,20 @@ class PivotModel():
     def columns(self):
         return self._column_data_header
     
-    def delete_row_col_values(self, index, mask_other_index = [], direction = 'row'):
-        """Deletes values for given index and mask of other index"""
-        if direction not in ['row','column']:
-            raise ValueError('direction must be a str with value "row" or "column"')
-        if direction == 'row':
-            if not all(m <= len(self._row_data_header) or m < 0 for m in index):
-                raise ValueError('index must be valid index for row pivot')
-            if not all(m <= len(self._column_data_header) or m < 0 for m in mask_other_index):
-                raise ValueError('mask_other_index must be valid index for column pivot')
-            key_getter = self._key_getter
-            invalid_first = self._invalid_row
-            invalid_other = self._invalid_column
-            other_index_name = self.pivot_columns
-            other_index_headers = self._column_data_header
-            first_key_getter = self.row
-            other_key_getter = self.column
-        elif direction == 'column':
-            if not all(m <= len(self._column_data_header) or m < 0 for m in index):
-                raise ValueError('index must be valid index for column pivot')
-            if not all(m <= len(self._row_data_header) or m < 0 for m in mask_other_index):
-                raise ValueError('mask_other_index must be valid index for row pivot')
-            # keygetter with column as first index
-            order = tuple(self.index_names.index(i) for i in self.pivot_columns + self.pivot_rows + self.pivot_frozen)
-            order = tuple(sorted(range(len(order)),key=order.__getitem__))
-            key_getter = operator.itemgetter(*order)
-            invalid_first = self._invalid_column
-            invalid_other = self._invalid_row
-            other_index_name = self.pivot_rows
-            other_index_headers = self._row_data_header
-            first_key_getter = self.column
-            other_key_getter = self.row
-        if not mask_other_index:
-            # no mask given, delete all indexes of other index
-            if not other_index_name:
-                mask_other_index = [0]
-            else:
-                mask_other_index = range(len(other_index_headers))
-        else:
-            # check that mask is valid
-            if not other_index_name:
-                if not len(mask_other_index) == 1 and mask_other_index[0] == 0:
-                    raise ValueError('mask_other_index contains invalid index values, no dimension in other pivot, only [0] is allowed')
-            elif not all(i >= 0 and i < len(other_index_headers) for i in mask_other_index):
-                raise ValueError('mask_other_index contains invalid index values for other pivot header')
+    def delete_pivoted_values(self, indexes):
+        """Deletes values for given indexes"""
+        if not all(i[0] <= len(self.rows) or i[0] < 0 
+                   or i[1] <= len(self.columns) or i[1] < 0 for i in indexes):
+            raise ValueError('index must be valid index for row pivot')
         # delete values
-        for i in index:
-            i_invalid = i in invalid_first
-            key_first = first_key_getter(i)
-            for i_other in mask_other_index:
-                if i_other in invalid_other or i_invalid:
-                    # delete invalid data
-                    self._invalid_data.pop((i, i_other), None)
-                else:
-                    key_other = other_key_getter(i_other)
-                    key = key_getter(key_first + key_other + self.frozen_value)
-                    self._delete_data(key)
+        for i in indexes:
+            if i[0] in self._invalid_row or i[1] in self._invalid_column:
+                # delete invalid data
+                self._invalid_data.pop(tuple(i), None)
+            else:
+                # delete data if exists
+                key = self._key_getter(self.row(i[0]) + self.column(i[1]) + self.frozen_value)
+                self._delete_data(key)
 
     def delete_tuple_index_values(self, delete_tuples):
         """deletes values from keys with combination of indexes given that match tuple_index_entries"""
@@ -841,6 +799,16 @@ class PivotTableModel(QAbstractTableModel):
         self.model.set_frozen_value(frozen_value)
         self._update_header_data()
         self.endResetModel()
+
+    def delete_values(self, indexes):
+        # transform to PivotModel index
+        indexes = [(i.row() - self._num_headers_row, i.column() - self._num_headers_column) 
+                   for i in indexes 
+                   if (i.row() >= self._num_headers_row and i.row() < len(self.model.rows))
+                   and (i.column() >= self._num_headers_column and i.column() < len(self.model.columns))]
+        self.beginResetModel()
+        self.model.delete_pivoted_values(indexes)
+        self.endResetModel()
     
     def paste_data(self, index, data, row_mask, col_mask):
         """paste data into pivot model"""
@@ -1125,9 +1093,9 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
                 break
         return accept
     
-    def delete_row_col(self, delete_indexes, direction):
+    def delete_values(self, delete_indexes):
         delete_indexes = [self.mapToSource(index) for index in delete_indexes]
-        self.sourceModel().delete_row_col(delete_indexes, direction)
+        self.sourceModel().delete_values(delete_indexes)
         
     def paste_data(self, index, data):
         model_index = self.mapToSource(index)
