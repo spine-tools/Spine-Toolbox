@@ -533,17 +533,17 @@ class TreeViewForm(QMainWindow):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
-        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
-        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
         self.object_parameter_value_model.init_model()
         self.relationship_parameter_value_model.init_model()
+        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
+        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
     def init_parameter_models(self):
         """Initialize parameter (definition) models from source database."""
-        self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
-        self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
         self.object_parameter_model.init_model()
         self.relationship_parameter_model.init_model()
+        self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
+        self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -556,6 +556,8 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -566,7 +568,10 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_name_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
@@ -578,6 +583,7 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
         h = self.object_parameter_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -588,6 +594,8 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
         h = self.relationship_parameter_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('relationship_class_id'))
+        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -621,55 +629,55 @@ class TreeViewForm(QMainWindow):
     def receive_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Update filter proxy models accordingly."""
-        selected_object_class_names = set()
-        selected_object_names = set()
-        selected_relationship_class_names = set()
-        selected_object_name_lists = set()
-        deselected_object_class_names = set()
-        deselected_object_names = set()
-        deselected_relationship_class_names = set()
-        deselected_object_name_lists = set()
+        selected_object_class_ids = set()
+        selected_object_ids = set()
+        selected_relationship_class_ids = set()
+        selected_object_id_lists = set()
+        deselected_object_class_ids = set()
+        deselected_object_ids = set()
+        deselected_relationship_class_ids = set()
+        deselected_object_id_lists = set()
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             item = index.data(Qt.UserRole + 1)
             if item_type == 'object_class':
-                deselected_object_class_names.add(item['name'])
+                deselected_object_class_ids.add(item['id'])
             elif item_type == 'object':
-                deselected_object_names.add(item['name'])
+                deselected_object_ids.add(item['id'])
             elif item_type == 'relationship_class':
-                deselected_relationship_class_names.add(item['name'])
+                deselected_relationship_class_ids.add(item['id'])
             elif item_type == 'relationship':
-                deselected_object_name_lists.add(item['object_name_list'])
-        self.object_parameter_proxy.diff_update_object_class_name_set(deselected_object_class_names)
-        self.object_parameter_value_proxy.diff_update_object_class_name_set(deselected_object_class_names)
-        self.object_parameter_value_proxy.diff_update_object_name_set(deselected_object_names)
-        self.relationship_parameter_proxy.diff_update_relationship_class_name_set(deselected_relationship_class_names)
-        self.relationship_parameter_proxy.diff_update_object_class_name_set(deselected_object_class_names)
-        self.relationship_parameter_value_proxy.diff_update_relationship_class_name_set(
-            deselected_relationship_class_names)
-        self.relationship_parameter_value_proxy.diff_update_object_class_name_set(deselected_object_class_names)
-        self.relationship_parameter_value_proxy.diff_update_object_name_set(deselected_object_names)
-        self.relationship_parameter_value_proxy.diff_update_object_name_list_set(deselected_object_name_lists)
+                deselected_object_id_lists.add(item['object_id_list'])
+        self.object_parameter_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
+        self.object_parameter_value_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
+        self.object_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
+        self.relationship_parameter_proxy.diff_update_relationship_class_id_set(deselected_relationship_class_ids)
+        self.relationship_parameter_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
+        self.relationship_parameter_value_proxy.diff_update_relationship_class_id_set(
+            deselected_relationship_class_ids)
+        self.relationship_parameter_value_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
+        self.relationship_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
+        self.relationship_parameter_value_proxy.diff_update_object_id_list_set(deselected_object_id_lists)
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
             item = index.data(Qt.UserRole + 1)
             if item_type == 'object_class':
-                selected_object_class_names.add(item['name'])
+                selected_object_class_ids.add(item['id'])
             elif item_type == 'object':
-                selected_object_names.add(item['name'])
+                selected_object_ids.add(item['id'])
             elif item_type == 'relationship_class':
-                selected_relationship_class_names.add(item['name'])
+                selected_relationship_class_ids.add(item['id'])
             elif item_type == 'relationship':
-                selected_object_name_lists.add(item['object_name_list'])
-        self.object_parameter_proxy.update_object_class_name_set(selected_object_class_names)
-        self.object_parameter_value_proxy.update_object_class_name_set(selected_object_class_names)
-        self.object_parameter_value_proxy.update_object_name_set(selected_object_names)
-        self.relationship_parameter_proxy.update_relationship_class_name_set(selected_relationship_class_names)
-        self.relationship_parameter_proxy.update_object_class_name_set(selected_object_class_names)
-        self.relationship_parameter_value_proxy.update_relationship_class_name_set(selected_relationship_class_names)
-        self.relationship_parameter_value_proxy.update_object_class_name_set(selected_object_class_names)
-        self.relationship_parameter_value_proxy.update_object_name_set(selected_object_names)
-        self.relationship_parameter_value_proxy.update_object_name_list_set(selected_object_name_lists)
+                selected_object_id_lists.add(item['object_id_list'])
+        self.object_parameter_proxy.update_object_class_id_set(selected_object_class_ids)
+        self.object_parameter_value_proxy.update_object_class_id_set(selected_object_class_ids)
+        self.object_parameter_value_proxy.update_object_id_set(selected_object_ids)
+        self.relationship_parameter_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
+        self.relationship_parameter_proxy.update_object_class_id_set(selected_object_class_ids)
+        self.relationship_parameter_value_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
+        self.relationship_parameter_value_proxy.update_object_class_id_set(selected_object_class_ids)
+        self.relationship_parameter_value_proxy.update_object_id_set(selected_object_ids)
+        self.relationship_parameter_value_proxy.update_object_id_list_set(selected_object_id_lists)
         if self.ui.tabWidget_object.currentIndex() == 0:
             self.object_parameter_value_proxy.apply_filter()
         else:
@@ -682,12 +690,12 @@ class TreeViewForm(QMainWindow):
     @Slot(name="hide_unused_object_name_columns")
     def hide_unused_object_name_columns(self):
         """Hide unused object name columns in relationship parameter value view."""
-        max_object_count = len(self.relationship_parameter_value_model.object_name_header)
+        max_object_count = len(self.relationship_parameter_value_model.object_name_range)
         object_count = self.relationship_parameter_value_proxy.object_count
         if not object_count:
             object_count = max_object_count
         header = self.relationship_parameter_value_model.horizontal_header_labels()
-        object_name_1_column = header.index("object_name_1")
+        object_name_1_column = header.index("object_name [1]")
         for column in range(object_name_1_column, object_name_1_column + object_count):
             self.ui.tableView_relationship_parameter_value.horizontalHeader().showSection(column)
         for column in range(object_name_1_column + object_count, object_name_1_column + max_object_count):
@@ -822,12 +830,13 @@ class TreeViewForm(QMainWindow):
 
     def add_relationship_classes(self, wide_relationship_classes):
         """Insert new relationship classes."""
-        dim_count_list = list()
+        object_name_list_lengths = list()
         for wide_relationship_class in wide_relationship_classes:
             self.object_tree_model.add_relationship_class(wide_relationship_class)
-            dim_count_list.append(len(wide_relationship_class.object_class_id_list.split(',')))
-        max_dim_count = max(dim_count_list)
-        self.relationship_parameter_value_model.extend_object_name_header(max_dim_count)
+            object_name_list_lengths.append(len(wide_relationship_class.object_class_id_list.split(',')))
+        object_name_list_length = max(object_name_list_lengths)
+        self.relationship_parameter_value_model.extend_object_name_range(object_name_list_length)
+        self.hide_unused_object_name_columns()
         self.set_commit_rollback_actions_enabled(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
@@ -1157,7 +1166,7 @@ class TreeViewForm(QMainWindow):
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
-            object_name_1_column = model.horizontal_header_labels().index('object_name_1')
+            object_name_1_column = model.horizontal_header_labels().index('object_name [1]')
             row_column_tuples = list()
             data = list()
             i = 0

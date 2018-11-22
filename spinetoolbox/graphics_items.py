@@ -1027,6 +1027,7 @@ class ObjectItem(QGraphicsPixmapItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
+        object_id (int): object id
         object_name (str): object name
         object_class_name (str): object class name
         x (float): x-coordinate of central point
@@ -1036,10 +1037,11 @@ class ObjectItem(QGraphicsPixmapItem):
         label_color (QColor): label bg color
         label_position (str)
     """
-    def __init__(self, graph_view_form, object_name, object_class_name, x, y, extent,
+    def __init__(self, graph_view_form, object_id, object_name, object_class_name, x, y, extent,
                  label_font=QFont(), label_color=QColor(), label_position="over_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
+        self._object_id = object_id
         self._object_name = object_name
         self._object_class_name = object_class_name
         self._extent = extent
@@ -1075,11 +1077,12 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
-        super().paint(painter, option, widget)
         if option.state & (QStyle.State_Selected):
             self.shade.show()
+            option.state &= ~QStyle.State_Selected
         else:
             self.shade.hide()
+        super().paint(painter, option, widget)
 
     def setParentItem(self, parent):
         """Set same parent for label item."""
@@ -1275,6 +1278,9 @@ class ArcItem(QGraphicsLineItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
+        TODO: finish this... we need relationship identifiers
+        relationship_id (int): relationship id
+        object_class_name (str): object class name
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
@@ -1301,13 +1307,16 @@ class ArcItem(QGraphicsLineItem):
         dst_x = dst_item.x() #sceneBoundingRect().center().x()
         dst_y = dst_item.y() #sceneBoundingRect().center().y()
         self.setLine(src_x, src_y, dst_x, dst_y)
-        pen = QPen()
-        pen.setWidth(self.width)
-        pen.setColor(color)
-        pen.setStyle(pen_style)
-        pen.setCapStyle(Qt.RoundCap)
-        self.setPen(pen)
+        self.pen = QPen()
+        self.pen.setWidth(self.width)
+        self.pen.setColor(color)
+        self.pen.setStyle(pen_style)
+        self.pen.setCapStyle(Qt.RoundCap)
+        self.selected_pen = QPen(self.pen)
+        self.selected_pen.setColor(graph_view_form.palette().highlight().color())
+        self.setPen(self.pen)
         self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setZValue(-2)
         self.shape_item = QGraphicsLineItem()
         self.shape_item.setLine(src_x, src_y, dst_x, dst_y)
@@ -1317,6 +1326,15 @@ class ArcItem(QGraphicsLineItem):
         self.shape_item.hide()
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
+
+    def paint(self, painter, option, widget=None):
+        """Try and make it more clear when an item is selected."""
+        if option.state & (QStyle.State_Selected):
+            self.setPen(self.selected_pen)
+            option.state &= ~QStyle.State_Selected
+        else:
+            self.setPen(self.pen)
+        super().paint(painter, option, widget)
 
     def itemChange(self, change, value):
         """Add label item to same scene if added as top level item."""

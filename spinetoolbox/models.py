@@ -1960,7 +1960,11 @@ class WIPTableModel(MinimalTableModel):
 
 
 class ParameterModel(WIPTableModel):
-    """A model of parameter data, used by TreeViewForm."""
+    """A model of parameter data, used by TreeViewForm.
+    It implements methods that are common to both object and relationship parameters,
+    so the more specific `ObjectParameterModel` and `RelationshipParameterModel`
+    can inherit from this.
+    """
 
     def __init__(self, tree_view_form=None):
         """Initialize class."""
@@ -2034,7 +2038,10 @@ class ParameterModel(WIPTableModel):
 
 
 class ParameterValueModel(WIPTableModel):
-    """A model of parameter value data, used by TreeViewForm."""
+    """A model of parameter value data, used by TreeViewForm.
+    It implements methods that are common to both object and relationship parameter values,
+    so the more specific `ObjectParameterValueModel` and `RelationshipParameterValueModel`
+    can inherit from this."""
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form)
@@ -2125,7 +2132,7 @@ class ObjectParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(tree_view_form)
 
-    def init_model(self, skip_fields=["object_class_id"]):
+    def init_model(self, skip_fields=[]):
         """Initialize model from source database."""
         data = self.db_map.object_parameter_list()
         fields = self.db_map.object_parameter_fields()
@@ -2197,7 +2204,7 @@ class RelationshipParameterModel(ParameterModel):
         """Initialize class."""
         super().__init__(tree_view_form)
 
-    def init_model(self, skip_fields=["relationship_class_id", 'object_class_id_list']):
+    def init_model(self, skip_fields=[]):
         """Initialize model from source database."""
         data = self.db_map.relationship_parameter_list()
         fields = self.db_map.relationship_parameter_fields()
@@ -2306,13 +2313,18 @@ class ObjectParameterValueModel(ParameterValueModel):
         """Initialize class."""
         super().__init__(tree_view_form)
 
-    def init_model(self, skip_fields=['object_class_id', 'object_id', 'parameter_id']):
+    def init_model(self, skip_fields=['parameter_id']):
         """Initialize model from source database."""
         data = self.db_map.object_parameter_value_list()
         fields = self.db_map.object_parameter_value_fields()
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
+        self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
+
+    def init_model_from_data(self, model_data, header):
+        """Initialize model from source database."""
+        self.set_horizontal_header_labels(header)
         self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
 
     def rename_items(self, renamed_type, new_names, curr_names):
@@ -2409,49 +2421,46 @@ class RelationshipParameterValueModel(ParameterValueModel):
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form)
-        self.object_name_header = list()
+        self.object_name_range = None  # Range of column indices that are part of the object name list
 
-    def init_model(
-            self,
-            skip_fields=['relationship_class_id', 'object_class_id_list', 'object_id_list', 'parameter_id']):
+    def init_model(self, skip_fields=['parameter_id']):
         """Initialize model from source database."""
         data = self.db_map.relationship_parameter_value_list()
         fields = self.db_map.relationship_parameter_value_fields()
         header = [x for x in fields if x not in skip_fields]
         # Split single 'object_name_list' column into several 'object_name' columns
         relationship_class_list = self.db_map.wide_relationship_class_list()
-        max_dim_count = max(
-            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
-        self.object_name_header = ["object_name_" + str(i + 1) for i in range(max_dim_count)]
         object_name_list_index = header.index("object_name_list")
+        object_name_list_length = max(
+            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
+        self.object_name_range = range(object_name_list_index, object_name_list_index + object_name_list_length)
         header.pop(object_name_list_index)
-        for i, x in enumerate(self.object_name_header):
-            header.insert(object_name_list_index + i, x)
+        for k, i in enumerate(self.object_name_range):
+            header.insert(i, "object_name [{}]".format(str(k + 1)))
         self.set_horizontal_header_labels(header)
         # Compute model data: split single 'object_name_list' value into several 'object_name' values
         model_data = list()
         for row in data:
             row_data = [v for k, v in row._asdict().items() if k not in skip_fields]
             object_name_list = row_data.pop(object_name_list_index).split(',')
-            for i in range(max_dim_count):
+            for i in range(object_name_list_length):
                 try:
                     value = object_name_list[i]
                 except IndexError:
                     value = None
                 row_data.insert(object_name_list_index + i, value)
             model_data.append(row_data)
-        fixed_column_names = ['id', 'relationship_class_name', *self.object_name_header, 'parameter_name']
+        object_name_header = [header[x] for x in self.object_name_range]
+        fixed_column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
         self.reset_model(model_data, fixed_column_names=fixed_column_names)
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object", "parameter"):
             return
         names_dict = dict(zip(curr_names, new_names))
-        header_index = self.horizontal_header_labels().index
         if renamed_type == "object":
-            columns = [header_index(x) for x in self.object_name_header]
             for row in range(self.rowCount()):
-                for column in columns:
+                for column in self.object_name_range:
                     try:
                         curr_name = self._main_data[row][column]
                         new_name = names_dict[curr_name]
@@ -2459,6 +2468,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
                     except KeyError:
                         continue
         elif renamed_type in ("relationship_class", "parameter"):
+            header_index = self.horizontal_header_labels().index
             if renamed_type in "relationship_class":
                 column = header_index("relationship_class_name")
             elif renamed_type in "parameter":
@@ -2474,11 +2484,9 @@ class RelationshipParameterValueModel(ParameterValueModel):
     def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object", "parameter"):
             return
-        header_index = self.horizontal_header_labels().index
         if removed_type == "object":
-            columns = [header_index(x) for x in self.object_name_header]
             for row in reversed(range(self.rowCount())):
-                for column in columns:
+                for column in self.object_name_range:
                     try:
                         name = self._main_data[row][column]
                     except KeyError:
@@ -2487,6 +2495,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
                         super().removeRows(row, 1)
                         break
         elif removed_type in ("relationship_class", "parameter"):
+            header_index = self.horizontal_header_labels().index
             if removed_type in "relationship_class":
                 column = header_index("relationship_class_name")
             elif removed_type in "parameter":
@@ -2499,16 +2508,18 @@ class RelationshipParameterValueModel(ParameterValueModel):
                 if name in removed_names:
                     super().removeRows(row, 1)
 
-    def extend_object_name_header(self, max_dim_count):
-        """Extend object name header to fit new max dimension count."""
-        curr_dim_count = len(self.object_name_header)
-        object_name_header_ext = ["object_name_" + str(i + 1) for i in range(curr_dim_count, max_dim_count)]
-        if object_name_header_ext:
-            header = self.horizontal_header_labels()
-            section = header.index(self.object_name_header[-1]) + 1
-            self.insertColumns(section, len(object_name_header_ext))
-            self.insert_horizontal_header_labels(section, object_name_header_ext)
-            self.object_name_header.extend(object_name_header_ext)
+    def extend_object_name_range(self, length):
+        """Extend object name range to fit given length."""
+        print(length)
+        curr_length = len(self.object_name_range)
+        diff = length - curr_length
+        print(diff)
+        if diff <= 0:
+            return
+        self.insertColumns(self.object_name_range.stop, diff)
+        object_name_header_ext = ["object_name [{}]".format(str(i + 1)) for i in range(curr_length, length)]
+        self.insert_horizontal_header_labels(self.object_name_range.stop, object_name_header_ext)
+        self.object_name_range = range(self.object_name_range.start, self.object_name_range.stop + diff)
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
@@ -2522,16 +2533,16 @@ class RelationshipParameterValueModel(ParameterValueModel):
         return True
 
     def relationships_on_the_fly(self, indexes):
-        """Return a dict of row (int) to relationship items (KeyedTuple),
+        """Return a dict of row (int) to relationship item (KeyedTuple),
         either retrieved or added on the fly.
-        Also extend the given list of indexes if some are autoset.
+        Also extend `indexes` with the ones that are 'autoset'.
         """
         relationships_on_the_fly = dict()
         relationships_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
         relationship_class_name_column = header.index('relationship_class_name')
-        object_name_1_column = header.index('object_name_1')
+        object_name_1_column = header.index('object_name [1]')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
         relationship_class_lookup_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}
@@ -2781,51 +2792,48 @@ class ObjectParameterProxy(AutoFilterProxy):
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form)
-        self.object_class_name_set = set()
+        self.object_class_id_set = set()
+        self.object_class_id_column = None
         self.object_class_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
+            self.object_class_id_column = self.header_index("object_class_id")
             self.object_class_name_column = self.header_index("object_class_name")
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
         source_model = self.sourceModel()
-        if self.object_class_name_set:
-            try:
-                object_class_name = source_model._main_data[source_row][self.object_class_name_column]
-            except KeyError:
-                object_class_name = None
-            if object_class_name not in self.object_class_name_set:
+        if self.object_class_id_set:
+            object_class_id = source_model._main_data[source_row][self.object_class_id_column]
+            if object_class_id not in self.object_class_id_set:
                 return False
             source_model._aux_data[source_row][self.object_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def clear_object_class_name_set(self):
-        if not self.object_class_name_set:
+    def clear_object_class_id_set(self):
+        if not self.object_class_id_set:
             return
-        self.object_class_name_set.clear()
+        self.object_class_id_set.clear()
         self.invalidate_filter()
 
-    def update_object_class_name_set(self, names):
-        if self.object_class_name_set.issuperset(names):
+    def update_object_class_id_set(self, ids):
+        if self.object_class_id_set.issuperset(ids):
             return
-        self.object_class_name_set.update(names)
+        self.object_class_id_set.update(ids)
         self.invalidate_filter()
 
-    def diff_update_object_class_name_set(self, names):
-        if self.object_class_name_set.isdisjoint(names):
+    def diff_update_object_class_id_set(self, ids):
+        if self.object_class_id_set.isdisjoint(ids):
             return
-        self.object_class_name_set.difference_update(names)
+        self.object_class_id_set.difference_update(ids)
         self.invalidate_filter()
 
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
-        if not self.object_class_name_column:
-            return
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_class_name_column][Qt.FontRole] = None
 
@@ -2835,13 +2843,15 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form)
-        self.object_name_set = set()
+        self.object_id_set = set()
+        self.object_id_column = None
         self.object_name_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
+            self.object_id_column = self.header_index("object_id")
             self.object_name_column = self.header_index("object_name")
 
     def filter_accepts_row(self, source_row, source_parent):
@@ -2849,39 +2859,34 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
         if not super().filter_accepts_row(source_row, source_parent):
             return False
         source_model = self.sourceModel()
-        if self.object_name_set:
-            try:
-                object_name = source_model._main_data[source_row][self.object_name_column]
-            except KeyError:
-                object_name = None
-            if object_name not in self.object_name_set:
+        if self.object_id_set:
+            object_id = source_model._main_data[source_row][self.object_id_column]
+            if object_id not in self.object_id_set:
                 return False
             source_model._aux_data[source_row][self.object_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def clear_object_name_set(self):
-        if not self.object_name_set:
+    def clear_object_id_set(self):
+        if not self.object_id_set:
             return
-        self.object_name_set.clear()
+        self.object_id_set.clear()
         self.invalidate_filter()
 
-    def update_object_name_set(self, names):
-        if self.object_name_set.issuperset(names):
+    def update_object_id_set(self, ids):
+        if self.object_id_set.issuperset(ids):
             return
-        self.object_name_set.update(names)
+        self.object_id_set.update(ids)
         self.invalidate_filter()
 
-    def diff_update_object_name_set(self, names):
-        if self.object_name_set.isdisjoint(names):
+    def diff_update_object_id_set(self, ids):
+        if self.object_id_set.isdisjoint(ids):
             return
-        self.object_name_set.difference_update(names)
+        self.object_id_set.difference_update(ids)
         self.invalidate_filter()
 
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
-        if not self.object_name_column:
-            return
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_name_column][Qt.FontRole] = None
 
@@ -2891,79 +2896,76 @@ class RelationshipParameterProxy(AutoFilterProxy):
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form)
-        self.relationship_class_name_set = set()
-        self.object_class_name_set = set()
+        self.relationship_class_id_set = set()
+        self.object_class_id_set = set()
+        self.relationship_class_id_column = None
         self.relationship_class_name_column = None
-        self.object_class_name_list_column = None
+        self.object_class_id_list_column = None
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
+            self.relationship_class_id_column = self.header_index("relationship_class_id")
             self.relationship_class_name_column = self.header_index("relationship_class_name")
-            self.object_class_name_list_column = self.header_index("object_class_name_list")
+            self.object_class_id_list_column = self.header_index("object_class_id_list")
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
         source_model = self.sourceModel()
-        if self.relationship_class_name_set:
-            try:
-                relationship_class_name = source_model._main_data[source_row][self.relationship_class_name_column]
-            except KeyError:
-                relationship_class_name = None
-            if relationship_class_name not in self.relationship_class_name_set:
+        if self.relationship_class_id_set:
+            relationship_class_id = source_model._main_data[source_row][self.relationship_class_id_column]
+            if relationship_class_id not in self.relationship_class_id_set:
                 return False
             source_model._aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
-        if self.object_class_name_set:
-            object_class_name_list = source_model._main_data[source_row][self.object_class_name_list_column]
-            if not object_class_name_list:
+        if self.object_class_id_set:
+            object_class_id_list = source_model._main_data[source_row][self.object_class_id_list_column]
+            if not object_class_id_list:
                 return False
-            if self.object_class_name_set.isdisjoint(object_class_name_list.split(",")):
+            if self.object_class_id_set.isdisjoint([int(x) for x in object_class_id_list.split(",")]):
                 return False
             source_model._aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
         return True
 
-    def clear_relationship_class_name_set(self):
-        if not self.relationship_class_name_set:
+    def clear_relationship_class_id_set(self):
+        if not self.relationship_class_id_set:
             return
-        self.relationship_class_name_set.clear()
+        self.relationship_class_id_set.clear()
         self.invalidate_filter()
 
-    def update_relationship_class_name_set(self, names):
-        if self.relationship_class_name_set.issuperset(names):
+    def update_relationship_class_id_set(self, ids):
+        if self.relationship_class_id_set.issuperset(ids):
             return
-        self.relationship_class_name_set.update(names)
+        self.relationship_class_id_set.update(ids)
         self.invalidate_filter()
 
-    def diff_update_relationship_class_name_set(self, names):
-        if self.relationship_class_name_set.isdisjoint(names):
+    def diff_update_relationship_class_id_set(self, ids):
+        if self.relationship_class_id_set.isdisjoint(ids):
             return
-        self.relationship_class_name_set.difference_update(names)
+        self.relationship_class_id_set.difference_update(ids)
         self.invalidate_filter()
 
-    def clear_object_class_name_set(self):
-        if not self.object_class_name_set:
+    def clear_object_class_id_set(self):
+        if not self.object_class_id_set:
             return
-        self.object_class_name_set.clear()
+        self.object_class_id_set.clear()
         self.invalidate_filter()
 
-    def update_object_class_name_set(self, names):
-        if self.object_class_name_set.issuperset(names):
+    def update_object_class_id_set(self, ids):
+        if self.object_class_id_set.issuperset(ids):
             return
-        self.object_class_name_set.update(names)
+        self.object_class_id_set.update(ids)
         self.invalidate_filter()
 
-    def diff_update_object_class_name_set(self, names):
-        if self.object_class_name_set.isdisjoint(names):
+    def diff_update_object_class_id_set(self, ids):
+        if self.object_class_id_set.isdisjoint(ids):
             return
-        self.object_class_name_set.difference_update(names)
+        self.object_class_id_set.difference_update(ids)
         self.invalidate_filter()
 
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
-        if not self.relationship_class_name_column:
-            return
         for row_data in self.sourceModel()._aux_data:
             row_data[self.relationship_class_name_column][Qt.FontRole] = None
 
@@ -2973,100 +2975,91 @@ class RelationshipParameterValueProxy(RelationshipParameterProxy):
     def __init__(self, tree_view_form=None):
         """Initialize class."""
         super().__init__(tree_view_form)
-        self.object_name_set = set()
-        self.object_name_list_set = set()  # Set of lists
-        self.object_name_columns = list()
+        self.object_id_set = set()
+        self.object_id_list_set = set()  # Set of string
+        self.object_id_list_column = None
+        self.object_name_range = None
         self.object_count = 0
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
-            self.object_name_columns = [self.header_index(x) for x in self.sourceModel().object_name_header]
+            self.object_id_list_column = self.header_index("object_id_list")
+        self.object_name_range = self.sourceModel().object_name_range
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
         if not super().filter_accepts_row(source_row, source_parent):
             return False
-        # Determine object_name_list for this row
         source_model = self.sourceModel()
-        object_name_list = list()
-        for j in self.object_name_columns:
-            try:
-                object_name = source_model._main_data[source_row][j]
-            except KeyError:
-                break
-            if not object_name:
-                break
-            object_name_list.append(object_name)
-        # Now check filter
-        if self.object_name_list_set:
-            if ",".join(object_name_list) not in self.object_name_list_set:
+        object_id_list = source_model._main_data[source_row][self.object_id_list_column]
+        split_object_id_list = [int(x) for x in object_id_list.split(",")]
+        if self.object_id_list_set:
+            if object_id_list not in self.object_id_list_set:
                 return False
-            for j in range(len(object_name_list)):
-                source_model._aux_data[source_row][self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
-        if self.object_name_set:
+            for j in range(len(split_object_id_list)):
+                source_model._aux_data[source_row][self.object_name_range.start + j][Qt.FontRole] = self.bold_font
+        if self.object_id_set:
             found = False
-            for j, object_name in enumerate(object_name_list):
-                if object_name in self.object_name_set:
-                    source_model._aux_data[source_row][self.object_name_columns[0] + j][Qt.FontRole] = self.bold_font
+            for j, object_id in enumerate(split_object_id_list):
+                if object_id in self.object_id_set:
+                    source_model._aux_data[source_row][self.object_name_range.start + j][Qt.FontRole] = self.bold_font
                     found = True
             if not found:
                 return False
         # If this row passes, update the object count
-        self.object_count = max(self.object_count, len(object_name_list))
+        self.object_count = max(self.object_count, len(split_object_id_list))
         return True
 
-    def clear_object_name_set(self):
+    def clear_object_id_set(self):
         self.object_count = 0
-        if not self.object_name_set:
+        if not self.object_id_set:
             return
-        self.object_name_set.clear()
+        self.object_id_set.clear()
         self.invalidate_filter()
 
-    def update_object_name_set(self, names):
+    def update_object_id_set(self, ids):
         self.object_count = 0
-        if self.object_name_set.issuperset(names):
+        if self.object_id_set.issuperset(ids):
             return
-        self.object_name_set.update(names)
+        self.object_id_set.update(ids)
         self.invalidate_filter()
 
-    def diff_update_object_name_set(self, names):
+    def diff_update_object_id_set(self, ids):
         self.object_count = 0
-        if self.object_name_set.isdisjoint(names):
+        if self.object_id_set.isdisjoint(ids):
             return
-        self.object_name_set.difference_update(names)
+        self.object_id_set.difference_update(ids)
         self.invalidate_filter()
 
-    def clear_object_name_list_set(self):
+    def clear_object_id_list_set(self):
         self.object_count = 0
-        if not self.object_name_list_set:
+        if not self.object_id_list_set:
             return
-        self.object_name_list_set.clear()
+        self.object_id_list_set.clear()
         self.invalidate_filter()
 
-    def update_object_name_list_set(self, name_lists):
+    def update_object_id_list_set(self, id_lists):
         self.object_count = 0
-        if self.object_name_list_set.issuperset(name_lists):
+        if self.object_id_list_set.issuperset(id_lists):
             return
-        self.object_name_list_set.update(name_lists)
+        self.object_id_list_set.update(id_lists)
         self.invalidate_filter()
 
-    def diff_update_object_name_list_set(self, name_lists):
+    def diff_update_object_id_list_set(self, id_lists):
         self.object_count = 0
-        if self.object_name_list_set.isdisjoint(name_lists):
+        if self.object_id_list_set.isdisjoint(id_lists):
             return
-        self.object_name_list_set.difference_update(name_lists)
+        self.object_id_list_set.difference_update(id_lists)
         self.invalidate_filter()
 
     def invalidate_filter(self):
         self.object_count = 0
         self.filter_is_valid = False
         self.clear_autofilter()
-        if not self.object_name_columns:
-            return
         for row_data in self.sourceModel()._aux_data:
-            for j in self.object_name_columns:
+            for j in self.object_name_range:
                 row_data[j][Qt.FontRole] = None
 
 

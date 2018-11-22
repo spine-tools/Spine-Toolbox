@@ -16,6 +16,7 @@ Widget to show graph view form.
 :date:   5.11.2018
 """
 
+import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
@@ -34,9 +35,10 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     CommitDialog
 from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
-    ObjectParameterValueModel, ObjectParameterValueProxy
+    ObjectParameterValueModel, ObjectParameterValueProxy, \
+    RelationshipParameterValueModel, RelationshipParameterValueProxy
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
-from helpers import busy_effect
+from helpers import busy_effect, relationship_pixmap
 from config import STATUSBAR_SS
 
 
@@ -65,7 +67,12 @@ class GraphViewForm(QMainWindow):
         self.err_msg = QErrorMessage(self)
         self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
-        self._min_spread = self.font_metric.width("spread")
+        self._spread = self.font_metric.width("Spine Toolbox")
+        self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
+        self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
+        self.label_color.setAlphaF(.5)
+        self.arc_color.setAlphaF(.75)
+        self.object_id_list = list()
         self.object_name_list = list()
         self.object_class_name_list = list()
         self.arc_relationship_class_name_list = list()
@@ -115,6 +122,8 @@ class GraphViewForm(QMainWindow):
         title = database + " (read only) " if read_only else database
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
         self.setAttribute(Qt.WA_DeleteOnClose)
+        toc = time.clock()
+        self.msg.emit("Graph view form created in {} seconds".format(toc - tic))
 
     def init_models(self):
         """Initialize object tree, object class list, and
@@ -127,16 +136,27 @@ class GraphViewForm(QMainWindow):
 
     def init_parameter_models(self):
         """Initialize parameter models and views."""
-        skip_fields = ['object_class_id', 'object_id', 'parameter_id', 'index']
-        parameter_value_data = {}
-        data = self.db_map.object_parameter_value_list()
+        self.init_object_parameter_models()
+        #self.init_relationship_parameter_models()
+
+    def init_object_parameter_models(self):
+        # Prepare dictionary of data per object class
+        skip_fields = ['parameter_id']
         fields = self.db_map.object_parameter_value_fields()
         header = [x for x in fields if x not in skip_fields]
-        for row in data:
-            object_class_name = row.object_class_name
-            row_data = [v for k, v in row._asdict().items() if k not in skip_fields]
-            parameter_value_data.setdefault(object_class_name, list()).append(row_data)
-        for object_class_name, data in parameter_value_data.items():
+        object_class_data = {}
+        for parameter_value in self.db_map.object_parameter_value_list():
+            object_class_id = parameter_value.object_class_id
+            parameter_value_data = [v for k, v in parameter_value._asdict().items() if k not in skip_fields]
+            object_class_data.setdefault(object_class_id, list()).append(parameter_value_data)
+        for object_class in self.db_map.object_class_list():
+            object_class_id = object_class.id
+            try:
+                model_data = object_class_data[object_class_id]
+            except KeyError:
+                continue
+            object_class_name = object_class.name
+            # Create widget to add to splitter
             widget = QWidget(self.parameter_splitter)
             widget.hide()
             layout = QVBoxLayout(widget)
@@ -160,15 +180,60 @@ class GraphViewForm(QMainWindow):
             layout.addWidget(label_widget)
             layout.addWidget(view)
             self.parameter_value_views[object_class_name] = view
+            # Setup model
             model = ObjectParameterValueModel(self)
-            model.set_horizontal_header_labels(header)
-            model.reset_model(data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
             proxy = ObjectParameterValueProxy(self)
+            view.setModel(proxy)
+            model.init_model_from_data(model_data, header)
+            proxy.setSourceModel(model)
+            h = model.horizontal_header_labels().index
+            view.horizontalHeader().hideSection(h('id'))
+            view.horizontalHeader().hideSection(h('object_class_id'))
+            view.horizontalHeader().hideSection(h('object_class_name'))
+            view.horizontalHeader().hideSection(h('object_id'))
+            view.resizeColumnsToContents()
+            height = QFontMetrics(QFont("", 0)).lineSpacing()
+            view.verticalHeader().setDefaultSectionSize(height)
+            view.verticalHeader().hide()
+
+    def init_relationship_parameter_models(self):
+        for relationship_class in self.db_map.wide_relationship_class_list():
+            relationship_class_name = relationship_class.name
+            relationship_class_id = relationship_class.id
+            # Create widget to add to splitter
+            widget = QWidget(self.parameter_splitter)
+            widget.hide()
+            layout = QVBoxLayout(widget)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+            label_widget = QWidget()
+            label_layout = QHBoxLayout(label_widget)
+            label_layout.setContentsMargins(0, 0, 0, 0)
+            label_layout.setSpacing(0)
+            text_label = QLabel(relationship_class_name, widget)
+            text_label.setAlignment(Qt.AlignLeft)
+            pixmap_label = QLabel(widget)
+            pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
+            pixmap_label.setPixmap(pixmap.scaled(16, 16))
+            pixmap_label.setMaximumWidth(20)
+            label_layout.addWidget(pixmap_label)
+            label_layout.addWidget(text_label)
+            view = QTableView(widget)
+            layout.addWidget(label_widget)
+            layout.addWidget(view)
+            self.parameter_value_views[relationship_class_name] = view
+            # Setup model
+            model = RelationshipParameterValueModel(self)
+            model.init_model(relationship_class_id=relationship_class_id)
+            proxy = RelationshipParameterValueProxy(self)
             proxy.setSourceModel(model)
             view.setModel(proxy)
             h = model.horizontal_header_labels().index
             view.horizontalHeader().hideSection(h('id'))
-            view.horizontalHeader().hideSection(h('object_class_name'))
+            view.horizontalHeader().hideSection(h('relationship_class_id'))
+            view.horizontalHeader().hideSection(h('object_class_id_list'))
+            view.horizontalHeader().hideSection(h('object_class_name_list'))
+            view.horizontalHeader().hideSection(h('object_id_list'))
             view.resizeColumnsToContents()
             height = QFontMetrics(QFont("", 0)).lineSpacing()
             view.verticalHeader().setDefaultSectionSize(height)
@@ -344,6 +409,7 @@ class GraphViewForm(QMainWindow):
             True if graph data changed, False otherwise
         """
         rejected_object_names = [x._object_name for x in self.rejected_items]
+        self.object_id_list = list()
         self.object_name_list = list()
         self.object_class_name_list = list()
         root_item = self.object_tree_model.root_item
@@ -356,12 +422,14 @@ class GraphViewForm(QMainWindow):
             is_object_class_selected = self.ui.treeView.selectionModel().isSelected(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
+                object_id = object_item.data(Qt.UserRole + 1)["id"]
                 object_name = object_item.data(Qt.EditRole)
                 if object_name in rejected_object_names:
                     continue
                 index = self.object_tree_model.indexFromItem(object_item)
                 is_object_selected = self.ui.treeView.selectionModel().isSelected(index)
                 if is_root_selected or is_object_class_selected or is_object_selected:
+                    self.object_id_list.append(object_id)
                     self.object_name_list.append(object_name)
                     self.object_class_name_list.append(object_class_name)
         self.arc_relationship_class_name_list = list()
@@ -378,28 +446,31 @@ class GraphViewForm(QMainWindow):
         for relationship in self.db_map.wide_relationship_list():
             relationship_class_name = relationship_class_dict[relationship.class_id]["name"]
             object_class_name_list = relationship_class_dict[relationship.class_id]["object_class_name_list"]
+            object_id_list = [int(x) for x in relationship.object_id_list.split(",")]
             object_name_list = relationship.object_name_list.split(",")
-            for i in range(len(object_name_list)):
-                src_object_name = object_name_list[i]
+            for i in range(len(object_id_list)):
+                src_object_id = object_id_list[i]
                 try:
-                    dst_object_name = object_name_list[i + 1]
+                    dst_object_id = object_id_list[i + 1]
                 except IndexError:
-                    dst_object_name = object_name_list[0]
+                    dst_object_id = object_id_list[0]
                 try:
-                    src_ind = self.object_name_list.index(src_object_name)
-                    dst_ind = self.object_name_list.index(dst_object_name)
+                    src_ind = self.object_id_list.index(src_object_id)
+                    dst_ind = self.object_id_list.index(dst_object_id)
                 except ValueError:
                     continue
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
+                src_object_name = self.object_name_list[src_ind]
+                dst_object_name = self.object_name_list[dst_ind]
                 self.arc_relationship_class_name_list.append(relationship_class_name)
                 arc_object_names = list()
                 arc_object_class_names = list()
-                for x, y in zip(object_name_list, object_class_name_list):
-                    if x in (src_object_name, dst_object_name):
+                for object_name, object_class_name in zip(object_name_list, object_class_name_list):
+                    if object_name in (src_object_name, dst_object_name):
                         continue
-                    arc_object_names.append(x)
-                    arc_object_class_names.append(y)
+                    arc_object_names.append(object_name)
+                    arc_object_class_names.append(object_class_name)
                 self.arc_object_names_list.append(arc_object_names)
                 self.arc_object_class_names_list.append(arc_object_class_names)
         # Add template items hanging around
@@ -407,14 +478,15 @@ class GraphViewForm(QMainWindow):
         if scene:
             self.heavy_positions = {}
             object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
-            object_ind = len(self.object_name_list)
+            object_ind = len(self.object_id_list)
             self.template_id_dims = {}
             self.is_template = {}
             object_ind_dict = {}
             for item in object_items:
+                object_id = item._object_id
                 object_name = item._object_name
                 try:
-                    found_ind = self.object_name_list.index(object_name)
+                    found_ind = self.object_id_list.index(object_id)
                     is_template = self.is_template.get(found_ind)
                     if not is_template:
                         self.template_id_dims[found_ind] = item.template_id_dim
@@ -424,6 +496,7 @@ class GraphViewForm(QMainWindow):
                 except ValueError:
                     pass
                 object_class_name = item._object_class_name
+                self.object_id_list.append(object_id)
                 self.object_name_list.append(object_name)
                 self.object_class_name_list.append(object_class_name)
                 self.template_id_dims[object_ind] = item.template_id_dim
@@ -440,13 +513,13 @@ class GraphViewForm(QMainWindow):
                 try:
                     src_ind = object_ind_dict[src_item]
                 except KeyError:
-                    src_object_name = src_item._object_name
-                    src_ind = self.object_name_list.index(src_object_name)
+                    src_object_id = src_item._object_id
+                    src_ind = self.object_id_list.index(src_object_id)
                 try:
                     dst_ind = object_ind_dict[dst_item]
                 except KeyError:
-                    dst_object_name = dst_item._object_name
-                    dst_ind = self.object_name_list.index(dst_object_name)
+                    dst_object_id = dst_item._object_id
+                    dst_ind = self.object_id_list.index(dst_object_id)
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
                 self.arc_relationship_class_name_list.append("")
@@ -545,12 +618,13 @@ class GraphViewForm(QMainWindow):
         x, y = self.vertex_coordinates(d, self.heavy_positions)
         object_items = list()
         for i in range(len(self.object_name_list)):
+            object_id = self.object_id_list[i]
             object_name = self.object_name_list[i]
             object_class_name = self.object_class_name_list[i]
             extent = 2 * self.font.pointSize()
             object_item = ObjectItem(
-                self, object_name, object_class_name, x[i], y[i], extent,
-                self.font, QColor(224, 224, 224, 128))
+                self, object_id, object_name, object_class_name, x[i], y[i], extent,
+                label_font=self.font, label_color=self.label_color)
             try:
                 template_id_dim = self.template_id_dims[i]
                 if self.is_template[i]:
@@ -596,6 +670,7 @@ class GraphViewForm(QMainWindow):
 
     @Slot(name="handle_scene_selection_changed")
     def handle_scene_selection_changed(self):
+        """Show parameters for selected items."""
         scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
         current_items = scene.selectedItems()
         previous_items = self.previous_item_selection
@@ -603,22 +678,21 @@ class GraphViewForm(QMainWindow):
         deselected = [x for x in previous_items if x not in current_items]
         self.previous_item_selection = current_items
         current_object_class_names = set()
-        selected_object_names = set()
-        deselected_object_names = set()
+        selected_object_ids = set()
+        deselected_object_ids = set()
         for item in current_items:
             current_object_class_names.add(item._object_class_name)
         for item in selected:
-            selected_object_names.add(item._object_name)
+            selected_object_ids.add(item._object_id)
         for item in deselected:
-            deselected_object_names.add(item._object_name)
+            deselected_object_ids.add(item._object_id)
         self.hide_parameter_views(current_object_class_names)
         self.show_parameter_views(current_object_class_names)
         for view in self.parameter_value_views.values():
-            if not view.isVisible():
-                continue
-            view.model().update_object_name_set(selected_object_names)
-            view.model().diff_update_object_name_set(deselected_object_names)
-            view.model().apply_filter()
+            view.model().update_object_id_set(selected_object_ids)
+            view.model().diff_update_object_id_set(deselected_object_ids)
+            if view.isVisible():
+                view.model().apply_filter()
 
     def hide_parameter_views(self, current_object_class_names):
         """Hide parameter views for non selected object classes."""
@@ -644,10 +718,11 @@ class GraphViewForm(QMainWindow):
         if len(self.ui.graphicsView.scene().items()) > 1:  # TODO: should we use sender() here?
             return
         scene = self.new_scene()
-        msg = "\t• Select items in the 'Object tree' to show objects here.\t\n" \
-            + "\t\tYou can select multiple ones by holding the 'Ctrl' key.\t\n\n"
+        msg = "\t• Select items in the 'Object tree' to show objects here.\t\n\n" \
+            + "\t• Select items here to show their parameters in 'Parameters'.\t\n\n"
         if not self.read_only:
-            msg += "\t• Drag icons from the 'Item palette' and drop them here to add new.\t\n"
+            msg += "\t• Drag icons from the 'Item palette' and drop them here to add new.\t\n\n"
+        msg += "\n\tNote: You can select multiple items by holding the 'Ctrl' key.\t"
         msg_item = CustomTextItem(msg, self.font)
         scene.addItem(msg_item)
         self._has_graph = False
@@ -671,7 +746,7 @@ class GraphViewForm(QMainWindow):
             class_name = data["name"]
             extent = 2 * self.font.pointSize()
             self.object_item_placeholder = ObjectItem(
-                self, None, class_name, scene_pos.x(), scene_pos.y(), extent)
+                self, 0, "", class_name, scene_pos.x(), scene_pos.y(), extent)
             scene.addItem(self.object_item_placeholder)
             class_id = data["id"]
             self.show_add_objects_form(class_id)
@@ -770,8 +845,8 @@ class GraphViewForm(QMainWindow):
         x, y = self.vertex_coordinates(d)
         for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
             object_item = ObjectItem(
-                self, object_name, object_class_name, x_, y_, extent,
-                font, color, label_position=object_label_position)
+                self, 0, object_name, object_class_name, x_, y_, extent,
+                label_font=font, label_color=Qt.transparent, label_position=object_label_position)
             object_items.append(object_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
@@ -823,6 +898,7 @@ class GraphViewForm(QMainWindow):
         """Insert new objects."""
         for object_ in objects:
             self.object_tree_model.add_object(object_, flat=True)
+        object_id_list = [x.id for x in objects]
         object_name_list = [x.name for x in objects]
         src_ind_list = list()
         dst_ind_list = list()
@@ -836,10 +912,10 @@ class GraphViewForm(QMainWindow):
         y_offset = self.object_item_placeholder.y()
         extent = self.object_item_placeholder._extent
         scene.removeItem(self.object_item_placeholder)
-        for x_, y_, object_name in zip(x, y, object_name_list):
+        for x_, y_, object_id, object_name in zip(x, y, object_id_list, object_name_list):
             object_item = ObjectItem(
-                self, object_name, object_class_name, x_offset + x_, y_offset + y_, extent,
-                self.font, QColor(224, 224, 224, 128))
+                self, object_id, object_name, object_class_name, x_offset + x_, y_offset + y_, extent,
+                label_font=self.font, label_color=self.label_color)
             scene.addItem(object_item)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
