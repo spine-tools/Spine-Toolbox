@@ -984,9 +984,8 @@ class MinimalTableModel(QAbstractTableModel):
         self._main_data = list()
         self._aux_data = list()
         self.endResetModel()
-        if not self.has_empty_row:
-            return
-        self.insertRows(self.rowCount(), 1)
+        if self.has_empty_row:
+            self.insertRows(self.rowCount(), 1)
 
     def flags(self, index):
         """Returns flags for table items."""
@@ -1334,6 +1333,8 @@ class MinimalTableModel(QAbstractTableModel):
             self._aux_data.append(aux_data_row)
             self._flags.append(flags_row)
         self.endResetModel()
+        if self.has_empty_row:
+            self.insertRows(self.rowCount(), 1)
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -1857,16 +1858,6 @@ class WIPTableModel(MinimalTableModel):
         else:
             self.gray_brush = QGuiApplication.palette().button()
 
-    def set_fixed_columns(self, *column_names):
-        """Set the fixed_columns attribute according to the column names given as argument."""
-        header = self.horizontal_header_labels()
-        self.fixed_columns = []
-        for name in column_names:
-            try:
-                self.fixed_columns.append(header.index(name))
-            except ValueError:
-                pass
-
     def setData(self, index, value, role=Qt.EditRole):
         """Set data in model."""
         if role != Qt.EditRole:
@@ -1936,28 +1927,37 @@ class WIPTableModel(MinimalTableModel):
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
-        return self._flags[row][self.fixed_columns[0]] & Qt.ItemIsEditable
+        try:
+            column = self.fixed_columns[0]
+        except IndexError:
+            return True
+        return self._flags[row][column] & Qt.ItemIsEditable
 
-    def make_columns_fixed_for_rows(self, *rows):
-        """Set fixed columns as non-editable and paint them gray."""
-        header = self.horizontal_header_labels()
-        for row in rows:
-            for column in self.fixed_columns:
+    def make_data_fixed(self, rows=[], column_names=[]):
+        """Make data non-editable and set background."""
+        if not rows:
+            rows = range(0, self.rowCount() - 1)  # last row is the empty row
+        h = self.horizontal_header_labels().index
+        columns = []
+        for x in column_names:
+            try:
+                columns.append(h(x))
+            except ValueError:
+                pass
+        if not columns:
+            columns = self.fixed_columns
+        for column in columns:
+            for row in rows:
                 self._aux_data[row][column][Qt.BackgroundRole] = self.gray_brush
                 self._flags[row][column] = ~Qt.ItemIsEditable
+        new_columns = [x for x in columns if x not in self.fixed_columns]
+        self.fixed_columns.extend(new_columns)
         try:
-            top_left = self.index(rows[0], self.fixed_columns[0])
-            bottom_right = self.index(rows[-1], self.fixed_columns[-1])
+            top_left = self.index(min(rows), min(columns))
+            bottom_right = self.index(max(rows), max(columns))
             self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
         except IndexError:
             pass
-
-    def reset_model(self, model_data, fixed_column_names=list()):
-        """Reset model while keeping the work in progress rows."""
-        self.set_fixed_columns(*fixed_column_names)
-        super().reset_model(model_data)
-        self.make_columns_fixed_for_rows(*[r for r in range(len(model_data))])
-
 
 class ParameterModel(WIPTableModel):
     """A model of parameter data, used by TreeViewForm.
@@ -2007,7 +2007,7 @@ class ParameterModel(WIPTableModel):
             id_column = self.horizontal_header_labels().index('id')
             for i, parameter in enumerate(parameters):
                 self._main_data[rows[i]][id_column] = parameter.id  # NOTE: DisplayRole not in use
-            self.make_columns_fixed_for_rows(*rows)
+            self.make_data_fixed(rows=rows)
             self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
             self._tree_view_form.msg.emit(msg)
@@ -2096,7 +2096,7 @@ class ParameterValueModel(WIPTableModel):
             id_column = self.horizontal_header_labels().index('id')
             for i, parameter_value in enumerate(parameter_values):
                 self._main_data[rows[i]][id_column] = parameter_value.id
-            self.make_columns_fixed_for_rows(*rows)
+            self.make_data_fixed(rows=rows)
             self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
             self._tree_view_form.msg.emit(msg)
@@ -2139,7 +2139,9 @@ class ObjectParameterModel(ParameterModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        self.reset_model(model_data, fixed_column_names=['id', 'object_class_name'])
+        self.reset_model(model_data)
+        column_names = ['id', 'object_class_name']
+        self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type != "object_class":
@@ -2211,7 +2213,9 @@ class RelationshipParameterModel(ParameterModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        self.reset_model(model_data, fixed_column_names=['id', 'relationship_class_name', 'object_class_name_list'])
+        self.reset_model(model_data)
+        column_names = ['id', 'relationship_class_name', 'object_class_name_list']
+        self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object_class"):
@@ -2320,12 +2324,16 @@ class ObjectParameterValueModel(ParameterValueModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
+        self.reset_model(model_data)
+        column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
+        self.make_data_fixed(column_names=column_names)
 
     def init_model_from_data(self, model_data, header):
         """Initialize model from source database."""
         self.set_horizontal_header_labels(header)
-        self.reset_model(model_data, fixed_column_names=['id', 'object_class_name', 'object_name', 'parameter_name'])
+        self.reset_model(model_data)
+        column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
+        self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("object_class", "object", "parameter"):
@@ -2445,14 +2453,24 @@ class RelationshipParameterValueModel(ParameterValueModel):
             object_name_list = row_data.pop(object_name_list_index).split(',')
             for i in range(object_name_list_length):
                 try:
-                    value = object_name_list[i]
+                    object_name = object_name_list[i]
+                    row_data.insert(object_name_list_index + i, object_name)
                 except IndexError:
-                    value = None
-                row_data.insert(object_name_list_index + i, value)
+                    row_data.insert(object_name_list_index + i, None)
             model_data.append(row_data)
+        self.reset_model(model_data)
         object_name_header = [header[x] for x in self.object_name_range]
-        fixed_column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
-        self.reset_model(model_data, fixed_column_names=fixed_column_names)
+        column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
+        self.make_data_fixed(column_names=column_names)
+
+    def init_model_from_data(self, model_data, header, object_name_range):
+        """Initialize model from source database."""
+        self.set_horizontal_header_labels(header)
+        self.object_name_range = object_name_range
+        self.reset_model(model_data)
+        object_name_header = [header[x] for x in self.object_name_range]
+        column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
+        self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object", "parameter"):
@@ -2510,16 +2528,15 @@ class RelationshipParameterValueModel(ParameterValueModel):
 
     def extend_object_name_range(self, length):
         """Extend object name range to fit given length."""
-        print(length)
         curr_length = len(self.object_name_range)
         diff = length - curr_length
-        print(diff)
         if diff <= 0:
             return
         self.insertColumns(self.object_name_range.stop, diff)
         object_name_header_ext = ["object_name [{}]".format(str(i + 1)) for i in range(curr_length, length)]
         self.insert_horizontal_header_labels(self.object_name_range.stop, object_name_header_ext)
         self.object_name_range = range(self.object_name_range.start, self.object_name_range.stop + diff)
+        self.make_data_fixed(column_names=object_name_header_ext)
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
@@ -2542,7 +2559,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
         # Get column numbers
         header = self.horizontal_header_labels()
         relationship_class_name_column = header.index('relationship_class_name')
-        object_name_1_column = header.index('object_name [1]')
+        # object_name_1_column = header.index('object_name [1]')
+        object_name_1_column = self.object_name_range.start
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
         relationship_class_lookup_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}

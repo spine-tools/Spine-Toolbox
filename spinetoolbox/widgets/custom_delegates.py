@@ -269,9 +269,10 @@ class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         h = header.index
+        object_name_range = index.model().object_name_range
         if header[index.column()] in ('relationship_class_name', 'parameter_name'):
             return CustomComboEditor(parent)
-        elif header[index.column()].startswith('object_name_'):
+        elif index.column() in object_name_range:
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
             return JSONEditor(parent)
@@ -282,10 +283,11 @@ class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         h = header.index
+        object_name_range = index.model().object_name_range
         if header[index.column()] == 'relationship_class_name':
             relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), relationship_class_name_list)
-        elif header[index.column()].startswith('object_name_'):
+        elif index.column() in object_name_range:
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
             relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
@@ -294,7 +296,7 @@ class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
                 editor.set_data(index.data(Qt.EditRole), [])
                 return
             # Get object class
-            dimension = int(header[index.column()].split('object_name_')[1]) - 1
+            dimension = object_name_range.index(index.column())
             object_class_name_list = relationship_class.object_class_name_list.split(',')
             try:
                 object_class_name = object_class_name_list[dimension]
@@ -321,7 +323,7 @@ class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
                 # Get object name list
                 object_name_list = list()
                 object_class_count = len(relationship_class.object_class_id_list.split(','))
-                for j in range(h('object_name_1'), h('object_name_1') + object_class_count):
+                for j in range(object_name_range.start, object_name_range.start + object_class_count):
                     object_name = index.sibling(index.row(), j).data(Qt.DisplayRole)
                     if not object_name:
                         break

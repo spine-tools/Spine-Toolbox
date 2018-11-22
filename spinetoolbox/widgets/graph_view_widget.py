@@ -73,11 +73,13 @@ class GraphViewForm(QMainWindow):
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.label_color.setAlphaF(.5)
         self.arc_color.setAlphaF(.75)
-        self.object_id_list = list()
-        self.object_name_list = list()
-        self.object_class_name_list = list()
-        self.arc_relationship_class_name_list = list()
+        self.object_ids = list()
+        self.object_names = list()
+        self.object_class_names = list()
+        self.object_id_lists = list()
+        self.relationship_class_names = list()
         self.arc_object_names_list = list()
+        self.arc_object_class_names_list = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         self.heavy_positions = {}
@@ -93,7 +95,8 @@ class GraphViewForm(QMainWindow):
         self.graph_view_context_menu = None
         self.hidden_items = list()
         self.rejected_items = list()
-        self.parameter_value_views = {}
+        self.obj_parameter_value_views = {}
+        self.rel_parameter_value_views = {}
         self.previous_item_selection = list()
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -138,13 +141,16 @@ class GraphViewForm(QMainWindow):
     def init_parameter_models(self):
         """Initialize parameter models and views."""
         self.init_object_parameter_models()
-        #self.init_relationship_parameter_models()
+        self.init_relationship_parameter_models()
 
     def init_object_parameter_models(self):
-        # Prepare dictionary of data per object class
+        """Iterate through object classes to make model/views of parameter value data.
+        Add those views to the parameter splitter to show them when needed.
+        """
         skip_fields = ['parameter_id']
         fields = self.db_map.object_parameter_value_fields()
         header = [x for x in fields if x not in skip_fields]
+        # Prepare dictionary of data per object class
         object_class_data = {}
         for parameter_value in self.db_map.object_parameter_value_list():
             object_class_id = parameter_value.object_class_id
@@ -180,13 +186,13 @@ class GraphViewForm(QMainWindow):
             view = QTableView(widget)
             layout.addWidget(label_widget)
             layout.addWidget(view)
-            self.parameter_value_views[object_class_name] = view
+            self.obj_parameter_value_views[object_class_name] = view
             # Setup model
             model = ObjectParameterValueModel(self)
-            proxy = ObjectParameterValueProxy(self)
-            view.setModel(proxy)
             model.init_model_from_data(model_data, header)
+            proxy = ObjectParameterValueProxy(self)
             proxy.setSourceModel(model)
+            view.setModel(proxy)
             h = model.horizontal_header_labels().index
             view.horizontalHeader().hideSection(h('id'))
             view.horizontalHeader().hideSection(h('object_class_id'))
@@ -198,9 +204,30 @@ class GraphViewForm(QMainWindow):
             view.verticalHeader().hide()
 
     def init_relationship_parameter_models(self):
+        """Iterate through relationship classes to make model/views of parameter value data.
+        Add those views to the parameter splitter to show them when needed.
+        """
+        skip_fields = ['parameter_id']
+        fields = self.db_map.relationship_parameter_value_fields()
+        base_header = [x for x in fields if x not in skip_fields]
+        object_name_list_index = base_header.index("object_name_list")
+        base_header.pop(object_name_list_index)
+        # Prepare dictionary of data per relationship class
+        relationship_class_data = {}
+        for parameter_value in self.db_map.relationship_parameter_value_list():
+            relationship_class_id = parameter_value.relationship_class_id
+            parameter_value_data = [v for k, v in parameter_value._asdict().items() if k not in skip_fields]
+            object_name_list = parameter_value_data.pop(object_name_list_index).split(',')
+            for i, object_name in enumerate(object_name_list):
+                parameter_value_data.insert(object_name_list_index + i, object_name)
+            relationship_class_data.setdefault(relationship_class_id, list()).append(parameter_value_data)
         for relationship_class in self.db_map.wide_relationship_class_list():
-            relationship_class_name = relationship_class.name
             relationship_class_id = relationship_class.id
+            try:
+                model_data = relationship_class_data[relationship_class_id]
+            except KeyError:
+                continue
+            relationship_class_name = relationship_class.name
             # Create widget to add to splitter
             widget = QWidget(self.parameter_splitter)
             widget.hide()
@@ -222,16 +249,23 @@ class GraphViewForm(QMainWindow):
             view = QTableView(widget)
             layout.addWidget(label_widget)
             layout.addWidget(view)
-            self.parameter_value_views[relationship_class_name] = view
+            self.rel_parameter_value_views[relationship_class_name] = view
             # Setup model
+            object_class_name_list = relationship_class.object_class_name_list.split(',')
+            object_name_list_length = len(object_class_name_list)
+            object_name_range = range(object_name_list_index, object_name_list_index + object_name_list_length)
+            header = base_header.copy()
+            for k, i in enumerate(object_name_range):
+                header.insert(i, object_class_name_list[k])
             model = RelationshipParameterValueModel(self)
-            model.init_model(relationship_class_id=relationship_class_id)
+            model.init_model_from_data(model_data, header, object_name_range)
             proxy = RelationshipParameterValueProxy(self)
             proxy.setSourceModel(model)
             view.setModel(proxy)
             h = model.horizontal_header_labels().index
             view.horizontalHeader().hideSection(h('id'))
             view.horizontalHeader().hideSection(h('relationship_class_id'))
+            view.horizontalHeader().hideSection(h('relationship_class_name'))
             view.horizontalHeader().hideSection(h('object_class_id_list'))
             view.horizontalHeader().hideSection(h('object_class_name_list'))
             view.horizontalHeader().hideSection(h('object_id_list'))
@@ -388,10 +422,10 @@ class GraphViewForm(QMainWindow):
 
     def init_graph_data(self):
         """Initialize graph data by querying db_map."""
-        rejected_object_names = [x._object_name for x in self.rejected_items]
-        self.object_id_list = list()
-        self.object_name_list = list()
-        self.object_class_name_list = list()
+        rejected_object_names = [x.object_name for x in self.rejected_items]
+        self.object_ids = list()
+        self.object_names = list()
+        self.object_class_names = list()
         root_item = self.object_tree_model.root_item
         index = self.object_tree_model.indexFromItem(root_item)
         is_root_selected = self.ui.treeView.selectionModel().isSelected(index)
@@ -409,10 +443,11 @@ class GraphViewForm(QMainWindow):
                 index = self.object_tree_model.indexFromItem(object_item)
                 is_object_selected = self.ui.treeView.selectionModel().isSelected(index)
                 if is_root_selected or is_object_class_selected or is_object_selected:
-                    self.object_id_list.append(object_id)
-                    self.object_name_list.append(object_name)
-                    self.object_class_name_list.append(object_class_name)
-        self.arc_relationship_class_name_list = list()
+                    self.object_ids.append(object_id)
+                    self.object_names.append(object_name)
+                    self.object_class_names.append(object_class_name)
+        self.object_id_lists = list()
+        self.relationship_class_names = list()
         self.arc_object_names_list = list()
         self.arc_object_class_names_list = list()
         self.src_ind_list = list()
@@ -426,24 +461,26 @@ class GraphViewForm(QMainWindow):
         for relationship in self.db_map.wide_relationship_list():
             relationship_class_name = relationship_class_dict[relationship.class_id]["name"]
             object_class_name_list = relationship_class_dict[relationship.class_id]["object_class_name_list"]
-            object_id_list = [int(x) for x in relationship.object_id_list.split(",")]
+            object_id_list = relationship.object_id_list
+            split_object_id_list = [int(x) for x in object_id_list.split(",")]
             object_name_list = relationship.object_name_list.split(",")
-            for i in range(len(object_id_list)):
-                src_object_id = object_id_list[i]
+            for i in range(len(split_object_id_list)):
+                src_object_id = split_object_id_list[i]
                 try:
-                    dst_object_id = object_id_list[i + 1]
+                    dst_object_id = split_object_id_list[i + 1]
                 except IndexError:
-                    dst_object_id = object_id_list[0]
+                    dst_object_id = split_object_id_list[0]
                 try:
-                    src_ind = self.object_id_list.index(src_object_id)
-                    dst_ind = self.object_id_list.index(dst_object_id)
+                    src_ind = self.object_ids.index(src_object_id)
+                    dst_ind = self.object_ids.index(dst_object_id)
                 except ValueError:
                     continue
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
-                src_object_name = self.object_name_list[src_ind]
-                dst_object_name = self.object_name_list[dst_ind]
-                self.arc_relationship_class_name_list.append(relationship_class_name)
+                src_object_name = self.object_names[src_ind]
+                dst_object_name = self.object_names[dst_ind]
+                self.object_id_lists.append(object_id_list)
+                self.relationship_class_names.append(relationship_class_name)
                 arc_object_names = list()
                 arc_object_class_names = list()
                 for object_name, object_class_name in zip(object_name_list, object_class_name_list):
@@ -458,15 +495,15 @@ class GraphViewForm(QMainWindow):
         if scene:
             self.heavy_positions = {}
             object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
-            object_ind = len(self.object_id_list)
+            object_ind = len(self.object_ids)
             self.template_id_dims = {}
             self.is_template = {}
             object_ind_dict = {}
             for item in object_items:
-                object_id = item._object_id
-                object_name = item._object_name
+                object_id = item.object_id
+                object_name = item.object_name
                 try:
-                    found_ind = self.object_id_list.index(object_id)
+                    found_ind = self.object_ids.index(object_id)
                     is_template = self.is_template.get(found_ind)
                     if not is_template:
                         self.template_id_dims[found_ind] = item.template_id_dim
@@ -475,10 +512,10 @@ class GraphViewForm(QMainWindow):
                         continue
                 except ValueError:
                     pass
-                object_class_name = item._object_class_name
-                self.object_id_list.append(object_id)
-                self.object_name_list.append(object_name)
-                self.object_class_name_list.append(object_class_name)
+                object_class_name = item.object_class_name
+                self.object_ids.append(object_id)
+                self.object_names.append(object_name)
+                self.object_class_names.append(object_class_name)
                 self.template_id_dims[object_ind] = item.template_id_dim
                 self.is_template[object_ind] = item.is_template
                 self.heavy_positions[object_ind] = item.pos()
@@ -493,16 +530,19 @@ class GraphViewForm(QMainWindow):
                 try:
                     src_ind = object_ind_dict[src_item]
                 except KeyError:
-                    src_object_id = src_item._object_id
-                    src_ind = self.object_id_list.index(src_object_id)
+                    src_object_id = src_item.object_id
+                    src_ind = self.object_ids.index(src_object_id)
                 try:
                     dst_ind = object_ind_dict[dst_item]
                 except KeyError:
-                    dst_object_id = dst_item._object_id
-                    dst_ind = self.object_id_list.index(dst_object_id)
+                    dst_object_id = dst_item.object_id
+                    dst_ind = self.object_ids.index(dst_object_id)
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
-                self.arc_relationship_class_name_list.append("")
+                # NOTE: These arcs correspond to template arcs.
+                # TODO: Set `object_id` and `relationship_class_name` attributes when creating the relationship
+                self.object_id_lists.append("")
+                self.relationship_class_names.append("")
                 self.arc_object_names_list.append("")
                 self.arc_object_class_names_list.append("")
                 self.arc_template_ids[arc_ind] = item.template_id
@@ -589,15 +629,15 @@ class GraphViewForm(QMainWindow):
     def make_graph(self):
         """Make graph."""
         scene = self.new_scene()
-        d = self.shortest_path_matrix(self.object_name_list, self.src_ind_list, self.dst_ind_list, self._spread)
+        d = self.shortest_path_matrix(self.object_names, self.src_ind_list, self.dst_ind_list, self._spread)
         if d is None:
             return False
         x, y = self.vertex_coordinates(d, self.heavy_positions)
         object_items = list()
-        for i in range(len(self.object_name_list)):
-            object_id = self.object_id_list[i]
-            object_name = self.object_name_list[i]
-            object_class_name = self.object_class_name_list[i]
+        for i in range(len(self.object_names)):
+            object_id = self.object_ids[i]
+            object_name = self.object_names[i]
+            object_class_name = self.object_class_names[i]
             extent = 2 * self.font.pointSize()
             object_item = ObjectItem(
                 self, object_id, object_name, object_class_name, x[i], y[i], extent,
@@ -614,7 +654,8 @@ class GraphViewForm(QMainWindow):
         for k in range(len(self.src_ind_list)):
             i = self.src_ind_list[k]
             j = self.dst_ind_list[k]
-            # relationship_class_name = self.arc_relationship_class_name_list[k]
+            object_id_list = self.object_id_lists[k]
+            relationship_class_name = self.relationship_class_names[k]
             object_class_names = self.arc_object_class_names_list[k]
             object_names = self.arc_object_names_list[k]
             extent = 2 * self.font.pointSize()
@@ -622,7 +663,7 @@ class GraphViewForm(QMainWindow):
                 object_class_names, object_names, extent, self.font,
                 object_label_position="beside_icon")
             arc_item = ArcItem(
-                self, object_items[i], object_items[j], .25 * extent,
+                self, object_id_list, relationship_class_name, object_items[i], object_items[j], .25 * extent,
                 self.arc_color, label_color=self.label_color, label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
@@ -654,34 +695,59 @@ class GraphViewForm(QMainWindow):
         selected = [x for x in current_items if x not in previous_items]
         deselected = [x for x in previous_items if x not in current_items]
         self.previous_item_selection = current_items
-        current_object_class_names = set()
+        current_obj_class_names = set()
+        current_rel_class_names = set()
         selected_object_ids = set()
+        selected_object_id_lists = set()
         deselected_object_ids = set()
+        deselected_object_id_lists = set()
         for item in current_items:
-            current_object_class_names.add(item._object_class_name)
+            if isinstance(item, ObjectItem):
+                current_obj_class_names.add(item.object_class_name)
+            elif isinstance(item, ArcItem):
+                current_rel_class_names.add(item.relationship_class_name)
         for item in selected:
-            selected_object_ids.add(item._object_id)
+            if isinstance(item, ObjectItem):
+                selected_object_ids.add(item.object_id)
+            elif isinstance(item, ArcItem):
+                selected_object_id_lists.add(item.object_id_list)
         for item in deselected:
-            deselected_object_ids.add(item._object_id)
-        self.hide_parameter_views(current_object_class_names)
-        self.show_parameter_views(current_object_class_names)
-        for view in self.parameter_value_views.values():
-            view.model().update_object_id_set(selected_object_ids)
+            if isinstance(item, ObjectItem):
+                deselected_object_ids.add(item.object_id)
+            elif isinstance(item, ArcItem):
+                deselected_object_id_lists.add(item.object_id_list)
+        self.hide_parameter_views(current_obj_class_names, current_rel_class_names)
+        self.show_parameter_views(current_obj_class_names, current_rel_class_names)
+        for view in self.obj_parameter_value_views.values():
             view.model().diff_update_object_id_set(deselected_object_ids)
+            view.model().update_object_id_set(selected_object_ids)
+        for view in self.rel_parameter_value_views.values():
+            view.model().diff_update_object_id_list_set(deselected_object_id_lists)
+            view.model().update_object_id_list_set(selected_object_id_lists)
             if view.isVisible():
                 view.model().apply_filter()
 
-    def hide_parameter_views(self, current_object_class_names):
+    def hide_parameter_views(self, current_obj_class_names, current_rel_class_names):
         """Hide parameter views for non selected object classes."""
-        for object_class_name in [x for x in self.parameter_value_views if x not in current_object_class_names]:
-            view = self.parameter_value_views[object_class_name]
+        for obj_class_name in [x for x in self.obj_parameter_value_views if x not in current_obj_class_names]:
+            view = self.obj_parameter_value_views[obj_class_name]
+            view.parent().hide()
+        for rel_class_name in [x for x in self.rel_parameter_value_views if x not in current_rel_class_names]:
+            view = self.rel_parameter_value_views[rel_class_name]
             view.parent().hide()
 
-    def show_parameter_views(self, current_object_class_names):
+    def show_parameter_views(self, current_obj_class_names, current_rel_class_names):
         """Show parameter views for selected object classes."""
-        for i, object_class_name in enumerate(current_object_class_names):
+        for i, obj_class_name in enumerate(current_obj_class_names):
             try:
-                view = self.parameter_value_views[object_class_name]
+                view = self.obj_parameter_value_views[obj_class_name]
+                self.parameter_splitter.insertWidget(i, view.parent())
+                view.parent().show()
+            except KeyError:
+                pass
+        for i, rel_class_name in enumerate(current_rel_class_names):
+            try:
+                view = self.rel_parameter_value_views[rel_class_name]
                 self.parameter_splitter.insertWidget(i, view.parent())
                 view.parent().show()
             except KeyError:
@@ -767,7 +833,7 @@ class GraphViewForm(QMainWindow):
         for dimension in sorted(object_dimensions):
             ind = object_dimensions.index(dimension)
             item = object_items[ind]
-            object_name = item._object_name
+            object_name = item.object_name
             if not object_name:
                 logging.debug("can't find name {}".format(object_name))
                 return False
@@ -829,7 +895,7 @@ class GraphViewForm(QMainWindow):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(self, src_item, dst_item, extent / 4, self.arc_color, pen_style=arc_pen_style)
+            arc_item = ArcItem(self, "", "", src_item, dst_item, extent / 4, self.arc_color, pen_style=arc_pen_style)
             arc_items.append(arc_item)
         return object_items, arc_items
 
@@ -880,7 +946,7 @@ class GraphViewForm(QMainWindow):
         d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread)
         x, y = self.vertex_coordinates(d)
         scene = self.ui.graphicsView.scene()
-        object_class_name = self.object_item_placeholder._object_class_name
+        object_class_name = self.object_item_placeholder.object_class_name
         x_offset = self.object_item_placeholder.x()
         y_offset = self.object_item_placeholder.y()
         extent = self.object_item_placeholder._extent

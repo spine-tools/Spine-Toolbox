@@ -1041,9 +1041,9 @@ class ObjectItem(QGraphicsPixmapItem):
                  label_font=QFont(), label_color=QColor(), label_position="over_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
-        self._object_id = object_id
-        self._object_name = object_name
-        self._object_class_name = object_class_name
+        self.object_id = object_id
+        self.object_name = object_name
+        self.object_class_name = object_class_name
         self._extent = extent
         self._label_position = label_position
         self.label_item = ObjectLabelItem(object_name, label_font, label_color)
@@ -1124,7 +1124,7 @@ class ObjectItem(QGraphicsPixmapItem):
         y = rect.center().y() - question_rect.height() / 2
         question_item.setPos(x, y)
         self.setToolTip("<html>Drag-and-drop this onto a <b>{}</b> object "
-                        "(or viceversa) to complete this relationship.".format(self._object_class_name))
+                        "(or viceversa) to complete this relationship.".format(self.object_class_name))
 
     def shape(self):
         """Make the entire bounding rect to be the shape."""
@@ -1178,7 +1178,7 @@ class ObjectItem(QGraphicsPixmapItem):
             if not isinstance(item, ObjectItem):
                 continue
             if item.is_template != self.is_template:
-                if item._object_class_name == self._object_class_name:
+                if item.object_class_name == self.object_class_name:
                     self._merge_target = item
                     break
             self._bounce = True
@@ -1278,9 +1278,8 @@ class ArcItem(QGraphicsLineItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
-        TODO: finish this... we need relationship identifiers
-        relationship_id (int): relationship id
-        object_class_name (str): object class name
+        object_id_list (str): object id comma separated list
+        relationship_class_name (str): relationship class name
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
@@ -1289,11 +1288,13 @@ class ArcItem(QGraphicsLineItem):
         label_color (QColor): color
         label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
-    def __init__(self, graph_view_form, src_item, dst_item, width, color, pen_style=Qt.SolidLine,
-                 label_color=QColor(), label_parts=()):
+    def __init__(self, graph_view_form, object_id_list, relationship_class_name, src_item, dst_item,
+                 width, color, pen_style=Qt.SolidLine, label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
+        self.object_id_list = object_id_list
+        self.relationship_class_name = relationship_class_name
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width

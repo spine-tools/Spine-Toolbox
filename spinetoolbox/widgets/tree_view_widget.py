@@ -61,8 +61,6 @@ class TreeViewForm(QMainWindow):
         super().__init__(flags=Qt.Window)
         # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
         # reimplementing the window minimizing and maximizing actions as well as setting the window modality
-        # NOTE: Alternatively, make this class inherit from QWidget rather than QMainWindow,
-        # and implement the menubar by hand
         self._data_store = data_store
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
@@ -694,8 +692,7 @@ class TreeViewForm(QMainWindow):
         object_count = self.relationship_parameter_value_proxy.object_count
         if not object_count:
             object_count = max_object_count
-        header = self.relationship_parameter_value_model.horizontal_header_labels()
-        object_name_1_column = header.index("object_name [1]")
+        object_name_1_column = self.relationship_parameter_value_model.object_name_range.start
         for column in range(object_name_1_column, object_name_1_column + object_count):
             self.ui.tableView_relationship_parameter_value.horizontalHeader().showSection(column)
         for column in range(object_name_1_column + object_count, object_name_1_column + max_object_count):
@@ -1166,7 +1163,7 @@ class TreeViewForm(QMainWindow):
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
-            object_name_1_column = model.horizontal_header_labels().index('object_name [1]')
+            object_name_1_column = model.object_name_range.start
             row_column_tuples = list()
             data = list()
             i = 0
