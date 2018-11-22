@@ -21,7 +21,7 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 import json
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
-    QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage
+    QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage, QPushButton
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap
 from ui.tree_view_form import Ui_MainWindow
@@ -70,6 +70,17 @@ class TreeViewForm(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
+        # Set up corner widgets
+        icon = QIcon(":/icons/relationship_parameter_icon.png")
+        button = QPushButton(icon, "Relationship parameter")
+        button.setFlat(True)
+        button.mousePressEvent = lambda e: e.ignore()
+        self.ui.tabWidget_relationship.setCornerWidget(button, Qt.TopLeftCorner)
+        icon = QIcon(":/icons/object_parameter_icon.png")
+        button = QPushButton(icon, "Object parameter")
+        button.setFlat(True)
+        button.mousePressEvent = lambda e: e.ignore()
+        self.ui.tabWidget_object.setCornerWidget(button, Qt.TopLeftCorner)
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB db_map

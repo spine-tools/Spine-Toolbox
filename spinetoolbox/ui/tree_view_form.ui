@@ -146,12 +146,8 @@
             <bool>false</bool>
            </property>
            <widget class="QWidget" name="tab_object_parameter_value">
-            <attribute name="icon">
-             <iconset resource="resources/resources_icons.qrc">
-              <normaloff>:/icons/object_parameter_icon.png</normaloff>:/icons/object_parameter_icon.png</iconset>
-            </attribute>
             <attribute name="title">
-             <string>Object parameter value</string>
+             <string>value</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_4">
              <property name="spacing">
@@ -273,9 +269,9 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="tab_object_parameter">
+           <widget class="QWidget" name="tab_object_parameter_definition">
             <attribute name="title">
-             <string>Definition</string>
+             <string>definition</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_6">
              <property name="spacing">
@@ -372,6 +368,9 @@
            </widget>
           </widget>
           <widget class="QTabWidget" name="tabWidget_relationship">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>2</horstretch>
@@ -393,13 +392,12 @@
            <property name="currentIndex">
             <number>0</number>
            </property>
+           <property name="usesScrollButtons">
+            <bool>true</bool>
+           </property>
            <widget class="QWidget" name="tab_relationship_parameter_value">
-            <attribute name="icon">
-             <iconset resource="resources/resources_icons.qrc">
-              <normaloff>:/icons/relationship_parameter_icon.png</normaloff>:/icons/relationship_parameter_icon.png</iconset>
-            </attribute>
             <attribute name="title">
-             <string>Relationship parameter value</string>
+             <string>value</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_8">
              <property name="spacing">
@@ -494,9 +492,9 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="tab_relationship_parameter">
+           <widget class="QWidget" name="tab_relationship_parameter_definition">
             <attribute name="title">
-             <string>Definition</string>
+             <string>definition</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_9">
              <property name="spacing">
@@ -603,7 +601,7 @@
      <x>0</x>
      <y>0</y>
      <width>789</width>
-     <height>25</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">

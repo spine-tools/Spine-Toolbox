@@ -20,8 +20,8 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
-    QAction, QGraphicsRectItem, QMessageBox, QCheckBox, QVBoxLayout, QHBoxLayout, QTableView, \
-    QLabel, QWidget, QSplitter
+    QAction, QGraphicsRectItem, QMessageBox, QCheckBox, QTableView, QSplitter, QPushButton, QTabWidget, \
+    QMenu, QWidget
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
@@ -98,15 +98,18 @@ class GraphViewForm(QMainWindow):
         self.obj_parameter_value_views = {}
         self.rel_parameter_value_views = {}
         self.previous_item_selection = list()
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        self.visible_rows = int(max_screen_height / self.default_row_height)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.ui.graphicsView._graph_view_form = self
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set up parameter splitter
-        self.parameter_splitter = QSplitter(self.ui.dockWidgetContents_parameters)
-        self.ui.dockWidgetContents_parameters.layout().addWidget(self.parameter_splitter)
-        area = self.dockWidgetArea(self.ui.dockWidget_parameters)
+        self.parameter_splitter = QSplitter(self.ui.dockWidgetContents_parameter)
+        self.ui.dockWidgetContents_parameter.layout().addWidget(self.parameter_splitter)
+        area = self.dockWidgetArea(self.ui.dockWidget_parameter)
         self.handle_parameter_dock_location_changed(area)
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
@@ -127,7 +130,7 @@ class GraphViewForm(QMainWindow):
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
         self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
-        self.msg.emit("Graph view form created in {} seconds".format(toc - tic))
+        self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
     def init_models(self):
         """Initialize object tree, object class list, and
@@ -162,33 +165,28 @@ class GraphViewForm(QMainWindow):
                 model_data = object_class_data[object_class_id]
             except KeyError:
                 continue
+                model_data = []
             object_class_name = object_class.name
             # Create widget to add to splitter
-            widget = QWidget(self.parameter_splitter)
-            widget.hide()
-            layout = QVBoxLayout(widget)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(0)
-            label_widget = QWidget()
-            label_layout = QHBoxLayout(label_widget)
-            label_layout.setContentsMargins(0, 0, 0, 0)
-            label_layout.setSpacing(0)
-            text_label = QLabel(object_class_name, widget)
-            text_label.setAlignment(Qt.AlignLeft)
-            pixmap_label = QLabel(widget)
+            tab_widget = QTabWidget(self.parameter_splitter)
+            tab_widget.setObjectName(object_class_name)
             pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
             if pixmap.isNull():
                 pixmap = QPixmap(":/icons/object_icon.png")
-            pixmap_label.setPixmap(pixmap.scaled(16, 16))
-            pixmap_label.setMaximumWidth(20)
-            label_layout.addWidget(pixmap_label)
-            label_layout.addWidget(text_label)
-            view = QTableView(widget)
-            layout.addWidget(label_widget)
-            layout.addWidget(view)
+            button = QPushButton(QIcon(pixmap), object_class_name, tab_widget)
+            button.setFlat(True)
+            menu = QMenu(button)
+            action = menu.addAction("Hide")
+            action.triggered.connect(tab_widget.hide)
+            button.setMenu(menu)
+            tab_widget.setCornerWidget(button, Qt.TopRightCorner)
+            view = QTableView(tab_widget)
+            tab_widget.addTab(view, "value")
+            tab_widget.addTab(QWidget(), "definition")
+            tab_widget.hide()
             self.obj_parameter_value_views[object_class_name] = view
             # Setup model
-            model = ObjectParameterValueModel(self)
+            model = ObjectParameterValueModel(self, has_empty_row=not self.read_only)
             model.init_model_from_data(model_data, header)
             proxy = ObjectParameterValueProxy(self)
             proxy.setSourceModel(model)
@@ -198,15 +196,17 @@ class GraphViewForm(QMainWindow):
             view.horizontalHeader().hideSection(h('object_class_id'))
             view.horizontalHeader().hideSection(h('object_class_name'))
             view.horizontalHeader().hideSection(h('object_id'))
+            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.resizeColumnsToContents()
-            height = QFontMetrics(QFont("", 0)).lineSpacing()
-            view.verticalHeader().setDefaultSectionSize(height)
+            view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.verticalHeader().hide()
+
 
     def init_relationship_parameter_models(self):
         """Iterate through relationship classes to make model/views of parameter value data.
         Add those views to the parameter splitter to show them when needed.
         """
+        font_metric = QFontMetrics(QFont(""))  # For elided text
         skip_fields = ['parameter_id']
         fields = self.db_map.relationship_parameter_value_fields()
         base_header = [x for x in fields if x not in skip_fields]
@@ -227,28 +227,24 @@ class GraphViewForm(QMainWindow):
                 model_data = relationship_class_data[relationship_class_id]
             except KeyError:
                 continue
+                model_data = []
             relationship_class_name = relationship_class.name
             # Create widget to add to splitter
-            widget = QWidget(self.parameter_splitter)
-            widget.hide()
-            layout = QVBoxLayout(widget)
-            layout.setContentsMargins(0, 0, 0, 0)
-            layout.setSpacing(0)
-            label_widget = QWidget()
-            label_layout = QHBoxLayout(label_widget)
-            label_layout.setContentsMargins(0, 0, 0, 0)
-            label_layout.setSpacing(0)
-            text_label = QLabel(relationship_class_name, widget)
-            text_label.setAlignment(Qt.AlignLeft)
-            pixmap_label = QLabel(widget)
+            tab_widget = QTabWidget(self.parameter_splitter)
             pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
-            pixmap_label.setPixmap(pixmap.scaled(16, 16))
-            pixmap_label.setMaximumWidth(20)
-            label_layout.addWidget(pixmap_label)
-            label_layout.addWidget(text_label)
-            view = QTableView(widget)
-            layout.addWidget(label_widget)
-            layout.addWidget(view)
+            text = font_metric.elidedText(relationship_class_name, Qt.ElideMiddle, 100)
+            button = QPushButton(QIcon(pixmap), text, tab_widget)
+            button.setToolTip(relationship_class_name)
+            button.setFlat(True)
+            menu = QMenu(button)
+            action = menu.addAction("Hide")
+            action.triggered.connect(tab_widget.hide)
+            button.setMenu(menu)
+            tab_widget.setCornerWidget(button, Qt.TopRightCorner)
+            view = QTableView(tab_widget)
+            tab_widget.addTab(view, "value")
+            tab_widget.addTab(QWidget(), "definition")
+            tab_widget.hide()
             self.rel_parameter_value_views[relationship_class_name] = view
             # Setup model
             object_class_name_list = relationship_class.object_class_name_list.split(',')
@@ -257,7 +253,7 @@ class GraphViewForm(QMainWindow):
             header = base_header.copy()
             for k, i in enumerate(object_name_range):
                 header.insert(i, object_class_name_list[k])
-            model = RelationshipParameterValueModel(self)
+            model = RelationshipParameterValueModel(self, has_empty_row=not self.read_only)
             model.init_model_from_data(model_data, header, object_name_range)
             proxy = RelationshipParameterValueProxy(self)
             proxy.setSourceModel(model)
@@ -269,9 +265,9 @@ class GraphViewForm(QMainWindow):
             view.horizontalHeader().hideSection(h('object_class_id_list'))
             view.horizontalHeader().hideSection(h('object_class_name_list'))
             view.horizontalHeader().hideSection(h('object_id_list'))
+            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
             view.resizeColumnsToContents()
-            height = QFontMetrics(QFont("", 0)).lineSpacing()
-            view.verticalHeader().setDefaultSectionSize(height)
+            view.verticalHeader().setDefaultSectionSize(self.default_row_height)
             view.verticalHeader().hide()
 
     def create_add_more_actions(self):
@@ -314,7 +310,7 @@ class GraphViewForm(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
-        self.ui.dockWidget_parameters.dockLocationChanged.connect(self.handle_parameter_dock_location_changed)
+        self.ui.dockWidget_parameter.dockLocationChanged.connect(self.handle_parameter_dock_location_changed)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -347,7 +343,7 @@ class GraphViewForm(QMainWindow):
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameters.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter.toggleViewAction())
         if not self.read_only:
             self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
         else:
@@ -409,10 +405,13 @@ class GraphViewForm(QMainWindow):
     @Slot("bool", name="build_graph")
     def build_graph(self, checked=True):
         """Initialize graph data and build graph."""
+        tic = time.clock()
         self.init_graph_data()
         self._has_graph = self.make_graph()
         if self._has_graph:
             self.ui.graphicsView.scale_to_fit_scene()
+            toc = time.clock()
+            self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.hidden_items = list()
 
     @Slot("QItemSelection", "QItemSelection", name="handle_item_tree_selection_changed")
@@ -582,7 +581,7 @@ class GraphViewForm(QMainWindow):
                 sets.append(s2)
         return sets
 
-    def vertex_coordinates(self, matrix, heavy_positions={}, iterations=10, weight_exp=-2, initial_diameter=100):
+    def vertex_coordinates(self, matrix, heavy_positions={}, iterations=10, weight_exp=-2, initial_diameter=1000):
         """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
         N = len(matrix)
         if N == 1:
@@ -721,6 +720,8 @@ class GraphViewForm(QMainWindow):
         for view in self.obj_parameter_value_views.values():
             view.model().diff_update_object_id_set(deselected_object_ids)
             view.model().update_object_id_set(selected_object_ids)
+            if view.isVisible():
+                view.model().apply_filter()
         for view in self.rel_parameter_value_views.values():
             view.model().diff_update_object_id_list_set(deselected_object_id_lists)
             view.model().update_object_id_list_set(selected_object_id_lists)
@@ -731,25 +732,25 @@ class GraphViewForm(QMainWindow):
         """Hide parameter views for non selected object classes."""
         for obj_class_name in [x for x in self.obj_parameter_value_views if x not in current_obj_class_names]:
             view = self.obj_parameter_value_views[obj_class_name]
-            view.parent().hide()
+            view.parent().parent().hide()
         for rel_class_name in [x for x in self.rel_parameter_value_views if x not in current_rel_class_names]:
             view = self.rel_parameter_value_views[rel_class_name]
-            view.parent().hide()
+            view.parent().parent().hide()
 
     def show_parameter_views(self, current_obj_class_names, current_rel_class_names):
         """Show parameter views for selected object classes."""
         for i, obj_class_name in enumerate(current_obj_class_names):
             try:
                 view = self.obj_parameter_value_views[obj_class_name]
-                self.parameter_splitter.insertWidget(i, view.parent())
-                view.parent().show()
+                self.parameter_splitter.insertWidget(i, view.parent().parent())
+                view.parent().parent().show()
             except KeyError:
                 pass
         for i, rel_class_name in enumerate(current_rel_class_names):
             try:
                 view = self.rel_parameter_value_views[rel_class_name]
-                self.parameter_splitter.insertWidget(i, view.parent())
-                view.parent().show()
+                self.parameter_splitter.insertWidget(i, view.parent().parent())
+                view.parent().parent().show()
             except KeyError:
                 pass
 

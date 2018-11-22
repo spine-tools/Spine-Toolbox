@@ -1847,9 +1847,9 @@ class WIPTableModel(MinimalTableModel):
     For the former, only a subset of columns are editable. For the latter, all of them are editable.
     Wip rows can become normal rows after succesfully setting data for some key fields.
     """
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form, can_grow=True, has_empty_row=True)
+        super().__init__(tree_view_form, can_grow=True, has_empty_row=has_empty_row)
         self._tree_view_form = tree_view_form
         self.db_map = self._tree_view_form.db_map
         self.fixed_columns = list()
@@ -1936,7 +1936,14 @@ class WIPTableModel(MinimalTableModel):
     def make_data_fixed(self, rows=[], column_names=[]):
         """Make data non-editable and set background."""
         if not rows:
-            rows = range(0, self.rowCount() - 1)  # last row is the empty row
+            data_row_count = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
+            rows = range(0, data_row_count)
+        elif self.has_empty_row:
+            empty_row = self.rowCount() - 1
+            try:
+                rows.remove(empty_row)
+            except ValueError:
+                pass
         h = self.horizontal_header_labels().index
         columns = []
         for x in column_names:
@@ -1953,11 +1960,12 @@ class WIPTableModel(MinimalTableModel):
         new_columns = [x for x in columns if x not in self.fixed_columns]
         self.fixed_columns.extend(new_columns)
         try:
-            top_left = self.index(min(rows), min(columns))
-            bottom_right = self.index(max(rows), max(columns))
+            top_left = self.index(min(rows, default=-1), min(columns, default=-1))
+            bottom_right = self.index(max(rows, default=-1), max(columns, default=-1))
             self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
         except IndexError:
             pass
+
 
 class ParameterModel(WIPTableModel):
     """A model of parameter data, used by TreeViewForm.
@@ -1966,9 +1974,9 @@ class ParameterModel(WIPTableModel):
     can inherit from this.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
     def items_to_update(self, indexes, values):
         """Return a list of items (dict) to update in the database."""
@@ -2042,9 +2050,9 @@ class ParameterValueModel(WIPTableModel):
     It implements methods that are common to both object and relationship parameter values,
     so the more specific `ObjectParameterValueModel` and `RelationshipParameterValueModel`
     can inherit from this."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the output of json array data to 8 positions."""
@@ -2128,9 +2136,9 @@ class ParameterValueModel(WIPTableModel):
 
 class ObjectParameterModel(ParameterModel):
     """A model of object parameter data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
     def init_model(self, skip_fields=[]):
         """Initialize model from source database."""
@@ -2202,9 +2210,9 @@ class ObjectParameterModel(ParameterModel):
 
 class RelationshipParameterModel(ParameterModel):
     """A model of relationship parameter data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
     def init_model(self, skip_fields=[]):
         """Initialize model from source database."""
@@ -2313,9 +2321,9 @@ class RelationshipParameterModel(ParameterModel):
 
 class ObjectParameterValueModel(ParameterValueModel):
     """A model of object parameter value data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
     def init_model(self, skip_fields=['parameter_id']):
         """Initialize model from source database."""
@@ -2426,9 +2434,9 @@ class ObjectParameterValueModel(ParameterValueModel):
 
 class RelationshipParameterValueModel(ParameterValueModel):
     """A model of relationship parameter value data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
         self.object_name_range = None  # Range of column indices that are part of the object name list
 
     def init_model(self, skip_fields=['parameter_id']):
