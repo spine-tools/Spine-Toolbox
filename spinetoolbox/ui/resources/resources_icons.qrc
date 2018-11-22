@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="symbols">
     <file>Spine_symbol.png</file>
+    <file>app.ico</file>
   </qresource>
   <qresource prefix="icons">
     <file>minus_object_icon.png</file>

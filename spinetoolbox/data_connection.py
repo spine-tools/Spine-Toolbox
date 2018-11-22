@@ -20,9 +20,9 @@ import os
 import shutil
 import logging
 from collections import Counter
-from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
-from PySide2.QtWidgets import QFileDialog, QMessageBox
+from PySide2.QtWidgets import QFileDialog, QMessageBox, QStyle, QFileIconProvider
 from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
@@ -393,6 +393,7 @@ class DataConnection(ProjectItem):
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(item, Qt.ToolTipRole)
+                qitem.setData(self._toolbox.style().standardIcon(QStyle.SP_FileLinkIcon), Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
 
     def populate_data_list(self, items):
@@ -407,6 +408,9 @@ class DataConnection(ProjectItem):
                 qitem.setFlags(~Qt.ItemIsEditable)
                 if item == 'datapackage.json':
                     qitem.setData(self.datapackage_icon, Qt.DecorationRole)
+                else:
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
+                    # qitem.setData(self._toolbox.style().standardIcon(QStyle.SP_FileIcon), Qt.DecorationRole)
                 self.data_model.appendRow(qitem)
 
     def update_name_label(self):

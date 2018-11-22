@@ -17,13 +17,14 @@ Class for main application GUI functions.
 """
 
 import os
+import sys
 import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QImageReader
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -41,8 +42,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS, \
-    REQUIRED_SPINE_DBAPI_VERSION
+    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
 from helpers import project_dir, get_datetime, erase_dir, busy_effect
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -67,6 +67,11 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        # pyside2_plugin_path = os.path.join(sys.modules['PySide2'].__path__[0], 'plugins')
+        # QApplication.addLibraryPath(pyside2_plugin_path)
+        # self.print_supported_img_formats()
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        self.set_win_taskbar_icon()
         self.ui.graphicsView.set_ui(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
@@ -116,6 +121,18 @@ class ToolboxUI(QMainWindow):
         # Initialize widgets that are shared among multiple project items
         self.init_shared_widgets()
         self.restore_ui()
+
+    def print_supported_img_formats(self):
+        img_formats = QImageReader().supportedImageFormats()
+        img_formats_str = '\n'.join(str(x) for x in img_formats)
+        logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
+
+    def set_win_taskbar_icon(self):
+        """Set application icon to Windows taskbar."""
+        if os.name == "nt":
+            import ctypes
+            myappid = "SpineConsortium.SpineToolbox." + SPINE_TOOLBOX_VERSION  # arbitrary string
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     def init_conf(self):
         """Load settings from configuration file."""
@@ -797,6 +814,8 @@ class ToolboxUI(QMainWindow):
         Args:
             qurl (QUrl): Directory path or a file to open
         """
+        if qurl.url() == "#":  # This is a Tip so do not try to open the URL
+            return
         path = qurl.toLocalFile()  # Path to result folder
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(qurl)
