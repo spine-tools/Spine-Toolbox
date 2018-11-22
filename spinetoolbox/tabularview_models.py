@@ -402,8 +402,18 @@ class PivotModel():
         self._data[key] = value
     
     def _restore_data(self, key):
-        # TODO: function to restore data to original value
-        pass
+        if key in self._deleted_data:
+            # data was deleted, add deleted data
+            self._add_data(key, self._deleted_data[key])
+        elif key in self._edit_data:
+            # data was edited
+            value = self._edit_data[key]
+            if value == None:
+                # no previous data, delete
+                self._delete_data(key)
+            else:
+                # readd previous data
+                self._add_data(key, value)
     
     def row(self, row):
         if self.pivot_rows:

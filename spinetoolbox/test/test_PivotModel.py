@@ -751,6 +751,36 @@ class TestPivotModel(unittest.TestCase):
         model.set_pivoted_data([['value_a_aa_1']],[0],[0])
         self.assertEqual(model._deleted_data, {})
         self.assertEqual(model._edit_data, {})
+    
+    def test_restore_edited_value(self):
+        """test that restoring an edited data works"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        model._add_data(('a','aa',1), 'edit')
+        model._restore_data(('a','aa',1))
+        self.assertEqual(model._deleted_data, {})
+        self.assertEqual(model._edit_data, {})
+        self.assertEqual(model._data[('a','aa',1)], 'value_a_aa_1')
+    
+    def test_restore_deleted_value(self):
+        """test that restoring a deleted value works"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        model._delete_data(('a','aa',1))
+        model._restore_data(('a','aa',1))
+        self.assertEqual(model._deleted_data, {})
+        self.assertEqual(model._edit_data, {})
+        self.assertEqual(model._data[('a','aa',1)], 'value_a_aa_1')
+    
+    def test_restore_added_value(self):
+        """test that restoring a added data works"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        model._add_data(('new_key','aa',1),'new value')
+        model._restore_data(('new_key','aa',1))
+        self.assertEqual(model._deleted_data, {})
+        self.assertEqual(model._edit_data, {})
+        self.assertFalse(('new_key','aa',1) in model._data)
         
 
         
