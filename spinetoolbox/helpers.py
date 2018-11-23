@@ -24,10 +24,26 @@ import time
 import shutil
 import glob
 import spinedatabase_api
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtGui import QCursor, QPainter, QPixmap
+from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+
+
+def set_taskbar_icon():
+    """Set application icon to Windows taskbar."""
+    if os.name == "nt":
+        import ctypes
+        myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
+
+@Slot(name="supported_img_formats")
+def supported_img_formats():
+    """Function to check if reading .ico files is supported."""
+    img_formats = QImageReader().supportedImageFormats()
+    img_formats_str = '\n'.join(str(x) for x in img_formats)
+    logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
 
 
 def spinedatabase_api_version_check():
