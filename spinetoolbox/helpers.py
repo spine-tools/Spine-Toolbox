@@ -274,6 +274,15 @@ def rename_dir(widget, old_dir, new_dir):
         return False
     return True
 
+
+def object_pixmap(object_class_name):
+    """An object pixmap defined for `object_class_name` if any, or a generic one if none."""
+    pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
+    if pixmap.isNull():
+        pixmap = QPixmap(":/icons/object_icon.png")
+    return pixmap
+
+
 def relationship_pixmap(object_class_name_list):
     """A pixmap rendered by painting several object pixmaps together."""
     extent = 64
@@ -281,9 +290,7 @@ def relationship_pixmap(object_class_name_list):
     y_offset = 50
     pixmap_list = list()
     for object_class_name in object_class_name_list:
-        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
-        if pixmap.isNull():
-            pixmap = QPixmap(":/icons/object_icon.png")
+        pixmap = object_pixmap(object_class_name)
         pixmap_list.append(pixmap.scaled(extent, extent))
     pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)]
     combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
@@ -308,3 +315,15 @@ def relationship_pixmap(object_class_name_list):
         x_offset += x_step
     painter.end()
     return relationship_pixmap
+
+def fix_name_ambiguity(name_list, offset=0):
+    """Modify repeated entries in name list by appending an increasing integer."""
+    ref_name_list = name_list.copy()
+    ocurrences = {}
+    for i, name in enumerate(name_list):
+        n_ocurrences = ref_name_list.count(name)
+        if n_ocurrences == 1:
+            continue
+        ocurrence = ocurrences.setdefault(name, 1)
+        name_list[i] = name + str(offset + ocurrence)
+        ocurrences[name] = ocurrence + 1

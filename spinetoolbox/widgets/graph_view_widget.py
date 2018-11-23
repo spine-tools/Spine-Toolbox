@@ -38,7 +38,7 @@ from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListM
     ObjectParameterValueModel, ObjectParameterValueProxy, \
     RelationshipParameterValueModel, RelationshipParameterValueProxy
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
-from helpers import busy_effect, relationship_pixmap
+from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity
 from config import STATUSBAR_SS
 
 
@@ -88,6 +88,9 @@ class GraphViewForm(QMainWindow):
         self.template_id_dims = {}
         self.is_template = {}
         self.arc_template_ids = {}
+        self.object_icon_dict = {}
+        self.relationship_icon_dict = {}
+        self.init_icon_dicts()
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
@@ -132,6 +135,17 @@ class GraphViewForm(QMainWindow):
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
+    def init_icon_dicts(self):
+        self.object_icon_dict = {}
+        object_icon = lambda x: QIcon(object_pixmap(x))
+        for object_class in self.db_map.object_class_list():
+            self.object_icon_dict[object_class.id] = object_icon(object_class.name)
+        self.relationship_icon_dict = {}
+        relationship_icon = lambda x: QIcon(relationship_pixmap(x.split(",")))
+        for relationship_class in self.db_map.wide_relationship_class_list():
+            object_class_name_list = relationship_class.object_class_name_list
+            self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
+
     def init_models(self):
         """Initialize object tree, object class list, and
         relationship class models and their respective views."""
@@ -170,16 +184,14 @@ class GraphViewForm(QMainWindow):
             # Create widget to add to splitter
             tab_widget = QTabWidget(self.parameter_splitter)
             tab_widget.setObjectName(object_class_name)
-            pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
-            if pixmap.isNull():
-                pixmap = QPixmap(":/icons/object_icon.png")
-            button = QPushButton(QIcon(pixmap), object_class_name, tab_widget)
+            icon = self.object_icon_dict[object_class.id]
+            button = QPushButton(icon, object_class_name, tab_widget)
             button.setFlat(True)
             menu = QMenu(button)
             action = menu.addAction("Hide")
             action.triggered.connect(tab_widget.hide)
             button.setMenu(menu)
-            tab_widget.setCornerWidget(button, Qt.TopRightCorner)
+            tab_widget.setCornerWidget(button, Qt.TopLeftCorner)
             view = QTableView(tab_widget)
             tab_widget.addTab(view, "value")
             tab_widget.addTab(QWidget(), "definition")
@@ -231,16 +243,16 @@ class GraphViewForm(QMainWindow):
             relationship_class_name = relationship_class.name
             # Create widget to add to splitter
             tab_widget = QTabWidget(self.parameter_splitter)
-            pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
+            icon = self.relationship_icon_dict[relationship_class.id]
             text = font_metric.elidedText(relationship_class_name, Qt.ElideMiddle, 100)
-            button = QPushButton(QIcon(pixmap), text, tab_widget)
+            button = QPushButton(icon, text, tab_widget)
             button.setToolTip(relationship_class_name)
             button.setFlat(True)
             menu = QMenu(button)
             action = menu.addAction("Hide")
             action.triggered.connect(tab_widget.hide)
             button.setMenu(menu)
-            tab_widget.setCornerWidget(button, Qt.TopRightCorner)
+            tab_widget.setCornerWidget(button, Qt.TopLeftCorner)
             view = QTableView(tab_widget)
             tab_widget.addTab(view, "value")
             tab_widget.addTab(QWidget(), "definition")
@@ -248,6 +260,7 @@ class GraphViewForm(QMainWindow):
             self.rel_parameter_value_views[relationship_class_name] = view
             # Setup model
             object_class_name_list = relationship_class.object_class_name_list.split(',')
+            fix_name_ambiguity(object_class_name_list)
             object_name_list_length = len(object_class_name_list)
             object_name_range = range(object_name_list_index, object_name_list_index + object_name_list_length)
             header = base_header.copy()
@@ -659,8 +672,9 @@ class GraphViewForm(QMainWindow):
             object_names = self.arc_object_names_list[k]
             extent = 2 * self.font.pointSize()
             label_parts = self.relationship_parts(
-                object_class_names, object_names, extent, self.font,
-                object_label_position="beside_icon")
+                relationship_class_name, object_class_names, object_names,
+                extent, self._spread / 2,
+                label_font=self.font, label_color=Qt.transparent, label_position="beside_icon")
             arc_item = ArcItem(
                 self, object_id_list, relationship_class_name, object_items[i], object_items[j], .25 * extent,
                 self.arc_color, label_color=self.label_color, label_parts=label_parts)
@@ -795,12 +809,15 @@ class GraphViewForm(QMainWindow):
             class_id = data["id"]
             self.show_add_objects_form(class_id)
         elif data["type"] == "relationship_class":
+            relationship_class_name = data["name"]
             object_class_name_list = data["object_class_name_list"].split(',')
-            object_name_list = object_class_name_list
+            object_name_list = object_class_name_list.copy()
+            fix_name_ambiguity(object_name_list)
             extent = 2 * self.font.pointSize()
             relationship_parts = self.relationship_parts(
-                object_class_name_list, object_name_list, extent,
-                self.font, arc_pen_style=Qt.DotLine)
+                relationship_class_name, object_class_name_list, object_name_list,
+                extent, self._spread,
+                label_font=self.font, label_color=self.label_color, label_position="under_icon")
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_parts)
             self._has_graph = True
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
@@ -863,6 +880,7 @@ class GraphViewForm(QMainWindow):
             for item in arc_items:
                 item.remove_template()
                 item.template_id = None
+                item.object_id_list = ",".join(object_id_list)
             self.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new relationship '{}'.".format(wide_relationship.name)
             self.msg.emit(msg)
@@ -874,21 +892,21 @@ class GraphViewForm(QMainWindow):
             self.msg_error.emit(e.msg)
             return False
 
-    def relationship_parts(self, object_class_name_list, object_name_list, extent, font,
-                           arc_pen_style=Qt.SolidLine, object_label_position="under_icon"):
+    def relationship_parts(self, relationship_class_name, object_class_name_list, object_name_list,
+                           extent, spread, label_font, label_color, label_position="under_icon"):
         """Lists of object and arc items that form a relationship."""
         object_items = list()
         arc_items = list()
         src_ind_list = list(range(len(object_name_list)))
         dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread / 2)
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
         for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
             object_item = ObjectItem(
                 self, 0, object_name, object_class_name, x_, y_, extent,
-                label_font=font, label_color=Qt.transparent, label_position=object_label_position)
+                label_font=label_font, label_color=label_color, label_position=label_position)
             object_items.append(object_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
@@ -896,7 +914,7 @@ class GraphViewForm(QMainWindow):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(self, "", "", src_item, dst_item, extent / 4, self.arc_color, pen_style=arc_pen_style)
+            arc_item = ArcItem(self, relationship_class_name, "", src_item, dst_item, extent / 4, self.arc_color)
             arc_items.append(arc_item)
         return object_items, arc_items
 

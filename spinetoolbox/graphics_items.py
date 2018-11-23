@@ -24,6 +24,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, QFont, QTransform
 from math import atan2, degrees, sin, cos, pi
+from helpers import object_pixmap
 
 
 class SceneBackground(QGraphicsRectItem):
@@ -1038,7 +1039,7 @@ class ObjectItem(QGraphicsPixmapItem):
         label_position (str)
     """
     def __init__(self, graph_view_form, object_id, object_name, object_class_name, x, y, extent,
-                 label_font=QFont(), label_color=QColor(), label_position="over_icon"):
+                 label_font=QFont(), label_color=QColor(), label_position="under_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -1057,9 +1058,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._bounce = False
         self._views_cursor = {}
         self.shade = QGraphicsRectItem()
-        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
-        if pixmap.isNull():
-            pixmap = QPixmap(":/icons/object_icon.png")
+        pixmap = object_pixmap(object_class_name)
         self.setPixmap(pixmap.scaled(extent, extent))
         self.setZValue(-1)
         # self.setPos(x - 0.5 * extent, y - 0.5 * extent)
@@ -1103,9 +1102,9 @@ class ObjectItem(QGraphicsPixmapItem):
         x = self.x() - self.label_item.boundingRect().width() / 2
         y = self.y() + self.offset().y() + (self.boundingRect().height() - self.label_item.boundingRect().height()) / 2
         if self._label_position == "under_icon":
-            y -= self._extent
-        elif self._label_position == "over_icon":
             y += self._extent
+        elif self._label_position == "over_icon":
+            y -= self._extent
         elif self._label_position == "beside_icon":
             x += self._extent / 2 + self.label_item.boundingRect().width() / 2
         self.label_item.setPos(x, y)
@@ -1262,6 +1261,8 @@ class ObjectItem(QGraphicsPixmapItem):
             e (QGraphicsSceneMouseEvent): Mouse event
         """
         e.accept()
+        if not e.modifiers() & Qt.ControlModifier:
+            self.scene().clearSelection()
         self.setSelected(True)
         self._graph_view_form.show_object_item_context_menu(e.screenPos())
 
@@ -1284,12 +1285,11 @@ class ArcItem(QGraphicsLineItem):
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
         color (QColor): color
-        pen_style : pen style
         label_color (QColor): color
         label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
     def __init__(self, graph_view_form, object_id_list, relationship_class_name, src_item, dst_item,
-                 width, color, pen_style=Qt.SolidLine, label_color=QColor(), label_parts=()):
+                 width, color, label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
@@ -1303,19 +1303,19 @@ class ArcItem(QGraphicsLineItem):
         self.is_dst_hovered = False
         self.is_template = False
         self.template_id = None
-        src_x = src_item.x() #sceneBoundingRect().center().x()
-        src_y = src_item.y() #sceneBoundingRect().center().y()
-        dst_x = dst_item.x() #sceneBoundingRect().center().x()
-        dst_y = dst_item.y() #sceneBoundingRect().center().y()
+        src_x = src_item.x()
+        src_y = src_item.y()
+        dst_x = dst_item.x()
+        dst_y = dst_item.y()
         self.setLine(src_x, src_y, dst_x, dst_y)
-        self.pen = QPen()
-        self.pen.setWidth(self.width)
-        self.pen.setColor(color)
-        self.pen.setStyle(pen_style)
-        self.pen.setCapStyle(Qt.RoundCap)
-        self.selected_pen = QPen(self.pen)
+        self.normal_pen = QPen()
+        self.normal_pen.setWidth(self.width)
+        self.normal_pen.setColor(color)
+        self.normal_pen.setStyle(Qt.SolidLine)
+        self.normal_pen.setCapStyle(Qt.RoundCap)
+        self.selected_pen = QPen(self.normal_pen)
         self.selected_pen.setColor(graph_view_form.palette().highlight().color())
-        self.setPen(self.pen)
+        self.setPen(self.normal_pen)
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setZValue(-2)
@@ -1334,7 +1334,7 @@ class ArcItem(QGraphicsLineItem):
             self.setPen(self.selected_pen)
             option.state &= ~QStyle.State_Selected
         else:
-            self.setPen(self.pen)
+            self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
     def itemChange(self, change, value):
@@ -1348,15 +1348,13 @@ class ArcItem(QGraphicsLineItem):
 
     def make_template(self):
         self.is_template = True
-        pen = self.pen()
-        pen.setStyle(Qt.DotLine)
-        self.setPen(pen)
+        self.normal_pen.setStyle(Qt.DotLine)
+        self.selected_pen.setStyle(Qt.DotLine)
 
     def remove_template(self):
         self.is_template = False
-        pen = self.pen()
-        pen.setStyle(Qt.SolidLine)
-        self.setPen(pen)
+        self.normal_pen.setStyle(Qt.SolidLine)
+        self.selected_pen.setStyle(Qt.SolidLine)
 
     def shape(self):
         return self.shape_item.shape()

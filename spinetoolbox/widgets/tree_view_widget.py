@@ -35,13 +35,14 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
-from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterModel, \
-    RelationshipParameterModel, RelationshipParameterValueModel, \
-    ObjectParameterProxy, ObjectParameterValueProxy, RelationshipParameterProxy, RelationshipParameterValueProxy
+from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterDefinitionModel, \
+    RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
+    ObjectParameterDefinitionProxy, ObjectParameterValueProxy, \
+    RelationshipParameterDefinitionProxy, RelationshipParameterValueProxy
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
 from datapackage_import_export import import_datapackage
-from helpers import busy_effect
+from helpers import busy_effect, relationship_pixmap, object_pixmap
 
 
 class TreeViewForm(QMainWindow):
@@ -86,6 +87,9 @@ class TreeViewForm(QMainWindow):
         # DB db_map
         self.db_map = db_map
         self.database = database
+        self.object_icon_dict = {}
+        self.relationship_icon_dict = {}
+        self.init_icon_dicts()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
@@ -94,10 +98,10 @@ class TreeViewForm(QMainWindow):
         self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
         self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
         # Parameter (definition) models
-        self.object_parameter_model = ObjectParameterModel(self)
-        self.object_parameter_proxy = ObjectParameterProxy(self)
-        self.relationship_parameter_model = RelationshipParameterModel(self)
-        self.relationship_parameter_proxy = RelationshipParameterProxy(self)
+        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
+        self.object_parameter_definition_proxy = ObjectParameterDefinitionProxy(self)
+        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
+        self.relationship_parameter_definition_proxy = RelationshipParameterDefinitionProxy(self)
         # Context menus
         self.object_tree_context_menu = None
         self.object_parameter_value_context_menu = None
@@ -138,19 +142,19 @@ class TreeViewForm(QMainWindow):
             setDefaultAction(self.ui.actionAdd_relationship_parameter_values)
         self.ui.toolButton_remove_relationship_parameter_values.\
             setDefaultAction(self.ui.actionRemove_relationship_parameter_values)
-        self.ui.toolButton_add_object_parameters.\
-            setDefaultAction(self.ui.actionAdd_object_parameters)
-        self.ui.toolButton_remove_object_parameters.\
-            setDefaultAction(self.ui.actionRemove_object_parameters)
-        self.ui.toolButton_add_relationship_parameters.\
-            setDefaultAction(self.ui.actionAdd_relationship_parameters)
-        self.ui.toolButton_remove_relationship_parameters.\
-            setDefaultAction(self.ui.actionRemove_relationship_parameters)
+        self.ui.toolButton_add_object_parameter_definitions.\
+            setDefaultAction(self.ui.actionAdd_object_parameter_definitions)
+        self.ui.toolButton_remove_object_parameter_definitions.\
+            setDefaultAction(self.ui.actionRemove_object_parameter_definitions)
+        self.ui.toolButton_add_relationship_parameter_definitions.\
+            setDefaultAction(self.ui.actionAdd_relationship_parameter_definitions)
+        self.ui.toolButton_remove_relationship_parameter_definitions.\
+            setDefaultAction(self.ui.actionRemove_relationship_parameter_definitions)
 
     def setup_delegates(self):
         """Set delegates for tables."""
         # Object parameter
-        table_view = self.ui.tableView_object_parameter
+        table_view = self.ui.tableView_object_parameter_definition
         delegate = ObjectParameterDelegate(table_view, self.db_map)
         table_view.setItemDelegate(delegate)
         # Object parameter value
@@ -158,7 +162,7 @@ class TreeViewForm(QMainWindow):
         delegate = ObjectParameterValueDelegate(table_view, self.db_map)
         table_view.setItemDelegate(delegate)
         # Relationship parameter
-        table_view = self.ui.tableView_relationship_parameter
+        table_view = self.ui.tableView_relationship_parameter_definition
         delegate = RelationshipParameterDelegate(table_view, self.db_map)
         table_view.setItemDelegate(delegate)
         # Relationship parameter value
@@ -184,16 +188,16 @@ class TreeViewForm(QMainWindow):
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
         self.ui.actionAdd_object_parameter_values.triggered.connect(self.add_object_parameter_values)
         self.ui.actionAdd_relationship_parameter_values.triggered.connect(self.add_relationship_parameter_values)
-        self.ui.actionAdd_object_parameters.triggered.connect(self.add_object_parameters)
-        self.ui.actionAdd_relationship_parameters.triggered.connect(self.add_relationship_parameters)
+        self.ui.actionAdd_object_parameter_definitions.triggered.connect(self.add_object_parameter_definitions)
+        self.ui.actionAdd_relationship_parameter_definitions.triggered.connect(self.add_relationship_parameter_definitions)
         self.ui.actionEdit_object_classes.triggered.connect(self.show_edit_object_classes_form)
         self.ui.actionEdit_objects.triggered.connect(self.show_edit_objects_form)
         self.ui.actionEdit_relationship_classes.triggered.connect(self.show_edit_relationship_classes_form)
         self.ui.actionEdit_relationships.triggered.connect(self.show_edit_relationships_form)
         self.ui.actionRemove_object_tree_items.triggered.connect(self.remove_object_tree_items)
-        self.ui.actionRemove_object_parameters.triggered.connect(self.remove_object_parameters)
+        self.ui.actionRemove_object_parameter_definitions.triggered.connect(self.remove_object_parameter_definitions)
         self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
-        self.ui.actionRemove_relationship_parameters.triggered.connect(self.remove_relationship_parameters)
+        self.ui.actionRemove_relationship_parameter_definitions.triggered.connect(self.remove_relationship_parameter_definitions)
         self.ui.actionRemove_relationship_parameter_values.triggered.connect(self.remove_relationship_parameter_values)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
@@ -204,25 +208,25 @@ class TreeViewForm(QMainWindow):
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.find_next_leaf)
         # Autofilter parameter tables
-        self.ui.tableView_object_parameter.filter_changed.connect(self.apply_autofilter)
+        self.ui.tableView_object_parameter_definition.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
-        self.ui.tableView_relationship_parameter.filter_changed.connect(self.apply_autofilter)
+        self.ui.tableView_relationship_parameter_definition.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
         # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter.itemDelegate().commit_model_data.\
+        self.ui.tableView_object_parameter_definition.itemDelegate().commit_model_data.\
             connect(self.set_parameter_data)
         self.ui.tableView_object_parameter_value.itemDelegate().commit_model_data.\
             connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter.itemDelegate().commit_model_data.\
+        self.ui.tableView_relationship_parameter_definition.itemDelegate().commit_model_data.\
             connect(self.set_parameter_data)
         self.ui.tableView_relationship_parameter_value.itemDelegate().commit_model_data.\
             connect(self.set_parameter_value_data)
         # Parameter tables selection changes
-        self.ui.tableView_object_parameter.selectionModel().selectionChanged.\
+        self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.\
             connect(self.receive_object_parameter_selection_changed)
         self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.\
             connect(self.receive_object_parameter_value_selection_changed)
-        self.ui.tableView_relationship_parameter.selectionModel().selectionChanged.\
+        self.ui.tableView_relationship_parameter_definition.selectionModel().selectionChanged.\
             connect(self.receive_relationship_parameter_selection_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
             connect(self.receive_relationship_parameter_value_selection_changed)
@@ -230,11 +234,11 @@ class TreeViewForm(QMainWindow):
         self.ui.tabWidget_object.currentChanged.connect(self.receive_object_parameter_tab_changed)
         self.ui.tabWidget_relationship.currentChanged.connect(self.receive_relationship_parameter_tab_changed)
         # Parameter tables context menu requested
-        self.ui.tableView_object_parameter.customContextMenuRequested.\
+        self.ui.tableView_object_parameter_definition.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
         self.ui.tableView_object_parameter_value.customContextMenuRequested.\
             connect(self.show_object_parameter_value_context_menu)
-        self.ui.tableView_relationship_parameter.customContextMenuRequested.\
+        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.\
             connect(self.show_relationship_parameter_context_menu)
         self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
             connect(self.show_relationship_parameter_value_context_menu)
@@ -294,9 +298,9 @@ class TreeViewForm(QMainWindow):
     @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_selection_changed")
     def receive_object_parameter_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.tableView_object_parameter.selectionModel().selection()
+        selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         index = self.ui.tabWidget_object.currentIndex()
-        self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selection.isEmpty())
+        self.ui.actionRemove_object_parameter_definitions.setEnabled(index == 1 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_value_selection_changed")
     def receive_object_parameter_value_selection_changed(self, selected, deselected):
@@ -308,9 +312,9 @@ class TreeViewForm(QMainWindow):
     @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_selection_changed")
     def receive_relationship_parameter_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
+        selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         index = self.ui.tabWidget_relationship.currentIndex()
-        self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selection.isEmpty())
+        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(index == 1 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_value_selection_changed")
     def receive_relationship_parameter_value_selection_changed(self, selected, deselected):
@@ -325,9 +329,9 @@ class TreeViewForm(QMainWindow):
         if index == 0:
             self.object_parameter_value_proxy.apply_filter()
         else:
-            self.object_parameter_proxy.apply_filter()
-        selected = self.ui.tableView_object_parameter.selectionModel().selection()
-        self.ui.actionRemove_object_parameters.setEnabled(index == 1 and not selected.isEmpty())
+            self.object_parameter_definition_proxy.apply_filter()
+        selected = self.ui.tableView_object_parameter_definition.selectionModel().selection()
+        self.ui.actionRemove_object_parameter_definitions.setEnabled(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
         self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
 
@@ -337,9 +341,9 @@ class TreeViewForm(QMainWindow):
         if index == 0:
             self.relationship_parameter_value_proxy.apply_filter()
         else:
-            self.relationship_parameter_proxy.apply_filter()
-        selected = self.ui.tableView_relationship_parameter.selectionModel().selection()
-        self.ui.actionRemove_relationship_parameters.setEnabled(index == 1 and not selected.isEmpty())
+            self.relationship_parameter_definition_proxy.apply_filter()
+        selected = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
+        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
 
@@ -361,8 +365,8 @@ class TreeViewForm(QMainWindow):
             if not self.ui.treeView_object.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from object tree")
                 self.ui.actionCopy.setEnabled(True)
-        elif self.focus_widget == self.ui.tableView_object_parameter:
-            if not self.ui.tableView_object_parameter.selectionModel().selection().isEmpty():
+        elif self.focus_widget == self.ui.tableView_object_parameter_definition:
+            if not self.ui.tableView_object_parameter_definition.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from object parameter definition")
                 self.ui.actionCopy.setEnabled(True)
             if self.clipboard_text:
@@ -375,8 +379,8 @@ class TreeViewForm(QMainWindow):
             if self.clipboard_text:
                 self.ui.actionPaste.setText("Paste to object parameter value")
                 self.ui.actionPaste.setEnabled(True)
-        elif self.focus_widget == self.ui.tableView_relationship_parameter:
-            if not self.ui.tableView_relationship_parameter.selectionModel().selection().isEmpty():
+        elif self.focus_widget == self.ui.tableView_relationship_parameter_definition:
+            if not self.ui.tableView_relationship_parameter_definition.selectionModel().selection().isEmpty():
                 self.ui.actionCopy.setText("Copy from relationship parameter definition")
                 self.ui.actionCopy.setEnabled(True)
             if self.clipboard_text:
@@ -416,7 +420,7 @@ class TreeViewForm(QMainWindow):
             try:
                 import_datapackage(self, file_path)
                 self.init_parameter_value_models()
-                self.init_parameter_models()
+                self.init_parameter_definition_models()
                 self.msg.emit("Datapackage successfully imported.")
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
@@ -525,10 +529,21 @@ class TreeViewForm(QMainWindow):
         self.msg.emit(msg)
         self.init_models()
 
+    def init_icon_dicts(self):
+        self.object_icon_dict = {}
+        object_icon = lambda x: QIcon(object_pixmap(x))
+        for object_class in self.db_map.object_class_list():
+            self.object_icon_dict[object_class.id] = object_icon(object_class.name)
+        self.relationship_icon_dict = {}
+        relationship_icon = lambda x: QIcon(relationship_pixmap(x.split(",")))
+        for relationship_class in self.db_map.wide_relationship_class_list():
+            object_class_name_list = relationship_class.object_class_name_list
+            self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
+
     def init_models(self):
         self.init_object_tree_model()
         self.init_parameter_value_models()
-        self.init_parameter_models()
+        self.init_parameter_definition_models()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -547,12 +562,12 @@ class TreeViewForm(QMainWindow):
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
         self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
 
-    def init_parameter_models(self):
+    def init_parameter_definition_models(self):
         """Initialize parameter (definition) models from source database."""
-        self.object_parameter_model.init_model()
-        self.relationship_parameter_model.init_model()
-        self.object_parameter_proxy.setSourceModel(self.object_parameter_model)
-        self.relationship_parameter_proxy.setSourceModel(self.relationship_parameter_model)
+        self.object_parameter_definition_model.init_model()
+        self.relationship_parameter_definition_model.init_model()
+        self.object_parameter_definition_proxy.setSourceModel(self.object_parameter_definition_model)
+        self.relationship_parameter_definition_proxy.setSourceModel(self.relationship_parameter_definition_model)
 
     def init_views(self):
         self.init_object_parameter_value_view()
@@ -589,26 +604,26 @@ class TreeViewForm(QMainWindow):
 
     def init_object_parameter_view(self):
         """Init the object parameter table view."""
-        self.ui.tableView_object_parameter.setModel(self.object_parameter_proxy)
-        h = self.object_parameter_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_object_parameter.horizontalHeader().hideSection(h('object_class_id'))
-        self.ui.tableView_object_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_object_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.ui.tableView_object_parameter.resizeColumnsToContents()
+        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_proxy)
+        h = self.object_parameter_definition_model.horizontal_header_labels().index
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
 
     def init_relationship_parameter_view(self):
         """Init the object parameter table view."""
-        self.ui.tableView_relationship_parameter.setModel(self.relationship_parameter_proxy)
-        h = self.relationship_parameter_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('relationship_class_id'))
-        self.ui.tableView_relationship_parameter.horizontalHeader().hideSection(h('object_class_id_list'))
-        self.ui.tableView_relationship_parameter.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_relationship_parameter.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.ui.tableView_relationship_parameter.resizeColumnsToContents()
+        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_proxy)
+        h = self.relationship_parameter_definition_model.horizontal_header_labels().index
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_relationship_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
@@ -657,11 +672,11 @@ class TreeViewForm(QMainWindow):
                 deselected_relationship_class_ids.add(item['id'])
             elif item_type == 'relationship':
                 deselected_object_id_lists.add(item['object_id_list'])
-        self.object_parameter_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
+        self.object_parameter_definition_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
         self.object_parameter_value_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
         self.object_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
-        self.relationship_parameter_proxy.diff_update_relationship_class_id_set(deselected_relationship_class_ids)
-        self.relationship_parameter_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
+        self.relationship_parameter_definition_proxy.diff_update_relationship_class_id_set(deselected_relationship_class_ids)
+        self.relationship_parameter_definition_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
         self.relationship_parameter_value_proxy.diff_update_relationship_class_id_set(
             deselected_relationship_class_ids)
         self.relationship_parameter_value_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
@@ -678,11 +693,11 @@ class TreeViewForm(QMainWindow):
                 selected_relationship_class_ids.add(item['id'])
             elif item_type == 'relationship':
                 selected_object_id_lists.add(item['object_id_list'])
-        self.object_parameter_proxy.update_object_class_id_set(selected_object_class_ids)
+        self.object_parameter_definition_proxy.update_object_class_id_set(selected_object_class_ids)
         self.object_parameter_value_proxy.update_object_class_id_set(selected_object_class_ids)
         self.object_parameter_value_proxy.update_object_id_set(selected_object_ids)
-        self.relationship_parameter_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
-        self.relationship_parameter_proxy.update_object_class_id_set(selected_object_class_ids)
+        self.relationship_parameter_definition_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
+        self.relationship_parameter_definition_proxy.update_object_class_id_set(selected_object_class_ids)
         self.relationship_parameter_value_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
         self.relationship_parameter_value_proxy.update_object_class_id_set(selected_object_class_ids)
         self.relationship_parameter_value_proxy.update_object_id_set(selected_object_ids)
@@ -690,11 +705,11 @@ class TreeViewForm(QMainWindow):
         if self.ui.tabWidget_object.currentIndex() == 0:
             self.object_parameter_value_proxy.apply_filter()
         else:
-            self.object_parameter_proxy.apply_filter()
+            self.object_parameter_definition_proxy.apply_filter()
         if self.ui.tabWidget_relationship.currentIndex() == 0:
             self.relationship_parameter_value_proxy.apply_filter()
         else:
-            self.relationship_parameter_proxy.apply_filter()
+            self.relationship_parameter_definition_proxy.apply_filter()
 
     @Slot(name="hide_unused_object_name_columns")
     def hide_unused_object_name_columns(self):
@@ -791,9 +806,9 @@ class TreeViewForm(QMainWindow):
     def call_add_parameters(self, tree_index):
         class_type = tree_index.data(Qt.UserRole)
         if class_type == 'object_class':
-            self.add_object_parameters()
+            self.add_object_parameter_definitions()
         elif class_type == 'relationship_class':
-            self.add_relationship_parameters()
+            self.add_relationship_parameter_definitions()
 
     def call_add_parameter_values(self, tree_index):
         entity_type = tree_index.data(Qt.UserRole)
@@ -1010,9 +1025,9 @@ class TreeViewForm(QMainWindow):
 
     def rename_items_in_parameter_models(self, renamed_type, new_names, curr_names):
         """Rename items in parameter definition and value models."""
-        self.object_parameter_model.rename_items(renamed_type, new_names, curr_names)
+        self.object_parameter_definition_model.rename_items(renamed_type, new_names, curr_names)
         self.object_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
-        self.relationship_parameter_model.rename_items(renamed_type, new_names, curr_names)
+        self.relationship_parameter_definition_model.rename_items(renamed_type, new_names, curr_names)
         self.relationship_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
 
     @busy_effect
@@ -1032,9 +1047,9 @@ class TreeViewForm(QMainWindow):
             for key, value in removed_id_dict.items():
                 removed_name_dict.update(self.object_tree_model.remove_items(key, *value))
             for key, value in removed_name_dict.items():
-                self.object_parameter_model.remove_items(key, *value)
+                self.object_parameter_definition_model.remove_items(key, *value)
                 self.object_parameter_value_model.remove_items(key, *value)
-                self.relationship_parameter_model.remove_items(key, *value)
+                self.relationship_parameter_definition_model.remove_items(key, *value)
                 self.relationship_parameter_value_model.remove_items(key, *value)
             self.set_commit_rollback_actions_enabled(True)
             self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
@@ -1091,17 +1106,17 @@ class TreeViewForm(QMainWindow):
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.tableView_object_parameter.indexAt(pos)
-        global_pos = self.ui.tableView_object_parameter.viewport().mapToGlobal(pos)
-        remove_icon = self.ui.actionRemove_object_parameters.icon()
+        index = self.ui.tableView_object_parameter_definition.indexAt(pos)
+        global_pos = self.ui.tableView_object_parameter_definition.viewport().mapToGlobal(pos)
+        remove_icon = self.ui.actionRemove_object_parameter_definitions.icon()
         self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
         option = self.object_parameter_context_menu.get_action()
         if option == "Remove selected":
-            self.remove_object_parameters()
+            self.remove_object_parameter_definitions()
         elif option == "Copy":
-            self.ui.tableView_object_parameter.copy()
+            self.ui.tableView_object_parameter_definition.copy()
         elif option == "Paste":
-            self.ui.tableView_object_parameter.paste(self.clipboard_text)
+            self.ui.tableView_object_parameter_definition.paste(self.clipboard_text)
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
 
@@ -1112,17 +1127,17 @@ class TreeViewForm(QMainWindow):
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.tableView_relationship_parameter.indexAt(pos)
-        global_pos = self.ui.tableView_relationship_parameter.viewport().mapToGlobal(pos)
-        remove_icon = self.ui.actionRemove_relationship_parameters.icon()
+        index = self.ui.tableView_relationship_parameter_definition.indexAt(pos)
+        global_pos = self.ui.tableView_relationship_parameter_definition.viewport().mapToGlobal(pos)
+        remove_icon = self.ui.actionRemove_relationship_parameter_definitions.icon()
         self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
         option = self.relationship_parameter_context_menu.get_action()
         if option == "Remove selected":
-            self.remove_relationship_parameters()
+            self.remove_relationship_parameter_definitions()
         elif option == "Copy":
-            self.ui.tableView_relationship_parameter.copy()
+            self.ui.tableView_relationship_parameter_definition.copy()
         elif option == "Paste":
-            self.ui.tableView_relationship_parameter.paste(self.clipboard_text)
+            self.ui.tableView_relationship_parameter_definition.paste(self.clipboard_text)
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
@@ -1208,14 +1223,14 @@ class TreeViewForm(QMainWindow):
         self.ui.tabWidget_relationship.setCurrentIndex(0)
         self.relationship_parameter_value_proxy.apply_filter()
 
-    @Slot(name="add_object_parameters")
-    def add_object_parameters(self):
+    @Slot(name="add_object_parameter_definitions")
+    def add_object_parameter_definitions(self):
         """Sweep object treeview selection.
         For each item in the selection, add a parameter value row if needed.
         """
-        model = self.object_parameter_model
-        proxy_index = self.ui.tableView_object_parameter.currentIndex()
-        index = self.object_parameter_proxy.mapToSource(proxy_index)
+        model = self.object_parameter_definition_model
+        proxy_index = self.ui.tableView_object_parameter_definition.currentIndex()
+        index = self.object_parameter_definition_proxy.mapToSource(proxy_index)
         row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
@@ -1238,16 +1253,16 @@ class TreeViewForm(QMainWindow):
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
         self.ui.tabWidget_object.setCurrentIndex(1)
-        self.object_parameter_proxy.apply_filter()
+        self.object_parameter_definition_proxy.apply_filter()
 
-    @Slot(name="add_relationship_parameters")
-    def add_relationship_parameters(self):
+    @Slot(name="add_relationship_parameter_definitions")
+    def add_relationship_parameter_definitions(self):
         """Sweep object treeview selection.
         For each item in the selection, add a parameter row if needed.
         """
-        model = self.relationship_parameter_model
-        proxy_index = self.ui.tableView_relationship_parameter.currentIndex()
-        index = self.relationship_parameter_proxy.mapToSource(proxy_index)
+        model = self.relationship_parameter_definition_model
+        proxy_index = self.ui.tableView_relationship_parameter_definition.currentIndex()
+        index = self.relationship_parameter_definition_proxy.mapToSource(proxy_index)
         row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
@@ -1270,7 +1285,7 @@ class TreeViewForm(QMainWindow):
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
         self.ui.tabWidget_relationship.setCurrentIndex(1)
-        self.relationship_parameter_proxy.apply_filter()
+        self.relationship_parameter_definition_proxy.apply_filter()
 
     @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
     def set_parameter_value_data(self, index, new_value):
@@ -1336,48 +1351,48 @@ class TreeViewForm(QMainWindow):
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    @Slot(name="remove_object_parameters")
-    def remove_object_parameters(self):
-        selection = self.ui.tableView_object_parameter.selectionModel().selection()
-        source_row_set = self.source_row_set(selection, self.object_parameter_proxy)
+    @Slot(name="remove_object_parameter_definitions")
+    def remove_object_parameter_definitions(self):
+        selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
+        source_row_set = self.source_row_set(selection, self.object_parameter_definition_proxy)
         parameter_ids = set()
         parameter_names = set()
-        id_column = self.object_parameter_model.horizontal_header_labels().index("id")
-        name_column = self.object_parameter_model.horizontal_header_labels().index("parameter_name")
+        id_column = self.object_parameter_definition_model.horizontal_header_labels().index("id")
+        name_column = self.object_parameter_definition_model.horizontal_header_labels().index("parameter_name")
         for source_row in source_row_set:
-            if self.object_parameter_model.is_work_in_progress(source_row):
+            if self.object_parameter_definition_model.is_work_in_progress(source_row):
                 continue
-            source_index = self.object_parameter_model.index(source_row, id_column)
+            source_index = self.object_parameter_definition_model.index(source_row, id_column)
             parameter_ids.add(source_index.data(Qt.EditRole))
-            source_index = self.object_parameter_model.index(source_row, name_column)
+            source_index = self.object_parameter_definition_model.index(source_row, name_column)
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.object_parameter_model.remove_row_set(source_row_set)
+            self.object_parameter_definition_model.remove_row_set(source_row_set)
             self.object_parameter_value_model.remove_items("parameter", *parameter_names)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    @Slot(name="remove_relationship_parameters")
-    def remove_relationship_parameters(self):
-        selection = self.ui.tableView_relationship_parameter.selectionModel().selection()
-        source_row_set = self.source_row_set(selection, self.relationship_parameter_proxy)
+    @Slot(name="remove_relationship_parameter_definitions")
+    def remove_relationship_parameter_definitions(self):
+        selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
+        source_row_set = self.source_row_set(selection, self.relationship_parameter_definition_proxy)
         parameter_ids = set()
         parameter_names = set()
-        id_column = self.relationship_parameter_model.horizontal_header_labels().index("id")
-        name_column = self.relationship_parameter_model.horizontal_header_labels().index("parameter_name")
+        id_column = self.relationship_parameter_definition_model.horizontal_header_labels().index("id")
+        name_column = self.relationship_parameter_definition_model.horizontal_header_labels().index("parameter_name")
         for source_row in source_row_set:
-            if self.relationship_parameter_model.is_work_in_progress(source_row):
+            if self.relationship_parameter_definition_model.is_work_in_progress(source_row):
                 continue
-            source_index = self.relationship_parameter_model.index(source_row, id_column)
+            source_index = self.relationship_parameter_definition_model.index(source_row, id_column)
             parameter_ids.add(source_index.data(Qt.EditRole))
-            source_index = self.relationship_parameter_model.index(source_row, name_column)
+            source_index = self.relationship_parameter_definition_model.index(source_row, name_column)
             parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.relationship_parameter_model.remove_row_set(source_row_set)
+            self.relationship_parameter_definition_model.remove_row_set(source_row_set)
             self.relationship_parameter_value_model.remove_items("parameter", *parameter_names)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
@@ -1387,7 +1402,7 @@ class TreeViewForm(QMainWindow):
     def source_row_set(self, selection, proxy_model):
         """A set of source rows corresponding to a selection of proxy indexes
         from any of the following models:
-        object_parameter_model, relationship_parameter_model,
+        object_parameter_definition_model, relationship_parameter_definition_model,
         object_parameter_value_model, relationship_parameter_value_model
         """
         if selection.isEmpty():
@@ -1459,15 +1474,15 @@ class TreeViewForm(QMainWindow):
     def close_editors(self):
         """Close any open editor in the parameter table views.
         Call this before closing the database mapping."""
-        current = self.ui.tableView_object_parameter.currentIndex()
-        if self.ui.tableView_object_parameter.isPersistentEditorOpen(current):
-            self.ui.tableView_object_parameter.closePersistentEditor(current)
+        current = self.ui.tableView_object_parameter_definition.currentIndex()
+        if self.ui.tableView_object_parameter_definition.isPersistentEditorOpen(current):
+            self.ui.tableView_object_parameter_definition.closePersistentEditor(current)
         current = self.ui.tableView_object_parameter_value.currentIndex()
         if self.ui.tableView_object_parameter_value.isPersistentEditorOpen(current):
             self.ui.tableView_object_parameter_value.closePersistentEditor(current)
-        current = self.ui.tableView_relationship_parameter.currentIndex()
-        if self.ui.tableView_relationship_parameter.isPersistentEditorOpen(current):
-            self.ui.tableView_relationship_parameter.closePersistentEditor(current)
+        current = self.ui.tableView_relationship_parameter_definition.currentIndex()
+        if self.ui.tableView_relationship_parameter_definition.isPersistentEditorOpen(current):
+            self.ui.tableView_relationship_parameter_definition.closePersistentEditor(current)
         current = self.ui.tableView_relationship_parameter_value.currentIndex()
         if self.ui.tableView_relationship_parameter_value.isPersistentEditorOpen(current):
             self.ui.tableView_relationship_parameter_value.closePersistentEditor(current)

@@ -22,11 +22,11 @@ import logging
 import os
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, QPainter, \
-    QGuiApplication
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QFontMetrics, QIcon, QPixmap, \
+    QPainter, QGuiApplication
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir, relationship_pixmap
+from helpers import rename_dir, relationship_pixmap, object_pixmap, fix_name_ambiguity
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
@@ -1318,20 +1318,23 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveRows()
         return True
 
-    def reset_model(self, main_data=[]):
+    def reset_model(self, main_data=[], aux_data=None):
         """Reset model."""
         self.beginResetModel()
         self._main_data = main_data
-        self._aux_data = list()
-        self._flags = list()
-        for line in main_data:
-            aux_data_row = list()
-            flags_row = list()
-            for item in line:
-                aux_data_row.append(dict())
-                flags_row.append(self.default_flags)
-            self._aux_data.append(aux_data_row)
-            self._flags.append(flags_row)
+        if aux_data:
+            self._aux_data = aux_data
+        else:
+            self._aux_data = [[{} for j in range(len(row))] for row in main_data]
+        self._flags = [[self.default_flags for j in range(len(row))] for row in main_data]
+        #for line in main_data:
+        #    aux_data_row = list()
+        #    flags_row = list()
+        #    for item in line:
+        #        aux_data_row.append(dict())
+        #        flags_row.append(self.default_flags)
+        #    self._aux_data.append(aux_data_row)
+        #    self._flags.append(flags_row)
         self.endResetModel()
         if self.has_empty_row:
             self.insertRows(self.rowCount(), 1)
@@ -1343,17 +1346,15 @@ class ObjectClassListModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
+        self.object_icon_dict = graph_view_form.object_icon_dict
         self.add_more_index = None
-        self.object_icon = QIcon(":/icons/object_icon.png")
 
     def populate_list(self):
         """Populate model."""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         for object_class in object_class_list:
-            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-            if icon.pixmap(1, 1).isNull():
-                icon = self.object_icon
+            icon = self.object_icon_dict[object_class.id]
             object_class_item = QStandardItem(object_class.name)
             data = {"type": "object_class", **object_class._asdict()}
             object_class_item.setData(data, Qt.UserRole + 1)
@@ -1367,9 +1368,7 @@ class ObjectClassListModel(QStandardItemModel):
 
     def add_object_class(self, object_class):
         """Add object class item to model."""
-        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-        if icon.pixmap(1, 1).isNull():
-            icon = self.object_icon
+        icon = self.object_icon_dict[object_class.id]
         object_class_item = QStandardItem(object_class.name)
         data = {"type": "object_class", **object_class._asdict()}
         object_class_item.setData(data, Qt.UserRole + 1)
@@ -1389,6 +1388,7 @@ class RelationshipClassListModel(QStandardItemModel):
     def __init__(self, graph_view_form):
         """Initialize class"""
         super().__init__(graph_view_form)
+        self.relationship_icon_dict = graph_view_form.relationship_icon_dict
         self.db_map = graph_view_form.db_map
         self.add_more_index = None
 
@@ -1397,11 +1397,11 @@ class RelationshipClassListModel(QStandardItemModel):
         self.clear()
         relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         for relationship_class in relationship_class_list:
-            pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
+            icon = self.relationship_icon_dict[relationship_class.id]
             relationship_class_item = QStandardItem(relationship_class.name)
             data = {"type": "relationship_class", **relationship_class._asdict()}
             relationship_class_item.setData(data, Qt.UserRole + 1)
-            relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            relationship_class_item.setData(icon, Qt.DecorationRole)
             relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
             self.appendRow(relationship_class_item)
         add_more_item = QStandardItem()
@@ -1411,11 +1411,11 @@ class RelationshipClassListModel(QStandardItemModel):
 
     def add_relationship_class(self, relationship_class):
         """Add relationship class."""
-        pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
+        icon = self.relationship_icon_dict[relationship_class.id]
         relationship_class_item = QStandardItem(relationship_class.name)
         data = {"type": "relationship_class", **relationship_class._asdict()}
         relationship_class_item.setData(data, Qt.UserRole + 1)
-        relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        relationship_class_item.setData(icon, Qt.DecorationRole)
         relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
         self.insertRow(self.rowCount() - 1, relationship_class_item)
 
@@ -1430,8 +1430,8 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.object_icon = QIcon(":/icons/object_icon.png")
-        self.relationship_icon = QIcon(":/icons/relationship_icon.png")
+        self.object_icon_dict = tree_view_form.object_icon_dict
+        self.relationship_icon_dict = tree_view_form.relationship_icon_dict
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
@@ -1499,9 +1499,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-            if icon.pixmap(1, 1).isNull():
-                icon = self.object_icon
+            icon = self.object_icon_dict[object_class.id]
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
@@ -1536,9 +1534,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            object_icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-            if object_icon.pixmap(1, 1).isNull():
-                object_icon = self.object_icon
+            object_icon = self.object_icon_dict[object_class.id]
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
@@ -1563,8 +1559,7 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                    pixmap = relationship_pixmap(wide_relationship_class.object_class_name_list.split(","))
-                    relationship_icon = QIcon(pixmap)
+                    relationship_icon = self.relationship_icon_dict[wide_relationship_class.id]
                     relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
                     relationship_class_item.setData(self.bold_font, Qt.FontRole)
                     relationship_item_list = list()
@@ -1640,9 +1635,7 @@ class ObjectTreeModel(QStandardItemModel):
         row = self.root_item.rowCount()
         self.root_item.insertRow(row, QStandardItem())
         self.root_item.setChild(row, 0, object_class_item)
-        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
-        if icon.pixmap(1, 1).isNull():
-            icon = self.object_icon
+        icon = self.object_icon_dict[object_class.id]
         object_class_item.setData(icon, Qt.DecorationRole)
 
     def add_object(self, object_, flat=False):
@@ -1676,8 +1669,8 @@ class ObjectTreeModel(QStandardItemModel):
             if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
-            pixmap = relationship_pixmap(wide_relationship_class.object_class_name_list.split(","))
-            relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            icon = self.relationship_icon_dict[wide_relationship_class.id]
+            relationship_class_item.setData(icon, Qt.DecorationRole)
             visited_item.appendRow(relationship_class_item)
 
     def add_relationship(self, wide_relationship):
@@ -1851,7 +1844,6 @@ class WIPTableModel(MinimalTableModel):
         """Initialize class."""
         super().__init__(tree_view_form, can_grow=True, has_empty_row=has_empty_row)
         self._tree_view_form = tree_view_form
-        self.db_map = self._tree_view_form.db_map
         self.fixed_columns = list()
         if self._tree_view_form:
             self.gray_brush = self._tree_view_form.palette().button()
@@ -1967,16 +1959,19 @@ class WIPTableModel(MinimalTableModel):
             pass
 
 
-class ParameterModel(WIPTableModel):
+class ParameterDefinitionModel(WIPTableModel):
     """A model of parameter data, used by TreeViewForm.
     It implements methods that are common to both object and relationship parameters,
-    so the more specific `ObjectParameterModel` and `RelationshipParameterModel`
+    so the more specific `ObjectParameterDefinitionModel` and `RelationshipParameterDefinitionModel`
     can inherit from this.
     """
 
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
+        self.db_map = self._tree_view_form.db_map
+        self.object_icon_dict = self._tree_view_form.object_icon_dict
+        self.relationship_icon_dict = self._tree_view_form.relationship_icon_dict
 
     def items_to_update(self, indexes, values):
         """Return a list of items (dict) to update in the database."""
@@ -2053,6 +2048,10 @@ class ParameterValueModel(WIPTableModel):
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
+        self.db_map = self._tree_view_form.db_map
+        self.object_icon_dict = self._tree_view_form.object_icon_dict
+        self.relationship_icon_dict = self._tree_view_form.relationship_icon_dict
+        self.font_metric = QFontMetrics(QFont(""))  # For elided json text
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the output of json array data to 8 positions."""
@@ -2060,14 +2059,7 @@ class ParameterValueModel(WIPTableModel):
         if role != Qt.DisplayRole:
             return data
         if self.header[index.column()] == 'json':
-            try:
-                json_data = data[1:-1].split(",")
-                if len(json_data) <= 1:
-                    return data
-                new_data = [x.strip() for x in json_data[0:1]]
-                return "[" + ", ".join(new_data) + "..."
-            except TypeError:
-                return data
+            return self.font_metric.elidedText(data, Qt.ElideMiddle, 100)
         return data
 
     def items_to_update(self, indexes, values):
@@ -2134,7 +2126,7 @@ class ParameterValueModel(WIPTableModel):
             return False
 
 
-class ObjectParameterModel(ParameterModel):
+class ObjectParameterDefinitionModel(ParameterDefinitionModel):
     """A model of object parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
@@ -2147,9 +2139,25 @@ class ObjectParameterModel(ParameterModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        self.reset_model(model_data)
+        aux_data = self.decoration_role_data(model_data, header)
+        self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'object_class_name']
         self.make_data_fixed(column_names=column_names)
+
+    def decoration_role_data(self, model_data, header):
+        """Return decoration role data for model initialization."""
+        aux_data = []
+        aux_data_append = aux_data.append
+        row_range = range(len(model_data[0]))
+        object_class_id_column = header.index('object_class_id')
+        object_class_name_column = header.index('object_class_name')
+        for model_row in model_data:
+            aux_row = [{} for i in row_range]
+            object_class_id = model_row[object_class_id_column]
+            icon = self.object_icon_dict[object_class_id]
+            aux_row[object_class_name_column][Qt.DecorationRole] = icon
+            aux_data_append(aux_row)
+        return aux_data
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type != "object_class":
@@ -2208,7 +2216,7 @@ class ObjectParameterModel(ParameterModel):
         return items_to_add
 
 
-class RelationshipParameterModel(ParameterModel):
+class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
     """A model of relationship parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
@@ -2221,7 +2229,21 @@ class RelationshipParameterModel(ParameterModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        self.reset_model(model_data)
+        # Prepare decoration role data
+        aux_data = []
+        aux_data_append = aux_data.append
+        row_range = range(len(model_data[0]))
+        relationship_icon = lambda x: QIcon(relationship_pixmap(x.split(",")))
+        relationship_class_id_column = header.index('relationship_class_id')
+        relationship_class_name_column = header.index('relationship_class_name')
+        object_class_name_list_column = header.index('object_class_name_list')
+        for model_row in model_data:
+            aux_row = [{} for i in row_range]
+            relationship_class_id = model_row[relationship_class_id_column]
+            icon = self.relationship_icon_dict[relationship_class_id]
+            aux_row[relationship_class_name_column][Qt.DecorationRole] = icon
+            aux_data_append(aux_row)
+        self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'relationship_class_name', 'object_class_name_list']
         self.make_data_fixed(column_names=column_names)
 
@@ -2332,16 +2354,33 @@ class ObjectParameterValueModel(ParameterValueModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        self.reset_model(model_data)
+        aux_data = self.decoration_role_data(model_data, header)
+        self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
     def init_model_from_data(self, model_data, header):
         """Initialize model from source database."""
+        aux_data = self.decoration_role_data(model_data, header)
         self.set_horizontal_header_labels(header)
-        self.reset_model(model_data)
+        self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
+
+    def decoration_role_data(self, model_data, header):
+        """Return decoration role data for model initialization."""
+        aux_data = []
+        aux_data_append = aux_data.append
+        row_range = range(len(model_data[0]))
+        object_class_id_column = header.index('object_class_id')
+        object_class_name_column = header.index('object_class_name')
+        for model_row in model_data:
+            aux_row = [{} for i in row_range]
+            object_class_id = model_row[object_class_id_column]
+            icon = self.object_icon_dict[object_class_id]
+            aux_row[object_class_name_column][Qt.DecorationRole] = icon
+            aux_data_append(aux_row)
+        return aux_data
 
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("object_class", "object", "parameter"):
@@ -2446,27 +2485,48 @@ class RelationshipParameterValueModel(ParameterValueModel):
         header = [x for x in fields if x not in skip_fields]
         # Split single 'object_name_list' column into several 'object_name' columns
         relationship_class_list = self.db_map.wide_relationship_class_list()
+        object_class_id_list_index = header.index("object_class_id_list")
         object_name_list_index = header.index("object_name_list")
-        object_name_list_length = max(
+        max_object_name_list_length = max(
             [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
-        self.object_name_range = range(object_name_list_index, object_name_list_index + object_name_list_length)
+        self.object_name_range = range(object_name_list_index, object_name_list_index + max_object_name_list_length)
         header.pop(object_name_list_index)
+        object_name_header = ["object_name" for k in range(max_object_name_list_length)]
+        fix_name_ambiguity(object_name_header)
         for k, i in enumerate(self.object_name_range):
-            header.insert(i, "object_name [{}]".format(str(k + 1)))
+            header.insert(i, object_name_header[k])
         self.set_horizontal_header_labels(header)
-        # Compute model data: split single 'object_name_list' value into several 'object_name' values
+        # Compute model and aux data: split single 'object_name_list' value into several 'object_name' values
         model_data = list()
+        model_data_append = model_data.append
+        aux_data = []
+        aux_data_append = aux_data.append
+        relationship_class_id_column = header.index('relationship_class_id')
+        relationship_class_name_column = header.index('relationship_class_name')
         for row in data:
-            row_data = [v for k, v in row._asdict().items() if k not in skip_fields]
-            object_name_list = row_data.pop(object_name_list_index).split(',')
-            for i in range(object_name_list_length):
+            model_row = [v for k, v in row._asdict().items() if k not in skip_fields]
+            object_name_list = model_row.pop(object_name_list_index).split(',')
+            for i in range(max_object_name_list_length):
                 try:
                     object_name = object_name_list[i]
-                    row_data.insert(object_name_list_index + i, object_name)
+                    model_row.insert(object_name_list_index + i, object_name)
                 except IndexError:
-                    row_data.insert(object_name_list_index + i, None)
-            model_data.append(row_data)
-        self.reset_model(model_data)
+                    model_row.insert(object_name_list_index + i, None)
+            model_data_append(model_row)
+            aux_row = [{} for i in model_row]
+            object_class_id_list = [int(x) for x in model_row[object_class_id_list_index].split(',')]
+            for i in range(max_object_name_list_length):
+                try:
+                    object_class_id = object_class_id_list[i]
+                    object_icon = self.object_icon_dict[object_class_id]
+                    aux_row[object_name_list_index + i][Qt.DecorationRole] = object_icon
+                except IndexError:
+                    pass
+            relationship_class_id = model_row[relationship_class_id_column]
+            relationship_icon = self.relationship_icon_dict[relationship_class_id]
+            aux_row[relationship_class_name_column][Qt.DecorationRole] = relationship_icon
+            aux_data_append(aux_row)
+        self.reset_model(model_data, aux_data=aux_data)
         object_name_header = [header[x] for x in self.object_name_range]
         column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
         self.make_data_fixed(column_names=column_names)
@@ -2542,6 +2602,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
             return
         self.insertColumns(self.object_name_range.stop, diff)
         object_name_header_ext = ["object_name [{}]".format(str(i + 1)) for i in range(curr_length, length)]
+        object_name_header_ext = ["object_name" for i in range(diff)]
+        fix_name_ambiguity(object_name_header_ext, offset=curr_length)
         self.insert_horizontal_header_labels(self.object_name_range.stop, object_name_header_ext)
         self.object_name_range = range(self.object_name_range.start, self.object_name_range.stop + diff)
         self.make_data_fixed(column_names=object_name_header_ext)
@@ -2813,7 +2875,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.rule_dict = dict()
 
 
-class ObjectParameterProxy(AutoFilterProxy):
+class ObjectParameterDefinitionProxy(AutoFilterProxy):
     """A model to filter object parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None):
         """Initialize class."""
@@ -2864,7 +2926,7 @@ class ObjectParameterProxy(AutoFilterProxy):
             row_data[self.object_class_name_column][Qt.FontRole] = None
 
 
-class ObjectParameterValueProxy(ObjectParameterProxy):
+class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
     """A model to filter object parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None):
         """Initialize class."""
@@ -2917,7 +2979,7 @@ class ObjectParameterValueProxy(ObjectParameterProxy):
             row_data[self.object_name_column][Qt.FontRole] = None
 
 
-class RelationshipParameterProxy(AutoFilterProxy):
+class RelationshipParameterDefinitionProxy(AutoFilterProxy):
     """A model to filter relationship parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None):
         """Initialize class."""
@@ -2996,7 +3058,7 @@ class RelationshipParameterProxy(AutoFilterProxy):
             row_data[self.relationship_class_name_column][Qt.FontRole] = None
 
 
-class RelationshipParameterValueProxy(RelationshipParameterProxy):
+class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
     """A model to filter relationship parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None):
         """Initialize class."""

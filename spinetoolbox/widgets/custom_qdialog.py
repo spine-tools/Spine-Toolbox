@@ -34,7 +34,7 @@ import ui.add_objects
 import ui.add_relationship_classes
 import ui.add_relationships
 import ui.edit_data_items
-from helpers import busy_effect
+from helpers import busy_effect, object_pixmap
 
 
 class AddItemsDialog(QDialog):
@@ -207,9 +207,7 @@ class AddObjectsDialog(AddItemsDialog):
                 object_class_name = index.data(Qt.DisplayRole)
                 if not object_class_name:
                     return
-                icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
-                if icon.pixmap(1, 1).isNull():
-                    icon = self.object_icon
+                icon = QIcon(object_pixmap(object_class_name))
                 self.model.setData(index, icon, Qt.DecorationRole)
 
     @busy_effect
@@ -326,9 +324,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 object_class_name = index.data(Qt.DisplayRole)
                 if not object_class_name:
                     continue
-                icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
-                if icon.pixmap(1, 1).isNull():
-                    icon = self.object_icon
+                icon = QIcon(object_pixmap(object_class_name))
                 self.model.setData(index, icon, Qt.DecorationRole)
 
     @busy_effect
