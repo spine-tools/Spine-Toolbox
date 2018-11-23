@@ -7,9 +7,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 This section is for upcoming changes.
 
 ### Added
-- New Setting (F1). You can now select whether to delete project item's data directory
-when removing a project item.
- 
+
 ### Fixed
 
 ### Changed
@@ -19,6 +17,33 @@ when removing a project item.
 ### Removed
 
 ### Security
+
+## [0.1.75] - 2018-11-23
+
+### Added
+- New Setting (F1). You can now select whether to delete project item's data 
+directory when removing a project item.
+- Application icon (Spine symbol)
+- New installer for 64-bit Windows:
+    - Installation file extension is now *.exe* instead of *.msi*
+    - Show license file before installation (users must agree to continue)
+    - Default install folder is now `C:\Program Files\ `. 
+    - **No** need to *Run as Administrator* even if installed to the default location 
+    because write permissions for sub-folders that need them (\conf, \projects, 
+    \work) are set automatically
+    - Create a shortcut on desktop (if wanted)
+    - Create a Start Menu folder (if wanted)
+    - Uninstaller. Available in the Start Menu folder or in Windows 
+    Add/Remove Programs
+    - Remove app related registry entries when uninstalling (if wanted)
+
+### Fixed
+- Data Package editor. Some files were missing from the tabulator package.
+- Bug when exiting the app when there is no project open in close_view_forms() when 
+exiting the application without a project open 
+
+### Changed
+- settings.conf file is now in /conf directory
 
 ## [0.1.71] - 2018-11-19
 
