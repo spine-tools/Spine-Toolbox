@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, QFont
+from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, QFont, QTransform
 from math import atan2, degrees, sin, cos, pi
 
 
@@ -261,9 +261,8 @@ class ItemImage(QGraphicsItem):
             event (QKeyEvent): Key event
         """
         if event.key() == Qt.Key_Delete and self._master.isSelected():
-            name = self.name()
-            ind = self._toolbox.project_item_model.find_item(name)
-            self._toolbox.remove_item(ind, delete_item=True)
+            ind = self._toolbox.project_item_model.find_item(self.name())
+            self._toolbox.remove_item(ind, delete_item=self._toolbox._config.getboolean("settings", "delete_data"))
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item."""
@@ -1027,33 +1026,109 @@ class ObjectItem(QGraphicsPixmapItem):
     """Object item to use with GraphViewForm.
 
     Attributes:
-        pixmap (QPixmap): pixmap to use
+        graph_view_form (GraphViewForm): 'owner'
+        object_name (str): object name
+        object_class_name (str): object class name
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
-        extent (int): extent
+        extent (int): preferred extent
+        label_font (QFont): label font
+        label_color (QColor): label bg color
+        label_position (str)
     """
-    def __init__(self, pixmap, x, y, extent):
+    def __init__(self, graph_view_form, object_name, object_class_name, x, y, extent,
+                 label_font=QFont(), label_color=QColor(), label_position="over_icon"):
         super().__init__()
-        self.extent = extent
-        self.setPixmap(pixmap.scaled(self.extent, self.extent))
-        self.setPos(x - 0.5 * self.extent, y - 0.5 * self.extent)
-        self.label_item = None
-        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self._graph_view_form = graph_view_form
+        self._object_name = object_name
+        self._object_class_name = object_class_name
+        self._extent = extent
+        self._label_position = label_position
+        self.label_item = ObjectLabelItem(object_name, label_font, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
-        self.setAcceptHoverEvents(True)
+        self.is_template = False
+        self.template_id_dim = {}  # NOTE: for a template item this should have one and only one entry
+        self._original_pos = None
+        self._merge_target = None
+        self._merge = False
+        self._bounce = False
+        self._views_cursor = {}
+        self.shade = QGraphicsRectItem()
+        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
+        if pixmap.isNull():
+            pixmap = QPixmap(":/icons/object_icon.png")
+        self.setPixmap(pixmap.scaled(extent, extent))
         self.setZValue(-1)
+        # self.setPos(x - 0.5 * extent, y - 0.5 * extent)
+        self.setPos(x, y)
+        self.setOffset(-0.5 * extent, -0.5 * extent)
+        self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
+        self.shade.setRect(self.boundingRect())
+        self.shade.setBrush(graph_view_form.palette().highlight())
+        self.shade.setPen(Qt.NoPen)
+        self.shade.setParentItem(self)
+        self.shade.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+        self.shade.hide()
+
+    def paint(self, painter, option, widget=None):
+        """Try and make it more clear when an item is selected."""
+        super().paint(painter, option, widget)
+        if option.state & (QStyle.State_Selected):
+            self.shade.show()
+        else:
+            self.shade.hide()
+
+    def setParentItem(self, parent):
+        """Set same parent for label item."""
+        super().setParentItem(parent)
+        self.label_item.setParentItem(parent)
+        self.place_label_item()
+
+    def itemChange(self, change, value):
+        """Add label item to same scene if added as top level item."""
+        if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
+            scene = value
+            value.addItem(self.label_item)
+            self.place_label_item()
+        return super().itemChange(change, value)
+
+    def place_label_item(self):
+        """Put label item in position."""
+        x = self.x() - self.label_item.boundingRect().width() / 2
+        y = self.y() + self.offset().y() + (self.boundingRect().height() - self.label_item.boundingRect().height()) / 2
+        if self._label_position == "under_icon":
+            y -= self._extent
+        elif self._label_position == "over_icon":
+            y += self._extent
+        elif self._label_position == "beside_icon":
+            x += self._extent / 2 + self.label_item.boundingRect().width() / 2
+        self.label_item.setPos(x, y)
+
+    def make_template(self):
+        """Make this object a template for a relationship."""
+        self.is_template = True
+        font = QFont("", 0.75 * self._extent)
+        brush = QBrush(Qt.white)
+        outline_pen = QPen(Qt.black, 8, Qt.SolidLine)
+        question_item = CustomTextItem("?", font, brush=brush, outline_pen=outline_pen)
+        question_item.setParentItem(self)
+        rect = self.boundingRect()
+        question_rect = question_item.boundingRect()
+        x = rect.center().x() - question_rect.width() / 2
+        y = rect.center().y() - question_rect.height() / 2
+        question_item.setPos(x, y)
+        self.setToolTip("<html>Drag-and-drop this onto a <b>{}</b> object "
+                        "(or viceversa) to complete this relationship.".format(self._object_class_name))
 
     def shape(self):
-        """Return shape."""
+        """Make the entire bounding rect to be the shape."""
         path = QPainterPath()
+        # path.addRect(self.boundingRect() | self.childrenBoundingRect())
         path.addRect(self.boundingRect())
         return path
-
-    def set_label_item(self, item):
-        self.label_item = item
-        self.label_item.setPos(self.x() + self.extent, self.y())
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1063,92 +1138,238 @@ class ObjectItem(QGraphicsPixmapItem):
         """Add an ArcItem to the list of outgoing arcs."""
         self.outgoing_arc_items.append(arc_item)
 
+    def mousePressEvent(self, event):
+        """Save original position."""
+        super().mousePressEvent(event)
+        self._original_pos = self.pos()
+
     def mouseMoveEvent(self, event):
-        """Reset position of text, incoming and outgoing arcs."""
+        """Call move related items and check for a merge target."""
         super().mouseMoveEvent(event)
-        self.label_item.setPos(self.x() + self.extent, self.y())
+        object_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
+        for item in object_items:
+            item.move_related_items_by(event.scenePos() - event.lastScenePos())
+        self.check_for_merge_target(event.scenePos())
+        # Depending on the value of merge target and bounce, set the drop indicator cursor
+        for view in self.scene().views():
+            if view not in self._views_cursor:
+                self._views_cursor[view] = view.viewport().cursor()
+            if self._merge_target:
+                view.viewport().setCursor(Qt.DragCopyCursor)
+            elif self._bounce:
+                view.viewport().setCursor(Qt.ForbiddenCursor)
+            else:
+                try:
+                    view.viewport().setCursor(self._views_cursor[view])
+                except KeyError:
+                    pass
+
+    def check_for_merge_target(self, scene_pos):
+        """Check if this item is touching another item so they can merge
+        (this happens when building a relationship)."""
+        self._merge_target = None
+        self._bounce = False
+        for item in self.scene().items(scene_pos):
+            if item == self:
+                continue
+            if not isinstance(item, ObjectItem):
+                continue
+            if item.is_template != self.is_template:
+                if item._object_class_name == self._object_class_name:
+                    self._merge_target = item
+                    break
+            self._bounce = True
+            break
+
+    def mouseReleaseEvent(self, event):
+        """Merge, bounce, or just do nothing."""
+        super().mouseReleaseEvent(event)
+        if self._merge_target:
+            if not self.merge_item():
+                self._bounce = True
+        if self._bounce:
+            self.move_related_items_by(self._original_pos - self.pos())
+            self.setPos(self._original_pos)
+            self._original_pos = None
+
+    def merge_item(self):
+        """Merge this item with the one from the _merge_target attribute.
+        Try and create a relationship if needed."""
+        if self.is_template:
+            template = self
+            instance = self._merge_target
+        else:
+            template = self._merge_target
+            instance = self
+        template_buddies = template.template_buddies()
+        # Add template id-dimension to instance. We'll remove it if needed
+        instance.template_id_dim.update(template.template_id_dim)
+        if not [x for x in template_buddies if x.is_template and x != template]:
+            # The only template left is the one we're merging
+            template_id = list(template.template_id_dim)[0]
+            relationship_items = [x if x != template else instance for x in template_buddies]
+            if not self._graph_view_form.add_relationship(template_id, relationship_items):
+                del instance.template_id_dim[template_id]
+                return False
+        template.move_related_items_by(instance.pos() - template.pos())
+        for arc_item in template.outgoing_arc_items:
+            arc_item.src_item = instance
+        for arc_item in template.incoming_arc_items:
+            arc_item.dst_item = instance
+        instance.incoming_arc_items.extend(template.incoming_arc_items)
+        instance.outgoing_arc_items.extend(template.outgoing_arc_items)
+        self.scene().removeItem(template.label_item)
+        self.scene().removeItem(template)
+        return True
+
+    def template_buddies(self):
+        """A list of all object items in the same template."""
+        if not self.is_template:  # NOTE: This shouldn't happen
+            logging.debug("template_buddies method shouldn't be called on a non-template item.")
+            return []
+        template_id = list(self.template_id_dim)[0]  # NOTE: a template item should have one and only one template
+        return [x for x in self.scene().items() if isinstance(x, ObjectItem) and template_id in x.template_id_dim]
+
+    def move_related_items_by(self, pos_diff):
+        """Move related items."""
+        self.label_item.moveBy(pos_diff.x(), pos_diff.y())
         for item in self.outgoing_arc_items:
-            item.set_source_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+            item.move_src_by(pos_diff)
         for item in self.incoming_arc_items:
-            item.set_destination_point(self.x() + 0.5 * self.extent, self.y() + 0.5 * self.extent)
+            item.move_dst_by(pos_diff)
 
     def hoverEnterEvent(self, event):
-        """Show text on hover."""
+        """Make related arcs know that this is hovered."""
         for item in self.incoming_arc_items:
             item.is_dst_hovered = True
         for item in self.outgoing_arc_items:
             item.is_src_hovered = True
 
     def hoverLeaveEvent(self, event):
-        """Hide text on hover."""
+        """Make related arcs know that this isn't hovered."""
         for item in self.incoming_arc_items:
             item.is_dst_hovered = False
         for item in self.outgoing_arc_items:
             item.is_src_hovered = False
+
+    def contextMenuEvent(self, e):
+        """Show context menu.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        e.accept()
+        self.setSelected(True)
+        self._graph_view_form.show_object_item_context_menu(e.screenPos())
+
+    def set_all_visible(self, on):
+        """Set visible attribute for this item and all related ones."""
+        self.label_item.setVisible(on)
+        for item in self.incoming_arc_items + self.outgoing_arc_items:
+            item.setVisible(on)
+        self.setVisible(on)
 
 
 class ArcItem(QGraphicsLineItem):
     """Arc item to use with GraphViewForm.
 
     Attributes:
-        x1, y1 (float): source position
-        x2, y2 (float): destination position
+        graph_view_form (GraphViewForm): 'owner'
+        src_item (ObjectItem): source item
+        dst_item (ObjectItem): destination item
         width (int): Preferred line width
+        color (QColor): color
+        pen_style : pen style
+        label_color (QColor): color
+        label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
-    def __init__(self, x1, y1, x2, y2, width):
+    def __init__(self, graph_view_form, src_item, dst_item, width, color, pen_style=Qt.SolidLine,
+                 label_color=QColor(), label_parts=()):
         """Init class."""
-        super().__init__(x1, y1, x2, y2)
-        self.label_item = None
+        super().__init__()
+        self._graph_view_form = graph_view_form
+        self.src_item = src_item
+        self.dst_item = dst_item
         self.width = width
+        self.label_item = ArcLabelItem(label_color, *label_parts)
         self.is_src_hovered = False
         self.is_dst_hovered = False
-        pen = QPen(QColor(64, 64, 64))
+        self.is_template = False
+        self.template_id = None
+        src_x = src_item.x() #sceneBoundingRect().center().x()
+        src_y = src_item.y() #sceneBoundingRect().center().y()
+        dst_x = dst_item.x() #sceneBoundingRect().center().x()
+        dst_y = dst_item.y() #sceneBoundingRect().center().y()
+        self.setLine(src_x, src_y, dst_x, dst_y)
+        pen = QPen()
         pen.setWidth(self.width)
+        pen.setColor(color)
+        pen.setStyle(pen_style)
         pen.setCapStyle(Qt.RoundCap)
         self.setPen(pen)
         self.setAcceptHoverEvents(True)
         self.setZValue(-2)
-        self.shape_item = QGraphicsLineItem(x1, y1, x2, y2)
+        self.shape_item = QGraphicsLineItem()
+        self.shape_item.setLine(src_x, src_y, dst_x, dst_y)
         shape_pen = QPen()
         shape_pen.setWidth(3 * self.width)
         self.shape_item.setPen(shape_pen)
         self.shape_item.hide()
+        src_item.add_outgoing_arc_item(self)
+        dst_item.add_incoming_arc_item(self)
+
+    def itemChange(self, change, value):
+        """Add label item to same scene if added as top level item."""
+        if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
+            scene = value
+            value.addItem(self.label_item)
+            self.label_item.hide()
+            self.label_item.setZValue(0)
+        return super().itemChange(change, value)
+
+    def make_template(self):
+        self.is_template = True
+        pen = self.pen()
+        pen.setStyle(Qt.DotLine)
+        self.setPen(pen)
+
+    def remove_template(self):
+        self.is_template = False
+        pen = self.pen()
+        pen.setStyle(Qt.SolidLine)
+        self.setPen(pen)
 
     def shape(self):
         return self.shape_item.shape()
 
-    def set_label_item(self, item):
-        self.label_item = item
-        self.label_item.hide()
+    def move_src_by(self, pos_diff):
+        """Move source point by pos_diff. Used when moving ObjectItems around."""
+        line = self.line()
+        line.setP1(line.p1() + pos_diff)
+        self.setLine(line)
+        self.shape_item.setLine(line)
 
-    def set_source_point(self, x, y):
-        """Reset the source point. Used when moving ObjectItems around."""
-        x1 = x
-        y1 = y
-        x2 = self.line().x2()
-        y2 = self.line().y2()
-        self.setLine(x1, y1, x2, y2)
-        self.shape_item.setLine(x1, y1, x2, y2)
-
-    def set_destination_point(self, x, y):
-        """Reset the destination point. Used when moving ObjectItems around."""
-        x1 = self.line().x1()
-        y1 = self.line().y1()
-        x2 = x
-        y2 = y
-        self.setLine(x1, y1, x2, y2)
-        self.shape_item.setLine(x1, y1, x2, y2)
+    def move_dst_by(self, pos_diff):
+        """Move destination point by pos_diff. Used when moving ObjectItems around."""
+        line = self.line()
+        line.setP2(line.p2() + pos_diff)
+        self.setLine(line)
+        self.shape_item.setLine(line)
 
     def hoverEnterEvent(self, event):
         """Show label if src and dst are not hovered."""
-        self.label_item.setPos(event.pos().x(), event.pos().y())
+        self.label_item.setPos(
+            event.scenePos().x() - self.label_item.boundingRect().x() + 16,
+            event.scenePos().y() - self.label_item.boundingRect().y() + 16)
         if self.is_src_hovered or self.is_dst_hovered:
             return
         self.label_item.show()
 
     def hoverMoveEvent(self, event):
         """Show label if src and dst are not hovered."""
-        self.label_item.setPos(event.pos().x(), event.pos().y())
+        self.label_item.setPos(
+            event.scenePos().x() - self.label_item.boundingRect().x() + 16,
+            event.scenePos().y() - self.label_item.boundingRect().y() + 16)
         if self.is_src_hovered or self.is_dst_hovered:
             return
         self.label_item.show()
@@ -1159,17 +1380,18 @@ class ArcItem(QGraphicsLineItem):
 
 
 class ObjectLabelItem(QGraphicsRectItem):
-    """Label item for objects to use with GraphViewForm.
+    """Object label item to use with GraphViewForm.
 
     Attributes:
-        object_name (str): object name
+        text (str): text
         font (QFont): font to display the text
         color (QColor): color to paint the label
     """
-    def __init__(self, object_name, font, color):
+    def __init__(self, text, font, color):
         super().__init__()
-        self.title_item = CustomTextItem(object_name, font)
-        self.title_item.setParentItem(self)
+        self.text = text
+        self.text_item = CustomTextItem(text, font)
+        self.text_item.setParentItem(self)
         self.setRect(self.childrenBoundingRect())
         self.setBrush(QBrush(color))
         self.setPen(Qt.NoPen)
@@ -1177,35 +1399,23 @@ class ObjectLabelItem(QGraphicsRectItem):
 
 
 class ArcLabelItem(QGraphicsRectItem):
-    """Label item for arcs to use with GraphViewForm.
+    """Arc label item to use with GraphViewForm.
 
     Attributes:
-        relationship_class_name (str): relationship class name
-        object_pixmaps (list): object pixmaps
-        object_names (list): object names
-        extent (int): extent of object items
-        font (QFont): font to display the text
         color (QColor): color to paint the label
+        object_items (list): ObjectItem instances
+        arc_items (list): ArcItem instances
     """
-    def __init__(self, relationship_class_name, object_pixmaps, object_names, extent, font, color):
+    def __init__(self, color, object_items=[], arc_items=[]):
+        """A QGraphicsRectItem with a relationship to use as arc label"""
         super().__init__()
-        self.title_item = CustomTextItem(relationship_class_name, font)
-        self.title_item.setParentItem(self)
-        self.object_items = []
-        y_offset = self.title_item.boundingRect().height()
-        for k in range(len(object_pixmaps)):
-            object_pixmap = object_pixmaps[k]
-            object_name = object_names[k]
-            object_item = ObjectItem(object_pixmap, .5 * extent, y_offset + (k + .5) * extent, extent)
-            object_item.setParentItem(self)
-            label_item = ObjectLabelItem(object_name, font, Qt.transparent)
-            label_item.setParentItem(self)
-            object_item.set_label_item(label_item)
-            self.object_items.append(object_item)
-        self.setRect(self.childrenBoundingRect())
-        self.setBrush(QBrush(color))
+        for item in object_items + arc_items:
+            item.setParentItem(self)
+        rect = self.childrenBoundingRect()
+        self.setBrush(color)
         self.setPen(Qt.NoPen)
-        self.setZValue(1)
+        self.setRect(rect)
+        # label.setZValue(-2)
 
 
 class CustomTextItem(QGraphicsSimpleTextItem):
@@ -1214,11 +1424,14 @@ class CustomTextItem(QGraphicsSimpleTextItem):
     Attributes:
         text (str): text to show
         font (QFont): font to display the text
+        brush (QBrus)
+        outline_pen (QPen)
     """
-    def __init__(self, text, font):
+    def __init__(self, text, font, brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
         """Init class."""
-        super().__init__(text)
+        super().__init__()
+        self.setText(text)
         font.setWeight(QFont.Black)
         self.setFont(font)
-        outline_pen = QPen(Qt.white, 2, Qt.SolidLine)
+        self.setBrush(brush)
         self.setPen(outline_pen)

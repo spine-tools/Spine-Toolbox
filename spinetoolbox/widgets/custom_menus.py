@@ -80,7 +80,8 @@ class ProjectItemContextMenu(CustomContextMenu):
         if d.item_type == "Data Connection":
             self.add_action("Open directory...")
         elif d.item_type == "Data Store":
-            self.add_action("Open treeview...")
+            self.add_action("Open tree view...")
+            self.add_action("Open graph view...")
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Execute")
@@ -154,7 +155,7 @@ class ToolTemplateContextMenu(CustomContextMenu):
 
 
 class ObjectTreeContextMenu(CustomContextMenu):
-    """Context menu class for object tree items in Data store form.
+    """Context menu class for object tree items in tree view form.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -215,7 +216,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter (value) items in Data Store.
+    """Context menu class for object (relationship) parameter (value) items in tree views.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -233,6 +234,36 @@ class ParameterContextMenu(CustomContextMenu):
         self.add_action("Paste", paste_icon)
         self.addSeparator()
         self.add_action("Remove selected", remove_icon)
+        self.exec_(position)
+
+
+class GraphViewContextMenu(CustomContextMenu):
+    """Context menu class for qgraphics view in graph view.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (GraphViewForm)
+        position (QPoint): Position on screen
+    """
+    def __init__(self, parent, position):
+        """Class constructor."""
+        super().__init__(parent)
+        self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
+        self.add_action("Reset graph", enabled=parent._has_graph > 0)
+        self.exec_(position)
+
+
+class ObjectItemContextMenu(CustomContextMenu):
+    """Context menu class for object graphic items in graph view.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (GraphViewForm)
+        position (QPoint): Position on screen
+    """
+    def __init__(self, parent, position):
+        """Class constructor."""
+        super().__init__(parent)
+        self.add_action("Hide selected")
+        self.add_action("Ignore selected and rebuild graph")
         self.exec_(position)
 
 

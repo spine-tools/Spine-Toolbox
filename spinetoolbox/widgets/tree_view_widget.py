@@ -49,7 +49,7 @@ class TreeViewForm(QMainWindow):
 
     Attributes:
         data_store (DataStore): The DataStore instance that owns this form
-        db_map (DatabaseMapping): The object relational database mapping
+        db_map (DiffDatabaseMapping): The object relational database mapping
         database (str): The database name
     """
     msg = Signal(str, name="msg")
@@ -116,7 +116,7 @@ class TreeViewForm(QMainWindow):
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         toc = time.clock()
-        self.msg.emit("Data Store form created in {} seconds".format(toc - tic))
+        self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
     def setup_buttons(self):
         """Specify actions and menus for add/remove parameter buttons."""
@@ -159,7 +159,7 @@ class TreeViewForm(QMainWindow):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        # Event log signals
+        # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
         # Menu actions
@@ -168,7 +168,7 @@ class TreeViewForm(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
-        self.ui.actionQuit.triggered.connect(self.close)
+        self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)

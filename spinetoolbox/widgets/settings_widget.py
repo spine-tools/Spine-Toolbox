@@ -17,7 +17,7 @@ Widget for controlling user settings.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog
+from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog, QStyle
 from PySide2.QtCore import Slot, Qt
 import ui.settings
 from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, STATUSBAR_SS, \
@@ -34,16 +34,19 @@ class SettingsWidget(QWidget):
     def __init__(self, toolbox, configs):
         """ Initialize class. """
         super().__init__(parent=toolbox, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
-        # Set up the ui from Qt Designer files
-        self.ui = ui.settings.Ui_SettingsForm()
-        self.ui.setupUi(self)
-        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
-        # Ensure this window gets garbage-collected when closed
-        self.setAttribute(Qt.WA_DeleteOnClose)
         self._toolbox = toolbox  # QWidget parent
         self._configs = configs
         self._project = self._toolbox.project()
         self.orig_work_dir = ""  # Work dir when this widget was opened
+        # Set up the ui from Qt Designer files
+        self.ui = ui.settings.Ui_SettingsForm()
+        self.ui.setupUi(self)
+        self.ui.toolButton_browse_gams.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.toolButton_browse_julia.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.toolButton_browse_work.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
+        # Ensure this window gets garbage-collected when closed
+        self.setAttribute(Qt.WA_DeleteOnClose)
         self.statusbar = QStatusBar(self)
         self.statusbar.setFixedHeight(20)
         self.statusbar.setSizeGripEnabled(False)
@@ -62,12 +65,12 @@ class SettingsWidget(QWidget):
         """ Connect PyQt signals. """
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
-        self.ui.pushButton_browse_gams.clicked.connect(self.browse_gams_path)
-        self.ui.pushButton_browse_julia.clicked.connect(self.browse_julia_path)
-        self.ui.pushButton_browse_work.clicked.connect(self.browse_work_path)
+        self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
+        self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
+        self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
 
-    @Slot(name="browse_gams_path")
-    def browse_gams_path(self):
+    @Slot(bool, name="browse_gams_path")
+    def browse_gams_path(self, checked=False):
         """Open file browser where user can select the directory of
         GAMS that the user wants to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -86,8 +89,8 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_gams_path.setText(selected_path)
         return
 
-    @Slot(name="browse_julia_path")
-    def browse_julia_path(self):
+    @Slot(bool, name="browse_julia_path")
+    def browse_julia_path(self, checked=False):
         """Open file browser where user can select the path to wanted Julia version."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, 'Select Julia Directory', os.path.abspath('C:\\'))
@@ -104,8 +107,8 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_julia_path.setText(selected_path)
         return
 
-    @Slot(name="browse_work_path")
-    def browse_work_path(self):
+    @Slot(bool, name="browse_work_path")
+    def browse_work_path(self, checked=False):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, 'Select work directory', os.path.abspath('C:\\'))
@@ -125,6 +128,7 @@ class SettingsWidget(QWidget):
         gams_path = self._configs.get("settings", "gams_path")
         use_repl = self._configs.getboolean("settings", "use_repl")
         julia_path = self._configs.get("settings", "julia_path")
+        delete_data = self._configs.getboolean("settings", "delete_data")
         if open_previous_project:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt:
@@ -147,6 +151,8 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         if datetime:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
+        if delete_data:
+            self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
         if not proj_dir:
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
@@ -173,6 +179,7 @@ class SettingsWidget(QWidget):
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         d = int(self.ui.checkBox_datetime.checkState())
+        delete_data = int(self.ui.checkBox_delete_data.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
         gams_path = self.ui.lineEdit_gams_path.text()
         if not gams_path == "":  # Skip this if using GAMS in system path
@@ -195,6 +202,7 @@ class SettingsWidget(QWidget):
         self._configs.set("settings", "save_at_exit", f)
         self._configs.set("settings", "commit_at_exit", g)
         self._configs.setboolean("settings", "datetime", d)
+        self._configs.setboolean("settings", "delete_data", delete_data)
         self._configs.set("settings", "gams_path", gams_path)
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)

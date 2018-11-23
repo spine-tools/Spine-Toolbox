@@ -22,10 +22,10 @@ import logging
 import os
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, QPainter
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir
+from helpers import rename_dir, relationship_pixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
@@ -866,37 +866,39 @@ class ConnectionModel(QAbstractTableModel):
 
 
 class MinimalTableModel(QAbstractTableModel):
-    """Table model for outlining simple tabular data."""
+    """Table model for outlining simple tabular data.
 
-    def __init__(self, toolbox=None, can_grow=False, has_empty_row=False):
+    Attributes:
+        parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
+        can_grow (bool): if True, the model grows automatically when setting data beyond its limits
+        has_empty_row (bool): if True, the model always has an empty row at the bottom
+    """
+    def __init__(self, parent=None, can_grow=False, has_empty_row=False):
         """Initialize class"""
         super().__init__()
-        self._toolbox = toolbox  # QMainWindow
+        self._parent = parent
         self._data = list()
         self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        self.row_defaults = []
+        self.default_row = []  # A row of default values to put in any newly inserted row
+        self._force_default = False  # Whether or not default values are editable
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
         self.rowsInserted.connect(self.receive_rows_inserted)
         self.columnsInserted.connect(self.receive_columns_inserted)
 
-    def set_row_defaults(self, data, roles):
-        """Set row defaults for each role in roles to data.
+    def set_default_row(self, data):
+        """Set default row.
 
         Args:
             data (list)
-            roles (list)
         """
-        if not data or not roles:
+        if not data:
             return
-        self.row_defaults.extend([{} for j in range(len(data) - len(self.row_defaults))])
-        for j, default in enumerate(data):
-            for role in roles:
-                self.row_defaults[j][role] = default
+        self.default_row = data.copy()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
@@ -907,14 +909,20 @@ class MinimalTableModel(QAbstractTableModel):
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):
             try:
-                default = self.row_defaults[column]
+                data = self._data[last_row][column][Qt.DisplayRole]
+            except KeyError:
+                # No data in this column, just continue
+                continue
+            try:
+                default = self.default_row[column]
             except IndexError:
                 # No default for this column, check if any data
-                if self._data[last_row][column]:
-                    self.insertRows(self.rowCount(), 1)
+                if not data:
+                    continue
+                self.insertRows(self.rowCount(), 1)
                 break
-            # Check if data is different from default
-            if self._data[last_row][column] != default:
+            # Both data and default found, check if they differ
+            if data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
 
@@ -931,25 +939,44 @@ class MinimalTableModel(QAbstractTableModel):
     @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
     def receive_rows_inserted(self, parent, first, last):
         """In models with row defaults, set default data in newly inserted rows."""
+        last_column = 0
         for column in range(self.columnCount()):
+            last_column = column
             try:
-                default = self.row_defaults[column]
+                default = self.default_row[column]
             except IndexError:
                 break
             for row in range(first, last + 1):
-                self._data[row][column] = {**default}
+                self._data[row][column][Qt.EditRole] = default
+                self._data[row][column][Qt.DisplayRole] = default
+                if self._force_default:
+                    self._flags[row][column] &= ~Qt.ItemIsEditable
+        if last_column == 0:
+            return
+        top_left = self.index(first, 0)
+        bottom_right = self.index(last, last_column)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
     def receive_columns_inserted(self, parent, first, last):
         """In models with row defaults, set default data in newly inserted columns."""
-        self.row_defaults.extend([{} for j in range(self.columnCount() - len(self.row_defaults))])
+        last_column = 0
         for column in range(first, last + 1):
+            last_column = column
             try:
-                default = self.row_defaults[column]
+                default = self.default_row[column]
             except IndexError:
                 break
             for row in range(self.rowCount()):
-                self._data[row][column] = {**default}
+                self._data[row][column][Qt.EditRole] = default
+                self._data[row][column][Qt.DisplayRole] = default
+                if self._force_default:
+                    self._flags[row][column] &= ~Qt.ItemIsEditable
+        if last_column == first:
+            return
+        top_left = self.index(0, first)
+        bottom_right = self.index(self.rowCount() - 1, last_column)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     def clear(self):
         """Clear all data in model."""
@@ -1024,7 +1051,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels))
 
     def horizontal_header_labels(self):
-        return [self.headerData(section, Qt.Horizontal, Qt.DisplayRole) for section in range(self.columnCount())]
+        return [self.header[j][Qt.DisplayRole] for j in range(len(self.header))]
 
     def setHeaderData(self, section, orientation, value, role=Qt.EditRole):
         """Sets the data for the given role and section in the header
@@ -1300,18 +1327,109 @@ class MinimalTableModel(QAbstractTableModel):
         self.insertRows(self.rowCount(), 1)
 
 
-class FlatObjectTreeModel(QStandardItemModel):
-    """Another class to hold Spine data structure in a treeview.
-    It only has two levels. object class -> object.
-    """
+class ObjectClassListModel(QStandardItemModel):
+    """A class to list object classes in the GraphViewForm."""
     def __init__(self, graph_view_form):
         """Initialize class"""
         super().__init__(graph_view_form)
         self.db_map = graph_view_form.db_map
-        self.root_item = None
-        self.initial_status = "False"
+        self.add_more_index = None
+        self.object_icon = QIcon(":/icons/object_icon.png")
+
+    def populate_list(self):
+        """Populate model."""
+        self.clear()
+        object_class_list = [x for x in self.db_map.object_class_list()]
+        for object_class in object_class_list:
+            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if icon.pixmap(1, 1).isNull():
+                icon = self.object_icon
+            object_class_item = QStandardItem(object_class.name)
+            data = {"type": "object_class", **object_class._asdict()}
+            object_class_item.setData(data, Qt.UserRole + 1)
+            object_class_item.setData(icon, Qt.DecorationRole)
+            object_class_item.setData(object_class.name, Qt.ToolTipRole)
+            self.appendRow(object_class_item)
+        add_more_item = QStandardItem()
+        add_more_item.setData("Add more...", Qt.DisplayRole)
+        self.appendRow(add_more_item)
+        self.add_more_index = self.indexFromItem(add_more_item)
+
+    def add_object_class(self, object_class):
+        """Add object class item to model."""
+        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = self.object_icon
+        object_class_item = QStandardItem(object_class.name)
+        data = {"type": "object_class", **object_class._asdict()}
+        object_class_item.setData(data, Qt.UserRole + 1)
+        object_class_item.setData(icon, Qt.DecorationRole)
+        object_class_item.setData(object_class.name, Qt.ToolTipRole)
+        for i in range(self.rowCount()):
+            visited_index = self.index(i, 0)
+            visited_display_order = visited_index.data(Qt.UserRole + 1)['display_order']
+            if visited_display_order >= object_class.display_order:
+                self.insertRow(i, object_class_item)
+                return
+        self.insertRow(self.rowCount() - 1, object_class_item)
+
+
+class RelationshipClassListModel(QStandardItemModel):
+    """A class to list relationship classes in the GraphViewForm."""
+    def __init__(self, graph_view_form):
+        """Initialize class"""
+        super().__init__(graph_view_form)
+        self.db_map = graph_view_form.db_map
+        self.add_more_index = None
+
+    def populate_list(self):
+        """Populate model."""
+        self.clear()
+        relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
+        for relationship_class in relationship_class_list:
+            pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
+            relationship_class_item = QStandardItem(relationship_class.name)
+            data = {"type": "relationship_class", **relationship_class._asdict()}
+            relationship_class_item.setData(data, Qt.UserRole + 1)
+            relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+            relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
+            self.appendRow(relationship_class_item)
+        add_more_item = QStandardItem()
+        add_more_item.setData("Add more...", Qt.DisplayRole)
+        self.appendRow(add_more_item)
+        self.add_more_index = self.indexFromItem(add_more_item)
+
+    def add_relationship_class(self, relationship_class):
+        """Add relationship class."""
+        pixmap = relationship_pixmap(relationship_class.object_class_name_list.split(","))
+        relationship_class_item = QStandardItem(relationship_class.name)
+        data = {"type": "relationship_class", **relationship_class._asdict()}
+        relationship_class_item.setData(data, Qt.UserRole + 1)
+        relationship_class_item.setData(QIcon(pixmap), Qt.DecorationRole)
+        relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
+        self.insertRow(self.rowCount() - 1, relationship_class_item)
+
+
+class ObjectTreeModel(QStandardItemModel):
+    """A class to hold Spine data structure in a treeview."""
+
+    def __init__(self, tree_view_form):
+        """Initialize class"""
+        super().__init__(tree_view_form)
+        self.db_map = tree_view_form.db_map
+        self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.object_icon = QIcon(":/icons/object_icon.png")
+        self.relationship_icon = QIcon(":/icons/relationship_icon.png")
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.ForegroundRole:
+            item_type = index.data(Qt.UserRole)
+            if item_type.endswith('class') and not self.hasChildren(index):
+                return QBrush(Qt.gray)
+        return super().data(index, role)
 
     def backward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the root, and apply `call` on each."""
@@ -1358,96 +1476,8 @@ class FlatObjectTreeModel(QStandardItemModel):
                 continue
             break
 
-    def build_tree(self, database):
-        """Populate tree."""
-        self.clear()
-        pixmap = QPixmap(":/icons/Spine_db_icon.png")
-        self.root_item = QStandardItem(database)
-        self.root_item.setData(QIcon(pixmap), Qt.DecorationRole)
-        object_class_list = [x for x in self.db_map.object_class_list()]
-        object_list = [x for x in self.db_map.object_list()]
-        for object_class in object_class_list:
-            pixmap = QPixmap(":/object_class_icons/" + object_class.name + ".png")
-            if pixmap.isNull():
-                pixmap = QPixmap(":/icons/object_icon.png")
-            object_class_name_item = QStandardItem(object_class.name)
-            object_class_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
-            object_class_name_item.setData(self.bold_font, Qt.FontRole)
-            object_class_name_item.setFlags(object_class_name_item.flags() & ~Qt.ItemIsEditable)
-            object_class_status_item = QStandardItem()
-            object_class_status_item.setData(self.initial_status, Qt.EditRole)
-            for object_ in object_list:
-                if object_.class_id != object_class.id:
-                    continue
-                object_name_item = QStandardItem(object_.name)
-                object_name_item.setData(QIcon(pixmap), Qt.DecorationRole)
-                object_name_item.setFlags(~Qt.ItemIsEditable)
-                object_status_item = QStandardItem()
-                object_status_item.setData(self.initial_status, Qt.EditRole)
-                object_class_name_item.appendRow([object_name_item, object_status_item])
-            self.root_item.appendRow([object_class_name_item, object_class_status_item])
-        root_status_item = QStandardItem()
-        root_status_item.setData(self.initial_status, Qt.EditRole)
-        self.appendRow([self.root_item, root_status_item])
-        self.setHorizontalHeaderLabels(['name', 'show?'])
-
-
-class ObjectTreeModel(QStandardItemModel):
-    """A class to hold Spine data structure in a treeview."""
-
-    def __init__(self, tree_view_form):
-        """Initialize class"""
-        super().__init__(tree_view_form)
-        self.db_map = tree_view_form.db_map
-        self.root_item = QModelIndex()
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
-        self.spine_icon = QIcon(QPixmap(":/icons/Spine_db_icon.png"))
-        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
-        self.relationship_icon = QIcon(QPixmap(":/icons/relationship_icon.png"))
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the item referred to by the index."""
-        if role == Qt.ForegroundRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type.endswith('class') and not self.hasChildren(index):
-                return QBrush(Qt.gray)
-        return super().data(index, role)
-
-    def forward_sweep(self, index, call=None):
-        """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
-        if call:
-            call(index)
-        if not self.hasChildren(index):
-            return
-        current = index
-        back_to_parent = False  # True if moving back to the parent index
-        while True:
-            if call:
-                call(current)
-            if not back_to_parent:
-                # Try and visit first child
-                next_ = self.index(0, 0, current)
-                if next_.isValid():
-                    back_to_parent = False
-                    current = next_
-                    continue
-            # Try and visit next sibling
-            next_ = current.sibling(current.row() + 1, 0)
-            if next_.isValid():
-                back_to_parent = False
-                current = next_
-                continue
-            # Go back to parent
-            next_ = self.parent(current)
-            if next_ != index:
-                back_to_parent = True
-                current = next_
-                continue
-            break
-
-    def build_tree(self, db_name):
-        """Populate tree."""
+    def build_flat_tree(self, db_name):
+        """Build flat tree, only with object classes and objects."""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
@@ -1455,14 +1485,18 @@ class ObjectTreeModel(QStandardItemModel):
         wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
-        self.root_item.setData(self.spine_icon, Qt.DecorationRole)
+        icon = QIcon(":/icons/Spine_db_icon.png")
+        self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
+            icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if icon.pixmap(1, 1).isNull():
+                icon = self.object_icon
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
             object_class_item.setData(object_class.description, Qt.ToolTipRole)
-            object_class_item.setData(self.object_icon, Qt.DecorationRole)
+            object_class_item.setData(icon, Qt.DecorationRole)
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_item_list = list()
             for object_ in object_list:
@@ -1472,7 +1506,44 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item.setData('object', Qt.UserRole)
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(self.object_icon, Qt.DecorationRole)
+                object_item.setData(icon, Qt.DecorationRole)
+                object_item_list.append(object_item)
+            object_class_item.appendRows(object_item_list)
+            object_class_item_list.append(object_class_item)
+        self.root_item.appendRows(object_class_item_list)
+        self.appendRow(self.root_item)
+
+    def build_tree(self, db_name):
+        """Build tree."""
+        self.clear()
+        object_class_list = [x for x in self.db_map.object_class_list()]
+        object_list = [x for x in self.db_map.object_list()]
+        wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
+        wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
+        self.root_item = QStandardItem(db_name)
+        self.root_item.setData('root', Qt.UserRole)
+        icon = QIcon(":/icons/Spine_db_icon.png")
+        self.root_item.setData(icon, Qt.DecorationRole)
+        object_class_item_list = list()
+        for object_class in object_class_list:
+            object_icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+            if object_icon.pixmap(1, 1).isNull():
+                object_icon = self.object_icon
+            object_class_item = QStandardItem(object_class.name)
+            object_class_item.setData('object_class', Qt.UserRole)
+            object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
+            object_class_item.setData(object_class.description, Qt.ToolTipRole)
+            object_class_item.setData(object_icon, Qt.DecorationRole)
+            object_class_item.setData(self.bold_font, Qt.FontRole)
+            object_item_list = list()
+            for object_ in object_list:
+                if object_.class_id != object_class.id:
+                    continue
+                object_item = QStandardItem(object_.name)
+                object_item.setData('object', Qt.UserRole)
+                object_item.setData(object_._asdict(), Qt.UserRole + 1)
+                object_item.setData(object_.description, Qt.ToolTipRole)
+                object_item.setData(object_icon, Qt.DecorationRole)
                 relationship_class_item_list = list()
                 for wide_relationship_class in wide_relationship_class_list:
                     object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
@@ -1482,7 +1553,9 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                    relationship_class_item.setData(self.relationship_icon, Qt.DecorationRole)
+                    pixmap = relationship_pixmap(wide_relationship_class.object_class_name_list.split(","))
+                    relationship_icon = QIcon(pixmap)
+                    relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
                     relationship_class_item.setData(self.bold_font, Qt.FontRole)
                     relationship_item_list = list()
                     for wide_relationship in wide_relationship_list:
@@ -1493,7 +1566,7 @@ class ObjectTreeModel(QStandardItemModel):
                         relationship_item = QStandardItem(wide_relationship.object_name_list)
                         relationship_item.setData('relationship', Qt.UserRole)
                         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-                        relationship_item.setData(self.relationship_icon, Qt.DecorationRole)
+                        relationship_item.setData(relationship_icon, Qt.DecorationRole)
                         relationship_item_list.append(relationship_item)
                     relationship_class_item.appendRows(relationship_item_list)
                     relationship_class_item_list.append(relationship_class_item)
@@ -1510,17 +1583,25 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData('object_class', Qt.UserRole)
         object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
         object_class_item.setData(object_class.description, Qt.ToolTipRole)
-        object_class_item.setData(self.object_icon, Qt.DecorationRole)
+        icon = QIcon(":/object_class_icons/" + object_class.name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = self.object_icon
+        object_class_item.setData(icon, Qt.DecorationRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
-    def new_object_item(self, object_):
+    def new_object_item(self, object_, object_class_name, flat=False):
         """Returns new object item."""
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
         object_item.setData(object_.description, Qt.ToolTipRole)
-        object_item.setData(self.object_icon, Qt.DecorationRole)
+        icon = QIcon(":/object_class_icons/" + object_class_name + ".png")
+        if icon.pixmap(1, 1).isNull():
+            icon = self.object_icon
+        object_item.setData(icon, Qt.DecorationRole)
+        if flat:
+            return object_item
         relationship_class_item_list = list()
         for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
@@ -1549,25 +1630,23 @@ class ObjectTreeModel(QStandardItemModel):
     def add_object_class(self, object_class):
         """Add object class item to the model."""
         object_class_item = self.new_object_class_item(object_class)
-        root_item = self.invisibleRootItem().child(0)
-        for i in range(root_item.rowCount()):
-            visited_object_class_item = root_item.child(i)
+        for i in range(self.root_item.rowCount()):
+            visited_object_class_item = self.root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
             if visited_object_class['display_order'] >= object_class.display_order:
-                root_item.insertRow(i, QStandardItem())
-                root_item.setChild(i, 0, object_class_item)
+                self.root_item.insertRow(i, QStandardItem())
+                self.root_item.setChild(i, 0, object_class_item)
                 return
-        row = root_item.rowCount()
-        root_item.insertRow(row, QStandardItem())
-        root_item.setChild(row, 0, object_class_item)
+        row = self.root_item.rowCount()
+        self.root_item.insertRow(row, QStandardItem())
+        self.root_item.setChild(row, 0, object_class_item)
 
-    def add_object(self, object_):
+    def add_object(self, object_, flat=False):
         """Add object item to the model."""
         # find object class item among the children of the root
-        root_item = self.invisibleRootItem().child(0)
         object_class_item = None
-        for i in range(root_item.rowCount()):
-            visited_object_class_item = root_item.child(i)
+        for i in range(self.root_item.rowCount()):
+            visited_object_class_item = self.root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
             if visited_object_class['id'] == object_.class_id:
                 object_class_item = visited_object_class_item
@@ -1575,7 +1654,8 @@ class ObjectTreeModel(QStandardItemModel):
         if not object_class_item:
             logging.error("Object class item not found in model. This is probably a bug.")
             return
-        object_item = self.new_object_item(object_)
+        object_class_name = object_class_item.data(Qt.DisplayRole)
+        object_item = self.new_object_item(object_, object_class_name, flat=flat)
         object_class_item.appendRow(object_item)
 
     def add_relationship_class(self, wide_relationship_class):

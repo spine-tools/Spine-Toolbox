@@ -24,10 +24,26 @@ import time
 import shutil
 import glob
 import spinedatabase_api
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtGui import QCursor
+from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+
+
+def set_taskbar_icon():
+    """Set application icon to Windows taskbar."""
+    if os.name == "nt":
+        import ctypes
+        myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
+
+@Slot(name="supported_img_formats")
+def supported_img_formats():
+    """Function to check if reading .ico files is supported."""
+    img_formats = QImageReader().supportedImageFormats()
+    img_formats_str = '\n'.join(str(x) for x in img_formats)
+    logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
 
 
 def spinedatabase_api_version_check():
@@ -273,3 +289,38 @@ def rename_dir(widget, old_dir, new_dir):
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
     return True
+
+def relationship_pixmap(object_class_name_list):
+    """A pixmap rendered by painting several object pixmaps together."""
+    extent = 64
+    x_step = 56
+    y_offset = 50
+    pixmap_list = list()
+    for object_class_name in object_class_name_list:
+        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
+        if pixmap.isNull():
+            pixmap = QPixmap(":/icons/object_icon.png")
+        pixmap_list.append(pixmap.scaled(extent, extent))
+    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)]
+    combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
+    combo_height = extent + y_offset
+    combo_extent = max(combo_width, combo_height)
+    x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
+    y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
+    relationship_pixmap = QPixmap(combo_extent, combo_extent)
+    relationship_pixmap.fill(Qt.transparent)
+    painter = QPainter(relationship_pixmap)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+    x_offset = 0
+    for pixmap_row in pixmap_matrix:
+        for j, pixmap in enumerate(pixmap_row):
+            if j % 2 == 1:
+                x = x_offset + x_step / 2 + x_padding
+                y = y_offset + y_padding
+            else:
+                x = x_offset + x_padding
+                y = y_padding
+            painter.drawPixmap(x, y, pixmap)
+        x_offset += x_step
+    painter.end()
+    return relationship_pixmap

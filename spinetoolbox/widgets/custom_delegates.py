@@ -53,12 +53,14 @@ class CheckBoxDelegate(QItemDelegate):
 
     Attributes:
         parent (QMainWindow): either toolbox or spine datapackage widget
+        centered (bool): whether or not the checkbox should be center-aligned in the widget
     """
 
     commit_data = Signal("QModelIndex", name="commit_data")
 
-    def __init__(self, parent):
+    def __init__(self, parent, centered=True):
         super().__init__(parent)
+        self._centered = centered
         self.mouse_press_point = QPoint()
 
     def createEditor(self, parent, option, index):
@@ -120,9 +122,13 @@ class CheckBoxDelegate(QItemDelegate):
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
         checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
-        checkbox_center = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
-                                 option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
-        return QRect(checkbox_center, checkbox_rect.size())
+        if self._centered:
+            checkbox_anchor = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
+                                     option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
+        else:
+            checkbox_anchor = QPoint(option.rect.x() + checkbox_rect.width() / 2,
+                                     option.rect.y() + checkbox_rect.height() / 2)
+        return QRect(checkbox_anchor, checkbox_rect.size())
 
 
 class TreeViewDelegate(QItemDelegate):
@@ -409,10 +415,23 @@ class AddRelationshipClassesDelegate(TreeViewDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship class name':
-            editor.set_data(index.data(Qt.EditRole))
+            data = index.data(Qt.EditRole)
+            if data:
+                editor.set_data(index.data(Qt.EditRole))
+            else:
+                editor.set_data(self.relationship_class_name(index))
         else:
             object_class_name_list = [x.name for x in self.db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+
+    def relationship_class_name(self, index):
+        """A relationship class name composed by concatenating object class names."""
+        object_class_name_list = list()
+        for column in range(index.column()):
+            object_class_name = index.sibling(index.row(), column).data(Qt.DisplayRole)
+            if object_class_name:
+                object_class_name_list.append(object_class_name)
+        return "__".join(object_class_name_list)
 
 
 class AddRelationshipsDelegate(TreeViewDelegate):
@@ -435,7 +454,11 @@ class AddRelationshipsDelegate(TreeViewDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship name':
-            editor.set_data(index.data(Qt.EditRole))
+            data = index.data(Qt.EditRole)
+            if data:
+                editor.set_data(data)
+            else:
+                editor.set_data(self.relationship_name(index))
         else:
             object_class_name = header[index.column()].split(' ', 1)[0]
             object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
@@ -444,6 +467,15 @@ class AddRelationshipsDelegate(TreeViewDelegate):
             else:
                 object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
             editor.set_data(index.data(Qt.EditRole), object_name_list)
+
+    def relationship_name(self, index):
+        """A relationship name composed by concatenating object names."""
+        object_name_list = list()
+        for column in range(index.column()):
+            object_name = index.sibling(index.row(), column).data(Qt.DisplayRole)
+            if object_name:
+                object_name_list.append(object_name)
+        return "__".join(object_name_list)
 
 
 class ResourceNameDelegate(QItemDelegate):

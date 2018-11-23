@@ -88,6 +88,12 @@
           <property name="selectionMode">
            <enum>QAbstractItemView::ExtendedSelection</enum>
           </property>
+          <property name="iconSize">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
          </widget>
         </item>
        </layout>
@@ -647,7 +653,7 @@
     <addaction name="actionImport"/>
     <addaction name="actionExport"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
+    <addaction name="actionClose"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -684,7 +690,7 @@
     <string>Ctrl+Backspace</string>
    </property>
   </action>
-  <action name="actionQuit">
+  <action name="actionClose">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
@@ -693,7 +699,7 @@
     <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Esc</string>
+    <string>Ctrl+W</string>
    </property>
   </action>
   <action name="actionAdd_object_classes">

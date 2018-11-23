@@ -20,7 +20,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.1.71"
+SPINE_TOOLBOX_VERSION = "0.1.75"
 REQUIRED_SPINE_DBAPI_VERSION = "0.0.10"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
@@ -36,7 +36,7 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "settings.conf"))
+    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
     DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html", "index.html"))
@@ -92,7 +92,8 @@ SETTINGS = {"project_directory": "",
             "use_repl": "true",
             "julia_path": "",
             "save_at_exit": "1",
-            "commit_at_exit": "1"}
+            "commit_at_exit": "1",
+            "delete_data": "false"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \

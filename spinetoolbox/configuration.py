@@ -16,24 +16,34 @@ Module for handling Spine Toolbox configuration files.
 :date:   10.1.2018
 """
 
+import os
 import configparser
 import logging
 import codecs
 from config import SETTINGS
+from helpers import create_dir
 
 
 class ConfigurationParser(object):
     """ConfigurationParser class takes care of handling configurations files
     in persistent storage."""
-    def __init__(self, file_path, defaults=None):
+    def __init__(self, toolbox, file_path, defaults=None):
         """Initialize configuration parser.
 
         Args:
+            toolbox (ToolboxUI): QMainWindow instance
             file_path (str): Absolute path to the configuration file.
             defaults (dict): A dictionary containing configuration default options.
         """
+        self._toolbox = toolbox
         self.parser = configparser.ConfigParser()
         self.file_path = file_path
+        # Create conf directory if it does not exist
+        d = os.path.split(self.file_path)[0]
+        try:
+            create_dir(d)
+        except OSError:
+            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed. Check permissions.".format(d))
         if defaults:
             self.parser['settings'] = defaults
         else:
