@@ -2200,13 +2200,18 @@ class RelationshipParameterModel(QAbstractTableModel):
         if Qt.DecorationRole in roles:
             return
         header = self.horizontal_header_labels()
+        top = top_left.row()
         left = top_left.column()
+        bottom = bottom_right.row()
         right = bottom_right.column()
+        self.set_relationship_class_icon(top, left, bottom, right, header)
+        self.set_object_icons(top, left, bottom, right, header)
+
+    def set_relationship_class_icon(self, top, left, bottom, right, header):
+        """Set relationship class icons."""
         relationship_class_name_column = header.index('relationship_class_name')
         if relationship_class_name_column < left or relationship_class_name_column > right:
             return
-        top = top_left.row()
-        bottom = bottom_right.row()
         relationship_class_dict = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
         for row in range(top, bottom + 1):
             relationship_class_name = self._main_data[row][relationship_class_name_column]
@@ -2219,6 +2224,10 @@ class RelationshipParameterModel(QAbstractTableModel):
         new_top_left = self.index(top, relationship_class_name_column)
         new_bottom_right = self.index(bottom, relationship_class_name_column)
         self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
+
+    def set_object_icons(self, top, left, bottom, right, header):
+        """See reimplementation in RelationshipParameterValueModel"""
+        pass
 
 
 class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterModel):
@@ -2557,6 +2566,25 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
         self.object_name_range = None  # Range of column indices that are part of the object name list
 
+    def set_object_icons(self, top, left, bottom, right, header):
+        """Set object icons."""
+        object_name_columns = [x for x in range(left, right + 1) if x in self.object_name_range]
+        if not object_name_columns:
+            return
+        object_dict = {x.name: x.class_id for x in self.db_map.object_list()}
+        for row in range(top, bottom + 1):
+            for column in object_name_columns:
+                object_name = self._main_data[row][column]
+                try:
+                    object_class_id = object_dict[object_name]
+                    icon = self.object_icon_dict[object_class_id]
+                    self._aux_data[row][column][Qt.DecorationRole] = icon
+                except KeyError:
+                    continue
+        new_top_left = self.index(top, object_name_columns[0])
+        new_bottom_right = self.index(bottom, object_name_columns[-1])
+        self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
+
     def init_model(self, skip_fields=['parameter_id']):
         """Initialize model from source database."""
         data = self.db_map.relationship_parameter_value_list()
@@ -2759,7 +2787,9 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
                 }
                 relationships_to_add[row] = relationship
             self._main_data[row][object_id_list_column] = join_object_id_list
-        relationships_on_the_fly.update(self.new_relationships(relationships_to_add))
+        relationships = self.new_relationships(relationships_to_add)
+        if relationships:
+            relationships_on_the_fly.update(relationships)
         return relationships_on_the_fly
 
     def new_relationships(self, relationships_to_add):
