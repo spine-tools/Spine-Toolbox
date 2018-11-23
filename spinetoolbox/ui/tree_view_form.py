@@ -440,7 +440,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuSession.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_object.setCurrentIndex(1)
+        self.tabWidget_object.setCurrentIndex(0)
         self.tabWidget_relationship.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
@@ -506,6 +506,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import JSONPopupTableView, AutoFilterCopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import JSONPopupTableView, AutoFilterCopyPasteTableView
 import resources_icons_rc

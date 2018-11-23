@@ -183,6 +183,7 @@ class GraphViewForm(QMainWindow):
             object_class_name = object_class.name
             # Create widget to add to splitter
             tab_widget = QTabWidget(self.parameter_splitter)
+            tab_widget.tabBar().setMaximumHeight(24)
             tab_widget.setObjectName(object_class_name)
             icon = self.object_icon_dict[object_class.id]
             button = QPushButton(icon, object_class_name, tab_widget)
@@ -880,7 +881,7 @@ class GraphViewForm(QMainWindow):
             for item in arc_items:
                 item.remove_template()
                 item.template_id = None
-                item.object_id_list = ",".join(object_id_list)
+                item.object_id_list = ",".join([str(x) for x in object_id_list])
             self.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new relationship '{}'.".format(wide_relationship.name)
             self.msg.emit(msg)

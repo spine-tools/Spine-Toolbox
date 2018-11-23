@@ -1046,6 +1046,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.object_name = object_name
         self.object_class_name = object_class_name
         self._extent = extent
+        self._label_color = label_color
         self._label_position = label_position
         self.label_item = ObjectLabelItem(object_name, label_font, label_color)
         self.incoming_arc_items = list()
@@ -1058,6 +1059,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._bounce = False
         self._views_cursor = {}
         self.shade = QGraphicsRectItem()
+        self._selected_color = graph_view_form.palette().highlight()
         pixmap = object_pixmap(object_class_name)
         self.setPixmap(pixmap.scaled(extent, extent))
         self.setZValue(-1)
@@ -1068,7 +1070,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.shade.setRect(self.boundingRect())
-        self.shade.setBrush(graph_view_form.palette().highlight())
+        self.shade.setBrush(self._selected_color)
         self.shade.setPen(Qt.NoPen)
         self.shade.setParentItem(self)
         self.shade.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
@@ -1078,9 +1080,11 @@ class ObjectItem(QGraphicsPixmapItem):
         """Try and make it more clear when an item is selected."""
         if option.state & (QStyle.State_Selected):
             self.shade.show()
+            self.label_item.setBrush(self._selected_color)
             option.state &= ~QStyle.State_Selected
         else:
             self.shade.hide()
+            self.label_item.setBrush(self._label_color)
         super().paint(painter, option, widget)
 
     def setParentItem(self, parent):

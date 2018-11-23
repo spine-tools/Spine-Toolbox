@@ -88,26 +88,27 @@ class CopyPasteTableView(QTableView):
         If data is smaller than selection, repeat data to fit selection."""
         if not text:
             return False
+        data = [line.split('\t') for line in text.split('\n')]
+        if not data:
+            return False
         selection = self.selectionModel().selection()
         if selection.isEmpty():
             return False
         first = selection.first()
-        data = [line.split('\t') for line in text.split('\n')]
-        v_header = self.verticalHeader()
-        h_header = self.horizontalHeader()
         indexes = list()
         values = list()
-        for i in range(first.top(), first.bottom() + 1):
-            if v_header.isSectionHidden(i):
-                continue
-            for j in range(first.left(), first.right() + 1):
-                if h_header.isSectionHidden(j):
-                    continue
-                index = self.model().index(i, j)
+        is_row_hidden = self.verticalHeader().isSectionHidden
+        rows = [x for x in range(first.top(), first.bottom() + 1) if not is_row_hidden(x)]
+        is_column_hidden = self.horizontalHeader().isSectionHidden
+        columns = [x for x in range(first.left(), first.right() + 1) if not is_column_hidden(x)]
+        model_index = self.model().index
+        for row in rows:
+            for column in columns:
+                index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
-                    ii = (i - first.top()) % len(data)
-                    jj = (j - first.left()) % len(data[ii])
-                    value = data[ii][jj]
+                    i = (row - rows[0]) % len(data)
+                    j = (column - columns[0]) % len(data[i])
+                    value = data[i][j]
                     indexes.append(index)
                     values.append(value)
         self.model().batch_set_data(indexes, values)
@@ -118,32 +119,44 @@ class CopyPasteTableView(QTableView):
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]
-        top_left_index = self.currentIndex()
-        if not top_left_index.isValid():
+        if not data:
             return False
-        v_header = self.verticalHeader()
-        h_header = self.horizontalHeader()
-        row = top_left_index.row()
+        current = self.currentIndex()
+        if not current.isValid():
+            return False
         indexes = list()
         values = list()
-        for line in data:
+        row = current.row()
+        rows = []
+        rows_append = rows.append
+        is_row_hidden = self.verticalHeader().isSectionHidden
+        for x in range(len(data)):
+            while is_row_hidden(row):
+                row += 1
+            rows_append(row)
+            row += 1
+        column = current.column()
+        columns = []
+        columns_append = columns.append
+        is_column_hidden = self.horizontalHeader().isSectionHidden
+        for x in range(len(data[0])):
+            while is_column_hidden(column):
+                column += 1
+            columns_append(column)
+            column += 1
+        model_index = self.model().index
+        for i, row in enumerate(rows):
+            line = data[i]
             if not line:
                 continue
-            if v_header.isSectionHidden(row):
-                row += 1
-            column = top_left_index.column()
-            for value in line:
+            for j, column in enumerate(columns):
+                value = line[j]
                 if not value:
-                    column += 1
                     continue
-                if h_header.isSectionHidden(column):
-                    column += 1
-                index = self.model().index(row, column)  # NOTE: This should make the model grow if needed
+                index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
                     values.append(value)
-                column += 1
-            row += 1
         self.model().batch_set_data(indexes, values)
         return True
 

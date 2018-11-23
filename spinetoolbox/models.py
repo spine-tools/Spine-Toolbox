@@ -26,7 +26,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QFon
     QPainter, QGuiApplication
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir, relationship_pixmap, object_pixmap, fix_name_ambiguity
+from helpers import rename_dir, fix_name_ambiguity, busy_effect
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
@@ -1931,7 +1931,7 @@ class WIPTableModel(MinimalTableModel):
             data_row_count = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
             rows = range(0, data_row_count)
         elif self.has_empty_row:
-            empty_row = self.rowCount() - 1
+            empty_row = self.rowCount()  # FIXME: is this correct? or should it be self.rowCount() - 1???
             try:
                 rows.remove(empty_row)
             except ValueError:
@@ -1960,12 +1960,11 @@ class WIPTableModel(MinimalTableModel):
 
 
 class ParameterDefinitionModel(WIPTableModel):
-    """A model of parameter data, used by TreeViewForm.
-    It implements methods that are common to both object and relationship parameters,
+    """A model of parameter definition data, used by TreeViewForm.
+    It implements methods that are common to both object and relationship parameter definitions,
     so the more specific `ObjectParameterDefinitionModel` and `RelationshipParameterDefinitionModel`
     can inherit from this.
     """
-
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
@@ -1998,6 +1997,7 @@ class ParameterDefinitionModel(WIPTableModel):
             items_to_update.setdefault(id, dict()).update(item)
         return list(items_to_update.values())
 
+    @busy_effect
     def add_items_to_db(self, items_to_add):
         """Add items to database and make columns fixed if successful."""
         if not items_to_add:
@@ -2009,7 +2009,7 @@ class ParameterDefinitionModel(WIPTableModel):
             parameters = self.db_map.add_parameters(*items)
             id_column = self.horizontal_header_labels().index('id')
             for i, parameter in enumerate(parameters):
-                self._main_data[rows[i]][id_column] = parameter.id  # NOTE: DisplayRole not in use
+                self._main_data[rows[i]][id_column] = parameter.id
             self.make_data_fixed(rows=rows)
             self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
@@ -2022,6 +2022,7 @@ class ParameterDefinitionModel(WIPTableModel):
             self._tree_view_form.msg_error.emit(e.msg)
             return False
 
+    @busy_effect
     def update_items_in_db(self, items_to_update):
         """Try and update parameters in database."""
         if not items_to_update:
@@ -2085,6 +2086,7 @@ class ParameterValueModel(WIPTableModel):
             items_to_update.setdefault(id, dict()).update(item)
         return list(items_to_update.values())
 
+    @busy_effect
     def add_items_to_db(self, items_to_add):
         """Add parameter values to database and make columns fixed if successful."""
         if not items_to_add:
@@ -2108,6 +2110,7 @@ class ParameterValueModel(WIPTableModel):
             self._tree_view_form.msg_error.emit(e.msg)
             return False
 
+    @busy_effect
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database."""
         if not items_to_update:
@@ -2126,26 +2129,46 @@ class ParameterValueModel(WIPTableModel):
             return False
 
 
-class ObjectParameterDefinitionModel(ParameterDefinitionModel):
-    """A model of object parameter data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None, has_empty_row=True):
-        """Initialize class."""
-        super().__init__(tree_view_form, has_empty_row=has_empty_row)
+class ObjectParameterModel(QAbstractTableModel):
+    """A model of object parameter data, used by TreeViewForm.
+    It implements methods that are common to both object parameter definitions and values,
+    so the more specific `ObjectParameterDefinitionModel` and `ObjectParameterValueModel`
+    can inherit from this."""
+    def __init__(self):
+        super().__init__()
+        self.dataChanged.connect(self.handle_data_changed)
 
-    def init_model(self, skip_fields=[]):
-        """Initialize model from source database."""
-        data = self.db_map.object_parameter_list()
-        fields = self.db_map.object_parameter_fields()
-        header = [x for x in fields if x not in skip_fields]
-        self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        aux_data = self.decoration_role_data(model_data, header)
-        self.reset_model(model_data, aux_data=aux_data)
-        column_names = ['id', 'object_class_name']
-        self.make_data_fixed(column_names=column_names)
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_data_changed")
+    def handle_data_changed(self, top_left, bottom_right, roles=[]):
+        """Fill in decoration role data when object class name changes."""
+        if Qt.EditRole not in roles:
+            return
+        if Qt.DecorationRole in roles:
+            return
+        header = self.horizontal_header_labels()
+        left = top_left.column()
+        right = bottom_right.column()
+        object_class_name_column = header.index('object_class_name')
+        if object_class_name_column < left or object_class_name_column > right:
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
+        object_class_dict = {x.name: x.id for x in self.db_map.object_class_list()}
+        for row in range(top, bottom + 1):
+            object_class_name = self._main_data[row][object_class_name_column]
+            try:
+                object_class_id = object_class_dict[object_class_name]
+                icon = self.object_icon_dict[object_class_id]
+                self._aux_data[row][object_class_name_column][Qt.DecorationRole] = icon
+            except KeyError:
+                continue
+        new_top_left = self.index(top, object_class_name_column)
+        new_bottom_right = self.index(bottom, object_class_name_column)
+        self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
 
-    def decoration_role_data(self, model_data, header):
-        """Return decoration role data for model initialization."""
+    def decoration_role_data(self, model_data):
+        """Return decoration role data based on model_data."""
+        header = self.horizontal_header_labels()
         aux_data = []
         aux_data_append = aux_data.append
         row_range = range(len(model_data[0]))
@@ -2159,13 +2182,71 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
             aux_data_append(aux_row)
         return aux_data
 
+
+class RelationshipParameterModel(QAbstractTableModel):
+    """A model of relationship parameter data, used by TreeViewForm.
+    It implements methods that are common to both relationship parameter definitions and values,
+    so the more specific `RelationshipParameterDefinitionModel` and `RelationshipParameterValueModel`
+    can inherit from this."""
+    def __init__(self):
+        super().__init__()
+        self.dataChanged.connect(self.handle_data_changed)
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_data_changed")
+    def handle_data_changed(self, top_left, bottom_right, roles=[]):
+        """Fill in decoration role data when relationship class or object names change."""
+        if Qt.EditRole not in roles:
+            return
+        if Qt.DecorationRole in roles:
+            return
+        header = self.horizontal_header_labels()
+        left = top_left.column()
+        right = bottom_right.column()
+        relationship_class_name_column = header.index('relationship_class_name')
+        if relationship_class_name_column < left or relationship_class_name_column > right:
+            return
+        top = top_left.row()
+        bottom = bottom_right.row()
+        relationship_class_dict = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
+        for row in range(top, bottom + 1):
+            relationship_class_name = self._main_data[row][relationship_class_name_column]
+            try:
+                relationship_class_id = relationship_class_dict[relationship_class_name]
+                icon = self.relationship_icon_dict[relationship_class_id]
+                self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = icon
+            except KeyError:
+                continue
+        new_top_left = self.index(top, relationship_class_name_column)
+        new_bottom_right = self.index(bottom, relationship_class_name_column)
+        self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
+
+
+class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterModel):
+    """A model of object parameter data, used by TreeViewForm."""
+    def __init__(self, tree_view_form=None, has_empty_row=True):
+        """Initialize class."""
+        super().__init__(tree_view_form, has_empty_row=has_empty_row)
+
+    def init_model(self, skip_fields=[]):
+        """Initialize model from source database."""
+        data = self.db_map.object_parameter_list()
+        fields = self.db_map.object_parameter_fields()
+        header = [x for x in fields if x not in skip_fields]
+        self.set_horizontal_header_labels(header)
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
+        aux_data = self.decoration_role_data(model_data)
+        self.reset_model(model_data, aux_data=aux_data)
+        column_names = ['id', 'object_class_name']
+        self.make_data_fixed(column_names=column_names)
+
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type != "object_class":
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
-        for row in range(self.rowCount()):
+        for row in row_range:
             try:
                 curr_name = self._main_data[row][column][Qt.DisplayRole]
                 new_name = names_dict[curr_name]
@@ -2176,9 +2257,10 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
     def remove_items(self, removed_type, *removed_names):
         if removed_type != "object_class":
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
-        for row in reversed(range(self.rowCount())):
+        for row in reversed(row_range):
             try:
                 name = self._main_data[row][column]
             except KeyError:
@@ -2191,6 +2273,7 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
+        object_class_id_column = header.index('object_class_id')
         object_class_name_column = header.index('object_class_name')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
@@ -2200,23 +2283,25 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
                 continue
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            if not parameter_name:
-                continue
             try:
                 object_class_id = object_class_dict[object_class_name]
-                item = {
-                    "object_class_id": object_class_id,
-                    "name": parameter_name
-                }
-                for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
-                items_to_add[row] = item
             except KeyError:
-                pass
+                continue
+            # Autoset the object_class_id
+            self._main_data[row][object_class_id_column] = object_class_id
+            if not parameter_name:
+                continue
+            item = {
+                "object_class_id": object_class_id,
+                "name": parameter_name
+            }
+            for column in range(parameter_name_column + 1, self.columnCount()):
+                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            items_to_add[row] = item
         return items_to_add
 
 
-class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
+class RelationshipParameterDefinitionModel(ParameterDefinitionModel, RelationshipParameterModel):
     """A model of relationship parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
@@ -2233,7 +2318,6 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
         aux_data = []
         aux_data_append = aux_data.append
         row_range = range(len(model_data[0]))
-        relationship_icon = lambda x: QIcon(relationship_pixmap(x.split(",")))
         relationship_class_id_column = header.index('relationship_class_id')
         relationship_class_name_column = header.index('relationship_class_name')
         object_class_name_list_column = header.index('object_class_name_list')
@@ -2250,11 +2334,12 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object_class"):
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "relationship_class":
             column = header_index("relationship_class_name")
-            for row in range(self.rowCount()):
+            for row in row_range:
                 try:
                     curr_name = self._main_data[row][column]
                     new_name = names_dict[curr_name]
@@ -2263,7 +2348,7 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
                     continue
         elif renamed_type == "object_class":
             column = header_index("object_class_name_list")
-            for row in range(self.rowCount()):
+            for row in row_range:
                 object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
                 for i, object_class_name in enumerate(object_class_name_list):
                     try:
@@ -2275,10 +2360,11 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
     def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object_class"):
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
         if removed_type == "relationship_class":
             column = header_index("relationship_class_name")
-            for row in reversed(range(self.rowCount())):
+            for row in reversed(row_range):
                 try:
                     name = self._main_data[row][column]
                 except KeyError:
@@ -2287,7 +2373,7 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
                     super().removeRows(row, 1)
         elif removed_type == "object_class":
             column = header_index("object_class_name_list")
-            for row in reversed(range(self.rowCount())):
+            for row in reversed(row_range):
                 try:
                     object_class_name_list = self._main_data[row][column].split(",")
                 except KeyError:
@@ -2303,12 +2389,18 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
+        relationship_class_id_column = header.index('relationship_class_id')
         relationship_class_name_column = header.index('relationship_class_name')
-        parameter_name_column = header.index('parameter_name')
+        object_class_id_list_column = header.index('object_class_id_list')
         object_class_name_list_column = header.index('object_class_name_list')
+        parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        relationship_class_dict = {x.name: {'id': x.id, 'object_class_name_list': x.object_class_name_list}
-                                   for x in self.db_map.wide_relationship_class_list()}
+        relationship_class_dict = {
+            x.name: {
+                'id': x.id,
+                'object_class_id_list': x.object_class_id_list,
+                'object_class_name_list': x.object_class_name_list
+            } for x in self.db_map.wide_relationship_class_list()}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             if not self.is_work_in_progress(row):
@@ -2316,32 +2408,29 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            # Autoset the object_class_name_list if possible and needed
-            if relationship_class_name and not object_class_name_list:
-                try:
-                    object_class_name_list = relationship_class_dict[relationship_class_name]['object_class_name_list']
-                    self._main_data[row][object_class_name_list_column] = object_class_name_list
-                    # Append index to indexes, so we can emit dataChanged with it later
-                    indexes.append(self.index(row, object_class_name_list_column))
-                except KeyError:
-                    pass
+            try:
+                relationship_class = relationship_class_dict[relationship_class_name]
+            except KeyError:
+                continue
+            if object_class_name_list != relationship_class['object_class_name_list']:
+                self._main_data[row][object_class_id_list_column] = relationship_class['object_class_id_list']
+                self._main_data[row][object_class_name_list_column] = relationship_class['object_class_name_list']
+                indexes.append(self.index(row, object_class_name_list_column))
             if not parameter_name:
                 continue
-            try:
-                relationship_class_id = relationship_class_dict[relationship_class_name]['id']
-                item = {
-                    "relationship_class_id": relationship_class_id,
-                    "name": parameter_name
-                }
-                for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
-                items_to_add[row] = item
-            except KeyError:
-                pass
+            relationship_class_id = relationship_class['id']
+            self._main_data[row][relationship_class_id_column] = relationship_class_id
+            item = {
+                "relationship_class_id": relationship_class_id,
+                "name": parameter_name
+            }
+            for column in range(parameter_name_column + 1, self.columnCount()):
+                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            items_to_add[row] = item
         return items_to_add
 
 
-class ObjectParameterValueModel(ParameterValueModel):
+class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
     """A model of object parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
@@ -2354,37 +2443,23 @@ class ObjectParameterValueModel(ParameterValueModel):
         header = [x for x in fields if x not in skip_fields]
         self.set_horizontal_header_labels(header)
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
-        aux_data = self.decoration_role_data(model_data, header)
+        aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
     def init_model_from_data(self, model_data, header):
         """Initialize model from source database."""
-        aux_data = self.decoration_role_data(model_data, header)
         self.set_horizontal_header_labels(header)
+        aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
-    def decoration_role_data(self, model_data, header):
-        """Return decoration role data for model initialization."""
-        aux_data = []
-        aux_data_append = aux_data.append
-        row_range = range(len(model_data[0]))
-        object_class_id_column = header.index('object_class_id')
-        object_class_name_column = header.index('object_class_name')
-        for model_row in model_data:
-            aux_row = [{} for i in row_range]
-            object_class_id = model_row[object_class_id_column]
-            icon = self.object_icon_dict[object_class_id]
-            aux_row[object_class_name_column][Qt.DecorationRole] = icon
-            aux_data_append(aux_row)
-        return aux_data
-
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("object_class", "object", "parameter"):
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         names_dict = dict(zip(curr_names, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object_class":
@@ -2393,7 +2468,7 @@ class ObjectParameterValueModel(ParameterValueModel):
             column = header_index("object_name")
         elif renamed_type == "parameter":
             column = header_index("parameter_name")
-        for row in range(self.rowCount()):
+        for row in row_range:
             try:
                 curr_name = self._main_data[row][column]
                 new_name = names_dict[curr_name]
@@ -2404,6 +2479,7 @@ class ObjectParameterValueModel(ParameterValueModel):
     def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("object_class", "object", "parameter"):
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
         if removed_type == "object_class":
             column = header_index("object_class_name")
@@ -2411,7 +2487,7 @@ class ObjectParameterValueModel(ParameterValueModel):
             column = header_index("object_name")
         elif removed_type == "parameter":
             column = header_index("parameter_name")
-        for row in reversed(range(self.rowCount())):
+        for row in reversed(row_range):
             try:
                 name = self._main_data[row][column]
             except KeyError:
@@ -2425,11 +2501,13 @@ class ObjectParameterValueModel(ParameterValueModel):
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
+        object_class_id_column = header.index('object_class_id')
         object_class_name_column = header.index('object_class_name')
+        object_id_column = header.index('object_id')
         object_name_column = header.index('object_name')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        object_class_lookup_dict = {x.id: x.name for x in self.db_map.object_class_list()}
+        object_class_dict = {x.id: x.name for x in self.db_map.object_class_list()}
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self.db_map.object_list()}
         parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
                           for x in self.db_map.parameter_list()}
@@ -2437,41 +2515,42 @@ class ObjectParameterValueModel(ParameterValueModel):
         for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
-            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            # Autoset the object_class_name if possible and needed
-            if (object_name or parameter_name) and not object_class_name:
-                try:
-                    object_class_id = object_dict[object_name]['class_id']
-                except KeyError:
-                    try:
-                        object_class_id = parameter_dict[parameter_name]['object_class_id']
-                    except KeyError:
-                        object_class_id = None
-                try:
-                    object_class_name = object_class_lookup_dict[object_class_id]
-                    self._main_data[row][object_class_name_column] = object_class_name
-                    # Append index to indexes, so we can emit dataChanged with it later
-                    indexes.append(self.index(row, object_class_name_column))
-                except KeyError:
-                    pass
+            object_ = object_dict.get(object_name)
+            parameter = parameter_dict.get(parameter_name)
             try:
-                object_id = object_dict[object_name]['id']
-                parameter_id = parameter_dict[parameter_name]['id']
-                item = {
-                    "object_id": object_id,
-                    "parameter_id": parameter_id
-                }
-                for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
-                items_to_add[row] = item
+                object_class_id = object_['class_id']
+            except TypeError:
+                try:
+                    object_class_id = parameter['object_class_id']
+                except TypeError:
+                    continue
+            try:
+                new_object_class_name = object_class_dict[object_class_id]
             except KeyError:
-                pass
+                continue
+            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
+            if object_class_name != new_object_class_name:
+                self._main_data[row][object_class_id_column] = object_class_id
+                self._main_data[row][object_class_name_column] = new_object_class_name
+                indexes.append(self.index(row, object_class_name_column))
+            if object_ is None or parameter is None:
+                continue
+            object_id = object_['id']
+            parameter_id = parameter['id']
+            self._main_data[row][object_id_column] = object_id
+            item = {
+                "object_id": object_id,
+                "parameter_id": parameter_id
+            }
+            for column in range(parameter_name_column + 1, self.columnCount()):
+                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            items_to_add[row] = item
         return items_to_add
 
 
-class RelationshipParameterValueModel(ParameterValueModel):
+class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameterModel):
     """A model of relationship parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
@@ -2543,9 +2622,10 @@ class RelationshipParameterValueModel(ParameterValueModel):
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("relationship_class", "object", "parameter"):
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         names_dict = dict(zip(curr_names, new_names))
         if renamed_type == "object":
-            for row in range(self.rowCount()):
+            for row in row_range:
                 for column in self.object_name_range:
                     try:
                         curr_name = self._main_data[row][column]
@@ -2559,7 +2639,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
                 column = header_index("relationship_class_name")
             elif renamed_type in "parameter":
                 column = header_index("parameter_name")
-            for row in range(self.rowCount()):
+            for row in row_range:
                 try:
                     curr_name = self._main_data[row][column]
                     new_name = names_dict[curr_name]
@@ -2570,8 +2650,9 @@ class RelationshipParameterValueModel(ParameterValueModel):
     def remove_items(self, removed_type, *removed_names):
         if removed_type not in ("relationship_class", "object", "parameter"):
             return
+        row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         if removed_type == "object":
-            for row in reversed(range(self.rowCount())):
+            for row in reversed(row_range):
                 for column in self.object_name_range:
                     try:
                         name = self._main_data[row][column]
@@ -2586,7 +2667,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
                 column = header_index("relationship_class_name")
             elif removed_type in "parameter":
                 column = header_index("parameter_name")
-            for row in reversed(range(self.rowCount())):
+            for row in reversed(row_range):
                 try:
                     name = self._main_data[row][column]
                 except KeyError:
@@ -2629,45 +2710,32 @@ class RelationshipParameterValueModel(ParameterValueModel):
         # Get column numbers
         header = self.horizontal_header_labels()
         relationship_class_name_column = header.index('relationship_class_name')
-        # object_name_1_column = header.index('object_name [1]')
-        object_name_1_column = self.object_name_range.start
-        parameter_name_column = header.index('parameter_name')
+        object_id_list_column = header.index('object_id_list')
+        object_name1_column = self.object_name_range.start
         # Query db and build ad-hoc dicts
-        relationship_class_lookup_dict = {x.id: x.name for x in self.db_map.wide_relationship_class_list()}
-        relationship_class_dict = {x.name: {'id': x.id, 'object_class_id_list': x.object_class_id_list}
-                                   for x in self.db_map.wide_relationship_class_list()}
-        parameter_dict = {x.name: {'id': x.id, 'relationship_class_id': x.relationship_class_id}
-                          for x in self.db_map.parameter_list()}
-        relationship_dict = {x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
-                             for x in self.db_map.wide_relationship_list()}
+        relationship_class_dict = {
+            x.name: {
+                'id': x.id,
+                'object_class_count': len(x.object_class_id_list.split(','))
+            } for x in self.db_map.wide_relationship_class_list()}
+        relationship_dict = {
+            x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
+            for x in self.db_map.wide_relationship_list()}
+        relationship_dict = {(x.class_id, x.object_id_list): x.id for x in self.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self.db_map.object_list()}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
-            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            # Autoset the relationship_class_name if possible and needed
-            if parameter_name and not relationship_class_name:
-                try:
-                    relationship_class_id = parameter_dict[parameter_name]['relationship_class_id']
-                    try:
-                        relationship_class_name = relationship_class_lookup_dict[relationship_class_id]
-                        self._main_data[row][relationship_class_name_column] = relationship_class_name
-                        # Append index to indexes, so we can emit dataChanged with it later
-                        indexes.append(self.index(row, relationship_class_name_column))
-                    except KeyError:
-                        pass
-                except KeyError:
-                    pass
             try:
                 relationship_class = relationship_class_dict[relationship_class_name]
             except KeyError:
                 continue
             object_id_list = list()
             object_name_list = list()
-            object_class_count = len(relationship_class['object_class_id_list'].split(','))
-            for j in range(object_name_1_column, object_name_1_column + object_class_count):
+            object_class_count = relationship_class['object_class_count']
+            for j in range(object_name1_column, object_name1_column + object_class_count):
                 object_name = self.index(row, j).data(Qt.DisplayRole)
                 try:
                     object_id = object_dict[object_name]
@@ -2677,13 +2745,12 @@ class RelationshipParameterValueModel(ParameterValueModel):
                     break
             if len(object_id_list) < object_class_count or len(object_name_list) < object_class_count:
                 continue
+            join_object_id_list = ",".join([str(x) for x in object_id_list])
             try:
-                value = (relationship_class['id'], object_id_list)
-                index = list(relationship_dict.values()).index(value)
-                relationship_id = list(relationship_dict.keys())[index]
+                relationship_id = relationship_dict[relationship_class['id'], join_object_id_list]
                 relationships_on_the_fly[row] = relationship_id
                 continue
-            except ValueError:  # (relationship_class_id, object_id_list) not found in relationship_dict
+            except KeyError:
                 relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
                 relationship = {
                     "name": relationship_name,
@@ -2691,6 +2758,7 @@ class RelationshipParameterValueModel(ParameterValueModel):
                     "class_id": relationship_class['id']
                 }
                 relationships_to_add[row] = relationship
+            self._main_data[row][object_id_list_column] = join_object_id_list
         relationships_on_the_fly.update(self.new_relationships(relationships_to_add))
         return relationships_on_the_fly
 
@@ -2702,6 +2770,8 @@ class RelationshipParameterValueModel(ParameterValueModel):
             items = list(relationships_to_add.values())
             rows = list(relationships_to_add.keys())
             relationships = self.db_map.add_wide_relationships(*items)
+            for relationship in relationships:
+                self._tree_view_form.object_tree_model.add_relationship(relationship)
             msg = "Successfully added new relationships on the fly."
             self._tree_view_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
@@ -2715,25 +2785,54 @@ class RelationshipParameterValueModel(ParameterValueModel):
         items_to_add = dict()
         # Get column numbers
         header = self.horizontal_header_labels()
+        relationship_class_id_column = header.index('relationship_class_id')
+        relationship_class_name_column = header.index('relationship_class_name')
+        object_class_id_list_column = header.index('object_class_id_list')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        parameter_dict = {x.name: x.id for x in self.db_map.parameter_list()}
+        relationship_class_dict = {
+            x.id: {
+                "name": x.name,
+                "object_class_id_list": x.object_class_id_list
+            } for x in self.db_map.wide_relationship_class_list()}
+        parameter_dict = {
+            x.name: {
+                'id': x.id,
+                'relationship_class_id': x.relationship_class_id
+            } for x in self.db_map.parameter_list()}
         for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             try:
-                relationship_id = relationships_on_the_fly[row]
-                parameter_id = parameter_dict[parameter_name]
-                item = {
-                    "relationship_id": relationship_id,
-                    "parameter_id": parameter_id
-                }
-                for column in range(parameter_name_column + 1, self.columnCount()):
-                    item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
-                items_to_add[row] = item
+                parameter = parameter_dict[parameter_name]
             except KeyError:
-                pass
+                continue
+            relationship_class_id = parameter['relationship_class_id']
+            try:
+                new_relationship_class = relationship_class_dict[relationship_class_id]
+            except KeyError:
+                continue
+            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
+            new_relationship_class_name = new_relationship_class["name"]
+            new_object_class_id_list = new_relationship_class["object_class_id_list"]
+            if relationship_class_name != new_relationship_class_name:
+                self._main_data[row][relationship_class_id_column] = relationship_class_id
+                self._main_data[row][relationship_class_name_column] = new_relationship_class_name
+                self._main_data[row][object_class_id_list_column] = new_object_class_id_list
+                indexes.append(self.index(row, relationship_class_name_column))
+            try:
+                relationship_id = relationships_on_the_fly[row]
+            except KeyError:
+                continue
+            parameter_id = parameter['id']
+            item = {
+                "relationship_id": relationship_id,
+                "parameter_id": parameter_id
+            }
+            for column in range(parameter_name_column + 1, self.columnCount()):
+                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            items_to_add[row] = item
         return items_to_add
 
 
@@ -3009,7 +3108,7 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
         if self.object_class_id_set:
             object_class_id_list = source_model._main_data[source_row][self.object_class_id_list_column]
             if not object_class_id_list:
-                return False
+                return False  # FIXME: This shouldn't happen
             if self.object_class_id_set.isdisjoint([int(x) for x in object_class_id_list.split(",")]):
                 return False
             source_model._aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
