@@ -75,13 +75,15 @@ class TreeViewForm(QMainWindow):
         icon = QIcon(":/icons/relationship_parameter_icon.png")
         button = QPushButton(icon, "Relationship parameter")
         button.setFlat(True)
+        button.setLayoutDirection(Qt.LeftToRight)
         button.mousePressEvent = lambda e: e.ignore()
-        self.ui.tabWidget_relationship.setCornerWidget(button, Qt.TopLeftCorner)
+        self.ui.tabWidget_relationship.setCornerWidget(button, Qt.TopRightCorner)
         icon = QIcon(":/icons/object_parameter_icon.png")
         button = QPushButton(icon, "Object parameter")
+        button.setLayoutDirection(Qt.LeftToRight)
         button.setFlat(True)
         button.mousePressEvent = lambda e: e.ignore()
-        self.ui.tabWidget_object.setCornerWidget(button, Qt.TopLeftCorner)
+        self.ui.tabWidget_object.setCornerWidget(button, Qt.TopRightCorner)
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB db_map

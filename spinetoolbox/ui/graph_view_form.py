@@ -239,6 +239,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsview import GraphViewGraphicsView
+from widgets.custom_qlistview import DragListView
 import resources_icons_rc
