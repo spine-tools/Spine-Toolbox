@@ -91,7 +91,6 @@ class TreeViewForm(QMainWindow):
         self.database = database
         self.object_icon_dict = {}
         self.relationship_icon_dict = {}
-        self.init_icon_dicts()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
@@ -345,11 +344,13 @@ class TreeViewForm(QMainWindow):
     @Slot(name="edit_object_parameter_json")
     def edit_object_parameter_json(self):
         index = self.object_parameter_json_model.index(0, 0)
+        self.ui.tableView_object_parameter_json.scrollTo(index)
         self.ui.tableView_object_parameter_json.edit(index)
 
     @Slot(name="edit_relationship_parameter_json")
     def edit_relationship_parameter_json(self):
         index = self.relationship_parameter_json_model.index(0, 0)
+        self.ui.tableView_relationship_parameter_json.scrollTo(index)
         self.ui.tableView_relationship_parameter_json.edit(index)
 
     @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_definition_selection_changed")
@@ -586,6 +587,7 @@ class TreeViewForm(QMainWindow):
             self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
 
     def init_models(self):
+        self.init_icon_dicts()
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_definition_models()

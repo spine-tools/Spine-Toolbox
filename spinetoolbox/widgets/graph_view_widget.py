@@ -963,7 +963,7 @@ class GraphViewForm(QMainWindow):
         object_name_list = [x.name for x in objects]
         src_ind_list = list()
         dst_ind_list = list()
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread)
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread / 2)
         x, y = self.vertex_coordinates(d)
         scene = self.ui.graphicsView.scene()
         object_class_name = self.object_item_placeholder.object_class_name
