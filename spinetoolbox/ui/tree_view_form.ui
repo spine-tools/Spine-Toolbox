@@ -296,7 +296,7 @@
                <widget class="QWidget" name="horizontalLayoutWidget">
                 <layout class="QHBoxLayout" name="horizontalLayout_4">
                  <item>
-                  <widget class="QTableView" name="tableView_object_parameter_json">
+                  <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_json">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                      <horstretch>1</horstretch>
@@ -564,7 +564,7 @@
                <widget class="QWidget" name="horizontalLayoutWidget_2">
                 <layout class="QHBoxLayout" name="horizontalLayout_7">
                  <item>
-                  <widget class="QTableView" name="tableView_relationship_parameter_json"/>
+                  <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_json"/>
                  </item>
                 </layout>
                </widget>

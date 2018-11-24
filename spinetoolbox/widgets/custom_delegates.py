@@ -137,6 +137,7 @@ class ParameterDelegate(QItemDelegate):
         parent (QTableView): widget where the delegate is installed
     """
     commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+    json_editor_requested = Signal(name="json_editor_requested")
 
     def __init__(self, parent, db_map):
         super().__init__(parent)
@@ -164,6 +165,7 @@ class ObjectParameterValueDelegate(ParameterDelegate):
         if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
+            self.json_editor_requested.emit()
             return None
         else:
             return CustomLineEditor(parent)
@@ -251,6 +253,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         elif index.column() in object_name_range:
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
+            self.json_editor_requested.emit()
             return None
         else:
             return CustomLineEditor(parent)

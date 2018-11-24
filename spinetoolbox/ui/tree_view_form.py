@@ -158,7 +158,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget)
         self.horizontalLayout_4.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        self.tableView_object_parameter_json = QtWidgets.QTableView(self.horizontalLayoutWidget)
+        self.tableView_object_parameter_json = AutoFilterCopyPasteTableView(self.horizontalLayoutWidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(1)
         sizePolicy.setVerticalStretch(0)
@@ -278,7 +278,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_2)
         self.horizontalLayout_7.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
-        self.tableView_relationship_parameter_json = QtWidgets.QTableView(self.horizontalLayoutWidget_2)
+        self.tableView_relationship_parameter_json = AutoFilterCopyPasteTableView(self.horizontalLayoutWidget_2)
         self.tableView_relationship_parameter_json.setObjectName("tableView_relationship_parameter_json")
         self.horizontalLayout_7.addWidget(self.tableView_relationship_parameter_json)
         self.verticalLayout_9.addWidget(self.splitter_relationship_parameter_json)
@@ -562,6 +562,6 @@ class Ui_MainWindow(object):
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

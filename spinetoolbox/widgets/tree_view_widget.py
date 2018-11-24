@@ -206,7 +206,8 @@ class TreeViewForm(QMainWindow):
         self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
         self.ui.actionRemove_relationship_parameter_definitions.triggered.\
             connect(self.remove_relationship_parameter_definitions)
-        self.ui.actionRemove_relationship_parameter_values.triggered.connect(self.remove_relationship_parameter_values)
+        self.ui.actionRemove_relationship_parameter_values.triggered.\
+            connect(self.remove_relationship_parameter_values)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
@@ -229,6 +230,11 @@ class TreeViewForm(QMainWindow):
             connect(self.set_parameter_definition_data)
         self.ui.tableView_relationship_parameter_value.itemDelegate().commit_model_data.\
             connect(self.set_parameter_value_data)
+        # Parameter value tables delegate json editor requested
+        self.ui.tableView_object_parameter_value.itemDelegate().json_editor_requested.\
+            connect(self.edit_object_parameter_json)
+        self.ui.tableView_relationship_parameter_value.itemDelegate().json_editor_requested.\
+            connect(self.edit_relationship_parameter_json)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.\
             connect(self.handle_object_parameter_definition_selection_changed)
@@ -336,6 +342,16 @@ class TreeViewForm(QMainWindow):
         else:
             self.ui.tableView_relationship_parameter_json.hide()
 
+    @Slot(name="edit_object_parameter_json")
+    def edit_object_parameter_json(self):
+        index = self.object_parameter_json_model.index(0, 0)
+        self.ui.tableView_object_parameter_json.edit(index)
+
+    @Slot(name="edit_relationship_parameter_json")
+    def edit_relationship_parameter_json(self):
+        index = self.relationship_parameter_json_model.index(0, 0)
+        self.ui.tableView_relationship_parameter_json.edit(index)
+
     @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_definition_selection_changed")
     def handle_object_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
@@ -403,37 +419,25 @@ class TreeViewForm(QMainWindow):
         self.ui.actionCopy.setEnabled(False)
         self.ui.actionPaste.setEnabled(False)
         if self.focus_widget == self.ui.treeView_object:
-            if not self.ui.treeView_object.selectionModel().selection().isEmpty():
-                self.ui.actionCopy.setText("Copy from object tree")
-                self.ui.actionCopy.setEnabled(True)
+            focus_widget_name = "object tree"
         elif self.focus_widget == self.ui.tableView_object_parameter_definition:
-            if not self.ui.tableView_object_parameter_definition.selectionModel().selection().isEmpty():
-                self.ui.actionCopy.setText("Copy from object parameter definition")
-                self.ui.actionCopy.setEnabled(True)
-            if self.clipboard_text:
-                self.ui.actionPaste.setText("Paste to object parameter definition")
-                self.ui.actionPaste.setEnabled(True)
+            focus_widget_name = "object parameter definition"
         elif self.focus_widget == self.ui.tableView_object_parameter_value:
-            if not self.ui.tableView_object_parameter_value.selectionModel().selection().isEmpty():
-                self.ui.actionCopy.setText("Copy from object parameter value")
-                self.ui.actionCopy.setEnabled(True)
-            if self.clipboard_text:
-                self.ui.actionPaste.setText("Paste to object parameter value")
-                self.ui.actionPaste.setEnabled(True)
+            focus_widget_name = "object parameter value"
+        elif self.focus_widget == self.ui.tableView_object_parameter_json:
+            focus_widget_name = "object parameter json"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_definition:
-            if not self.ui.tableView_relationship_parameter_definition.selectionModel().selection().isEmpty():
-                self.ui.actionCopy.setText("Copy from relationship parameter definition")
-                self.ui.actionCopy.setEnabled(True)
-            if self.clipboard_text:
-                self.ui.actionPaste.setText("Paste to relationship parameter definition")
-                self.ui.actionPaste.setEnabled(True)
+            focus_widget_name = "relationship parameter definition"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_value:
-            if not self.ui.tableView_relationship_parameter_value.selectionModel().selection().isEmpty():
-                self.ui.actionCopy.setText("Copy from relationship parameter value")
-                self.ui.actionCopy.setEnabled(True)
-            if self.clipboard_text:
-                self.ui.actionPaste.setText("Paste to relationship parameter value")
-                self.ui.actionPaste.setEnabled(True)
+            focus_widget_name = "relationship parameter value"
+        elif self.focus_widget == self.ui.tableView_relationship_parameter_json:
+            focus_widget_name = "relationship parameter json"
+        if not self.focus_widget.selectionModel().selection().isEmpty():
+            self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
+            self.ui.actionCopy.setEnabled(True)
+        if focus_widget_name != "object tree" and self.clipboard_text:
+            self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
+            self.ui.actionPaste.setEnabled(True)
         # Edit object tree item actions
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         item_types = {x.data(Qt.UserRole) for x in indexes}
