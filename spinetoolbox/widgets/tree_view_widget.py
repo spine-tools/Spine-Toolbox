@@ -102,6 +102,8 @@ class TreeViewForm(QMainWindow):
         # JSON models
         self.object_parameter_json_model = JSONModel(self)
         self.relationship_parameter_json_model = JSONModel(self)
+        self.object_parameter_json_splitter_sizes = None
+        self.relationship_parameter_json_splitter_sizes = None
         # Parameter (definition) models
         self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
         self.object_parameter_definition_proxy = ObjectParameterDefinitionProxy(self)
@@ -322,11 +324,28 @@ class TreeViewForm(QMainWindow):
         """Show/hide json table."""
         header = self.object_parameter_value_model.horizontal_header_labels()
         data = current.data(Qt.EditRole)
+        splitter = self.ui.tableView_object_parameter_json.parent()
         if header[current.column()] == "json":
+            # Reset json model
             self.object_parameter_json_model.reset_model(data)
-            self.ui.tableView_object_parameter_json.show()
             self.ui.tableView_object_parameter_json.resizeColumnsToContents()
-        else:
+            if self.ui.tableView_object_parameter_json.isVisible():
+                return
+            if not self.object_parameter_json_splitter_sizes:
+                # Apply decent sizes
+                sizes = splitter.sizes()
+                width = self.ui.tableView_object_parameter_json.columnWidth(0)
+                if sizes[1] < width:
+                    sizes[0] = sum(sizes) - width
+                    sizes[1] = width
+                splitter.setSizes(sizes)
+            else:
+                # Apply stored sizes
+                splitter.setSizes(self.object_parameter_json_splitter_sizes)
+            self.ui.tableView_object_parameter_json.show()
+        elif self.ui.tableView_object_parameter_json.isVisible():
+            # Save sizes and hide
+            self.object_parameter_json_splitter_sizes = splitter.sizes()
             self.ui.tableView_object_parameter_json.hide()
 
     @Slot("QModelIndex","QModelIndex", name="handle_relationship_parameter_value_current_changed")
@@ -334,11 +353,28 @@ class TreeViewForm(QMainWindow):
         """Show/hide json table."""
         header = self.relationship_parameter_value_model.horizontal_header_labels()
         data = current.data(Qt.EditRole)
+        splitter = self.ui.tableView_relationship_parameter_json.parent()
         if header[current.column()] == "json":
+            # Reset json model
             self.relationship_parameter_json_model.reset_model(data)
-            self.ui.tableView_relationship_parameter_json.show()
             self.ui.tableView_relationship_parameter_json.resizeColumnsToContents()
-        else:
+            if self.ui.tableView_relationship_parameter_json.isVisible():
+                return
+            if not self.relationship_parameter_json_splitter_sizes:
+                # Apply decent sizes
+                sizes = splitter.sizes()
+                width = self.ui.tableView_relationship_parameter_json.columnWidth(0)
+                if sizes[1] < width:
+                    sizes[0] = sum(sizes) - width
+                    sizes[1] = width
+                splitter.setSizes(sizes)
+            else:
+                # Apply stored sizes
+                splitter.setSizes(self.relationship_parameter_json_splitter_sizes)
+            self.ui.tableView_relationship_parameter_json.show()
+        elif self.ui.tableView_relationship_parameter_json.isVisible():
+            # Save sizes and hide
+            self.relationship_parameter_json_splitter_sizes = splitter.sizes()
             self.ui.tableView_relationship_parameter_json.hide()
 
     @Slot(name="edit_object_parameter_json")

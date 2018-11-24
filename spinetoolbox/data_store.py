@@ -549,7 +549,11 @@ class DataStore(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.tree_view_form = TreeViewForm(self, db_map, database)
+        try:
+            self.tree_view_form = TreeViewForm(self, db_map, database)
+        except:
+            db_map.close()
+            raise
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -584,7 +588,11 @@ class DataStore(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        try:
+            self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        except:
+            db_map.close()
+            raise
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 

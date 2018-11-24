@@ -169,7 +169,7 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QSplitter" name="splitter_object_parameter_json">
+              <widget class="QSplitter" name="splitter_2">
                <property name="layoutDirection">
                 <enum>Qt::LeftToRight</enum>
                </property>
@@ -293,25 +293,19 @@
                  </item>
                 </layout>
                </widget>
-               <widget class="QWidget" name="horizontalLayoutWidget">
-                <layout class="QHBoxLayout" name="horizontalLayout_4">
-                 <item>
-                  <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_json">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>1</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="layoutDirection">
-                    <enum>Qt::LeftToRight</enum>
-                   </property>
-                   <attribute name="horizontalHeaderStretchLastSection">
-                    <bool>false</bool>
-                   </attribute>
-                  </widget>
-                 </item>
-                </layout>
+               <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_json">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
+                </property>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>false</bool>
+                </attribute>
                </widget>
               </widget>
              </item>
@@ -473,7 +467,7 @@
               <number>0</number>
              </property>
              <item>
-              <widget class="QSplitter" name="splitter_relationship_parameter_json">
+              <widget class="QSplitter" name="splitter_3">
                <property name="layoutDirection">
                 <enum>Qt::LeftToRight</enum>
                </property>
@@ -561,12 +555,16 @@
                  </item>
                 </layout>
                </widget>
-               <widget class="QWidget" name="horizontalLayoutWidget_2">
-                <layout class="QHBoxLayout" name="horizontalLayout_7">
-                 <item>
-                  <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_json"/>
-                 </item>
-                </layout>
+               <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_json">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>1</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>false</bool>
+                </attribute>
                </widget>
               </widget>
              </item>
