@@ -2421,14 +2421,15 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
                 relationship_class = relationship_class_dict[relationship_class_name]
             except KeyError:
                 continue
-            if object_class_name_list != relationship_class['object_class_name_list']:
-                self._main_data[row][object_class_id_list_column] = relationship_class['object_class_id_list']
-                self._main_data[row][object_class_name_list_column] = relationship_class['object_class_name_list']
+            new_object_class_name_list = relationship_class['object_class_name_list']
+            relationship_class_id = relationship_class['id']
+            self._main_data[row][relationship_class_id_column] = relationship_class_id
+            self._main_data[row][object_class_id_list_column] = relationship_class['object_class_id_list']
+            self._main_data[row][object_class_name_list_column] = new_object_class_name_list
+            if new_object_class_name_list != object_class_name_list:
                 indexes.append(self.index(row, object_class_name_list_column))
             if not parameter_name:
                 continue
-            relationship_class_id = relationship_class['id']
-            self._main_data[row][relationship_class_id_column] = relationship_class_id
             item = {
                 "relationship_class_id": relationship_class_id,
                 "name": parameter_name
@@ -2516,7 +2517,8 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         object_name_column = header.index('object_name')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        object_class_dict = {x.id: x.name for x in self.db_map.object_class_list()}
+        object_class_id_name_dict = {x.id: x.name for x in self.db_map.object_class_list()}
+        object_class_name_id_dict = {x.name: x.id for x in self.db_map.object_class_list()}
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self.db_map.object_list()}
         parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
                           for x in self.db_map.parameter_list()}
@@ -2524,31 +2526,41 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         for row in unique_rows:
             if not self.is_work_in_progress(row):
                 continue
+            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            # Find object class id
+            object_class_ids = list()
+            try:
+                object_class_id = object_class_name_id_dict[object_class_name]
+                object_class_ids.append(object_class_id)
+            except KeyError:
+                pass
             object_ = object_dict.get(object_name)
             parameter = parameter_dict.get(parameter_name)
+            if object_:
+                object_class_ids.append(object_['class_id'])
+            if parameter:
+                object_class_ids.append(parameter['object_class_id'])
+            if object_class_ids and object_class_ids.count(object_class_ids[0]) != len(object_class_ids):
+                # Not all of them are equal
+                continue
+            object_class_id = object_class_ids[0]
             try:
-                object_class_id = object_['class_id']
-            except TypeError:
-                try:
-                    object_class_id = parameter['object_class_id']
-                except TypeError:
-                    continue
-            try:
-                new_object_class_name = object_class_dict[object_class_id]
+                correct_object_class_name = object_class_id_name_dict[object_class_id]
             except KeyError:
                 continue
-            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
-            if object_class_name != new_object_class_name:
-                self._main_data[row][object_class_id_column] = object_class_id
-                self._main_data[row][object_class_name_column] = new_object_class_name
+            self._main_data[row][object_class_id_column] = object_class_id
+            self._main_data[row][object_class_name_column] = correct_object_class_name
+            if correct_object_class_name != object_class_name:
                 indexes.append(self.index(row, object_class_name_column))
-            if object_ is None or parameter is None:
+            if object_ is None:
                 continue
             object_id = object_['id']
-            parameter_id = parameter['id']
             self._main_data[row][object_id_column] = object_id
+            if parameter is None:
+                continue
+            parameter_id = parameter['id']
             item = {
                 "object_id": object_id,
                 "parameter_id": parameter_id
@@ -2777,7 +2789,6 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             try:
                 relationship_id = relationship_dict[relationship_class['id'], join_object_id_list]
                 relationships_on_the_fly[row] = relationship_id
-                continue
             except KeyError:
                 relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
                 relationship = {
@@ -2820,6 +2831,8 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         object_class_id_list_column = header.index('object_class_id_list')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
+        relationship_class_name_id_dict = {
+            x.name: x.id for x in self.db_map.wide_relationship_class_list()}
         relationship_class_dict = {
             x.id: {
                 "name": x.name,
@@ -2833,24 +2846,35 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         for row in {ind.row() for ind in indexes}:
             if not self.is_work_in_progress(row):
                 continue
-            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            try:
-                parameter = parameter_dict[parameter_name]
-            except KeyError:
-                continue
-            relationship_class_id = parameter['relationship_class_id']
-            try:
-                new_relationship_class = relationship_class_dict[relationship_class_id]
-            except KeyError:
-                continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
-            new_relationship_class_name = new_relationship_class["name"]
-            new_object_class_id_list = new_relationship_class["object_class_id_list"]
-            if relationship_class_name != new_relationship_class_name:
-                self._main_data[row][relationship_class_id_column] = relationship_class_id
-                self._main_data[row][relationship_class_name_column] = new_relationship_class_name
-                self._main_data[row][object_class_id_list_column] = new_object_class_id_list
+            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+            parameter = parameter_dict.get(parameter_name)
+            # Find relationship_class_id
+            relationship_class_ids = list()
+            try:
+                relationship_class_id = relationship_class_name_id_dict[relationship_class_name]
+                relationship_class_ids.append(relationship_class_id)
+            except KeyError:
+                pass
+            if parameter:
+                relationship_class_ids.append(parameter['relationship_class_id'])
+            if relationship_class_ids \
+                    and relationship_class_ids.count(relationship_class_ids[0]) != len(relationship_class_ids):
+                # Not all of them are equal
+                continue
+            relationship_class_id = relationship_class_ids[0]
+            try:
+                correct_relationship_class_name = relationship_class_dict[relationship_class_id]['name']
+                object_class_id_list = relationship_class_dict[relationship_class_id]['object_class_id_list']
+            except KeyError:
+                continue
+            self._main_data[row][relationship_class_id_column] = relationship_class_id
+            self._main_data[row][relationship_class_name_column] = correct_relationship_class_name
+            self._main_data[row][object_class_id_list_column] = object_class_id_list
+            if correct_relationship_class_name != relationship_class_name:
                 indexes.append(self.index(row, relationship_class_name_column))
+            if parameter is None:
+                continue
             try:
                 relationship_id = relationships_on_the_fly[row]
             except KeyError:
@@ -3053,6 +3077,10 @@ class ObjectParameterDefinitionProxy(AutoFilterProxy):
         self.clear_autofilter()
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_class_name_column][Qt.FontRole] = None
+        row_count = self.sourceModel().rowCount()
+        top_left = self.sourceModel().index(0, self.object_class_name_column)
+        bottom_right = self.sourceModel().index(row_count - 1, self.object_class_name_column)
+        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
@@ -3102,10 +3130,13 @@ class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
         self.invalidate_filter()
 
     def invalidate_filter(self):
-        self.filter_is_valid = False
-        self.clear_autofilter()
+        super().invalidate_filter()
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_name_column][Qt.FontRole] = None
+        row_count = self.sourceModel().rowCount()
+        top_left = self.sourceModel().index(0, self.object_name_column)
+        bottom_right = self.sourceModel().index(row_count - 1, self.object_name_column)
+        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class RelationshipParameterDefinitionProxy(AutoFilterProxy):
@@ -3185,6 +3216,10 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
         self.clear_autofilter()
         for row_data in self.sourceModel()._aux_data:
             row_data[self.relationship_class_name_column][Qt.FontRole] = None
+        row_count = self.sourceModel().rowCount()
+        top_left = self.sourceModel().index(0, self.relationship_class_name_column)
+        bottom_right = self.sourceModel().index(row_count - 1, self.relationship_class_name_column)
+        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
@@ -3272,12 +3307,15 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
         self.invalidate_filter()
 
     def invalidate_filter(self):
+        super().invalidate_filter()
         self.object_count = 0
-        self.filter_is_valid = False
-        self.clear_autofilter()
         for row_data in self.sourceModel()._aux_data:
             for j in self.object_name_range:
                 row_data[j][Qt.FontRole] = None
+        row_count = self.sourceModel().rowCount()
+        top_left = self.sourceModel().index(0, self.object_name_range.start)
+        bottom_right = self.sourceModel().index(row_count - 1, self.object_name_range.stop - 1)
+        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class JSONModel(MinimalTableModel):
