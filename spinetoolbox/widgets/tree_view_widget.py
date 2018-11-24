@@ -28,8 +28,8 @@ from ui.tree_view_form import Ui_MainWindow
 from config import STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu
-from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDelegate, \
-    RelationshipParameterValueDelegate, RelationshipParameterDelegate
+from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
+    RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     AddRelationshipClassesDialog, AddRelationshipsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
@@ -38,7 +38,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from models import ObjectTreeModel, ObjectParameterValueModel, ObjectParameterDefinitionModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
     ObjectParameterDefinitionProxy, ObjectParameterValueProxy, \
-    RelationshipParameterDefinitionProxy, RelationshipParameterValueProxy
+    RelationshipParameterDefinitionProxy, RelationshipParameterValueProxy, JSONModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
 from datapackage_import_export import import_datapackage
@@ -99,6 +99,10 @@ class TreeViewForm(QMainWindow):
         self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
         self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
         self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
+        self.object_parameter_json_model = ObjectParameterValueModel(self)
+        # JSON models
+        self.object_parameter_json_model = JSONModel(self)
+        self.relationship_parameter_json_model = JSONModel(self)
         # Parameter (definition) models
         self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
         self.object_parameter_definition_proxy = ObjectParameterDefinitionProxy(self)
@@ -157,7 +161,7 @@ class TreeViewForm(QMainWindow):
         """Set delegates for tables."""
         # Object parameter
         table_view = self.ui.tableView_object_parameter_definition
-        delegate = ObjectParameterDelegate(table_view, self.db_map)
+        delegate = ObjectParameterDefinitionDelegate(table_view, self.db_map)
         table_view.setItemDelegate(delegate)
         # Object parameter value
         table_view = self.ui.tableView_object_parameter_value
@@ -165,7 +169,7 @@ class TreeViewForm(QMainWindow):
         table_view.setItemDelegate(delegate)
         # Relationship parameter
         table_view = self.ui.tableView_relationship_parameter_definition
-        delegate = RelationshipParameterDelegate(table_view, self.db_map)
+        delegate = RelationshipParameterDefinitionDelegate(table_view, self.db_map)
         table_view.setItemDelegate(delegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
@@ -207,7 +211,7 @@ class TreeViewForm(QMainWindow):
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
         # Object tree
-        self.ui.treeView_object.selectionModel().selectionChanged.connect(self.receive_object_tree_selection_changed)
+        self.ui.treeView_object.selectionModel().selectionChanged.connect(self.handle_object_tree_selection_changed)
         self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.find_next_leaf)
@@ -227,16 +231,25 @@ class TreeViewForm(QMainWindow):
             connect(self.set_parameter_value_data)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.\
-            connect(self.receive_object_parameter_selection_changed)
+            connect(self.handle_object_parameter_definition_selection_changed)
         self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.\
-            connect(self.receive_object_parameter_value_selection_changed)
+            connect(self.handle_object_parameter_value_selection_changed)
         self.ui.tableView_relationship_parameter_definition.selectionModel().selectionChanged.\
-            connect(self.receive_relationship_parameter_selection_changed)
+            connect(self.handle_relationship_parameter_definition_selection_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
-            connect(self.receive_relationship_parameter_value_selection_changed)
+            connect(self.handle_relationship_parameter_value_selection_changed)
+        # Parameter value tables current changed
+        self.ui.tableView_object_parameter_value.selectionModel().currentChanged.\
+            connect(self.handle_object_parameter_value_current_changed)
+        self.ui.tableView_relationship_parameter_value.selectionModel().currentChanged.\
+            connect(self.handle_relationship_parameter_value_current_changed)
+        # Parameter json models data changed
+        self.object_parameter_json_model.dataChanged.connect(self.handle_object_parameter_json_data_changed)
+        self.relationship_parameter_json_model.dataChanged.\
+            connect(self.handle_relationship_parameter_json_data_changed)
         # Parameter tabwidgets current changed
-        self.ui.tabWidget_object.currentChanged.connect(self.receive_object_parameter_tab_changed)
-        self.ui.tabWidget_relationship.currentChanged.connect(self.receive_relationship_parameter_tab_changed)
+        self.ui.tabWidget_object.currentChanged.connect(self.handle_object_parameter_tab_changed)
+        self.ui.tabWidget_relationship.currentChanged.connect(self.handle_relationship_parameter_tab_changed)
         # Parameter tables context menu requested
         self.ui.tableView_object_parameter_definition.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
@@ -249,9 +262,9 @@ class TreeViewForm(QMainWindow):
         # Clipboard data changed
         self.clipboard.dataChanged.connect(self.clipboard_data_changed)
         # Menu about to show
-        self.ui.menuFile.aboutToShow.connect(self.receive_menu_about_to_show)
-        self.ui.menuEdit.aboutToShow.connect(self.receive_menu_about_to_show)
-        self.ui.menuSession.aboutToShow.connect(self.receive_menu_about_to_show)
+        self.ui.menuFile.aboutToShow.connect(self.handle_menu_about_to_show)
+        self.ui.menuEdit.aboutToShow.connect(self.handle_menu_about_to_show)
+        self.ui.menuSession.aboutToShow.connect(self.handle_menu_about_to_show)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
         # Others
@@ -299,36 +312,60 @@ class TreeViewForm(QMainWindow):
         except AttributeError:
             pass
 
-    @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_selection_changed")
-    def receive_object_parameter_selection_changed(self, selected, deselected):
+    @Slot("QModelIndex","QModelIndex", name="handle_object_parameter_value_current_changed")
+    def handle_object_parameter_value_current_changed(self, current, previous):
+        """Show/hide json table."""
+        header = self.object_parameter_value_model.horizontal_header_labels()
+        data = current.data(Qt.EditRole)
+        if header[current.column()] == "json":
+            self.object_parameter_json_model.reset_model(data)
+            self.ui.tableView_object_parameter_json.show()
+            self.ui.tableView_object_parameter_json.resizeColumnsToContents()
+        else:
+            self.ui.tableView_object_parameter_json.hide()
+
+    @Slot("QModelIndex","QModelIndex", name="handle_relationship_parameter_value_current_changed")
+    def handle_relationship_parameter_value_current_changed(self, current, previous):
+        """Show/hide json table."""
+        header = self.relationship_parameter_value_model.horizontal_header_labels()
+        data = current.data(Qt.EditRole)
+        if header[current.column()] == "json":
+            self.relationship_parameter_json_model.reset_model(data)
+            self.ui.tableView_relationship_parameter_json.show()
+            self.ui.tableView_relationship_parameter_json.resizeColumnsToContents()
+        else:
+            self.ui.tableView_relationship_parameter_json.hide()
+
+    @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_definition_selection_changed")
+    def handle_object_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        index = self.ui.tabWidget_object.currentIndex()
-        self.ui.actionRemove_object_parameter_definitions.setEnabled(index == 1 and not selection.isEmpty())
+        tab_index = self.ui.tabWidget_object.currentIndex()
+        self.ui.actionRemove_object_parameter_definitions.setEnabled(tab_index == 1 and not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="receive_object_parameter_value_selection_changed")
-    def receive_object_parameter_value_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_value_selection_changed")
+    def handle_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        index = self.ui.tabWidget_object.currentIndex()
-        self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selection.isEmpty())
+        tab_index = self.ui.tabWidget_object.currentIndex()
+        self.ui.actionRemove_object_parameter_values.setEnabled(tab_index == 0 and not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_selection_changed")
-    def receive_relationship_parameter_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="handle_relationship_parameter_definition_selection_changed")
+    def handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        index = self.ui.tabWidget_relationship.currentIndex()
-        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(index == 1 and not selection.isEmpty())
+        tab_index = self.ui.tabWidget_relationship.currentIndex()
+        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(tab_index == 1 and not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="receive_relationship_parameter_value_selection_changed")
-    def receive_relationship_parameter_value_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="handle_relationship_parameter_value_selection_changed")
+    def handle_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        index = self.ui.tabWidget_relationship.currentIndex()
-        self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selection.isEmpty())
+        tab_index = self.ui.tabWidget_relationship.currentIndex()
+        self.ui.actionRemove_relationship_parameter_values.setEnabled(tab_index == 0 and not selection.isEmpty())
 
-    @Slot("int", name="receive_object_parameter_tab_changed")
-    def receive_object_parameter_tab_changed(self, index):
+    @Slot("int", name="handle_object_parameter_tab_changed")
+    def handle_object_parameter_tab_changed(self, index):
         """Enable/disable the option to remove rows."""
         if index == 0:
             self.object_parameter_value_proxy.apply_filter()
@@ -339,8 +376,8 @@ class TreeViewForm(QMainWindow):
         selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
         self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
 
-    @Slot("int", name="receive_relationship_parameter_tab_changed")
-    def receive_relationship_parameter_tab_changed(self, index):
+    @Slot("int", name="handle_relationship_parameter_tab_changed")
+    def handle_relationship_parameter_tab_changed(self, index):
         """Enable/disable the option to remove rows."""
         if index == 0:
             self.relationship_parameter_value_proxy.apply_filter()
@@ -351,8 +388,8 @@ class TreeViewForm(QMainWindow):
         selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
 
-    @Slot(name="receive_menu_about_to_show")
-    def receive_menu_about_to_show(self):
+    @Slot(name="handle_menu_about_to_show")
+    def handle_menu_about_to_show(self):
         """Called when a menu from the menubar is about to show.
         Adjust copy paste actions depending on which widget has the focus.
         Enable/disable actions to edit object tree items depending on selection.
@@ -576,11 +613,12 @@ class TreeViewForm(QMainWindow):
     def init_views(self):
         self.init_object_parameter_value_view()
         self.init_relationship_parameter_value_view()
-        self.init_object_parameter_view()
-        self.init_relationship_parameter_view()
+        self.init_object_parameter_definition_view()
+        self.init_relationship_parameter_definition_view()
+        self.init_parameter_json_views()
 
     def init_object_parameter_value_view(self):
-        """Init the object parameter table view."""
+        """Init the object parameter value view."""
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
@@ -592,7 +630,7 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
-        """Init the relationship parameter table view."""
+        """Init the relationship parameter value view."""
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
@@ -606,8 +644,8 @@ class TreeViewForm(QMainWindow):
             setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
-    def init_object_parameter_view(self):
-        """Init the object parameter table view."""
+    def init_object_parameter_definition_view(self):
+        """Init the object parameter definition view."""
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_proxy)
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
@@ -617,8 +655,8 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
 
-    def init_relationship_parameter_view(self):
-        """Init the object parameter table view."""
+    def init_relationship_parameter_definition_view(self):
+        """Init the relationship parameter definition view."""
         self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_proxy)
         h = self.relationship_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
@@ -631,6 +669,33 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
             setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
+
+    def init_parameter_json_views(self):
+        """Init object and relationship parameter json views."""
+        self.ui.tableView_object_parameter_json.setModel(self.object_parameter_json_model)
+        self.ui.tableView_object_parameter_json.hide()
+        self.ui.tableView_object_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_object_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_relationship_parameter_json.setModel(self.relationship_parameter_json_model)
+        self.ui.tableView_relationship_parameter_json.hide()
+        self.ui.tableView_relationship_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_relationship_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_object_parameter_json_data_changed")
+    def handle_object_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
+        if Qt.EditRole not in roles:
+            return
+        json = self.object_parameter_json_model.json()
+        index = self.ui.tableView_object_parameter_value.currentIndex()
+        self.set_parameter_value_data(index, json)
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_relationship_parameter_json_data_changed")
+    def handle_relationship_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
+        if Qt.EditRole not in roles:
+            return
+        json = self.relationship_parameter_json_model.json()
+        index = self.ui.tableView_relationship_parameter_value.currentIndex()
+        self.set_parameter_value_data(index, json)
 
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
@@ -656,8 +721,8 @@ class TreeViewForm(QMainWindow):
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
 
-    @Slot("QItemSelection", "QItemSelection", name="receive_object_tree_selection_changed")
-    def receive_object_tree_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="handle_object_tree_selection_changed")
+    def handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Update filter proxy models accordingly."""
         selected_object_class_ids = set()
@@ -1432,7 +1497,7 @@ class TreeViewForm(QMainWindow):
         window_size = self.qsettings.value("treeViewWidget/windowSize")
         window_pos = self.qsettings.value("treeViewWidget/windowPosition")
         splitter_tree_parameter_state = self.qsettings.value("treeViewWidget/splitterTreeParameterState")
-        window_maximized = self.qsettings.value("treeViewWidget/windowMaximized", defaultValue='false')  # returns str
+        window_maximized = self.qsettings.value("treeViewWidget/windowMaximized", defaultValue='false')
         n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)

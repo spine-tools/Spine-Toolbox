@@ -20,7 +20,6 @@ from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOption
     QTextEdit
 from PySide2.QtGui import QPen
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor
-from widgets.custom_qtableview import JSONEditor
 import logging
 
 
@@ -131,7 +130,7 @@ class CheckBoxDelegate(QItemDelegate):
         return QRect(checkbox_anchor, checkbox_rect.size())
 
 
-class TreeViewDelegate(QItemDelegate):
+class ParameterDelegate(QItemDelegate):
     """A custom delegate for the parameter value models and views in TreeViewForm.
 
     Attributes:
@@ -149,30 +148,7 @@ class TreeViewDelegate(QItemDelegate):
         self.commit_model_data.emit(index, editor.data())
 
 
-class JSONDelegate(QItemDelegate):
-    """A delegate that handles JSON data.
-
-    Attributes:
-        parent (QTableView): widget where the delegate is installed
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def updateEditorGeometry(self, editor, option, index):
-        """Adjust dimensions of CustomTextEditor for editing the JSON data."""
-        super().updateEditorGeometry(editor, option, index)
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'json':
-            x = option.rect.x()
-            y = option.rect.y()
-            width = max(self._parent.columnWidth(index.column()), editor.width())
-            height = editor.height()
-            if y + editor.default_row_height + height > self._parent.height():
-                y -= height - editor.default_row_height
-            editor.setGeometry(x, y, width, height)
-
-
-class ObjectParameterValueDelegate(TreeViewDelegate, JSONDelegate):
+class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
@@ -188,7 +164,7 @@ class ObjectParameterValueDelegate(TreeViewDelegate, JSONDelegate):
         if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
-            return JSONEditor(parent)
+            return None
         else:
             return CustomLineEditor(parent)
 
@@ -225,12 +201,12 @@ class ObjectParameterValueDelegate(TreeViewDelegate, JSONDelegate):
                 parameter_name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), parameter_name_list)
         elif header[index.column()] == 'json':
-            editor.set_data(index.data(Qt.EditRole))
+            pass
         else:
             editor.set_data(index.data(Qt.EditRole))
 
 
-class ObjectParameterDelegate(TreeViewDelegate):
+class ObjectParameterDefinitionDelegate(ParameterDelegate):
     """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
@@ -256,7 +232,7 @@ class ObjectParameterDelegate(TreeViewDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
+class RelationshipParameterValueDelegate(ParameterDelegate):
     """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
@@ -275,7 +251,7 @@ class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
         elif index.column() in object_name_range:
             return CustomComboEditor(parent)
         elif header[index.column()] == 'json':
-            return JSONEditor(parent)
+            return None
         else:
             return CustomLineEditor(parent)
 
@@ -341,12 +317,12 @@ class RelationshipParameterValueDelegate(TreeViewDelegate, JSONDelegate):
                     parameter_name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), parameter_name_list)
         elif header[index.column()] == 'json':
-            editor.set_data(index.data(Qt.EditRole))
+            pass
         else:
             editor.set_data(index.data(Qt.EditRole))
 
 
-class RelationshipParameterDelegate(TreeViewDelegate):
+class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
@@ -371,7 +347,7 @@ class RelationshipParameterDelegate(TreeViewDelegate):
         else:
             editor.set_data(index.data(Qt.EditRole))
 
-class AddObjectsDelegate(TreeViewDelegate):
+class AddObjectsDelegate(ParameterDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
@@ -397,7 +373,7 @@ class AddObjectsDelegate(TreeViewDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class AddRelationshipClassesDelegate(TreeViewDelegate):
+class AddRelationshipClassesDelegate(ParameterDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
@@ -436,7 +412,7 @@ class AddRelationshipClassesDelegate(TreeViewDelegate):
         return "__".join(object_class_name_list)
 
 
-class AddRelationshipsDelegate(TreeViewDelegate):
+class AddRelationshipsDelegate(ParameterDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:

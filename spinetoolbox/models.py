@@ -22,7 +22,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QFontMetrics, QIcon, QPixmap, \
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, \
     QPainter, QGuiApplication
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
@@ -2052,15 +2052,17 @@ class ParameterValueModel(WIPTableModel):
         self.db_map = self._tree_view_form.db_map
         self.object_icon_dict = self._tree_view_form.object_icon_dict
         self.relationship_icon_dict = self._tree_view_form.relationship_icon_dict
-        self.font_metric = QFontMetrics(QFont(""))  # For elided json text
 
     def data(self, index, role=Qt.DisplayRole):
-        """Limit the output of json array data to 8 positions."""
+        """Limit the display of json array data."""
         data = super().data(index, role)
         if role != Qt.DisplayRole:
             return data
-        if self.header[index.column()] == 'json':
-            return self.font_metric.elidedText(data, Qt.ElideMiddle, 100)
+        if self.header[index.column()] == 'json' and data:
+            split_data = data.split(",")
+            if len(split_data) > 2:
+                return split_data[0].strip() + ",...," + split_data[-1].strip()
+            return data
         return data
 
     def items_to_update(self, indexes, values):
@@ -2542,7 +2544,7 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
                 object_class_ids.append(object_['class_id'])
             if parameter:
                 object_class_ids.append(parameter['object_class_id'])
-            if object_class_ids and object_class_ids.count(object_class_ids[0]) != len(object_class_ids):
+            if not object_class_ids or object_class_ids.count(object_class_ids[0]) != len(object_class_ids):
                 # Not all of them are equal
                 continue
             object_class_id = object_class_ids[0]
@@ -2858,8 +2860,8 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
                 pass
             if parameter:
                 relationship_class_ids.append(parameter['relationship_class_id'])
-            if relationship_class_ids \
-                    and relationship_class_ids.count(relationship_class_ids[0]) != len(relationship_class_ids):
+            if not relationship_class_ids \
+                    or relationship_class_ids.count(relationship_class_ids[0]) != len(relationship_class_ids):
                 # Not all of them are equal
                 continue
             relationship_class_id = relationship_class_ids[0]
