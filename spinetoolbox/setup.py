@@ -10,12 +10,13 @@
 ######################################################################################################################
 
 """
-CX-FREEZE setup file for Spine Toolbox.
+cx-Freeze setup file for Spine Toolbox.
 
-    - Build the application into /build directory with the following command:
-        python setup.py build
-    - Create a Windows Installer distribution package (.msi) with the following command:
-        python setup.py bdist_msi
+Usage:
+- Building the application into /build directory can be done with command 'python setup.py build'
+- Packaging the built application into an installer file for distribution:
+1. On Windows, compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
+2. On other platforms, use setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
 
 :author: P. Savolainen (VTT)
 :date:   29.5.2018
@@ -42,14 +43,6 @@ def main(argv):
     readme_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "README.md"))
     copying_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING"))
     copying_lesser_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING.LESSER"))
-    # Set Windows .msi installer default install path to C:\SpineToolbox-version
-    systemdrive = os.environ['SYSTEMDRIVE']
-    default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
-    # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
-    msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
-    if not os.path.isfile(msvcr120_dll):
-        print("\nmsvcr120.dll not found in path:{0}".format(msvcr120_dll))
-        return
     # Most dependencies are automatically detected but some need to be manually included.
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
@@ -60,21 +53,33 @@ def main(argv):
                                       "qtconsole.client", "sqlalchemy.sql.default_comparator",
                                       "sqlalchemy.ext.baked", "numpy.core._methods",
                                       "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
-                                      "scipy.spatial.ckdtree", "pymysql"],
-                         "include_files": [(doc_path, "docs/"), msvcr120_dll, tcl86t_dll, tk86t_dll,
+                                      "scipy.spatial.ckdtree", "pymysql", "tabulator.loaders.local",
+                                      "tabulator.parsers.csv"],
+                         "include_files": [(doc_path, "docs/"), tcl86t_dll, tk86t_dll,
                                            changelog_file, readme_file, copying_file, copying_lesser_file],
                          "include_msvcr": True}
-    bdist_msi_options = {"initial_target_dir": default_install_dir}
-    # This does not show logging messages
-    # base = "Win32GUI" if sys.platform == "win32" else None
-    # This opens a console that shows also logging messages
-    base = "Console" if sys.platform == "win32" else None
-    executables = [Executable("spinetoolbox.py", base=base)]
+    # Windows specific options
+    if os.name == "nt":  # Windows specific options
+        base = "Console"  # set this to "Win32GUI" to not show console
+        # Set Windows .msi installer default install path to C:\SpineToolbox-version
+        systemdrive = os.environ['SYSTEMDRIVE']
+        default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
+        # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
+        msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
+        if not os.path.isfile(msvcr120_dll):
+            print("\nmsvcr120.dll not found in path:{0}".format(msvcr120_dll))
+            return
+        # Append msvcr120.dll for Windows 7/8 support
+        build_exe_options["include_files"].append(msvcr120_dll)
+    # Other platforms (TODO: needs testing)
+    else:
+        base = None
+    executables = [Executable("spinetoolbox.py", base=base, icon="./ui/resources/app.ico")]
     setup(name="Spine Toolbox",
           version=SPINE_TOOLBOX_VERSION,
           description="An application to define, manage, and execute various energy system simulation models.",
-          author="Spine project",
-          options={"build_exe": build_exe_options, "bdist_msi": bdist_msi_options},
+          author="Spine project consortium",
+          options={"build_exe": build_exe_options},
           executables=executables)
 
 

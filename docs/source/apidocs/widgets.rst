@@ -92,6 +92,14 @@ widgets.custom\_qlineedit module
     :undoc-members:
     :show-inheritance:
 
+widgets.custom\_qlistview module
+--------------------------------
+
+.. automodule:: widgets.custom_qlistview
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.custom\_qtableview module
 ---------------------------------
 

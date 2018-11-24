@@ -17,14 +17,13 @@ Class for main application GUI functions.
 """
 
 import os
-import sys
 import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QImageReader
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -43,7 +42,7 @@ from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
     MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
-from helpers import project_dir, get_datetime, erase_dir, busy_effect
+from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
 
@@ -67,11 +66,8 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        # pyside2_plugin_path = os.path.join(sys.modules['PySide2'].__path__[0], 'plugins')
-        # QApplication.addLibraryPath(pyside2_plugin_path)
-        # self.print_supported_img_formats()
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.set_win_taskbar_icon()
+        set_taskbar_icon()  # in helpers
         self.ui.graphicsView.set_ui(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
@@ -112,6 +108,8 @@ class ToolboxUI(QMainWindow):
         # QActions
         self.show_connections_tab = QAction(self)  # self is for PySide 5.6
         self.show_item_tabbar = QAction(self)
+        self.show_supported_img_formats = QAction(self)
+        self.set_debug_qactions()
         self.hide_tabs()
         # Add toggleview actions
         self.add_toggle_view_actions()
@@ -122,21 +120,9 @@ class ToolboxUI(QMainWindow):
         self.init_shared_widgets()
         self.restore_ui()
 
-    def print_supported_img_formats(self):
-        img_formats = QImageReader().supportedImageFormats()
-        img_formats_str = '\n'.join(str(x) for x in img_formats)
-        logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
-
-    def set_win_taskbar_icon(self):
-        """Set application icon to Windows taskbar."""
-        if os.name == "nt":
-            import ctypes
-            myappid = "SpineConsortium.SpineToolbox." + SPINE_TOOLBOX_VERSION  # arbitrary string
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
-
     def init_conf(self):
         """Load settings from configuration file."""
-        self._config = ConfigurationParser(CONFIGURATION_FILE, defaults=SETTINGS)
+        self._config = ConfigurationParser(self, CONFIGURATION_FILE, defaults=SETTINGS)
         self._config.load()
 
     # noinspection PyArgumentList, PyUnresolvedReferences
@@ -164,9 +150,10 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        # Other QActions
+        # Debug QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
         self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
+        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
         # Project TreeView
@@ -924,13 +911,18 @@ class ToolboxUI(QMainWindow):
             if dock.isFloating():
                 dock.setFloating(False)
 
+    def set_debug_qactions(self):
+        """Set shortcuts for QActions that may be needed in debugging."""
+        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
+        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
+        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
+        self.addAction(self.show_item_tabbar)
+        self.addAction(self.show_connections_tab)
+        self.addAction(self.show_supported_img_formats)
+
     def hide_tabs(self):
         """Hides project item info tab bar and connections tab in project item QTreeView.
         Makes (hidden) actions on how to show them if needed for debugging purposes."""
-        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
-        self.addAction(self.show_item_tabbar)
-        self.addAction(self.show_connections_tab)
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide project item info QTabBar
         self.connections_tab = self.ui.tabWidget.widget(2)
         self.ui.tabWidget.removeTab(2)  # Remove connections tab
@@ -1224,6 +1216,8 @@ class ToolboxUI(QMainWindow):
 
     def close_view_forms(self):
         """Close all GraphViewForm and TreeViewForm instances opened in Data Stores and Views."""
+        if not self._project:
+            return
         for data_store in self.project_item_model.items("Data Stores"):
             if data_store.tree_view_form:
                 data_store.tree_view_form.close()
