@@ -21,7 +21,7 @@ import logging
 from ui.graph_view_form import Ui_MainWindow
 from PySide2.QtWidgets import QMainWindow, QGraphicsScene, QDialog, QErrorMessage, QToolButton, \
     QAction, QGraphicsRectItem, QMessageBox, QCheckBox, QTableView, QSplitter, QPushButton, QTabWidget, \
-    QMenu, QWidget
+    QMenu, QWidget, QHeaderView
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
@@ -90,16 +90,19 @@ class GraphViewForm(QMainWindow):
         self.arc_template_ids = {}
         self.object_icon_dict = {}
         self.relationship_icon_dict = {}
-        self.init_icon_dicts()
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
+        # Parameter value models
+        has_empty_row = not self.read_only
+        self.object_parameter_value_model = ObjectParameterValueModel(self, has_empty_row=has_empty_row)
+        self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
+        self.relationship_parameter_value_model = RelationshipParameterValueModel(self, has_empty_row=has_empty_row)
+        self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
         self.hidden_items = list()
         self.rejected_items = list()
-        self.obj_parameter_value_views = {}
-        self.rel_parameter_value_views = {}
         self.previous_item_selection = list()
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -109,20 +112,30 @@ class GraphViewForm(QMainWindow):
         self.ui.setupUi(self)
         self.ui.graphicsView._graph_view_form = self
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
-        # Set up parameter splitter
-        self.parameter_splitter = QSplitter(self.ui.dockWidgetContents_parameter)
-        self.ui.dockWidgetContents_parameter.layout().addWidget(self.parameter_splitter)
+        # Set up corner widgets
+        icon = QIcon(":/icons/relationship_parameter_icon.png")
+        button = QPushButton(icon, "Relationship parameter")
+        button.setFlat(True)
+        button.setLayoutDirection(Qt.LeftToRight)
+        button.mousePressEvent = lambda e: e.ignore()
+        self.ui.tabWidget_relationship_parameter.setCornerWidget(button, Qt.TopRightCorner)
+        icon = QIcon(":/icons/object_parameter_icon.png")
+        button = QPushButton(icon, "Object parameter")
+        button.setLayoutDirection(Qt.LeftToRight)
+        button.setFlat(True)
+        button.mousePressEvent = lambda e: e.ignore()
+        self.ui.tabWidget_object_parameter.setCornerWidget(button, Qt.TopRightCorner)
+        # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_parameter)
         self.handle_parameter_dock_location_changed(area)
+        area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
+        self.handle_item_palette_dock_location_changed(area)
         # Set up status bar
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.treeView.setModel(self.object_tree_model)
-        self.ui.listView_object_class.setModel(self.object_class_list_model)
-        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.init_models()
-        self.init_parameter_models()
+        self.init_views()
         self.create_add_more_actions()
         self.connect_signals()
         self.restore_ui()
@@ -136,6 +149,7 @@ class GraphViewForm(QMainWindow):
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
     def init_icon_dicts(self):
+        """Initialize icon dictionaries."""
         self.object_icon_dict = {}
         object_icon = lambda x: QIcon(object_pixmap(x))
         for object_class in self.db_map.object_class_list():
@@ -147,142 +161,82 @@ class GraphViewForm(QMainWindow):
             self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
 
     def init_models(self):
-        """Initialize object tree, object class list, and
-        relationship class models and their respective views."""
+        """Initialize models."""
+        self.init_icon_dicts()
         self.object_tree_model.build_flat_tree(self.database)
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
+        self.object_parameter_value_model.init_model()
+        self.relationship_parameter_value_model.init_model()
+        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
+        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
+        self.object_parameter_value_proxy.update_object_id_set({-1})
+        self.relationship_parameter_value_proxy.update_object_id_list_set({-1})
+
+    def init_views(self):
+        self.ui.treeView.setModel(self.object_tree_model)
+        self.ui.listView_object_class.setModel(self.object_class_list_model)
+        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         self.ui.treeView.resizeColumnToContents(0)
         self.ui.treeView.expand(self.object_tree_model.root_item.index())
+        self.init_object_parameter_value_view()
+        self.init_relationship_parameter_value_view()
+        # self.init_object_parameter_definition_view()
+        # self.init_relationship_parameter_definition_view()
+        # self.init_parameter_json_views()
 
-    def init_parameter_models(self):
-        """Initialize parameter models and views."""
-        self.init_object_parameter_models()
-        self.init_relationship_parameter_models()
+    def init_object_parameter_value_view(self):
+        """Init the object parameter value view."""
+        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
+        h = self.object_parameter_value_model.horizontal_header_labels().index
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
-    def init_object_parameter_models(self):
-        """Iterate through object classes to make model/views of parameter value data.
-        Add those views to the parameter splitter to show them when needed.
-        """
-        skip_fields = ['parameter_id']
-        fields = self.db_map.object_parameter_value_fields()
-        header = [x for x in fields if x not in skip_fields]
-        # Prepare dictionary of data per object class
-        object_class_data = {}
-        for parameter_value in self.db_map.object_parameter_value_list():
-            object_class_id = parameter_value.object_class_id
-            parameter_value_data = [v for k, v in parameter_value._asdict().items() if k not in skip_fields]
-            object_class_data.setdefault(object_class_id, list()).append(parameter_value_data)
-        for object_class in self.db_map.object_class_list():
-            object_class_id = object_class.id
-            try:
-                model_data = object_class_data[object_class_id]
-            except KeyError:
-                continue
-                model_data = []
-            object_class_name = object_class.name
-            # Create widget to add to splitter
-            tab_widget = QTabWidget(self.parameter_splitter)
-            tab_widget.tabBar().setMaximumHeight(24)
-            tab_widget.setObjectName(object_class_name)
-            icon = self.object_icon_dict[object_class.id]
-            button = QPushButton(icon, object_class_name, tab_widget)
-            button.setFlat(True)
-            menu = QMenu(button)
-            action = menu.addAction("Hide")
-            action.triggered.connect(tab_widget.hide)
-            button.setMenu(menu)
-            tab_widget.setCornerWidget(button, Qt.TopLeftCorner)
-            view = QTableView(tab_widget)
-            tab_widget.addTab(view, "value")
-            tab_widget.addTab(QWidget(), "definition")
-            tab_widget.hide()
-            self.obj_parameter_value_views[object_class_name] = view
-            # Setup model
-            model = ObjectParameterValueModel(self, has_empty_row=not self.read_only)
-            model.init_model_from_data(model_data, header)
-            proxy = ObjectParameterValueProxy(self)
-            proxy.setSourceModel(model)
-            view.setModel(proxy)
-            h = model.horizontal_header_labels().index
-            view.horizontalHeader().hideSection(h('id'))
-            view.horizontalHeader().hideSection(h('object_class_id'))
-            view.horizontalHeader().hideSection(h('object_class_name'))
-            view.horizontalHeader().hideSection(h('object_id'))
-            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-            view.resizeColumnsToContents()
-            view.verticalHeader().setDefaultSectionSize(self.default_row_height)
-            view.verticalHeader().hide()
+    def init_relationship_parameter_value_view(self):
+        """Init the relationship parameter value view."""
+        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
+        h = self.relationship_parameter_value_model.horizontal_header_labels().index
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_id_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_name_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().\
+            setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
+    def init_object_parameter_definition_view(self):
+        """Init the object parameter definition view."""
+        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_proxy)
+        h = self.object_parameter_definition_model.horizontal_header_labels().index
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
 
-    def init_relationship_parameter_models(self):
-        """Iterate through relationship classes to make model/views of parameter value data.
-        Add those views to the parameter splitter to show them when needed.
-        """
-        font_metric = QFontMetrics(QFont(""))  # For elided text
-        skip_fields = ['parameter_id']
-        fields = self.db_map.relationship_parameter_value_fields()
-        base_header = [x for x in fields if x not in skip_fields]
-        object_name_list_index = base_header.index("object_name_list")
-        base_header.pop(object_name_list_index)
-        # Prepare dictionary of data per relationship class
-        relationship_class_data = {}
-        for parameter_value in self.db_map.relationship_parameter_value_list():
-            relationship_class_id = parameter_value.relationship_class_id
-            parameter_value_data = [v for k, v in parameter_value._asdict().items() if k not in skip_fields]
-            object_name_list = parameter_value_data.pop(object_name_list_index).split(',')
-            for i, object_name in enumerate(object_name_list):
-                parameter_value_data.insert(object_name_list_index + i, object_name)
-            relationship_class_data.setdefault(relationship_class_id, list()).append(parameter_value_data)
-        for relationship_class in self.db_map.wide_relationship_class_list():
-            relationship_class_id = relationship_class.id
-            try:
-                model_data = relationship_class_data[relationship_class_id]
-            except KeyError:
-                continue
-                model_data = []
-            relationship_class_name = relationship_class.name
-            # Create widget to add to splitter
-            tab_widget = QTabWidget(self.parameter_splitter)
-            icon = self.relationship_icon_dict[relationship_class.id]
-            text = font_metric.elidedText(relationship_class_name, Qt.ElideMiddle, 100)
-            button = QPushButton(icon, text, tab_widget)
-            button.setToolTip(relationship_class_name)
-            button.setFlat(True)
-            menu = QMenu(button)
-            action = menu.addAction("Hide")
-            action.triggered.connect(tab_widget.hide)
-            button.setMenu(menu)
-            tab_widget.setCornerWidget(button, Qt.TopLeftCorner)
-            view = QTableView(tab_widget)
-            tab_widget.addTab(view, "value")
-            tab_widget.addTab(QWidget(), "definition")
-            tab_widget.hide()
-            self.rel_parameter_value_views[relationship_class_name] = view
-            # Setup model
-            object_class_name_list = relationship_class.object_class_name_list.split(',')
-            fix_name_ambiguity(object_class_name_list)
-            object_name_list_length = len(object_class_name_list)
-            object_name_range = range(object_name_list_index, object_name_list_index + object_name_list_length)
-            header = base_header.copy()
-            for k, i in enumerate(object_name_range):
-                header.insert(i, object_class_name_list[k])
-            model = RelationshipParameterValueModel(self, has_empty_row=not self.read_only)
-            model.init_model_from_data(model_data, header, object_name_range)
-            proxy = RelationshipParameterValueProxy(self)
-            proxy.setSourceModel(model)
-            view.setModel(proxy)
-            h = model.horizontal_header_labels().index
-            view.horizontalHeader().hideSection(h('id'))
-            view.horizontalHeader().hideSection(h('relationship_class_id'))
-            view.horizontalHeader().hideSection(h('relationship_class_name'))
-            view.horizontalHeader().hideSection(h('object_class_id_list'))
-            view.horizontalHeader().hideSection(h('object_class_name_list'))
-            view.horizontalHeader().hideSection(h('object_id_list'))
-            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-            view.resizeColumnsToContents()
-            view.verticalHeader().setDefaultSectionSize(self.default_row_height)
-            view.verticalHeader().hide()
+    def init_relationship_parameter_definition_view(self):
+        """Init the relationship parameter definition view."""
+        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_proxy)
+        h = self.relationship_parameter_definition_model.horizontal_header_labels().index
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
+            setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_relationship_parameter_definition.verticalHeader().\
+            setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
+            setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     def create_add_more_actions(self):
         """Setup 'Add more' action and button."""
@@ -325,6 +279,7 @@ class GraphViewForm(QMainWindow):
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.dockWidget_parameter.dockLocationChanged.connect(self.handle_parameter_dock_location_changed)
+        self.ui.dockWidget_item_palette.dockLocationChanged.connect(self.handle_item_palette_dock_location_changed)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -347,12 +302,21 @@ class GraphViewForm(QMainWindow):
 
     @Slot("Qt.DockWidgetArea", name="handle_parameter_dock_location_changed")
     def handle_parameter_dock_location_changed(self, area):
-        """Called when the parameters dock widget location changes.
-        Adjust parameters splitter orientation accordingly."""
+        """Called when the parameter dock widget location changes.
+        Adjust splitter orientation accordingly."""
         if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
-            self.parameter_splitter.setOrientation(Qt.Vertical)
+            self.ui.splitter_object_relationship_parameter.setOrientation(Qt.Vertical)
         else:
-            self.parameter_splitter.setOrientation(Qt.Horizontal)
+            self.ui.splitter_object_relationship_parameter.setOrientation(Qt.Horizontal)
+
+    @Slot("Qt.DockWidgetArea", name="handle_item_palette_dock_location_changed")
+    def handle_item_palette_dock_location_changed(self, area):
+        """Called when the item palette dock widget location changes.
+        Adjust splitter orientation accordingly."""
+        if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
+            self.ui.splitter_object_relationship_class.setOrientation(Qt.Vertical)
+        else:
+            self.ui.splitter_object_relationship_class.setOrientation(Qt.Horizontal)
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
@@ -690,6 +654,9 @@ class GraphViewForm(QMainWindow):
 
     def new_scene(self):
         """A new scene with a background."""
+        old_scene = self.ui.graphicsView.scene()
+        if old_scene:
+            old_scene.deleteLater()
         self._scene_bg = QGraphicsRectItem()
         self._scene_bg.setPen(Qt.NoPen)
         self._scene_bg.setZValue(-100)
@@ -709,17 +676,10 @@ class GraphViewForm(QMainWindow):
         selected = [x for x in current_items if x not in previous_items]
         deselected = [x for x in previous_items if x not in current_items]
         self.previous_item_selection = current_items
-        current_obj_class_names = set()
-        current_rel_class_names = set()
         selected_object_ids = set()
         selected_object_id_lists = set()
         deselected_object_ids = set()
         deselected_object_id_lists = set()
-        for item in current_items:
-            if isinstance(item, ObjectItem):
-                current_obj_class_names.add(item.object_class_name)
-            elif isinstance(item, ArcItem):
-                current_rel_class_names.add(item.relationship_class_name)
         for item in selected:
             if isinstance(item, ObjectItem):
                 selected_object_ids.add(item.object_id)
@@ -730,44 +690,12 @@ class GraphViewForm(QMainWindow):
                 deselected_object_ids.add(item.object_id)
             elif isinstance(item, ArcItem):
                 deselected_object_id_lists.add(item.object_id_list)
-        self.hide_parameter_views(current_obj_class_names, current_rel_class_names)
-        self.show_parameter_views(current_obj_class_names, current_rel_class_names)
-        for view in self.obj_parameter_value_views.values():
-            view.model().diff_update_object_id_set(deselected_object_ids)
-            view.model().update_object_id_set(selected_object_ids)
-            if view.isVisible():
-                view.model().apply_filter()
-        for view in self.rel_parameter_value_views.values():
-            view.model().diff_update_object_id_list_set(deselected_object_id_lists)
-            view.model().update_object_id_list_set(selected_object_id_lists)
-            if view.isVisible():
-                view.model().apply_filter()
-
-    def hide_parameter_views(self, current_obj_class_names, current_rel_class_names):
-        """Hide parameter views for non selected object classes."""
-        for obj_class_name in [x for x in self.obj_parameter_value_views if x not in current_obj_class_names]:
-            view = self.obj_parameter_value_views[obj_class_name]
-            view.parent().parent().hide()
-        for rel_class_name in [x for x in self.rel_parameter_value_views if x not in current_rel_class_names]:
-            view = self.rel_parameter_value_views[rel_class_name]
-            view.parent().parent().hide()
-
-    def show_parameter_views(self, current_obj_class_names, current_rel_class_names):
-        """Show parameter views for selected object classes."""
-        for i, obj_class_name in enumerate(current_obj_class_names):
-            try:
-                view = self.obj_parameter_value_views[obj_class_name]
-                self.parameter_splitter.insertWidget(i, view.parent().parent())
-                view.parent().parent().show()
-            except KeyError:
-                pass
-        for i, rel_class_name in enumerate(current_rel_class_names):
-            try:
-                view = self.rel_parameter_value_views[rel_class_name]
-                self.parameter_splitter.insertWidget(i, view.parent().parent())
-                view.parent().parent().show()
-            except KeyError:
-                pass
+        self.object_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
+        self.object_parameter_value_proxy.update_object_id_set(selected_object_ids)
+        self.object_parameter_value_proxy.apply_filter()
+        self.relationship_parameter_value_proxy.diff_update_object_id_list_set(deselected_object_id_lists)
+        self.relationship_parameter_value_proxy.update_object_id_list_set(selected_object_id_lists)
+        self.relationship_parameter_value_proxy.apply_filter()
 
     @Slot("QList<QRectF>", name="handle_scene_changed")
     def handle_scene_changed(self, region):
@@ -778,7 +706,7 @@ class GraphViewForm(QMainWindow):
             return
         scene = self.new_scene()
         msg = "\t• Select items in the 'Object tree' to show objects here.\t\n\n" \
-            + "\t• Select items here to show their parameters in 'Parameters'.\t\n\n"
+            + "\t• Select items here to show their parameters in 'Parameter dock'.\t\n\n"
         if not self.read_only:
             msg += "\t• Drag icons from the 'Item palette' and drop them here to add new.\t\n\n"
         msg += "\n\tNote: You can select multiple items by holding the 'Ctrl' key.\t"
@@ -1118,6 +1046,9 @@ class GraphViewForm(QMainWindow):
             self.qsettings.setValue("{0}/windowMaximized".format(graph_view_widget), True)
         else:
             self.qsettings.setValue("{0}/windowMaximized".format(graph_view_widget), False)
+        scene = self.ui.graphicsView.scene()
+        if scene:
+            scene.deleteLater()
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
         self.db_map.close()

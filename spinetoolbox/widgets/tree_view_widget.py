@@ -98,7 +98,6 @@ class TreeViewForm(QMainWindow):
         self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
         self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
         self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
-        self.object_parameter_json_model = ObjectParameterValueModel(self)
         # JSON models
         self.object_parameter_json_model = JSONModel(self)
         self.relationship_parameter_json_model = JSONModel(self)
@@ -379,12 +378,14 @@ class TreeViewForm(QMainWindow):
 
     @Slot(name="edit_object_parameter_json")
     def edit_object_parameter_json(self):
+        """Start editing object parameter json."""
         index = self.object_parameter_json_model.index(0, 0)
         self.ui.tableView_object_parameter_json.scrollTo(index)
         self.ui.tableView_object_parameter_json.edit(index)
 
     @Slot(name="edit_relationship_parameter_json")
     def edit_relationship_parameter_json(self):
+        """Start editing relationship parameter json."""
         index = self.relationship_parameter_json_model.index(0, 0)
         self.ui.tableView_relationship_parameter_json.scrollTo(index)
         self.ui.tableView_relationship_parameter_json.edit(index)
@@ -448,6 +449,15 @@ class TreeViewForm(QMainWindow):
         Enable/disable actions to edit object tree items depending on selection.
         Enable/disable actions to remove object tree items depending on selection.
         """
+        # Edit object tree item actions
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        item_types = {x.data(Qt.UserRole) for x in indexes}
+        self.ui.actionEdit_object_classes.setEnabled('object_class' in item_types)
+        self.ui.actionEdit_objects.setEnabled('object' in item_types)
+        self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
+        self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
+        # Remove object tree items action
+        self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
         # Copy/paste actions
         if self.focusWidget() != self.ui.menubar:
             self.focus_widget = self.focusWidget()
@@ -469,21 +479,14 @@ class TreeViewForm(QMainWindow):
             focus_widget_name = "relationship parameter value"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_json:
             focus_widget_name = "relationship parameter json"
+        else:
+            return
         if not self.focus_widget.selectionModel().selection().isEmpty():
             self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
             self.ui.actionCopy.setEnabled(True)
         if focus_widget_name != "object tree" and self.clipboard_text:
             self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
             self.ui.actionPaste.setEnabled(True)
-        # Edit object tree item actions
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        item_types = {x.data(Qt.UserRole) for x in indexes}
-        self.ui.actionEdit_object_classes.setEnabled('object_class' in item_types)
-        self.ui.actionEdit_objects.setEnabled('object' in item_types)
-        self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
-        self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
-        # Remove object tree items action
-        self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
 
     @Slot(name="show_import_file_dialog")
     def show_import_file_dialog(self):
@@ -612,6 +615,7 @@ class TreeViewForm(QMainWindow):
         self.init_models()
 
     def init_icon_dicts(self):
+        """Initialize icon dictionaries."""
         self.object_icon_dict = {}
         object_icon = lambda x: QIcon(object_pixmap(x))
         for object_class in self.db_map.object_class_list():
@@ -623,6 +627,7 @@ class TreeViewForm(QMainWindow):
             self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
 
     def init_models(self):
+        """Initialize models."""
         self.init_icon_dicts()
         self.init_object_tree_model()
         self.init_parameter_value_models()
@@ -653,6 +658,7 @@ class TreeViewForm(QMainWindow):
         self.relationship_parameter_definition_proxy.setSourceModel(self.relationship_parameter_definition_model)
 
     def init_views(self):
+        """Initialize model views."""
         self.init_object_parameter_value_view()
         self.init_relationship_parameter_value_view()
         self.init_object_parameter_definition_view()
@@ -660,7 +666,7 @@ class TreeViewForm(QMainWindow):
         self.init_parameter_json_views()
 
     def init_object_parameter_value_view(self):
-        """Init the object parameter value view."""
+        """Init object parameter value view."""
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
@@ -672,7 +678,7 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
 
     def init_relationship_parameter_value_view(self):
-        """Init the relationship parameter value view."""
+        """Init relationship parameter value view."""
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
@@ -687,7 +693,7 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_object_parameter_definition_view(self):
-        """Init the object parameter definition view."""
+        """Init object parameter definition view."""
         self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_proxy)
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
@@ -698,7 +704,7 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
 
     def init_relationship_parameter_definition_view(self):
-        """Init the relationship parameter definition view."""
+        """Init relationship parameter definition view."""
         self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_proxy)
         h = self.relationship_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
@@ -725,6 +731,8 @@ class TreeViewForm(QMainWindow):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_object_parameter_json_data_changed")
     def handle_object_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
+        """Called when the user edits the object parameter json table.
+        Set json field in object parameter value table."""
         if Qt.EditRole not in roles:
             return
         json = self.object_parameter_json_model.json()
@@ -733,6 +741,8 @@ class TreeViewForm(QMainWindow):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_relationship_parameter_json_data_changed")
     def handle_relationship_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
+        """Called when the user edits the relationship parameter json table.
+        Set json field in relationship parameter value table."""
         if Qt.EditRole not in roles:
             return
         json = self.relationship_parameter_json_model.json()
