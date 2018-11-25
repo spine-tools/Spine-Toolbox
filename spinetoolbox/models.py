@@ -2152,7 +2152,7 @@ class ObjectParameterModel(QAbstractTableModel):
                 icon = self._tree_view_form.object_icon_dict[object_class_id]
                 self._aux_data[row][object_class_name_column][Qt.DecorationRole] = icon
             except KeyError:
-                continue
+                pass
         new_top_left = self.index(top, object_class_name_column)
         new_bottom_right = self.index(bottom, object_class_name_column)
         self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
@@ -2193,18 +2193,13 @@ class RelationshipParameterModel(QAbstractTableModel):
         if Qt.DecorationRole in roles:
             return
         header = self.horizontal_header_labels()
-        top = top_left.row()
         left = top_left.column()
-        bottom = bottom_right.row()
         right = bottom_right.column()
-        self.set_relationship_class_icon(top, left, bottom, right, header)
-        self.set_object_icons(top, left, bottom, right, header)
-
-    def set_relationship_class_icon(self, top, left, bottom, right, header):
-        """Set relationship class icons."""
         relationship_class_name_column = header.index('relationship_class_name')
         if relationship_class_name_column < left or relationship_class_name_column > right:
             return
+        top = top_left.row()
+        bottom = bottom_right.row()
         relationship_class_dict = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
         for row in range(top, bottom + 1):
             relationship_class_name = self._main_data[row][relationship_class_name_column]
@@ -2213,14 +2208,29 @@ class RelationshipParameterModel(QAbstractTableModel):
                 icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
                 self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = icon
             except KeyError:
-                continue
+                pass
         new_top_left = self.index(top, relationship_class_name_column)
         new_bottom_right = self.index(bottom, relationship_class_name_column)
         self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
 
-    def set_object_icons(self, top, left, bottom, right, header):
-        """See reimplementation in RelationshipParameterValueModel"""
-        pass
+    def decoration_role_data(self, model_data):
+        """Return decoration role data based on model_data."""
+        if not model_data:
+            return []
+        header = self.horizontal_header_labels()
+        aux_data = []
+        aux_data_append = aux_data.append
+        row_range = range(len(model_data[0]))
+        relationship_class_id_column = header.index('relationship_class_id')
+        relationship_class_name_column = header.index('relationship_class_name')
+        object_class_name_list_column = header.index('object_class_name_list')
+        for model_row in model_data:
+            aux_row = [{} for i in row_range]
+            relationship_class_id = model_row[relationship_class_id_column]
+            icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
+            aux_row[relationship_class_name_column][Qt.DecorationRole] = icon
+            aux_data_append(aux_row)
+        return aux_data
 
 
 class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterModel):
@@ -2251,12 +2261,12 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterMo
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in row_range:
+            curr_name = self._main_data[row][column]
             try:
-                curr_name = self._main_data[row][column][Qt.DisplayRole]
                 new_name = names_dict[curr_name]
                 self._main_data[row][column] = new_name
             except KeyError:
-                continue
+                pass
 
     def remove_items(self, removed_type, *removed_names):
         if removed_type != "object_class":
@@ -2265,10 +2275,7 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterMo
         header_index = self.horizontal_header_labels().index
         column = header_index("object_class_name")
         for row in reversed(row_range):
-            try:
-                name = self._main_data[row][column]
-            except KeyError:
-                continue
+            name = self._main_data[row][column]
             if name in removed_names:
                 super().removeRows(row, 1)
 
@@ -2320,19 +2327,7 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
         if not model_data:
             return
-        # Prepare decoration role data
-        aux_data = []
-        aux_data_append = aux_data.append
-        row_range = range(len(model_data[0]))
-        relationship_class_id_column = header.index('relationship_class_id')
-        relationship_class_name_column = header.index('relationship_class_name')
-        object_class_name_list_column = header.index('object_class_name_list')
-        for model_row in model_data:
-            aux_row = [{} for i in row_range]
-            relationship_class_id = model_row[relationship_class_id_column]
-            icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
-            aux_row[relationship_class_name_column][Qt.DecorationRole] = icon
-            aux_data_append(aux_row)
+        aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data, aux_data=aux_data)
         column_names = ['id', 'relationship_class_name', 'object_class_name_list']
         self.make_data_fixed(column_names=column_names)
@@ -2346,12 +2341,12 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         if renamed_type == "relationship_class":
             column = header_index("relationship_class_name")
             for row in row_range:
+                curr_name = self._main_data[row][column]
                 try:
-                    curr_name = self._main_data[row][column]
                     new_name = names_dict[curr_name]
                     self._main_data[row][column] = new_name
                 except KeyError:
-                    continue
+                    pass
         elif renamed_type == "object_class":
             column = header_index("object_class_name_list")
             for row in row_range:
@@ -2371,19 +2366,13 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         if removed_type == "relationship_class":
             column = header_index("relationship_class_name")
             for row in reversed(row_range):
-                try:
-                    name = self._main_data[row][column]
-                except KeyError:
-                    continue
+                name = self._main_data[row][column]
                 if name in removed_names:
                     super().removeRows(row, 1)
         elif removed_type == "object_class":
             column = header_index("object_class_name_list")
             for row in reversed(row_range):
-                try:
-                    object_class_name_list = self._main_data[row][column].split(",")
-                except KeyError:
-                    continue
+                object_class_name_list = self._main_data[row][column].split(",")
                 for object_class_name in object_class_name_list:
                     if object_class_name in removed_names:
                         super().removeRows(row, 1)
@@ -2457,14 +2446,6 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
-    def init_model_from_data(self, model_data, header):
-        """Initialize model from source database."""
-        self.set_horizontal_header_labels(header)
-        aux_data = self.decoration_role_data(model_data)
-        self.reset_model(model_data, aux_data=aux_data)
-        column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
-        self.make_data_fixed(column_names=column_names)
-
     def rename_items(self, renamed_type, new_names, curr_names):
         if renamed_type not in ("object_class", "object", "parameter"):
             return
@@ -2478,15 +2459,15 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         elif renamed_type == "parameter":
             column = header_index("parameter_name")
         for row in row_range:
+            curr_name = self._main_data[row][column]
             try:
-                curr_name = self._main_data[row][column]
                 new_name = names_dict[curr_name]
                 self._main_data[row][column] = new_name
             except KeyError:
-                continue
+                pass
 
     def remove_items(self, removed_type, *removed_names):
-        if removed_type not in ("object_class", "object", "parameter"):
+        if removed_type not in ("object_class",  "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
@@ -2497,10 +2478,7 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         elif removed_type == "parameter":
             column = header_index("parameter_name")
         for row in reversed(row_range):
-            try:
-                name = self._main_data[row][column]
-            except KeyError:
-                continue
+            name = self._main_data[row][column]
             if name in removed_names:
                 super().removeRows(row, 1)
 
@@ -2575,160 +2553,90 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
-        self.object_name_range = None  # Range of column indices that are part of the object name list
-
-    def set_object_icons(self, top, left, bottom, right, header):
-        """Set object icons."""
-        object_name_columns = [x for x in range(left, right + 1) if x in self.object_name_range]
-        if not object_name_columns:
-            return
-        object_dict = {x.name: x.class_id for x in self.db_map.object_list()}
-        for row in range(top, bottom + 1):
-            for column in object_name_columns:
-                object_name = self._main_data[row][column]
-                try:
-                    object_class_id = object_dict[object_name]
-                    icon = self._tree_view_form.object_icon_dict[object_class_id]
-                    self._aux_data[row][column][Qt.DecorationRole] = icon
-                except KeyError:
-                    continue
-        new_top_left = self.index(top, object_name_columns[0])
-        new_bottom_right = self.index(bottom, object_name_columns[-1])
-        self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
 
     def init_model(self, skip_fields=['parameter_id']):
         """Initialize model from source database."""
         data = self.db_map.relationship_parameter_value_list()
         fields = self.db_map.relationship_parameter_value_fields()
         header = [x for x in fields if x not in skip_fields]
-        # Split single 'object_name_list' column into several 'object_name' columns
-        relationship_class_list = self.db_map.wide_relationship_class_list()
-        object_class_id_list_index = header.index("object_class_id_list")
-        object_name_list_index = header.index("object_name_list")
-        max_object_name_list_length = max(
-            [len(x.object_class_id_list.split(',')) for x in relationship_class_list], default=1)
-        self.object_name_range = range(object_name_list_index, object_name_list_index + max_object_name_list_length)
-        header.pop(object_name_list_index)
-        object_name_header = ["object_name" for k in range(max_object_name_list_length)]
-        fix_name_ambiguity(object_name_header)
-        for k, i in enumerate(self.object_name_range):
-            header.insert(i, object_name_header[k])
         self.set_horizontal_header_labels(header)
-        # Compute model and aux data: split single 'object_name_list' value into several 'object_name' values
-        model_data = list()
-        model_data_append = model_data.append
-        aux_data = []
-        aux_data_append = aux_data.append
-        relationship_class_id_column = header.index('relationship_class_id')
-        relationship_class_name_column = header.index('relationship_class_name')
-        for row in data:
-            model_row = [v for k, v in row._asdict().items() if k not in skip_fields]
-            object_name_list = model_row.pop(object_name_list_index).split(',')
-            for i in range(max_object_name_list_length):
-                try:
-                    object_name = object_name_list[i]
-                    model_row.insert(object_name_list_index + i, object_name)
-                except IndexError:
-                    model_row.insert(object_name_list_index + i, None)
-            model_data_append(model_row)
-            aux_row = [{} for i in model_row]
-            object_class_id_list = [int(x) for x in model_row[object_class_id_list_index].split(',')]
-            for i in range(max_object_name_list_length):
-                try:
-                    object_class_id = object_class_id_list[i]
-                    object_icon = self._tree_view_form.object_icon_dict[object_class_id]
-                    aux_row[object_name_list_index + i][Qt.DecorationRole] = object_icon
-                except IndexError:
-                    pass
-            relationship_class_id = model_row[relationship_class_id_column]
-            relationship_icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
-            aux_row[relationship_class_name_column][Qt.DecorationRole] = relationship_icon
-            aux_data_append(aux_row)
+        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
         if not model_data:
             return
+        aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data, aux_data=aux_data)
-        object_name_header = [header[x] for x in self.object_name_range]
-        column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
-        self.make_data_fixed(column_names=column_names)
-
-    def init_model_from_data(self, model_data, header, object_name_range):
-        """Initialize model from source database."""
-        self.set_horizontal_header_labels(header)
-        self.object_name_range = object_name_range
-        self.reset_model(model_data)
-        object_name_header = [header[x] for x in self.object_name_range]
-        column_names = ['id', 'relationship_class_name', *object_name_header, 'parameter_name']
+        column_names = ['id', 'relationship_class_name', 'object_name_list', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, new_names, curr_names):
-        if renamed_type not in ("relationship_class", "object", "parameter"):
+        if renamed_type not in ("relationship_class", "object_class", "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         names_dict = dict(zip(curr_names, new_names))
-        if renamed_type == "object":
+        header_index = self.horizontal_header_labels().index
+        if renamed_type == "object_class":
+            column = header_index("object_class_name_list")
             for row in row_range:
-                for column in self.object_name_range:
+                object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
+                for i, object_class_name in enumerate(object_class_name_list):
                     try:
-                        curr_name = self._main_data[row][column]
-                        new_name = names_dict[curr_name]
-                        self._main_data[row][column] = new_name
+                        object_class_name_list[i] = names_dict[object_class_name]
                     except KeyError:
                         continue
+                self._main_data[row][column] = ",".join(object_class_name_list)
+        elif renamed_type == "object":
+            column = header_index("object_name_list")
+            for row in row_range:
+                object_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
+                for i, object_name in enumerate(object_name_list):
+                    try:
+                        object_name_list[i] = names_dict[object_name]
+                    except KeyError:
+                        continue
+                self._main_data[row][column] = ",".join(object_name_list)
         elif renamed_type in ("relationship_class", "parameter"):
-            header_index = self.horizontal_header_labels().index
             if renamed_type in "relationship_class":
                 column = header_index("relationship_class_name")
             elif renamed_type in "parameter":
                 column = header_index("parameter_name")
             for row in row_range:
+                curr_name = self._main_data[row][column]
                 try:
-                    curr_name = self._main_data[row][column]
                     new_name = names_dict[curr_name]
                     self._main_data[row][column] = new_name
                 except KeyError:
-                    continue
+                    pass
 
     def remove_items(self, removed_type, *removed_names):
-        if removed_type not in ("relationship_class", "object", "parameter"):
+        if removed_type not in ("relationship_class", "object_class", "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
-        if removed_type == "object":
+        header_index = self.horizontal_header_labels().index
+        if removed_type == "object_class":
+            column = header_index("object_class_name_list")
             for row in reversed(row_range):
-                for column in self.object_name_range:
-                    try:
-                        name = self._main_data[row][column]
-                    except KeyError:
-                        continue
-                    if name in removed_names:
+                object_class_name_list = self._main_data[row][column].split(",")
+                for object_class_name in object_class_name_list:
+                    if object_class_name in removed_names:
+                        super().removeRows(row, 1)
+                        break
+        elif removed_type == "object":
+            column = header_index("object_name_list")
+            for row in reversed(row_range):
+                object_name_list = self._main_data[row][column].split(",")
+                for object_name in object_name_list:
+                    if object_name in removed_names:
                         super().removeRows(row, 1)
                         break
         elif removed_type in ("relationship_class", "parameter"):
-            header_index = self.horizontal_header_labels().index
             if removed_type in "relationship_class":
                 column = header_index("relationship_class_name")
             elif removed_type in "parameter":
                 column = header_index("parameter_name")
             for row in reversed(row_range):
-                try:
-                    name = self._main_data[row][column]
-                except KeyError:
-                    continue
+                name = self._main_data[row][column]
                 if name in removed_names:
                     super().removeRows(row, 1)
-
-    def extend_object_name_range(self, length):
-        """Extend object name range to fit given length."""
-        curr_length = len(self.object_name_range)
-        diff = length - curr_length
-        if diff <= 0:
-            return
-        self.insertColumns(self.object_name_range.stop, diff)
-        object_name_header_ext = ["object_name [{}]".format(str(i + 1)) for i in range(curr_length, length)]
-        object_name_header_ext = ["object_name" for i in range(diff)]
-        fix_name_ambiguity(object_name_header_ext, offset=curr_length)
-        self.insert_horizontal_header_labels(self.object_name_range.stop, object_name_header_ext)
-        self.object_name_range = range(self.object_name_range.start, self.object_name_range.stop + diff)
-        self.make_data_fixed(column_names=object_name_header_ext)
 
     def batch_set_wip_data(self, indexes, data):
         """Batch set work in progress data. Update model first, then see if the database
@@ -2752,7 +2660,7 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         header = self.horizontal_header_labels()
         relationship_class_name_column = header.index('relationship_class_name')
         object_id_list_column = header.index('object_id_list')
-        object_name1_column = self.object_name_range.start
+        object_name_list_column = header.index('object_name_list')
         # Query db and build ad-hoc dicts
         relationship_class_dict = {
             x.name: {
@@ -2774,17 +2682,20 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             except KeyError:
                 continue
             object_id_list = list()
-            object_name_list = list()
+            join_object_name_list = self.index(row, object_name_list_column).data(Qt.DisplayRole)
+            if not join_object_name_list:
+                continue
+            object_name_list = join_object_name_list.split(",")
             object_class_count = relationship_class['object_class_count']
-            for j in range(object_name1_column, object_name1_column + object_class_count):
-                object_name = self.index(row, j).data(Qt.DisplayRole)
+            if len(object_name_list) < object_class_count:
+                continue
+            for object_name in object_name_list:
                 try:
                     object_id = object_dict[object_name]
                     object_id_list.append(object_id)
-                    object_name_list.append(object_name)
                 except KeyError:
                     break
-            if len(object_id_list) < object_class_count or len(object_name_list) < object_class_count:
+            if len(object_id_list) < object_class_count:
                 continue
             join_object_id_list = ",".join([str(x) for x in object_id_list])
             try:
@@ -2830,6 +2741,7 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         relationship_class_id_column = header.index('relationship_class_id')
         relationship_class_name_column = header.index('relationship_class_name')
         object_class_id_list_column = header.index('object_class_id_list')
+        object_class_name_list_column = header.index('object_class_name_list')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
         relationship_class_name_id_dict = {
@@ -2837,7 +2749,8 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         relationship_class_dict = {
             x.id: {
                 "name": x.name,
-                "object_class_id_list": x.object_class_id_list
+                "object_class_id_list": x.object_class_id_list,
+                "object_class_name_list": x.object_class_name_list
             } for x in self.db_map.wide_relationship_class_list()}
         parameter_dict = {
             x.name: {
@@ -2867,11 +2780,13 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             try:
                 correct_relationship_class_name = relationship_class_dict[relationship_class_id]['name']
                 object_class_id_list = relationship_class_dict[relationship_class_id]['object_class_id_list']
+                object_class_name_list = relationship_class_dict[relationship_class_id]['object_class_name_list']
             except KeyError:
                 continue
             self._main_data[row][relationship_class_id_column] = relationship_class_id
             self._main_data[row][relationship_class_name_column] = correct_relationship_class_name
             self._main_data[row][object_class_id_list_column] = object_class_id_list
+            self._main_data[row][object_class_name_list_column] = object_class_name_list
             if correct_relationship_class_name != relationship_class_name:
                 indexes.append(self.index(row, relationship_class_name_column))
             if parameter is None:
@@ -3231,7 +3146,7 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
         self.object_id_set = set()
         self.object_id_list_set = set()  # Set of string
         self.object_id_list_column = None
-        self.object_name_range = None
+        self.object_name_list_column = None
         self.object_count = 0
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
@@ -3239,7 +3154,7 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
         super().receive_header_data_changed(orientation, first, last)
         if self.header_index:
             self.object_id_list_column = self.header_index("object_id_list")
-        self.object_name_range = self.sourceModel().object_name_range
+            self.object_name_list_column = self.header_index("object_name_list")
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
@@ -3251,13 +3166,12 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
         if self.object_id_list_set:
             if object_id_list not in self.object_id_list_set:
                 return False
-            for j in range(len(split_object_id_list)):
-                source_model._aux_data[source_row][self.object_name_range.start + j][Qt.FontRole] = self.bold_font
+            source_model._aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
         if self.object_id_set:
             found = False
             for j, object_id in enumerate(split_object_id_list):
                 if object_id in self.object_id_set:
-                    source_model._aux_data[source_row][self.object_name_range.start + j][Qt.FontRole] = self.bold_font
+                    source_model._aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
                     found = True
             if not found:
                 return False
@@ -3311,11 +3225,10 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
         super().invalidate_filter()
         self.object_count = 0
         for row_data in self.sourceModel()._aux_data:
-            for j in self.object_name_range:
-                row_data[j][Qt.FontRole] = None
+            row_data[self.object_name_list_column][Qt.FontRole] = None
         row_count = self.sourceModel().rowCount()
-        top_left = self.sourceModel().index(0, self.object_name_range.start)
-        bottom_right = self.sourceModel().index(row_count - 1, self.object_name_range.stop - 1)
+        top_left = self.sourceModel().index(0, self.object_name_list_column)
+        bottom_right = self.sourceModel().index(row_count - 1, self.object_name_list_column)
         self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
