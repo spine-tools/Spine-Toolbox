@@ -1268,7 +1268,7 @@ class ObjectItem(QGraphicsPixmapItem):
         if not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
-        self._graph_view_form.show_object_item_context_menu(e.screenPos())
+        self._graph_view_form.show_object_item_context_menu(e, self)
 
     def set_all_visible(self, on):
         """Set visible attribute for this item and all related ones."""

@@ -824,24 +824,27 @@ class GraphViewForm(QMainWindow):
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
             self.template_id += 1
 
-    def add_relationship_template(self, scene, x, y, object_items, arc_items):
+    def add_relationship_template(self, scene, x, y, object_items, arc_items, origin_at_first=False):
         """Add relationship parts into the scene to form a 'relationship template'."""
         for item in object_items + arc_items:
             scene.addItem(item)
-        # Move
-        rectf = QRectF()
-        for object_item in object_items:
-            rectf |= object_item.sceneBoundingRect()
-        center = rectf.center()
-        for object_item in object_items:
-            object_item.moveBy(x - center.x(), y - center.y())
-            object_item.move_related_items_by(QPointF(x, y) - center)
+        # Make template
         for dimension, object_item in enumerate(object_items):
             object_item.make_template()
             object_item.template_id_dim[self.template_id] = dimension
         for arc_item in arc_items:
             arc_item.make_template()
             arc_item.template_id = self.template_id
+        # Move
+        rectf = QRectF()
+        for object_item in object_items:
+            rectf |= object_item.sceneBoundingRect()
+            if origin_at_first:
+                break
+        center = rectf.center()
+        for object_item in object_items:
+            object_item.moveBy(x - center.x(), y - center.y())
+            object_item.move_related_items_by(QPointF(x, y) - center)
 
     @busy_effect
     def add_relationship(self, template_id, object_items):
@@ -1020,9 +1023,10 @@ class GraphViewForm(QMainWindow):
         self.graph_view_context_menu.deleteLater()
         self.graph_view_context_menu = None
 
-    def show_object_item_context_menu(self, global_pos):
+    def show_object_item_context_menu(self, e, main_item):
         """Show context menu for object_item."""
-        self.object_item_context_menu = ObjectItemContextMenu(self, global_pos)
+        global_pos = e.screenPos()
+        self.object_item_context_menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = self.object_item_context_menu.get_action()
         scene = self.ui.graphicsView.scene()
         if scene:
@@ -1034,6 +1038,30 @@ class GraphViewForm(QMainWindow):
             elif option == "Ignore selected and rebuild graph":
                 self.rejected_items.extend(object_items)
                 self.build_graph()
+            elif option.startswith("Add") and option.endswith("relationship"):
+                # NOTE: the line below assumes the relationship name is enclose by '' in the option str
+                relationship_class_name = option.split("'")[1]
+                item = self.relationship_class_list_model.findItems(relationship_class_name)[0]
+                relationship_class = item.data(Qt.UserRole + 1)
+                object_class_name_list = relationship_class['object_class_name_list'].split(",")
+                object_name_list = object_class_name_list.copy()
+                fix_name_ambiguity(object_name_list)
+                extent = 2 * self.font.pointSize()
+                object_items, arc_items = self.relationship_parts(
+                    relationship_class_name, object_class_name_list, object_name_list,
+                    extent, self._spread,
+                    label_font=self.font, label_color=self.label_color, label_position="under_icon")
+                scene_pos = e.scenePos()
+                self.add_relationship_template(
+                    scene, scene_pos.x(), scene_pos.y(), object_items, arc_items, origin_at_first=True)
+                main_item.check_for_merge_target(scene_pos)
+                main_item.merge_item()
+                self._has_graph = True
+                self.relationship_class_dict[self.template_id] = {
+                    "id": relationship_class["id"],
+                    "name": relationship_class_name
+                }
+                self.template_id += 1
             else:
                 pass
         self.object_item_context_menu.deleteLater()

@@ -258,12 +258,28 @@ class ObjectItemContextMenu(CustomContextMenu):
     Attributes:
         parent (QWidget): Parent for menu widget (GraphViewForm)
         position (QPoint): Position on screen
+        graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
     """
-    def __init__(self, parent, position):
+    def __init__(self, parent, position, graphics_item):
         """Class constructor."""
         super().__init__(parent)
         self.add_action("Hide selected")
         self.add_action("Ignore selected and rebuild graph")
+        self.addSeparator()
+        if parent.read_only:
+            self.exec_(position)
+            return
+        for item in parent.relationship_class_list_model.findItems('*', Qt.MatchWildcard):
+            relationship_class = item.data(Qt.UserRole + 1)
+            if not relationship_class:
+                continue
+            object_class_name_list = relationship_class["object_class_name_list"].split(",")
+            if not object_class_name_list:
+                continue
+            if graphics_item.object_class_name != object_class_name_list[0]:
+                continue
+            # NOTE: the '' enclosing the name in the line below are important
+            self.add_action("Add '{}' relationship".format(relationship_class['name']))
         self.exec_(position)
 
 

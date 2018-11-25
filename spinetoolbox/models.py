@@ -1348,7 +1348,8 @@ class ObjectClassListModel(QStandardItemModel):
         for object_class in object_class_list:
             icon = self._graph_view_form.object_icon_dict[object_class.id]
             object_class_item = QStandardItem(object_class.name)
-            data = {"type": "object_class", **object_class._asdict()}
+            data = {"type": "object_class"}
+            data.update(object_class._asdict())
             object_class_item.setData(data, Qt.UserRole + 1)
             object_class_item.setData(icon, Qt.DecorationRole)
             object_class_item.setData(object_class.name, Qt.ToolTipRole)
@@ -1391,7 +1392,8 @@ class RelationshipClassListModel(QStandardItemModel):
         for relationship_class in relationship_class_list:
             icon = self._graph_view_form.relationship_icon_dict[relationship_class.id]
             relationship_class_item = QStandardItem(relationship_class.name)
-            data = {"type": "relationship_class", **relationship_class._asdict()}
+            data = {"type": "relationship_class"}
+            data.update(relationship_class._asdict())
             relationship_class_item.setData(data, Qt.UserRole + 1)
             relationship_class_item.setData(icon, Qt.DecorationRole)
             relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
