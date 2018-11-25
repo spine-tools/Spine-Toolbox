@@ -876,7 +876,7 @@ class GraphViewForm(QMainWindow):
             'class_id': class_id
         }
         try:
-            wide_relationship = self.db_map.add_wide_relationships(*[wide_kwargs])[0]
+            wide_relationship = self.db_map.add_wide_relationships(wide_kwargs)[0]
             for item in object_items:
                 del item.template_id_dim[template_id]
             items = self.ui.graphicsView.scene().items()

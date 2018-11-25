@@ -1207,16 +1207,19 @@ class ObjectItem(QGraphicsPixmapItem):
         else:
             template = self._merge_target
             instance = self
+        # Set the object_name attribute of template, assuming everything will go fine.
+        template_object_name = template.object_name
+        template.object_name = instance.object_name
         template_buddies = template.template_buddies()
-        # Add template id-dimension to instance. We'll remove it if needed
-        instance.template_id_dim.update(template.template_id_dim)
         if not [x for x in template_buddies if x.is_template and x != template]:
             # The only template left is the one we're merging
             template_id = list(template.template_id_dim)[0]
-            relationship_items = [x if x != template else instance for x in template_buddies]
-            if not self._graph_view_form.add_relationship(template_id, relationship_items):
-                del instance.template_id_dim[template_id]
+            if not self._graph_view_form.add_relationship(template_id, template_buddies):
+                # Restablish template object name, since something went wrong (not that it matters too much, though)
+                template.object_name = template_object_name
                 return False
+        # Add template id-dimension to instance
+        instance.template_id_dim.update(template.template_id_dim)
         template.move_related_items_by(instance.pos() - template.pos())
         for arc_item in template.outgoing_arc_items:
             arc_item.src_item = instance
