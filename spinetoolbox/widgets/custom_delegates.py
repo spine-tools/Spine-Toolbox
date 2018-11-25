@@ -19,7 +19,8 @@ from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
     QTextEdit
 from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor, \
+    ObjectNameListEditor
 import logging
 
 
@@ -134,15 +135,15 @@ class ParameterDelegate(QItemDelegate):
     """A custom delegate for the parameter value models and views in TreeViewForm.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
     commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
     json_editor_requested = Signal(name="json_editor_requested")
 
-    def __init__(self, parent, db_map):
+    def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.db_map = db_map
+        self.db_map = parent.db_map
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -153,10 +154,10 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -212,10 +213,10 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -238,20 +239,27 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
     """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def close_object_name_list_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, model, index)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         h = header.index
-        object_name_range = index.model().object_name_range
         if header[index.column()] in ('relationship_class_name', 'parameter_name'):
             return CustomComboEditor(parent)
-        elif index.column() in object_name_range:
-            return CustomComboEditor(parent)
+        elif header[index.column()] == 'object_name_list':
+            editor = ObjectNameListEditor(parent)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_object_name_list_editor(e, i, m))
+            return editor
         elif header[index.column()] == 'json':
             self.json_editor_requested.emit()
             return None
@@ -262,33 +270,32 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         h = header.index
-        object_name_range = index.model().object_name_range
         if header[index.column()] == 'relationship_class_name':
             relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), relationship_class_name_list)
-        elif index.column() in object_name_range:
-            # Get relationship class
-            relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            if not relationship_class:
-                editor.set_data(index.data(Qt.EditRole), [])
-                return
-            # Get object class
-            dimension = object_name_range.index(index.column())
-            object_class_name_list = relationship_class.object_class_name_list.split(',')
+        elif header[index.column()] == 'object_name_list':
+            object_class_id_list = index.sibling(index.row(), h('object_class_id_list')).data(Qt.DisplayRole)
+            object_class_name_list = index.sibling(index.row(), h('object_class_name_list')).data(Qt.DisplayRole)
             try:
-                object_class_name = object_class_name_list[dimension]
-            except IndexError:
-                editor.set_data(index.data(Qt.EditRole), [])
+                object_class_ids = [int(x) for x in object_class_id_list.split(',')]
+                object_class_names = object_class_name_list.split(',')
+            except AttributeError:
                 return
-            object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
-            if not object_class:
-                editor.set_data(index.data(Qt.EditRole), [])
-                return
-            # Get object name list
-            object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
-            editor.set_data(index.data(Qt.EditRole), object_name_list)
+            object_icons = [self._parent.object_icon_dict[x] for x in object_class_ids]
+            object_class_dict = dict(zip(object_class_ids, object_class_names))
+            object_names_dict = {}
+            for object_ in self.db_map.object_list():
+                try:
+                    object_class_name = object_class_dict[object_.class_id]
+                except KeyError:
+                    continue
+                object_names_dict.setdefault(object_class_name, list()).append(object_.name)
+            object_name_list = index.data(Qt.EditRole)
+            try:
+                object_names = object_name_list.split(",")
+            except AttributeError:
+                object_names = []
+            editor.set_data(object_icons, object_class_names, object_names, object_names_dict)
         elif header[index.column()] == 'parameter_name':
             # Get relationship class
             relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
@@ -299,18 +306,10 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
                 parameter_list = self.db_map.relationship_parameter_list()
                 parameter_name_list = [x.parameter_name for x in parameter_list]
             else:
-                # Get object name list
-                object_name_list = list()
-                object_class_count = len(relationship_class.object_class_id_list.split(','))
-                for j in range(object_name_range.start, object_name_range.start + object_class_count):
-                    object_name = index.sibling(index.row(), j).data(Qt.DisplayRole)
-                    if not object_name:
-                        break
-                    object_name_list.append(object_name)
-                # Get relationship
+                object_name_list = index.sibling(index.row(), h('object_name_list')).data(Qt.DisplayRole)
                 relationship = self.db_map.single_wide_relationship(
                     class_id=relationship_class.id,
-                    object_name_list=",".join(object_name_list)).one_or_none()
+                    object_name_list=object_name_list).one_or_none()
                 if relationship:
                     parameter_list = self.db_map.unvalued_relationship_parameter_list(relationship.id)
                     parameter_name_list = [x.name for x in parameter_list]
@@ -329,10 +328,10 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     """A delegate for the object parameter model and view in TreeViewForm.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -354,10 +353,10 @@ class AddObjectsDelegate(ParameterDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -380,10 +379,10 @@ class AddRelationshipClassesDelegate(ParameterDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -419,10 +418,10 @@ class AddRelationshipsDelegate(ParameterDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:
-        parent (QTableView): widget where the delegate is installed
+        parent (QMainWindow): tree or graph view form
     """
-    def __init__(self, parent, db_map):
-        super().__init__(parent, db_map)
+    def __init__(self, parent):
+        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""

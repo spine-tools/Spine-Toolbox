@@ -21,7 +21,7 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
 import json
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QLineEdit, QInputDialog, \
-    QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage, QPushButton
+    QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage, QPushButton, QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QSettings
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap
 from ui.tree_view_form import Ui_MainWindow
@@ -161,19 +161,19 @@ class TreeViewForm(QMainWindow):
         """Set delegates for tables."""
         # Object parameter
         table_view = self.ui.tableView_object_parameter_definition
-        delegate = ObjectParameterDefinitionDelegate(table_view, self.db_map)
+        delegate = ObjectParameterDefinitionDelegate(self)
         table_view.setItemDelegate(delegate)
         # Object parameter value
         table_view = self.ui.tableView_object_parameter_value
-        delegate = ObjectParameterValueDelegate(table_view, self.db_map)
+        delegate = ObjectParameterValueDelegate(self)
         table_view.setItemDelegate(delegate)
         # Relationship parameter
         table_view = self.ui.tableView_relationship_parameter_definition
-        delegate = RelationshipParameterDefinitionDelegate(table_view, self.db_map)
+        delegate = RelationshipParameterDefinitionDelegate(self)
         table_view.setItemDelegate(delegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
-        delegate = RelationshipParameterValueDelegate(table_view, self.db_map)
+        delegate = RelationshipParameterValueDelegate(self)
         table_view.setItemDelegate(delegate)
 
     def connect_signals(self):
@@ -273,8 +273,6 @@ class TreeViewForm(QMainWindow):
         self.ui.menuSession.aboutToShow.connect(self.handle_menu_about_to_show)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
-        # Others
-        self.relationship_parameter_value_proxy.layoutChanged.connect(self.hide_unused_object_name_columns)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -836,19 +834,6 @@ class TreeViewForm(QMainWindow):
         else:
             self.relationship_parameter_definition_proxy.apply_filter()
 
-    @Slot(name="hide_unused_object_name_columns")
-    def hide_unused_object_name_columns(self):
-        """Hide unused object name columns in relationship parameter value view."""
-        max_object_count = len(self.relationship_parameter_value_model.object_name_range)
-        object_count = self.relationship_parameter_value_proxy.object_count
-        if not object_count:
-            object_count = max_object_count
-        object_name_1_column = self.relationship_parameter_value_model.object_name_range.start
-        for column in range(object_name_1_column, object_name_1_column + object_count):
-            self.ui.tableView_relationship_parameter_value.horizontalHeader().showSection(column)
-        for column in range(object_name_1_column + object_count, object_name_1_column + max_object_count):
-            self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(column)
-
     @Slot("QObject", "int", "QStringList", name="apply_autofilter")
     def apply_autofilter(self, proxy_model, column, text_list):
         """Called when the tableview wants to trigger the subfilter."""
@@ -983,8 +968,6 @@ class TreeViewForm(QMainWindow):
             self.object_tree_model.add_relationship_class(wide_relationship_class)
             object_name_list_lengths.append(len(wide_relationship_class.object_class_id_list.split(',')))
         object_name_list_length = max(object_name_list_lengths)
-        self.relationship_parameter_value_model.extend_object_name_range(object_name_list_length)
-        self.hide_unused_object_name_columns()
         self.set_commit_rollback_actions_enabled(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
@@ -1314,7 +1297,7 @@ class TreeViewForm(QMainWindow):
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
             relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
-            object_name_1_column = model.object_name_range.start
+            object_name_list_column = model.horizontal_header_labels().index('object_name_list')
             row_column_tuples = list()
             data = list()
             i = 0
@@ -1329,7 +1312,7 @@ class TreeViewForm(QMainWindow):
                         if object_class_name == selected_object_class_name:
                             object_name_list.append(object_name)
                         else:
-                            object_name_list.append(None)
+                            object_name_list.append('')
                 elif tree_index.data(Qt.UserRole) == 'relationship':
                     relationship_class_name = tree_index.parent().data(Qt.DisplayRole)
                     object_name_list = tree_index.data(Qt.UserRole + 1)["object_name_list"].split(",")
@@ -1337,9 +1320,8 @@ class TreeViewForm(QMainWindow):
                     continue
                 row_column_tuples.append((row + i, relationship_class_name_column))
                 data.append(relationship_class_name)
-                for j, object_name in enumerate(object_name_list):
-                    row_column_tuples.append((row + i, object_name_1_column + j))
-                    data.append(object_name)
+                row_column_tuples.append((row + i, object_name_list_column))
+                data.append(",".join(object_name_list))
                 i += 1
             if i > 0:
                 model.insertRows(row, i)

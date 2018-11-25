@@ -50,7 +50,6 @@ class AddItemsDialog(QDialog):
         self.ui = None
         self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
         self.model._force_default = force_default
-        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.remove_row_icon = None  # Set in subclasses to a custom one
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -180,7 +179,7 @@ class AddObjectsDialog(AddItemsDialog):
         super().__init__(parent, force_default=force_default)
         self.remove_row_icon = QIcon(QPixmap(":/icons/minus_object_icon.png"))
         self.setup_ui(ui.add_objects.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddObjectsDelegate(self.ui.tableView, parent.db_map))
+        self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
         default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
@@ -257,7 +256,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         super().__init__(parent, force_default=force_default)
         self.remove_row_icon = QIcon(QPixmap(":/icons/minus_relationship_icon.png"))
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(self.ui.tableView, parent.db_map))
+        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
         self.connect_signals()
         self.number_of_dimensions = 2
         self.object_class_one_name = None
@@ -393,7 +392,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.default_object_name = None
         self.set_default_object_name()
         self.setup_ui(ui.add_relationships.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self.ui.tableView, parent.db_map))
+        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
         self.init_relationship_class(force_default)
         # Add status bar to form
         self.statusbar = QStatusBar(self)
@@ -529,7 +528,6 @@ class EditItemsDialog(QDialog):
         self.orig_kwargs_list = orig_kwargs_list
         self.ui = None
         self.model = MinimalTableModel(self)
-        self.object_icon = QIcon(QPixmap(":/icons/object_icon.png"))
         self.setAttribute(Qt.WA_DeleteOnClose)
 
     def setup_ui(self):
@@ -569,9 +567,6 @@ class EditObjectClassesDialog(EditItemsDialog):
             row_data = [name, description]
             self.orig_data.append(row_data)
         self.model.reset_model(self.orig_data)
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, 0)
-            self.model.setData(index, self.object_icon, Qt.DecorationRole)
         self.ui.tableView.resizeColumnsToContents()
 
     @busy_effect
@@ -755,11 +750,7 @@ class EditRelationshipsDialog(EditItemsDialog):
             self.orig_data.append(row_data)
             self.orig_object_id_lists.append(object_id_list)
         self.model.reset_model(self.orig_data)
-        for row in range(self.model.rowCount()):
-            for column in range(self.model.columnCount() - 1):
-                index = self.model.index(row, column)
-                self.model.setData(index, self.object_icon, Qt.DecorationRole)
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(self.ui.tableView, parent.db_map))
+        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
         self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
         self.ui.tableView.resizeColumnsToContents()
 
