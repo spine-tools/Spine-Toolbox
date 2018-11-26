@@ -66,36 +66,44 @@ class GraphViewForm(QMainWindow):
         self.read_only = read_only
         self._has_graph = False
         self._scene_bg = None
-        self.object_item_placeholder = None
-        self.err_msg = QErrorMessage(self)
         self.font = QFont("", 64)
         self.font_metric = QFontMetrics(self.font)
         self._spread = self.font_metric.width("Spine Toolbox")
         self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
-        self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.label_color.setAlphaF(.5)
+        self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(.75)
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        self.visible_rows = int(max_screen_height / self.default_row_height)
+        self.object_item_placeholder = None
+        self.err_msg = QErrorMessage(self)
+        # Data for ObjectItems
         self.object_ids = list()
         self.object_names = list()
         self.object_class_names = list()
-        self.object_id_lists = list()
-        self.relationship_class_names = list()
-        self.arc_object_names_list = list()
-        self.arc_object_class_names_list = list()
+        # Data for ArcItems
+        self.arc_object_id_lists = list()
+        self.arc_object_name_lists = list()
+        self.arc_relationship_class_names = list()
+        self.arc_object_class_name_lists = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
+        # Data for template ObjectItems and ArcItems (these are persisted across graph builds)
         self.heavy_positions = {}
+        self.is_template = {}
+        self.template_id_dims = {}
+        self.arc_template_ids = {}
+        # Data of relationship templates
         self.template_id = 1
         self.relationship_class_dict = {}  # template_id => relationship_class_name, relationship_class_id
-        self.template_id_dims = {}
-        self.is_template = {}
-        self.arc_template_ids = {}
+        # Icon dicts
         self.object_icon_dict = {}
         self.relationship_icon_dict = {}
         self.object_tree_model = ObjectTreeModel(self)
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
-        # Parameter value models
+        # Parameter models
         has_empty_row = not self.read_only
         self.object_parameter_value_model = ObjectParameterValueModel(self, has_empty_row=has_empty_row)
         self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
@@ -106,14 +114,14 @@ class GraphViewForm(QMainWindow):
         self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(
             self, has_empty_row=has_empty_row)
         self.relationship_parameter_definition_proxy = RelationshipParameterDefinitionProxy(self)
+        # Contex menus
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
+        # Hidden and rejected items
         self.hidden_items = list()
         self.rejected_items = list()
+        # Previous item selection (for filtering parameter tables)
         self.previous_item_selection = list()
-        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
-        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
-        self.visible_rows = int(max_screen_height / self.default_row_height)
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -141,6 +149,7 @@ class GraphViewForm(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
+        # Initialize stuff
         self.init_models()
         self.init_views()
         self.create_add_more_actions()
@@ -444,10 +453,10 @@ class GraphViewForm(QMainWindow):
                     self.object_ids.append(object_id)
                     self.object_names.append(object_name)
                     self.object_class_names.append(object_class_name)
-        self.object_id_lists = list()
-        self.relationship_class_names = list()
-        self.arc_object_names_list = list()
-        self.arc_object_class_names_list = list()
+        self.arc_object_id_lists = list()
+        self.arc_relationship_class_names = list()
+        self.arc_object_name_lists = list()
+        self.arc_object_class_name_lists = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         relationship_class_dict = {
@@ -477,17 +486,17 @@ class GraphViewForm(QMainWindow):
                 self.dst_ind_list.append(dst_ind)
                 src_object_name = self.object_names[src_ind]
                 dst_object_name = self.object_names[dst_ind]
-                self.object_id_lists.append(object_id_list)
-                self.relationship_class_names.append(relationship_class_name)
-                arc_object_names = list()
-                arc_object_class_names = list()
+                self.arc_object_id_lists.append(object_id_list)
+                self.arc_relationship_class_names.append(relationship_class_name)
+                arc_object_name_list = list()
+                arc_object_class_name_list = list()
                 for object_name, object_class_name in zip(object_name_list, object_class_name_list):
                     if object_name in (src_object_name, dst_object_name):
                         continue
-                    arc_object_names.append(object_name)
-                    arc_object_class_names.append(object_class_name)
-                self.arc_object_names_list.append(arc_object_names)
-                self.arc_object_class_names_list.append(arc_object_class_names)
+                    arc_object_name_list.append(object_name)
+                    arc_object_class_name_list.append(object_class_name)
+                self.arc_object_name_lists.append(arc_object_name_list)
+                self.arc_object_class_name_lists.append(arc_object_class_name_list)
         # Add template items hanging around
         scene = self.ui.graphicsView.scene()
         if scene:
@@ -520,7 +529,7 @@ class GraphViewForm(QMainWindow):
                 object_ind_dict[item] = object_ind
                 object_ind += 1
             arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-            arc_ind = len(self.arc_object_names_list)
+            arc_ind = len(self.arc_object_name_lists)
             self.arc_template_ids = {}
             for item in arc_items:
                 src_item = item.src_item
@@ -539,10 +548,10 @@ class GraphViewForm(QMainWindow):
                 self.dst_ind_list.append(dst_ind)
                 # NOTE: These arcs correspond to template arcs.
                 # TODO: Set `object_id` and `relationship_class_name` attributes when creating the relationship
-                self.object_id_lists.append("")
-                self.relationship_class_names.append("")
-                self.arc_object_names_list.append("")
-                self.arc_object_class_names_list.append("")
+                self.arc_object_id_lists.append("")
+                self.arc_relationship_class_names.append("")
+                self.arc_object_name_lists.append("")
+                self.arc_object_class_name_lists.append("")
                 self.arc_template_ids[arc_ind] = item.template_id
                 arc_ind += 1
 
@@ -652,10 +661,10 @@ class GraphViewForm(QMainWindow):
         for k in range(len(self.src_ind_list)):
             i = self.src_ind_list[k]
             j = self.dst_ind_list[k]
-            object_id_list = self.object_id_lists[k]
-            relationship_class_name = self.relationship_class_names[k]
-            object_class_names = self.arc_object_class_names_list[k]
-            object_names = self.arc_object_names_list[k]
+            object_id_list = self.arc_object_id_lists[k]
+            relationship_class_name = self.arc_relationship_class_names[k]
+            object_class_names = self.arc_object_class_name_lists[k]
+            object_names = self.arc_object_name_lists[k]
             extent = 2 * self.font.pointSize()
             label_parts = self.relationship_parts(
                 relationship_class_name, object_class_names, object_names,

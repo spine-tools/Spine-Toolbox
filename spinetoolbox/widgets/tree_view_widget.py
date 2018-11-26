@@ -908,7 +908,7 @@ class TreeViewForm(QMainWindow):
 
     @Slot("QObject", "int", "QStringList", name="apply_autofilter")
     def apply_autofilter(self, proxy_model, column, text_list):
-        """Called when the tableview wants to trigger the subfilter."""
+        """Called when the tableview wants to trigger the autofilter."""
         header = proxy_model.sourceModel().horizontal_header_labels()
         kwargs = {header[column]: text_list}
         proxy_model.add_rule(**kwargs)

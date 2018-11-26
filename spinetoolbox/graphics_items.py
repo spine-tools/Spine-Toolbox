@@ -1060,10 +1060,9 @@ class ObjectItem(QGraphicsPixmapItem):
         self._views_cursor = {}
         self.shade = QGraphicsRectItem()
         self._selected_color = graph_view_form.palette().highlight()
-        pixmap = object_pixmap(object_class_name)
+        pixmap = self._graph_view_form.object_icon(object_class_name).pixmap(extent)
         self.setPixmap(pixmap.scaled(extent, extent))
         self.setZValue(-1)
-        # self.setPos(x - 0.5 * extent, y - 0.5 * extent)
         self.setPos(x, y)
         self.setOffset(-0.5 * extent, -0.5 * extent)
         self.setAcceptHoverEvents(True)
@@ -1114,7 +1113,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.label_item.setPos(x, y)
 
     def make_template(self):
-        """Make this object a template for a relationship."""
+        """Make this object par of a template for a relationship."""
         self.is_template = True
         font = QFont("", 0.75 * self._extent)
         brush = QBrush(Qt.white)
@@ -1132,7 +1131,6 @@ class ObjectItem(QGraphicsPixmapItem):
     def shape(self):
         """Make the entire bounding rect to be the shape."""
         path = QPainterPath()
-        # path.addRect(self.boundingRect() | self.childrenBoundingRect())
         path.addRect(self.boundingRect())
         return path
 
@@ -1354,16 +1352,19 @@ class ArcItem(QGraphicsLineItem):
         return super().itemChange(change, value)
 
     def make_template(self):
+        """Make this arc part of a template for a relationship."""
         self.is_template = True
         self.normal_pen.setStyle(Qt.DotLine)
         self.selected_pen.setStyle(Qt.DotLine)
 
     def remove_template(self):
+        """Make this arc no longer part of a template for a relationship."""
         self.is_template = False
         self.normal_pen.setStyle(Qt.SolidLine)
         self.selected_pen.setStyle(Qt.SolidLine)
 
     def shape(self):
+        """Shape is a the shape of a slightly thicker line."""
         return self.shape_item.shape()
 
     def move_src_by(self, pos_diff):
