@@ -1895,9 +1895,7 @@ class WIPTableModel(MinimalTableModel):
         for k, index in enumerate(indexes):
             self._main_data[index.row()][index.column()] = data[k]
         items_to_add = self.items_to_add(indexes)
-        if self.add_items_to_db(items_to_add):
-            id_column = self.horizontal_header_labels().index('id')
-            indexes.extend([self.index(row, id_column) for row in items_to_add])
+        self.add_items_to_db(items_to_add)
         return True
 
     def batch_set_non_wip_data(self, indexes, data):
@@ -2513,27 +2511,22 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            # Find object class id
-            object_class_ids = list()
-            try:
-                object_class_id = object_class_name_id_dict[object_class_name]
-                object_class_ids.append(object_class_id)
-            except KeyError:
-                pass
             object_ = object_dict.get(object_name)
             parameter = parameter_dict.get(parameter_name)
-            if object_:
-                object_class_ids.append(object_['class_id'])
-                object_id = object_['id']
-                self._main_data[row][object_id_column] = object_id
+            # Determine the object class id: trust the object class name most
+            object_class_id = None
             if parameter:
-                object_class_ids.append(parameter['object_class_id'])
+                object_class_id = parameter['object_class_id']
                 parameter_id = parameter['id']
                 self._main_data[row][parameter_id_column] = parameter_id
-            if not object_class_ids or object_class_ids.count(object_class_ids[0]) != len(object_class_ids):
-                # Not all of them are equal
-                continue
-            object_class_id = object_class_ids[0]
+            if object_:
+                object_class_id = object_['class_id']
+                object_id = object_['id']
+                self._main_data[row][object_id_column] = object_id
+            try:
+                object_class_id = object_class_name_id_dict[object_class_name]
+            except KeyError:
+                pass
             try:
                 correct_object_class_name = object_class_id_name_dict[object_class_id]
             except KeyError:
@@ -2778,22 +2771,16 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             parameter = parameter_dict.get(parameter_name)
-            # Find relationship_class_id
-            relationship_class_ids = list()
-            try:
-                relationship_class_id = relationship_class_name_id_dict[relationship_class_name]
-                relationship_class_ids.append(relationship_class_id)
-            except KeyError:
-                pass
+            # Find relationship_class_id: trust relationship_class_name the most
+            relationship_class_id = None
             if parameter:
-                relationship_class_ids.append(parameter['relationship_class_id'])
+                relationship_class_id = parameter['relationship_class_id']
                 parameter_id = parameter['id']
                 self._main_data[row][parameter_id_column] = parameter_id
-            if not relationship_class_ids \
-                    or relationship_class_ids.count(relationship_class_ids[0]) != len(relationship_class_ids):
-                # Not all of them are equal
-                continue
-            relationship_class_id = relationship_class_ids[0]
+            try:
+                relationship_class_id = relationship_class_name_id_dict[relationship_class_name]
+            except KeyError:
+                pass
             try:
                 correct_relationship_class_name = relationship_class_dict[relationship_class_id]['name']
                 object_class_id_list = relationship_class_dict[relationship_class_id]['object_class_id_list']

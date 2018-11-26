@@ -176,33 +176,16 @@ class ObjectParameterValueDelegate(ParameterDelegate):
         header = index.model().horizontal_header_labels()
         h = header.index
         if header[index.column()] == 'object_class_name':
-            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+            name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'object_name':
-            parameter_name = index.sibling(index.row(), h('parameter_name')).data(Qt.DisplayRole)
-            parameter = self.db_map.single_parameter(name=parameter_name).one_or_none()
-            if parameter:
-                object_list = self.db_map.unvalued_object_list(parameter_id=parameter.id)
-            else:
-                object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
-                object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
-                object_class_id = object_class.id if object_class else None
-                object_list = self.db_map.object_list(class_id=object_class_id)
-            object_name_list = [x.name for x in object_list]
-            editor.set_data(index.data(Qt.EditRole), object_name_list)
+            object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
+            name_list = [x.name for x in self.db_map.object_list(class_id=object_class_id)]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'parameter_name':
-            object_name = index.sibling(index.row(), h('object_name')).data(Qt.DisplayRole)
-            object_ = self.db_map.single_object(name=object_name).one_or_none()
-            if object_:
-                parameter_list = self.db_map.unvalued_object_parameter_list(object_id=object_.id)
-                parameter_name_list = [x.name for x in parameter_list]
-            else:
-                object_class_name = index.sibling(index.row(), h('object_class_name')).data(Qt.DisplayRole)
-                object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
-                object_class_id = object_class.id if object_class else None
-                parameter_list = self.db_map.object_parameter_list(object_class_id=object_class_id)
-                parameter_name_list = [x.parameter_name for x in parameter_list]
-            editor.set_data(index.data(Qt.EditRole), parameter_name_list)
+            object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
+            name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'json':
             pass
         else:
@@ -229,8 +212,8 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object_class_name':
-            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
+            name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 
@@ -271,8 +254,8 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         header = index.model().horizontal_header_labels()
         h = header.index
         if header[index.column()] == 'relationship_class_name':
-            relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
-            editor.set_data(index.data(Qt.EditRole), relationship_class_name_list)
+            name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'object_name_list':
             object_class_id_list = index.sibling(index.row(), h('object_class_id_list')).data(Qt.DisplayRole)
             object_class_name_list = index.sibling(index.row(), h('object_class_name_list')).data(Qt.DisplayRole)
@@ -297,27 +280,10 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
                 object_names = []
             editor.set_data(object_icons, object_class_names, object_names, object_names_dict)
         elif header[index.column()] == 'parameter_name':
-            # Get relationship class
-            relationship_class_name = index.sibling(index.row(), h('relationship_class_name')).data(Qt.DisplayRole)
-            relationship_class = self.db_map.single_wide_relationship_class(name=relationship_class_name).\
-                one_or_none()
-            # Get parameter name list
-            if not relationship_class:
-                parameter_list = self.db_map.relationship_parameter_list()
-                parameter_name_list = [x.parameter_name for x in parameter_list]
-            else:
-                object_name_list = index.sibling(index.row(), h('object_name_list')).data(Qt.DisplayRole)
-                relationship = self.db_map.single_wide_relationship(
-                    class_id=relationship_class.id,
-                    object_name_list=object_name_list).one_or_none()
-                if relationship:
-                    parameter_list = self.db_map.unvalued_relationship_parameter_list(relationship.id)
-                    parameter_name_list = [x.name for x in parameter_list]
-                else:
-                    parameter_list = self.db_map.relationship_parameter_list(
-                        relationship_class_id=relationship_class.id)
-                    parameter_name_list = [x.parameter_name for x in parameter_list]
-            editor.set_data(index.data(Qt.EditRole), parameter_name_list)
+            relationship_class_id = index.sibling(index.row(), h('relationship_class_id')).data(Qt.DisplayRole)
+            parameter_list = self.db_map.relationship_parameter_list(relationship_class_id=relationship_class_id)
+            name_list = [x.parameter_name for x in parameter_list]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'json':
             pass
         else:
@@ -344,8 +310,8 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
         """Set editor data."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship_class_name':
-            relationship_class_name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
-            editor.set_data(index.data(Qt.EditRole), relationship_class_name_list)
+            name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 

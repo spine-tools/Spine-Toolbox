@@ -35,7 +35,7 @@ class CustomComboEditor(QComboBox):
 
     def set_data(self, current_text, items):
         self.addItems(items)
-        if current_text:
+        if current_text and current_text in items:
             self.setCurrentText(current_text)
         else:
             self.setCurrentIndex(-1)
