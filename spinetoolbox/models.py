@@ -1353,7 +1353,7 @@ class ObjectClassListModel(QStandardItemModel):
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         for object_class in object_class_list:
-            icon = self._graph_view_form.object_icon_dict[object_class.id]
+            icon = self._graph_view_form.object_icon(object_class.name)
             object_class_item = QStandardItem(object_class.name)
             data = {"type": "object_class"}
             data.update(object_class._asdict())
@@ -1368,7 +1368,7 @@ class ObjectClassListModel(QStandardItemModel):
 
     def add_object_class(self, object_class):
         """Add object class item to model."""
-        icon = self._graph_view_form.object_icon_dict[object_class.id]
+        icon = self._graph_view_form.object_icon(object_class.name)
         object_class_item = QStandardItem(object_class.name)
         data = {"type": "object_class", **object_class._asdict()}
         object_class_item.setData(data, Qt.UserRole + 1)
@@ -1397,7 +1397,7 @@ class RelationshipClassListModel(QStandardItemModel):
         self.clear()
         relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         for relationship_class in relationship_class_list:
-            icon = self._graph_view_form.relationship_icon_dict[relationship_class.id]
+            icon = self._graph_view_form.relationship_icon(relationship_class.object_class_name_list)
             relationship_class_item = QStandardItem(relationship_class.name)
             data = {"type": "relationship_class"}
             data.update(relationship_class._asdict())
@@ -1412,7 +1412,7 @@ class RelationshipClassListModel(QStandardItemModel):
 
     def add_relationship_class(self, relationship_class):
         """Add relationship class."""
-        icon = self._graph_view_form.relationship_icon_dict[relationship_class.id]
+        icon = self._graph_view_form.relationship_icon(relationship_class.object_class_name_list)
         relationship_class_item = QStandardItem(relationship_class.name)
         data = {"type": "relationship_class", **relationship_class._asdict()}
         relationship_class_item.setData(data, Qt.UserRole + 1)
@@ -1499,7 +1499,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            icon = self._tree_view_form.object_icon_dict[object_class.id]
+            icon = self._tree_view_form.object_icon(object_class.name)
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
@@ -1534,7 +1534,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in object_class_list:
-            object_icon = self._tree_view_form.object_icon_dict[object_class.id]
+            object_icon = self._tree_view_form.object_icon(object_class.name)
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
@@ -1559,7 +1559,8 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_item.setData('relationship_class', Qt.UserRole)
                     relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
                     relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                    relationship_icon = self._tree_view_form.relationship_icon_dict[wide_relationship_class.id]
+                    relationship_icon = self._tree_view_form.relationship_icon(
+                        wide_relationship_class.object_class_name_list)
                     relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
                     relationship_class_item.setData(self.bold_font, Qt.FontRole)
                     relationship_item_list = list()
@@ -1625,6 +1626,8 @@ class ObjectTreeModel(QStandardItemModel):
     def add_object_class(self, object_class):
         """Add object class item to the model."""
         object_class_item = self.new_object_class_item(object_class)
+        icon = self._tree_view_form.object_icon(object_class.name)
+        object_class_item.setData(icon, Qt.DecorationRole)
         for i in range(self.root_item.rowCount()):
             visited_object_class_item = self.root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
@@ -1635,8 +1638,6 @@ class ObjectTreeModel(QStandardItemModel):
         row = self.root_item.rowCount()
         self.root_item.insertRow(row, QStandardItem())
         self.root_item.setChild(row, 0, object_class_item)
-        icon = self._tree_view_form.object_icon_dict[object_class.id]
-        object_class_item.setData(icon, Qt.DecorationRole)
 
     def add_object(self, object_, flat=False):
         """Add object item to the model."""
@@ -1669,7 +1670,7 @@ class ObjectTreeModel(QStandardItemModel):
             if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
                 continue
             relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
-            icon = self._tree_view_form.relationship_icon_dict[wide_relationship_class.id]
+            icon = self._tree_view_form.relationship_icon(wide_relationship_class.object_class_name_list)
             relationship_class_item.setData(icon, Qt.DecorationRole)
             visited_item.appendRow(relationship_class_item)
 
@@ -2144,14 +2145,12 @@ class ObjectParameterModel(QAbstractTableModel):
             return
         top = top_left.row()
         bottom = bottom_right.row()
-        object_class_dict = {x.name: x.id for x in self.db_map.object_class_list()}
         for row in range(top, bottom + 1):
             object_class_name = self._main_data[row][object_class_name_column]
-            try:
-                object_class_id = object_class_dict[object_class_name]
-                icon = self._tree_view_form.object_icon_dict[object_class_id]
+            if object_class_name:
+                icon = self._tree_view_form.object_icon(object_class_name)
                 self._aux_data[row][object_class_name_column][Qt.DecorationRole] = icon
-            except KeyError:
+            else:
                 self._aux_data[row][object_class_name_column][Qt.DecorationRole] = None
         new_top_left = self.index(top, object_class_name_column)
         new_bottom_right = self.index(bottom, object_class_name_column)
@@ -2165,12 +2164,11 @@ class ObjectParameterModel(QAbstractTableModel):
         aux_data = []
         aux_data_append = aux_data.append
         row_range = range(len(model_data[0]))
-        object_class_id_column = header.index('object_class_id')
         object_class_name_column = header.index('object_class_name')
         for model_row in model_data:
             aux_row = [{} for i in row_range]
-            object_class_id = model_row[object_class_id_column]
-            icon = self._tree_view_form.object_icon_dict[object_class_id]
+            object_class_name = model_row[object_class_name_column]
+            icon = self._tree_view_form.object_icon(object_class_name)
             aux_row[object_class_name_column][Qt.DecorationRole] = icon
             aux_data_append(aux_row)
         return aux_data
@@ -2187,7 +2185,7 @@ class RelationshipParameterModel(QAbstractTableModel):
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_data_changed")
     def handle_data_changed(self, top_left, bottom_right, roles=[]):
-        """Fill in decoration role data when relationship class or object names change."""
+        """Fill in decoration role data when relationship class change."""
         if Qt.EditRole not in roles:
             return
         if Qt.DecorationRole in roles:
@@ -2196,18 +2194,17 @@ class RelationshipParameterModel(QAbstractTableModel):
         left = top_left.column()
         right = bottom_right.column()
         relationship_class_name_column = header.index('relationship_class_name')
+        object_class_name_list_column = header.index('object_class_name_list')
         if relationship_class_name_column < left or relationship_class_name_column > right:
             return
         top = top_left.row()
         bottom = bottom_right.row()
-        relationship_class_dict = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
         for row in range(top, bottom + 1):
-            relationship_class_name = self._main_data[row][relationship_class_name_column]
-            try:
-                relationship_class_id = relationship_class_dict[relationship_class_name]
-                icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
+            object_class_name_list = self._main_data[row][object_class_name_list_column]
+            if object_class_name_list:
+                icon = self._tree_view_form.relationship_icon(object_class_name_list)
                 self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = icon
-            except KeyError:
+            else:
                 self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = None
         new_top_left = self.index(top, relationship_class_name_column)
         new_bottom_right = self.index(bottom, relationship_class_name_column)
@@ -2221,13 +2218,12 @@ class RelationshipParameterModel(QAbstractTableModel):
         aux_data = []
         aux_data_append = aux_data.append
         row_range = range(len(model_data[0]))
-        relationship_class_id_column = header.index('relationship_class_id')
         relationship_class_name_column = header.index('relationship_class_name')
         object_class_name_list_column = header.index('object_class_name_list')
         for model_row in model_data:
             aux_row = [{} for i in row_range]
-            relationship_class_id = model_row[relationship_class_id_column]
-            icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
+            object_class_name_list = model_row[object_class_name_list_column]
+            icon = self._tree_view_form.relationship_icon(object_class_name_list)
             aux_row[relationship_class_name_column][Qt.DecorationRole] = icon
             aux_data_append(aux_row)
         return aux_data

@@ -612,21 +612,26 @@ class TreeViewForm(QMainWindow):
         self.msg.emit(msg)
         self.init_models()
 
-    def init_icon_dicts(self):
-        """Initialize icon dictionaries."""
-        self.object_icon_dict = {}
-        object_icon = lambda x: QIcon(object_pixmap(x))
-        for object_class in self.db_map.object_class_list():
-            self.object_icon_dict[object_class.id] = object_icon(object_class.name)
-        self.relationship_icon_dict = {}
-        relationship_icon = lambda x: QIcon(relationship_pixmap(x.split(",")))
-        for relationship_class in self.db_map.wide_relationship_class_list():
-            object_class_name_list = relationship_class.object_class_name_list
-            self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
+    def object_icon(self, object_class_name):
+        """An appropriate object icon for object_class_name."""
+        try:
+            icon = self.object_icon_dict[object_class_name]
+        except KeyError:
+            icon = QIcon(object_pixmap(object_class_name))
+            self.object_icon_dict[object_class_name] = icon
+        return icon
+
+    def relationship_icon(self, object_class_name_list):
+        """An appropriate relationship icon for object_class_name_list."""
+        try:
+            icon = self.relationship_icon_dict[object_class_name_list]
+        except KeyError:
+            icon = QIcon(relationship_pixmap(object_class_name_list.split(",")))
+            self.relationship_icon_dict[object_class_name_list] = icon
+        return icon
 
     def init_models(self):
         """Initialize models."""
-        self.init_icon_dicts()
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_definition_models()

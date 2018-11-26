@@ -36,7 +36,9 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterValueModel, ObjectParameterValueProxy, \
-    RelationshipParameterValueModel, RelationshipParameterValueProxy
+    ObjectParameterDefinitionModel, ObjectParameterDefinitionProxy, \
+    RelationshipParameterValueModel, RelationshipParameterValueProxy, \
+    RelationshipParameterDefinitionModel, RelationshipParameterDefinitionProxy
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity
 from config import STATUSBAR_SS
@@ -97,8 +99,13 @@ class GraphViewForm(QMainWindow):
         has_empty_row = not self.read_only
         self.object_parameter_value_model = ObjectParameterValueModel(self, has_empty_row=has_empty_row)
         self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
+        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self, has_empty_row=has_empty_row)
+        self.object_parameter_definition_proxy = ObjectParameterDefinitionProxy(self)
         self.relationship_parameter_value_model = RelationshipParameterValueModel(self, has_empty_row=has_empty_row)
         self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
+        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(
+            self, has_empty_row=has_empty_row)
+        self.relationship_parameter_definition_proxy = RelationshipParameterDefinitionProxy(self)
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
         self.hidden_items = list()
@@ -148,30 +155,41 @@ class GraphViewForm(QMainWindow):
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
-    def init_icon_dicts(self):
-        """Initialize icon dictionaries."""
-        self.object_icon_dict = {}
-        object_icon = lambda x: QIcon(object_pixmap(x))
-        for object_class in self.db_map.object_class_list():
-            self.object_icon_dict[object_class.id] = object_icon(object_class.name)
-        self.relationship_icon_dict = {}
-        relationship_icon = lambda x: QIcon(relationship_pixmap(x.split(",")))
-        for relationship_class in self.db_map.wide_relationship_class_list():
-            object_class_name_list = relationship_class.object_class_name_list
-            self.relationship_icon_dict[relationship_class.id] = relationship_icon(object_class_name_list)
+    def object_icon(self, object_class_name):
+        """An appropriate object icon for object_class_name."""
+        try:
+            icon = self.object_icon_dict[object_class_name]
+        except KeyError:
+            icon = QIcon(object_pixmap(object_class_name))
+            self.object_icon_dict[object_class_name] = icon
+        return icon
+
+    def relationship_icon(self, object_class_name_list):
+        """An appropriate relationship icon for object_class_name_list."""
+        try:
+            icon = self.relationship_icon_dict[object_class_name_list]
+        except KeyError:
+            icon = QIcon(relationship_pixmap(object_class_name_list.split(",")))
+            self.relationship_icon_dict[object_class_name_list] = icon
+        return icon
 
     def init_models(self):
         """Initialize models."""
-        self.init_icon_dicts()
         self.object_tree_model.build_flat_tree(self.database)
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
         self.object_parameter_value_model.init_model()
-        self.relationship_parameter_value_model.init_model()
         self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
-        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
         self.object_parameter_value_proxy.update_object_id_set({-1})
+        self.object_parameter_definition_model.init_model()
+        self.object_parameter_definition_proxy.setSourceModel(self.object_parameter_definition_model)
+        self.object_parameter_definition_proxy.update_object_class_id_set({-1})
+        self.relationship_parameter_value_model.init_model()
+        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
         self.relationship_parameter_value_proxy.update_object_id_list_set({-1})
+        self.relationship_parameter_definition_model.init_model()
+        self.relationship_parameter_definition_proxy.setSourceModel(self.relationship_parameter_definition_model)
+        self.relationship_parameter_definition_proxy.update_relationship_class_id_set({-1})
 
     def init_views(self):
         self.ui.treeView.setModel(self.object_tree_model)
@@ -180,9 +198,9 @@ class GraphViewForm(QMainWindow):
         self.ui.treeView.resizeColumnToContents(0)
         self.ui.treeView.expand(self.object_tree_model.root_item.index())
         self.init_object_parameter_value_view()
+        self.init_object_parameter_definition_view()
         self.init_relationship_parameter_value_view()
-        # self.init_object_parameter_definition_view()
-        # self.init_relationship_parameter_definition_view()
+        self.init_relationship_parameter_definition_view()
         # self.init_parameter_json_views()
 
     def init_object_parameter_value_view(self):
@@ -192,6 +210,7 @@ class GraphViewForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -205,7 +224,9 @@ class GraphViewForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_name_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
