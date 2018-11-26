@@ -904,8 +904,6 @@ class MinimalTableModel(QAbstractTableModel):
             return
         if not self.has_empty_row:
             return
-        if not self.default_row:
-            return
         last_row = self.rowCount() - 1
         for column, name in enumerate(self.header):
             data = self._main_data[last_row][column]
