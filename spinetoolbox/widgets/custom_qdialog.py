@@ -68,8 +68,9 @@ class AddItemsDialog(QDialog):
 
     @Slot(name="model_reset")
     def model_reset(self):
-        self.model.insertColumns(self.model.columnCount(), 1)
-        self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
+        column_count = self.model.columnCount()
+        self.model.insertColumns(column_count, 1)
+        self.model.insert_horizontal_header_labels(column_count, [""])
         self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
@@ -184,7 +185,7 @@ class AddObjectsDialog(AddItemsDialog):
         default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
-        self.model.set_default_row([self.default_class_name])
+        self.model.set_default_row(**{'object class name': self.default_class_name})
         self.model.clear()
         self.ui.tableView.resizeColumnsToContents()
 
@@ -266,7 +267,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 self.object_class_one_name = object_class_one.name
         self.model.set_horizontal_header_labels(
             ['object class 1 name', 'object class 2 name', 'relationship class name'])
-        self.model.set_default_row([self.object_class_one_name])
+        self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
         self.ui.tableView.resizeColumnsToContents()
 
@@ -446,9 +447,8 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.model.set_horizontal_header_labels(header)
         self.reset_default_object_column()
         if self.default_object_name and self.default_object_column is not None:
-            defaults = [None for i in range(len(header) - 1)]
-            defaults[self.default_object_column] = self.default_object_name
-            self.model.set_default_row(defaults)
+            defaults = {header[self.default_object_column]: self.default_object_name}
+            self.model.set_default_row(**defaults)
         self.model.clear()
         self.ui.tableView.resizeColumnsToContents()
 

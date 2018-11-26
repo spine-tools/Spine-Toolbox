@@ -777,7 +777,71 @@ class TreeViewForm(QMainWindow):
     @Slot("QItemSelection", "QItemSelection", name="handle_object_tree_selection_changed")
     def handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
-        Update filter proxy models accordingly."""
+        Set default rows and apply filters on parameter models."""
+        self.set_default_parameter_rows()
+        self.update_and_apply_filter(selected, deselected)
+
+    def set_default_parameter_rows(self):
+        """Set default rows for parameter models according to selection in object tree."""
+        selection = tree_selection = self.ui.treeView_object.selectionModel().selection()
+        if selection.count() != 1:
+            return
+        index = selection.indexes()[0]
+        item_type = index.data(Qt.UserRole)
+        if item_type == 'object_class':
+            default_row = dict(
+                object_class_id=index.data(Qt.UserRole + 1)['id'],
+                object_class_name=index.data(Qt.UserRole + 1)['name'])
+            for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
+                model.set_default_row(**default_row)
+                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+        elif item_type == 'object':
+            default_row = dict(
+                object_class_id=index.parent().data(Qt.UserRole + 1)['id'],
+                object_class_name=index.parent().data(Qt.UserRole + 1)['name'])
+            self.object_parameter_definition_model.set_default_row(**default_row)
+            last_row = self.object_parameter_definition_model.rowCount() - 1
+            self.object_parameter_definition_model.set_rows_to_default(last_row, last_row)
+            default_row.update(dict(
+                object_id=index.data(Qt.UserRole + 1)['id'],
+                object_name=index.data(Qt.UserRole + 1)['name']))
+            self.object_parameter_value_model.set_default_row(**default_row)
+            last_row = self.object_parameter_value_model.rowCount() - 1
+            self.object_parameter_value_model.set_rows_to_default(last_row, last_row)
+        elif item_type == 'relationship_class':
+            default_row = dict(
+                relationship_class_id=index.data(Qt.UserRole + 1)['id'],
+                relationship_class_name=index.data(Qt.UserRole + 1)['name'],
+                object_class_id_list=index.data(Qt.UserRole + 1)['object_class_id_list'],
+                object_class_name_list=index.data(Qt.UserRole + 1)['object_class_name_list'])
+            for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
+                model.set_default_row(**default_row)
+                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+        elif item_type == 'relationship':
+            default_row = dict(
+                relationship_class_id=index.parent().data(Qt.UserRole + 1)['id'],
+                relationship_class_name=index.parent().data(Qt.UserRole + 1)['name'],
+                object_class_id_list=index.parent().data(Qt.UserRole + 1)['object_class_id_list'],
+                object_class_name_list=index.parent().data(Qt.UserRole + 1)['object_class_name_list'])
+            self.relationship_parameter_definition_model.set_default_row(**default_row)
+            last_row = self.relationship_parameter_definition_model.rowCount() - 1
+            self.relationship_parameter_definition_model.set_rows_to_default(last_row, last_row)
+            default_row.update(dict(
+                relationship_id=index.data(Qt.UserRole + 1)['id'],
+                object_id_list=index.data(Qt.UserRole + 1)['object_id_list'],
+                object_name_list=index.data(Qt.UserRole + 1)['object_name_list']))
+            self.relationship_parameter_value_model.set_default_row(**default_row)
+            last_row = self.relationship_parameter_value_model.rowCount() - 1
+            self.relationship_parameter_value_model.set_rows_to_default(last_row, last_row)
+        elif item_type == 'root':
+            default_row = dict()
+            for model in (self.object_parameter_definition_model, self.object_parameter_value_model,
+                          self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
+                model.set_default_row(**default_row)
+                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+
+    def update_and_apply_filter(self, selected, deselected):
+        """Apply filters on parameter models according to selected and deselected object tree indexes."""
         selected_object_class_ids = set()
         selected_object_ids = set()
         selected_relationship_class_ids = set()

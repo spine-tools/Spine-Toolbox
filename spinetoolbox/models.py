@@ -885,45 +885,38 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = list()
         self.can_grow = can_grow
         self.has_empty_row = has_empty_row
-        self.default_row = []  # A row of default values to put in any newly inserted row
+        self.default_row = {}  # A row of default values to put in any newly inserted row
         self._force_default = False  # Whether or not default values are editable
         self.dataChanged.connect(self.receive_data_changed)
         self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
         self.rowsInserted.connect(self.receive_rows_inserted)
         self.columnsInserted.connect(self.receive_columns_inserted)
 
-    def set_default_row(self, data):
-        """Set default row.
-
-        Args:
-            data (list)
-        """
-        if not data:
-            return
-        self.default_row = data
+    def set_default_row(self, **kwargs):
+        """Set default row data."""
+        self.default_row = kwargs
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
     def receive_data_changed(self, top_left, bottom_right, roles):
         """In models with a last empty row, insert a new last empty row in case
         the previous one has been filled with any data other than the defaults."""
+        if Qt.EditRole not in roles:
+            return
         if not self.has_empty_row:
             return
+        if not self.default_row:
+            return
         last_row = self.rowCount() - 1
-        for column in range(self.columnCount()):
+        for column, name in enumerate(self.header):
+            data = self._main_data[last_row][column]
             try:
-                data = self._main_data[last_row][column]
+                default = self.default_row[name]
             except KeyError:
-                # No data in this column, just continue
-                continue
-            try:
-                default = self.default_row[column]
-            except IndexError:
                 # No default for this column, check if any data
-                if not data:
-                    continue
-                self.insertRows(self.rowCount(), 1)
-                break
-            # Both data and default found, check if they differ
+                if data:
+                    self.insertRows(self.rowCount(), 1)
+                    break
+                continue
             if data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
@@ -940,42 +933,56 @@ class MinimalTableModel(QAbstractTableModel):
 
     @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
     def receive_rows_inserted(self, parent, first, last):
-        """In models with row defaults, set default data in newly inserted rows."""
-        last_column = 0
-        for column in range(self.columnCount()):
-            last_column = column
+        """Handle rowsInserted signal."""
+        self.set_rows_to_default(first, last)
+
+    def set_rows_to_default(self, first, last):
+        """In models with a default row, set default data in newly inserted rows."""
+        left = None
+        right = None
+        for column, name in enumerate(self.header):
             try:
-                default = self.default_row[column]
-            except IndexError:
-                break
+                default = self.default_row[name]
+            except KeyError:
+                default = None
+            if left is None:
+                left = column
+            right = column
             for row in range(first, last + 1):
                 self._main_data[row][column] = default
                 if self._force_default:
                     self._flags[row][column] &= ~Qt.ItemIsEditable
-        if last_column == 0:
+        if left is None:
             return
-        top_left = self.index(first, 0)
-        bottom_right = self.index(last, last_column)
+        top_left = self.index(first, left)
+        bottom_right = self.index(last, right)
         self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
     def receive_columns_inserted(self, parent, first, last):
-        """In models with row defaults, set default data in newly inserted columns."""
-        last_column = 0
+        """In models with a default row, set default data in newly inserted columns."""
+        left = None
+        right = None
         for column in range(first, last + 1):
-            last_column = column
             try:
-                default = self.default_row[column]
+                name = self.header[column]
             except IndexError:
-                break
+                continue
+            try:
+                default = self.default_row[name]
+            except KeyError:
+                default = None
+            if left is None:
+                left = column
+            right = column
             for row in range(self.rowCount()):
                 self._main_data[row][column] = default
                 if self._force_default:
                     self._flags[row][column] &= ~Qt.ItemIsEditable
-        if last_column == first:
+        if left is None:
             return
-        top_left = self.index(0, first)
-        bottom_right = self.index(self.rowCount() - 1, last_column)
+        top_left = self.index(0, left)
+        bottom_right = self.index(self.rowCount() - 1, right)
         self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     def clear(self):
@@ -1067,6 +1074,8 @@ class MinimalTableModel(QAbstractTableModel):
         return False
 
     def index(self, row, column, parent=QModelIndex()):
+        if column is None:
+            print("hey")
         if row < 0 or column < 0 or column >= self.columnCount(parent):
             return QModelIndex()
         if self.can_grow:
@@ -2147,7 +2156,7 @@ class ObjectParameterModel(QAbstractTableModel):
                 icon = self._tree_view_form.object_icon_dict[object_class_id]
                 self._aux_data[row][object_class_name_column][Qt.DecorationRole] = icon
             except KeyError:
-                pass
+                self._aux_data[row][object_class_name_column][Qt.DecorationRole] = None
         new_top_left = self.index(top, object_class_name_column)
         new_bottom_right = self.index(bottom, object_class_name_column)
         self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
@@ -2203,7 +2212,7 @@ class RelationshipParameterModel(QAbstractTableModel):
                 icon = self._tree_view_form.relationship_icon_dict[relationship_class_id]
                 self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = icon
             except KeyError:
-                pass
+                self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = None
         new_top_left = self.index(top, relationship_class_name_column)
         new_bottom_right = self.index(bottom, relationship_class_name_column)
         self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
