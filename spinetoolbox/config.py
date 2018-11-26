@@ -21,7 +21,7 @@ import os
 from PySide2.QtGui import QColor
 
 SPINE_TOOLBOX_VERSION = "0.1.75"
-REQUIRED_SPINE_DBAPI_VERSION = "0.0.10"
+REQUIRED_SPINE_DBAPI_VERSION = "0.0.12"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')

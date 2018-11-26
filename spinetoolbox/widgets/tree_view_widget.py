@@ -670,6 +670,7 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -683,7 +684,9 @@ class TreeViewForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_name_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.horizontalHeader().\
@@ -1021,19 +1024,12 @@ class TreeViewForm(QMainWindow):
         dialog.show()
 
     @busy_effect
-    def update_object_classes(self, object_classes, orig_kwargs_list):
+    def update_object_classes(self, object_classes):
         """Update object classes."""
         self.object_tree_model.update_object_classes(object_classes)
-        new_names = list()
-        curr_names = list()
-        for object_class in object_classes:
-            try:
-                curr_name = next(x for x in orig_kwargs_list if x["id"] == object_class.id)["name"]
-                curr_names.append(curr_name)
-                new_names.append(object_class.name)
-            except StopIteration:
-                continue
-        self.rename_items_in_parameter_models('object_class', new_names, curr_names)
+        ids = [x.id for x in object_classes]
+        new_names = [x.name for x in object_classes]
+        self.rename_items_in_parameter_models('object_class', ids, new_names)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
@@ -1051,19 +1047,12 @@ class TreeViewForm(QMainWindow):
         dialog.show()
 
     @busy_effect
-    def update_objects(self, objects, orig_kwargs_list):
+    def update_objects(self, objects):
         """Update objects."""
         self.object_tree_model.update_objects(objects)
-        new_names = list()
-        curr_names = list()
-        for object_ in objects:
-            try:
-                curr_name = next(x for x in orig_kwargs_list if x["id"] == object_.id)["name"]
-                curr_names.append(curr_name)
-                new_names.append(object_.name)
-            except StopIteration:
-                continue
-        self.rename_items_in_parameter_models('object', new_names, curr_names)
+        ids = [x.id for x in objects]
+        new_names = [x.name for x in objects]
+        self.rename_items_in_parameter_models('object', ids, new_names)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
@@ -1081,19 +1070,12 @@ class TreeViewForm(QMainWindow):
         dialog.show()
 
     @busy_effect
-    def update_relationship_classes(self, wide_relationship_classes, orig_kwargs_list):
+    def update_relationship_classes(self, wide_relationship_classes):
         """Update relationship classes."""
         self.object_tree_model.update_relationship_classes(wide_relationship_classes)
-        new_names = list()
-        curr_names = list()
-        for wide_relationship_class in wide_relationship_classes:
-            try:
-                curr_name = next(x for x in orig_kwargs_list if x["id"] == wide_relationship_class.id)["name"]
-                curr_names.append(curr_name)
-                new_names.append(wide_relationship_class.name)
-            except StopIteration:
-                continue
-        self.rename_items_in_parameter_models('relationship_class', new_names, curr_names)
+        ids = [x.id for x in wide_relationship_classes]
+        new_names = [x.name for x in wide_relationship_classes]
+        self.rename_items_in_parameter_models('relationship_class', ids, new_names)
         self.set_commit_rollback_actions_enabled(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
@@ -1122,7 +1104,7 @@ class TreeViewForm(QMainWindow):
         dialog.show()
 
     @busy_effect
-    def update_relationships(self, wide_relationships, orig_kwargs_list):
+    def update_relationships(self, wide_relationships):
         """Update relationships."""
         self.object_tree_model.update_relationships(wide_relationships)
         # NOTE: we don't need to call rename_items_in_parameter_models here, for now
@@ -1131,12 +1113,12 @@ class TreeViewForm(QMainWindow):
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
-    def rename_items_in_parameter_models(self, renamed_type, new_names, curr_names):
+    def rename_items_in_parameter_models(self, renamed_type, ids, new_names):
         """Rename items in parameter definition and value models."""
-        self.object_parameter_definition_model.rename_items(renamed_type, new_names, curr_names)
-        self.object_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
-        self.relationship_parameter_definition_model.rename_items(renamed_type, new_names, curr_names)
-        self.relationship_parameter_value_model.rename_items(renamed_type, new_names, curr_names)
+        self.object_parameter_definition_model.rename_items(renamed_type, ids, new_names)
+        self.object_parameter_value_model.rename_items(renamed_type, ids, new_names)
+        self.relationship_parameter_definition_model.rename_items(renamed_type, ids, new_names)
+        self.relationship_parameter_value_model.rename_items(renamed_type, ids, new_names)
 
     @busy_effect
     def remove_object_tree_items(self):
@@ -1150,11 +1132,10 @@ class TreeViewForm(QMainWindow):
             removed_id = index.data(Qt.UserRole + 1)['id']
             removed_id_dict.setdefault(removed_type, set()).add(removed_id)
         try:
-            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})
-            removed_name_dict = {}
+            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})  # FIXME: this is ugly
             for key, value in removed_id_dict.items():
-                removed_name_dict.update(self.object_tree_model.remove_items(key, *value))
-            for key, value in removed_name_dict.items():
+                self.object_tree_model.remove_items(key, *value)
+            for key, value in removed_id_dict.items():
                 self.object_parameter_definition_model.remove_items(key, *value)
                 self.object_parameter_value_model.remove_items(key, *value)
                 self.relationship_parameter_definition_model.remove_items(key, *value)
@@ -1413,12 +1394,12 @@ class TreeViewForm(QMainWindow):
         source_model = proxy_model.sourceModel()
         source_index = proxy_model.mapToSource(index)
         parameter_name_column = source_model.horizontal_header_labels().index('parameter_name')
-        if source_index.column() == parameter_name_column:
-            curr_name = source_index.data(Qt.DisplayRole)
         if source_model.setData(source_index, new_value) and source_index.column() == parameter_name_column:
-            new_name = source_index.data(Qt.DisplayRole)
-            self.object_parameter_value_model.rename_items("parameter", [new_name], [curr_name])
-            self.relationship_parameter_value_model.rename_items("parameter", [new_name], [curr_name])
+            parameter_id_column = source_model.horizontal_header_labels().index('id')
+            id = source_index.sibling(source_index.row(), parameter_id_column).data(Qt.DisplayRole)
+            new_name = new_value
+            self.object_parameter_value_model.rename_items("parameter", [id], [new_name])
+            self.relationship_parameter_value_model.rename_items("parameter", [id], [new_name])
 
     @busy_effect
     @Slot(name="remove_object_parameter_values")
@@ -1466,20 +1447,16 @@ class TreeViewForm(QMainWindow):
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         source_row_set = self.source_row_set(selection, self.object_parameter_definition_proxy)
         parameter_ids = set()
-        parameter_names = set()
         id_column = self.object_parameter_definition_model.horizontal_header_labels().index("id")
-        name_column = self.object_parameter_definition_model.horizontal_header_labels().index("parameter_name")
         for source_row in source_row_set:
             if self.object_parameter_definition_model.is_work_in_progress(source_row):
                 continue
             source_index = self.object_parameter_definition_model.index(source_row, id_column)
             parameter_ids.add(source_index.data(Qt.EditRole))
-            source_index = self.object_parameter_definition_model.index(source_row, name_column)
-            parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
             self.object_parameter_definition_model.remove_row_set(source_row_set)
-            self.object_parameter_value_model.remove_items("parameter", *parameter_names)
+            self.object_parameter_value_model.remove_items("parameter", *parameter_ids)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
         except SpineDBAPIError as e:
@@ -1491,20 +1468,16 @@ class TreeViewForm(QMainWindow):
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         source_row_set = self.source_row_set(selection, self.relationship_parameter_definition_proxy)
         parameter_ids = set()
-        parameter_names = set()
         id_column = self.relationship_parameter_definition_model.horizontal_header_labels().index("id")
-        name_column = self.relationship_parameter_definition_model.horizontal_header_labels().index("parameter_name")
         for source_row in source_row_set:
             if self.relationship_parameter_definition_model.is_work_in_progress(source_row):
                 continue
             source_index = self.relationship_parameter_definition_model.index(source_row, id_column)
             parameter_ids.add(source_index.data(Qt.EditRole))
-            source_index = self.relationship_parameter_definition_model.index(source_row, name_column)
-            parameter_names.add(source_index.data(Qt.DisplayRole))
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
             self.relationship_parameter_definition_model.remove_row_set(source_row_set)
-            self.relationship_parameter_value_model.remove_items("parameter", *parameter_names)
+            self.relationship_parameter_value_model.remove_items("parameter", *parameter_ids)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameters.")
         except SpineDBAPIError as e:

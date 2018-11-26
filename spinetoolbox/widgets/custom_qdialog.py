@@ -520,12 +520,11 @@ class EditItemsDialog(QDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        orig_kwargs_list (list): orignal key word arguments
+        kwargs_list (list): orignal key word arguments
     """
-    def __init__(self, parent, orig_kwargs_list):
+    def __init__(self, parent, kwargs_list):
         super().__init__(parent)
         self._parent = parent
-        self.orig_kwargs_list = orig_kwargs_list
         self.ui = None
         self.model = MinimalTableModel(self)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -542,17 +541,17 @@ class EditObjectClassesDialog(EditItemsDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        orig_kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
+        kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
     """
-    def __init__(self, parent, orig_kwargs_list):
-        super().__init__(parent, orig_kwargs_list)
+    def __init__(self, parent, kwargs_list):
+        super().__init__(parent, kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit object classes")
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.orig_data = list()
         self.id_list = list()
         model_data = list()
-        for kwargs in orig_kwargs_list:
+        for kwargs in kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
             except KeyError:
@@ -595,7 +594,7 @@ class EditObjectClassesDialog(EditItemsDialog):
             return
         try:
             object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
-            self._parent.update_object_classes(object_classes, self.orig_kwargs_list)
+            self._parent.update_object_classes(object_classes)
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -606,17 +605,17 @@ class EditObjectsDialog(EditItemsDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        orig_kwargs_list (list): list of dictionaries corresponding to objects to edit/update
+        kwargs_list (list): list of dictionaries corresponding to objects to edit/update
     """
-    def __init__(self, parent, orig_kwargs_list):
-        super().__init__(parent, orig_kwargs_list)
+    def __init__(self, parent, kwargs_list):
+        super().__init__(parent, kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit objects")
         self.model.set_horizontal_header_labels(['object name', 'description'])
         self.orig_data = list()
         self.id_list = list()
         model_data = list()
-        for kwargs in orig_kwargs_list:
+        for kwargs in kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
             except KeyError:
@@ -659,7 +658,7 @@ class EditObjectsDialog(EditItemsDialog):
             return
         try:
             objects = self._parent.db_map.update_objects(*kwargs_list)
-            self._parent.update_objects(objects, self.orig_kwargs_list)
+            self._parent.update_objects(objects)
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -670,17 +669,17 @@ class EditRelationshipClassesDialog(EditItemsDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        orig_kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
+        kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
     """
-    def __init__(self, parent, orig_kwargs_list):
-        super().__init__(parent, orig_kwargs_list)
+    def __init__(self, parent, kwargs_list):
+        super().__init__(parent, kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit relationship classes")
         self.model.set_horizontal_header_labels(['relationship class name'])
         self.orig_data = list()
         self.id_list = list()
         model_data = list()
-        for kwargs in orig_kwargs_list:
+        for kwargs in kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
             except KeyError:
@@ -718,7 +717,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             return
         try:
             wide_relationship_classes = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
-            self._parent.update_relationship_classes(wide_relationship_classes, self.orig_kwargs_list)
+            self._parent.update_relationship_classes(wide_relationship_classes)
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -729,11 +728,11 @@ class EditRelationshipsDialog(EditItemsDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        orig_kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
+        kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
         relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
     """
-    def __init__(self, parent, orig_kwargs_list, relationship_class):
-        super().__init__(parent, orig_kwargs_list)
+    def __init__(self, parent, kwargs_list, relationship_class):
+        super().__init__(parent, kwargs_list)
         self.setup_ui()
         self.setWindowTitle("Edit relationships")
         object_class_name_list = relationship_class.object_class_name_list.split(",")
@@ -742,7 +741,7 @@ class EditRelationshipsDialog(EditItemsDialog):
         self.orig_object_id_lists = list()
         self.id_list = list()
         model_data = list()
-        for kwargs in orig_kwargs_list:
+        for kwargs in kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
             except KeyError:
@@ -811,7 +810,7 @@ class EditRelationshipsDialog(EditItemsDialog):
             return
         try:
             wide_relationships = self._parent.db_map.update_wide_relationships(*kwargs_list)
-            self._parent.update_relationships(wide_relationships, self.orig_kwargs_list)
+            self._parent.update_relationships(wide_relationships)
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)

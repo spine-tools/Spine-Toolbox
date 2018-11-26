@@ -1780,9 +1780,8 @@ class ObjectTreeModel(QStandardItemModel):
             self.add_relationship(updated_items_dict[id])
 
     def remove_items(self, removed_type, *removed_ids):
-        """Remove all matched items and their orphans."""
+        """Remove all matched items and their 'childs'."""
         # TODO: try and remove all rows at once, if possible
-        removed_name_dict = dict()
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
@@ -1794,20 +1793,16 @@ class ObjectTreeModel(QStandardItemModel):
             visited_index = self.indexFromItem(visited_item)
             if visited_type == removed_type and visited_id in removed_ids:
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
-                removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
-            # When removing an object class, also remove relationship classes that involve it
+            # When removing an object class, also remove 'child' relationship classes
             if removed_type == 'object_class' and visited_type == 'relationship_class':
                 object_class_id_list = visited['object_class_id_list']
                 if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
-                    removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
-            # When removing an object, also remove relationships that involve it
+            # When removing an object, also remove 'child' relationships
             if removed_type == 'object' and visited_type == 'relationship':
                 object_id_list = visited['object_id_list']
                 if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
                     self.removeRows(visited_index.row(), 1, visited_index.parent())
-                    removed_name_dict.setdefault(visited_type, set()).add(visited["name"])
-        return removed_name_dict
 
     def next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -2239,13 +2234,12 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterMo
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
-    def init_model(self, skip_fields=[]):
+    def init_model(self):
         """Initialize model from source database."""
         data = self.db_map.object_parameter_list()
-        fields = self.db_map.object_parameter_fields()
-        header = [x for x in fields if x not in skip_fields]
+        header = self.db_map.object_parameter_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
+        model_data = [list(r._asdict().values()) for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2253,30 +2247,31 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterMo
         column_names = ['id', 'object_class_name']
         self.make_data_fixed(column_names=column_names)
 
-    def rename_items(self, renamed_type, new_names, curr_names):
+    def rename_items(self, renamed_type, ids, new_names):
         if renamed_type != "object_class":
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
-        names_dict = dict(zip(curr_names, new_names))
+        names_dict = dict(zip(ids, new_names))
         header_index = self.horizontal_header_labels().index
-        column = header_index("object_class_name")
+        id_column = header_index("object_class_id")
+        name_column = header_index("object_class_name")
         for row in row_range:
-            curr_name = self._main_data[row][column]
+            object_class_id = self._main_data[row][id_column]
             try:
-                new_name = names_dict[curr_name]
-                self._main_data[row][column] = new_name
+                new_name = names_dict[object_class_id]
+                self._main_data[row][name_column] = new_name
             except KeyError:
                 pass
 
-    def remove_items(self, removed_type, *removed_names):
+    def remove_items(self, removed_type, *removed_ids):
         if removed_type != "object_class":
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
-        column = header_index("object_class_name")
+        column = header_index("object_class_id")
         for row in reversed(row_range):
-            name = self._main_data[row][column]
-            if name in removed_names:
+            id = self._main_data[row][column]
+            if id in removed_ids:
                 super().removeRows(row, 1)
 
     def items_to_add(self, indexes):
@@ -2318,13 +2313,12 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
-    def init_model(self, skip_fields=[]):
+    def init_model(self):
         """Initialize model from source database."""
         data = self.db_map.relationship_parameter_list()
-        fields = self.db_map.relationship_parameter_fields()
-        header = [x for x in fields if x not in skip_fields]
+        header = self.db_map.relationship_parameter_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
+        model_data = [list(r._asdict().values()) for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2332,49 +2326,52 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         column_names = ['id', 'relationship_class_name', 'object_class_name_list']
         self.make_data_fixed(column_names=column_names)
 
-    def rename_items(self, renamed_type, new_names, curr_names):
+    def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("relationship_class", "object_class"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
-        names_dict = dict(zip(curr_names, new_names))
+        names_dict = dict(zip(ids, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "relationship_class":
-            column = header_index("relationship_class_name")
+            id_column = header_index("relationship_class_id")
+            name_column = header_index("relationship_class_name")
             for row in row_range:
-                curr_name = self._main_data[row][column]
+                relationship_class_id = self._main_data[row][id_column]
                 try:
-                    new_name = names_dict[curr_name]
-                    self._main_data[row][column] = new_name
+                    new_name = names_dict[relationship_class_id]
+                    self._main_data[row][name_column] = new_name
                 except KeyError:
                     pass
         elif renamed_type == "object_class":
-            column = header_index("object_class_name_list")
+            id_list_column = header_index("object_class_id_list")
+            name_list_column = header_index("object_class_name_list")
             for row in row_range:
-                object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
-                for i, object_class_name in enumerate(object_class_name_list):
+                object_class_id_list = [int(x) for x in self._main_data[row][id_list_column].split(",")]  # FIXME: split may fail here?
+                object_class_name_list = self._main_data[row][name_list_column].split(",")
+                for i, object_class_id in enumerate(object_class_id_list):
                     try:
-                        object_class_name_list[i] = names_dict[object_class_name]
+                        object_class_name_list[i] = names_dict[object_class_id]
                     except KeyError:
                         continue
-                self._main_data[row][column] = ",".join(object_class_name_list)
+                self._main_data[row][name_list_column] = ",".join(object_class_name_list)
 
-    def remove_items(self, removed_type, *removed_names):
+    def remove_items(self, removed_type, *removed_ids):
         if removed_type not in ("relationship_class", "object_class"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
         if removed_type == "relationship_class":
-            column = header_index("relationship_class_name")
+            column = header_index("relationship_class_id")
             for row in reversed(row_range):
-                name = self._main_data[row][column]
-                if name in removed_names:
+                id = self._main_data[row][column]
+                if id in removed_ids:
                     super().removeRows(row, 1)
         elif removed_type == "object_class":
-            column = header_index("object_class_name_list")
+            column = header_index("object_class_id_list")
             for row in reversed(row_range):
-                object_class_name_list = self._main_data[row][column].split(",")
-                for object_class_name in object_class_name_list:
-                    if object_class_name in removed_names:
+                object_class_id_list = [int(x) for x in self._main_data[row][column].split(",")]
+                for object_class_id in object_class_id_list:
+                    if object_class_id in removed_ids:
                         super().removeRows(row, 1)
                         break
 
@@ -2432,13 +2429,12 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
-    def init_model(self, skip_fields=['parameter_id']):
+    def init_model(self):
         """Initialize model from source database."""
         data = self.db_map.object_parameter_value_list()
-        fields = self.db_map.object_parameter_value_fields()
-        header = [x for x in fields if x not in skip_fields]
+        header = self.db_map.object_parameter_value_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
+        model_data = [list(r._asdict().values()) for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2446,40 +2442,43 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
-    def rename_items(self, renamed_type, new_names, curr_names):
+    def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("object_class", "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
-        names_dict = dict(zip(curr_names, new_names))
+        names_dict = dict(zip(ids, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object_class":
-            column = header_index("object_class_name")
+            id_column = header_index("object_class_id")
+            name_column = header_index("object_class_name")
         elif renamed_type == "object":
-            column = header_index("object_name")
+            id_column = header_index("object_id")
+            name_column = header_index("object_name")
         elif renamed_type == "parameter":
-            column = header_index("parameter_name")
+            id_column = header_index("parameter_id")
+            name_column = header_index("parameter_name")
         for row in row_range:
-            curr_name = self._main_data[row][column]
+            id = self._main_data[row][id_column]
             try:
-                new_name = names_dict[curr_name]
-                self._main_data[row][column] = new_name
+                new_name = names_dict[id]
+                self._main_data[row][name_column] = new_name
             except KeyError:
                 pass
 
-    def remove_items(self, removed_type, *removed_names):
+    def remove_items(self, removed_type, *removed_ids):
         if removed_type not in ("object_class",  "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
         if removed_type == "object_class":
-            column = header_index("object_class_name")
+            column = header_index("object_class_id")
         elif removed_type == "object":
-            column = header_index("object_name")
+            column = header_index("object_id")
         elif removed_type == "parameter":
-            column = header_index("parameter_name")
+            column = header_index("parameter_id")
         for row in reversed(row_range):
-            name = self._main_data[row][column]
-            if name in removed_names:
+            id = self._main_data[row][column]
+            if id in removed_ids:
                 super().removeRows(row, 1)
 
     def items_to_add(self, indexes):
@@ -2492,6 +2491,7 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         object_class_name_column = header.index('object_class_name')
         object_id_column = header.index('object_id')
         object_name_column = header.index('object_name')
+        parameter_id_column = header.index('parameter_id')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
         object_class_id_name_dict = {x.id: x.name for x in self.db_map.object_class_list()}
@@ -2517,8 +2517,12 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
             parameter = parameter_dict.get(parameter_name)
             if object_:
                 object_class_ids.append(object_['class_id'])
+                object_id = object_['id']
+                self._main_data[row][object_id_column] = object_id
             if parameter:
                 object_class_ids.append(parameter['object_class_id'])
+                parameter_id = parameter['id']
+                self._main_data[row][parameter_id_column] = parameter_id
             if not object_class_ids or object_class_ids.count(object_class_ids[0]) != len(object_class_ids):
                 # Not all of them are equal
                 continue
@@ -2531,13 +2535,8 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
             self._main_data[row][object_class_name_column] = correct_object_class_name
             if correct_object_class_name != object_class_name:
                 indexes.append(self.index(row, object_class_name_column))
-            if object_ is None:
+            if object_ is None or parameter is None:
                 continue
-            object_id = object_['id']
-            self._main_data[row][object_id_column] = object_id
-            if parameter is None:
-                continue
-            parameter_id = parameter['id']
             item = {
                 "object_id": object_id,
                 "parameter_id": parameter_id
@@ -2554,13 +2553,12 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
 
-    def init_model(self, skip_fields=['parameter_id']):
+    def init_model(self):
         """Initialize model from source database."""
         data = self.db_map.relationship_parameter_value_list()
-        fields = self.db_map.relationship_parameter_value_fields()
-        header = [x for x in fields if x not in skip_fields]
+        header = self.db_map.relationship_parameter_value_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [[v for k, v in r._asdict().items() if k not in skip_fields] for r in data]
+        model_data = [list(r._asdict().values()) for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2568,74 +2566,82 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         column_names = ['id', 'relationship_class_name', 'object_name_list', 'parameter_name']
         self.make_data_fixed(column_names=column_names)
 
-    def rename_items(self, renamed_type, new_names, curr_names):
+    def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("relationship_class", "object_class", "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
-        names_dict = dict(zip(curr_names, new_names))
+        names_dict = dict(zip(ids, new_names))
         header_index = self.horizontal_header_labels().index
         if renamed_type == "object_class":
-            column = header_index("object_class_name_list")
+            id_list_column = header_index("object_class_id_list")
+            name_list_column = header_index("object_class_name_list")
             for row in row_range:
-                object_class_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
-                for i, object_class_name in enumerate(object_class_name_list):
+                object_class_id_list = [int(x) for x in self._main_data[row][id_list_column].split(",")]   # FIXME: split may fail here?
+                object_class_name_list = self._main_data[row][name_list_column].split(",")
+                for i, object_class_id in enumerate(object_class_id_list):
                     try:
-                        object_class_name_list[i] = names_dict[object_class_name]
+                        object_class_name_list[i] = names_dict[object_class_id]
                     except KeyError:
                         continue
-                self._main_data[row][column] = ",".join(object_class_name_list)
+                self._main_data[row][name_list_column] = ",".join(object_class_name_list)
         elif renamed_type == "object":
-            column = header_index("object_name_list")
+            id_list_column = header_index("object_id_list")
+            name_list_column = header_index("object_name_list")
             for row in row_range:
-                object_name_list = self.index(row, column).data(Qt.DisplayRole).split(",")
-                for i, object_name in enumerate(object_name_list):
+                object_id_list = [int(x) for x in self._main_data[row][id_list_column].split(",")]   # FIXME: split may fail here?
+                object_name_list = self._main_data[row][name_list_column].split(",")
+                for i, object_id in enumerate(object_id_list):
                     try:
-                        object_name_list[i] = names_dict[object_name]
+                        object_name_list[i] = names_dict[object_id]
                     except KeyError:
                         continue
-                self._main_data[row][column] = ",".join(object_name_list)
+                self._main_data[row][name_list_column] = ",".join(object_name_list)
         elif renamed_type in ("relationship_class", "parameter"):
             if renamed_type in "relationship_class":
-                column = header_index("relationship_class_name")
+                id_column = header_index("relationship_class_id")
+                name_column = header_index("relationship_class_name")
             elif renamed_type in "parameter":
-                column = header_index("parameter_name")
+                id_column = header_index("parameter_id")
+                name_column = header_index("parameter_name")
             for row in row_range:
-                curr_name = self._main_data[row][column]
+                id = self._main_data[row][id_column]
                 try:
-                    new_name = names_dict[curr_name]
-                    self._main_data[row][column] = new_name
+                    new_name = names_dict[id]
+                    self._main_data[row][name_column] = new_name
                 except KeyError:
                     pass
 
-    def remove_items(self, removed_type, *removed_names):
-        if removed_type not in ("relationship_class", "object_class", "object", "parameter"):
+    def remove_items(self, removed_type, *removed_ids):
+        if removed_type not in ("relationship_class", "relationship", "object_class", "object", "parameter"):
             return
         row_range = range(self.rowCount() - 1) if self.has_empty_row else range(self.rowCount())
         header_index = self.horizontal_header_labels().index
         if removed_type == "object_class":
-            column = header_index("object_class_name_list")
+            column = header_index("object_class_id_list")
             for row in reversed(row_range):
-                object_class_name_list = self._main_data[row][column].split(",")
-                for object_class_name in object_class_name_list:
-                    if object_class_name in removed_names:
+                object_class_id_list = [int(x) for x in self._main_data[row][column].split(",")]
+                for object_class_id in object_class_id_list:
+                    if object_class_id in removed_ids:
                         super().removeRows(row, 1)
                         break
         elif removed_type == "object":
-            column = header_index("object_name_list")
+            column = header_index("object_id_list")
             for row in reversed(row_range):
-                object_name_list = self._main_data[row][column].split(",")
-                for object_name in object_name_list:
-                    if object_name in removed_names:
+                object_id_list = [int(x) for x in self._main_data[row][column].split(",")]
+                for object_id in object_id_list:
+                    if object_id in removed_ids:
                         super().removeRows(row, 1)
                         break
-        elif removed_type in ("relationship_class", "parameter"):
-            if removed_type in "relationship_class":
-                column = header_index("relationship_class_name")
-            elif removed_type in "parameter":
-                column = header_index("parameter_name")
+        elif removed_type in ("relationship_class", "relationship", "parameter"):
+            if removed_type == "relationship_class":
+                column = header_index("relationship_class_id")
+            elif removed_type == "relationship":
+                column = header_index("relationship_id")
+            elif removed_type == "parameter":
+                column = header_index("parameter_id")
             for row in reversed(row_range):
-                name = self._main_data[row][column]
-                if name in removed_names:
+                id = self._main_data[row][column]
+                if id in removed_ids:
                     super().removeRows(row, 1)
 
     def batch_set_wip_data(self, indexes, data):
@@ -2742,6 +2748,8 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         relationship_class_name_column = header.index('relationship_class_name')
         object_class_id_list_column = header.index('object_class_id_list')
         object_class_name_list_column = header.index('object_class_name_list')
+        relationship_id_column = header.index('relationship_id')
+        parameter_id_column = header.index('parameter_id')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
         relationship_class_name_id_dict = {
@@ -2772,6 +2780,8 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
                 pass
             if parameter:
                 relationship_class_ids.append(parameter['relationship_class_id'])
+                parameter_id = parameter['id']
+                self._main_data[row][parameter_id_column] = parameter_id
             if not relationship_class_ids \
                     or relationship_class_ids.count(relationship_class_ids[0]) != len(relationship_class_ids):
                 # Not all of them are equal
@@ -2789,13 +2799,13 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             self._main_data[row][object_class_name_list_column] = object_class_name_list
             if correct_relationship_class_name != relationship_class_name:
                 indexes.append(self.index(row, relationship_class_name_column))
-            if parameter is None:
-                continue
             try:
                 relationship_id = relationships_on_the_fly[row]
+                self._main_data[row][relationship_id_column] = relationship_id
             except KeyError:
                 continue
-            parameter_id = parameter['id']
+            if parameter is None:
+                continue
             item = {
                 "relationship_id": relationship_id,
                 "parameter_id": parameter_id
