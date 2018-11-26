@@ -1028,8 +1028,9 @@ class ObjectItem(QGraphicsPixmapItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
-        object_id (int): object id
+        object_id (int): object id (for filtering parameters)
         object_name (str): object name
+        object_class_id (int): object class id (for filtering parameters)
         object_class_name (str): object class name
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
@@ -1038,12 +1039,13 @@ class ObjectItem(QGraphicsPixmapItem):
         label_color (QColor): label bg color
         label_position (str)
     """
-    def __init__(self, graph_view_form, object_id, object_name, object_class_name, x, y, extent,
-                 label_font=QFont(), label_color=QColor(), label_position="under_icon"):
+    def __init__(self, graph_view_form, object_id, object_name, object_class_id, object_class_name,
+                 x, y, extent, label_font=QFont(), label_color=QColor(), label_position="under_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
         self.object_name = object_name
+        self.object_class_id = object_class_id
         self.object_class_name = object_class_name
         self._extent = extent
         self._label_color = label_color
@@ -1285,7 +1287,7 @@ class ArcItem(QGraphicsLineItem):
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
         object_id_list (str): object id comma separated list
-        relationship_class_name (str): relationship class name
+        relationship_class_id (int): relationship class id (for filtering parameters)
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
@@ -1293,13 +1295,13 @@ class ArcItem(QGraphicsLineItem):
         label_color (QColor): color
         label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
-    def __init__(self, graph_view_form, object_id_list, relationship_class_name, src_item, dst_item,
+    def __init__(self, graph_view_form, object_id_list, relationship_class_id, src_item, dst_item,
                  width, color, label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id_list = object_id_list
-        self.relationship_class_name = relationship_class_name
+        self.relationship_class_id = relationship_class_id
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width

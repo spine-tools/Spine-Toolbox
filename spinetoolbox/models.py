@@ -1498,42 +1498,7 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             break
 
-    def build_flat_tree(self, db_name):
-        """Build flat tree, only with object classes and objects."""
-        self.clear()
-        object_class_list = [x for x in self.db_map.object_class_list()]
-        object_list = [x for x in self.db_map.object_list()]
-        wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
-        wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
-        self.root_item = QStandardItem(db_name)
-        self.root_item.setData('root', Qt.UserRole)
-        icon = QIcon(":/icons/Spine_db_icon.png")
-        self.root_item.setData(icon, Qt.DecorationRole)
-        object_class_item_list = list()
-        for object_class in object_class_list:
-            icon = self._tree_view_form.object_icon(object_class.name)
-            object_class_item = QStandardItem(object_class.name)
-            object_class_item.setData('object_class', Qt.UserRole)
-            object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
-            object_class_item.setData(object_class.description, Qt.ToolTipRole)
-            object_class_item.setData(icon, Qt.DecorationRole)
-            object_class_item.setData(self.bold_font, Qt.FontRole)
-            object_item_list = list()
-            for object_ in object_list:
-                if object_.class_id != object_class.id:
-                    continue
-                object_item = QStandardItem(object_.name)
-                object_item.setData('object', Qt.UserRole)
-                object_item.setData(object_._asdict(), Qt.UserRole + 1)
-                object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(icon, Qt.DecorationRole)
-                object_item_list.append(object_item)
-            object_class_item.appendRows(object_item_list)
-            object_class_item_list.append(object_class_item)
-        self.root_item.appendRows(object_class_item_list)
-        self.appendRow(self.root_item)
-
-    def build_tree(self, db_name):
+    def build_tree(self, db_name, flat=False):
         """Build tree."""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
@@ -1562,33 +1527,34 @@ class ObjectTreeModel(QStandardItemModel):
                 object_item.setData(object_._asdict(), Qt.UserRole + 1)
                 object_item.setData(object_.description, Qt.ToolTipRole)
                 object_item.setData(object_icon, Qt.DecorationRole)
-                relationship_class_item_list = list()
-                for wide_relationship_class in wide_relationship_class_list:
-                    object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
-                    if object_.class_id not in object_class_id_list:
-                        continue
-                    relationship_class_item = QStandardItem(wide_relationship_class.name)
-                    relationship_class_item.setData('relationship_class', Qt.UserRole)
-                    relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
-                    relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                    relationship_icon = self._tree_view_form.relationship_icon(
-                        wide_relationship_class.object_class_name_list)
-                    relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
-                    relationship_class_item.setData(self.bold_font, Qt.FontRole)
-                    relationship_item_list = list()
-                    for wide_relationship in wide_relationship_list:
-                        if wide_relationship.class_id != wide_relationship_class.id:
+                if not flat:
+                    relationship_class_item_list = list()
+                    for wide_relationship_class in wide_relationship_class_list:
+                        object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
+                        if object_.class_id not in object_class_id_list:
                             continue
-                        if object_.id not in [int(x) for x in wide_relationship.object_id_list.split(",")]:
-                            continue
-                        relationship_item = QStandardItem(wide_relationship.object_name_list)
-                        relationship_item.setData('relationship', Qt.UserRole)
-                        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-                        relationship_item.setData(relationship_icon, Qt.DecorationRole)
-                        relationship_item_list.append(relationship_item)
-                    relationship_class_item.appendRows(relationship_item_list)
-                    relationship_class_item_list.append(relationship_class_item)
-                object_item.appendRows(relationship_class_item_list)
+                        relationship_class_item = QStandardItem(wide_relationship_class.name)
+                        relationship_class_item.setData('relationship_class', Qt.UserRole)
+                        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
+                        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+                        relationship_icon = self._tree_view_form.relationship_icon(
+                            wide_relationship_class.object_class_name_list)
+                        relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
+                        relationship_class_item.setData(self.bold_font, Qt.FontRole)
+                        relationship_item_list = list()
+                        for wide_relationship in wide_relationship_list:
+                            if wide_relationship.class_id != wide_relationship_class.id:
+                                continue
+                            if object_.id not in [int(x) for x in wide_relationship.object_id_list.split(",")]:
+                                continue
+                            relationship_item = QStandardItem(wide_relationship.object_name_list)
+                            relationship_item.setData('relationship', Qt.UserRole)
+                            relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+                            relationship_item.setData(relationship_icon, Qt.DecorationRole)
+                            relationship_item_list.append(relationship_item)
+                        relationship_class_item.appendRows(relationship_item_list)
+                        relationship_class_item_list.append(relationship_class_item)
+                    object_item.appendRows(relationship_class_item_list)
                 object_item_list.append(object_item)
             object_class_item.appendRows(object_item_list)
             object_class_item_list.append(object_class_item)
@@ -2819,10 +2785,17 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
 
 
 class AutoFilterProxy(QSortFilterProxyModel):
-    """A custom sort filter proxy model which implementes a two-level filter."""
-    def __init__(self, tree_view_form=None):
+    """A custom sort filter proxy model which implementes a two-level filter.
+
+    Attributes:
+        tree_view_form (QMainWindow): TreeViewForm or GraphViewForm instance
+        default (bool): what to return if no filter is specified
+    """
+    def __init__(self, tree_view_form=None, default=True):
         """Initialize class."""
         super().__init__(tree_view_form)
+        self._tree_view_form = tree_view_form
+        self.default = default
         self.header_index = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
@@ -2831,6 +2804,8 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.rule_dict = dict()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
+        self.source_main_data = None
+        self.source_aux_data = None
 
     def index(self, row, column, parent=QModelIndex()):
         if row < 0 or column < 0 or column >= self.columnCount(parent):
@@ -2849,6 +2824,8 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
+        self.source_main_data = source_model._main_data
+        self.source_aux_data = source_model._aux_data
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
         self.receive_header_data_changed()
 
@@ -2958,9 +2935,9 @@ class AutoFilterProxy(QSortFilterProxyModel):
 
 class ObjectParameterDefinitionProxy(AutoFilterProxy):
     """A model to filter object parameter data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, default=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, default)
         self.object_class_id_set = set()
         self.object_class_id_column = None
         self.object_class_name_column = None
@@ -2974,13 +2951,13 @@ class ObjectParameterDefinitionProxy(AutoFilterProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
-        source_model = self.sourceModel()
         if self.object_class_id_set:
-            object_class_id = source_model._main_data[source_row][self.object_class_id_column]
+            object_class_id = self.source_main_data[source_row][self.object_class_id_column]
             if object_class_id not in self.object_class_id_set:
                 return False
-            source_model._aux_data[source_row][self.object_class_name_column][Qt.FontRole] = self.bold_font
-        return True
+            self.source_aux_data[source_row][self.object_class_name_column][Qt.FontRole] = self.bold_font
+            return True
+        return self.default
 
     def clear_object_class_id_set(self):
         if not self.object_class_id_set:
@@ -3013,9 +2990,9 @@ class ObjectParameterDefinitionProxy(AutoFilterProxy):
 
 class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
     """A model to filter object parameter value data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, default=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, default)
         self.object_id_set = set()
         self.object_id_column = None
         self.object_name_column = None
@@ -3029,15 +3006,13 @@ class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept rows."""
-        if not super().filter_accepts_row(source_row, source_parent):
-            return False
-        source_model = self.sourceModel()
         if self.object_id_set:
-            object_id = source_model._main_data[source_row][self.object_id_column]
+            object_id = self.source_main_data[source_row][self.object_id_column]
             if object_id not in self.object_id_set:
                 return False
-            source_model._aux_data[source_row][self.object_name_column][Qt.FontRole] = self.bold_font
-        return True
+            self.source_aux_data[source_row][self.object_name_column][Qt.FontRole] = self.bold_font
+            return True
+        return super().filter_accepts_row(source_row, source_parent)
 
     def clear_object_id_set(self):
         if not self.object_id_set:
@@ -3069,9 +3044,9 @@ class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
 
 class RelationshipParameterDefinitionProxy(AutoFilterProxy):
     """A model to filter relationship parameter data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, default=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, default)
         self.relationship_class_id_set = set()
         self.object_class_id_set = set()
         self.relationship_class_id_column = None
@@ -3088,20 +3063,21 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
-        source_model = self.sourceModel()
         if self.relationship_class_id_set:
-            relationship_class_id = source_model._main_data[source_row][self.relationship_class_id_column]
+            relationship_class_id = self.source_main_data[source_row][self.relationship_class_id_column]
             if relationship_class_id not in self.relationship_class_id_set:
                 return False
-            source_model._aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
+            self.source_aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
+            return True
         if self.object_class_id_set:
-            object_class_id_list = source_model._main_data[source_row][self.object_class_id_list_column]
+            object_class_id_list = self.source_main_data[source_row][self.object_class_id_list_column]
             if not object_class_id_list:
-                return False  # FIXME: This shouldn't happen
+                return False  # NOTE: This shouldn't happen
             if self.object_class_id_set.isdisjoint([int(x) for x in object_class_id_list.split(",")]):
                 return False
-            source_model._aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
-        return True
+            self.source_aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
+            return True
+        return self.default
 
     def clear_relationship_class_id_set(self):
         if not self.relationship_class_id_set:
@@ -3152,14 +3128,13 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
 
 class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
     """A model to filter relationship parameter value data, used by TreeViewForm."""
-    def __init__(self, tree_view_form=None):
+    def __init__(self, tree_view_form=None, default=True):
         """Initialize class."""
-        super().__init__(tree_view_form)
+        super().__init__(tree_view_form, default)
         self.object_id_set = set()
         self.object_id_list_set = set()  # Set of string
         self.object_id_list_column = None
         self.object_name_list_column = None
-        self.object_count = 0
 
     @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
     def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
@@ -3170,64 +3145,51 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
 
     def filter_accepts_row(self, source_row, source_parent):
         """Accept row."""
-        if not super().filter_accepts_row(source_row, source_parent):
-            return False
-        source_model = self.sourceModel()
-        object_id_list = source_model._main_data[source_row][self.object_id_list_column]
-        split_object_id_list = [int(x) for x in object_id_list.split(",")]
         if self.object_id_list_set:
+            object_id_list = self.source_main_data[source_row][self.object_id_list_column]
             if object_id_list not in self.object_id_list_set:
                 return False
-            source_model._aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
+            self.source_aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
+            return True
         if self.object_id_set:
-            found = False
-            for j, object_id in enumerate(split_object_id_list):
-                if object_id in self.object_id_set:
-                    source_model._aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
-                    found = True
-            if not found:
+            object_id_list = self.source_main_data[source_row][self.object_id_list_column]
+            if not self.object_id_set.intersection(int(x) for x in object_id_list.split(",")):
                 return False
-        # If this row passes, update the object count
-        self.object_count = max(self.object_count, len(split_object_id_list))
-        return True
+            self.source_aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
+            return True
+        return super().filter_accepts_row(source_row, source_parent)
 
     def clear_object_id_set(self):
-        self.object_count = 0
         if not self.object_id_set:
             return
         self.object_id_set.clear()
         self.invalidate_filter()
 
     def update_object_id_set(self, ids):
-        self.object_count = 0
         if self.object_id_set.issuperset(ids):
             return
         self.object_id_set.update(ids)
         self.invalidate_filter()
 
     def diff_update_object_id_set(self, ids):
-        self.object_count = 0
         if self.object_id_set.isdisjoint(ids):
             return
         self.object_id_set.difference_update(ids)
         self.invalidate_filter()
 
     def clear_object_id_list_set(self):
-        self.object_count = 0
         if not self.object_id_list_set:
             return
         self.object_id_list_set.clear()
         self.invalidate_filter()
 
     def update_object_id_list_set(self, id_lists):
-        self.object_count = 0
         if self.object_id_list_set.issuperset(id_lists):
             return
         self.object_id_list_set.update(id_lists)
         self.invalidate_filter()
 
     def diff_update_object_id_list_set(self, id_lists):
-        self.object_count = 0
         if self.object_id_list_set.isdisjoint(id_lists):
             return
         self.object_id_list_set.difference_update(id_lists)
@@ -3235,7 +3197,6 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
 
     def invalidate_filter(self):
         super().invalidate_filter()
-        self.object_count = 0
         for row_data in self.sourceModel()._aux_data:
             row_data[self.object_name_list_column][Qt.FontRole] = None
         row_count = self.sourceModel().rowCount()

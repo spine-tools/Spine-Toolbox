@@ -120,7 +120,7 @@
           <property name="handleWidth">
            <number>6</number>
           </property>
-          <widget class="QTabWidget" name="tabWidget_object">
+          <widget class="QTabWidget" name="tabWidget_object_parameter">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>2</horstretch>
@@ -176,7 +176,7 @@
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
-               <widget class="QWidget" name="">
+               <widget class="QWidget" name="layoutWidget">
                 <layout class="QHBoxLayout" name="horizontalLayout">
                  <property name="spacing">
                   <number>0</number>
@@ -415,7 +415,7 @@
             </layout>
            </widget>
           </widget>
-          <widget class="QTabWidget" name="tabWidget_relationship">
+          <widget class="QTabWidget" name="tabWidget_relationship_parameter">
            <property name="enabled">
             <bool>true</bool>
            </property>
@@ -474,7 +474,7 @@
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
-               <widget class="QWidget" name="">
+               <widget class="QWidget" name="layoutWidget">
                 <layout class="QHBoxLayout" name="horizontalLayout_2">
                  <property name="spacing">
                   <number>0</number>

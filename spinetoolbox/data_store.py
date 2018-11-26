@@ -24,8 +24,7 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
 from project_item import ProjectItem
-from widgets.tree_view_widget import TreeViewForm
-from widgets.graph_view_widget import GraphViewForm
+from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
