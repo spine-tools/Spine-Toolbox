@@ -551,6 +551,7 @@ class EditObjectClassesDialog(EditItemsDialog):
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.orig_data = list()
         self.id_list = list()
+        model_data = list()
         for kwargs in orig_kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
@@ -565,8 +566,9 @@ class EditObjectClassesDialog(EditItemsDialog):
             except KeyError:
                 description = None
             row_data = [name, description]
-            self.orig_data.append(row_data)
-        self.model.reset_model(self.orig_data)
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.reset_model(model_data)
         self.ui.tableView.resizeColumnsToContents()
 
     @busy_effect
@@ -613,6 +615,7 @@ class EditObjectsDialog(EditItemsDialog):
         self.model.set_horizontal_header_labels(['object name', 'description'])
         self.orig_data = list()
         self.id_list = list()
+        model_data = list()
         for kwargs in orig_kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
@@ -627,8 +630,9 @@ class EditObjectsDialog(EditItemsDialog):
             except KeyError:
                 description = None
             row_data = [name, description]
-            self.orig_data.append(row_data)
-        self.model.reset_model(self.orig_data)
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.reset_model(model_data)
         self.ui.tableView.resizeColumnsToContents()
 
     @busy_effect
@@ -675,6 +679,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
         self.model.set_horizontal_header_labels(['relationship class name'])
         self.orig_data = list()
         self.id_list = list()
+        model_data = list()
         for kwargs in orig_kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
@@ -685,8 +690,9 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             except KeyError:
                 continue
             row_data = [name]
-            self.orig_data.append(row_data)
-        self.model.reset_model(self.orig_data)
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.reset_model(model_data)
         self.ui.tableView.resizeColumnsToContents()
 
     @busy_effect
@@ -735,6 +741,7 @@ class EditRelationshipsDialog(EditItemsDialog):
         self.orig_data = list()
         self.orig_object_id_lists = list()
         self.id_list = list()
+        model_data = list()
         for kwargs in orig_kwargs_list:
             try:
                 self.id_list.append(kwargs["id"])
@@ -747,9 +754,10 @@ class EditRelationshipsDialog(EditItemsDialog):
             except KeyError:
                 continue
             row_data = [*object_name_list, name]
-            self.orig_data.append(row_data)
             self.orig_object_id_lists.append(object_id_list)
-        self.model.reset_model(self.orig_data)
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.reset_model(model_data)
         self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
         self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
         self.ui.tableView.resizeColumnsToContents()
