@@ -20,6 +20,7 @@ import logging
 from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot
+from helpers import fix_name_ambiguity
 
 
 class CustomContextMenu(QMenu):
@@ -247,8 +248,11 @@ class GraphViewContextMenu(CustomContextMenu):
     def __init__(self, parent, position):
         """Class constructor."""
         super().__init__(parent)
+        self.add_action("Hide selected items", enabled=len(parent.object_item_selection) > 0)
         self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
-        self.add_action("Reset graph", enabled=parent._has_graph > 0)
+        self.addSeparator()
+        self.add_action("Prune selected items", enabled=len(parent.object_item_selection) > 0)
+        self.add_action("Reinstate pruned items", enabled=len(parent.rejected_items) > 0)
         self.exec_(position)
 
 
@@ -263,23 +267,49 @@ class ObjectItemContextMenu(CustomContextMenu):
     def __init__(self, parent, position, graphics_item):
         """Class constructor."""
         super().__init__(parent)
-        self.add_action("Hide selected")
-        self.add_action("Ignore selected and rebuild graph")
-        self.addSeparator()
+        self.relationship_class_dict = dict()
+        object_item_selection_length = len(parent.object_item_selection)
+        self.add_action('Hide')
+        self.add_action('Prune')
         if parent.read_only:
+            self.exec_(position)
+            return
+        self.addSeparator()
+        if graphics_item.is_template:
+            self.add_action("Set name", enabled=object_item_selection_length == 1)
+        else:
+            self.add_action("Rename", enabled=object_item_selection_length == 1)
+        self.add_action("Remove")
+        self.addSeparator()
+        if graphics_item.is_template or object_item_selection_length > 1:
             self.exec_(position)
             return
         for item in parent.relationship_class_list_model.findItems('*', Qt.MatchWildcard):
             relationship_class = item.data(Qt.UserRole + 1)
             if not relationship_class:
                 continue
+            relationship_class_id = relationship_class['id']
+            relationship_class_name = relationship_class['name']
+            object_class_id_list = [int(x) for x in relationship_class["object_class_id_list"].split(",")]
             object_class_name_list = relationship_class["object_class_name_list"].split(",")
-            if not object_class_name_list:
-                continue
-            if graphics_item.object_class_name != object_class_name_list[0]:
-                continue
-            # NOTE: the '' enclosing the name in the line below are important
-            self.add_action("Add '{}' relationship".format(relationship_class['name']))
+            fixed_object_class_name_list = object_class_name_list.copy()
+            fix_name_ambiguity(fixed_object_class_name_list)
+            for i, object_class_name in enumerate(object_class_name_list):
+                if object_class_name != graphics_item.object_class_name:
+                    continue
+                option = "Add '{}' relationship".format(relationship_class['name'])
+                fixed_object_class_name = fixed_object_class_name_list[i]
+                if object_class_name != fixed_object_class_name:
+                    option += " as '{}'".format(fixed_object_class_name)
+                self.add_action(option)
+                self.relationship_class_dict[option] = {
+                    'id': relationship_class_id,
+                    'name': relationship_class_name,
+                    'object_class_id_list': object_class_id_list,
+                    'object_class_name_list': object_class_name_list,
+                    'object_name_list': fixed_object_class_name_list,
+                    'dimension': i
+                }
         self.exec_(position)
 
 

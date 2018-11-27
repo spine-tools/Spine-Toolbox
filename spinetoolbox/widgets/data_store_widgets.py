@@ -149,7 +149,7 @@ class DataStoreForm(QMainWindow):
             msg (str): String to show in QStatusBar
         """
         current_msg = self.ui.statusbar.currentMessage()
-        self.ui.statusbar.showMessage(" ".join([current_msg, msg]), 5000)
+        self.ui.statusbar.showMessage("\t".join([msg, current_msg]), 5000)
 
     @Slot(str, name="add_error_message")
     def add_error_message(self, msg):
@@ -164,8 +164,8 @@ class DataStoreForm(QMainWindow):
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
-    @Slot(name="show_commit_session_dialog")
-    def show_commit_session_dialog(self):
+    @Slot("bool", name="show_commit_session_dialog")
+    def show_commit_session_dialog(self, checked=False):
         """Query user for a commit message and commit changes to source database."""
         if not self.db_map.has_pending_changes():
             self.msg.emit("Nothing to commit yet.")
@@ -187,8 +187,8 @@ class DataStoreForm(QMainWindow):
         msg = "All changes committed successfully."
         self.msg.emit(msg)
 
-    @Slot(name="rollback_session")
-    def rollback_session(self):
+    @Slot("bool", name="rollback_session")
+    def rollback_session(self, checked=False):
         try:
             self.db_map.rollback_session()
             self.set_commit_rollback_actions_enabled(False)
@@ -199,8 +199,8 @@ class DataStoreForm(QMainWindow):
         self.msg.emit(msg)
         self.init_models()
 
-    @Slot(name="refresh_session")
-    def refresh_session(self):
+    @Slot("bool", name="refresh_session")
+    def refresh_session(self, checked=False):
         msg = "Session refreshed."
         self.msg.emit(msg)
         self.init_models()
@@ -333,25 +333,27 @@ class DataStoreForm(QMainWindow):
         delegate = RelationshipParameterValueDelegate(self)
         table_view.setItemDelegate(delegate)
 
-    @Slot(name="show_add_object_classes_form")
-    def show_add_object_classes_form(self):
+    @Slot("bool", name="show_add_object_classes_form")
+    def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
         dialog = AddObjectClassesDialog(self)
         dialog.show()
 
-    @Slot(name="show_add_objects_form")
-    def show_add_objects_form(self, class_id=None):
+    @Slot("bool", name="show_add_objects_form")
+    def show_add_objects_form(self, checked=False, class_id=None):
         """Show dialog to let user select preferences for new objects."""
         dialog = AddObjectsDialog(self, class_id=class_id)
         dialog.show()
 
-    def show_add_relationship_classes_form(self, object_class_id=None):
+    @Slot("bool", name="show_add_relationship_classes_form")
+    def show_add_relationship_classes_form(self, checked=False, object_class_id=None):
         """Show dialog to let user select preferences for new relationship class."""
         dialog = AddRelationshipClassesDialog(self, object_class_one_id=object_class_id)
         dialog.show()
 
-    @Slot(name="show_add_relationships_form")
-    def show_add_relationships_form(self, relationship_class_id=None, object_id=None, object_class_id=None):
+    @Slot("bool", name="show_add_relationships_form")
+    def show_add_relationships_form(
+            self, checked=False, relationship_class_id=None, object_id=None, object_class_id=None):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
@@ -399,7 +401,8 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
-    def show_edit_object_classes_form(self):
+    @Slot("bool", name="show_edit_object_classes_form")
+    def show_edit_object_classes_form(self, checked=False):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
@@ -411,7 +414,8 @@ class DataStoreForm(QMainWindow):
         dialog = EditObjectClassesDialog(self, kwargs_list)
         dialog.show()
 
-    def show_edit_objects_form(self):
+    @Slot("bool", name="show_edit_objects_form")
+    def show_edit_objects_form(self, checked=False):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
@@ -423,7 +427,8 @@ class DataStoreForm(QMainWindow):
         dialog = EditObjectsDialog(self, kwargs_list)
         dialog.show()
 
-    def show_edit_relationship_classes_form(self):
+    @Slot("bool", name="show_edit_relationship_classes_form")
+    def show_edit_relationship_classes_form(self, checked=False):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
@@ -435,7 +440,8 @@ class DataStoreForm(QMainWindow):
         dialog = EditRelationshipClassesDialog(self, kwargs_list)
         dialog.show()
 
-    def show_edit_relationships_form(self):
+    @Slot("bool", name="show_edit_relationships_form")
+    def show_edit_relationships_form(self, checked=False):
         current = self.ui.treeView_object.currentIndex()
         if current.data(Qt.UserRole) != "relationship":
             return
@@ -755,8 +761,8 @@ class TreeViewForm(DataStoreForm):
         """Store data from clipboard."""
         self.clipboard_text = self.clipboard.text()
 
-    @Slot(name="copy")
-    def copy(self):
+    @Slot("bool", name="copy")
+    def copy(self, checked=False):
         """Copy data to clipboard."""
         focus_widget = self.focusWidget()
         try:
@@ -764,8 +770,8 @@ class TreeViewForm(DataStoreForm):
         except AttributeError:
             pass
 
-    @Slot(name="paste")
-    def paste(self):
+    @Slot("bool", name="paste")
+    def paste(self, checked=False):
         """Paste data from clipboard."""
         focus_widget = self.focusWidget()
         try:
@@ -943,8 +949,8 @@ class TreeViewForm(DataStoreForm):
             self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
             self.ui.actionPaste.setEnabled(True)
 
-    @Slot(name="show_import_file_dialog")
-    def show_import_file_dialog(self):
+    @Slot("bool", name="show_import_file_dialog")
+    def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
         answer = QFileDialog.getOpenFileName(
             self, "Select file to import", self._data_store.project().project_dir, "*.*")
@@ -954,7 +960,7 @@ class TreeViewForm(DataStoreForm):
         self.import_file(file_path)
 
     @busy_effect
-    def import_file(self, file_path):
+    def import_file(self, file_path, checked=False):
         """Import data from file into current database."""
         if file_path.lower().endswith('datapackage.json'):
             try:
@@ -984,8 +990,8 @@ class TreeViewForm(DataStoreForm):
                     QMessageBox.information(self, "Excel import may have failed", msg)
                     # logging.debug(error_log)
 
-    @Slot(name="show_export_file_dialog")
-    def show_export_file_dialog(self):
+    @Slot("bool", name="show_export_file_dialog")
+    def show_export_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to export."""
         answer = QFileDialog.getSaveFileName(self,
                                              "Export to file",
@@ -1330,7 +1336,8 @@ class TreeViewForm(DataStoreForm):
             self.show_edit_relationships_form()
 
     @busy_effect
-    def remove_object_tree_items(self):
+    @Slot("bool", name="remove_object_tree_items")
+    def remove_object_tree_items(self, checked=False):
         """Remove all selected items from the object treeview."""
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
@@ -1625,8 +1632,8 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    @Slot(name="remove_object_parameter_definitions")
-    def remove_object_parameter_definitions(self):
+    @Slot("bool", name="remove_object_parameter_definitions")
+    def remove_object_parameter_definitions(self, checked=False):
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         source_row_set = self.source_row_set(selection, self.object_parameter_definition_proxy)
         parameter_ids = set()
@@ -1646,8 +1653,8 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    @Slot(name="remove_relationship_parameter_definitions")
-    def remove_relationship_parameter_definitions(self):
+    @Slot("bool", name="remove_relationship_parameter_definitions")
+    def remove_relationship_parameter_definitions(self, checked=False):
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         source_row_set = self.source_row_set(selection, self.relationship_parameter_definition_proxy)
         parameter_ids = set()
@@ -1738,7 +1745,7 @@ class GraphViewForm(DataStoreForm):
         self.font = QApplication.font()
         self.font.setPointSize(72)
         self.font_metric = QFontMetrics(self.font)
-        self.extent = 5 * self.font.pointSize()
+        self.extent = self.font_metric.width("SPINE")
         self._spread = 2 * self.extent
         self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
         self.label_color.setAlphaF(.5)
@@ -1773,8 +1780,9 @@ class GraphViewForm(DataStoreForm):
         # Hidden and rejected items
         self.hidden_items = list()
         self.rejected_items = list()
-        # Previous item selection (for filtering parameter tables)
-        self.previous_item_selection = list()
+        # Current item selection
+        self.object_item_selection = list()
+        self.arc_item_selection = list()
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_parameter)
         self.handle_parameter_dock_location_changed(area)
@@ -1859,10 +1867,22 @@ class GraphViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
-        self.ui.actionBuild.triggered.connect(self.build_graph)
         self.ui.graphicsView.item_dropped.connect(self.handle_item_dropped)
         self.ui.dockWidget_parameter.dockLocationChanged.connect(self.handle_parameter_dock_location_changed)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self.handle_item_palette_dock_location_changed)
+        self.ui.actionGraph_hide_selected.triggered.connect(self.hide_selected_items)
+        self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
+        self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
+        self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.menuGraph.aboutToShow.connect(self.handle_menu_about_to_show)
+
+    @Slot(name="handle_menu_about_to_show")
+    def handle_menu_about_to_show(self):
+        """Called when a menu from the menubar is about to show."""
+        self.ui.actionGraph_hide_selected.setEnabled(len(self.object_item_selection) > 0)
+        self.ui.actionGraph_show_hidden.setEnabled(len(self.hidden_items) > 0)
+        self.ui.actionGraph_prune_selected.setEnabled(len(self.object_item_selection) > 0)
+        self.ui.actionGraph_reinstate_pruned.setEnabled(len(self.rejected_items) > 0)
 
     @Slot("Qt.DockWidgetArea", name="handle_parameter_dock_location_changed")
     def handle_parameter_dock_location_changed(self, area):
@@ -2194,10 +2214,11 @@ class GraphViewForm(DataStoreForm):
         """Show parameters for selected items."""
         scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
         current_items = scene.selectedItems()
-        previous_items = self.previous_item_selection
+        previous_items = self.object_item_selection + self.arc_item_selection
         selected = [x for x in current_items if x not in previous_items]
         deselected = [x for x in previous_items if x not in current_items]
-        self.previous_item_selection = current_items
+        self.object_item_selection = [x for x in current_items if isinstance(x, ObjectItem)]
+        self.arc_item_selection = [x for x in current_items if isinstance(x, ArcItem)]
         selected_object_ids = set()
         selected_object_id_lists = set()
         deselected_object_ids = set()
@@ -2254,14 +2275,15 @@ class GraphViewForm(DataStoreForm):
             <ul>
             <li>Select items in <a href="Object tree">Object tree</a> to show objects here.</li>
             <li>Select items here to show their parameters in <a href="Parameter dock">Parameter dock</a>.</li>
+            <li>In both cases above, hold down the 'Ctrl' key to select multiple items at once.</li>
         """
         if not self.read_only:
             usage += """
-                <li>Drag icons from <a href="Item palette">Item palette</a> and drop them here to add new.</li>
+                <li>Drag icons from <a href="Item palette">Item palette</a>
+                and drop them here to create new items.</li>
             """
         usage += """
             </ul>
-            <p><strong>Note:</strong> You can select multiple items by holding the 'Ctrl' key.</p>
             </html>
         """
         usage_item = CustomTextItem(usage, self.font)
@@ -2317,7 +2339,7 @@ class GraphViewForm(DataStoreForm):
             self.template_id += 1
         self._has_graph = True
 
-    def add_relationship_template(self, scene, x, y, object_items, arc_items, origin_at_first=False):
+    def add_relationship_template(self, scene, x, y, object_items, arc_items, dimension_at_origin=None):
         """Add relationship parts into the scene to form a 'relationship template'."""
         for item in object_items + arc_items:
             scene.addItem(item)
@@ -2329,11 +2351,12 @@ class GraphViewForm(DataStoreForm):
             arc_item.template_id = self.template_id
             arc_item.make_template()
         # Move
-        rectf = QRectF()
-        for object_item in object_items:
-            rectf |= object_item.sceneBoundingRect()
-            if origin_at_first:
-                break
+        try:
+            rectf = object_items[dimension_at_origin].sceneBoundingRect()
+        except IndexError:
+            rectf = QRectF()
+            for object_item in object_items:
+                rectf |= object_item.sceneBoundingRect()
         center = rectf.center()
         for object_item in object_items:
             object_item.moveBy(x - center.x(), y - center.y())
@@ -2450,64 +2473,115 @@ class GraphViewForm(DataStoreForm):
         """Show context menu for graphics view."""
         self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
         option = self.graph_view_context_menu.get_action()
-        if option == "Reset graph":
-            self.rejected_items = list()
-            self.build_graph()
+        if option == "Hide selected items":
+            self.hide_selected_items()
         elif option == "Show hidden items":
-            scene = self.ui.graphicsView.scene()
-            if scene:
-                for item in self.hidden_items:
-                    item.set_all_visible(True)
-                self.hidden_items = list()
+            self.show_hidden_items()
+        elif option == "Prune selected items":
+            self.prune_selected_items()
+        elif option == "Reinstate pruned items":
+            self.reinstate_pruned_items()
         else:
             pass
         self.graph_view_context_menu.deleteLater()
         self.graph_view_context_menu = None
+
+    @Slot("bool", name="reinstate_pruned_items")
+    def hide_selected_items(self, checked=False):
+        """Hide selected items."""
+        self.hidden_items.extend(self.object_item_selection)
+        for item in self.object_item_selection:
+            item.set_all_visible(False)
+
+    @Slot("bool", name="reinstate_pruned_items")
+    def show_hidden_items(self, checked=False):
+        """Show hidden items."""
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        for item in self.hidden_items:
+            item.set_all_visible(True)
+            self.hidden_items = list()
+
+    @Slot("bool", name="reinstate_pruned_items")
+    def prune_selected_items(self, checked=False):
+        """Prune selected items."""
+        self.rejected_items.extend(self.object_item_selection)
+        self.build_graph()
+
+    @Slot("bool", name="reinstate_pruned_items")
+    def reinstate_pruned_items(self, checked=False):
+        """Reinstate pruned items."""
+        self.rejected_items = list()
+        self.build_graph()
 
     def show_object_item_context_menu(self, e, main_item):
         """Show context menu for object_item."""
         global_pos = e.screenPos()
         self.object_item_context_menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = self.object_item_context_menu.get_action()
-        scene = self.ui.graphicsView.scene()
-        if scene:
-            object_items = [x for x in scene.selectedItems() if isinstance(x, ObjectItem)]
-            if option == "Hide selected":
-                self.hidden_items.extend(object_items)
-                for item in object_items:
-                    item.set_all_visible(False)
-            elif option == "Ignore selected and rebuild graph":
-                self.rejected_items.extend(object_items)
-                self.build_graph()
-            elif option.startswith("Add") and option.endswith("relationship"):
-                # NOTE: the line below assumes the relationship name is enclosed by '' in the option str
-                relationship_class_name = option.split("'")[1]
-                item = self.relationship_class_list_model.findItems(relationship_class_name)[0]
-                relationship_class = item.data(Qt.UserRole + 1)
-                relationship_class_id = relationship_class["id"]
-                object_class_id_list = [int(x) for x in relationship_class["object_class_id_list"].split(",")]
-                object_class_name_list = relationship_class['object_class_name_list'].split(",")
-                object_name_list = object_class_name_list.copy()
-                fix_name_ambiguity(object_name_list)
-                object_items, arc_items = self.relationship_graph(
-                    object_name_list, object_class_name_list, self.extent, self._spread,
-                    label_font=self.font, label_color=self.label_color, label_position="under_icon",
-                    object_class_id_list=object_class_id_list, relationship_class_id=relationship_class_id)
-                scene_pos = e.scenePos()
-                self.add_relationship_template(
-                    scene, scene_pos.x(), scene_pos.y(), object_items, arc_items, origin_at_first=True)
-                object_items[0].merge_item(main_item)
-                self._has_graph = True
-                self.relationship_class_dict[self.template_id] = {
-                    "id": relationship_class_id,
-                    "name": relationship_class_name
-                }
-                self.template_id += 1
-            else:
-                pass
+        if option == 'Hide':
+            self.hide_selected_items()
+        elif option == 'Prune':
+            self.prune_selected_items()
+        elif option in ('Set name', 'Rename'):
+            main_item.edit_name()
+        elif option == 'Remove':
+            self.remove_graph_items()
+        try:
+            relationship_class = self.object_item_context_menu.relationship_class_dict[option]
+            relationship_class_id = relationship_class["id"]
+            relationship_class_name = relationship_class["name"]
+            object_class_id_list = relationship_class["object_class_id_list"]
+            object_class_name_list = relationship_class['object_class_name_list']
+            object_name_list = relationship_class['object_name_list']
+            dimension = relationship_class['dimension']
+            object_items, arc_items = self.relationship_graph(
+                object_name_list, object_class_name_list, self.extent, self._spread,
+                label_font=self.font, label_color=self.label_color, label_position="under_icon",
+                object_class_id_list=object_class_id_list, relationship_class_id=relationship_class_id)
+            scene = self.ui.graphicsView.scene()
+            scene_pos = e.scenePos()
+            self.add_relationship_template(
+                scene, scene_pos.x(), scene_pos.y(), object_items, arc_items, dimension_at_origin=dimension)
+            object_items[dimension].merge_item(main_item)
+            self._has_graph = True
+            self.relationship_class_dict[self.template_id] = {
+                "id": relationship_class_id,
+                "name": relationship_class_name
+            }
+            self.template_id += 1
+        except KeyError:
+            pass
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None
 
+    @busy_effect
+    @Slot("bool", name="remove_graph_items")
+    def remove_graph_items(self, checked=False):
+        """Remove all selected items in the graph."""
+        if not self.object_item_selection + self.arc_item_selection:
+            return
+        removed_id_dict = {
+            "object": set(x.object_id for x in self.object_item_selection if x.object_id)
+        }
+        try:
+            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})  # FIXME: this is ugly
+            for key, value in removed_id_dict.items():
+                self.object_tree_model.remove_items(key, *value)
+            for key, value in removed_id_dict.items():
+                self.object_parameter_definition_model.remove_items(key, *value)
+                self.object_parameter_value_model.remove_items(key, *value)
+                self.relationship_parameter_definition_model.remove_items(key, *value)
+                self.relationship_parameter_value_model.remove_items(key, *value)
+            for item in self.object_item_selection:
+                item.wipe_out()
+            #for item in self.arc_item_selection:
+            #    item.scene().removeItem(item)
+            self.set_commit_rollback_actions_enabled(True)
+            self.msg.emit("Successfully removed items.")
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

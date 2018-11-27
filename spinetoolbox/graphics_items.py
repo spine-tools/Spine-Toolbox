@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextIte
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, \
-    QFont, QTransform, QTextCursor
+    QFont, QTransform, QTextCursor, QFontMetrics
 from math import atan2, degrees, sin, cos, pi
 from helpers import object_pixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
@@ -1052,7 +1052,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._extent = extent
         self._label_color = label_color
         self._label_position = label_position
-        self.label_item = ObjectLabelItem(self, object_name, label_font, label_color)
+        self.label_item = ObjectLabelItem(self, object_name, 2 * extent, label_font, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
@@ -1090,10 +1090,11 @@ class ObjectItem(QGraphicsPixmapItem):
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
         if option.state & (QStyle.State_Selected):
-            self.shade.show()
             if self.label_item.hasFocus():
+                self.shade.hide()
                 self.label_item.set_bg_color(self._label_color)
             else:
+                self.shade.show()
                 self.label_item.set_bg_color(self._selected_color)
             option.state &= ~QStyle.State_Selected
         else:
@@ -1147,15 +1148,15 @@ class ObjectItem(QGraphicsPixmapItem):
                 and needs to be associated with an object.
                 Please do one of the following:
                 <ul>
-                <li>Give this item a name (F2).</li>
-                <li>Drag-and-drop this item onto an existing <b>{}</b> object (or viceversa)</li>
+                <li>Give this item a name to create a new <b>{0}</b> object (select it and press F2).</li>
+                <li>Drag-and-drop this item onto an existing <b>{0}</b> object (or viceversa)</li>
                 </ul>
                 </html>""".format(self.object_class_name))
         else:
             self.setToolTip("""
                 <html>
-                This item is a <i>template</i> for an object.
-                Please give it a name (F2).
+                This item is a <i>template</i> for a <b>{0}</b>.
+                Please give it a name to create a new <b>{0}</b> object (select it and press F2).
                 </html>""".format(self.object_class_name))
 
 
@@ -1168,10 +1169,12 @@ class ObjectItem(QGraphicsPixmapItem):
     def edit_name(self):
         """Start editing object name."""
         self.setSelected(True)
+        self.label_item.set_non_elided_text(self.object_name)
         self.label_item.setTextInteractionFlags(Qt.TextEditorInteraction)
         self.label_item.setFocus()
-        self.label_item._cursor.select(QTextCursor.Document)
-        self.label_item.setTextCursor(self.label_item._cursor)
+        cursor = QTextCursor(self.label_item._cursor)
+        cursor.select(QTextCursor.Document)
+        self.label_item.setTextCursor(cursor)
 
     def finish_name_editing(self):
         """Called by the label item when editing finishes."""
@@ -1184,10 +1187,11 @@ class ObjectItem(QGraphicsPixmapItem):
                 self._graph_view_form.add_objects(object_)
                 self.object_name = name
                 self.object_id = object_.first().id
-                self.add_into_relationship()
+                if self.template_id_dim:
+                    self.add_into_relationship()
                 self.remove_template()
             except SpineDBAPIError as e:
-                self.label_item.setPlainText(self.object_name)
+                self.label_item.set_non_elided_text(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
         else:
             try:
@@ -1196,8 +1200,9 @@ class ObjectItem(QGraphicsPixmapItem):
                 self._graph_view_form.update_objects(object_)
                 self.object_name = name
             except SpineDBAPIError as e:
-                self.label_item.setPlainText(self.object_name)
+                self.label_item.set_non_elided_text(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
+        self.label_item.elide_text()
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1233,7 +1238,7 @@ class ObjectItem(QGraphicsPixmapItem):
         for item in object_items:
             item.move_related_items_by(event.scenePos() - event.lastScenePos())
         self.check_for_merge_target(event.scenePos())
-        # Depending on the value of merge target and bounce, set the drop indicator cursor
+        # Depending on the value of merge target and bounce, set drop indicator cursor
         for view in self.scene().views():
             if view not in self._views_cursor:
                 self._views_cursor[view] = view.viewport().cursor()
@@ -1269,17 +1274,20 @@ class ObjectItem(QGraphicsPixmapItem):
                 continue
             if not isinstance(item, ObjectItem):
                 continue
-            if item.is_template != self.is_template:
-                if item.object_class_name == self.object_class_name:
-                    self._merge_target = item
-                    break
-            self._bounce = True
+            if item.is_template != self.is_template and item.object_class_name == self.object_class_name:
+                self._merge_target = item
+            else:
+                self._bounce = True
             break
 
     def merge_item(self, other):
         """Merge this item with other.
         Try and create a relationship if needed."""
         if not other:
+            return False
+        if self.is_template == other.is_template:
+            return False
+        if self.object_class_id != other.object_class_id:
             return False
         if not self.is_template:
             # Do the merging on the template, by convention
@@ -1344,17 +1352,28 @@ class ObjectItem(QGraphicsPixmapItem):
             e (QGraphicsSceneMouseEvent): Mouse event
         """
         e.accept()
-        if not e.modifiers() & Qt.ControlModifier:
+        if not self.isSelected() and not e.modifiers() & Qt.ControlModifier:
             self.scene().clearSelection()
         self.setSelected(True)
         self._graph_view_form.show_object_item_context_menu(e, self)
 
     def set_all_visible(self, on):
-        """Set visible attribute for this item and all related ones."""
+        """Set visible status for this item and all related ones."""
         self.label_item.setVisible(on)
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             item.setVisible(on)
         self.setVisible(on)
+
+    def wipe_out(self):
+        """Remove this item and all related from the scene."""
+        scene = self.scene()
+        scene.removeItem(self.label_item)
+        for item in self.incoming_arc_items + self.outgoing_arc_items:
+            if not item.scene():
+                # Already removed
+                continue
+            scene.removeItem(item)
+        scene.removeItem(self)
 
 
 class ArcItem(QGraphicsLineItem):
@@ -1488,16 +1507,19 @@ class ObjectLabelItem(QGraphicsTextItem):
     Attributes:
         object_item (ObjectItem): the ObjectItem instance
         text (str): text
+        width (int): maximum width
         font (QFont): font to display the text
         bg_color (QColor): color to paint the label
     """
-    def __init__(self, object_item, text, font, bg_color):
+    def __init__(self, object_item, text, width, font, bg_color):
         """Init class."""
-        super().__init__(text)
+        super().__init__()
         self.object_item = object_item
-        # font.setWeight(QFont.Black)
+        self._text = text
+        self._width = width
+        self._font = font
+        self.font_metric = QFontMetrics(font)
         self.setFont(font)
-        self.adjustSize()
         self.bg = QGraphicsRectItem()
         self.bg.setParentItem(self)
         self.bg.setRect(self.boundingRect())
@@ -1505,7 +1527,34 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.bg.setPen(Qt.NoPen)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
+        self.set_non_elided_text(text)
+        self.elide_text()
+
+    def elide_text(self):
+        """Make text elided."""
+        text = self.toPlainText()
+        elided_text = self.font_metric.elidedText(text, Qt.ElideMiddle, self._width)
+        self.adjustSize()
+        old_width = self.textWidth()
+        self.setPlainText(elided_text)
+        self.recenter(old_width)
+
+    def set_non_elided_text(self, text):
+        """Set non elided text."""
+        self.adjustSize()
+        old_width = self.textWidth()
+        self.setPlainText(text)
+        self.setToolTip(text)
+        self.recenter(old_width)
+
+    def recenter(self, old_width):
+        """Adjust size and recenter label."""
+        self.adjustSize()
+        new_width = self.textWidth()
+        self.setX(self.x() - (new_width - old_width) / 2)
+        self.bg.setRect(self.boundingRect())
 
     def set_bg_color(self, bg_color):
         """Set background color."""
@@ -1518,11 +1567,9 @@ class ObjectLabelItem(QGraphicsTextItem):
         old_width = self.textWidth()
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
             self.clearFocus()
-        super().keyPressEvent(event)
-        self.adjustSize()
-        new_width = self.textWidth()
-        self.setX(self.x() - (new_width - old_width) / 2)
-        self.bg.setRect(self.boundingRect())
+        else:
+            super().keyPressEvent(event)
+            self.recenter(old_width)
 
     def focusOutEvent(self, event):
         """Call method to finish name editing in object item."""
