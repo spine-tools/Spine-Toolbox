@@ -129,6 +129,15 @@ class DataStoreForm(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         # Object tree
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self.handle_object_tree_selection_changed)
+        # Parameter tables delegate commit data
+        self.ui.tableView_object_parameter_definition.itemDelegate().commit_model_data.\
+            connect(self.set_parameter_definition_data)
+        self.ui.tableView_object_parameter_value.itemDelegate().commit_model_data.\
+            connect(self.set_parameter_value_data)
+        self.ui.tableView_relationship_parameter_definition.itemDelegate().commit_model_data.\
+            connect(self.set_parameter_definition_data)
+        self.ui.tableView_relationship_parameter_value.itemDelegate().commit_model_data.\
+            connect(self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
 
@@ -305,6 +314,226 @@ class DataStoreForm(QMainWindow):
             setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
+    def setup_delegates(self):
+        """Set delegates for tables."""
+        # Object parameter
+        table_view = self.ui.tableView_object_parameter_definition
+        delegate = ObjectParameterDefinitionDelegate(self)
+        table_view.setItemDelegate(delegate)
+        # Object parameter value
+        table_view = self.ui.tableView_object_parameter_value
+        delegate = ObjectParameterValueDelegate(self)
+        table_view.setItemDelegate(delegate)
+        # Relationship parameter
+        table_view = self.ui.tableView_relationship_parameter_definition
+        delegate = RelationshipParameterDefinitionDelegate(self)
+        table_view.setItemDelegate(delegate)
+        # Relationship parameter value
+        table_view = self.ui.tableView_relationship_parameter_value
+        delegate = RelationshipParameterValueDelegate(self)
+        table_view.setItemDelegate(delegate)
+
+    @Slot(name="show_add_object_classes_form")
+    def show_add_object_classes_form(self):
+        """Show dialog to let user select preferences for new object classes."""
+        dialog = AddObjectClassesDialog(self)
+        dialog.show()
+
+    @Slot(name="show_add_objects_form")
+    def show_add_objects_form(self, class_id=None):
+        """Show dialog to let user select preferences for new objects."""
+        dialog = AddObjectsDialog(self, class_id=class_id)
+        dialog.show()
+
+    def show_add_relationship_classes_form(self, object_class_id=None):
+        """Show dialog to let user select preferences for new relationship class."""
+        dialog = AddRelationshipClassesDialog(self, object_class_one_id=object_class_id)
+        dialog.show()
+
+    @Slot(name="show_add_relationships_form")
+    def show_add_relationships_form(self, relationship_class_id=None, object_id=None, object_class_id=None):
+        """Show dialog to let user select preferences for new relationships."""
+        dialog = AddRelationshipsDialog(
+            self,
+            relationship_class_id=relationship_class_id,
+            object_id=object_id,
+            object_class_id=object_class_id
+        )
+        dialog.show()
+
+    def add_object_classes(self, object_classes):
+        """Insert new object classes."""
+        for object_class in object_classes:
+            self.object_tree_model.add_object_class(object_class)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
+        self.msg.emit(msg)
+
+    @busy_effect
+    def add_objects(self, objects):
+        """Insert new objects."""
+        for object_ in objects:
+            self.object_tree_model.add_object(object_)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new object(s) '{}'.".format("', '".join([x.name for x in objects]))
+        self.msg.emit(msg)
+
+    def add_relationship_classes(self, wide_relationship_classes):
+        """Insert new relationship classes."""
+        object_name_list_lengths = list()
+        for wide_relationship_class in wide_relationship_classes:
+            self.object_tree_model.add_relationship_class(wide_relationship_class)
+            object_name_list_lengths.append(len(wide_relationship_class.object_class_id_list.split(',')))
+        object_name_list_length = max(object_name_list_lengths)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
+        self.msg.emit(msg)
+
+    def add_relationships(self, wide_relationships):
+        """Insert new relationships."""
+        for wide_relationship in wide_relationships:
+            self.object_tree_model.add_relationship(wide_relationship)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_name_list = "', '".join([x.name for x in wide_relationships])
+        msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)
+        self.msg.emit(msg)
+
+    def show_edit_object_classes_form(self):
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        kwargs_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "object_class":
+                continue
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditObjectClassesDialog(self, kwargs_list)
+        dialog.show()
+
+    def show_edit_objects_form(self):
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        kwargs_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "object":
+                continue
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditObjectsDialog(self, kwargs_list)
+        dialog.show()
+
+    def show_edit_relationship_classes_form(self):
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        kwargs_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "relationship_class":
+                continue
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipClassesDialog(self, kwargs_list)
+        dialog.show()
+
+    def show_edit_relationships_form(self):
+        current = self.ui.treeView_object.currentIndex()
+        if current.data(Qt.UserRole) != "relationship":
+            return
+        class_id = current.data(Qt.UserRole + 1)['class_id']
+        wide_relationship_class = self.db_map.single_wide_relationship_class(id=class_id).one_or_none()
+        if not wide_relationship_class:
+            return
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        kwargs_list = list()
+        for index in indexes:
+            if index.data(Qt.UserRole) != "relationship":
+                continue
+            # Only edit relationships of the same class as the one in current index, for now...
+            if index.data(Qt.UserRole + 1)['class_id'] != class_id:
+                continue
+            kwargs_list.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipsDialog(self, kwargs_list, wide_relationship_class)
+        dialog.show()
+
+    @busy_effect
+    def update_object_classes(self, object_classes):
+        """Update object classes."""
+        self.object_tree_model.update_object_classes(object_classes)
+        ids = [x.id for x in object_classes]
+        new_names = [x.name for x in object_classes]
+        self.rename_items_in_parameter_models('object_class', ids, new_names)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
+        self.msg.emit(msg)
+
+    @busy_effect
+    def update_objects(self, objects):
+        """Update objects."""
+        self.object_tree_model.update_objects(objects)
+        ids = [x.id for x in objects]
+        new_names = [x.name for x in objects]
+        self.rename_items_in_parameter_models('object', ids, new_names)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
+        self.msg.emit(msg)
+
+    @busy_effect
+    def update_relationships(self, wide_relationships):
+        """Update relationships."""
+        self.object_tree_model.update_relationships(wide_relationships)
+        # NOTE: we don't need to call rename_items_in_parameter_models here, for now
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_name_list = "', '".join([x.name for x in wide_relationships])
+        msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
+        self.msg.emit(msg)
+
+    @busy_effect
+    def update_relationship_classes(self, wide_relationship_classes):
+        """Update relationship classes."""
+        self.object_tree_model.update_relationship_classes(wide_relationship_classes)
+        ids = [x.id for x in wide_relationship_classes]
+        new_names = [x.name for x in wide_relationship_classes]
+        self.rename_items_in_parameter_models('relationship_class', ids, new_names)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
+        self.msg.emit(msg)
+
+    def rename_items_in_parameter_models(self, renamed_type, ids, new_names):
+        """Rename items in parameter definition and value models."""
+        self.object_parameter_definition_model.rename_items(renamed_type, ids, new_names)
+        self.object_parameter_value_model.rename_items(renamed_type, ids, new_names)
+        self.relationship_parameter_definition_model.rename_items(renamed_type, ids, new_names)
+        self.relationship_parameter_value_model.rename_items(renamed_type, ids, new_names)
+
+    @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
+    def set_parameter_value_data(self, index, new_value):
+        """Update (object or relationship) parameter value with newly edited data."""
+        if new_value is None:
+            return
+        proxy_model = index.model()
+        source_model = proxy_model.sourceModel()
+        source_index = proxy_model.mapToSource(index)
+        source_model.setData(source_index, new_value)
+
+    @Slot("QModelIndex", "QVariant", name="set_parameter_definition_data")
+    def set_parameter_definition_data(self, index, new_value):
+        """Update (object or relationship) parameter definition with newly edited data."""
+        if new_value is None:
+            return
+        proxy_model = index.model()
+        source_model = proxy_model.sourceModel()
+        source_index = proxy_model.mapToSource(index)
+        parameter_name_column = source_model.horizontal_header_labels().index('parameter_name')
+        if source_model.setData(source_index, new_value) and source_index.column() == parameter_name_column:
+            parameter_id_column = source_model.horizontal_header_labels().index('id')
+            id = source_index.sibling(source_index.row(), parameter_id_column).data(Qt.DisplayRole)
+            new_name = new_value
+            self.object_parameter_value_model.rename_items("parameter", [id], [new_name])
+            self.relationship_parameter_value_model.rename_items("parameter", [id], [new_name])
+
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
         config = self._data_store._toolbox._config
@@ -441,25 +670,6 @@ class TreeViewForm(DataStoreForm):
         self.ui.toolButton_remove_relationship_parameter_definitions.\
             setDefaultAction(self.ui.actionRemove_relationship_parameter_definitions)
 
-    def setup_delegates(self):
-        """Set delegates for tables."""
-        # Object parameter
-        table_view = self.ui.tableView_object_parameter_definition
-        delegate = ObjectParameterDefinitionDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Object parameter value
-        table_view = self.ui.tableView_object_parameter_value
-        delegate = ObjectParameterValueDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Relationship parameter
-        table_view = self.ui.tableView_relationship_parameter_definition
-        delegate = RelationshipParameterDefinitionDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Relationship parameter value
-        table_view = self.ui.tableView_relationship_parameter_value
-        delegate = RelationshipParameterValueDelegate(self)
-        table_view.setItemDelegate(delegate)
-
     def connect_signals(self):
         """Connect signals to slots."""
         # Menu actions
@@ -498,15 +708,6 @@ class TreeViewForm(DataStoreForm):
         self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter_definition.filter_changed.connect(self.apply_autofilter)
         self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
-        # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter_definition.itemDelegate().commit_model_data.\
-            connect(self.set_parameter_definition_data)
-        self.ui.tableView_object_parameter_value.itemDelegate().commit_model_data.\
-            connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter_definition.itemDelegate().commit_model_data.\
-            connect(self.set_parameter_definition_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().commit_model_data.\
-            connect(self.set_parameter_value_data)
         # Parameter value tables delegate json editor requested
         self.ui.tableView_object_parameter_value.itemDelegate().json_editor_requested.\
             connect(self.edit_object_parameter_json)
@@ -1108,71 +1309,10 @@ class TreeViewForm(DataStoreForm):
         elif entity_type == 'relationship':
             self.add_relationship_parameter_values()
 
-    @Slot(name="show_add_object_classes_form")
-    def show_add_object_classes_form(self):
-        """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self)
-        dialog.show()
-
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
-        for object_class in object_classes:
-            self.object_tree_model.add_object_class(object_class)
-        self.set_commit_rollback_actions_enabled(True)
+        super().add_object_classes(object_classes)
         self.ui.actionExport.setEnabled(True)
-        msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
-        self.msg.emit(msg)
-
-    @Slot(name="show_add_objects_form")
-    def show_add_objects_form(self, class_id=None):
-        """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, class_id=class_id)
-        dialog.show()
-
-    def add_objects(self, objects):
-        """Insert new objects."""
-        for object_ in objects:
-            self.object_tree_model.add_object(object_)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
-        self.msg.emit(msg)
-
-    def show_add_relationship_classes_form(self, object_class_id=None):
-        """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, object_class_one_id=object_class_id)
-        dialog.show()
-
-    def add_relationship_classes(self, wide_relationship_classes):
-        """Insert new relationship classes."""
-        object_name_list_lengths = list()
-        for wide_relationship_class in wide_relationship_classes:
-            self.object_tree_model.add_relationship_class(wide_relationship_class)
-            object_name_list_lengths.append(len(wide_relationship_class.object_class_id_list.split(',')))
-        object_name_list_length = max(object_name_list_lengths)
-        self.set_commit_rollback_actions_enabled(True)
-        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-        msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
-        self.msg.emit(msg)
-
-    @Slot(name="show_add_relationships_form")
-    def show_add_relationships_form(self, relationship_class_id=None, object_id=None, object_class_id=None):
-        """Show dialog to let user select preferences for new relationships."""
-        dialog = AddRelationshipsDialog(
-            self,
-            relationship_class_id=relationship_class_id,
-            object_id=object_id,
-            object_class_id=object_class_id
-        )
-        dialog.show()
-
-    def add_relationships(self, wide_relationships):
-        """Insert new relationships."""
-        for wide_relationship in wide_relationships:
-            self.object_tree_model.add_relationship(wide_relationship)
-        self.set_commit_rollback_actions_enabled(True)
-        relationship_name_list = "', '".join([x.name for x in wide_relationships])
-        msg = "Successfully added new relationships '{}'.".format(relationship_name_list)
-        self.msg.emit(msg)
 
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.
@@ -1188,115 +1328,6 @@ class TreeViewForm(DataStoreForm):
             self.show_edit_relationship_classes_form()
         elif current_type == 'relationship':
             self.show_edit_relationships_form()
-
-    def show_edit_object_classes_form(self):
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "object_class":
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditObjectClassesDialog(self, kwargs_list)
-        dialog.show()
-
-    @busy_effect
-    def update_object_classes(self, object_classes):
-        """Update object classes."""
-        self.object_tree_model.update_object_classes(object_classes)
-        ids = [x.id for x in object_classes]
-        new_names = [x.name for x in object_classes]
-        self.rename_items_in_parameter_models('object_class', ids, new_names)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
-        self.msg.emit(msg)
-
-    def show_edit_objects_form(self):
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "object":
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditObjectsDialog(self, kwargs_list)
-        dialog.show()
-
-    @busy_effect
-    def update_objects(self, objects):
-        """Update objects."""
-        self.object_tree_model.update_objects(objects)
-        ids = [x.id for x in objects]
-        new_names = [x.name for x in objects]
-        self.rename_items_in_parameter_models('object', ids, new_names)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
-        self.msg.emit(msg)
-
-    def show_edit_relationship_classes_form(self):
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "relationship_class":
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipClassesDialog(self, kwargs_list)
-        dialog.show()
-
-    @busy_effect
-    def update_relationship_classes(self, wide_relationship_classes):
-        """Update relationship classes."""
-        self.object_tree_model.update_relationship_classes(wide_relationship_classes)
-        ids = [x.id for x in wide_relationship_classes]
-        new_names = [x.name for x in wide_relationship_classes]
-        self.rename_items_in_parameter_models('relationship_class', ids, new_names)
-        self.set_commit_rollback_actions_enabled(True)
-        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-        msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
-        self.msg.emit(msg)
-
-    def show_edit_relationships_form(self):
-        current = self.ui.treeView_object.currentIndex()
-        if current.data(Qt.UserRole) != "relationship":
-            return
-        class_id = current.data(Qt.UserRole + 1)['class_id']
-        wide_relationship_class = self.db_map.single_wide_relationship_class(id=class_id).one_or_none()
-        if not wide_relationship_class:
-            return
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "relationship":
-                continue
-            # Only edit relationships of the same class as the one in current index, for now...
-            if index.data(Qt.UserRole + 1)['class_id'] != class_id:
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipsDialog(self, kwargs_list, wide_relationship_class)
-        dialog.show()
-
-    @busy_effect
-    def update_relationships(self, wide_relationships):
-        """Update relationships."""
-        self.object_tree_model.update_relationships(wide_relationships)
-        # NOTE: we don't need to call rename_items_in_parameter_models here, for now
-        self.set_commit_rollback_actions_enabled(True)
-        relationship_name_list = "', '".join([x.name for x in wide_relationships])
-        msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
-        self.msg.emit(msg)
-
-    def rename_items_in_parameter_models(self, renamed_type, ids, new_names):
-        """Rename items in parameter definition and value models."""
-        self.object_parameter_definition_model.rename_items(renamed_type, ids, new_names)
-        self.object_parameter_value_model.rename_items(renamed_type, ids, new_names)
-        self.relationship_parameter_definition_model.rename_items(renamed_type, ids, new_names)
-        self.relationship_parameter_value_model.rename_items(renamed_type, ids, new_names)
 
     @busy_effect
     def remove_object_tree_items(self):
@@ -1553,32 +1584,6 @@ class TreeViewForm(DataStoreForm):
         self.ui.tabWidget_relationship_parameter.setCurrentIndex(1)
         self.relationship_parameter_definition_proxy.apply_filter()
 
-    @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
-    def set_parameter_value_data(self, index, new_value):
-        """Update (object or relationship) parameter value with newly edited data."""
-        if new_value is None:
-            return
-        proxy_model = index.model()
-        source_model = proxy_model.sourceModel()
-        source_index = proxy_model.mapToSource(index)
-        source_model.setData(source_index, new_value)
-
-    @Slot("QModelIndex", "QVariant", name="set_parameter_definition_data")
-    def set_parameter_definition_data(self, index, new_value):
-        """Update (object or relationship) parameter definition with newly edited data."""
-        if new_value is None:
-            return
-        proxy_model = index.model()
-        source_model = proxy_model.sourceModel()
-        source_index = proxy_model.mapToSource(index)
-        parameter_name_column = source_model.horizontal_header_labels().index('parameter_name')
-        if source_model.setData(source_index, new_value) and source_index.column() == parameter_name_column:
-            parameter_id_column = source_model.horizontal_header_labels().index('id')
-            id = source_index.sibling(source_index.row(), parameter_id_column).data(Qt.DisplayRole)
-            new_name = new_value
-            self.object_parameter_value_model.rename_items("parameter", [id], [new_name])
-            self.relationship_parameter_value_model.rename_items("parameter", [id], [new_name])
-
     @busy_effect
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
@@ -1726,17 +1731,19 @@ class GraphViewForm(DataStoreForm):
         """Initialize class."""
         tic = time.clock()
         super().__init__(owner, db_map, database, graph_view_form_ui())
+        self.ui.graphicsView._graph_view_form = self
         self.read_only = read_only
         self._has_graph = False
         self._scene_bg = None
-        self.font = QFont("", 64)
+        self.font = QApplication.font()
+        self.font.setPointSize(72)
         self.font_metric = QFontMetrics(self.font)
-        self._spread = self.font_metric.width("Spine Toolbox")
+        self.extent = 5 * self.font.pointSize()
+        self._spread = 2 * self.extent
         self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
         self.label_color.setAlphaF(.5)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(.75)
-        self.object_item_placeholder = None
         # Data for ObjectItems
         self.object_ids = list()
         self.object_names = list()
@@ -1776,6 +1783,7 @@ class GraphViewForm(DataStoreForm):
         # Initialize stuff
         self.init_models()
         self.init_views()
+        self.setup_delegates()
         self.create_add_more_actions()
         self.connect_signals()
         self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
@@ -1803,16 +1811,16 @@ class GraphViewForm(DataStoreForm):
         self.object_parameter_value_model.has_empty_row = not self.read_only
         self.relationship_parameter_value_model.has_empty_row = not self.read_only
         super().init_parameter_value_models()
-        self.object_parameter_value_proxy.default = False
-        self.relationship_parameter_value_proxy.default = False
+        # self.object_parameter_value_proxy.default = False
+        # self.relationship_parameter_value_proxy.default = False
 
     def init_parameter_definition_models(self):
         """Initialize parameter (definition) models from source database."""
         self.object_parameter_definition_model.has_empty_row = not self.read_only
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
         super().init_parameter_definition_models()
-        self.object_parameter_definition_proxy.default = False
-        self.relationship_parameter_definition_proxy.default = False
+        # self.object_parameter_definition_proxy.default = False
+        # self.relationship_parameter_definition_proxy.default = False
 
     def init_views(self):
         super().init_views()
@@ -2131,15 +2139,14 @@ class GraphViewForm(DataStoreForm):
             object_name = self.object_names[i]
             object_class_id = self.object_class_ids[i]
             object_class_name = self.object_class_names[i]
-            extent = 2 * self.font.pointSize()
             object_item = ObjectItem(
                 self, object_id, object_name, object_class_id, object_class_name,
-                x[i], y[i], extent, label_font=self.font, label_color=self.label_color)
+                x[i], y[i], self.extent, label_font=self.font, label_color=self.label_color)
             try:
                 template_id_dim = self.template_id_dims[i]
+                object_item.template_id_dim = template_id_dim
                 if self.is_template[i]:
                     object_item.make_template()
-                object_item.template_id_dim = template_id_dim
             except KeyError:
                 pass
             scene.addItem(object_item)
@@ -2151,18 +2158,17 @@ class GraphViewForm(DataStoreForm):
             relationship_class_id = self.arc_relationship_class_ids[k]
             object_class_names = self.arc_object_class_name_lists[k]
             object_names = self.arc_object_name_lists[k]
-            extent = 2 * self.font.pointSize()
-            label_parts = self.relationship_parts(
-                relationship_class_id, object_class_names, object_names,
-                extent, self._spread / 2,
-                label_font=self.font, label_color=Qt.transparent, label_position="beside_icon")
+            label_parts = self.relationship_graph(
+                object_names, object_class_names, self.extent, self._spread / 2,
+                label_font=self.font, label_color=Qt.transparent, label_position="beside_icon",
+                relationship_class_id=relationship_class_id)
             arc_item = ArcItem(
-                self, object_id_list, relationship_class_id, object_items[i], object_items[j], .25 * extent,
+                self, object_id_list, relationship_class_id, object_items[i], object_items[j], .25 * self.extent,
                 self.arc_color, label_color=self.label_color, label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
-                arc_item.make_template()
                 arc_item.template_id = template_id
+                arc_item.make_template()
             except KeyError:
                 pass
             scene.addItem(arc_item)
@@ -2234,15 +2240,44 @@ class GraphViewForm(DataStoreForm):
         if len(self.ui.graphicsView.scene().items()) > 1:  # TODO: should we use sender() here?
             return
         scene = self.new_scene()
-        msg = "\t• Select items in the 'Object tree' to show objects here.\t\n\n" \
-            + "\t• Select items here to show their parameters in 'Parameter dock'.\t\n\n"
+        usage = """
+            <html>
+            <head>
+            <style type="text/css">
+            ul {
+                margin-left: 40px;
+                padding-left: 0px;
+            }
+            </style>
+            </head>
+            <h3>Usage:</h3>
+            <ul>
+            <li>Select items in <a href="Object tree">Object tree</a> to show objects here.</li>
+            <li>Select items here to show their parameters in <a href="Parameter dock">Parameter dock</a>.</li>
+        """
         if not self.read_only:
-            msg += "\t• Drag icons from the 'Item palette' and drop them here to add new.\t\n\n"
-        msg += "\n\tNote: You can select multiple items by holding the 'Ctrl' key.\t"
-        msg_item = CustomTextItem(msg, self.font)
-        scene.addItem(msg_item)
+            usage += """
+                <li>Drag icons from <a href="Item palette">Item palette</a> and drop them here to add new.</li>
+            """
+        usage += """
+            </ul>
+            <p><strong>Note:</strong> You can select multiple items by holding the 'Ctrl' key.</p>
+            </html>
+        """
+        usage_item = CustomTextItem(usage, self.font)
+        usage_item.linkActivated.connect(self.handle_usage_link_activated)
+        scene.addItem(usage_item)
         self._has_graph = False
         self.ui.graphicsView.scale_to_fit_scene()
+
+    @Slot("QString", name="handle_usage_link_activated")
+    def handle_usage_link_activated(self, link):
+        if link == "Object tree":
+            self.ui.dockWidget_object_tree.show()
+        elif link == "Parameter dock":
+            self.ui.dockWidget_parameter.show()
+        elif link == "Item palette":
+            self.ui.dockWidget_item_palette.show()
 
     @Slot("QPoint", "QString", name="handle_item_dropped")
     def handle_item_dropped(self, pos, text):
@@ -2261,26 +2296,26 @@ class GraphViewForm(DataStoreForm):
         if data["type"] == "object_class":
             class_id = data["id"]
             class_name = data["name"]
-            extent = 2 * self.font.pointSize()
-            self.object_item_placeholder = ObjectItem(
-                self, 0, "", class_id, class_name, scene_pos.x(), scene_pos.y(), extent)
-            scene.addItem(self.object_item_placeholder)
-            class_id = data["id"]
-            self.show_add_objects_form(class_id)
+            name = class_name
+            object_item = ObjectItem(
+                self, 0, name, class_id, class_name, scene_pos.x(), scene_pos.y(), self.extent,
+                label_font=self.font, label_color=self.label_color)
+            scene.addItem(object_item)
+            object_item.make_template()
         elif data["type"] == "relationship_class":
             relationship_class_id = data["id"]
+            object_class_id_list = [int(x) for x in data["object_class_id_list"].split(',')]
             object_class_name_list = data["object_class_name_list"].split(',')
             object_name_list = object_class_name_list.copy()
             fix_name_ambiguity(object_name_list)
-            extent = 2 * self.font.pointSize()
-            relationship_parts = self.relationship_parts(
-                relationship_class_id, object_class_name_list, object_name_list,
-                extent, self._spread,
-                label_font=self.font, label_color=self.label_color, label_position="under_icon")
-            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_parts)
-            self._has_graph = True
+            relationship_graph = self.relationship_graph(
+                object_name_list, object_class_name_list, self.extent, self._spread,
+                label_font=self.font, label_color=self.label_color, label_position="under_icon",
+                object_class_id_list=object_class_id_list, relationship_class_id=relationship_class_id)
+            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_graph)
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
             self.template_id += 1
+        self._has_graph = True
 
     def add_relationship_template(self, scene, x, y, object_items, arc_items, origin_at_first=False):
         """Add relationship parts into the scene to form a 'relationship template'."""
@@ -2288,11 +2323,11 @@ class GraphViewForm(DataStoreForm):
             scene.addItem(item)
         # Make template
         for dimension, object_item in enumerate(object_items):
-            object_item.make_template()
             object_item.template_id_dim[self.template_id] = dimension
+            object_item.make_template()
         for arc_item in arc_items:
-            arc_item.make_template()
             arc_item.template_id = self.template_id
+            arc_item.make_template()
         # Move
         rectf = QRectF()
         for object_item in object_items:
@@ -2354,8 +2389,10 @@ class GraphViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
             return False
 
-    def relationship_parts(self, relationship_class_id, object_class_name_list, object_name_list,
-                           extent, spread, label_font, label_color, label_position="under_icon"):
+    def relationship_graph(
+            self, object_name_list, object_class_name_list,
+            extent, spread, label_font, label_color, label_position="under_icon",
+            object_class_id_list=[], relationship_class_id=None):
         """Lists of object and arc items that form a relationship."""
         object_items = list()
         arc_items = list()
@@ -2365,9 +2402,17 @@ class GraphViewForm(DataStoreForm):
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
-        for x_, y_, object_name, object_class_name in zip(x, y, object_name_list, object_class_name_list):
+        for i in range(len(object_name_list)):
+            x_ = x[i]
+            y_ = y[i]
+            object_name = object_name_list[i]
+            object_class_name = object_class_name_list[i]
+            try:
+                object_class_id = object_class_id_list[i]
+            except IndexError:
+                object_class_id = None
             object_item = ObjectItem(
-                self, 0, object_name, 0, object_class_name, x_, y_, extent,
+                self, None, object_name, object_class_id, object_class_name, x_, y_, extent,
                 label_font=label_font, label_color=label_color, label_position=label_position)
             object_items.append(object_item)
         for i in range(len(object_items)):
@@ -2376,24 +2421,15 @@ class GraphViewForm(DataStoreForm):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(self, relationship_class_id, "", src_item, dst_item, extent / 4, self.arc_color)
+            arc_item = ArcItem(self, relationship_class_id, None, src_item, dst_item, extent / 4, self.arc_color)
             arc_items.append(arc_item)
         return object_items, arc_items
 
-    @Slot(name="show_add_object_classes_form")
-    def show_add_object_classes_form(self):
-        """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self)
-        dialog.show()
-
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
+        super().add_object_classes(object_classes)
         for object_class in object_classes:
-            self.object_tree_model.add_object_class(object_class)
             self.object_class_list_model.add_object_class(object_class)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully added new object classes '{}'.".format("', '".join([x.name for x in object_classes]))
-        self.msg.emit(msg)
 
     def show_add_relationship_classes_form(self):
         """Show dialog to let user select preferences for new relationship class."""
@@ -2407,42 +2443,8 @@ class GraphViewForm(DataStoreForm):
             self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
         self.set_commit_rollback_actions_enabled(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-        msg = "Successfully added new relationship classes '{}'.".format(relationship_class_name_list)
+        msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
-
-    def show_add_objects_form(self, class_id=None):
-        """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, class_id=class_id, force_default=True)
-        dialog.rejected.connect(lambda: self.ui.graphicsView.scene().removeItem(self.object_item_placeholder))
-        dialog.show()
-
-    def add_objects(self, objects):
-        """Insert new objects."""
-        for object_ in objects:
-            self.object_tree_model.add_object(object_, flat=True)
-        object_id_list = [x.id for x in objects]
-        object_name_list = [x.name for x in objects]
-        src_ind_list = list()
-        dst_ind_list = list()
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, self._spread / 2)
-        x, y = self.vertex_coordinates(d)
-        scene = self.ui.graphicsView.scene()
-        object_class_id = self.object_item_placeholder.object_class_id
-        object_class_name = self.object_item_placeholder.object_class_name
-        x_offset = self.object_item_placeholder.x()
-        y_offset = self.object_item_placeholder.y()
-        extent = self.object_item_placeholder._extent
-        scene.removeItem(self.object_item_placeholder)
-        for x_, y_, object_id, object_name in zip(x, y, object_id_list, object_name_list):
-            object_item = ObjectItem(
-                self, object_id, object_name, object_class_id, object_class_name,
-                x_offset + x_, y_offset + y_, extent,
-                label_font=self.font, label_color=self.label_color)
-            scene.addItem(object_item)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully added new objects '{}'.".format("', '".join([x.name for x in objects]))
-        self.msg.emit(msg)
-        self._has_graph = True
 
     def show_graph_view_context_menu(self, global_pos):
         """Show context menu for graphics view."""
@@ -2478,24 +2480,23 @@ class GraphViewForm(DataStoreForm):
                 self.rejected_items.extend(object_items)
                 self.build_graph()
             elif option.startswith("Add") and option.endswith("relationship"):
-                # NOTE: the line below assumes the relationship name is enclose by '' in the option str
+                # NOTE: the line below assumes the relationship name is enclosed by '' in the option str
                 relationship_class_name = option.split("'")[1]
                 item = self.relationship_class_list_model.findItems(relationship_class_name)[0]
                 relationship_class = item.data(Qt.UserRole + 1)
                 relationship_class_id = relationship_class["id"]
+                object_class_id_list = [int(x) for x in relationship_class["object_class_id_list"].split(",")]
                 object_class_name_list = relationship_class['object_class_name_list'].split(",")
                 object_name_list = object_class_name_list.copy()
                 fix_name_ambiguity(object_name_list)
-                extent = 2 * self.font.pointSize()
-                object_items, arc_items = self.relationship_parts(
-                    relationship_class_id, object_class_name_list, object_name_list,
-                    extent, self._spread,
-                    label_font=self.font, label_color=self.label_color, label_position="under_icon")
+                object_items, arc_items = self.relationship_graph(
+                    object_name_list, object_class_name_list, self.extent, self._spread,
+                    label_font=self.font, label_color=self.label_color, label_position="under_icon",
+                    object_class_id_list=object_class_id_list, relationship_class_id=relationship_class_id)
                 scene_pos = e.scenePos()
                 self.add_relationship_template(
                     scene, scene_pos.x(), scene_pos.y(), object_items, arc_items, origin_at_first=True)
-                main_item.check_for_merge_target(scene_pos)
-                main_item.merge_item()
+                object_items[0].merge_item(main_item)
                 self._has_graph = True
                 self.relationship_class_dict[self.template_id] = {
                     "id": relationship_class_id,

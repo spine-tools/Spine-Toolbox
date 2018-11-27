@@ -264,7 +264,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
                 object_class_names = object_class_name_list.split(',')
             except AttributeError:
                 return
-            object_icons = [self._parent.object_icon_dict[x] for x in object_class_ids]
+            object_icons = [self._parent.object_icon(x) for x in object_class_names]
             object_class_dict = dict(zip(object_class_ids, object_class_names))
             object_names_dict = {}
             for object_ in self.db_map.object_list():

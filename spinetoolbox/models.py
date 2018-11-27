@@ -949,7 +949,7 @@ class MinimalTableModel(QAbstractTableModel):
             right = column
             for row in range(first, last + 1):
                 self._main_data[row][column] = default
-                if self._force_default:
+                if self._force_default and default is not None:
                     self._flags[row][column] &= ~Qt.ItemIsEditable
         if left is None:
             return
@@ -976,7 +976,7 @@ class MinimalTableModel(QAbstractTableModel):
             right = column
             for row in range(self.rowCount()):
                 self._main_data[row][column] = default
-                if self._force_default:
+                if self._force_default and default is not None:
                     self._flags[row][column] &= ~Qt.ItemIsEditable
         if left is None:
             return
