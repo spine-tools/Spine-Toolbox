@@ -18,7 +18,7 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
@@ -300,7 +300,8 @@ class GraphViewGraphicsView(QGraphicsView):
         self._zoom_factor_base = 1.0015
         self.target_viewport_pos = None
         self.target_scene_pos = QPointF(0, 0)
-        self.scaling = False
+        self._num_scheduled_scalings = 0
+        self.anim = None
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
@@ -312,44 +313,58 @@ class GraphViewGraphicsView(QGraphicsView):
         self.target_viewport_pos = event.pos()
         self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
 
+    # def wheelEvent(self, event):
+    #    """Zoom in/out."""
+    #    if event.orientation() != Qt.Vertical:
+    #        event.ignore()
+    #        return
+    #    event.accept()
+    #    angle = event.angleDelta().y()
+    #    self.gentle_zoom(angle)
+
+    # def gentle_zoom(self, angle):
+    #    """Perform the zoom."""
+    #    factor = self._zoom_factor_base ** angle
+    #    self.scale(factor, factor)
+    #    self.centerOn(self.target_scene_pos)
+    #    delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+    #    viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+    #    self.centerOn(self.mapToScene(viewport_center))
+
     def wheelEvent(self, event):
         """Zoom in/out."""
         if event.orientation() != Qt.Vertical:
             event.ignore()
             return
         event.accept()
-        angle = event.angleDelta().y()
-        self.gentle_zoom(angle)
+        num_degrees = event.delta() / 8
+        num_steps = num_degrees / 15
+        self._num_scheduled_scalings += num_steps
+        if self._num_scheduled_scalings * num_steps < 0:
+            self._num_scheduled_scalings = num_steps
+        if self.anim:
+            self.anim.deleteLater()
+        self.anim = QTimeLine(200, self)
+        self.anim.setUpdateInterval(20)
+        self.anim.valueChanged.connect(self.scaling_time)
+        self.anim.finished.connect(self.anim_finished)
+        self.anim.start()
 
-    def gentle_zoom(self, angle):
-        """Perform the zoom."""
-        factor = self._zoom_factor_base ** angle
+    def scaling_time(self, x):
+        factor = 1.0 + self._num_scheduled_scalings / 100.0
         self.scale(factor, factor)
         self.centerOn(self.target_scene_pos)
         delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
         viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
         self.centerOn(self.mapToScene(viewport_center))
-        self.scaling = False
 
-    def resizeEvent(self, event):
-        """Scale view so the scene fits best in it."""
-        super().resizeEvent(event)
-        return
-        # NOTE: Is this below what's causing trouble? Cause actually we don't need it
-        scene_rect = self.sceneRect()
-        scene_extent = max(scene_rect.width(), scene_rect.height())
-        if not scene_extent:
-            return
-        old_size = event.oldSize()
-        if not old_size.isEmpty():
-            old_extent = min(old_size.height(), old_size.width())
-            old_factor = old_extent / scene_extent
-            self.scale(1 / old_factor, 1 / old_factor)
-        size = event.size()
-        extent = min(size.height(), size.width())
-        factor = extent / scene_extent
-        # logging.debug("[resizeEvent] Scaling graphics view by a factor of {0}".format(factor))
-        self.scale(factor, factor)
+    def anim_finished(self):
+        if self._num_scheduled_scalings > 0:
+            self._num_scheduled_scalings -= 1
+        else:
+            self._num_scheduled_scalings += 1
+        self.sender().deleteLater()
+        self.anim = None
 
     def scale_to_fit_scene(self):
         """Scale view so the scene fits best in it."""
@@ -363,17 +378,7 @@ class GraphViewGraphicsView(QGraphicsView):
         size = self.size()
         extent = min(size.height(), size.width())
         factor = extent / scene_extent
-        # logging.debug("[scale_to_fit_scene] Scaling graphics view by a factor of {0}".format(factor))
         self.scale(factor, factor)
-
-    def scale(self, sx, sy):
-        # logging.debug("[scale] Scaling graphics view by {0}, {1}".format(sx, sy))
-        if self.scaling:
-            # logging.debug("Trying to scale while scaling.")
-            return
-        self.scaling = True
-        super().scale(sx, sy)
-        self.scaling = False
 
     def mousePressEvent(self, event):
         """Set rubber band drag mode if control pressed."""
