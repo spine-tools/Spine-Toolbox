@@ -1985,10 +1985,7 @@ class ParameterDefinitionModel(WIPTableModel):
             msg = "Successfully added new parameters."
             self._tree_view_form.msg.emit(msg)
             return True
-        except SpineIntegrityError as e:
-            self._tree_view_form.msg_error.emit(e.msg)
-            return False
-        except SpineDBAPIError as e:
+        except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
             return False
 
@@ -2003,10 +2000,7 @@ class ParameterDefinitionModel(WIPTableModel):
             msg = "Parameters successfully updated."
             self._tree_view_form.msg.emit(msg)
             return True
-        except SpineIntegrityError as e:
-            self._tree_view_form.msg_error.emit(e.msg)
-            return False
-        except SpineDBAPIError as e:
+        except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
             return False
 
@@ -2073,10 +2067,7 @@ class ParameterValueModel(WIPTableModel):
             msg = "Successfully added new parameter values."
             self._tree_view_form.msg.emit(msg)
             return True
-        except SpineIntegrityError as e:
-            self._tree_view_form.msg_error.emit(e.msg)
-            return False
-        except SpineDBAPIError as e:
+        except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
             return False
 
@@ -2091,10 +2082,7 @@ class ParameterValueModel(WIPTableModel):
             msg = "Parameter values successfully updated."
             self._tree_view_form.msg.emit(msg)
             return True
-        except SpineIntegrityError as e:
-            self._tree_view_form.msg_error.emit(e.msg)
-            return False
-        except SpineDBAPIError as e:
+        except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
             return False
 
@@ -2708,9 +2696,7 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             msg = "Successfully added new relationships on the fly."
             self._tree_view_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
-        except SpineIntegrityError as e:
-            self._tree_view_form.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
+        except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
 
     def items_to_add(self, indexes, relationships_on_the_fly):

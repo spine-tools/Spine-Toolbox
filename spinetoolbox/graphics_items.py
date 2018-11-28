@@ -1033,7 +1033,7 @@ class ObjectItem(QGraphicsPixmapItem):
         object_id (int): object id (for filtering parameters)
         object_name (str): object name
         object_class_id (int): object class id (for filtering parameters)
-        object_class_name (str): object class name
+        object_class_name (str): object class name (for finding the pixmap)
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
         extent (int): preferred extent
@@ -1067,7 +1067,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._selected_color = graph_view_form.palette().highlight()
         pixmap = self._graph_view_form.object_icon(object_class_name).pixmap(extent)
         self.setPixmap(pixmap.scaled(extent, extent))
-        self.setZValue(-1)
+        self.setZValue(0)
         self.setPos(x, y)
         self.setOffset(-0.5 * extent, -0.5 * extent)
         self.setAcceptHoverEvents(True)
@@ -1381,8 +1381,9 @@ class ArcItem(QGraphicsLineItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
-        object_id_list (str): object id comma separated list
+        object_id_list (str): object id comma separated list (for filtering parameters)
         relationship_class_id (int): relationship class id (for filtering parameters)
+        object_class_name_list (str): object class name comma separated list (for finding the pixmap)
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
@@ -1390,13 +1391,14 @@ class ArcItem(QGraphicsLineItem):
         label_color (QColor): color
         label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
-    def __init__(self, graph_view_form, object_id_list, relationship_class_id, src_item, dst_item,
-                 width, color, label_color=QColor(), label_parts=()):
+    def __init__(self, graph_view_form, object_id_list, relationship_class_id, object_class_name_list,
+                 src_item, dst_item, width, color, label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id_list = object_id_list
         self.relationship_class_id = relationship_class_id
+        self.object_class_name_list = object_class_name_list
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width
@@ -1429,6 +1431,20 @@ class ArcItem(QGraphicsLineItem):
         self.shape_item.hide()
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
+        self.pixmap_item = QGraphicsPixmapItem()
+        if object_class_name_list:
+            extent = 3 * width
+            pixmap = self._graph_view_form.relationship_icon(object_class_name_list).pixmap(extent)
+            self.pixmap_item.setPixmap(pixmap.scaled(extent, extent))
+            self.pixmap_item.setOffset(-0.5 * extent, -0.5 * extent)
+            diameter = extent / sin(pi / 4)
+            delta = (diameter - extent) / 2
+            rectf = self.pixmap_item.boundingRect().adjusted(-delta, -delta, delta, delta)
+            ellipse_item = QGraphicsEllipseItem(rectf)
+            ellipse_item.setParentItem(self.pixmap_item)
+            ellipse_item.setPen(Qt.NoPen)
+            ellipse_item.setBrush(label_color)
+            ellipse_item.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
@@ -1440,12 +1456,15 @@ class ArcItem(QGraphicsLineItem):
         super().paint(painter, option, widget)
 
     def itemChange(self, change, value):
-        """Add label item to same scene if added as top level item."""
+        """Add label and pixmap item to same scene if added as top level item."""
         if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
             scene = value
             value.addItem(self.label_item)
+            value.addItem(self.pixmap_item)
             self.label_item.hide()
             self.label_item.setZValue(0)
+            self.place_pixmap_item()
+            self.pixmap_item.setZValue(-1)
         return super().itemChange(change, value)
 
     def make_template(self):
@@ -1470,6 +1489,7 @@ class ArcItem(QGraphicsLineItem):
         line.setP1(line.p1() + pos_diff)
         self.setLine(line)
         self.shape_item.setLine(line)
+        self.place_pixmap_item()
 
     def move_dst_by(self, pos_diff):
         """Move destination point by pos_diff. Used when moving ObjectItems around."""
@@ -1477,6 +1497,12 @@ class ArcItem(QGraphicsLineItem):
         line.setP2(line.p2() + pos_diff)
         self.setLine(line)
         self.shape_item.setLine(line)
+        self.place_pixmap_item()
+
+    def place_pixmap_item(self):
+        """Put pixmap item in position."""
+        middle = (self.dst_item.pos() + self.src_item.pos()) / 2
+        self.pixmap_item.setPos(middle)
 
     def hoverEnterEvent(self, event):
         """Show label if src and dst are not hovered."""
@@ -1626,8 +1652,9 @@ class CustomTextItem(QGraphicsTextItem):
     def __init__(self, html, font):
         super().__init__()
         self.setHtml(html)
-        font.setWeight(QFont.Black)
+        # font.setWeight(QFont.Black)
         self.setFont(font)
         self.adjustSize()
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        # self.setTextInteractionFlags(Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)

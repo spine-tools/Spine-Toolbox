@@ -1746,7 +1746,7 @@ class GraphViewForm(DataStoreForm):
         self.font.setPointSize(72)
         self.font_metric = QFontMetrics(self.font)
         self.extent = self.font_metric.width("SPINE")
-        self._spread = 2 * self.extent
+        self._spread = 3 * self.extent
         self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
         self.label_color.setAlphaF(.5)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
@@ -1758,9 +1758,10 @@ class GraphViewForm(DataStoreForm):
         self.object_class_names = list()
         # Data for ArcItems
         self.arc_object_id_lists = list()
-        self.arc_object_name_lists = list()
         self.arc_relationship_class_ids = list()
         self.arc_object_class_name_lists = list()
+        self.arc_label_object_name_lists = list()
+        self.arc_label_object_class_name_lists = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         # Data for template ObjectItems and ArcItems (these are persisted across graph builds)
@@ -1967,21 +1968,23 @@ class GraphViewForm(DataStoreForm):
                     self.object_class_names.append(object_class_name)
         self.arc_object_id_lists = list()
         self.arc_relationship_class_ids = list()
-        self.arc_object_name_lists = list()
         self.arc_object_class_name_lists = list()
+        self.arc_label_object_name_lists = list()
+        self.arc_label_object_class_name_lists = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         relationship_class_dict = {
             x.id: {
                 "name": x.name,
-                "object_class_name_list": x.object_class_name_list.split(",")
+                "object_class_name_list": x.object_class_name_list
             } for x in self.db_map.wide_relationship_class_list()
         }
         for relationship in self.db_map.wide_relationship_list():
             object_class_name_list = relationship_class_dict[relationship.class_id]["object_class_name_list"]
+            split_object_class_name_list = object_class_name_list.split(",")
             object_id_list = relationship.object_id_list
             split_object_id_list = [int(x) for x in object_id_list.split(",")]
-            object_name_list = relationship.object_name_list.split(",")
+            split_object_name_list = relationship.object_name_list.split(",")
             for i in range(len(split_object_id_list)):
                 src_object_id = split_object_id_list[i]
                 try:
@@ -1999,15 +2002,17 @@ class GraphViewForm(DataStoreForm):
                 dst_object_name = self.object_names[dst_ind]
                 self.arc_object_id_lists.append(object_id_list)
                 self.arc_relationship_class_ids.append(relationship.class_id)
-                arc_object_name_list = list()
-                arc_object_class_name_list = list()
-                for object_name, object_class_name in zip(object_name_list, object_class_name_list):
+                self.arc_object_class_name_lists.append(object_class_name_list)
+                # Find out label items
+                arc_label_object_name_list = list()
+                arc_label_object_class_name_list = list()
+                for object_name, object_class_name in zip(split_object_name_list, split_object_class_name_list):
                     if object_name in (src_object_name, dst_object_name):
                         continue
-                    arc_object_name_list.append(object_name)
-                    arc_object_class_name_list.append(object_class_name)
-                self.arc_object_name_lists.append(arc_object_name_list)
-                self.arc_object_class_name_lists.append(arc_object_class_name_list)
+                    arc_label_object_name_list.append(object_name)
+                    arc_label_object_class_name_list.append(object_class_name)
+                self.arc_label_object_name_lists.append(arc_label_object_name_list)
+                self.arc_label_object_class_name_lists.append(arc_label_object_class_name_list)
         # Add template items hanging around
         scene = self.ui.graphicsView.scene()
         if scene:
@@ -2042,7 +2047,7 @@ class GraphViewForm(DataStoreForm):
                 object_ind_dict[item] = object_ind
                 object_ind += 1
             arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-            arc_ind = len(self.arc_object_name_lists)
+            arc_ind = len(self.arc_label_object_name_lists)
             self.arc_template_ids = {}
             for item in arc_items:
                 src_item = item.src_item
@@ -2060,11 +2065,14 @@ class GraphViewForm(DataStoreForm):
                 self.src_ind_list.append(src_ind)
                 self.dst_ind_list.append(dst_ind)
                 # NOTE: These arcs correspond to template arcs.
-                # TODO: Set these attributes when creating the relationship
-                self.arc_object_id_lists.append("")
-                self.arc_relationship_class_ids.append(0)
-                self.arc_object_name_lists.append("")
-                self.arc_object_class_name_lists.append("")
+                relationship_class_id = item.relationship_class_id
+                object_class_name_list = item.object_class_name_list
+                self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
+                self.arc_relationship_class_ids.append(relationship_class_id)
+                self.arc_object_class_name_lists.append(object_class_name_list)
+                # Label don't matter
+                self.arc_label_object_name_lists.append("")
+                self.arc_label_object_class_name_lists.append("")
                 self.arc_template_ids[arc_ind] = item.template_id
                 arc_ind += 1
 
@@ -2177,13 +2185,15 @@ class GraphViewForm(DataStoreForm):
             object_id_list = self.arc_object_id_lists[k]
             relationship_class_id = self.arc_relationship_class_ids[k]
             object_class_names = self.arc_object_class_name_lists[k]
-            object_names = self.arc_object_name_lists[k]
+            label_object_names = self.arc_label_object_name_lists[k]
+            label_object_class_names = self.arc_label_object_class_name_lists[k]
             label_parts = self.relationship_graph(
-                object_names, object_class_names, self.extent, self._spread / 2,
+                label_object_names, label_object_class_names, self.extent, self._spread / 2,
                 label_font=self.font, label_color=Qt.transparent, label_position="beside_icon",
                 relationship_class_id=relationship_class_id)
             arc_item = ArcItem(
-                self, object_id_list, relationship_class_id, object_items[i], object_items[j], .25 * self.extent,
+                self, object_id_list, relationship_class_id, object_class_names,
+                object_items[i], object_items[j], .25 * self.extent,
                 self.arc_color, label_color=self.label_color, label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
@@ -2265,6 +2275,10 @@ class GraphViewForm(DataStoreForm):
             <html>
             <head>
             <style type="text/css">
+            ol {
+                margin-left: 80px;
+                padding-left: 0px;
+            }
             ul {
                 margin-left: 40px;
                 padding-left: 0px;
@@ -2272,10 +2286,20 @@ class GraphViewForm(DataStoreForm):
             </style>
             </head>
             <h3>Usage:</h3>
-            <ul>
-            <li>Select items in <a href="Object tree">Object tree</a> to show objects here.</li>
-            <li>Select items here to show their parameters in <a href="Parameter dock">Parameter dock</a>.</li>
-            <li>In both cases above, hold down the 'Ctrl' key to select multiple items at once.</li>
+            <ol>
+            <li>Select items in <a href="Object tree">Object tree</a> to show objects here.
+                <ul>
+                <li>Hold down the 'Ctrl' key or just drag your mouse to add multiple items to the selection.</li>
+                <li>Selected objects are vertices in the graph,
+                while relationships between those objects are edges.
+                </ul>
+            </li>
+            <li>Select items here to show their parameters in <a href="Parameter dock">Parameter dock</a>.
+                <ul>
+                <li>Hold down 'Ctrl' to add multiple items to the selection.</li>
+                <li> Hold down 'Ctrl' and drag your mouse to perform a rubber band selection.</li>
+                </ul>
+            </li>
         """
         if not self.read_only:
             usage += """
@@ -2283,7 +2307,7 @@ class GraphViewForm(DataStoreForm):
                 and drop them here to create new items.</li>
             """
         usage += """
-            </ul>
+            </ol>
             </html>
         """
         usage_item = CustomTextItem(usage, self.font)
@@ -2353,7 +2377,7 @@ class GraphViewForm(DataStoreForm):
         # Move
         try:
             rectf = object_items[dimension_at_origin].sceneBoundingRect()
-        except IndexError:
+        except (IndexError, TypeError):
             rectf = QRectF()
             for object_item in object_items:
                 rectf |= object_item.sceneBoundingRect()
@@ -2444,7 +2468,9 @@ class GraphViewForm(DataStoreForm):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(self, relationship_class_id, None, src_item, dst_item, extent / 4, self.arc_color)
+            arc_item = ArcItem(
+                self, None, relationship_class_id, None,
+                src_item, dst_item, extent / 4, self.arc_color)
             arc_items.append(arc_item)
         return object_items, arc_items
 
