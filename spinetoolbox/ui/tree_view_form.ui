@@ -306,6 +306,9 @@
                 <attribute name="horizontalHeaderStretchLastSection">
                  <bool>false</bool>
                 </attribute>
+                <attribute name="verticalHeaderVisible">
+                 <bool>true</bool>
+                </attribute>
                </widget>
               </widget>
              </item>

@@ -1745,12 +1745,16 @@ class GraphViewForm(DataStoreForm):
         self.font = QApplication.font()
         self.font.setPointSize(72)
         self.font_metric = QFontMetrics(self.font)
-        self.extent = self.font_metric.width("SPINE")
+        self.extent = 6 * self.font.pointSize()
         self._spread = 3 * self.extent
-        self.label_color = self.palette().color(QPalette.Normal, QPalette.Window)
-        self.label_color.setAlphaF(.5)
+        self.object_label_color = self.palette().color(QPalette.Normal, QPalette.Window)
+        self.object_label_color.setAlphaF(.5)
+        self.arc_label_color = self.palette().color(QPalette.Normal, QPalette.Window)
+        self.arc_label_color.setAlphaF(.8)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(.75)
+        # Set flat object tree
+        self.object_tree_model.is_flat = True
         # Data for ObjectItems
         self.object_ids = list()
         self.object_names = list()
@@ -1813,7 +1817,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree(self.database, flat=True)
+        self.object_tree_model.build_tree(self.database)
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
@@ -2169,7 +2173,7 @@ class GraphViewForm(DataStoreForm):
             object_class_name = self.object_class_names[i]
             object_item = ObjectItem(
                 self, object_id, object_name, object_class_id, object_class_name,
-                x[i], y[i], self.extent, label_font=self.font, label_color=self.label_color)
+                x[i], y[i], self.extent, label_font=self.font, label_color=self.object_label_color)
             try:
                 template_id_dim = self.template_id_dims[i]
                 object_item.template_id_dim = template_id_dim
@@ -2189,12 +2193,12 @@ class GraphViewForm(DataStoreForm):
             label_object_class_names = self.arc_label_object_class_name_lists[k]
             label_parts = self.relationship_graph(
                 label_object_names, label_object_class_names, self.extent, self._spread / 2,
-                label_font=self.font, label_color=Qt.transparent, label_position="beside_icon",
+                label_font=self.font, label_color=Qt.transparent,
                 relationship_class_id=relationship_class_id)
             arc_item = ArcItem(
-                self, object_id_list, relationship_class_id, object_class_names,
+                self, object_id_list, relationship_class_id, label_object_class_names, # object_class_names,
                 object_items[i], object_items[j], .25 * self.extent,
-                self.arc_color, label_color=self.label_color, label_parts=label_parts)
+                self.arc_color, label_color=self.arc_label_color, label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
                 arc_item.template_id = template_id
@@ -2345,7 +2349,7 @@ class GraphViewForm(DataStoreForm):
             name = class_name
             object_item = ObjectItem(
                 self, 0, name, class_id, class_name, scene_pos.x(), scene_pos.y(), self.extent,
-                label_font=self.font, label_color=self.label_color)
+                label_font=self.font, label_color=self.object_label_color)
             scene.addItem(object_item)
             object_item.make_template()
         elif data["type"] == "relationship_class":
@@ -2356,7 +2360,7 @@ class GraphViewForm(DataStoreForm):
             fix_name_ambiguity(object_name_list)
             relationship_graph = self.relationship_graph(
                 object_name_list, object_class_name_list, self.extent, self._spread,
-                label_font=self.font, label_color=self.label_color, label_position="under_icon",
+                label_font=self.font, label_color=self.object_label_color,
                 object_class_id_list=object_class_id_list, relationship_class_id=relationship_class_id)
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_graph)
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
@@ -2438,7 +2442,7 @@ class GraphViewForm(DataStoreForm):
 
     def relationship_graph(
             self, object_name_list, object_class_name_list,
-            extent, spread, label_font, label_color, label_position="under_icon",
+            extent, spread, label_font, label_color,
             object_class_id_list=[], relationship_class_id=None):
         """Lists of object and arc items that form a relationship."""
         object_items = list()
@@ -2460,7 +2464,7 @@ class GraphViewForm(DataStoreForm):
                 object_class_id = None
             object_item = ObjectItem(
                 self, None, object_name, object_class_id, object_class_name, x_, y_, extent,
-                label_font=label_font, label_color=label_color, label_position=label_position)
+                label_font=label_font, label_color=label_color)
             object_items.append(object_item)
         for i in range(len(object_items)):
             src_item = object_items[i]
@@ -2564,7 +2568,7 @@ class GraphViewForm(DataStoreForm):
             dimension = relationship_class['dimension']
             object_items, arc_items = self.relationship_graph(
                 object_name_list, object_class_name_list, self.extent, self._spread,
-                label_font=self.font, label_color=self.label_color, label_position="under_icon",
+                label_font=self.font, label_color=self.object_label_color,
                 object_class_id_list=object_class_id_list, relationship_class_id=relationship_class_id)
             scene = self.ui.graphicsView.scene()
             scene_pos = e.scenePos()

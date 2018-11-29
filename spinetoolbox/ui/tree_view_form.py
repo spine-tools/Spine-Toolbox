@@ -162,6 +162,7 @@ class Ui_MainWindow(object):
         self.tableView_object_parameter_json.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.tableView_object_parameter_json.setObjectName("tableView_object_parameter_json")
         self.tableView_object_parameter_json.horizontalHeader().setStretchLastSection(False)
+        self.tableView_object_parameter_json.verticalHeader().setVisible(True)
         self.verticalLayout_4.addWidget(self.splitter_2)
         self.tabWidget_object_parameter.addTab(self.tab_object_parameter_value, "")
         self.tab_object_parameter_definition = QtWidgets.QWidget()

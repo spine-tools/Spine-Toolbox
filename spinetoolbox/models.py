@@ -1344,8 +1344,10 @@ class MinimalTableModel(QAbstractTableModel):
         if aux_data:
             self._aux_data = aux_data
         else:
-            self._aux_data = [[{} for j in range(len(row))] for row in main_data]
-        self._flags = [[self.default_flags for j in range(len(row))] for row in main_data]
+            aux_row = [{} for _ in range(self.columnCount())]
+            self._aux_data = [aux_row[:] for _ in range(self.rowCount())]
+        flags_row = [self.default_flags for _ in range(self.columnCount())]
+        self._flags = [flags_row[:] for _ in range(self.rowCount())]
         self.endResetModel()
         if self.has_empty_row:
             self.insertRows(self.rowCount(), 1)
@@ -1444,6 +1446,12 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item = QModelIndex()
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.is_flat = False
+        self._fetched = {
+            "object_class": set(),
+            "object": set(),
+            "relationship_class": set()
+        }
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
@@ -1498,8 +1506,113 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             break
 
+    def hasChildren(self, parent):
+        """Return True if not fetched, so it fetches it."""
+        if not parent.isValid():
+            return super().hasChildren(parent)
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type in ('root', 'relationship'):
+            return super().hasChildren(parent)
+        if parent_type == 'object_class':
+            object_class_id = parent.data(Qt.UserRole + 1)['id']
+            if object_class_id not in self._fetched['object_class']:
+                return True
+        if self.is_flat:
+            # The flat model don't go beyond the 'object' level
+            return super().hasChildren(parent)
+        if parent_type == 'object':
+            object_id = parent.parent().data(Qt.UserRole + 1)['id']
+            if object_id not in self._fetched['object']:
+                return True
+        elif parent_type == 'relationship_class':
+            object_id = parent.parent().data(Qt.UserRole + 1)['id']
+            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
+            if (object_id, relationship_class_id) not in self._fetched['relationship_class']:
+                return True
+        return super().hasChildren(parent)
+
+    def canFetchMore(self, parent):
+        """Return True if not fetched, so it fetches it."""
+        if not parent.isValid():
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type in ('root', 'relationship'):
+            return False
+        if parent_type in ('object_class', 'object'):
+            parent_id = parent.data(Qt.UserRole + 1)['id']
+            return parent_id not in self._fetched[parent_type]
+        elif parent_type in ('relationship_class'):
+            object_id = parent.parent().data(Qt.UserRole + 1)['id']
+            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
+            return (object_id, relationship_class_id) not in self._fetched[parent_type]
+        if parent_type == 'object_class':
+            object_class_id = parent.data(Qt.UserRole + 1)['id']
+            if object_class_id not in self._fetched['object_class']:
+                return True
+
+    @busy_effect
+    def fetchMore(self, parent):
+        """Build the deeper layers of the tree"""
+        if not parent.isValid():
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'object_class':
+            object_class_item = self.itemFromIndex(parent)
+            object_class = parent.data(Qt.UserRole + 1)
+            object_icon = parent.data(Qt.DecorationRole)
+            object_list = self.db_map.object_list(class_id=object_class['id'])
+            object_item_list = list()
+            for object_ in object_list:
+                object_item = QStandardItem(object_.name)
+                object_item.setData('object', Qt.UserRole)
+                object_item.setData(object_._asdict(), Qt.UserRole + 1)
+                object_item.setData(object_.description, Qt.ToolTipRole)
+                object_item.setData(object_icon, Qt.DecorationRole)
+                object_item_list.append(object_item)
+            object_class_item.appendRows(object_item_list)
+            self._fetched['object_class'].add(object_class['id'])
+        elif parent_type == 'object':
+            object_item = self.itemFromIndex(parent)
+            object_ = parent.data(Qt.UserRole + 1)
+            relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
+            relationship_class_item_list = list()
+            for relationship_class in relationship_class_list:
+                object_class_id_list = [int(x) for x in relationship_class.object_class_id_list.split(",")]
+                relationship_class_item = QStandardItem(relationship_class.name)
+                relationship_class_item.setData('relationship_class', Qt.UserRole)
+                relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
+                relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
+                relationship_icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
+                relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
+                relationship_class_item.setData(self.bold_font, Qt.FontRole)
+                relationship_class_item_list.append(relationship_class_item)
+            object_item.appendRows(relationship_class_item_list)
+            self._fetched['object'].add(object_['id'])
+        elif parent_type == 'relationship_class':
+            relationship_class_item = self.itemFromIndex(parent)
+            relationship_class = parent.data(Qt.UserRole + 1)
+            relationship_icon = parent.data(Qt.DecorationRole)
+            object_ = parent.parent().data(Qt.UserRole + 1)
+            relationship_list = self.db_map.wide_relationship_list(
+                class_id=relationship_class['id'],
+                object_id=object_['id']
+                )
+            relationship_item_list = list()
+            for relationship in relationship_list:
+                relationship_item = QStandardItem(relationship.object_name_list)
+                relationship_item.setData('relationship', Qt.UserRole)
+                relationship_item.setData(relationship._asdict(), Qt.UserRole + 1)
+                relationship_item.setData(relationship_icon, Qt.DecorationRole)
+                relationship_item_list.append(relationship_item)
+            relationship_class_item.appendRows(relationship_item_list)
+            self._fetched['relationship_class'].add((object_['id'], relationship_class['id']))
+        self.dataChanged.emit(parent, parent)
+
     def build_tree(self, db_name, flat=False):
-        """Build tree."""
+        """Build the first layer of the tree"""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
@@ -1518,45 +1631,6 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item.setData(object_class.description, Qt.ToolTipRole)
             object_class_item.setData(object_icon, Qt.DecorationRole)
             object_class_item.setData(self.bold_font, Qt.FontRole)
-            object_item_list = list()
-            for object_ in object_list:
-                if object_.class_id != object_class.id:
-                    continue
-                object_item = QStandardItem(object_.name)
-                object_item.setData('object', Qt.UserRole)
-                object_item.setData(object_._asdict(), Qt.UserRole + 1)
-                object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(object_icon, Qt.DecorationRole)
-                if not flat:
-                    relationship_class_item_list = list()
-                    for wide_relationship_class in wide_relationship_class_list:
-                        object_class_id_list = [int(x) for x in wide_relationship_class.object_class_id_list.split(",")]
-                        if object_.class_id not in object_class_id_list:
-                            continue
-                        relationship_class_item = QStandardItem(wide_relationship_class.name)
-                        relationship_class_item.setData('relationship_class', Qt.UserRole)
-                        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
-                        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-                        relationship_icon = self._tree_view_form.relationship_icon(
-                            wide_relationship_class.object_class_name_list)
-                        relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
-                        relationship_class_item.setData(self.bold_font, Qt.FontRole)
-                        relationship_item_list = list()
-                        for wide_relationship in wide_relationship_list:
-                            if wide_relationship.class_id != wide_relationship_class.id:
-                                continue
-                            if object_.id not in [int(x) for x in wide_relationship.object_id_list.split(",")]:
-                                continue
-                            relationship_item = QStandardItem(wide_relationship.object_name_list)
-                            relationship_item.setData('relationship', Qt.UserRole)
-                            relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-                            relationship_item.setData(relationship_icon, Qt.DecorationRole)
-                            relationship_item_list.append(relationship_item)
-                        relationship_class_item.appendRows(relationship_item_list)
-                        relationship_class_item_list.append(relationship_class_item)
-                    object_item.appendRows(relationship_class_item_list)
-                object_item_list.append(object_item)
-            object_class_item.appendRows(object_item_list)
             object_class_item_list.append(object_class_item)
         self.root_item.appendRows(object_class_item_list)
         self.appendRow(self.root_item)
@@ -1900,9 +1974,11 @@ class WIPTableModel(MinimalTableModel):
     def make_data_fixed(self, rows=[], column_names=[]):
         """Make data non-editable and set background."""
         if not rows:
+            # No rows means all rows
             data_row_count = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
             rows = range(0, data_row_count)
         elif self.has_empty_row:
+            # If rows are given, remove last empty row
             empty_row = self.rowCount()  # FIXME: is this correct? or should it be self.rowCount() - 1???
             try:
                 rows.remove(empty_row)
@@ -1929,7 +2005,6 @@ class WIPTableModel(MinimalTableModel):
             self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
         except IndexError:
             pass
-
 
 class ParameterDefinitionModel(WIPTableModel):
     """A model of parameter definition data, used by TreeViewForm.
@@ -2014,18 +2089,6 @@ class ParameterValueModel(WIPTableModel):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
         self.db_map = tree_view_form.db_map
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Limit the display of json array data."""
-        data = super().data(index, role)
-        if role != Qt.DisplayRole:
-            return data
-        if self.header[index.column()] == 'json' and data:
-            split_data = data.split(",")
-            if len(split_data) > 2:
-                return split_data[0].strip() + ",...," + split_data[-1].strip()
-            return data
-        return data
 
     def items_to_update(self, indexes, values):
         """Return a list of items (dict) to update in the database."""
@@ -2131,8 +2194,9 @@ class ObjectParameterModel(QAbstractTableModel):
         aux_data_append = aux_data.append
         row_range = range(len(model_data[0]))
         object_class_name_column = header.index('object_class_name')
+        aux_row_template = [{} for i in row_range]
         for model_row in model_data:
-            aux_row = [{} for i in row_range]
+            aux_row = aux_row_template[:]
             object_class_name = model_row[object_class_name_column]
             icon = self._tree_view_form.object_icon(object_class_name)
             aux_row[object_class_name_column][Qt.DecorationRole] = icon
@@ -2186,8 +2250,9 @@ class RelationshipParameterModel(QAbstractTableModel):
         row_range = range(len(model_data[0]))
         relationship_class_name_column = header.index('relationship_class_name')
         object_class_name_list_column = header.index('object_class_name_list')
+        aux_row_template = [{} for i in row_range]
         for model_row in model_data:
-            aux_row = [{} for i in row_range]
+            aux_row = aux_row_template[:]
             object_class_name_list = model_row[object_class_name_list_column]
             icon = self._tree_view_form.relationship_icon(object_class_name_list)
             aux_row[relationship_class_name_column][Qt.DecorationRole] = icon
@@ -2203,10 +2268,10 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterMo
 
     def init_model(self):
         """Initialize model from source database."""
-        data = self.db_map.object_parameter_list()
         header = self.db_map.object_parameter_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [list(r._asdict().values()) for r in data]
+        data = self.db_map.object_parameter_list()
+        model_data = [r for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2282,10 +2347,10 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
 
     def init_model(self):
         """Initialize model from source database."""
-        data = self.db_map.relationship_parameter_list()
         header = self.db_map.relationship_parameter_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [list(r._asdict().values()) for r in data]
+        data = self.db_map.relationship_parameter_list()
+        model_data = [r for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2398,10 +2463,10 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
 
     def init_model(self):
         """Initialize model from source database."""
-        data = self.db_map.object_parameter_value_list()
         header = self.db_map.object_parameter_value_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [list(r._asdict().values()) for r in data]
+        data = self.db_map.object_parameter_value_list()
+        model_data = [r for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)
@@ -2517,10 +2582,10 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
 
     def init_model(self):
         """Initialize model from source database."""
-        data = self.db_map.relationship_parameter_value_list()
         header = self.db_map.relationship_parameter_value_fields()
         self.set_horizontal_header_labels(header)
-        model_data = [list(r._asdict().values()) for r in data]
+        data = self.db_map.relationship_parameter_value_list()
+        model_data = [r for r in data]
         if not model_data:
             return
         aux_data = self.decoration_role_data(model_data)

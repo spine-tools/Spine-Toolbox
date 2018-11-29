@@ -1042,7 +1042,7 @@ class ObjectItem(QGraphicsPixmapItem):
         label_position (str)
     """
     def __init__(self, graph_view_form, object_id, object_name, object_class_id, object_class_name,
-                 x, y, extent, label_font=QFont(), label_color=QColor(), label_position='under_icon'):
+                 x, y, extent, label_font=QFont(), label_color=Qt.transparent, label_position='under_icon'):
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -1052,7 +1052,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._extent = extent
         self._label_color = label_color
         self._label_position = label_position
-        self.label_item = ObjectLabelItem(self, object_name, 2 * extent, label_font, label_color)
+        self.label_item = ObjectLabelItem(self, object_name, extent, label_font, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
@@ -1067,7 +1067,6 @@ class ObjectItem(QGraphicsPixmapItem):
         self._selected_color = graph_view_form.palette().highlight()
         pixmap = self._graph_view_form.object_icon(object_class_name).pixmap(extent)
         self.setPixmap(pixmap.scaled(extent, extent))
-        self.setZValue(0)
         self.setPos(x, y)
         self.setOffset(-0.5 * extent, -0.5 * extent)
         self.setAcceptHoverEvents(True)
@@ -1080,6 +1079,8 @@ class ObjectItem(QGraphicsPixmapItem):
         self.shade.setParentItem(self)
         self.shade.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
         self.shade.hide()
+        self.setZValue(0)
+        self.label_item.setZValue(1)
 
     def shape(self):
         """Make the entire bounding rect to be the shape."""
@@ -1117,16 +1118,21 @@ class ObjectItem(QGraphicsPixmapItem):
         return super().itemChange(change, value)
 
     def place_label_item(self):
-        """Put label item in position."""
+        """Put label item in position and align its text."""
         x = self.x() - self.label_item.boundingRect().width() / 2
         y = self.y() + self.offset().y() + (self.boundingRect().height() - self.label_item.boundingRect().height()) / 2
+        alignment = Qt.AlignCenter
         if self._label_position == "under_icon":
             y += self._extent / 2 + self.label_item.boundingRect().height() / 2
         elif self._label_position == "over_icon":
             y -= self._extent / 2 + self.label_item.boundingRect().height() / 2
         elif self._label_position == "beside_icon":
             x += self._extent / 2 + self.label_item.boundingRect().width() / 2
+            alignment = Qt.AlignLeft
         self.label_item.setPos(x, y)
+        option = self.label_item.document().defaultTextOption()
+        option.setAlignment(alignment)
+        self.label_item.document().setDefaultTextOption(option)
 
     def make_template(self):
         """Make this object par of a template for a relationship."""
@@ -1159,7 +1165,6 @@ class ObjectItem(QGraphicsPixmapItem):
                 Please give it a name to create a new <b>{0}</b> object (select it and press F2).
                 </html>""".format(self.object_class_name))
 
-
     def remove_template(self):
         """Make this arc no longer a template."""
         self.is_template = False
@@ -1169,7 +1174,6 @@ class ObjectItem(QGraphicsPixmapItem):
     def edit_name(self):
         """Start editing object name."""
         self.setSelected(True)
-        self.label_item.set_non_elided_text(self.object_name)
         self.label_item.setTextInteractionFlags(Qt.TextEditorInteraction)
         self.label_item.setFocus()
         cursor = QTextCursor(self.label_item._cursor)
@@ -1191,7 +1195,7 @@ class ObjectItem(QGraphicsPixmapItem):
                     self.add_into_relationship()
                 self.remove_template()
             except SpineDBAPIError as e:
-                self.label_item.set_non_elided_text(self.object_name)
+                self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
         else:
             try:
@@ -1200,9 +1204,8 @@ class ObjectItem(QGraphicsPixmapItem):
                 self._graph_view_form.update_objects(object_)
                 self.object_name = name
             except SpineDBAPIError as e:
-                self.label_item.set_non_elided_text(self.object_name)
+                self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
-        self.label_item.elide_text()
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1433,8 +1436,14 @@ class ArcItem(QGraphicsLineItem):
         dst_item.add_incoming_arc_item(self)
         self.pixmap_item = QGraphicsPixmapItem()
         if object_class_name_list:
-            extent = 3 * width
-            pixmap = self._graph_view_form.relationship_icon(object_class_name_list).pixmap(extent)
+            if len(object_class_name_list) > 1:
+                extent = 3 * width
+                join_object_class_name_list = ",".join(object_class_name_list)
+                pixmap = self._graph_view_form.relationship_icon(join_object_class_name_list).pixmap(extent)
+            else:
+                extent = 2 * width
+                object_class_name = object_class_name_list[0]
+                pixmap = self._graph_view_form.object_icon(object_class_name).pixmap(extent)
             self.pixmap_item.setPixmap(pixmap.scaled(extent, extent))
             self.pixmap_item.setOffset(-0.5 * extent, -0.5 * extent)
             diameter = extent / sin(pi / 4)
@@ -1462,9 +1471,9 @@ class ArcItem(QGraphicsLineItem):
             value.addItem(self.label_item)
             value.addItem(self.pixmap_item)
             self.label_item.hide()
-            self.label_item.setZValue(0)
+            self.label_item.setZValue(2)  # Arc label over everything
             self.place_pixmap_item()
-            self.pixmap_item.setZValue(-1)
+            self.pixmap_item.setZValue(-1)  # Arc pixmap only above arc
         return super().itemChange(change, value)
 
     def make_template(self):
@@ -1544,58 +1553,35 @@ class ObjectLabelItem(QGraphicsTextItem):
         self._text = text
         self._width = width
         self._font = font
-        self.font_metric = QFontMetrics(font)
-        self.setFont(font)
         self.bg = QGraphicsRectItem()
+        self.setFont(font)
+        self.setPlainText(text)
+        self.setTextWidth(width)
         self.bg.setParentItem(self)
-        self.bg.setRect(self.boundingRect())
-        self.bg.setBrush(QBrush(bg_color))
+        self.set_bg_color(bg_color)
         self.bg.setPen(Qt.NoPen)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
-        self.set_non_elided_text(text)
-        self.elide_text()
-
-    def elide_text(self):
-        """Make text elided."""
-        text = self.toPlainText()
-        elided_text = self.font_metric.elidedText(text, Qt.ElideMiddle, self._width)
-        self.adjustSize()
-        old_width = self.textWidth()
-        self.setPlainText(elided_text)
-        self.recenter(old_width)
-
-    def set_non_elided_text(self, text):
-        """Set non elided text."""
-        self.adjustSize()
-        old_width = self.textWidth()
-        self.setPlainText(text)
-        self.setToolTip(text)
-        self.recenter(old_width)
-
-    def recenter(self, old_width):
-        """Adjust size and recenter label."""
-        self.adjustSize()
-        new_width = self.textWidth()
-        self.setX(self.x() - (new_width - old_width) / 2)
-        self.bg.setRect(self.boundingRect())
 
     def set_bg_color(self, bg_color):
         """Set background color."""
         self.bg.setBrush(QBrush(bg_color))
 
+    def setTextWidth(self, width):
+        super().setTextWidth(width)
+        self.bg.setRect(self.boundingRect())
+
     def keyPressEvent(self, event):
         """Give up focus when the user presses Enter or Return.
         In the meantime, adapt item geometry so text is always centered.
         """
-        old_width = self.textWidth()
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
             self.clearFocus()
         else:
             super().keyPressEvent(event)
-            self.recenter(old_width)
+        self.bg.setRect(self.boundingRect())
 
     def focusOutEvent(self, event):
         """Call method to finish name editing in object item."""
@@ -1615,6 +1601,10 @@ class ArcLabelItem(QGraphicsRectItem):
     def __init__(self, color, object_items=[], arc_items=[]):
         """A QGraphicsRectItem with a relationship to use as arc label"""
         super().__init__()
+        for item in object_items:
+            item._label_position = 'beside_icon'
+            item.label_item.setTextWidth(-1)
+            item.label_item.set_bg_color(Qt.transparent)
         for item in object_items + arc_items:
             item.setParentItem(self)
         rect = self.childrenBoundingRect()
