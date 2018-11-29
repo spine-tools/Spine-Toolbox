@@ -507,6 +507,9 @@ class TestPivotModel(unittest.TestCase):
         """test that a correct key is valid"""
         model = PivotModel()
         model.set_new_data(self.data, self.index_names, self.index_types)
+        model._add_index_value('valid1','test1')
+        model._add_index_value('valid2','test2')
+        model._add_index_value(4,'test3')
         self.assertTrue(model.is_valid_key(('valid1', 'valid2', 4),
                                             model._row_data_header_set,
                                             ('test1', 'test2', 'test3')))
@@ -782,7 +785,63 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model._edit_data, {})
         self.assertFalse(('new_key','aa',1) in model._data)
         
-
+    def test_add_index_value1(self):
+        """test that adding a new index value works"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, used_index_values = {('test1',): set()})
+        result = model._add_index_value('new_index', 'test1')
+        self.assertTrue(result)
+        self.assertEqual(model._added_index_entries['test1'], set(['new_index']))
+        self.assertEqual(model._used_index_values[('test1',)], set(['new_index']))
+    
+    def test_add_index_value2(self):
+        """test that adding an existing doesn't do anything"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types)
+        result = model._add_index_value('a', 'test1')
+        self.assertTrue(result)
+        self.assertEqual(model._added_index_entries['test1'], set())
+    
+    def test_add_index_value3(self):
+        """test that adding a new index with name already taken doesn't work"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, used_index_values = {('test1',): set(['used_value'])})
+        result = model._add_index_value('used_value', 'test1')
+        self.assertFalse(result)
+        self.assertEqual(model._added_index_entries['test1'], set())
+    
+    def test_add_index_value4(self):
+        """test that adding a new index with name already taken doesn't work for multiple shared values"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, used_index_values = {('test1', 'test2'): set()})
+        result1 = model._add_index_value('used_value', 'test1')
+        result2 = model._add_index_value('used_value', 'test2')
+        self.assertTrue(result1)
+        self.assertFalse(result2)
+        self.assertEqual(model._added_index_entries['test1'], set(['used_value']))
+        self.assertEqual(model._added_index_entries['test2'], set())
+    
+    def test_add_index_value5(self):
+        """test that adding a to two different indexes with same real name"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, index_real_names = ['real','real','test3'])
+        result1 = model._add_index_value('new_val1', 'test1')
+        result2 = model._add_index_value('new_val2', 'test2')
+        self.assertTrue(result1)
+        self.assertTrue(result2)
+        self.assertEqual(model._added_index_entries['real'], set(['new_val1','new_val2']))
+    
+    def test_delete_index_then_add(self):
+        """test that deleting an index and then readding it removes it from _deleted_index_entries and doesn't add to _added_index_entries"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, used_index_values = {('test1', 'test2'): set()})
+        model.delete_index_values({'test1': set(['a'])})
+        self.assertEqual(model._deleted_index_entries['test1'], set(['a']))
+        self.assertEqual(model._added_index_entries['test1'], set())
+        result1 = model._add_index_value('a', 'test1')
+        self.assertTrue(result1)
+        self.assertEqual(model._added_index_entries['test1'], set())
+        self.assertEqual(model._deleted_index_entries['test1'], set())
         
 
 

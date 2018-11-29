@@ -36,7 +36,8 @@ class PivotModel():
     _data_frozen = {} # data filtered with frozen_value
     _data_frozen_index_values = set() # valid frozen_value values for current pivot_frozen
     _index_types = () # type of the indexes in _data
-    index_names = () # names of the indexes in _data
+    index_names = () # names of the indexes in _data, can not contain duplicates
+    index_real_names = () # real names of indexes, can contain duplicates
     pivot_rows = () # current selected rows indexes
     pivot_columns = () # current selected columns indexes
     pivot_frozen = () # current filtered frozen indexes
@@ -53,20 +54,39 @@ class PivotModel():
     _added_tuple_index_entries = {}
     _deleted_tuple_index_entries = {}
     _deleted_index_entries = {}
+    _used_index_values = {}
+    _unique_name_2_name = {}
 
     # dict with index name as key and set/range of valid values for that index
     # if set/range is empty or index doesn't exist in valid_index_values
     # then all values are valid
-    _valid_index_values = {} 
-    def set_new_data(self, data, index_names, index_type, rows=(), columns=(), frozen=(), frozen_value=() , valid_index_values={}, tuple_index_entries={}):
+    _valid_index_values = {}
+    
+    def set_new_data(self, data, index_names, index_type, rows=(), columns=(),
+                     frozen=(), frozen_value=() , index_entries={}, valid_index_values={}, 
+                     tuple_index_entries={}, used_index_values={}, index_real_names = []):
         """set the data of the model, index names and any additional indexes that don't have data, valid index values.
         """
+        if not index_real_names:
+            index_real_names = index_names
+        elif len(index_real_names) != len(index_names):
+            raise ValueError('index_real_name and index_names must have same length')
         if len(index_names) != len(index_type):
             raise ValueError('index_names and index_type must have same length')
         if data and any(len(d) < len(index_names) + 1 for d in data):
             raise ValueError('data inner lists be of len >= len(index_names) + 1')
         if not all(t in [str, int] for t in index_type):
             raise ValueError('index_type can only contain str or int type')
+        if len(set(index_real_names)) != len(index_names):
+            # index_real_names contains duplicates, make sure the type is the same
+            un_2_n = {unique: name for unique, name in zip(index_names, index_real_names)}
+            real_type = {n: set() for n in index_real_names}
+            for name, name_type in zip(index_names, index_type):
+                real_name = un_2_n[name]
+                real_type[real_name].add(name_type)
+            # should only have one type per unique name in index_real_names
+            if any(len(types) != 1 for types in real_type.values()):
+                raise ValueError('inconsistent types for "index_real_names" and "index_types"')
 
         if not rows + columns + frozen:
             # no pivot given, set default pivot
@@ -81,6 +101,8 @@ class PivotModel():
                 raise ValueError(pivot_error)
         
         self._model_is_updating = True
+        
+        self._unique_name_2_name = {unique: name for unique, name in zip(index_names, index_real_names)}
 
         self._valid_index_values = valid_index_values
         self._edit_data = {}
@@ -88,7 +110,8 @@ class PivotModel():
         self._index_ind = {index: ind for ind, index in enumerate(index_names)}
         
         self.index_names = tuple(index_names)
-        self._index_type = {index_names[i]: it for i, it in enumerate(index_type)}
+        self.index_real_names = tuple(index_real_names)
+        self._index_type = {self._unique_name_2_name[index_names[i]]: it for i, it in enumerate(index_type)}
         # create data dict with keys as long as index_names
         self._data = {tuple(d[:len(index_names)]):d[len(index_names)] for d in data}
         # item getter so that you can call _key_getter(row_header + column_header + frozen_value)
@@ -106,12 +129,21 @@ class PivotModel():
         self.pivot_columns = tuple(columns)
         self.pivot_frozen = tuple(frozen)
         self.frozen_value = tuple(frozen_value)
+        self._used_index_values = used_index_values
         
         # get all index values from data
         for i, c in enumerate(self.index_names):
-            self.index_entries[c] = set(d[i] for d in self._data.keys())
-            self._added_index_entries[c] = set()
-            self._deleted_index_entries[c] = set()
+            name = self._unique_name_2_name[c]
+            if name in self.index_entries:
+                self.index_entries[name].update(set(d[i] for d in self._data.keys()))
+            else:
+                self.index_entries[name] = set(d[i] for d in self._data.keys())
+            self._added_index_entries[name] = set()
+            self._deleted_index_entries[name] = set()
+        for k, v in index_entries.items():
+            name = self._unique_name_2_name[k]
+            if name in self.index_entries:
+                self.index_entries[name].update(set(v))
         # add tuple entries
         for k, v in tuple_index_entries.items():
             keys = tuple(self._index_ind[i] for i in k)
@@ -199,12 +231,14 @@ class PivotModel():
             self.pivot_rows, self._row_data_header_set,
             self.pivot_frozen, self.frozen_value, self.tuple_index_entries)
         for name, value in new_entries.items():
+            name = self._unique_name_2_name[name]
             self.index_entries[name].update(value)
         # columns
         new_column_keys, new_column_none_keys, new_entries = self._index_entries_without_data(
             self.pivot_columns, self._column_data_header_set,
             self.pivot_frozen, self.frozen_value, self.tuple_index_entries)
         for name, value in new_entries.items():
+            name = self._unique_name_2_name[name]
             self.index_entries[name].update(value)
 
         # add values
@@ -364,6 +398,36 @@ class PivotModel():
                     else:
                         # update data
                         self._add_data(key, paste_value)
+    
+    def _add_index_value(self, value, name):
+        name = self._unique_name_2_name[name]
+        if value in self.index_entries[name]:
+            # value for index already exists, no need to add.
+            return True
+        # check if value for index 'name' is already in use.
+        for k, v in self._used_index_values.items():
+            if name in k and value in v:
+                # value is already in use
+                return False
+        #check if new value is valid for index.
+        if not self.is_valid_index(value, name):
+            return False
+        # add to existing entries.
+        self.index_entries[name].add(value)
+        # add new value to used names
+        for k, v in self._used_index_values.items():
+            if name in k:
+                v.add(value)
+        # reomve from deleted values
+        if name in self._deleted_index_entries and value in self._deleted_index_entries[name]:
+            # value was deleted, now readded, don't add to _added_index_entries
+            self._deleted_index_entries[name].discard(value)
+        else:
+            # add to added values
+            if name not in self._added_index_entries:
+                self._added_index_entries[name] = set()
+            self._added_index_entries[name].add(value)
+        return True
 
     def _delete_data(self, key):
         # value is None or whitspace remove any existing data
@@ -521,7 +585,7 @@ class PivotModel():
         delete_values_row = {}
         delete_values_column = {}
         for k, indexes in delete_indexes.items():
-            if k not in self._index_ind or not indexes:
+            if k not in self.index_real_names or not indexes:
                 continue
             dv = set(indexes)
             if k in self.pivot_rows:
@@ -534,6 +598,10 @@ class PivotModel():
             self.index_entries[k].difference_update(dv)
             # remove any entries in added indexes
             self._added_index_entries[k].difference_update(dv)
+            # remove any entries in used values
+            for u_name, v in self._used_index_values.items():
+                if k in u_name:
+                    v.difference_update(dv)
             delete_values[self.index_names.index(k)] = dv
         # delete from tuple indexes
         for tk in self.tuple_index_entries.keys():
@@ -666,13 +734,7 @@ class PivotModel():
         new_indexes = {}
         for i, name in enumerate(index_name):
             for r in new_index:
-                index = r[i]
-                if self.is_valid_index(index, name) and index not in self.index_entries[name]:
-                    self.index_entries[name].add(index)
-                    if name in new_indexes:
-                        new_indexes[name].add(index)
-                    else:
-                        new_indexes[name] = set([index])
+                self._add_index_value(r[i], name)
         
         # update tuple entities
         for k in self.tuple_index_entries.keys():
@@ -684,8 +746,11 @@ class PivotModel():
                 getter = tuple_itemgetter(operator.itemgetter(*keys), len(keys))
                 for line in new_index:
                     new_tuple = getter(tuple(line) + self.frozen_value)
-                    if all(self.is_valid_index(i, n) for i, n in zip(new_tuple, names)):
+                    if all(i in self.index_entries[self._unique_name_2_name[n]] 
+                           for i, n in zip(new_tuple, names)):
+                        # all indexes are valid
                         if new_tuple not in self.tuple_index_entries[k]:
+                            # new tuple, save
                             self.tuple_index_entries[k].add(new_tuple)
                             if k in self._added_tuple_index_entries:
                                 self._added_tuple_index_entries[k].add(new_tuple)
@@ -776,7 +841,8 @@ class PivotModel():
     
     def is_valid_key(self, key, existing_keys, key_names):
         """Checks if given key (combination of indexes) is valid"""
-        if not all(self.is_valid_index(index, index_name) for index, index_name in zip(key, key_names)):
+        real_names = [self._unique_name_2_name[name] for name in key_names]
+        if not all(index in self.index_entries[index_name] for index, index_name in zip(key, real_names)):
             return False
         if key in existing_keys:
             # key cannot be a duplicate of existing keys in index.
@@ -792,9 +858,9 @@ class PivotTableModel(QAbstractTableModel):
         self._num_headers_row = 0
         self._num_headers_column = 0
     
-    def set_data(self, data, index_names, index_type, rows=(), columns=(), frozen=(), frozen_value=() , valid_index_values={}, tuple_index_entries={}):
+    def set_data(self, data, index_names, index_type, rows=(), columns=(), frozen=(), frozen_value=(), index_entries={} , valid_index_values={}, tuple_index_entries={}, used_index_values={}, index_real_names=[]):
         self.beginResetModel()
-        self.model.set_new_data(data, index_names, index_type, rows, columns, frozen, frozen_value , valid_index_values, tuple_index_entries)
+        self.model.set_new_data(data, index_names, index_type, rows, columns, frozen, frozen_value, index_entries, valid_index_values, tuple_index_entries, used_index_values, index_real_names)
         self._update_header_data()
         self.endResetModel()
     
@@ -1050,7 +1116,7 @@ class PivotTableModel(QAbstractTableModel):
             # color invalid columns
             if index.row() >= len(self.model.pivot_columns):
                 return
-            index_name = self.model.pivot_columns[index.row()]
+            index_name = self.model._unique_name_2_name[self.model.pivot_columns[index.row()]]
             key = self.model.column(index.column() - self._num_headers_column)
             index = key[index.row()]
             if not self.model.is_valid_index(index, index_name) or key in self.model._column_data_header_set:
@@ -1058,7 +1124,7 @@ class PivotTableModel(QAbstractTableModel):
                 return QColor(Qt.red)
         elif self.index_in_row_headers(index) and index.row() - self._num_headers_row in self.model._invalid_row:
             # color invalid indexes
-            index_name = self.model.pivot_rows[index.column()]
+            elif index_entry in self.model._added_index_entries[index_name]:
             key = self.model.row(index.row() - self._num_headers_row)
             index = key[index.column()]
             if not self.model.is_valid_index(index, index_name) or key in self.model._row_data_header_set:
