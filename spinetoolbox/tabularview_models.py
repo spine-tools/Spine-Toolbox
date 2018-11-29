@@ -1145,6 +1145,18 @@ class PivotTableModel(QAbstractTableModel):
                 return None
         elif role == Qt.BackgroundColorRole:
             return self.data_color(index)
+        elif role == Qt.ToolTipRole:
+            # display tooltip for edited data
+            if self.index_in_data(index):
+                key = self.get_key(index)
+                if key in self.model._edit_data:
+                    value = self.model._edit_data[key]
+                    if value:
+                        return 'Original data: {}'.format(value)
+                    else:
+                        return 'New data'
+                elif key in self.model._deleted_data:
+                    return 'Deleted data: {}'.format(self.model._deleted_data[key])
         else:
             return None
 
@@ -1176,24 +1188,35 @@ class PivotTableModel(QAbstractTableModel):
                     # edited data color yellow
                     return QColor(Qt.yellow)
                     
-        elif self.index_in_column_headers(index) and index.column() - self._num_headers_column in self.model._invalid_column:
-            # color invalid columns
+        elif self.index_in_column_headers(index):
+            # color new indexes or invalid indexes "columns"
             if index.row() >= len(self.model.pivot_columns):
                 return
             index_name = self.model._unique_name_2_name[self.model.pivot_columns[index.row()]]
             key = self.model.column(index.column() - self._num_headers_column)
-            index = key[index.row()]
-            if not self.model.is_valid_index(index, index_name) or key in self.model._column_data_header_set:
-                # invalid index or duplicate key
+            index_entry = key[index.row()]
+            if (index.column() - self._num_headers_column in self.model._invalid_column
+                and (not index_entry in self.model.index_entries[index_name]
+                     or key in self.model._column_data_header_set)):
+                # color invalid columns
                 return QColor(Qt.red)
-        elif self.index_in_row_headers(index) and index.row() - self._num_headers_row in self.model._invalid_row:
-            # color invalid indexes
             elif index_entry in self.model._added_index_entries[index_name]:
+                # color added indexes
+                return QColor(Qt.green)
+        elif self.index_in_row_headers(index):
+            # color new indexes or invalid indexes "rows"
+            index_name = self.model._unique_name_2_name[self.model.pivot_rows[index.column()]]
             key = self.model.row(index.row() - self._num_headers_row)
-            index = key[index.column()]
-            if not self.model.is_valid_index(index, index_name) or key in self.model._row_data_header_set:
+            index_entry = key[index.column()]
+            if (index.row() - self._num_headers_row in self.model._invalid_row
+                and (not index_entry in self.model.index_entries[index_name]
+                     or key in self.model._row_data_header_set)):
                 # invalid index or duplicate key
                 return QColor(Qt.red)
+            elif index_entry in self.model._added_index_entries[index_name]:
+                # color added indexes
+                return QColor(Qt.green)
+            
 
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
