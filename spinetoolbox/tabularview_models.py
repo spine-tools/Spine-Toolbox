@@ -515,6 +515,15 @@ class PivotModel():
     def columns(self):
         return self._column_data_header
     
+    def restore_pivoted_values(self, indexes):
+        """Restores all values for given indexes"""
+        if not all(i[0] <= len(self.rows) or i[0] < 0 
+                   or i[1] <= len(self.columns) or i[1] < 0 for i in indexes):
+            raise ValueError('indexes must be list of valid index for row pivot')
+        for i in indexes:
+            key = self._key_getter(self.row(i[0]) + self.column(i[1]) + self.frozen_value)
+            self._restore_data(key)
+    
     def delete_pivoted_values(self, indexes):
         """Deletes values for given indexes"""
         if not all(i[0] <= len(self.rows) or i[0] < 0 
@@ -906,6 +915,27 @@ class PivotTableModel(QAbstractTableModel):
         self.model.delete_pivoted_values(indexes)
         self.endResetModel()
     
+    def delete_index_values(self, keys_dict):
+        self.beginResetModel()
+        self.model.delete_index_values(keys_dict)
+        self.endResetModel()
+    
+    def delete_tuple_index_values(self, tuple_key_dict):
+        self.beginResetModel()
+        self.model.delete_tuple_index_values(tuple_key_dict)
+        self.endResetModel()
+    
+    def restore_values(self, indexes):
+        indexes = self._indexes_to_pivot_index(indexes)
+        self.beginResetModel()
+        self.model.restore_pivoted_values(indexes)
+        self.endResetModel()
+    
+    def get_key(self, index):
+        row = self.model.row(max(0, index.row() - self._num_headers_row))
+        col = self.model.column(max(0, index.column() - self._num_headers_column))
+        return self.model._key_getter(row + col + self.model.frozen_value)
+    
     def paste_data(self, index, data, row_mask, col_mask):
         """paste data into pivot model"""
         row_header_data = []
@@ -1206,6 +1236,10 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
     def delete_values(self, delete_indexes):
         delete_indexes = [self.mapToSource(index) for index in delete_indexes]
         self.sourceModel().delete_values(delete_indexes)
+    
+    def restore_values(self, indexes):
+        indexes = [self.mapToSource(index) for index in indexes]
+        self.sourceModel().restore_values(indexes)
         
     def paste_data(self, index, data):
         model_index = self.mapToSource(index)
