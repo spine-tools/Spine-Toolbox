@@ -356,6 +356,10 @@ class PivotModel():
         """paste list of lists into current pivot, no change of indexes,
         row_mask list of indexes where to paste data rows in current pivot
         col_mask list of indexes where to paste data columns in current pivot"""
+        if not data:
+            return
+        elif len(data) == 1 and not data[0]:
+            return
         if len(data) != len(row_mask):
             raise ValueError('row_mask must be same length as data')
         if not all(len(row) == len(col_mask) for row in data):
@@ -695,19 +699,30 @@ class PivotModel():
                          for row in range(len(edit_index), len(data))]
         return edit_index, new_index
 
-    def paste_data(self, row_start = 0, row_header_data = [], col_start = 0, col_header_data = [], data = [], row_mask = [], col_mask = []):
+    def paste_data(self, row_start=0, row_header_data=[], col_start=0,
+                   col_header_data=[], data=[], row_mask=[], col_mask=[]):
         """Paste a list of list into current view of AbstractTable"""
         if row_header_data:
-            edit_rows, add_rows = self._data_to_header(row_header_data, row_start, self._row_data_header, self.pivot_rows, row_mask, "row")
+            edit_rows, add_rows = self._data_to_header(row_header_data,
+                                                       row_start,
+                                                       self._row_data_header,
+                                                       self.pivot_rows,
+                                                       row_mask, "row")
             self.edit_index(edit_rows + add_rows, row_mask, "row")
         if col_header_data:
-            edit_columns, add_columns = self._data_to_header(col_header_data, col_start, self._column_data_header, self.pivot_columns, col_mask, "column")
+            edit_columns, add_columns = self._data_to_header(col_header_data, 
+                                                             col_start, 
+                                                             self._column_data_header,
+                                                             self.pivot_columns,
+                                                             col_mask, "column")
             self.edit_index(edit_columns + add_columns, col_mask, "column")
         # paste data
         if data:
             self.set_pivoted_data(data, row_mask, col_mask)
 
     def edit_index(self, new_index, index_mask, direction):
+        if len(new_index) != len(index_mask):
+            raise ValueError('index_mask must be same length as new_index')
         """Edits the index of either row or column"""
         if direction == "row":
             index_name = self.pivot_rows
@@ -894,7 +909,7 @@ class PivotTableModel(QAbstractTableModel):
     def paste_data(self, index, data, row_mask, col_mask):
         """paste data into pivot model"""
         row_header_data = []
-        col_header_data = []
+        col_header_data = [[]]
         skip_cols = max(0, self._num_headers_column - index.column())
         skip_rows = max(0, self._num_headers_row - index.row())
         
@@ -908,18 +923,19 @@ class PivotTableModel(QAbstractTableModel):
         
         # extract data for pasting in values
         value_data = [line[skip_cols:] for line in data[skip_rows:]]
+        if not value_data:
+            value_data = [[]]
         # translate mask into pivot index
         row_mask = [r - self._num_headers_row for r in row_mask if r >= self._num_headers_row]
         col_mask = [c - self._num_headers_column for c in col_mask if c >= self._num_headers_column]
-        new_rows = len(value_data) - len(row_mask)
+        new_rows = max(len(value_data), len(row_header_data)) - len(row_mask)
+        new_cols = max(len(value_data[0]), len(col_header_data[0])) - len(col_mask)
         
         # extend mask if new values are given
         if  new_rows > 0:
             row_mask.extend(list(range(len(self.model.rows), len(self.model.rows) + new_rows)))
-        if value_data:
-            new_cols = len(value_data[0]) - len(col_mask)
-            if new_cols > 0:
-                col_mask.extend(list(range(len(self.model.columns), len(self.model.columns) + new_cols)))
+        if new_cols > 0:
+            col_mask.extend(list(range(len(self.model.columns), len(self.model.columns) + new_cols)))
         
         self.beginResetModel()
         self.model.paste_data(index.column(), row_header_data, index.row(), col_header_data, value_data, row_mask, col_mask)
