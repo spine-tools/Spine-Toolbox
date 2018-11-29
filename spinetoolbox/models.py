@@ -1084,8 +1084,6 @@ class MinimalTableModel(QAbstractTableModel):
         return False
 
     def index(self, row, column, parent=QModelIndex()):
-        if column is None:
-            print("hey")
         if row < 0 or column < 0 or column >= self.columnCount(parent):
             return QModelIndex()
         if self.can_grow:
@@ -1346,8 +1344,8 @@ class MinimalTableModel(QAbstractTableModel):
         else:
             aux_row = [{} for _ in range(self.columnCount())]
             self._aux_data = [aux_row[:] for _ in range(self.rowCount())]
-        flags_row = [self.default_flags for _ in range(self.columnCount())]
-        self._flags = [flags_row[:] for _ in range(self.rowCount())]
+        #flags_row = [self.default_flags for _ in range(self.columnCount())]
+        #self._flags = [flags_row[:] for _ in range(self.rowCount())]
         self.endResetModel()
         if self.has_empty_row:
             self.insertRows(self.rowCount(), 1)
@@ -1507,52 +1505,55 @@ class ObjectTreeModel(QStandardItemModel):
             break
 
     def hasChildren(self, parent):
-        """Return True if not fetched, so it fetches it."""
+        """Return True if not fetched, so the user can try and expand it."""
         if not parent.isValid():
             return super().hasChildren(parent)
         parent_type = parent.data(Qt.UserRole)
-        if parent_type in ('root', 'relationship'):
+        if parent_type in 'root':
             return super().hasChildren(parent)
         if parent_type == 'object_class':
             object_class_id = parent.data(Qt.UserRole + 1)['id']
             if object_class_id not in self._fetched['object_class']:
                 return True
-        if self.is_flat:
-            # The flat model don't go beyond the 'object' level
-            return super().hasChildren(parent)
-        if parent_type == 'object':
+        elif parent_type == 'object':
+            if self.is_flat:
+                # The flat model doesn't go beyond the 'object' level
+                return False
             object_id = parent.parent().data(Qt.UserRole + 1)['id']
             if object_id not in self._fetched['object']:
                 return True
         elif parent_type == 'relationship_class':
+            if self.is_flat:
+                # The flat model doesn't go beyond the 'object' level
+                return False
             object_id = parent.parent().data(Qt.UserRole + 1)['id']
             relationship_class_id = parent.data(Qt.UserRole + 1)['id']
             if (object_id, relationship_class_id) not in self._fetched['relationship_class']:
                 return True
+        elif parent_type == 'relationship':
+            return False
         return super().hasChildren(parent)
 
     def canFetchMore(self, parent):
-        """Return True if not fetched, so it fetches it."""
+        """Return True if not fetched."""
         if not parent.isValid():
-            return False
+            return True
         parent_type = parent.data(Qt.UserRole)
-        if parent_type in ('root', 'relationship'):
-            return False
+        if parent_type == 'root':
+            return True
         if parent_type in ('object_class', 'object'):
             parent_id = parent.data(Qt.UserRole + 1)['id']
             return parent_id not in self._fetched[parent_type]
-        elif parent_type in ('relationship_class'):
+        if parent_type == 'relationship_class':
             object_id = parent.parent().data(Qt.UserRole + 1)['id']
             relationship_class_id = parent.data(Qt.UserRole + 1)['id']
             return (object_id, relationship_class_id) not in self._fetched[parent_type]
-        if parent_type == 'object_class':
-            object_class_id = parent.data(Qt.UserRole + 1)['id']
-            if object_class_id not in self._fetched['object_class']:
-                return True
+        if parent_type == 'relationship':
+            return False
 
     @busy_effect
     def fetchMore(self, parent):
-        """Build the deeper layers of the tree"""
+        """Build the deeper level of the tree"""
         if not parent.isValid():
             return False
         parent_type = parent.data(Qt.UserRole)
@@ -1612,7 +1613,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.dataChanged.emit(parent, parent)
 
     def build_tree(self, db_name, flat=False):
-        """Build the first layer of the tree"""
+        """Build the first level of the tree"""
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         object_list = [x for x in self.db_map.object_list()]
@@ -2006,6 +2007,7 @@ class WIPTableModel(MinimalTableModel):
         except IndexError:
             pass
 
+
 class ParameterDefinitionModel(WIPTableModel):
     """A model of parameter definition data, used by TreeViewForm.
     It implements methods that are common to both object and relationship parameter definitions,
@@ -2150,60 +2152,6 @@ class ParameterValueModel(WIPTableModel):
             return False
 
 
-class ObjectParameterModel(QAbstractTableModel):
-    """A model of object parameter data, used by TreeViewForm.
-    It implements methods that are common to both object parameter definitions and values,
-    so the more specific `ObjectParameterDefinitionModel` and `ObjectParameterValueModel`
-    can inherit from this."""
-    def __init__(self):
-        super().__init__()
-        self.dataChanged.connect(self.handle_data_changed)
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_data_changed")
-    def handle_data_changed(self, top_left, bottom_right, roles=[]):
-        """Fill in decoration role data when object class name changes."""
-        if Qt.EditRole not in roles:
-            return
-        if Qt.DecorationRole in roles:
-            return
-        header = self.horizontal_header_labels()
-        left = top_left.column()
-        right = bottom_right.column()
-        object_class_name_column = header.index('object_class_name')
-        if object_class_name_column < left or object_class_name_column > right:
-            return
-        top = top_left.row()
-        bottom = bottom_right.row()
-        for row in range(top, bottom + 1):
-            object_class_name = self._main_data[row][object_class_name_column]
-            if object_class_name:
-                icon = self._tree_view_form.object_icon(object_class_name)
-                self._aux_data[row][object_class_name_column][Qt.DecorationRole] = icon
-            else:
-                self._aux_data[row][object_class_name_column][Qt.DecorationRole] = None
-        new_top_left = self.index(top, object_class_name_column)
-        new_bottom_right = self.index(bottom, object_class_name_column)
-        self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
-
-    def decoration_role_data(self, model_data):
-        """Return decoration role data based on model_data."""
-        if not model_data:
-            return []
-        header = self.horizontal_header_labels()
-        aux_data = []
-        aux_data_append = aux_data.append
-        row_range = range(len(model_data[0]))
-        object_class_name_column = header.index('object_class_name')
-        aux_row_template = [{} for i in row_range]
-        for model_row in model_data:
-            aux_row = aux_row_template[:]
-            object_class_name = model_row[object_class_name_column]
-            icon = self._tree_view_form.object_icon(object_class_name)
-            aux_row[object_class_name_column][Qt.DecorationRole] = icon
-            aux_data_append(aux_row)
-        return aux_data
-
-
 class RelationshipParameterModel(QAbstractTableModel):
     """A model of relationship parameter data, used by TreeViewForm.
     It implements methods that are common to both relationship parameter definitions and values,
@@ -2260,11 +2208,18 @@ class RelationshipParameterModel(QAbstractTableModel):
         return aux_data
 
 
-class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterModel):
+class ObjectParameterDefinitionModel(ParameterDefinitionModel):
     """A model of object parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role != Qt.DecorationRole:
+            return super().data(index, role)
+        if self.header[index.column()] == "object_class_name":
+            return self._tree_view_form.object_icon(self._main_data[index.row()][index.column()])
+        return super().data(index, role)
 
     def init_model(self):
         """Initialize model from source database."""
@@ -2274,10 +2229,10 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel, ObjectParameterMo
         model_data = [r for r in data]
         if not model_data:
             return
-        aux_data = self.decoration_role_data(model_data)
-        self.reset_model(model_data, aux_data=aux_data)
+        # aux_data = self.decoration_role_data(model_data)
+        self.reset_model(model_data) #, aux_data=aux_data)
         column_names = ['id', 'object_class_name']
-        self.make_data_fixed(column_names=column_names)
+        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type != "object_class":
@@ -2353,10 +2308,10 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         model_data = [r for r in data]
         if not model_data:
             return
-        aux_data = self.decoration_role_data(model_data)
-        self.reset_model(model_data, aux_data=aux_data)
+        # aux_data = self.decoration_role_data(model_data)
+        self.reset_model(model_data) #, aux_data=aux_data)
         column_names = ['id', 'relationship_class_name', 'object_class_name_list']
-        self.make_data_fixed(column_names=column_names)
+        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("relationship_class", "object_class"):
@@ -2455,11 +2410,18 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
         return items_to_add
 
 
-class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
+class ObjectParameterValueModel(ParameterValueModel):
     """A model of object parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role != Qt.DecorationRole:
+            return super().data(index, role)
+        if self.header[index.column()] == "object_class_name":
+            return self._tree_view_form.object_icon(self._main_data[index.row()][index.column()])
+        return super().data(index, role)
 
     def init_model(self):
         """Initialize model from source database."""
@@ -2469,10 +2431,10 @@ class ObjectParameterValueModel(ParameterValueModel, ObjectParameterModel):
         model_data = [r for r in data]
         if not model_data:
             return
-        aux_data = self.decoration_role_data(model_data)
-        self.reset_model(model_data, aux_data=aux_data)
+        # aux_data = self.decoration_role_data(model_data)
+        self.reset_model(model_data) #, aux_data=aux_data)
         column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
-        self.make_data_fixed(column_names=column_names)
+        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("object_class", "object", "parameter"):
@@ -2588,10 +2550,10 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
         model_data = [r for r in data]
         if not model_data:
             return
-        aux_data = self.decoration_role_data(model_data)
-        self.reset_model(model_data, aux_data=aux_data)
+        # aux_data = self.decoration_role_data(model_data)
+        self.reset_model(model_data) #, aux_data=aux_data)
         column_names = ['id', 'relationship_class_name', 'object_name_list', 'parameter_name']
-        self.make_data_fixed(column_names=column_names)
+        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("relationship_class", "object_class", "object", "parameter"):
