@@ -879,8 +879,6 @@ class MinimalTableModel(QAbstractTableModel):
         super().__init__()
         self._parent = parent
         self._main_data = list()  # DisplayRole and EditRole
-        self._aux_data = list()  # All the other roles, each entry in the matrix is a dict
-        self._flags = list()
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()  # DisplayRole and EditRole
         self.aux_header = list()  # All the other roles, each entry in the list is a dict
@@ -949,8 +947,6 @@ class MinimalTableModel(QAbstractTableModel):
             right = column
             for row in range(first, last + 1):
                 self._main_data[row][column] = default
-                if self._force_default and default is not None:
-                    self._flags[row][column] &= ~Qt.ItemIsEditable
         if left is None:
             return
         top_left = self.index(first, left)
@@ -976,8 +972,6 @@ class MinimalTableModel(QAbstractTableModel):
             right = column
             for row in range(self.rowCount()):
                 self._main_data[row][column] = default
-                if self._force_default and default is not None:
-                    self._flags[row][column] &= ~Qt.ItemIsEditable
         if left is None:
             return
         top_left = self.index(0, left)
@@ -988,26 +982,18 @@ class MinimalTableModel(QAbstractTableModel):
         """Clear all data in model."""
         self.beginResetModel()
         self._main_data = list()
-        self._aux_data = list()
         self.endResetModel()
         if self.has_empty_row:
             self.insertRows(self.rowCount(), 1)
 
     def flags(self, index):
-        """Returns flags for table items."""
+        """Return default flags except if forcing defaults."""
         if not index.isValid():
             return Qt.NoItemFlags
-        return self._flags[index.row()][index.column()]
-
-    def set_flags(self, index, flags):
-        """set flags for given index."""
-        if not index.isValid():
-            return False
-        try:
-            self._flags[index.row()][index.column()] = flags
-            return True
-        except IndexError:
-            return False
+        if self._force_default:
+            if self.header[index.column()] in self.default_row:
+                return self.default_flags & ~Qt.ItemIsEditable
+        return self.default_flags
 
     def rowCount(self, *args, **kwargs):
         """Number of rows in the model."""
@@ -1108,15 +1094,12 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not index.isValid():
             return None
+        if role not in (Qt.DisplayRole, Qt.EditRole):
+            return None
         try:
-            if role in (Qt.DisplayRole, Qt.EditRole):
-                return self._main_data[index.row()][index.column()]
-            else:
-                return self._aux_data[index.row()][index.column()][role]
+            return self._main_data[index.row()][index.column()]
         except IndexError:
             logging.error(index)
-            return None
-        except KeyError:
             return None
 
     def row_data(self, row, role=Qt.DisplayRole):
@@ -1131,9 +1114,9 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not 0 <= row < self.rowCount():
             return None
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return self._main_data[row]
-        return [self._aux_data[row][column][role] for column in range(self.columnCount())]
+        if role not in (Qt.DisplayRole, Qt.EditRole):
+            return None
+        return self._main_data[row]
 
     def column_data(self, column, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the given column.
@@ -1147,9 +1130,9 @@ class MinimalTableModel(QAbstractTableModel):
         """
         if not 0 <= column < self.columnCount():
             return None
-        if role in (Qt.DisplayRole, Qt.EditRole):
-            return [self._main_data[row][column] for row in range(self.rowCount())]
-        return [self._aux_data[row][column][role] for row in range(self.rowCount())]
+        if role not in (Qt.DisplayRole, Qt.EditRole):
+            return None
+        return [self._main_data[row][column] for row in range(self.rowCount())]
 
     def model_data(self, role=Qt.DisplayRole):
         """Returns the data stored under the given role in the entire model.
@@ -1169,9 +1152,7 @@ class MinimalTableModel(QAbstractTableModel):
         if not index.isValid():
             return False
         if role not in (Qt.DisplayRole, Qt.EditRole):
-            self._aux_data[index.row()][index.column()][role] = value
-            self.dataChanged.emit(index, index, [role])
-            return True
+            return False
         return self.batch_set_data([index], [value])
 
     def batch_set_data(self, indexes, data):
@@ -1213,16 +1194,10 @@ class MinimalTableModel(QAbstractTableModel):
         for i in range(count):
             if self.columnCount() == 0:
                 new_main_row = [None]
-                new_aux_row = [{}]
-                new_flags_row = [self.default_flags]
             else:
                 new_main_row = [None for j in range(self.columnCount())]
-                new_aux_row = [{} for j in range(self.columnCount())]
-                new_flags_row = [self.default_flags for j in range(self.columnCount())]
             # Notice if insert index > rowCount(), new object is inserted to end
             self._main_data.insert(row + i, new_main_row)
-            self._aux_data.insert(row + i, new_aux_row)
-            self._flags.insert(row + i, new_flags_row)
         self.endInsertRows()
         return True
 
@@ -1247,8 +1222,6 @@ class MinimalTableModel(QAbstractTableModel):
         for j in range(count):
             for i in range(self.rowCount()):
                 self._main_data[i].insert(column + j, None)
-                self._aux_data[i].insert(column + j, {})
-                self._flags[i].insert(column + j, self.default_flags)
         self.endInsertColumns()
         return True
 
@@ -1270,8 +1243,6 @@ class MinimalTableModel(QAbstractTableModel):
             return False
         self.beginRemoveRows(parent, row, row)
         removed_main_data_row = self._main_data.pop(row)
-        removed_aux_data_row = self._aux_data.pop(row)
-        removed_flags_data_row = self._flags.pop(row)
         self.endRemoveRows()
         return True
 
@@ -1298,14 +1269,8 @@ class MinimalTableModel(QAbstractTableModel):
             removing_last_column = True
         for r in self._main_data:
             r.pop(column)
-        for r in self._aux_data:
-            r.pop(column)
-        for r in self._flags:
-            r.pop(column)
         if removing_last_column:
             self._main_data = []
-            self._aux_data = []
-            self._flags = []
         # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
         return True
@@ -1330,8 +1295,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginRemoveRows(parent, first, last)
         for row in reversed(sorted(row_set)):
             self._main_data.pop(row)
-            self._aux_data.pop(row)
-            self._flags.pop(row)
         self.endRemoveRows()
         return True
 
@@ -1339,13 +1302,6 @@ class MinimalTableModel(QAbstractTableModel):
         """Reset model."""
         self.beginResetModel()
         self._main_data = main_data
-        if aux_data:
-            self._aux_data = aux_data
-        else:
-            aux_row = [{} for _ in range(self.columnCount())]
-            self._aux_data = [aux_row[:] for _ in range(self.rowCount())]
-        #flags_row = [self.default_flags for _ in range(self.columnCount())]
-        #self._flags = [flags_row[:] for _ in range(self.rowCount())]
         self.endResetModel()
         if self.has_empty_row:
             self.insertRows(self.rowCount(), 1)
@@ -1893,11 +1849,29 @@ class WIPTableModel(MinimalTableModel):
         """Initialize class."""
         super().__init__(tree_view_form, can_grow=True, has_empty_row=has_empty_row)
         self._tree_view_form = tree_view_form
-        self.fixed_columns = list()
+        self.fixed_columns = tuple()
+        self.id_column = None
         if self._tree_view_form:
             self.gray_brush = self._tree_view_form.palette().button()
         else:
             self.gray_brush = QGuiApplication.palette().button()
+
+    def flags(self, index):
+        """Make fixed indexes non-editable."""
+        flags = super().flags(index)
+        if index.column() in self.fixed_columns:
+            if self._main_data[index.row()][self.id_column]:
+                return flags & ~Qt.ItemIsEditable
+        return flags
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Paint gray background on fixed indexes."""
+        if role != Qt.BackgroundRole:
+            return super().data(index, role)
+        if index.column() in self.fixed_columns:
+            if self._main_data[index.row()][self.id_column]:
+                return self.gray_brush
+        return super().data(index, role)
 
     def setData(self, index, value, role=Qt.EditRole):
         """Set data in model."""
@@ -1966,46 +1940,7 @@ class WIPTableModel(MinimalTableModel):
 
     def is_work_in_progress(self, row):
         """Return whether or not row is a work in progress."""
-        try:
-            column = self.fixed_columns[0]
-        except IndexError:
-            return True
-        return self._flags[row][column] & Qt.ItemIsEditable
-
-    def make_data_fixed(self, rows=[], column_names=[]):
-        """Make data non-editable and set background."""
-        if not rows:
-            # No rows means all rows
-            data_row_count = self.rowCount() - 1 if self.has_empty_row else self.rowCount()
-            rows = range(0, data_row_count)
-        elif self.has_empty_row:
-            # If rows are given, remove last empty row
-            empty_row = self.rowCount()  # FIXME: is this correct? or should it be self.rowCount() - 1???
-            try:
-                rows.remove(empty_row)
-            except ValueError:
-                pass
-        h = self.horizontal_header_labels().index
-        columns = []
-        for x in column_names:
-            try:
-                columns.append(h(x))
-            except ValueError:
-                pass
-        if not columns:
-            columns = self.fixed_columns
-        for column in columns:
-            for row in rows:
-                self._aux_data[row][column][Qt.BackgroundRole] = self.gray_brush
-                self._flags[row][column] = ~Qt.ItemIsEditable
-        new_columns = [x for x in columns if x not in self.fixed_columns]
-        self.fixed_columns.extend(new_columns)
-        try:
-            top_left = self.index(min(rows, default=-1), min(columns, default=-1))
-            bottom_right = self.index(max(rows, default=-1), max(columns, default=-1))
-            self.dataChanged.emit(top_left, bottom_right, [Qt.BackgroundRole])
-        except IndexError:
-            pass
+        return self._main_data[row][self.id_column] is None
 
 
 class ParameterDefinitionModel(WIPTableModel):
@@ -2057,7 +1992,6 @@ class ParameterDefinitionModel(WIPTableModel):
             id_column = self.horizontal_header_labels().index('id')
             for i, parameter in enumerate(parameters):
                 self._main_data[rows[i]][id_column] = parameter.id
-            self.make_data_fixed(rows=rows)
             self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters."
             self._tree_view_form.msg.emit(msg)
@@ -2127,7 +2061,6 @@ class ParameterValueModel(WIPTableModel):
             id_column = self.horizontal_header_labels().index('id')
             for i, parameter_value in enumerate(parameter_values):
                 self._main_data[rows[i]][id_column] = parameter_value.id
-            self.make_data_fixed(rows=rows)
             self._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameter values."
             self._tree_view_form.msg.emit(msg)
@@ -2152,62 +2085,6 @@ class ParameterValueModel(WIPTableModel):
             return False
 
 
-class RelationshipParameterModel(QAbstractTableModel):
-    """A model of relationship parameter data, used by TreeViewForm.
-    It implements methods that are common to both relationship parameter definitions and values,
-    so the more specific `RelationshipParameterDefinitionModel` and `RelationshipParameterValueModel`
-    can inherit from this."""
-    def __init__(self):
-        super().__init__()
-        self.dataChanged.connect(self.handle_data_changed)
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_data_changed")
-    def handle_data_changed(self, top_left, bottom_right, roles=[]):
-        """Fill in decoration role data when relationship class change."""
-        if Qt.EditRole not in roles:
-            return
-        if Qt.DecorationRole in roles:
-            return
-        header = self.horizontal_header_labels()
-        left = top_left.column()
-        right = bottom_right.column()
-        relationship_class_name_column = header.index('relationship_class_name')
-        object_class_name_list_column = header.index('object_class_name_list')
-        if relationship_class_name_column < left or relationship_class_name_column > right:
-            return
-        top = top_left.row()
-        bottom = bottom_right.row()
-        for row in range(top, bottom + 1):
-            object_class_name_list = self._main_data[row][object_class_name_list_column]
-            if object_class_name_list:
-                icon = self._tree_view_form.relationship_icon(object_class_name_list)
-                self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = icon
-            else:
-                self._aux_data[row][relationship_class_name_column][Qt.DecorationRole] = None
-        new_top_left = self.index(top, relationship_class_name_column)
-        new_bottom_right = self.index(bottom, relationship_class_name_column)
-        self.dataChanged.emit(new_top_left, new_bottom_right, [Qt.DecorationRole])
-
-    def decoration_role_data(self, model_data):
-        """Return decoration role data based on model_data."""
-        if not model_data:
-            return []
-        header = self.horizontal_header_labels()
-        aux_data = []
-        aux_data_append = aux_data.append
-        row_range = range(len(model_data[0]))
-        relationship_class_name_column = header.index('relationship_class_name')
-        object_class_name_list_column = header.index('object_class_name_list')
-        aux_row_template = [{} for i in row_range]
-        for model_row in model_data:
-            aux_row = aux_row_template[:]
-            object_class_name_list = model_row[object_class_name_list_column]
-            icon = self._tree_view_form.relationship_icon(object_class_name_list)
-            aux_row[relationship_class_name_column][Qt.DecorationRole] = icon
-            aux_data_append(aux_row)
-        return aux_data
-
-
 class ObjectParameterDefinitionModel(ParameterDefinitionModel):
     """A model of object parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
@@ -2218,12 +2095,17 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
         if role != Qt.DecorationRole:
             return super().data(index, role)
         if self.header[index.column()] == "object_class_name":
-            return self._tree_view_form.object_icon(self._main_data[index.row()][index.column()])
+            object_class_name = self._main_data[index.row()][index.column()]
+            if object_class_name:
+                return self._tree_view_form.object_icon(self._main_data[index.row()][index.column()])
         return super().data(index, role)
 
     def init_model(self):
         """Initialize model from source database."""
         header = self.db_map.object_parameter_fields()
+        h = header.index
+        self.id_column = h('id')
+        self.fixed_columns = [h('object_class_name')]
         self.set_horizontal_header_labels(header)
         data = self.db_map.object_parameter_list()
         model_data = [r for r in data]
@@ -2231,8 +2113,6 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
             return
         # aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data) #, aux_data=aux_data)
-        column_names = ['id', 'object_class_name']
-        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type != "object_class":
@@ -2294,15 +2174,30 @@ class ObjectParameterDefinitionModel(ParameterDefinitionModel):
         return items_to_add
 
 
-class RelationshipParameterDefinitionModel(ParameterDefinitionModel, RelationshipParameterModel):
+class RelationshipParameterDefinitionModel(ParameterDefinitionModel):
     """A model of relationship parameter data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
+        self.object_class_name_list_column = None
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Return relationship icon for decoration role."""
+        if role != Qt.DecorationRole:
+            return super().data(index, role)
+        if self.header[index.column()] == "relationship_class_name":
+            object_class_name_list = self._main_data[index.row()][self.object_class_name_list_column]
+            if object_class_name_list:
+                return self._tree_view_form.relationship_icon(object_class_name_list)
+        return super().data(index, role)
 
     def init_model(self):
         """Initialize model from source database."""
         header = self.db_map.relationship_parameter_fields()
+        h = header.index
+        self.id_column = h('id')
+        self.object_class_name_list_column = h("object_class_name_list")
+        self.fixed_columns = (h('relationship_class_name'), h('object_class_name_list'))
         self.set_horizontal_header_labels(header)
         data = self.db_map.relationship_parameter_list()
         model_data = [r for r in data]
@@ -2310,8 +2205,6 @@ class RelationshipParameterDefinitionModel(ParameterDefinitionModel, Relationshi
             return
         # aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data) #, aux_data=aux_data)
-        column_names = ['id', 'relationship_class_name', 'object_class_name_list']
-        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("relationship_class", "object_class"):
@@ -2420,21 +2313,23 @@ class ObjectParameterValueModel(ParameterValueModel):
         if role != Qt.DecorationRole:
             return super().data(index, role)
         if self.header[index.column()] == "object_class_name":
-            return self._tree_view_form.object_icon(self._main_data[index.row()][index.column()])
+            object_class_name = self._main_data[index.row()][index.column()]
+            if object_class_name:
+                return self._tree_view_form.object_icon(self._main_data[index.row()][index.column()])
         return super().data(index, role)
 
     def init_model(self):
         """Initialize model from source database."""
         header = self.db_map.object_parameter_value_fields()
+        h = header.index
+        self.id_column = h('id')
+        self.fixed_columns = (h('object_class_name'), h('object_name'), h('parameter_name'))
         self.set_horizontal_header_labels(header)
         data = self.db_map.object_parameter_value_list()
         model_data = [r for r in data]
         if not model_data:
             return
-        # aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data) #, aux_data=aux_data)
-        column_names = ['id', 'object_class_name', 'object_name', 'parameter_name']
-        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("object_class", "object", "parameter"):
@@ -2536,15 +2431,30 @@ class ObjectParameterValueModel(ParameterValueModel):
         return items_to_add
 
 
-class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameterModel):
+class RelationshipParameterValueModel(ParameterValueModel):
     """A model of relationship parameter value data, used by TreeViewForm."""
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
         super().__init__(tree_view_form, has_empty_row=has_empty_row)
+        self.object_class_name_list_column = None
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Return relationship icon for decoration role."""
+        if role != Qt.DecorationRole:
+            return super().data(index, role)
+        if self.header[index.column()] == "relationship_class_name":
+            object_class_name_list = self._main_data[index.row()][self.object_class_name_list_column]
+            if object_class_name_list:
+                return self._tree_view_form.relationship_icon(object_class_name_list)
+        return super().data(index, role)
 
     def init_model(self):
         """Initialize model from source database."""
         header = self.db_map.relationship_parameter_value_fields()
+        h = header.index
+        self.id_column = h('id')
+        self.object_class_name_list_column = h("object_class_name_list")
+        self.fixed_columns = (h('relationship_class_name'), h('object_name_list'), h('parameter_name'))
         self.set_horizontal_header_labels(header)
         data = self.db_map.relationship_parameter_value_list()
         model_data = [r for r in data]
@@ -2552,8 +2462,6 @@ class RelationshipParameterValueModel(ParameterValueModel, RelationshipParameter
             return
         # aux_data = self.decoration_role_data(model_data)
         self.reset_model(model_data) #, aux_data=aux_data)
-        column_names = ['id', 'relationship_class_name', 'object_name_list', 'parameter_name']
-        #self.make_data_fixed(column_names=column_names)
 
     def rename_items(self, renamed_type, ids, new_names):
         if renamed_type not in ("relationship_class", "object_class", "object", "parameter"):
@@ -2818,7 +2726,6 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
         self.source_main_data = None
-        self.source_aux_data = None
 
     def index(self, row, column, parent=QModelIndex()):
         if row < 0 or column < 0 or column >= self.columnCount(parent):
@@ -2838,7 +2745,6 @@ class AutoFilterProxy(QSortFilterProxyModel):
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
         self.source_main_data = source_model._main_data
-        self.source_aux_data = source_model._aux_data
         source_model.headerDataChanged.connect(self.receive_header_data_changed)
         self.receive_header_data_changed()
 
@@ -2968,7 +2874,6 @@ class ObjectParameterDefinitionProxy(AutoFilterProxy):
             object_class_id = self.source_main_data[source_row][self.object_class_id_column]
             if object_class_id not in self.object_class_id_set:
                 return False
-            self.source_aux_data[source_row][self.object_class_name_column][Qt.FontRole] = self.bold_font
             return True
         return self.default
 
@@ -2993,12 +2898,6 @@ class ObjectParameterDefinitionProxy(AutoFilterProxy):
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
-        for row_data in self.sourceModel()._aux_data:
-            row_data[self.object_class_name_column][Qt.FontRole] = None
-        row_count = self.sourceModel().rowCount()
-        top_left = self.sourceModel().index(0, self.object_class_name_column)
-        bottom_right = self.sourceModel().index(row_count - 1, self.object_class_name_column)
-        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
@@ -3023,7 +2922,6 @@ class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
             object_id = self.source_main_data[source_row][self.object_id_column]
             if object_id not in self.object_id_set:
                 return False
-            self.source_aux_data[source_row][self.object_name_column][Qt.FontRole] = self.bold_font
             return True
         return super().filter_accepts_row(source_row, source_parent)
 
@@ -3044,15 +2942,6 @@ class ObjectParameterValueProxy(ObjectParameterDefinitionProxy):
             return
         self.object_id_set.difference_update(ids)
         self.invalidate_filter()
-
-    def invalidate_filter(self):
-        super().invalidate_filter()
-        for row_data in self.sourceModel()._aux_data:
-            row_data[self.object_name_column][Qt.FontRole] = None
-        row_count = self.sourceModel().rowCount()
-        top_left = self.sourceModel().index(0, self.object_name_column)
-        bottom_right = self.sourceModel().index(row_count - 1, self.object_name_column)
-        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class RelationshipParameterDefinitionProxy(AutoFilterProxy):
@@ -3080,7 +2969,6 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
             relationship_class_id = self.source_main_data[source_row][self.relationship_class_id_column]
             if relationship_class_id not in self.relationship_class_id_set:
                 return False
-            self.source_aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
             return True
         if self.object_class_id_set:
             object_class_id_list = self.source_main_data[source_row][self.object_class_id_list_column]
@@ -3088,7 +2976,6 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
                 return False  # NOTE: This shouldn't happen
             if self.object_class_id_set.isdisjoint([int(x) for x in object_class_id_list.split(",")]):
                 return False
-            self.source_aux_data[source_row][self.relationship_class_name_column][Qt.FontRole] = self.bold_font
             return True
         return self.default
 
@@ -3131,12 +3018,6 @@ class RelationshipParameterDefinitionProxy(AutoFilterProxy):
     def invalidate_filter(self):
         self.filter_is_valid = False
         self.clear_autofilter()
-        for row_data in self.sourceModel()._aux_data:
-            row_data[self.relationship_class_name_column][Qt.FontRole] = None
-        row_count = self.sourceModel().rowCount()
-        top_left = self.sourceModel().index(0, self.relationship_class_name_column)
-        bottom_right = self.sourceModel().index(row_count - 1, self.relationship_class_name_column)
-        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
@@ -3162,13 +3043,11 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
             object_id_list = self.source_main_data[source_row][self.object_id_list_column]
             if object_id_list not in self.object_id_list_set:
                 return False
-            self.source_aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
             return True
         if self.object_id_set:
             object_id_list = self.source_main_data[source_row][self.object_id_list_column]
             if not self.object_id_set.intersection(int(x) for x in object_id_list.split(",")):
                 return False
-            self.source_aux_data[source_row][self.object_name_list_column][Qt.FontRole] = self.bold_font
             return True
         return super().filter_accepts_row(source_row, source_parent)
 
@@ -3207,15 +3086,6 @@ class RelationshipParameterValueProxy(RelationshipParameterDefinitionProxy):
             return
         self.object_id_list_set.difference_update(id_lists)
         self.invalidate_filter()
-
-    def invalidate_filter(self):
-        super().invalidate_filter()
-        for row_data in self.sourceModel()._aux_data:
-            row_data[self.object_name_list_column][Qt.FontRole] = None
-        row_count = self.sourceModel().rowCount()
-        top_left = self.sourceModel().index(0, self.object_name_list_column)
-        bottom_right = self.sourceModel().index(row_count - 1, self.object_name_list_column)
-        self.sourceModel().dataChanged.emit(top_left, bottom_right, [Qt.FontRole])
 
 
 class JSONModel(MinimalTableModel):
