@@ -31,7 +31,7 @@ from PySide2.QtCore import Qt, QModelIndex, Signal, QItemSelectionModel, Slot, \
 from PySide2.QtGui import QStandardItemModel, QKeySequence, QDropEvent
 from ui.tabular_view_form import Ui_MainWindow
 
-from tabularview_models import PivotTableSortFilterProxy, PivotTableModel, PivotModel, QPivotTableModel
+from tabularview_models import PivotTableSortFilterProxy, PivotTableModel, PivotModel
 from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError 
 import json
 import operator
@@ -45,6 +45,8 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
+    
+ParameterValue = namedtuple('ParameterValue',['id','has_value','has_json'])
 
 # constant strings
 RELATIONSHIP_CLASS = "relationship"
@@ -68,43 +70,6 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
     else:
         return itemgetter_func
 
-
-def get_relationshipclass_json(db_map, name, field):
-    # get parameter data
-    query = db_map.relationship_parameter_value_list()
-    query = query.filter(literal_column("relationship_class_name") == name)
-    
-    data = query.all()
-    data_dict = {(r.object_id_list, r.parameter_id, r.index): r.id for r in data}
-    if field == DATA_JSON:
-        data = [[d.object_name_list, d.parameter_name, d.index, d.json] for d in data if d.json]
-        data = unpack_json(data)
-        labels = [PARAMETER_NAME, INDEX_NAME, JSON_TIME_NAME]
-        label_types = [str, int, int]
-    elif  field == DATA_VALUE:
-        data = query.all()
-        
-        data = [[d.object_name_list, d.parameter_name, d.index, d.value] for d in data if d.value]
-        labels = [PARAMETER_NAME, INDEX_NAME]
-        label_types = [str, int]
-    data = [d[0].split(",") + d[1:] for d in data]
-    
-    rel_class = db_map.relationship_class_list().\
-        add_column(db_map.ObjectClass.name.label('object_class_name')).\
-        filter(db_map.ObjectClass.id == db_map.RelationshipClass.object_class_id,
-               db_map.RelationshipClass.name == name).\
-        order_by(db_map.RelationshipClass.dimension).all()
-    obj_class_names = [x.object_class_name for x in rel_class]
-    org_names = [x.object_class_name for x in rel_class]
-    obj_class_names = make_names_unique(obj_class_names)
-    org_names = {new_name: org_name for new_name, org_name in zip(obj_class_names, org_names)}
-    index_types = [str for _ in range(len(obj_class_names))]
-    index_types = index_types + label_types
-    index_names = obj_class_names + labels
-
-    return data, index_names, index_types, data_dict, org_names
-
-
 def unpack_json(data):
     expanded_data = []
     for d in data:
@@ -113,32 +78,6 @@ def unpack_json(data):
         new_data = [a + [b, c] for a, b, c in zip([d[:-1]]*len(json_array), json_index, json_array)]
         expanded_data = expanded_data + new_data
     return expanded_data
-
-
-def get_object_class_parameter_values(db_map, class_name, field):
-    query = db_map.parameter_value_list().\
-        add_column(db_map.Parameter.name.label("parameter_name")).\
-        add_column(db_map.ObjectClass.name.label("object_class_name")).\
-        add_column(db_map.Object.name.label("object_name")).\
-        join(db_map.Parameter, db_map.ObjectClass).\
-        filter(db_map.ParameterValue.object_id != None,
-               db_map.ParameterValue.object_id == db_map.Object.id,
-               db_map.ObjectClass.name == class_name)
-    data = []
-    if field == DATA_VALUE:
-        data = query.filter(db_map.ParameterValue.value != None).all()
-        index_names = [class_name, PARAMETER_NAME, INDEX_NAME]
-        index_types = [str, str, int]
-        data_dict = {(d.object_id, d.parameter_id, d.index): d.id for d in data}
-        data = [[d.object_name, d.parameter_name, d.index, d.value] for d in data if d.value]
-    elif field == DATA_JSON:
-        data = query.filter(db_map.ParameterValue.json != None).all()
-        index_names = [class_name, PARAMETER_NAME, INDEX_NAME, JSON_TIME_NAME]
-        index_types = [str, str, int, int]
-        data_dict = {(d.object_id, d.parameter_id, d.index): d.id for d in data}
-        data = [[d.object_name, d.parameter_name, d.index, d.json] for d in data if d.json]
-        data = unpack_json(data)
-    return data, index_names, index_types, data_dict
 
 # TODO: change use of this function to existing in helpers or move to helpers
 def make_names_unique(names):
@@ -261,7 +200,7 @@ class TabularViewForm(QMainWindow):
         self.object_classes = []
         self.objects = []
         self.parameters = []
-        self.relationship_tuple_key = None
+        self.relationship_tuple_key = ()
         self.original_index_names = {}
         self.filter = []
         
@@ -269,7 +208,7 @@ class TabularViewForm(QMainWindow):
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
 
-        self.update_class_list()
+        
         self.ui.comboBox_value_type.addItems([DATA_VALUE, DATA_JSON, DATA_SET])
 
         # set allowed drop for pivot index lists
@@ -279,22 +218,22 @@ class TabularViewForm(QMainWindow):
 
         # pivot model and filterproxy
         self.proxy_model = PivotTableSortFilterProxy()
-        self.model = QPivotTableModel()
+        self.model = PivotTableModel()
         self.proxy_model.setSourceModel(self.model)
         self.ui.pivot_table.setModel(self.proxy_model)
 
         # context menu for pivot_table
         self.rcMenu=QMenu(self.ui.pivot_table)
-        delete_row = self.rcMenu.addAction('Delete rows')
-        delete_col = self.rcMenu.addAction('Delete columns')
-        self.delete_index_action = self.rcMenu.addAction('Delete columns')
+        delete_values = self.rcMenu.addAction('Delete selected values')
+        restore_values = self.rcMenu.addAction('Restore selected values')
+        self.delete_index_action = self.rcMenu.addAction('Delete index')
         self.delete_relationship_action = self.rcMenu.addAction('Delete relationships')
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
         
         # connect signals
         self.ui.pivot_table.customContextMenuRequested.connect(self.onRightClick)
-        delete_row.triggered.connect(self.delete_row)
-        delete_col.triggered.connect(self.delete_col)
+        restore_values.triggered.connect(self.restore_values)
+        delete_values.triggered.connect(self.delete_values)
         self.delete_index_action.triggered.connect(self.delete_index_values)
         self.delete_relationship_action.triggered.connect(self.delete_relationship_values)
         self.ui.list_index.afterDrop.connect(self.change_pivot)
@@ -307,13 +246,73 @@ class TabularViewForm(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         
+        # load db data
+        self.load_class_data()
+        
+        self.update_class_list()
+        
         # update models to data
         self.select_data()
     
+    def load_class_data(self):
+        self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}
+        self.relationship_classes = {rc.name: rc for rc in self.db_map.wide_relationship_class_list().all()}
+        self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+        self.objects = {o.name: o for o in self.db_map.object_list().all()}
+    
+    def load_relationships(self):
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            class_id = self.relationship_classes[self.current_class_name].id
+            self.relationships = {tuple(int(i) for i in r.object_id_list.split(",")): r
+                                  for r in self.db_map.wide_relationship_list(class_id = class_id).all()}
+            self.relationship_tuple_key = tuple(self.relationship_classes[self.current_class_name].object_class_name_list.split(','))
+        
+    def load_parameter_values(self):
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            query = self.db_map.relationship_parameter_value_list()
+            query = query.filter(literal_column("relationship_class_name") == self.current_class_name)
+            data = query.all()
+            parameter_values = {(r.object_id_list, r.parameter_id, r.index): ParameterValue(r.id, r.value != None, r.json != None) for r in data}
+            data = [d.object_name_list.split(',') + [d.parameter_name, d.index, getattr(d, self.current_value_type)]
+                    for d in data if getattr(d, self.current_value_type) != None]
+            index_names = self.current_object_class_list()
+            index_types = [str for _ in index_names]
+        else:
+            query = self.db_map.object_parameter_value_list()
+            query = query.filter(literal_column("object_class_name") == self.current_class_name)
+            data = query.all()
+            parameter_values = {(r.object_id, r.parameter_id, r.index): ParameterValue(r.id, r.value != None, r.json != None) for r in data}
+            data = [[d.object_name, d.parameter_name, d.index, getattr(d, self.current_value_type)] 
+                    for d in data if getattr(d, self.current_value_type) != None]
+            index_names = [self.current_class_name]
+            index_types = [str]
+        index_names.extend([PARAMETER_NAME, INDEX_NAME])
+        index_types.extend([str, int])
+        if self.current_value_type == DATA_JSON:
+            data = unpack_json(data)
+            index_names = index_names + [JSON_TIME_NAME]
+            index_types = index_types + [int]
+        return data, index_names, index_types, parameter_values
+    
+    def current_object_class_list(self):
+        return self.relationship_classes[self.current_class_name].object_class_name_list.split(',')
+    
+    def get_set_data(self):
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            data = [r.object_name_list.split(',') + ['x'] for r in self.relationships.values()]
+            index_names = self.current_object_class_list()
+            index_types = [str for _ in index_names]
+        else:
+            data = [[o.name, 'x'] for o in self.objects.values()
+                    if o.class_id == self.object_classes[self.current_class_name].id]
+            index_names = [self.current_class_name]
+            index_types = [str]
+        return data, index_names, index_types
+
     def update_class_list(self):
         """update list_select_class with all object classes and relationship classes""" 
-        oc = sorted(set([OBJECT_CLASS + ': ' + oc.name for oc in self.db_map.object_class_list().all()]))
-        rc = sorted(set([RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.db_map.wide_relationship_class_list().all()]))
+        oc = sorted(set([OBJECT_CLASS + ': ' + oc.name for oc in self.object_classes.values()]))
+        rc = sorted(set([RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.relationship_classes.values()]))
         self.ui.list_select_class.addItems(oc + rc)
         self.ui.list_select_class.setCurrentItem(self.ui.list_select_class.item(0))
     
@@ -359,20 +358,21 @@ class TabularViewForm(QMainWindow):
             return text[0], text[1]
         return None, None
 
+    
     def pack_dict_json(self):
         """Pack down values with json_index into a json_array"""
         # TODO: can this be made a bit faster?
         # pack last index of dict to json
-        if not self.model._edit_data and not self.model._data_deleted:
+        if not self.model.model._edit_data and not self.model.model._deleted_data:
             return {}, set()
         # extract edited keys without time index
-        edited_keys = set(k[:-1] for k in self.model._edit_data)
-        edited_keys.update(set(k[:-1] for k in self.model._data_deleted))
+        edited_keys = set(k[:-1] for k in self.model.model._edit_data.keys())
+        edited_keys.update(set(k[:-1] for k in self.model.model._deleted_data.keys()))
         # find data for edited keys.
         edited_data = {k:[] for k in edited_keys}
-        for k in self.model._data:
+        for k in self.model.model._data:
             if k[:-1] in edited_data:
-                edited_data[k[:-1]].append([k[-1] ,self.model._data[k]])
+                edited_data[k[:-1]].append([k[-1] ,self.model.model._data[k]])
         # pack into json
         keyfunc = operator.itemgetter(0)
         packed_data = {}
@@ -397,45 +397,41 @@ class TabularViewForm(QMainWindow):
                     
         return packed_data, empty_keys
 
-    def delete_object_parameter_values(self, delete_values):
-        if not delete_values:
-            return
+    def delete_parameter_values(self, delete_values):
         delete_ids = set()
-        for k in delete_values:
-            if k[0] in self.objects and k[1] in self.parameters:
-                obj_id = self.objects[k[0]].id
-                par_id = self.parameters[k[1]].id
-                index = k[2]
-                key = (obj_id, par_id, index)
-                if key in self.parameter_values:
-                    delete_ids.add(self.parameter_values[key])
-                    self.parameter_values.pop(key, None)
+        update_data = []
+        # index to object classes
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            obj_ind = range(len(self.current_object_class_list()))
+        else:
+            obj_ind = [0]
+        par_ind = len(obj_ind)
+        index_ind = par_ind + 1
+        for k in delete_values.keys():
+            obj_id = tuple(self.objects[k[i]].id for i in obj_ind)
+            if self.current_class_type == OBJECT_CLASS:
+                obj_id = obj_id[0]
+            else:
+                obj_id = ",".join(map(str,obj_id))
+            par_id = self.parameters[k[par_ind]].id
+            index = k[index_ind]
+            key = (obj_id, par_id, index)
+            if key in self.parameter_values:
+                if ((self.current_value_type == DATA_JSON and not self.parameter_values[key].has_value)
+                    or (self.current_value_type == DATA_VALUE and not self.parameter_values[key].has_json)):
+                    # only delete values where only one field is populated
+                    delete_ids.add(self.parameter_values[key].id)
+                else:
+                    # remove value from parameter_value field but not entire row
+                    update_data.append({"id": self.parameter_values[key].id, self.current_value_type: None})
         if delete_ids:
             self.db_map.remove_items(parameter_value_ids = delete_ids)
-    
-    def delete_relationship_parameter_values(self, delete_values):
-        if not delete_values:
-            return
-        num_classes = len(self.relationship_class)
-        delete_ids = set()
-        for k in delete_values:
-            if all(k[i] in self.objects for i in range(num_classes)) and k[num_classes] in self.parameters:
-                obj_ids = tuple(self.objects[k[i]].id for i in range(num_classes))
-                obj_ids = ",".join(map(str,obj_ids))
-                par_id = self.parameters[k[num_classes]].id
-                index = k[num_classes+1]
-                key = (obj_ids, par_id, index)
-                if key in self.parameter_values:
-                    delete_ids.add(self.parameter_values[key])
-                    self.parameter_values.pop(key, None)
-        if delete_ids:
-            self.db_map.remove_items(parameter_value_ids = delete_ids)
+        if update_data:
+            self.db_map.update_parameter_values(*update_data)
 
-    def delete_relationships(self):
-        if not self.relationship_tuple_key in self.model.deleted_tuple_index_entries:
-            return
+    def delete_relationships(self, delete_relationships):
         delete_ids = set()
-        for del_rel in self.model.deleted_tuple_index_entries[self.relationship_tuple_key]:
+        for del_rel in delete_relationships:
             if all(n in self.objects for n in del_rel):
                 obj_ids = tuple(self.objects[n].id for n in del_rel)
                 if obj_ids in self.relationships:
@@ -471,192 +467,177 @@ class TabularViewForm(QMainWindow):
         if delete_par_ids:
             self.db_map.remove_items(parameter_ids=delete_par_ids)
 
+    
     def add_index_values_to_db(self, add_indexes):
-        if not add_indexes:
-            return
-        class_type = self.current_class_type
+        db_edited = False
+        if not any(v for v in add_indexes.values()):
+            return db_edited
         new_objects = []
         new_parameters = []
         #TODO: identify parameter and index and json time dimensions some other way.
         for k, on in add_indexes.items():
-            if len(k) != 1:
-                continue
-            k = k[0]
             if k == PARAMETER_NAME:
-                if class_type == OBJECT_CLASS:
-                    class_id = next(iter(self.object_classes.values())).id
-                    new_parameters += [{"name": n[0], "object_class_id": class_id} for n in on]
+                if self.current_class_type == OBJECT_CLASS:
+                    class_id = self.object_classes[self.current_class_name].id
+                    new_parameters += [{"name": n, "object_class_id": class_id} for n in on]
                 else:
-                    new_parameters += [{"name": n[0], "relationship_class_id": self.relationship_class[0].id} for n in on]
+                    new_parameters += [{"name": n, "relationship_class_id": self.relationship_classes[self.current_class_name].id} for n in on]
             elif k not in [INDEX_NAME, JSON_TIME_NAME]:
-                new_objects += [{"name": n[0], "class_id": self.object_classes[self.original_index_names[k]].id} for n in on]
+                new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
             new_objects = self.db_map.add_objects(*new_objects)
-            new_objects = {o.name: o for o in new_objects}
-            self.objects = {**self.objects, **new_objects}
+            db_edited = True
         if new_parameters:
             new_parameters = self.db_map.add_parameters(*new_parameters)
-            new_parameters = {o.name: o for o in new_parameters}
-            self.parameters = {**self.parameters, **new_parameters}
+            db_edited = True
+        return db_edited
 
     def save_model_set(self):
-        class_type = self.current_class_type
-        if class_type == RELATIONSHIP_CLASS:
-            data_relationships = set(self.model._data.keys())
+        db_edited = False
+        if self.current_class_type == RELATIONSHIP_CLASS:
             # find all objects and insert new into db for each class in relationship
+            rel_getter = operator.itemgetter(*range(len(self.current_object_class_list())))
+            add_relationships = set(rel_getter(index) for index, value in self.model.model._edit_data.items() if value == None)
+            delete_relationships = set(rel_getter(index) for index, value in self.model.model._deleted_data.items())
+            self.current_object_class_list()
             add_objects = []
-            for i, rc in enumerate(self.relationship_class):
-                db_objects = set(o.name for o in self.objects.values() if o.class_id == rc.object_class_id)
-                data_objects = set(objects[i] for objects in data_relationships)
-                add = data_objects.difference(db_objects)
-                add_objects = add_objects + [{"name": o, "class_id": rc.object_class_id} for o in add]
+            for i, name in enumerate(self.current_object_class_list()):
+                #only keep objects that has a relationship
+                new = self.model.model._added_index_entries[name]
+                new_data_set = set(r[i] for r in add_relationships)
+                new = [n for n in new if n in new_data_set]
+                add_objects.extend([{'name': n, 'class_id': self.object_classes[name].id} for n in new])
             if add_objects:
-                new_objects = self.db_map.add_objects(*add_objects)
-                new_objects = {o.name: o for o in new_objects}
-                self.objects = {**self.objects, **new_objects}
-            data_relationships = {tuple(self.objects[o].id for o in objects): objects for objects in data_relationships}
-            db_relationships = set(self.relationships.keys())
-            delete_relationships = db_relationships.difference(set(data_relationships.keys()))
-            add_relationships = set(data_relationships.keys()).difference(db_relationships)
+                self.db_map.add_objects(*add_objects)
+                self.objects = {o.name: o for o in self.db_map.object_list().all()}
             if delete_relationships:
-                delete_ids = set(self.relationships[r].id for r in delete_relationships)
-                for r in delete_relationships:
+                ids = [tuple(self.objects[i].id for i in rel) for rel in delete_relationships]
+                delete_ids = set(self.relationships[r].id for r in ids if r in self.relationships)
+                for r in delete_ids:
                     self.relationships.pop(r, None)
-                self.db_map.remove_items(relationship_ids=delete_ids)
+                if delete_ids:
+                    self.db_map.remove_items(relationship_ids=delete_ids)
             if add_relationships:
-                insert_rels = []
-                for ids in add_relationships:
-                    name = '_'.join(data_relationships[ids])
-                    insert_rels.append({'object_id_list': ids, 'name': name, 'class_id': self.relationship_class[0].id})
-                new_rels = self.db_map.add_wide_relationships(*insert_rels)
-                new_rels = {tuple(int(i) for i in r.object_id_list.split(",")): r for r in new_rels.all()}
-                self.relationships = {**self.relationships, **new_rels}
-            
-        elif class_type == OBJECT_CLASS:
-            # find removed and new objects
-            data_objects = set(o[0] for o in self.model._data.keys())
-            db_objects = set(self.objects.keys())
-            delete_objects = db_objects.difference(data_objects)
-            add_objects = data_objects.difference(db_objects)
+                ids = [(tuple(self.objects[i].id for i in rel),'_'.join(rel))
+                       for rel in delete_relationships]
+                c_id = self.relationship_classes[self.current_class_name].id
+                insert_rels = [{'object_id_list': r[0], 'name': r[1], 'class_id': c_id}
+                               for r in ids if r not in self.relationships]
+                if insert_rels:
+                    self.db_map.add_wide_relationships(*insert_rels)
+                    db_edited = True
+        elif self.current_class_type == OBJECT_CLASS:
+            # find removed and new objects, only keep indexes in data
+            delete_objects = set(index[0] for index in self.model.model._deleted_data.keys())
+            add_objects = set(index[0] for index, value in self.model.model._edit_data.items() if value == None)
             if delete_objects:
                 delete_ids = set(self.objects[name].id for name in delete_objects)
-                for o in delete_objects:
-                    self.objects.pop(o, None)
                 self.db_map.remove_items(object_ids=delete_ids)
+                db_edited = True
             if add_objects:
-                class_id = next(iter(self.object_classes.values())).id
+                class_id = self.object_classes[self.current_class_name].id
                 add_objects = [{"name": o, "class_id": class_id} for o in add_objects]
-                new_objects = self.db_map.add_objects(*add_objects)
-                new_objects = {o.name: o for o in new_objects}
-                self.objects = {**self.objects, **new_objects}
-        self.model._edit_data = {}
-
+                self.db_map.add_objects(*add_objects)
+                db_edited = True
+        return db_edited
+    
     def save_model(self):
-        parameter_type = self.current_value_type
-        class_type = self.current_class_type
-        if parameter_type == DATA_SET:
-            self.save_model_set()
-            return
-        # delete and add new index values
-        delete_indexes = self.model.deleted_index_entries
-        add_indexes = self.model.added_tuple_index_entries
-        self.delete_index_values_from_db(delete_indexes)
-        self.add_index_values_to_db(add_indexes)
-        # get data from model
-        if parameter_type == DATA_VALUE:
-            delete_values = self.model._data_deleted
-            data = self.model._edit_data
-            data_value = self.model._data
-        elif parameter_type == DATA_JSON:
-            data_value, delete_values = self.pack_dict_json()
-            data = data_value
-        #save and delete values
-        if class_type == OBJECT_CLASS:
-            self.delete_object_parameter_values(delete_values)
-            self.save_object_parameter_values( data, data_value, parameter_type)
+        if self.current_value_type == DATA_SET:
+            db_edited = self.save_model_set()
+            delete_indexes = self.model.model._deleted_index_entries
+            obj_edited = self.delete_index_values_from_db(delete_indexes)
+            db_edited = db_edited or obj_edited
         else:
-            self.delete_relationships()
-            self.delete_relationship_parameter_values(delete_values)
-            self.save_relationships()
-            self.save_relationship_parameter_values(data, data_value, parameter_type)
-        #update model
-        self.model._edit_data = {}
-        self.model._data_deleted = set()
+            # save new objects and parameters
+            add_indexes = self.model.model._added_index_entries
+            obj_edited = self.add_index_values_to_db(add_indexes)
+            if obj_edited:
+                self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+                self.objects = {o.name: o for o in self.db_map.object_list().all()}
+            
+            if self.current_value_type == DATA_VALUE:
+                delete_values = self.model.model._deleted_data
+                data = self.model.model._edit_data
+                data_value = self.model.model._data
+            elif self.current_value_type == DATA_JSON:
+                data_value, delete_values = self.pack_dict_json()
+                delete_values = {k:None for k in delete_values}
+                data = data_value
+            # delete values
+            self.delete_parameter_values(delete_values)
+            
+            if self.current_class_type == RELATIONSHIP_CLASS:
+                # add and remove relationships
+                if self.relationship_tuple_key in self.model.model._deleted_tuple_index_entries:
+                    delete_relationships = self.model.model._deleted_tuple_index_entries[self.relationship_tuple_key]
+                    self.delete_relationships(delete_relationships)
+                rel_edited = self.save_relationships()
+                if rel_edited:
+                    self.load_relationships()
+            # save parameter values
+            self.save_parameter_values(data, data_value)
+            # delete objects and parameters
+            delete_indexes = self.model.model._deleted_index_entries
+            db_edited = self.delete_index_values_from_db(delete_indexes)
+            
+        # update model
+        self.model.model.clear_track_data()
+        # reload classes, objects and parameters
+        if db_edited:
+            self.load_class_data()
 
-    def save_object_parameter_values(self, data, data_value, parameter_type):
+    def save_parameter_values(self, data, data_value):
         new_data = []
         update_data = []
-        # edited data, updated and new
+        # index to object classes
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            obj_ind = range(len(self.current_object_class_list()))
+            id_field = "relationship_id"
+        else:
+            obj_ind = [0]
+            id_field = "object_id"
+        par_ind = len(obj_ind)
+        index_ind = par_ind + 1
         for k in data.keys():
-            obj_id = self.objects[k[0]].id
-            par_id = self.parameters[k[1]].id
-            index = k[2]
+            obj_id = tuple(self.objects[k[i]].id for i in obj_ind)
+            par_id = self.parameters[k[par_ind]].id
+            index = k[index_ind]
+            db_id = None
+            if self.current_class_type == RELATIONSHIP_CLASS:
+                if obj_id in self.relationships:
+                    db_id = self.relationships[obj_id].id
+                obj_id = ",".join(map(str,obj_id))
+            else:
+                obj_id = obj_id[0]
+                db_id = obj_id
             key = (obj_id, par_id, index)
             if key in self.parameter_values:
-                value_id = self.parameter_values[key]
-                update_data.append({"id": value_id, parameter_type: data_value[k]})
-            else:
-                new_data.append({"object_id": obj_id,"parameter_id": par_id, parameter_type: data_value[k]})
+                value_id = self.parameter_values[key].id
+                update_data.append({"id": value_id, self.current_value_type: data_value[k]})
+            elif db_id:
+                new_data.append({id_field: db_id, "parameter_id": par_id,
+                                 self.current_value_type: data_value[k]})
         if new_data:
-            new_parameter_values = self.db_map.add_parameter_values(*new_data)
-            new_parameter_values = {(d.object_id, d.parameter_id, d.index): d.id for d in new_parameter_values}
-            self.parameter_values = {**self.parameter_values, **new_parameter_values}
+            self.db_map.add_parameter_values(*new_data)
         if update_data:
             self.db_map.update_parameter_values(*update_data)
 
     def save_relationships(self):
         new_rels = []
-        added_rels = set()
-        if self.relationship_tuple_key in self.model.added_tuple_index_entries:
+        db_edited = False
+        if self.relationship_tuple_key in self.model.model._added_tuple_index_entries:
             # relationships added by tuple
-            rels = self.model.added_tuple_index_entries[self.relationship_tuple_key]
+            rels = self.model.model._added_tuple_index_entries[self.relationship_tuple_key]
             for rel in rels:
                 if all(n in self.objects for n in rel):
                     obj_ids = tuple(self.objects[n].id for n in rel)
                     if obj_ids not in self.relationships:
-                        added_rels.add(obj_ids)
-                        new_rels.append({'object_id_list': obj_ids, 'class_id': self.relationship_class[0].id, 'name': '_'.join(rel)})
-        # relationships added by data
-        indexes = tuple(self.model._index_ind[n] for n in self.relationship_tuple_key)
-        getter = tuple_itemgetter(operator.itemgetter(*indexes), len(indexes))
-        for keys in self.model._edit_data.keys():
-            rel = getter(keys)
-            if all(n in self.objects for n in rel):
-                obj_ids = tuple(self.objects[n].id for n in rel)
-                if obj_ids not in added_rels and obj_ids not in self.relationships:
-                    new_rels.append({'object_id_list': obj_ids, 'class_id': self.relationship_class[0].id, 'name': '_'.join(rel)})
+                        new_rels.append({'object_id_list': obj_ids, 'class_id': self.relationship_classes[self.current_class_name].id, 'name': '_'.join(rel)})
         # save relationships
         if new_rels:
-            new_rels = self.db_map.add_wide_relationships(*new_rels)
-            new_rels = {tuple(int(i) for i in r.object_id_list.split(",")): r for r in new_rels.all()}
-            self.relationships = {**self.relationships, **new_rels}
-
-    def save_relationship_parameter_values(self, data, data_value, parameter_type):
-        num_classes = len(self.relationship_class)
-        new_data = []
-        update_data = []
-        rel_id_dict = {}
-        # edited data, updated and new
-        for k in data.keys():
-            if all(k[i] in self.objects for i in range(num_classes)):
-                obj_ids = tuple(self.objects[k[i]].id for i in range(num_classes))
-                par_id = self.parameters[k[num_classes]].id
-                index = k[num_classes+1]
-                key = (",".join(map(str,obj_ids)), par_id, index)
-                if obj_ids in self.relationships:
-                    rel_id = self.relationships[obj_ids].id
-                    rel_id_dict[rel_id] = ",".join(map(str,obj_ids))
-                    if key in self.parameter_values:
-                        value_id = self.parameter_values[key]
-                        update_data.append({"id": value_id, parameter_type: data_value[k]})
-                    else:
-                        new_data.append({"relationship_id": rel_id,"parameter_id": par_id, parameter_type: data_value[k]})
-        if new_data:
-            new_parameter_values = self.db_map.add_parameter_values(*new_data)
-            new_parameter_values = {(rel_id_dict[r.relationship_id], r.parameter_id, r.index): r.id for r in new_parameter_values}
-            self.parameter_values = {**self.parameter_values, **new_parameter_values}
-        if update_data:
-            self.db_map.update_parameter_values(*update_data)
+            self.db_map.add_wide_relationships(*new_rels)
+            db_edited = True
+        return db_edited
 
     def update_filters_to_new_model(self):
         new_names = list(self.model.model.index_entries)
@@ -709,101 +690,88 @@ class TabularViewForm(QMainWindow):
             self.ui.table_frozen.selectionModel().blockSignals(False)
     
     def change_class(self):
-        #self.save_model()
+        self.save_model()
         self.select_data()
+    
+    def get_pivot_preferences(self, selection_key, index_names):
+        if selection_key in self.class_pivot_preferences:
+            # get previously used pivot
+            rows = self.class_pivot_preferences[selection_key].index
+            columns = self.class_pivot_preferences[selection_key].columns
+            frozen = self.class_pivot_preferences[selection_key].frozen
+            frozen_value = self.class_pivot_preferences[selection_key].frozen_value
+        else:
+            # use default pivot
+            rows = [n for n in index_names if n not in [PARAMETER_NAME, INDEX_NAME]]
+            columns = [PARAMETER_NAME] if PARAMETER_NAME in index_names else []
+            frozen = [INDEX_NAME] if INDEX_NAME in index_names else []
+            frozen_value = (1,) if frozen else ()
+        return rows, columns, frozen, frozen_value
+    
+    def get_valid_entries_dicts(self):
+        tuple_entries = {}
+        used_index_entries = {}
+        valid_index_values = {INDEX_NAME: range(1,9999999), JSON_TIME_NAME: range(1,9999999)}
+        used_index_entries[(PARAMETER_NAME,)] = set(p.name for p in self.parameters.values())
+        index_entries = {}
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            object_class_names = tuple(self.relationship_classes[self.current_class_name].object_class_name_list.split(','))
+            used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
+            index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.relationship_class_id == self.relationship_classes[self.current_class_name].id)
+            for oc in object_class_names:
+                index_entries[oc] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id)
+            tuple_entries[tuple(make_names_unique(object_class_names))] = set(tuple(r.object_name_list.split(',')) for r in self.relationships.values())
+        else:
+            used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
+            index_entries[self.current_class_name] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id)
+            index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.object_class_id == self.object_classes[self.current_class_name].id)
+        
+        return index_entries, tuple_entries, valid_index_values, used_index_entries
 
     def select_data(self, text = ""):
         class_type, class_name = self.get_selected_class()
         self.current_class_type = class_type
         self.current_class_name = class_name
         self.current_value_type = self.ui.comboBox_value_type.currentText()
-        if not class_type or not class_name or not self.current_value_type:
-            return
-        valid_index_values = {}
-        valid_index_values[INDEX_NAME] = range(1,9999999)
-        valid_index_values[JSON_TIME_NAME] = range(1,9999999)
-        tuple_entries = {}
-        self.original_index_names = {}
-        self.relationship_tuple_key = None
-        if class_type == OBJECT_CLASS:
-            # get object class data
-            self.relationship_class = None
-            self.relationships = None
-            oc = self.db_map.single_object_class(name = class_name).first()
-            self.object_classes = {oc.name: oc}
-            self.objects = {o.name: o for o in self.db_map.object_list(class_id = oc.id).all()}
-            if self.current_value_type == DATA_SET:
-                index_names = [class_name]
-                index_types = [str]
-                data = [[o.name, 'x'] for o in self.objects.values()]
-                data_dict = {}
-                self.parameters = {}
-            else:
-                self.parameters = {p.name: p for p in self.db_map.parameter_list(object_class_id = oc.id).all()}
-                tuple_entries[(class_name,)] = set((o.name,) for o in self.objects.values())
-                tuple_entries[(PARAMETER_NAME,)] = set((p.name,) for p in self.parameters.values())
-                data, index_names, index_types, data_dict = get_object_class_parameter_values(self.db_map, class_name, self.current_value_type)
-            self.original_index_names = {n: n for n in index_names}
-        elif class_type == RELATIONSHIP_CLASS:
-            # get relationship class data
-            self.relationship_class = self.db_map.relationship_class_list().filter(self.db_map.RelationshipClass.name == class_name).order_by(self.db_map.RelationshipClass.dimension).all()
-            self.relationships = {tuple(int(i) for i in r.object_id_list.split(",")): r for r in self.db_map.wide_relationship_list(class_id = self.relationship_class[0].id).all()}
-            self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().filter(self.db_map.ObjectClass.id.in_(r.object_class_id for r in self.relationship_class)).all()}
-            if self.current_value_type == DATA_SET:
-                oc_id_2_name = {oc.id: oc.name for oc in self.object_classes.values()}
-                index_names = [oc_id_2_name[rc.object_class_id] for rc in self.relationship_class]
-                self.original_index_names = index_names
-                index_names = make_names_unique(index_names)
-                index_types = [str for _ in index_names]
-                self.relationship_tuple_key = tuple(index_names[:len(self.relationship_class)])
-                data = [r.object_name_list.split(',') + ['x'] for r in self.relationships.values()]
-                data_dict = {}
-                self.parameters = {}
-                self.objects = {}
-                for oc in self.object_classes.values():
-                    objects = {o.name: o for o in self.db_map.object_list(class_id = oc.id).all()}
-                    self.objects = {**self.objects, **objects}
-                    tuple_entries[(oc.name,)] = set((o.name,) for o in objects.values())
-            else:
-                self.parameters = {p.name: p for p in self.db_map.parameter_list(relationship_class_id = self.relationship_class[0].id).all()}
-                tuple_entries[(PARAMETER_NAME,)] = set((p.name,) for p in self.parameters.values())
-                data, index_names, index_types, data_dict, org_names = get_relationshipclass_json(self.db_map, class_name, self.current_value_type)
-                self.relationship_tuple_key = tuple(index_names[:len(self.relationship_class)])
-                self.original_index_names = org_names
-                tuple_entries[self.relationship_tuple_key] = set(tuple(r.object_name_list.split(",")) for r in self.relationships.values())
-                self.objects = {}
-                for oc in self.object_classes.values():
-                    objects = {o.name: o for o in self.db_map.object_list(class_id = oc.id).all()}
-                    self.objects = {**self.objects, **objects}
-            
-        self.parameter_values = data_dict
-        selection_key = (self.current_class_name, self.current_class_type, self.current_value_type)
-        if selection_key in self.class_pivot_preferences:
-            # get previously used pivot
-            index = self.class_pivot_preferences[selection_key].index
-            columns = self.class_pivot_preferences[selection_key].columns
-            frozen = self.class_pivot_preferences[selection_key].frozen
-            frozen_value = self.class_pivot_preferences[selection_key].frozen_value
+        self.load_relationships()
+        index_entries, tuple_entries, valid_index_values, used_index_entries = self.get_valid_entries_dicts()
+        if self.current_value_type == DATA_SET:
+            data, index_names, index_types = self.get_set_data()
+            tuple_entries = {}
+            valid_index_values = {}
+            index_entries.pop(PARAMETER_NAME, None)
         else:
-            # use default pivot
-            index = [n for n in index_names if n not in [PARAMETER_NAME, INDEX_NAME]]
-            columns = [PARAMETER_NAME] if PARAMETER_NAME in index_names else []
-            frozen = [INDEX_NAME] if INDEX_NAME in index_names else []
-            frozen_value = (1,) if frozen else ()
+            data, index_names, index_types, parameter_values = self.load_parameter_values()
+            
+            self.parameter_values = parameter_values
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            self.relationship_tuple_key = tuple(self.current_object_class_list())
+        
+        # make names unique
+        real_names = index_names
+        unique_names = make_names_unique(index_names)
+        self.original_index_names = {u: r for u, r in zip(unique_names, real_names)}
+        # get pivot preference for current selection
+        selection_key = (self.current_class_name, self.current_class_type, self.current_value_type)
+        rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key, unique_names)
         # update model and views
-        self.model.set_data(data, index_names, index_types, index, columns, frozen, frozen_value, valid_index_values, tuple_entries)
+        self.model.set_data(data, unique_names, index_types, rows, columns, 
+                            frozen, frozen_value, index_entries, valid_index_values, tuple_entries, used_index_entries, real_names)
         self.proxy_model.clear_filter()
         self.update_filters_to_new_model()
         self.update_pivot_lists_to_new_model()
         self.update_frozen_table_to_model()
     
-    def delete_row(self):
-        self.proxy_model.delete_row_col(self.ui.pivot_table.selectedIndexes(), "row")
-
-    def delete_col(self):
-        self.proxy_model.delete_row_col(self.ui.pivot_table.selectedIndexes(), "column")
+    def delete_values(self):
+        """deletes selected indexes in pivot_table"""
+        self.proxy_model.delete_values(self.ui.pivot_table.selectedIndexes())
+    
+    def restore_values(self):
+        """restores edited selected indexes in pivot_table"""
+        self.proxy_model.restore_values(self.ui.pivot_table.selectedIndexes())
 
     def delete_index_values(self):
+        """finds selected index items and deletes"""
         indexes = [self.proxy_model.mapToSource(i) for i in self.ui.pivot_table.selectedIndexes()]
         delete_dict = {}
         for i in indexes:
@@ -811,11 +779,11 @@ class TabularViewForm(QMainWindow):
             if self.model.index_in_column_headers(i):
                 value = self.model.data(i)
                 if value:
-                    index_name = self.model.pivot_columns[i.row()]
+                    index_name = self.model.model.pivot_columns[i.row()]
             elif self.model.index_in_row_headers(i):
                 value = self.model.data(i)
                 if value:
-                    index_name = self.model.pivot_index[i.column()]
+                    index_name = self.model.model.pivot_rows[i.column()]
             if index_name:
                 if index_name in delete_dict:
                     delete_dict[index_name].add(value)
@@ -824,10 +792,11 @@ class TabularViewForm(QMainWindow):
         self.model.delete_index_values(delete_dict)
     
     def delete_relationship_values(self):
+        """finds selected relationships deletes"""
         if not self.current_class_type == RELATIONSHIP_CLASS:
             return
         indexes = [self.proxy_model.mapToSource(i) for i in self.ui.pivot_table.selectedIndexes()]
-        pos = [self.model._index_ind[n] for n in self.relationship_tuple_key]
+        pos = [self.model.model.index_names.index(n) for n in self.relationship_tuple_key]
         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
         delete_dict = {self.relationship_tuple_key: set()}
         for i in indexes:
@@ -859,17 +828,17 @@ class TabularViewForm(QMainWindow):
             if self.model.index_in_column_headers(index):
                 value = self.model.data(index)
                 if value:
-                    index_name = self.model.pivot_columns[index.row()]
+                    index_name = self.model.model.pivot_columns[index.row()]
                     self.delete_index_action.setText("Delete {}: {}".format(index_name, value))
                     self.delete_index_action.setEnabled(True)
             elif self.model.index_in_row_headers(index):
                 value = self.model.data(index)
                 if value:
-                    index_name = self.model.pivot_index[index.column()]
+                    index_name = self.model.model.pivot_rows[index.column()]
                     self.delete_index_action.setText("Delete {}: {}".format(index_name, value))
                     self.delete_index_action.setEnabled(True)
             if class_type == RELATIONSHIP_CLASS and (self.model.index_in_column_headers(index) or self.model.index_in_row_headers(index)):
-                pos = [self.model._index_ind[n] for n in self.relationship_tuple_key]
+                pos = [self.model.model.index_names.index(n) for n in self.relationship_tuple_key]
                 getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                 key = self.model.get_key(index)
                 key = getter(key)
