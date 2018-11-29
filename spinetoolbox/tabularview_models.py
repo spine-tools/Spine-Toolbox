@@ -34,7 +34,7 @@ class PivotModel():
     _edit_data = {} # dictionary of edited data, values are original data
     _deleted_data = {} # dictionary of deleted data, values are original data
     _data_frozen = {} # data filtered with frozen_value
-    _data_frozen_index_values = set() # valid frozen_value values for current pivot_frozen
+    #_data_frozen_index_values = set() # valid frozen_value values for current pivot_frozen
     _index_types = () # type of the indexes in _data
     index_names = () # names of the indexes in _data, can not contain duplicates
     index_real_names = () # real names of indexes, can contain duplicates
@@ -47,13 +47,13 @@ class PivotModel():
     _column_data_header = [] # header valus for column data
     _row_data_header_set = set() # set of _row_data_header
     _column_data_header_set = set() # set of _column_data_header
-    _invalid_row = {}
-    _invalid_column = {}
-    _invalid_data = {}
-    _added_index_entries = {}
-    _added_tuple_index_entries = {}
-    _deleted_tuple_index_entries = {}
-    _deleted_index_entries = {}
+    _invalid_row = {} # set of rows that have invalid indexes
+    _invalid_column = {} # set of columns that have invalid indexes
+    _invalid_data = {} # dictionary of invalid data
+    _added_index_entries = {} # added index entries
+    _added_tuple_index_entries = {} # added tuple index entries
+    _deleted_tuple_index_entries = {} # deleted tuple index entries
+    _deleted_index_entries = {} # deleted index_entries
     _used_index_values = {}
     _unique_name_2_name = {}
 
@@ -61,6 +61,15 @@ class PivotModel():
     # if set/range is empty or index doesn't exist in valid_index_values
     # then all values are valid
     _valid_index_values = {}
+    
+    def clear_track_data(self):
+        """clears data that is tracked"""
+        self._edit_data = {}
+        self._deleted_data = {}
+        self._added_index_entries = {}
+        self._added_tuple_index_entries = {}
+        self._deleted_tuple_index_entries = {}
+        self._deleted_index_entries = {}
     
     def set_new_data(self, data, index_names, index_type, rows=(), columns=(),
                      frozen=(), frozen_value=() , index_entries={}, valid_index_values={}, 
@@ -105,8 +114,6 @@ class PivotModel():
         self._unique_name_2_name = {unique: name for unique, name in zip(index_names, index_real_names)}
 
         self._valid_index_values = valid_index_values
-        self._edit_data = {}
-        self._deleted_data = {}
         self._index_ind = {index: ind for ind, index in enumerate(index_names)}
         
         self.index_names = tuple(index_names)
@@ -121,10 +128,7 @@ class PivotModel():
         
         self.index_entries = {}
         self.tuple_index_entries = {}
-        self._added_index_entries = {}
-        self._added_tuple_index_entries = {}
-        self._deleted_tuple_index_entries = {}
-        self._deleted_index_entries = {}
+        self.clear_track_data()
         self.pivot_rows = tuple(rows)
         self.pivot_columns = tuple(columns)
         self.pivot_frozen = tuple(frozen)
@@ -158,14 +162,16 @@ class PivotModel():
         """checks if given pivot is valid for index_names,
         returns str with error message if invalid else None"""
         error = None
+        if not len(set(index_names)) == len(index_names):
+            error = "'index_names' must contain only unique strings"
         if not all(i in index_names for i in frozen):
-            error = "'frozen' contains values that doesn't match with current 'index_names'"
+            error = "'frozen' contains strings that doesn't match with current 'index_names'"
         if not all(i in index_names for i in rows):
-            error = "'rows' contains values that doesn't match with current 'index_names'"
+            error = "'rows' contains strings that doesn't match with current 'index_names'"
         if not all(c in index_names for c in columns):
-            error = "'columns' contains values that doesn't match with current 'index_names'"
+            error = "'columns' contains strings that doesn't match with current 'index_names'"
         if len(set(rows + columns + frozen)) != len(index_names):
-            error = "'rows', 'columns' and 'forzen' must contain all unqiue variables in 'index_names' without duplicates"
+            error = "'rows', 'columns' and 'forzen' must contain all unqiue strings in 'index_names' without duplicates"
         if len(frozen) != len(frozen_value):
             error = "'frozen_value' must be same length as 'frozen'"
         return error
@@ -257,7 +263,7 @@ class PivotModel():
         self._row_data_header.extend(none_rows)
         self._column_data_header.extend(none_columns)
 
-        self._change_index_frozen()
+        #self._change_index_frozen()
         
         # set invalid data to indexes with none in them.
         self._invalid_row = set(i + len_valid_rows for i, key in enumerate(none_rows))
@@ -509,7 +515,7 @@ class PivotModel():
         """Deletes values for given indexes"""
         if not all(i[0] <= len(self.rows) or i[0] < 0 
                    or i[1] <= len(self.columns) or i[1] < 0 for i in indexes):
-            raise ValueError('index must be valid index for row pivot')
+            raise ValueError('indexes must be list of valid index for row pivot')
         # delete values
         for i in indexes:
             if i[0] in self._invalid_row or i[1] in self._invalid_column:
@@ -676,8 +682,8 @@ class PivotModel():
 
         # replace old values with pasted values
         new_indexes = range(replace_to - replace_from)
-        edit_index = [old[0:replace_from] + tuple(data[row][col] for col in new_indexes) + old[replace_to:] 
-                        for row, old in enumerate(edit_index)]
+        edit_index = [old[0:replace_from] + tuple(data[row][col] for col in new_indexes) + old[replace_to:]
+                      for row, old in enumerate(edit_index)]
                 
         # new header values
         new_index = []
@@ -685,7 +691,8 @@ class PivotModel():
             none_tuple = tuple(None for _ in range(len(index_names)))
             before = none_tuple[0:replace_from]
             after = none_tuple[replace_to:]
-            new_index = [before + tuple(data[row][col] for col in new_indexes) + after for row in range(len(edit_index), len(data))]
+            new_index = [before + tuple(data[row][col] for col in new_indexes) + after 
+                         for row in range(len(edit_index), len(data))]
         return edit_index, new_index
 
     def paste_data(self, row_start = 0, row_header_data = [], col_start = 0, col_header_data = [], data = [], row_mask = [], col_mask = []):
@@ -721,7 +728,7 @@ class PivotModel():
             other_index = self._row_data_header
             other_invalid_set = self._invalid_row
             order_getter = operator.itemgetter(*(1,0))
-            order = tuple(self._index_ind[i] for i in self.pivot_columns + self.pivot_rows + self.pivot_frozen)
+            order = tuple(self.index_names.index(i) for i in self.pivot_columns + self.pivot_rows + self.pivot_frozen)
             order = tuple(sorted(range(len(order)),key=order.__getitem__))
             key_getter = operator.itemgetter(*order)
         else:
@@ -738,7 +745,8 @@ class PivotModel():
         
         # update tuple entities
         for k in self.tuple_index_entries.keys():
-            if set(k).issubset(index_name + self.pivot_frozen) and not set(self.pivot_frozen).issuperset(k):
+            if (set(k).issubset(index_name + self.pivot_frozen) 
+                and not set(self.pivot_frozen).issuperset(k)):
                 names = [n for n in index_name + self.pivot_frozen]
                 valid = [(i, names.index(kn)) for i, kn in enumerate(k) if kn in names]
                 keys = tuple(v[1] for v in valid)
@@ -878,10 +886,7 @@ class PivotTableModel(QAbstractTableModel):
 
     def delete_values(self, indexes):
         # transform to PivotModel index
-        indexes = [(i.row() - self._num_headers_row, i.column() - self._num_headers_column) 
-                   for i in indexes 
-                   if (i.row() >= self._num_headers_row and i.row() < len(self.model.rows))
-                   and (i.column() >= self._num_headers_column and i.column() < len(self.model.columns))]
+        indexes = self._indexes_to_pivot_index(indexes)
         self.beginResetModel()
         self.model.delete_pivoted_values(indexes)
         self.endResetModel()
@@ -920,6 +925,19 @@ class PivotTableModel(QAbstractTableModel):
         self.model.paste_data(index.column(), row_header_data, index.row(), col_header_data, value_data, row_mask, col_mask)
         self.endResetModel()
     
+    def _indexes_to_pivot_index(self, indexes):
+        max_row = len(self.model.rows)
+        max_col = len(self.model.columns)
+        if len(self.model.pivot_rows) == 0:
+            max_row = 1
+        if len(self.model.pivot_columns) == 0:
+            max_col = 1
+        indexes = [(i.row() - self._num_headers_row, i.column() - self._num_headers_column) 
+                   for i in indexes 
+                   if (i.row() >= self._num_headers_row and i.row() - self._num_headers_row < max_row)
+                   and (i.column() >= self._num_headers_column and i.column() - self._num_headers_column < max_col)]
+        return indexes
+    
     def _update_header_data(self):
         """updates the top left corner 'header' data"""
         self._num_headers_row = len(self.model.pivot_columns) + min(1,len(self.model.pivot_rows))
@@ -934,11 +952,11 @@ class PivotTableModel(QAbstractTableModel):
     
     def dataRowCount(self):
         """number of rows that contains actual data"""
-        return len(self.model._row_data_header)
+        return len(self.model.rows)
         
     def dataColumnCount(self):
         """number of columns that contains actual data"""
-        return len(self.model._column_data_header)
+        return len(self.model.columns)
 
     def rowCount(self, parent=QModelIndex()):
         """Number of rows in table, number of header rows + datarows + 1 empty row"""
