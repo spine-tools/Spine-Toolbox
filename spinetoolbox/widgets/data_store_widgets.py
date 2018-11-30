@@ -42,10 +42,9 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
-    ObjectParameterValueModel, ObjectParameterDefinitionModel, \
-    RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    ObjectParameterDefinitionProxy, ObjectParameterValueProxy, \
-    RelationshipParameterDefinitionProxy, RelationshipParameterValueProxy, JSONModel
+    SuperObjectParameterDefinitionModel, SuperObjectParameterValueModel, \
+    SuperRelationshipParameterDefinitionModel, SuperRelationshipParameterValueModel, \
+    JSONModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -101,15 +100,11 @@ class DataStoreForm(QMainWindow):
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
-        self.object_parameter_value_model = ObjectParameterValueModel(self)
-        self.object_parameter_value_proxy = ObjectParameterValueProxy(self)
-        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
-        self.relationship_parameter_value_proxy = RelationshipParameterValueProxy(self)
+        self.object_parameter_value_model = SuperObjectParameterValueModel(self)
+        self.relationship_parameter_value_model = SuperRelationshipParameterValueModel(self)
         # Parameter definition models
-        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
-        self.object_parameter_definition_proxy = ObjectParameterDefinitionProxy(self)
-        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
-        self.relationship_parameter_definition_proxy = RelationshipParameterDefinitionProxy(self)
+        self.object_parameter_definition_model = SuperObjectParameterDefinitionModel(self)
+        self.relationship_parameter_definition_model = SuperRelationshipParameterDefinitionModel(self)
         # Other
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -231,17 +226,13 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
-        self.object_parameter_value_model.init_model()
-        self.relationship_parameter_value_model.init_model()
-        self.object_parameter_value_proxy.setSourceModel(self.object_parameter_value_model)
-        self.relationship_parameter_value_proxy.setSourceModel(self.relationship_parameter_value_model)
+        self.object_parameter_value_model.reset_model()
+        self.relationship_parameter_value_model.reset_model()
 
     def init_parameter_definition_models(self):
         """Initialize parameter (definition) models from source database."""
-        self.object_parameter_definition_model.init_model()
-        self.relationship_parameter_definition_model.init_model()
-        self.object_parameter_definition_proxy.setSourceModel(self.object_parameter_definition_model)
-        self.relationship_parameter_definition_proxy.setSourceModel(self.relationship_parameter_definition_model)
+        self.object_parameter_definition_model.reset_model()
+        self.relationship_parameter_definition_model.reset_model()
 
     def init_views(self):
         """Initialize model views."""
@@ -260,7 +251,7 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_value_view(self):
         """Init object parameter value view."""
-        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_proxy)
+        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
@@ -273,7 +264,7 @@ class DataStoreForm(QMainWindow):
 
     def init_relationship_parameter_value_view(self):
         """Init relationship parameter value view."""
-        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_proxy)
+        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
@@ -290,7 +281,7 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_definition_view(self):
         """Init object parameter definition view."""
-        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_proxy)
+        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
@@ -301,7 +292,7 @@ class DataStoreForm(QMainWindow):
 
     def init_relationship_parameter_definition_view(self):
         """Init relationship parameter definition view."""
-        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_proxy)
+        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
         h = self.relationship_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
@@ -1095,11 +1086,12 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
 
+    @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="handle_object_tree_selection_changed")
     def handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
-        self.set_default_parameter_rows()
+        # self.set_default_parameter_rows()
         self.update_and_apply_filter(selected, deselected)
 
     def set_default_parameter_rows(self):
@@ -1163,56 +1155,61 @@ class TreeViewForm(DataStoreForm):
 
     def update_and_apply_filter(self, selected, deselected):
         """Apply filters on parameter models according to selected and deselected object tree indexes."""
-        selected_object_class_ids = set()
-        selected_object_ids = set()
-        selected_relationship_class_ids = set()
-        selected_object_id_lists = set()
         deselected_object_class_ids = set()
-        deselected_object_ids = set()
+        deselected_object_ids = dict()
         deselected_relationship_class_ids = set()
-        deselected_object_id_lists = set()
+        deselected_object_id_lists = dict()
+        selected_object_class_ids = set()
+        selected_object_ids = dict()
+        selected_relationship_class_ids = set()
+        selected_object_id_lists = dict()
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
-            item = index.data(Qt.UserRole + 1)
             if item_type == 'object_class':
-                deselected_object_class_ids.add(item['id'])
+                object_class_id = index.data(Qt.UserRole + 1)['id']
+                deselected_object_class_ids.add(object_class_id)
             elif item_type == 'object':
-                deselected_object_ids.add(item['id'])
+                object_class_id = index.parent().data(Qt.UserRole + 1)['id']
+                object_id = index.data(Qt.UserRole + 1)['id']
+                deselected_object_ids.setdefault(object_class_id, set()).add(object_id)
             elif item_type == 'relationship_class':
-                deselected_relationship_class_ids.add(item['id'])
+                relationship_class_id = index.data(Qt.UserRole + 1)['id']
+                deselected_relationship_class_ids.add(relationship_class_id)
             elif item_type == 'relationship':
-                deselected_object_id_lists.add(item['object_id_list'])
-        self.object_parameter_definition_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
-        self.object_parameter_value_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
-        self.object_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
-        self.relationship_parameter_definition_proxy.\
-            diff_update_relationship_class_id_set(deselected_relationship_class_ids)
-        self.relationship_parameter_definition_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
-        self.relationship_parameter_value_proxy.diff_update_relationship_class_id_set(
-            deselected_relationship_class_ids)
-        self.relationship_parameter_value_proxy.diff_update_object_class_id_set(deselected_object_class_ids)
-        self.relationship_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
-        self.relationship_parameter_value_proxy.diff_update_object_id_list_set(deselected_object_id_lists)
+                relationship_class_id = index.parent().data(Qt.UserRole + 1)['id']
+                object_id_list = index.data(Qt.UserRole + 1)['object_id_list']
+                deselected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
-            item = index.data(Qt.UserRole + 1)
             if item_type == 'object_class':
-                selected_object_class_ids.add(item['id'])
+                object_class_id = index.data(Qt.UserRole + 1)['id']
+                selected_object_class_ids.add(object_class_id)
             elif item_type == 'object':
-                selected_object_ids.add(item['id'])
+                object_class_id = index.parent().data(Qt.UserRole + 1)['id']
+                object_id = index.data(Qt.UserRole + 1)['id']
+                selected_object_ids.setdefault(object_class_id, set()).add(object_id)
             elif item_type == 'relationship_class':
-                selected_relationship_class_ids.add(item['id'])
+                relationship_class_id = index.data(Qt.UserRole + 1)['id']
+                selected_relationship_class_ids.add(relationship_class_id)
             elif item_type == 'relationship':
-                selected_object_id_lists.add(item['object_id_list'])
-        self.object_parameter_definition_proxy.update_object_class_id_set(selected_object_class_ids)
-        self.object_parameter_value_proxy.update_object_class_id_set(selected_object_class_ids)
-        self.object_parameter_value_proxy.update_object_id_set(selected_object_ids)
-        self.relationship_parameter_definition_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
-        self.relationship_parameter_definition_proxy.update_object_class_id_set(selected_object_class_ids)
-        self.relationship_parameter_value_proxy.update_relationship_class_id_set(selected_relationship_class_ids)
-        self.relationship_parameter_value_proxy.update_object_class_id_set(selected_object_class_ids)
-        self.relationship_parameter_value_proxy.update_object_id_set(selected_object_ids)
-        self.relationship_parameter_value_proxy.update_object_id_list_set(selected_object_id_lists)
+                relationship_class_id = index.parent().data(Qt.UserRole + 1)['id']
+                object_id_list = index.data(Qt.UserRole + 1)['object_id_list']
+                selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
+        self.object_parameter_value_model.update_filter(
+            deselected_object_class_ids, selected_object_class_ids,
+            deselected_object_ids, selected_object_ids)
+        self.object_parameter_definition_model.update_filter(
+            deselected_object_class_ids, selected_object_class_ids)
+        self.relationship_parameter_value_model.update_filter(
+            deselected_object_class_ids, selected_object_class_ids,
+            deselected_relationship_class_ids, selected_relationship_class_ids,
+            deselected_object_ids, selected_object_ids,
+            deselected_object_id_lists, selected_object_id_lists)
+        self.relationship_parameter_definition_model.update_filter(
+            deselected_object_class_ids, selected_object_class_ids,
+            deselected_relationship_class_ids, selected_relationship_class_ids)
+
+        return
         if self.ui.tabWidget_object_parameter.currentIndex() == 0:
             self.object_parameter_value_proxy.apply_filter()
         else:

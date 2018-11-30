@@ -871,128 +871,29 @@ class MinimalTableModel(QAbstractTableModel):
 
     Attributes:
         parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
-        can_grow (bool): if True, the model grows automatically when setting data beyond its limits
-        has_empty_row (bool): if True, the model always has an empty row at the bottom
     """
-    def __init__(self, parent=None, can_grow=False, has_empty_row=False):
+    def __init__(self, parent=None):
         """Initialize class"""
-        super().__init__()
+        super().__init__(parent)
         self._parent = parent
         self._main_data = list()  # DisplayRole and EditRole
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()  # DisplayRole and EditRole
         self.aux_header = list()  # All the other roles, each entry in the list is a dict
-        self.can_grow = can_grow
-        self.has_empty_row = has_empty_row
-        self.default_row = {}  # A row of default values to put in any newly inserted row
-        self._force_default = False  # Whether or not default values are editable
-        self.dataChanged.connect(self.receive_data_changed)
-        self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
-        self.rowsInserted.connect(self.receive_rows_inserted)
-        self.columnsInserted.connect(self.receive_columns_inserted)
-
-    def set_default_row(self, **kwargs):
-        """Set default row data."""
-        self.default_row = kwargs
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
-    def receive_data_changed(self, top_left, bottom_right, roles):
-        """In models with a last empty row, insert a new last empty row in case
-        the previous one has been filled with any data other than the defaults."""
-        if Qt.EditRole not in roles:
-            return
-        if not self.has_empty_row:
-            return
-        last_row = self.rowCount() - 1
-        for column, name in enumerate(self.header):
-            data = self._main_data[last_row][column]
-            try:
-                default = self.default_row[name]
-            except KeyError:
-                # No default for this column, check if any data
-                if data:
-                    self.insertRows(self.rowCount(), 1)
-                    break
-                continue
-            if data != default:
-                self.insertRows(self.rowCount(), 1)
-                break
-
-    @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
-    def receive_rows_about_to_be_removed(self, parent, first, last):
-        """In models with a last empty row, insert a new empty row
-        in case the current one is being deleted."""
-        if not self.has_empty_row:
-            return
-        last_row = self.rowCount() - 1
-        if last_row in range(first, last + 1):
-            self.insertRows(self.rowCount(), 1)
-
-    @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
-    def receive_rows_inserted(self, parent, first, last):
-        """Handle rowsInserted signal."""
-        self.set_rows_to_default(first, last)
-
-    def set_rows_to_default(self, first, last):
-        """In models with a default row, set default data in newly inserted rows."""
-        left = None
-        right = None
-        for column, name in enumerate(self.header):
-            try:
-                default = self.default_row[name]
-            except KeyError:
-                default = None
-            if left is None:
-                left = column
-            right = column
-            for row in range(first, last + 1):
-                self._main_data[row][column] = default
-        if left is None:
-            return
-        top_left = self.index(first, left)
-        bottom_right = self.index(last, right)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
-
-    @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
-    def receive_columns_inserted(self, parent, first, last):
-        """In models with a default row, set default data in newly inserted columns."""
-        left = None
-        right = None
-        for column in range(first, last + 1):
-            try:
-                name = self.header[column]
-            except IndexError:
-                continue
-            try:
-                default = self.default_row[name]
-            except KeyError:
-                default = None
-            if left is None:
-                left = column
-            right = column
-            for row in range(self.rowCount()):
-                self._main_data[row][column] = default
-        if left is None:
-            return
-        top_left = self.index(0, left)
-        bottom_right = self.index(self.rowCount() - 1, right)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
     def clear(self):
         """Clear all data in model."""
         self.beginResetModel()
         self._main_data = list()
         self.endResetModel()
-        if self.has_empty_row:
-            self.insertRows(self.rowCount(), 1)
 
     def flags(self, index):
         """Return default flags except if forcing defaults."""
         if not index.isValid():
             return Qt.NoItemFlags
-        if self._force_default:
-            if self.header[index.column()] in self.default_row:
-                return self.default_flags & ~Qt.ItemIsEditable
+        #if self._force_default:
+        #    if self.header[index.column()] in self.default_row:
+        #        return self.default_flags & ~Qt.ItemIsEditable
         return self.default_flags
 
     def rowCount(self, *args, **kwargs):
@@ -1068,19 +969,6 @@ class MinimalTableModel(QAbstractTableModel):
             except IndexError:
                 return False
         return False
-
-    def index(self, row, column, parent=QModelIndex()):
-        if row < 0 or column < 0 or column >= self.columnCount(parent):
-            return QModelIndex()
-        if self.can_grow:
-            index = super().index(row, column, parent)
-            while not index.isValid():
-                self.insertRows(self.rowCount(parent), 1, parent)
-                index = super().index(row, column, parent)
-            return index
-        if row >= self.rowCount(parent):
-            return QModelIndex()
-        return super().index(row, column, parent)
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index.
@@ -1303,8 +1191,118 @@ class MinimalTableModel(QAbstractTableModel):
         self.beginResetModel()
         self._main_data = main_data
         self.endResetModel()
-        if self.has_empty_row:
+
+
+class EmptyRowModel(MinimalTableModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.has_empty_row = has_empty_row
+        self.default_row = {}  # A row of default values to put in any newly inserted row
+        self._force_default = False  # Whether or not default values are editable
+        self.dataChanged.connect(self.receive_data_changed)
+        self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
+        self.rowsInserted.connect(self.receive_rows_inserted)
+        self.columnsInserted.connect(self.receive_columns_inserted)
+
+    def index(self, row, column, parent=QModelIndex()):
+        if row < 0 or column < 0 or column >= self.columnCount(parent):
+            return QModelIndex()
+        if self.can_grow:
+            index = super().index(row, column, parent)
+            while not index.isValid():
+                self.insertRows(self.rowCount(parent), 1, parent)
+                index = super().index(row, column, parent)
+            return index
+        if row >= self.rowCount(parent):
+            return QModelIndex()
+        return super().index(row, column, parent)
+
+    def set_default_row(self, **kwargs):
+        """Set default row data."""
+        self.default_row = kwargs
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
+    def receive_data_changed(self, top_left, bottom_right, roles):
+        """In models with a last empty row, insert a new last empty row in case
+        the previous one has been filled with any data other than the defaults."""
+        if Qt.EditRole not in roles:
+            return
+        if not self.has_empty_row:
+            return
+        last_row = self.rowCount() - 1
+        for column, name in enumerate(self.header):
+            data = self._main_data[last_row][column]
+            try:
+                default = self.default_row[name]
+            except KeyError:
+                # No default for this column, check if any data
+                if data:
+                    self.insertRows(self.rowCount(), 1)
+                    break
+                continue
+            if data != default:
+                self.insertRows(self.rowCount(), 1)
+                break
+
+    @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
+    def receive_rows_about_to_be_removed(self, parent, first, last):
+        """In models with a last empty row, insert a new empty row
+        in case the current one is being deleted."""
+        if not self.has_empty_row:
+            return
+        last_row = self.rowCount() - 1
+        if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
+
+    @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
+    def receive_rows_inserted(self, parent, first, last):
+        """Handle rowsInserted signal."""
+        self.set_rows_to_default(first, last)
+
+    def set_rows_to_default(self, first, last):
+        """In models with a default row, set default data in newly inserted rows."""
+        left = None
+        right = None
+        for column, name in enumerate(self.header):
+            try:
+                default = self.default_row[name]
+            except KeyError:
+                default = None
+            if left is None:
+                left = column
+            right = column
+            for row in range(first, last + 1):
+                self._main_data[row][column] = default
+        if left is None:
+            return
+        top_left = self.index(first, left)
+        bottom_right = self.index(last, right)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
+
+    @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
+    def receive_columns_inserted(self, parent, first, last):
+        """In models with a default row, set default data in newly inserted columns."""
+        left = None
+        right = None
+        for column in range(first, last + 1):
+            try:
+                name = self.header[column]
+            except IndexError:
+                continue
+            try:
+                default = self.default_row[name]
+            except KeyError:
+                default = None
+            if left is None:
+                left = column
+            right = column
+            for row in range(self.rowCount()):
+                self._main_data[row][column] = default
+        if left is None:
+            return
+        top_left = self.index(0, left)
+        bottom_right = self.index(self.rowCount() - 1, right)
+        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -1571,16 +1569,12 @@ class ObjectTreeModel(QStandardItemModel):
     def build_tree(self, db_name, flat=False):
         """Build the first level of the tree"""
         self.clear()
-        object_class_list = [x for x in self.db_map.object_class_list()]
-        object_list = [x for x in self.db_map.object_list()]
-        wide_relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
-        wide_relationship_list = [x for x in self.db_map.wide_relationship_list()]
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
         icon = QIcon(":/icons/Spine_db_icon.png")
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
-        for object_class in object_class_list:
+        for object_class in self.db_map.object_class_list():
             object_icon = self._tree_view_form.object_icon(object_class.name)
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
@@ -1847,7 +1841,7 @@ class WIPTableModel(MinimalTableModel):
     """
     def __init__(self, tree_view_form=None, has_empty_row=True):
         """Initialize class."""
-        super().__init__(tree_view_form, can_grow=True, has_empty_row=has_empty_row)
+        super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
         self.fixed_columns = tuple()
         self.id_column = None
@@ -2705,6 +2699,274 @@ class RelationshipParameterValueModel(ParameterValueModel):
         return items_to_add
 
 
+class SuperObjectParameterModel(MinimalTableModel):
+    def __init__(self, tree_view_form=None):
+        super().__init__(tree_view_form)
+        self._tree_view_form = tree_view_form
+        self.db_map = tree_view_form.db_map
+        self.models = {}
+        self.selected_object_class_ids = set()
+
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        column = index.column()
+        for object_class_id, model in self.models.items():
+            if self.selected_object_class_ids and object_class_id not in self.selected_object_class_ids:
+                continue
+            if row < model.rowCount():
+                break
+            row -= model.rowCount()
+        return model.index(row, column).data(role)
+
+    def rowCount(self, parent=QModelIndex()):
+        count = 0
+        for object_class_id, model in self.models.items():
+            if self.selected_object_class_ids and object_class_id not in self.selected_object_class_ids:
+                continue
+            count += model.rowCount()
+        return count
+
+
+class SuperObjectParameterValueModel(SuperObjectParameterModel):
+    def __init__(self, tree_view_form=None):
+        super().__init__(tree_view_form)
+
+    def reset_model(self):
+        header = self.db_map.object_parameter_value_fields()
+        data = self.db_map.object_parameter_value_list()
+        object_id_column = header.index('object_id')
+        self.models = {
+            x.id: ObjectFilterProxyModel(self._tree_view_form, object_id_column)
+            for x in self.db_map.object_class_list()}
+        self.set_horizontal_header_labels(header)
+        data_dict = {}
+        for parameter_value in data:
+            object_class_id = parameter_value.object_class_id
+            data_dict.setdefault(object_class_id, list()).append(parameter_value)
+        for object_class_id, data in data_dict.items():
+            source_model = MinimalTableModel(self._tree_view_form)
+            source_model.reset_model(data)
+            model = self.models[object_class_id]
+            model.setSourceModel(source_model)
+
+    def update_filter(
+            self, deselected_object_class_ids, selected_object_class_ids,
+            deselected_object_ids, selected_object_ids):
+        self.layoutAboutToBeChanged.emit()
+        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
+        self.selected_object_class_ids.update(selected_object_class_ids)
+        for object_class_id, model in self.models.items():
+            model.update_filter(
+                deselected_object_ids.get(object_class_id),
+                selected_object_ids.get(object_class_id))
+            if model.selected_ids:
+                self.selected_object_class_ids.add(object_class_id)
+        self.layoutChanged.emit()
+
+
+class SuperObjectParameterDefinitionModel(SuperObjectParameterModel):
+    def __init__(self, tree_view_form=None):
+        super().__init__(tree_view_form)
+
+    def reset_model(self):
+        self.models = {
+            x.id: MinimalTableModel(self._tree_view_form) for x in self.db_map.object_class_list()}
+        header = self.db_map.object_parameter_fields()
+        data = self.db_map.object_parameter_list()
+        self.set_horizontal_header_labels(header)
+        data_dict = {}
+        for parameter_definition in data:
+            object_class_id = parameter_definition.object_class_id
+            data_dict.setdefault(object_class_id, list()).append(parameter_definition)
+        for object_class_id, data in data_dict.items():
+            model = self.models[object_class_id]
+            model.reset_model(data)
+
+    def update_filter(self, deselected_object_class_ids, selected_object_class_ids):
+        self.layoutAboutToBeChanged.emit()
+        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
+        self.selected_object_class_ids.update(selected_object_class_ids)
+        self.layoutChanged.emit()
+
+
+class SuperRelationshipParameterModel(MinimalTableModel):
+    def __init__(self, tree_view_form=None):
+        super().__init__(tree_view_form)
+        self._tree_view_form = tree_view_form
+        self.db_map = tree_view_form.db_map
+        self.models = {}
+        self.object_class_id_lists = {}
+        self.selected_object_class_ids = set()
+        self.selected_relationship_class_ids = set()
+
+    def reset_model(self):
+        self.object_class_id_lists = {
+            x.id: [int(x) for x in x.object_class_id_list.split(",")]
+            for x in self.db_map.wide_relationship_class_list()
+        }
+
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        column = index.column()
+        for relationship_class_id, model in self.models.items():
+            if self.selected_object_class_ids:
+                object_class_id_list = self.object_class_id_lists[relationship_class_id]
+                if not self.selected_object_class_ids.intersection(object_class_id_list):
+                    continue
+            if self.selected_relationship_class_ids:
+                if relationship_class_id not in self.selected_relationship_class_ids:
+                    continue
+            if row < model.rowCount():
+                break
+            row -= model.rowCount()
+        return model.index(row, column).data(role)
+
+    def rowCount(self, parent=QModelIndex()):
+        count = 0
+        for relationship_class_id, model in self.models.items():
+            if self.selected_object_class_ids:
+                object_class_id_list = self.object_class_id_lists[relationship_class_id]
+                if not self.selected_object_class_ids.intersection(object_class_id_list):
+                    continue
+            if self.selected_relationship_class_ids:
+                if relationship_class_id not in self.selected_relationship_class_ids:
+                    continue
+            count += model.rowCount()
+        return count
+
+
+class SuperRelationshipParameterValueModel(SuperRelationshipParameterModel):
+    def __init__(self, tree_view_form=None):
+        super().__init__(tree_view_form)
+
+    def reset_model(self):
+        super().reset_model()
+        header = self.db_map.relationship_parameter_value_fields()
+        data = self.db_map.relationship_parameter_value_list()
+        object_id_list_column = header.index('object_id_list')
+        self.models = {
+            x.id: RelationshipFilterProxyModel(self._tree_view_form, object_id_list_column)
+            for x in self.db_map.wide_relationship_class_list()}
+        self.set_horizontal_header_labels(header)
+        data_dict = {}
+        for parameter_value in data:
+            relationship_class_id = parameter_value.relationship_class_id
+            data_dict.setdefault(relationship_class_id, list()).append(parameter_value)
+        for relationship_class_id, data in data_dict.items():
+            source_model = MinimalTableModel(self._tree_view_form)
+            source_model.reset_model(data)
+            model = self.models[relationship_class_id] = RelationshipFilterProxyModel(
+                self._tree_view_form, object_id_list_column)
+            model.setSourceModel(source_model)
+
+    def update_filter(
+            self, deselected_object_class_ids, selected_object_class_ids,
+            deselected_relationship_class_ids, selected_relationship_class_ids,
+            deselected_object_ids, selected_object_ids,
+            deselected_object_id_lists, selected_object_id_lists):
+        self.layoutAboutToBeChanged.emit()
+        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
+        self.selected_object_class_ids.update(selected_object_class_ids)
+        self.selected_relationship_class_ids.difference_update(deselected_relationship_class_ids)
+        self.selected_relationship_class_ids.update(selected_relationship_class_ids)
+        for relationship_class_id, model in self.models.items():
+            object_class_id_list = self.object_class_id_lists[relationship_class_id]
+            model.update_filter(
+                set(y for x in object_class_id_list for y in deselected_object_ids.get(x, {})),
+                set(y for x in object_class_id_list for y in selected_object_ids.get(x, {})),
+                deselected_object_id_lists.get(relationship_class_id),
+                selected_object_id_lists.get(relationship_class_id))
+            if model.selected_id_lists:
+                self.selected_relationship_class_ids.add(relationship_class_id)
+            if model.selected_ids:
+                self.selected_object_class_ids.update(object_class_id_list)
+        self.layoutChanged.emit()
+
+
+class SuperRelationshipParameterDefinitionModel(SuperRelationshipParameterModel):
+    def __init__(self, tree_view_form=None):
+        super().__init__(tree_view_form)
+
+    def reset_model(self):
+        super().reset_model()
+        self.models = {
+            x.id: MinimalTableModel(self._tree_view_form)
+            for x in self.db_map.wide_relationship_class_list()}
+        header = self.db_map.relationship_parameter_fields()
+        data = self.db_map.relationship_parameter_list()
+        self.set_horizontal_header_labels(header)
+        data_dict = {}
+        for parameter_definition in data:
+            relationship_class_id = parameter_definition.relationship_class_id
+            data_dict.setdefault(relationship_class_id, list()).append(parameter_definition)
+        for relationship_class_id, data in data_dict.items():
+            model = self.models[relationship_class_id]
+            model.reset_model(data)
+
+    def update_filter(
+            self, deselected_object_class_ids, selected_object_class_ids,
+            deselected_relationship_class_ids, selected_relationship_class_ids):
+        self.layoutAboutToBeChanged.emit()
+        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
+        self.selected_object_class_ids.update(selected_object_class_ids)
+        self.selected_relationship_class_ids.difference_update(deselected_relationship_class_ids)
+        self.selected_relationship_class_ids.update(selected_relationship_class_ids)
+        self.layoutChanged.emit()
+
+
+class ObjectFilterProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent, id_column):
+        super().__init__(parent)
+        self.selected_ids = set()
+        self.id_column = id_column
+
+    def update_filter(self, deselected_object_ids, selected_object_ids):
+        if not deselected_object_ids and not selected_object_ids:
+            return
+        if deselected_object_ids:
+            self.selected_ids.difference_update(deselected_object_ids)
+        if selected_object_ids:
+            self.selected_ids.update(selected_object_ids)
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        if self.selected_ids:
+            return self.sourceModel()._main_data[source_row][self.id_column] in self.selected_ids
+        return True
+
+
+class RelationshipFilterProxyModel(QSortFilterProxyModel):
+    def __init__(self, parent, id_list_column):
+        super().__init__(parent)
+        self.selected_ids = set()
+        self.selected_id_lists = set()
+        self.id_list_column = id_list_column
+
+    def update_filter(
+            self, deselected_object_ids, selected_object_ids,
+            deselected_object_id_lists, selected_object_id_lists):
+        if not deselected_object_ids and not selected_object_ids and \
+                not deselected_object_id_lists and not selected_object_id_lists:
+            return
+        if deselected_object_ids:
+            self.selected_ids.difference_update(deselected_object_ids)
+        if selected_object_ids:
+            self.selected_ids.update(selected_object_ids)
+        if deselected_object_id_lists:
+            self.selected_id_lists.difference_update(deselected_object_id_lists)
+        if selected_object_id_lists:
+            self.selected_id_lists.update(selected_object_id_lists)
+        self.invalidateFilter()
+
+    def filterAcceptsRow(self, source_row, source_parent):
+        id_list = self.sourceModel()._main_data[source_row][self.id_list_column]
+        if self.selected_id_lists:
+            return id_list in self.selected_id_lists
+        if self.selected_ids:
+            return len(self.selected_ids.intersection(int(x) for x in id_list.split(","))) > 0
+        return True
+
+
 class AutoFilterProxy(QSortFilterProxyModel):
     """A custom sort filter proxy model which implementes a two-level filter.
 
@@ -2727,20 +2989,20 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
         self.source_main_data = None
 
-    def index(self, row, column, parent=QModelIndex()):
-        if row < 0 or column < 0 or column >= self.columnCount(parent):
-            return QModelIndex()
-        if self.sourceModel().can_grow:
-            index = super().index(row, column, parent)
-            source_parent = self.mapToSource(parent)
-            while not index.isValid():
-                self.sourceModel().insertRows(
-                    self.sourceModel().rowCount(source_parent), 1, source_parent)
-                index = super().index(row, column, parent)
-            return index
-        if row >= self.rowCount(parent):
-            return QModelIndex()
-        return super().index(row, column, parent)
+    #def index(self, row, column, parent=QModelIndex()):
+    #    if row < 0 or column < 0 or column >= self.columnCount(parent):
+    #        return QModelIndex()
+    #    if self.sourceModel().can_grow:
+    #        index = super().index(row, column, parent)
+    #        source_parent = self.mapToSource(parent)
+    #        while not index.isValid():
+    #            self.sourceModel().insertRows(
+    #                self.sourceModel().rowCount(source_parent), 1, source_parent)
+    #            index = super().index(row, column, parent)
+    #        return index
+    #    if row >= self.rowCount(parent):
+    #        return QModelIndex()
+    #    return super().index(row, column, parent)
 
     def setSourceModel(self, source_model):
         super().setSourceModel(source_model)
@@ -3098,7 +3360,7 @@ class JSONModel(MinimalTableModel):
     """
     def __init__(self, parent, stride=256):
         """Initialize class"""
-        super().__init__(parent, can_grow=True)
+        super().__init__(parent)
         self._json = list()
         self.set_horizontal_header_labels(["json"])
         self._stride = stride
