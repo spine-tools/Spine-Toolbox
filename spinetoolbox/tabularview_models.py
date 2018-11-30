@@ -718,7 +718,7 @@ class PivotModel():
                                                        self.pivot_rows,
                                                        row_mask, "row")
             self.edit_index(edit_rows + add_rows, row_mask, "row")
-        if col_header_data:
+        if col_header_data and col_header_data[0]:
             edit_columns, add_columns = self._data_to_header(col_header_data, 
                                                              col_start, 
                                                              self._column_data_header,
