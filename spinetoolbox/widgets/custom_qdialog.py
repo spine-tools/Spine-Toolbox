@@ -49,7 +49,7 @@ class AddItemsDialog(QDialog):
         self._parent = parent
         self.ui = None
         self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
-        self.model._force_default = force_default
+        self.model.force_default = force_default
         self.remove_row_icon = None  # Set in subclasses to a custom one
         self.setAttribute(Qt.WA_DeleteOnClose)
 

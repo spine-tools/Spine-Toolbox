@@ -42,8 +42,8 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
-    SuperObjectParameterDefinitionModel, SuperObjectParameterValueModel, \
-    SuperRelationshipParameterDefinitionModel, SuperRelationshipParameterValueModel, \
+    ObjectParameterDefinitionModel, ObjectParameterValueModel, \
+    RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
     JSONModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
@@ -100,11 +100,11 @@ class DataStoreForm(QMainWindow):
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Parameter value models
-        self.object_parameter_value_model = SuperObjectParameterValueModel(self)
-        self.relationship_parameter_value_model = SuperRelationshipParameterValueModel(self)
+        self.object_parameter_value_model = ObjectParameterValueModel(self)
+        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
         # Parameter definition models
-        self.object_parameter_definition_model = SuperObjectParameterDefinitionModel(self)
-        self.relationship_parameter_definition_model = SuperRelationshipParameterDefinitionModel(self)
+        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
+        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
         # Other
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -510,26 +510,19 @@ class DataStoreForm(QMainWindow):
         """Update (object or relationship) parameter value with newly edited data."""
         if new_value is None:
             return
-        proxy_model = index.model()
-        source_model = proxy_model.sourceModel()
-        source_index = proxy_model.mapToSource(index)
-        source_model.setData(source_index, new_value)
+        index.model().setData(index, new_value)
 
     @Slot("QModelIndex", "QVariant", name="set_parameter_definition_data")
     def set_parameter_definition_data(self, index, new_value):
         """Update (object or relationship) parameter definition with newly edited data."""
         if new_value is None:
             return
-        proxy_model = index.model()
-        source_model = proxy_model.sourceModel()
-        source_index = proxy_model.mapToSource(index)
-        parameter_name_column = source_model.horizontal_header_labels().index('parameter_name')
-        if source_model.setData(source_index, new_value) and source_index.column() == parameter_name_column:
-            parameter_id_column = source_model.horizontal_header_labels().index('id')
-            id = source_index.sibling(source_index.row(), parameter_id_column).data(Qt.DisplayRole)
-            new_name = new_value
-            self.object_parameter_value_model.rename_items("parameter", [id], [new_name])
-            self.relationship_parameter_value_model.rename_items("parameter", [id], [new_name])
+        header = index.model().horizontal_header_labels()
+        if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name':
+            parameter_id_column = header.index('id')
+            id_ = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
+            self.object_parameter_value_model.rename_items("parameter", [id_], [new_value])
+            self.relationship_parameter_value_model.rename_items("parameter", [id_], [new_value])
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
