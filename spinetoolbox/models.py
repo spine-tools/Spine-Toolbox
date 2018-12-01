@@ -2705,13 +2705,13 @@ class SuperObjectParameterModel(MinimalTableModel):
         self._tree_view_form = tree_view_form
         self.db_map = tree_view_form.db_map
         self.models = {}
-        self.selected_object_class_ids = set()
 
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
         column = index.column()
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         for object_class_id, model in self.models.items():
-            if self.selected_object_class_ids and object_class_id not in self.selected_object_class_ids:
+            if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
             if row < model.rowCount():
                 break
@@ -2720,8 +2720,9 @@ class SuperObjectParameterModel(MinimalTableModel):
 
     def rowCount(self, parent=QModelIndex()):
         count = 0
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         for object_class_id, model in self.models.items():
-            if self.selected_object_class_ids and object_class_id not in self.selected_object_class_ids:
+            if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
             count += model.rowCount()
         return count
@@ -2749,18 +2750,10 @@ class SuperObjectParameterValueModel(SuperObjectParameterModel):
             model = self.models[object_class_id]
             model.setSourceModel(source_model)
 
-    def update_filter(
-            self, deselected_object_class_ids, selected_object_class_ids,
-            deselected_object_ids, selected_object_ids):
-        self.layoutAboutToBeChanged.emit()
-        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
-        self.selected_object_class_ids.update(selected_object_class_ids)
+    def update_filter(self):
+        selected_object_ids = self._tree_view_form.selected_object_ids
         for object_class_id, model in self.models.items():
-            model.update_filter(
-                deselected_object_ids.get(object_class_id),
-                selected_object_ids.get(object_class_id))
-            if model.selected_ids:
-                self.selected_object_class_ids.add(object_class_id)
+            model.update_filter(selected_object_ids.get(object_class_id, {}))
         self.layoutChanged.emit()
 
 
@@ -2782,10 +2775,7 @@ class SuperObjectParameterDefinitionModel(SuperObjectParameterModel):
             model = self.models[object_class_id]
             model.reset_model(data)
 
-    def update_filter(self, deselected_object_class_ids, selected_object_class_ids):
-        self.layoutAboutToBeChanged.emit()
-        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
-        self.selected_object_class_ids.update(selected_object_class_ids)
+    def update_filter(self):
         self.layoutChanged.emit()
 
 
@@ -2796,8 +2786,6 @@ class SuperRelationshipParameterModel(MinimalTableModel):
         self.db_map = tree_view_form.db_map
         self.models = {}
         self.object_class_id_lists = {}
-        self.selected_object_class_ids = set()
-        self.selected_relationship_class_ids = set()
 
     def reset_model(self):
         self.object_class_id_lists = {
@@ -2808,13 +2796,15 @@ class SuperRelationshipParameterModel(MinimalTableModel):
     def data(self, index, role=Qt.DisplayRole):
         row = index.row()
         column = index.column()
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
         for relationship_class_id, model in self.models.items():
-            if self.selected_object_class_ids:
+            if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
-                if not self.selected_object_class_ids.intersection(object_class_id_list):
+                if not selected_object_class_ids.intersection(object_class_id_list):
                     continue
-            if self.selected_relationship_class_ids:
-                if relationship_class_id not in self.selected_relationship_class_ids:
+            if selected_relationship_class_ids:
+                if relationship_class_id not in selected_relationship_class_ids:
                     continue
             if row < model.rowCount():
                 break
@@ -2823,13 +2813,15 @@ class SuperRelationshipParameterModel(MinimalTableModel):
 
     def rowCount(self, parent=QModelIndex()):
         count = 0
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
         for relationship_class_id, model in self.models.items():
-            if self.selected_object_class_ids:
+            if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
-                if not self.selected_object_class_ids.intersection(object_class_id_list):
+                if not selected_object_class_ids.intersection(object_class_id_list):
                     continue
-            if self.selected_relationship_class_ids:
-                if relationship_class_id not in self.selected_relationship_class_ids:
+            if selected_relationship_class_ids:
+                if relationship_class_id not in selected_relationship_class_ids:
                     continue
             count += model.rowCount()
         return count
@@ -2859,27 +2851,14 @@ class SuperRelationshipParameterValueModel(SuperRelationshipParameterModel):
                 self._tree_view_form, object_id_list_column)
             model.setSourceModel(source_model)
 
-    def update_filter(
-            self, deselected_object_class_ids, selected_object_class_ids,
-            deselected_relationship_class_ids, selected_relationship_class_ids,
-            deselected_object_ids, selected_object_ids,
-            deselected_object_id_lists, selected_object_id_lists):
-        self.layoutAboutToBeChanged.emit()
-        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
-        self.selected_object_class_ids.update(selected_object_class_ids)
-        self.selected_relationship_class_ids.difference_update(deselected_relationship_class_ids)
-        self.selected_relationship_class_ids.update(selected_relationship_class_ids)
+    def update_filter(self):
+        selected_object_ids = self._tree_view_form.selected_object_ids
+        selected_object_id_lists = self._tree_view_form.selected_object_id_lists
         for relationship_class_id, model in self.models.items():
             object_class_id_list = self.object_class_id_lists[relationship_class_id]
-            model.update_filter(
-                set(y for x in object_class_id_list for y in deselected_object_ids.get(x, {})),
-                set(y for x in object_class_id_list for y in selected_object_ids.get(x, {})),
-                deselected_object_id_lists.get(relationship_class_id),
-                selected_object_id_lists.get(relationship_class_id))
-            if model.selected_id_lists:
-                self.selected_relationship_class_ids.add(relationship_class_id)
-            if model.selected_ids:
-                self.selected_object_class_ids.update(object_class_id_list)
+            object_ids = set(y for x in object_class_id_list for y in selected_object_ids.get(x, {}))
+            object_id_lists = selected_object_id_lists.get(relationship_class_id, {})
+            model.update_filter(object_ids, object_id_lists)
         self.layoutChanged.emit()
 
 
@@ -2903,67 +2882,49 @@ class SuperRelationshipParameterDefinitionModel(SuperRelationshipParameterModel)
             model = self.models[relationship_class_id]
             model.reset_model(data)
 
-    def update_filter(
-            self, deselected_object_class_ids, selected_object_class_ids,
-            deselected_relationship_class_ids, selected_relationship_class_ids):
-        self.layoutAboutToBeChanged.emit()
-        self.selected_object_class_ids.difference_update(deselected_object_class_ids)
-        self.selected_object_class_ids.update(selected_object_class_ids)
-        self.selected_relationship_class_ids.difference_update(deselected_relationship_class_ids)
-        self.selected_relationship_class_ids.update(selected_relationship_class_ids)
+    def update_filter(self):
         self.layoutChanged.emit()
 
 
 class ObjectFilterProxyModel(QSortFilterProxyModel):
-    def __init__(self, parent, id_column):
+    def __init__(self, parent, object_id_column):
         super().__init__(parent)
-        self.selected_ids = set()
-        self.id_column = id_column
+        self.selected_object_ids = set()
+        self.object_id_column = object_id_column
 
-    def update_filter(self, deselected_object_ids, selected_object_ids):
-        if not deselected_object_ids and not selected_object_ids:
+    def update_filter(self, selected_object_ids):
+        if selected_object_ids == self.selected_object_ids:
             return
-        if deselected_object_ids:
-            self.selected_ids.difference_update(deselected_object_ids)
-        if selected_object_ids:
-            self.selected_ids.update(selected_object_ids)
+        self.selected_object_ids = selected_object_ids
         self.invalidateFilter()
 
     def filterAcceptsRow(self, source_row, source_parent):
-        if self.selected_ids:
-            return self.sourceModel()._main_data[source_row][self.id_column] in self.selected_ids
+        if self.selected_object_ids:
+            return self.sourceModel()._main_data[source_row][self.object_id_column] in self.selected_object_ids
         return True
 
 
 class RelationshipFilterProxyModel(QSortFilterProxyModel):
-    def __init__(self, parent, id_list_column):
+    def __init__(self, parent, object_id_list_column):
         super().__init__(parent)
-        self.selected_ids = set()
-        self.selected_id_lists = set()
-        self.id_list_column = id_list_column
+        self.selected_object_ids = dict()
+        self.selected_object_id_lists = set()
+        self.object_id_list_column = object_id_list_column
 
-    def update_filter(
-            self, deselected_object_ids, selected_object_ids,
-            deselected_object_id_lists, selected_object_id_lists):
-        if not deselected_object_ids and not selected_object_ids and \
-                not deselected_object_id_lists and not selected_object_id_lists:
+    def update_filter(self, selected_object_ids, selected_object_id_lists):
+        if selected_object_ids == self.selected_object_ids and \
+                selected_object_id_lists == self.selected_object_id_lists:
             return
-        if deselected_object_ids:
-            self.selected_ids.difference_update(deselected_object_ids)
-        if selected_object_ids:
-            self.selected_ids.update(selected_object_ids)
-        if deselected_object_id_lists:
-            self.selected_id_lists.difference_update(deselected_object_id_lists)
-        if selected_object_id_lists:
-            self.selected_id_lists.update(selected_object_id_lists)
+        self.selected_object_ids = selected_object_ids
+        self.selected_object_id_lists = selected_object_id_lists
         self.invalidateFilter()
 
     def filterAcceptsRow(self, source_row, source_parent):
-        id_list = self.sourceModel()._main_data[source_row][self.id_list_column]
-        if self.selected_id_lists:
-            return id_list in self.selected_id_lists
-        if self.selected_ids:
-            return len(self.selected_ids.intersection(int(x) for x in id_list.split(","))) > 0
+        object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
+        if self.selected_object_id_lists:
+            return object_id_list in self.selected_object_id_lists
+        if self.selected_object_ids:
+            return len(self.selected_object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
         return True
 
 

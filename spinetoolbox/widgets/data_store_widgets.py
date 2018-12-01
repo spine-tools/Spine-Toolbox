@@ -616,6 +616,12 @@ class TreeViewForm(DataStoreForm):
         """Initialize class."""
         tic = time.clock()
         super().__init__(data_store, db_map, database, tree_view_form_ui())
+        # Object tree selected indexes
+        self.selected_tree_indexes = {}
+        self.selected_object_class_ids = set()
+        self.selected_object_ids = dict()
+        self.selected_relationship_class_ids = set()
+        self.selected_object_id_lists = dict()
         # JSON models
         self.object_parameter_json_model = JSONModel(self)
         self.relationship_parameter_json_model = JSONModel(self)
@@ -874,9 +880,9 @@ class TreeViewForm(DataStoreForm):
     def handle_object_parameter_tab_changed(self, index):
         """Apply filter. Enable/disable the option to remove rows."""
         if index == 0:
-            self.object_parameter_value_proxy.apply_filter()
+            self.object_parameter_value_model.update_filter()
         else:
-            self.object_parameter_definition_proxy.apply_filter()
+            self.object_parameter_definition_model.update_filter()
         selected = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         self.ui.actionRemove_object_parameter_definitions.setEnabled(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
@@ -886,9 +892,9 @@ class TreeViewForm(DataStoreForm):
     def handle_relationship_parameter_tab_changed(self, index):
         """Apply filter. Enable/disable the option to remove rows."""
         if index == 0:
-            self.relationship_parameter_value_proxy.apply_filter()
+            self.relationship_parameter_value_model.update_filter()
         else:
-            self.relationship_parameter_definition_proxy.apply_filter()
+            self.relationship_parameter_definition_model.update_filter()
         selected = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         self.ui.actionRemove_relationship_parameter_definitions.setEnabled(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
@@ -1155,69 +1161,72 @@ class TreeViewForm(DataStoreForm):
 
     def update_and_apply_filter(self, selected, deselected):
         """Apply filters on parameter models according to selected and deselected object tree indexes."""
-        deselected_object_class_ids = set()
-        deselected_object_ids = dict()
-        deselected_relationship_class_ids = set()
-        deselected_object_id_lists = dict()
-        selected_object_class_ids = set()
-        selected_object_ids = dict()
-        selected_relationship_class_ids = set()
-        selected_object_id_lists = dict()
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
-            if item_type == 'object_class':
-                object_class_id = index.data(Qt.UserRole + 1)['id']
-                deselected_object_class_ids.add(object_class_id)
-            elif item_type == 'object':
-                object_class_id = index.parent().data(Qt.UserRole + 1)['id']
-                object_id = index.data(Qt.UserRole + 1)['id']
-                deselected_object_ids.setdefault(object_class_id, set()).add(object_id)
-            elif item_type == 'relationship_class':
-                relationship_class_id = index.data(Qt.UserRole + 1)['id']
-                deselected_relationship_class_ids.add(relationship_class_id)
-            elif item_type == 'relationship':
-                relationship_class_id = index.parent().data(Qt.UserRole + 1)['id']
-                object_id_list = index.data(Qt.UserRole + 1)['object_id_list']
-                deselected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
+            self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
-            if item_type == 'object_class':
-                object_class_id = index.data(Qt.UserRole + 1)['id']
-                selected_object_class_ids.add(object_class_id)
-            elif item_type == 'object':
-                object_class_id = index.parent().data(Qt.UserRole + 1)['id']
-                object_id = index.data(Qt.UserRole + 1)['id']
-                selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-            elif item_type == 'relationship_class':
-                relationship_class_id = index.data(Qt.UserRole + 1)['id']
-                selected_relationship_class_ids.add(relationship_class_id)
-            elif item_type == 'relationship':
-                relationship_class_id = index.parent().data(Qt.UserRole + 1)['id']
-                object_id_list = index.data(Qt.UserRole + 1)['object_id_list']
-                selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
-        self.object_parameter_value_model.update_filter(
-            deselected_object_class_ids, selected_object_class_ids,
-            deselected_object_ids, selected_object_ids)
-        self.object_parameter_definition_model.update_filter(
-            deselected_object_class_ids, selected_object_class_ids)
-        self.relationship_parameter_value_model.update_filter(
-            deselected_object_class_ids, selected_object_class_ids,
-            deselected_relationship_class_ids, selected_relationship_class_ids,
-            deselected_object_ids, selected_object_ids,
-            deselected_object_id_lists, selected_object_id_lists)
-        self.relationship_parameter_definition_model.update_filter(
-            deselected_object_class_ids, selected_object_class_ids,
-            deselected_relationship_class_ids, selected_relationship_class_ids)
-
-        return
+            self.selected_tree_indexes.setdefault(item_type, set()).add(index)
+        self.update_selected_object_class_ids()
+        self.update_selected_object_ids()
+        self.update_selected_relationship_class_ids()
+        self.update_selected_object_id_lists()
         if self.ui.tabWidget_object_parameter.currentIndex() == 0:
-            self.object_parameter_value_proxy.apply_filter()
+            self.object_parameter_value_model.update_filter()
         else:
-            self.object_parameter_definition_proxy.apply_filter()
+            self.object_parameter_definition_model.update_filter()
         if self.ui.tabWidget_relationship_parameter.currentIndex() == 0:
-            self.relationship_parameter_value_proxy.apply_filter()
+            self.relationship_parameter_value_model.update_filter()
         else:
-            self.relationship_parameter_definition_proxy.apply_filter()
+            self.relationship_parameter_definition_model.update_filter()
+
+    def update_selected_object_class_ids(self):
+        """Update set of selected object class id."""
+        self.selected_object_class_ids = set(
+            ind.data(Qt.UserRole + 1)['id']
+            for ind in self.selected_tree_indexes.get('object_class', {}))
+        self.selected_object_class_ids.update(set(
+            ind.data(Qt.UserRole + 1)['class_id']
+            for ind in self.selected_tree_indexes.get('object', {})))
+        self.selected_object_class_ids.update(set(
+            ind.parent().data(Qt.UserRole + 1)['class_id']
+            for ind in self.selected_tree_indexes.get('relationship_class', {})))
+        self.selected_object_class_ids.update(set(
+            ind.parent().parent().data(Qt.UserRole + 1)['class_id']
+            for ind in self.selected_tree_indexes.get('relationship', {})))
+
+    def update_selected_object_ids(self):
+        """Update set of selected object id."""
+        self.selected_object_ids = {}
+        for ind in self.selected_tree_indexes.get('object', {}):
+            object_class_id = ind.data(Qt.UserRole + 1)['class_id']
+            object_id = ind.data(Qt.UserRole + 1)['id']
+            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
+        for ind in self.selected_tree_indexes.get('relationship_class', {}):
+            object_class_id = ind.parent().data(Qt.UserRole + 1)['class_id']
+            object_id = ind.parent().data(Qt.UserRole + 1)['id']
+            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
+        for ind in self.selected_tree_indexes.get('relationship', {}):
+            object_class_id = ind.parent().parent().data(Qt.UserRole + 1)['class_id']
+            object_id = ind.parent().parent().data(Qt.UserRole + 1)['id']
+            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
+
+    def update_selected_relationship_class_ids(self):
+        """Update set of selected relationship class id."""
+        self.selected_relationship_class_ids = set(
+            ind.data(Qt.UserRole + 1)['id']
+            for ind in self.selected_tree_indexes.get('relationship_class', {}))
+        self.selected_relationship_class_ids.update(set(
+            ind.data(Qt.UserRole + 1)['class_id']
+            for ind in self.selected_tree_indexes.get('relationship', {})))
+
+    def update_selected_object_id_lists(self):
+        """Update set of selected object id list."""
+        self.selected_object_id_lists = {}
+        for ind in self.selected_tree_indexes.get('relationship', {}):
+            relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
+            object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
+            self.selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
 
     @Slot("QObject", "int", "QStringList", name="apply_autofilter")
     def apply_autofilter(self, proxy_model, column, text_list):
