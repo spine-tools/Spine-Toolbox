@@ -521,8 +521,9 @@ class DataStoreForm(QMainWindow):
         if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name':
             parameter_id_column = header.index('id')
             id_ = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
-            self.object_parameter_value_model.rename_items("parameter", [id_], [new_value])
-            self.relationship_parameter_value_model.rename_items("parameter", [id_], [new_value])
+            # FIXME
+            # self.object_parameter_value_model.rename_items("parameter", [id_], [new_value])
+            # self.relationship_parameter_value_model.rename_items("parameter", [id_], [new_value])
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
