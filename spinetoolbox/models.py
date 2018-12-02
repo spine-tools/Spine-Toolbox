@@ -1573,6 +1573,11 @@ class ObjectTreeModel(QStandardItemModel):
     def build_tree(self, db_name, flat=False):
         """Build the first level of the tree"""
         self.clear()
+        self._fetched = {
+            "object_class": set(),
+            "object": set(),
+            "relationship_class": set()
+        }
         self.root_item = QStandardItem(db_name)
         self.root_item.setData('root', Qt.UserRole)
         icon = QIcon(":/icons/Spine_db_icon.png")
@@ -1802,9 +1807,11 @@ class ObjectTreeModel(QStandardItemModel):
         for id in ids_to_add:
             self.add_relationship(updated_items_dict[id])
 
-    def remove_items(self, removed_type, *removed_ids):
+    def remove_items(self, removed_type, removed_ids):
         """Remove all matched items and their 'childs'."""
         # TODO: try and remove all rows at once, if possible
+        if not removed_ids:
+            return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
@@ -2448,7 +2455,7 @@ class ObjectParameterModel(MinimalTableModel):
             return QModelIndex()
         if row >= self.rowCount(parent):
             model = self.empty_row_model
-            model.insertRows(model.rowCount(), row - self.rowCount(parent) + 1)
+            model.insertRows(model.rowCount(), row - self.rowCount(parent) + 1)  # FIXME: this sometimes insert more rows than desired
         return super().index(row, column, parent)
 
     def rowCount(self, parent=QModelIndex()):
@@ -2621,6 +2628,30 @@ class ObjectParameterValueModel(ObjectParameterModel):
             if row_data[parameter_id_column] == parameter_id:
                 row_data[parameter_name_column] = new_name
 
+    def remove_object_classes(self, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        for object_class in object_classes:
+            self.sub_models.pop(object_class['id'], None)
+        self.layoutChanged.emit()
+
+    def remove_objects(self, objects):
+        """Remove objects in model."""
+        object_id_column = self.header.index("object_id")
+        object_dict = {}
+        for object_ in objects:
+            object_dict.setdefault(object_['class_id'], set()).add(object_['id'])
+        for object_class_id, object_ids in object_dict.items():
+            try:
+                model = self.sub_models[object_class_id]
+            except KeyError:
+                continue
+            source_model = model.sourceModel()
+            for row in reversed(range(source_model.rowCount())):
+                object_id = source_model._main_data[row][object_id_column]
+                if object_id in object_ids:
+                    source_model.removeRows(row, 1)
+
 
 class ObjectParameterDefinitionModel(ObjectParameterModel):
     """A model that concatenates several object parameter definition models
@@ -2683,6 +2714,13 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
                 continue
             for row_data in model._main_data:
                 row_data[object_class_name_column] = object_class_name
+
+    def remove_object_classes(self, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        for object_class in object_classes:
+            self.sub_models.pop(object_class['id'], None)
+        self.layoutChanged.emit()
 
 
 class RelationshipParameterModel(MinimalTableModel):
@@ -2939,7 +2977,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         object_id_list_column = self.header.index("object_id_list")
         object_name_list_column = self.header.index("object_name_list")
         object_id_name = {x.id: x.name for x in objects}
-        for relationship_class_id, model in self.sub_models.items():
+        for model in self.sub_models.values():
             for row_data in model.sourceModel()._main_data:
                 object_id_list = [int(x) for x in row_data[object_id_list_column].split(',')]
                 object_name_list = row_data[object_name_list_column].split(',')
@@ -2973,6 +3011,50 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         for row_data in model.sourceModel()._main_data:
             if row_data[parameter_id_column] == parameter_id:
                 row_data[parameter_name_column] = new_name
+
+    def remove_object_classes(self, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = {x['id'] for x in object_classes}
+        for relationship_class_id, object_class_id_list in self.object_class_id_lists.items():
+            if object_class_ids.intersection(object_class_id_list):
+                self.sub_models.pop(relationship_class_id, None)
+        self.layoutChanged.emit()
+
+    def remove_objects(self, objects):
+        """Remove objects from model."""
+        object_id_list_column = self.header.index("object_id_list")
+        object_ids = {x['id'] for x in objects}
+        for model in self.sub_models.values():
+            source_model = model.sourceModel()
+            for row in reversed(range(source_model.rowCount())):
+                object_id_list = source_model._main_data[row][object_id_list_column]
+                if object_ids.intersection(int(x) for x in object_id_list.split(',')):
+                    source_model.removeRows(row, 1)
+
+    def remove_relationship_classes(self, relationship_classes):
+        """Remove relationship classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        for relationship_class in relationship_classes:
+            self.sub_models.pop(relationship_class['id'], None)
+        self.layoutChanged.emit()
+
+    def remove_relationships(self, relationships):
+        """Remove relationships in model."""
+        relationship_id_column = self.header.index("relationship_id")
+        relationship_dict = {}
+        for relationship in relationships:
+            relationship_dict.setdefault(relationship['class_id'], set()).add(relationship['id'])
+        for relationship_class_id, relationship_ids in relationship_dict.items():
+            try:
+                model = self.sub_models[relationship_class_id]
+            except KeyError:
+                continue
+            source_model = model.sourceModel()
+            for row in reversed(range(source_model.rowCount())):
+                relationship_id = source_model._main_data[row][relationship_id_column]
+                if relationship_id in relationship_ids:
+                    source_model.removeRows(row, 1)
 
 
 class RelationshipParameterDefinitionModel(RelationshipParameterModel):
@@ -3061,6 +3143,23 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
                 continue
             for row_data in model._main_data:
                 row_data[relationship_class_name_column] = relationship_class_name
+
+    def remove_object_classes(self, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = {x['id'] for x in object_classes}
+        for relationship_class_id, object_class_id_list in self.object_class_id_lists.items():
+            if object_class_ids.intersection(object_class_id_list):
+                self.sub_models.pop(relationship_class_id, None)
+        self.layoutChanged.emit()
+
+    def remove_relationship_classes(self, relationship_classes):
+        """Remove relationship classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        for relationship_class in relationship_classes:
+            self.sub_models.pop(relationship_class['id'], None)
+        self.layoutChanged.emit()
+
 
 
 class ObjectFilterProxyModel(QSortFilterProxyModel):

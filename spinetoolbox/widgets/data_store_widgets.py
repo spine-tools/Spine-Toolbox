@@ -1097,6 +1097,7 @@ class TreeViewForm(DataStoreForm):
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
+        # TODO: adapt to new parameter models
         selection = tree_selection = self.ui.treeView_object.selectionModel().selection()
         if selection.count() != 1:
             return
@@ -1347,13 +1348,56 @@ class TreeViewForm(DataStoreForm):
         indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
         if not indexes:
             return
-        removed_id_dict = {}
+        removed_items = {}
+        for index in indexes:
+            removed_type = index.data(Qt.UserRole)
+            removed_item = index.data(Qt.UserRole + 1)
+            removed_items.setdefault(removed_type, list()).append(removed_item)
+        object_class_ids = set(x['id'] for x in removed_items.get('object_class', []))
+        object_ids = set(x['id'] for x in removed_items.get('object', []))
+        relationship_class_ids = set(x['id'] for x in removed_items.get('relationship_class', []))
+        relationship_ids = set(x['id'] for x in removed_items.get('relationship', []))
+        try:
+            self.db_map.remove_items(
+                object_class_ids=object_class_ids,
+                object_ids=object_ids,
+                relationship_class_ids=relationship_class_ids,
+                relationship_ids=relationship_ids
+            )
+            self.object_tree_model.remove_items("object_class", object_class_ids)
+            self.object_tree_model.remove_items("object", object_ids)
+            self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
+            self.object_tree_model.remove_items("relationship", relationship_ids)
+            # Parameter models
+            self.object_parameter_value_model.remove_object_classes(removed_items.get('object_class', []))
+            self.object_parameter_value_model.remove_objects(removed_items.get('object', []))
+            self.object_parameter_definition_model.remove_object_classes(removed_items.get('object_class', []))
+            self.relationship_parameter_value_model.remove_object_classes(removed_items.get('object_class', []))
+            self.relationship_parameter_value_model.remove_objects(removed_items.get('object', []))
+            self.relationship_parameter_value_model.remove_relationship_classes(
+                removed_items.get('relationship_class', []))
+            self.relationship_parameter_value_model.remove_relationships(removed_items.get('relationship', []))
+            self.relationship_parameter_definition_model.remove_object_classes(removed_items.get('object_class', []))
+            self.relationship_parameter_definition_model.remove_relationship_classes(
+                removed_items.get('relationship_class', []))
+            self.set_commit_rollback_actions_enabled(True)
+            self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+            self.msg.emit("Successfully removed items.")
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+        return
+
+
+        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
+        if not indexes:
+            return
+        removed_ids_dict = {}
         for index in indexes:
             removed_type = index.data(Qt.UserRole)
             removed_id = index.data(Qt.UserRole + 1)['id']
-            removed_id_dict.setdefault(removed_type, set()).add(removed_id)
+            removed_ids_dict.setdefault(removed_type + "_ids", set()).add(removed_id)
         try:
-            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})  # FIXME: this is ugly
+            self.db_map.remove_items(**removed_ids_dict)
             for key, value in removed_id_dict.items():
                 self.object_tree_model.remove_items(key, *value)
             for key, value in removed_id_dict.items():

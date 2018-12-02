@@ -26,7 +26,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from config import STATUSBAR_SS
-from models import EmptyRowModel
+from models import EmptyRowModel, MinimalTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     LineEditDelegate
 import ui.add_object_classes
