@@ -458,9 +458,10 @@ class DataStoreForm(QMainWindow):
     def update_object_classes(self, object_classes):
         """Update object classes."""
         self.object_tree_model.update_object_classes(object_classes)
-        ids = [x.id for x in object_classes]
-        new_names = [x.name for x in object_classes]
-        self.rename_items_in_parameter_models('object_class', ids, new_names)
+        self.object_parameter_value_model.rename_object_classes(object_classes)
+        self.object_parameter_definition_model.rename_object_classes(object_classes)
+        self.relationship_parameter_value_model.rename_object_classes(object_classes)
+        self.relationship_parameter_definition_model.rename_object_classes(object_classes)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
@@ -469,41 +470,31 @@ class DataStoreForm(QMainWindow):
     def update_objects(self, objects):
         """Update objects."""
         self.object_tree_model.update_objects(objects)
-        ids = [x.id for x in objects]
-        new_names = [x.name for x in objects]
-        self.rename_items_in_parameter_models('object', ids, new_names)
+        self.object_parameter_value_model.rename_objects(objects)
+        self.relationship_parameter_value_model.rename_objects(objects)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
-        self.msg.emit(msg)
-
-    @busy_effect
-    def update_relationships(self, wide_relationships):
-        """Update relationships."""
-        self.object_tree_model.update_relationships(wide_relationships)
-        # NOTE: we don't need to call rename_items_in_parameter_models here, for now
-        self.set_commit_rollback_actions_enabled(True)
-        relationship_name_list = "', '".join([x.name for x in wide_relationships])
-        msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
     @busy_effect
     def update_relationship_classes(self, wide_relationship_classes):
         """Update relationship classes."""
         self.object_tree_model.update_relationship_classes(wide_relationship_classes)
-        ids = [x.id for x in wide_relationship_classes]
-        new_names = [x.name for x in wide_relationship_classes]
-        self.rename_items_in_parameter_models('relationship_class', ids, new_names)
+        self.relationship_parameter_value_model.rename_relationship_classes(wide_relationship_classes)
+        self.relationship_parameter_definition_model.rename_relationship_classes(wide_relationship_classes)
         self.set_commit_rollback_actions_enabled(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
 
-    def rename_items_in_parameter_models(self, renamed_type, ids, new_names):
-        """Rename items in parameter definition and value models."""
-        self.object_parameter_definition_model.rename_items(renamed_type, ids, new_names)
-        self.object_parameter_value_model.rename_items(renamed_type, ids, new_names)
-        self.relationship_parameter_definition_model.rename_items(renamed_type, ids, new_names)
-        self.relationship_parameter_value_model.rename_items(renamed_type, ids, new_names)
+    @busy_effect
+    def update_relationships(self, wide_relationships):
+        """Update relationships."""
+        self.object_tree_model.update_relationships(wide_relationships)
+        self.set_commit_rollback_actions_enabled(True)
+        relationship_name_list = "', '".join([x.name for x in wide_relationships])
+        msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
+        self.msg.emit(msg)
 
     @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
     def set_parameter_value_data(self, index, new_value):
@@ -520,10 +511,20 @@ class DataStoreForm(QMainWindow):
         header = index.model().horizontal_header_labels()
         if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name':
             parameter_id_column = header.index('id')
-            id_ = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
-            # FIXME
-            # self.object_parameter_value_model.rename_items("parameter", [id_], [new_value])
-            # self.relationship_parameter_value_model.rename_items("parameter", [id_], [new_value])
+            parameter_id = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
+            try:
+                object_class_id_column = header.index('object_class_id')
+                object_class_id = index.sibling(index.row(), object_class_id_column).data(Qt.DisplayRole)
+                self.object_parameter_value_model.rename_parameter(parameter_id, object_class_id, new_value)
+            except ValueError:
+                try:
+                    relationship_class_id_column = header.index('relationship_class_id')
+                    relationship_class_id = index.sibling(index.row(), relationship_class_id_column).\
+                        data(Qt.DisplayRole)
+                    self.relationship_parameter_value_model.rename_parameter(
+                        parameter_id, relationship_class_id, new_value)
+                except ValueError:
+                    pass
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
@@ -1157,7 +1158,11 @@ class TreeViewForm(DataStoreForm):
         """Apply filters on parameter models according to selected and deselected object tree indexes."""
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
-            self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
+            try:
+                self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
+            except KeyError:  # TODO: Find out why this happens after adding new items
+                logging.debug("KeyError {}".format(index))
+                pass
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_tree_indexes.setdefault(item_type, set()).add(index)

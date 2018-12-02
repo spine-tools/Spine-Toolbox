@@ -26,7 +26,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from config import STATUSBAR_SS
-from models import MinimalTableModel
+from models import EmptyRowModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     LineEditDelegate
 import ui.add_object_classes
@@ -48,7 +48,7 @@ class AddItemsDialog(QDialog):
         super().__init__(parent)
         self._parent = parent
         self.ui = None
-        self.model = MinimalTableModel(self, can_grow=True, has_empty_row=True)
+        self.model = EmptyRowModel(self)
         self.model.force_default = force_default
         self.remove_row_icon = None  # Set in subclasses to a custom one
         self.setAttribute(Qt.WA_DeleteOnClose)
