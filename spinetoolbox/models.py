@@ -1197,11 +1197,11 @@ class EmptyRowModel(MinimalTableModel):
         super().__init__(parent)
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
-        self.modelReset.connect(self.receive_model_reset)
-        self.dataChanged.connect(self.receive_data_changed)
-        self.rowsAboutToBeRemoved.connect(self.receive_rows_about_to_be_removed)
-        self.rowsInserted.connect(self.receive_rows_inserted)
-        self.columnsInserted.connect(self.receive_columns_inserted)
+        self.modelReset.connect(self._handle_model_reset)
+        self.dataChanged.connect(self._handle_data_changed)
+        self.rowsAboutToBeRemoved.connect(self._handle_rows_about_to_be_removed)
+        self.rowsInserted.connect(self._handle_rows_inserted)
+        self.columnsInserted.connect(self._handle_columns_inserted)
 
     def flags(self, index):
         """Return default flags except if forcing defaults."""
@@ -1225,13 +1225,13 @@ class EmptyRowModel(MinimalTableModel):
         """Set default row data."""
         self.default_row = kwargs
 
-    @Slot(name="receive_model_reset")
-    def receive_model_reset(self):
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
         """Insert a last empty row after reset."""
         self.insertRows(0, 1, QModelIndex())
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="receive_data_changed")
-    def receive_data_changed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
+    def _handle_data_changed(self, top_left, bottom_right, roles):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
         if Qt.EditRole not in roles:
@@ -1251,15 +1251,15 @@ class EmptyRowModel(MinimalTableModel):
                 self.insertRows(self.rowCount(), 1)
                 break
 
-    @Slot("QModelIndex", "int", "int", name="receive_rows_about_to_be_removed")
-    def receive_rows_about_to_be_removed(self, parent, first, last):
+    @Slot("QModelIndex", "int", "int", name="_handle_rows_about_to_be_removed")
+    def _handle_rows_about_to_be_removed(self, parent, first, last):
         """Insert a new empty row in case the current one is being deleted."""
         last_row = self.rowCount() - 1
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
 
-    @Slot("QModelIndex", "int", "int", name="receive_rows_inserted")
-    def receive_rows_inserted(self, parent, first, last):
+    @Slot("QModelIndex", "int", "int", name="_handle_rows_inserted")
+    def _handle_rows_inserted(self, parent, first, last):
         """Handle rowsInserted signal."""
         self.set_rows_to_default(first, last)
 
@@ -1283,8 +1283,8 @@ class EmptyRowModel(MinimalTableModel):
         bottom_right = self.index(last, right)
         self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
 
-    @Slot("QModelIndex", "int", "int", name="receive_columns_inserted")
-    def receive_columns_inserted(self, parent, first, last):
+    @Slot("QModelIndex", "int", "int", name="_handle_columns_inserted")
+    def _handle_columns_inserted(self, parent, first, last):
         """Set default data in newly inserted columns."""
         left = None
         right = None
@@ -2109,7 +2109,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes. A little different from the base class implementation,
-        since here we need to handle creation of relationships on the fly.
+        since here we need to manage creating relationships on the fly.
         """
         if not indexes:
             return False
@@ -2517,7 +2517,8 @@ class ObjectParameterModel(MinimalTableModel):
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
-        self.layoutChanged.emit()
+        inserted_row = self.rowCount() - 1
+        self.rowsInserted.emit(QModelIndex(), inserted_row, inserted_row)
 
 
 class ObjectParameterValueModel(ObjectParameterModel):
@@ -2553,6 +2554,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
 
     def update_filter(self):
         """Update filter."""
+        self.layoutAboutToBeChanged.emit()
         selected_object_ids = self._tree_view_form.selected_object_ids
         for object_class_id, model in self.sub_models.items():
             model.update_filter(selected_object_ids.get(object_class_id, {}))
@@ -2683,6 +2685,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
 
     def update_filter(self):
         """Update filter."""
+        self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
     def move_rows_to_sub_models(self, rows):
@@ -2874,7 +2877,8 @@ class RelationshipParameterModel(MinimalTableModel):
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
-        self.layoutChanged.emit()
+        inserted_row = self.rowCount() - 1
+        self.rowsInserted.emit(QModelIndex(), inserted_row, inserted_row)
 
 
 class RelationshipParameterValueModel(RelationshipParameterModel):
@@ -2913,6 +2917,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
 
     def update_filter(self):
         """Update filter."""
+        self.layoutAboutToBeChanged.emit()
         selected_object_ids = self._tree_view_form.selected_object_ids
         selected_object_id_lists = self._tree_view_form.selected_object_id_lists
         for relationship_class_id, model in self.sub_models.items():
@@ -3089,6 +3094,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
 
     def update_filter(self):
         """Update filter."""
+        self.layoutAboutToBeChanged.emit()
         self.layoutChanged.emit()
 
     def move_rows_to_sub_models(self, rows):
@@ -3161,7 +3167,6 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         self.layoutChanged.emit()
 
 
-
 class ObjectFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for object parameter models."""
     def __init__(self, parent, object_id_column):
@@ -3220,7 +3225,7 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
         return self.sourceModel().batch_set_data(source_indexes, data)
 
 
-class AutoFilterProxy(QSortFilterProxyModel):
+class AutoFilterProxyModel(QSortFilterProxyModel):
     """A custom sort filter proxy model which implementes a two-level filter.
 
     Attributes:
@@ -3240,7 +3245,23 @@ class AutoFilterProxy(QSortFilterProxyModel):
         self.rule_dict = dict()
         self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
         self.filter_is_valid = True  # Set it to False when filter needs to be applied
-        self.source_main_data = None
+
+    def setSourceModel(self, source_model):
+        super().setSourceModel(source_model)
+        source_model.headerDataChanged.connect(self._handle_header_data_changed)
+        self._handle_header_data_changed()
+
+    @Slot("Qt.Orientation", "int", "int", name="_handle_header_data_changed")
+    def _handle_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
+        if orientation == Qt.Horizontal:
+            self.header_index = self.sourceModel().horizontal_header_labels().index
+
+    def reset_model(self):
+        self.sourceModel().reset_model()
+        self.sourceModel().update_filter()
+
+    def update_filter(self):
+        self.sourceModel().update_filter()
 
     #def index(self, row, column, parent=QModelIndex()):
     #    if row < 0 or column < 0 or column >= self.columnCount(parent):
@@ -3257,47 +3278,22 @@ class AutoFilterProxy(QSortFilterProxyModel):
     #        return QModelIndex()
     #    return super().index(row, column, parent)
 
-    def setSourceModel(self, source_model):
-        super().setSourceModel(source_model)
-        self.source_main_data = source_model._main_data
-        source_model.headerDataChanged.connect(self.receive_header_data_changed)
-        self.receive_header_data_changed()
-
     def horizontal_header_labels(self):
         return [self.headerData(i, Qt.Horizontal) for i in range(self.columnCount())]
-
-    @Slot("Qt.Orientation", "int", "int", name="receive_header_data_changed")
-    def receive_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
-        if orientation == Qt.Horizontal:
-            self.header_index = self.sourceModel().horizontal_header_labels().index
 
     def batch_set_data(self, proxy_indexes, values):
         source_indexes = [self.mapToSource(ind) for ind in proxy_indexes]
         return self.sourceModel().batch_set_data(source_indexes, values)
-
-    def is_work_in_progress(self, row):
-        """Return whether or not row is a work in progress."""
-        return self.sourceModel().is_work_in_progress(self.map_row_to_source(row))
-
-    def map_row_to_source(self, row):
-        return self.mapToSource(self.index(row, 0)).row()
 
     def autofilter_values(self, column):
         """Return values for the autofilter menu of `column`."""
         values = set()
         source_model = self.sourceModel()
         for source_row in range(source_model.rowCount()):
-            # Skip values rejected by filter if row is not wip
-            if not source_model.is_work_in_progress(source_row) \
-                    and not self.filter_accepts_row(source_row, QModelIndex()):
-                continue
             # Skip values rejected by autofilters from *other* columns
             if not self.autofilter_accepts_row(source_row, QModelIndex(), skip_source_column=[column]):
                 continue
-            try:
-                value = source_model._main_data[source_row][column]
-            except KeyError:
-                value = ""
+            value = source_model.index(source_row, column).data(Qt.DisplayRole)
             if value is None:
                 value = ""
             values.add(value)
@@ -3329,7 +3325,7 @@ class AutoFilterProxy(QSortFilterProxyModel):
             if source_column in skip_source_column:
                 continue
             try:
-                data = self.sourceModel()._main_data[source_row][source_column]
+                data = self.sourceModel().index(source_row, source_column).data(Qt.DisplayRole)
             except KeyError:
                 data = ""
             if data == None:
@@ -3338,18 +3334,10 @@ class AutoFilterProxy(QSortFilterProxyModel):
                 return False
         return True
 
-    def filter_accepts_row(self, source_row, source_parent):
-        """Reimplement this method in subclasses."""
-        return True
-
     def filterAcceptsRow(self, source_row, source_parent):
         """Returns true if the item in the row indicated by the given source_row
         and source_parent should be included in the model; otherwise returns false."""
-        if not self.autofilter_accepts_row(source_row, source_parent):
-            return False
-        if self.sourceModel().is_work_in_progress(source_row):
-            return True
-        return self.filter_accepts_row(source_row, source_parent)
+        return self.autofilter_accepts_row(source_row, source_parent)
 
     def apply_filter(self):
         """Trigger filtering."""

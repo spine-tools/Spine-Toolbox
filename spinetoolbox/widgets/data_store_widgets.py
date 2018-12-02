@@ -44,7 +44,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    JSONModel
+    AutoFilterProxyModel, JSONModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -251,7 +251,9 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_value_view(self):
         """Init object parameter value view."""
-        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
+        auto_filter_model = AutoFilterProxyModel(self)
+        auto_filter_model.setSourceModel(self.object_parameter_value_model)
+        self.ui.tableView_object_parameter_value.setModel(auto_filter_model)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
@@ -264,7 +266,9 @@ class DataStoreForm(QMainWindow):
 
     def init_relationship_parameter_value_view(self):
         """Init relationship parameter value view."""
-        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
+        auto_filter_model = AutoFilterProxyModel(self)
+        auto_filter_model.setSourceModel(self.relationship_parameter_value_model)
+        self.ui.tableView_relationship_parameter_value.setModel(auto_filter_model)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
@@ -281,7 +285,9 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_definition_view(self):
         """Init object parameter definition view."""
-        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
+        auto_filter_model = AutoFilterProxyModel(self)
+        auto_filter_model.setSourceModel(self.object_parameter_definition_model)
+        self.ui.tableView_object_parameter_definition.setModel(auto_filter_model)
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
@@ -292,7 +298,9 @@ class DataStoreForm(QMainWindow):
 
     def init_relationship_parameter_definition_view(self):
         """Init relationship parameter definition view."""
-        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
+        auto_filter_model = AutoFilterProxyModel(self)
+        auto_filter_model.setSourceModel(self.relationship_parameter_definition_model)
+        self.ui.tableView_relationship_parameter_definition.setModel(auto_filter_model)
         h = self.relationship_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
@@ -1385,31 +1393,6 @@ class TreeViewForm(DataStoreForm):
             self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
-        return
-
-
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        removed_ids_dict = {}
-        for index in indexes:
-            removed_type = index.data(Qt.UserRole)
-            removed_id = index.data(Qt.UserRole + 1)['id']
-            removed_ids_dict.setdefault(removed_type + "_ids", set()).add(removed_id)
-        try:
-            self.db_map.remove_items(**removed_ids_dict)
-            for key, value in removed_id_dict.items():
-                self.object_tree_model.remove_items(key, *value)
-            for key, value in removed_id_dict.items():
-                self.object_parameter_definition_model.remove_items(key, *value)
-                self.object_parameter_value_model.remove_items(key, *value)
-                self.relationship_parameter_definition_model.remove_items(key, *value)
-                self.relationship_parameter_value_model.remove_items(key, *value)
-            self.set_commit_rollback_actions_enabled(True)
-            self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
-            self.msg.emit("Successfully removed items.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
@@ -1648,8 +1631,6 @@ class TreeViewForm(DataStoreForm):
         parameter_value_ids = set()
         id_column = self.object_parameter_value_model.horizontal_header_labels().index("id")
         for source_row in source_row_set:
-            if self.object_parameter_value_model.is_work_in_progress(source_row):
-                continue
             source_index = self.object_parameter_value_model.index(source_row, id_column)
             parameter_value_ids.add(source_index.data(Qt.EditRole))
         try:
