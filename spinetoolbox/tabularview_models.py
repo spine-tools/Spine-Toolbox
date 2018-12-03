@@ -330,7 +330,7 @@ class PivotModel():
                 #special case when all indexes are in pivot forzen
                 return [[self._data.get(self._key_getter(self.frozen_value), None)]]
             # no data
-            return [[]]
+            return []
         if self.pivot_rows and any(r >= len(self._row_data_header) or r < 0 for r in row_mask):
             raise ValueError("row_mask contains invalid indexes to current row pivot")
         if self.pivot_columns and any(c >= len(self._column_data_header) or c < 0 for c in col_mask):
@@ -1125,7 +1125,10 @@ class PivotTableModel(QAbstractTableModel):
             if self.index_in_data(index):
                 # get values
                 data = self.model.get_pivoted_data([index.row() - self._num_headers_row],[index.column() - self._num_headers_column])
-                data = data[0][0]
+                if not data:
+                    return ''
+                else:
+                    data = data[0][0]
                 return '' if data is None else str(data)
             elif self.index_in_column_headers(index):
                 # draw column header values

@@ -248,16 +248,19 @@ class TabularViewForm(QMainWindow):
         
         # load db data
         self.load_class_data()
+        self.load_objects()
         
         self.update_class_list()
         
         # update models to data
-        self.select_data()
+        #self.select_data()
     
     def load_class_data(self):
         self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}
         self.relationship_classes = {rc.name: rc for rc in self.db_map.wide_relationship_class_list().all()}
         self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+
+    def load_objects(self):
         self.objects = {o.name: o for o in self.db_map.object_list().all()}
     
     def load_relationships(self):
@@ -509,7 +512,7 @@ class TabularViewForm(QMainWindow):
                 add_objects.extend([{'name': n, 'class_id': self.object_classes[name].id} for n in new])
             if add_objects:
                 self.db_map.add_objects(*add_objects)
-                self.objects = {o.name: o for o in self.db_map.object_list().all()}
+                self.load_objects()
             if delete_relationships:
                 ids = [tuple(self.objects[i].id for i in rel) for rel in delete_relationships]
                 delete_ids = set(self.relationships[r].id for r in ids if r in self.relationships)
@@ -542,18 +545,19 @@ class TabularViewForm(QMainWindow):
         return db_edited
     
     def save_model(self):
+        db_edited = False
         if self.current_value_type == DATA_SET:
             db_edited = self.save_model_set()
             delete_indexes = self.model.model._deleted_index_entries
             obj_edited = self.delete_index_values_from_db(delete_indexes)
             db_edited = db_edited or obj_edited
-        else:
+        elif self.current_value_type in [DATA_JSON, DATA_VALUE]:
             # save new objects and parameters
             add_indexes = self.model.model._added_index_entries
             obj_edited = self.add_index_values_to_db(add_indexes)
             if obj_edited:
                 self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
-                self.objects = {o.name: o for o in self.db_map.object_list().all()}
+                self.load_objects()
             
             if self.current_value_type == DATA_VALUE:
                 delete_values = self.model.model._deleted_data
@@ -585,6 +589,7 @@ class TabularViewForm(QMainWindow):
         # reload classes, objects and parameters
         if db_edited:
             self.load_class_data()
+            self.load_objects()
 
     def save_parameter_values(self, data, data_value):
         new_data = []
