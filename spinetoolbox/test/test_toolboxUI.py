@@ -42,7 +42,9 @@ class TestToolboxUI(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        with mock.patch('ui_main.CONFIGURATION_FILE') as mocked_file_path:
+        with mock.patch("ui_main.CONFIGURATION_FILE") as mocked_file_path, \
+                mock.patch("os.path.split") as mock_split, \
+                mock.patch("configuration.create_dir") as mock_create_dir:
             # # Set logging level to Error to silence "Logging level: All messages" print
             logging.disable(level=logging.ERROR)  # Disable logging
             self.mw = ToolboxUI()
