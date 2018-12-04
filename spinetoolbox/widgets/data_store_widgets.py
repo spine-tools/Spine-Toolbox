@@ -1602,17 +1602,22 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        source_row_set = self.source_row_set(selection, self.object_parameter_value_proxy)
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom + 1))
         parameter_value_ids = set()
         id_column = self.object_parameter_value_model.horizontal_header_labels().index("id")
-        for source_row in source_row_set:
-            source_index = self.object_parameter_value_model.index(source_row, id_column)
-            parameter_value_ids.add(source_index.data(Qt.EditRole))
+        for row in row_set:
+            index = self.object_parameter_value_model.index(row, id_column)
+            parameter_value_ids.add(index.data(Qt.EditRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            self.object_parameter_value_model.remove_row_set(source_row_set)
+            self.object_parameter_value_model.remove_row_set(row_set)
             self.set_commit_rollback_actions_enabled(True)
-            self.msg.emit("Successfully removed parameter vales.")
+            self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -1620,19 +1625,22 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        source_row_set = self.source_row_set(selection, self.relationship_parameter_value_proxy)
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom + 1))
         parameter_value_ids = set()
         id_column = self.relationship_parameter_value_model.horizontal_header_labels().index("id")
-        for source_row in source_row_set:
-            if self.relationship_parameter_value_model.is_work_in_progress(source_row):
-                continue
-            source_index = self.relationship_parameter_value_model.index(source_row, id_column)
-            parameter_value_ids.add(source_index.data(Qt.EditRole))
+        for row in row_set:
+            index = self.relationship_parameter_value_model.index(row, id_column)
+            parameter_value_ids.add(index.data(Qt.EditRole))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            self.relationship_parameter_value_model.remove_row_set(source_row_set)
+            self.relationship_parameter_value_model.remove_row_set(row_set)
             self.set_commit_rollback_actions_enabled(True)
-            self.msg.emit("Successfully removed parameter vales.")
+            self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -1640,20 +1648,29 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_object_parameter_definitions")
     def remove_object_parameter_definitions(self, checked=False):
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        source_row_set = self.source_row_set(selection, self.object_parameter_definition_proxy)
+        row_set = set()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            top = current.top()
+            bottom = current.bottom()
+            row_set.update(range(top, bottom + 1))
         parameter_ids = set()
-        id_column = self.object_parameter_definition_model.horizontal_header_labels().index("id")
-        for source_row in source_row_set:
-            if self.object_parameter_definition_model.is_work_in_progress(source_row):
-                continue
-            source_index = self.object_parameter_definition_model.index(source_row, id_column)
-            parameter_ids.add(source_index.data(Qt.EditRole))
+        parameter_dict = dict()
+        header = self.object_parameter_definition_model.horizontal_header_labels()
+        object_class_id_column = header.index("object_class_id")
+        id_column = header.index("id")
+        for row in row_set:
+            object_class_id = self.object_parameter_definition_model.index(row, object_class_id_column).\
+                data(Qt.DisplayRole)
+            id_ = self.object_parameter_definition_model.index(row, id_column).data(Qt.DisplayRole)
+            parameter_ids.add(id_)
+            parameter_dict.setdefault(object_class_id, set()).add(id_)
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.object_parameter_definition_model.remove_row_set(source_row_set)
-            self.object_parameter_value_model.remove_items("parameter", *parameter_ids)
+            self.object_parameter_definition_model.remove_row_set(row_set)
+            self.object_parameter_value_model.remove_parameters(parameter_dict)
             self.set_commit_rollback_actions_enabled(True)
-            self.msg.emit("Successfully removed parameters.")
+            self.msg.emit("Successfully removed parameter definitions.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -1661,38 +1678,31 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_relationship_parameter_definitions")
     def remove_relationship_parameter_definitions(self, checked=False):
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        source_row_set = self.source_row_set(selection, self.relationship_parameter_definition_proxy)
-        parameter_ids = set()
-        id_column = self.relationship_parameter_definition_model.horizontal_header_labels().index("id")
-        for source_row in source_row_set:
-            if self.relationship_parameter_definition_model.is_work_in_progress(source_row):
-                continue
-            source_index = self.relationship_parameter_definition_model.index(source_row, id_column)
-            parameter_ids.add(source_index.data(Qt.EditRole))
-        try:
-            self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.relationship_parameter_definition_model.remove_row_set(source_row_set)
-            self.relationship_parameter_value_model.remove_items("parameter", *parameter_ids)
-            self.set_commit_rollback_actions_enabled(True)
-            self.msg.emit("Successfully removed parameters.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-
-    def source_row_set(self, selection, proxy_model):
-        """A set of source rows corresponding to a selection of proxy indexes
-        from any of the following models:
-        object_parameter_definition_model, relationship_parameter_definition_model,
-        object_parameter_value_model, relationship_parameter_value_model
-        """
-        if selection.isEmpty():
-            return {}
-        proxy_row_set = set()
+        row_set = set()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            proxy_row_set.update(range(top, bottom + 1))
-        return {proxy_model.map_row_to_source(r) for r in proxy_row_set}
+            row_set.update(range(top, bottom + 1))
+        parameter_ids = set()
+        parameter_dict = dict()
+        header = self.relationship_parameter_definition_model.horizontal_header_labels()
+        relationship_class_id_column = header.index("relationship_class_id")
+        id_column = header.index("id")
+        for row in row_set:
+            relationship_class_id = self.relationship_parameter_definition_model.\
+                index(row, relationship_class_id_column).data(Qt.DisplayRole)
+            id_ = self.relationship_parameter_definition_model.index(row, id_column).data(Qt.DisplayRole)
+            parameter_ids.add(id_)
+            parameter_dict.setdefault(relationship_class_id, set()).add(id_)
+        try:
+            self.db_map.remove_items(parameter_ids=parameter_ids)
+            self.relationship_parameter_definition_model.remove_row_set(row_set)
+            self.relationship_parameter_value_model.remove_parameters(parameter_dict)
+            self.set_commit_rollback_actions_enabled(True)
+            self.msg.emit("Successfully removed parameter definitions.")
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
 
     def restore_ui(self):
         """Restore UI state from previous session."""

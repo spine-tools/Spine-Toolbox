@@ -2498,6 +2498,36 @@ class ObjectParameterModel(MinimalTableModel):
             row -= model.rowCount()
         return self.empty_row_model.insertRows(row, count)
 
+    def remove_row_set(self, row_set):
+        try:
+            first = min(row_set)
+            last = max(row_set)
+        except ValueError:
+            return False
+        if first < 0 or last >= self.rowCount():
+            return False
+        self.beginRemoveRows(QModelIndex(), first, last)
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        model_row_sets = {}
+        for row in row_set:
+            for object_class_id, model in self.sub_models.items():
+                if selected_object_class_ids and object_class_id not in selected_object_class_ids:
+                    continue
+                if row < model.rowCount():
+                    model_row_sets.setdefault(model, set()).add(row)
+                    break
+                row -= model.rowCount()
+            else:
+                model_row_sets.setdefault(self.empty_row_model, set()).add(row)
+        for model in self.sub_models.values():
+            if not model.remove_row_set(model_row_sets.get(model, set())):
+                self.endRemoveRows()
+                return False
+        val = self.empty_row_model.remove_row_set(model_row_sets.get(self.empty_row_model, set()))
+        self.endRemoveRows()
+        return val
+
+
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
         offset = self.rowCount() - 1
@@ -2650,7 +2680,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
                     continue
 
     def rename_parameter(self, parameter_id, object_class_id, new_name):
-        """Rename parameters in model."""
+        """Rename single parameter in model."""
         try:
             model = self.sub_models[object_class_id]
         except KeyError:
@@ -2669,7 +2699,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
         self.layoutChanged.emit()
 
     def remove_objects(self, objects):
-        """Remove objects in model."""
+        """Remove objects from model."""
         object_id_column = self.header.index("object_id")
         object_dict = {}
         for object_ in objects:
@@ -2683,6 +2713,20 @@ class ObjectParameterValueModel(ObjectParameterModel):
             for row in reversed(range(source_model.rowCount())):
                 object_id = source_model._main_data[row][object_id_column]
                 if object_id in object_ids:
+                    source_model.removeRows(row, 1)
+
+    def remove_parameters(self, parameter_dict):
+        """Remove parameters from model."""
+        parameter_id_column = self.header.index("parameter_id")
+        for object_class_id, parameter_ids in parameter_dict.items():
+            try:
+                model = self.sub_models[object_class_id]
+            except KeyError:
+                continue
+            source_model = model.sourceModel()
+            for row in reversed(range(source_model.rowCount())):
+                parameter_id = source_model._main_data[row][parameter_id_column]
+                if parameter_id in parameter_ids:
                     source_model.removeRows(row, 1)
 
 
@@ -2914,6 +2958,41 @@ class RelationshipParameterModel(MinimalTableModel):
             row -= model.rowCount()
         return self.empty_row_model.insertRows(row, count)
 
+    def remove_row_set(self, row_set):
+        try:
+            first = min(row_set)
+            last = max(row_set)
+        except ValueError:
+            return False
+        if first < 0 or last >= self.rowCount():
+            return False
+        self.beginRemoveRows(QModelIndex(), first, last)
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        model_row_sets = {}
+        for row in row_set:
+            for relationship_class_id, model in self.sub_models.items():
+                if selected_object_class_ids:
+                    object_class_id_list = self.object_class_id_lists[relationship_class_id]
+                    if not selected_object_class_ids.intersection(object_class_id_list):
+                        continue
+                if selected_relationship_class_ids:
+                    if relationship_class_id not in selected_relationship_class_ids:
+                        continue
+                if row < model.rowCount():
+                    model_row_sets.setdefault(model, set()).add(row)
+                    break
+                row -= model.rowCount()
+            else:
+                model_row_sets.setdefault(self.empty_row_model, set()).add(row)
+        for model in self.sub_models.values():
+            if not model.remove_row_set(model_row_sets.get(model, set())):
+                self.endRemoveRows()
+                return False
+        val = self.empty_row_model.remove_row_set(model_row_sets.get(self.empty_row_model, set()))
+        self.endRemoveRows()
+        return val
+
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
         offset = self.rowCount() - 1
@@ -3097,7 +3176,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 row_data[relationship_class_name_column] = relationship_class_name
 
     def rename_parameter(self, parameter_id, relationship_class_id, new_name):
-        """Rename parameters in model."""
+        """Rename single parameter in model."""
         try:
             model = self.sub_models[relationship_class_id]
         except KeyError:
@@ -3136,7 +3215,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         self.layoutChanged.emit()
 
     def remove_relationships(self, relationships):
-        """Remove relationships in model."""
+        """Remove relationships from model."""
         relationship_id_column = self.header.index("relationship_id")
         relationship_dict = {}
         for relationship in relationships:
@@ -3150,6 +3229,20 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             for row in reversed(range(source_model.rowCount())):
                 relationship_id = source_model._main_data[row][relationship_id_column]
                 if relationship_id in relationship_ids:
+                    source_model.removeRows(row, 1)
+
+    def remove_parameters(self, parameter_dict):
+        """Remove parameters from model."""
+        parameter_id_column = self.header.index("parameter_id")
+        for relationship_class_id, parameter_ids in parameter_dict.items():
+            try:
+                model = self.sub_models[relationship_class_id]
+            except KeyError:
+                continue
+            source_model = model.sourceModel()
+            for row in reversed(range(source_model.rowCount())):
+                parameter_id = source_model._main_data[row][parameter_id_column]
+                if parameter_id in parameter_ids:
                     source_model.removeRows(row, 1)
 
 
@@ -3315,6 +3408,16 @@ class ObjectFilterProxyModel(QSortFilterProxyModel):
         source_indexes = [self.mapToSource(x) for x in indexes]
         return self.sourceModel().batch_set_data(source_indexes, data)
 
+    def remove_row_set(self, row_set):
+        source_row_set = [self.map_row_to_source(row) for row in row_set]
+        return self.sourceModel().remove_row_set(source_row_set)
+
+    def map_row_to_source(self, row):
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        return source_index.row()
+
+
 
 class RelationshipFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for relationship parameter models."""
@@ -3378,6 +3481,15 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
     def batch_set_data(self, indexes, data):
         source_indexes = [self.mapToSource(x) for x in indexes]
         return self.sourceModel().batch_set_data(source_indexes, data)
+
+    def remove_row_set(self, row_set):
+        source_row_set = [self.map_row_to_source(row) for row in row_set]
+        return self.sourceModel().remove_row_set(source_row_set)
+
+    def map_row_to_source(self, row):
+        index = self.index(row, 0)
+        source_index = self.mapToSource(index)
+        return source_index.row()
 
 
 class JSONModel(EmptyRowModel):
