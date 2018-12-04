@@ -340,7 +340,7 @@
                 <number>0</number>
                </property>
                <item>
-                <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_definition">
+                <widget class="CopyPasteTableView" name="tableView_object_parameter_definition">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -599,7 +599,7 @@
                 <number>0</number>
                </property>
                <item>
-                <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_definition">
+                <widget class="CopyPasteTableView" name="tableView_relationship_parameter_definition">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                    <horstretch>2</horstretch>
@@ -1059,6 +1059,11 @@
   </customwidget>
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

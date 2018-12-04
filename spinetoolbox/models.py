@@ -888,7 +888,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.endResetModel()
 
     def flags(self, index):
-        """Return default flags except if forcing defaults."""
+        """Return index flags."""
         if not index.isValid():
             return Qt.NoItemFlags
         return self.default_flags
@@ -2401,39 +2401,6 @@ class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
         return items_to_add
 
 
-class AutoFilterModel(QAbstractItemModel):
-    """A model which implementes auto filter functionality.
-
-    Attributes:
-        tree_view_form (QMainWindow): TreeViewForm or GraphViewForm instance
-    """
-    def __init__(self, tree_view_form):
-        """Initialize class."""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
-        self.italic_font = QFont()
-        self.italic_font.setItalic(True)
-        self.rule_dict = dict()
-
-    def add_rule(self, rule):
-        """Add positive rules from `rule` dictionary.
-        Positive rules trigger a violation if met."""
-        for column, values in rule.items():
-            self.rule_dict[column] = values
-        if values:
-            self.setHeaderData(column, Qt.Horizontal, self.italic_font, Qt.FontRole)
-        else:
-            self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
-
-    def reset_auto_filter(self):
-        """Clear all rules."""
-        for column in self.rule_dict:
-            self.sourceModel().setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
-        self.rule_dict = dict()
-
-
 class ObjectParameterModel(MinimalTableModel):
     """A model that concatenates several 'sub' object parameter models,
     one per object class.
@@ -2596,8 +2563,11 @@ class ObjectParameterValueModel(ObjectParameterModel):
         selected_object_ids = self._tree_view_form.selected_object_ids
         for object_class_id, model in self.sub_models.items():
             model.update_filter(selected_object_ids.get(object_class_id, {}))
+            model.clear_filtered_out_values()
+        self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
+    @busy_effect
     def auto_filter_values(self, column):
         """Return values to populate the auto filter of given column.
         Each 'row' in the returned value consists of:
@@ -2615,12 +2585,14 @@ class ObjectParameterValueModel(ObjectParameterModel):
             for i in range(row_count):
                 if not model.main_filter_accepts_row(i, None):
                     continue
+                if not model.auto_filter_accepts_row(i, None, ignored_columns=[column]):
+                    continue
                 values.setdefault(data[i][column], set()).add(object_class_id)
         filtered_out = self.filtered_out.get(column, [])
         return [[val not in filtered_out, val, obj_cls_id_set] for val, obj_cls_id_set in values.items()]
 
     def set_filtered_out_values(self, column, values):
-        """Add values to filter out."""
+        """Set values that need to be filtered out."""
         filtered_out = [val for obj_cls_id, values in values.items() for val in values]
         self.filtered_out[column] = filtered_out
         for object_class_id, model in self.sub_models.items():
@@ -2631,7 +2603,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
             self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
 
     def clear_filtered_out_values(self):
-        """Clear the set of filtered out values."""
+        """Clear the set of values that need to be filtered out."""
         for column in self.filtered_out:
             self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
         self.filtered_out = dict()
@@ -2965,6 +2937,9 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Init class."""
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyRelationshipParameterValueModel(self)
+        self.filtered_out = dict()
+        self.italic_font = QFont()
+        self.italic_font.setItalic(True)
 
     def reset_model(self):
         """Reset model data. Each sub-model is filled with parameter value data
@@ -3001,19 +2976,56 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             object_ids = set(y for x in object_class_id_list for y in selected_object_ids.get(x, {}))
             object_id_lists = selected_object_id_lists.get(relationship_class_id, {})
             model.update_filter(object_ids, object_id_lists)
+            model.clear_filtered_out_values()
+        self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
+    @busy_effect
     def auto_filter_values(self, column):
-        keys = list()
+        """Return values to populate the auto filter of given column.
+        Each 'row' in the returned value consists of:
+        1) The 'checked' state, True if the value *hasn't* been filtered out
+        2) The value itself (an object name, a parameter name, a numerical value...)
+        3) A set of relationship class ids where the value is found.
+        """
+        values = dict()
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
         for relationship_class_id, model in self.sub_models.items():
-            if selected_relationship_class_ids and relationship_class_id not in selected_relationship_class_ids:
-                continue
+            if selected_object_class_ids:
+                object_class_id_list = self.object_class_id_lists[relationship_class_id]
+                if not selected_object_class_ids.intersection(object_class_id_list):
+                    continue
+            if selected_relationship_class_ids:
+                if relationship_class_id not in selected_relationship_class_ids:
+                    continue
             data = model.sourceModel()._main_data
             row_count = model.sourceModel().rowCount()
-            keys.extend([data[i][column] for i in range(row_count) if model.filterAcceptsRow(i, None)])
-        # return list(dict.fromkeys(keys)), []
-        return [[True, x] for x in dict.fromkeys(keys)]
+            for i in range(row_count):
+                if not model.main_filter_accepts_row(i, None):
+                    continue
+                if not model.auto_filter_accepts_row(i, None, ignored_columns=[column]):
+                    continue
+                values.setdefault(data[i][column], set()).add(relationship_class_id)
+        filtered_out = self.filtered_out.get(column, [])
+        return [[val not in filtered_out, val, rel_cls_id_set] for val, rel_cls_id_set in values.items()]
+
+    def set_filtered_out_values(self, column, values):
+        """Set values that need to be filtered out."""
+        filtered_out = [val for rel_cls_id, values in values.items() for val in values]
+        self.filtered_out[column] = filtered_out
+        for relationship_class_id, model in self.sub_models.items():
+            model.set_filtered_out_values(column, values.get(relationship_class_id, {}))
+        if filtered_out:
+            self.setHeaderData(column, Qt.Horizontal, self.italic_font, Qt.FontRole)
+        else:
+            self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
+
+    def clear_filtered_out_values(self):
+        """Clear the set of filtered out values."""
+        for column in self.filtered_out:
+            self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
+        self.filtered_out = dict()
 
     def move_rows_to_sub_models(self, rows):
         """Move rows from empty row model to the appropriate sub_model.
@@ -3272,12 +3284,17 @@ class ObjectFilterProxyModel(QSortFilterProxyModel):
         self.invalidateFilter()
 
     def set_filtered_out_values(self, column, values):
-        """Add values to filter out."""
-        print(values)
+        """Set values that need to be filtered out."""
         if values == self.filtered_out.get(column, {}):
             return
         self.filtered_out[column] = values
         self.invalidateFilter()
+
+    def clear_filtered_out_values(self):
+        """Clear the filtered out values."""
+        if self.filtered_out:
+            self.invalidateFilter()
+        self.filtered_out = dict()
 
     def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=[]):
         """Accept or reject row."""
@@ -3315,6 +3332,7 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
         self.selected_object_ids = dict()
         self.selected_object_id_lists = set()
         self.object_id_list_column = object_id_list_column
+        self.filtered_out = dict()
 
     def update_filter(self, selected_object_ids, selected_object_id_lists):
         """Update filter."""
@@ -3325,7 +3343,29 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
         self.selected_object_id_lists = selected_object_id_lists
         self.invalidateFilter()
 
-    def filterAcceptsRow(self, source_row, source_parent):
+    def set_filtered_out_values(self, column, values):
+        """Set values that need to be filtered out."""
+        if values == self.filtered_out.get(column, {}):
+            return
+        self.filtered_out[column] = values
+        self.invalidateFilter()
+
+    def clear_filtered_out_values(self):
+        """Clear the set of values that need to be filtered out."""
+        if self.filtered_out:
+            self.invalidateFilter()
+        self.filtered_out = dict()
+
+    def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=[]):
+        """Accept or reject row."""
+        for column, values in self.filtered_out.items():
+            if column in ignored_columns:
+                continue
+            if self.sourceModel()._main_data[source_row][column] in values:
+                return False
+        return True
+
+    def main_filter_accepts_row(self, source_row, source_parent):
         """Accept or reject row."""
         object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
         if self.selected_object_id_lists:
@@ -3334,134 +3374,17 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
             return len(self.selected_object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
         return True
 
+    def filterAcceptsRow(self, source_row, source_parent):
+        """Accept or reject row."""
+        if not self.main_filter_accepts_row(source_row, source_parent):
+            return False
+        if not self.auto_filter_accepts_row(source_row, source_parent):
+            return False
+        return True
+
     def batch_set_data(self, indexes, data):
         source_indexes = [self.mapToSource(x) for x in indexes]
         return self.sourceModel().batch_set_data(source_indexes, data)
-
-
-class OldAutoFilterProxyModel(QSortFilterProxyModel):
-    """A custom sort filter proxy model which implementes a two-level filter.
-
-    Attributes:
-        tree_view_form (QMainWindow): TreeViewForm or GraphViewForm instance
-        default (bool): what to return if no filter is specified
-    """
-    def __init__(self, tree_view_form=None, default=True):
-        """Initialize class."""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.default = default
-        self.header_index = None
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
-        self.italic_font = QFont()
-        self.italic_font.setItalic(True)
-        self.rule_dict = dict()
-        self.setDynamicSortFilter(False)  # Important so we can edit parameters in the view
-        self.filter_is_valid = True  # Set it to False when filter needs to be applied
-
-    def setSourceModel(self, source_model):
-        super().setSourceModel(source_model)
-        source_model.headerDataChanged.connect(self._handle_header_data_changed)
-        self._handle_header_data_changed()
-
-    @Slot("Qt.Orientation", "int", "int", name="_handle_header_data_changed")
-    def _handle_header_data_changed(self, orientation=Qt.Horizontal, first=0, last=0):
-        if orientation == Qt.Horizontal:
-            self.header_index = self.sourceModel().horizontal_header_labels().index
-
-    #def index(self, row, column, parent=QModelIndex()):
-    #    if row < 0 or column < 0 or column >= self.columnCount(parent):
-    #        return QModelIndex()
-    #    if self.sourceModel().can_grow:
-    #        index = super().index(row, column, parent)
-    #        source_parent = self.mapToSource(parent)
-    #        while not index.isValid():
-    #            self.sourceModel().insertRows(
-    #                self.sourceModel().rowCount(source_parent), 1, source_parent)
-    #            index = super().index(row, column, parent)
-    #        return index
-    #    if row >= self.rowCount(parent):
-    #        return QModelIndex()
-    #    return super().index(row, column, parent)
-
-    def horizontal_header_labels(self):
-        return [self.headerData(i, Qt.Horizontal) for i in range(self.columnCount())]
-
-    def batch_set_data(self, proxy_indexes, values):
-        source_indexes = [self.mapToSource(ind) for ind in proxy_indexes]
-        return self.sourceModel().batch_set_data(source_indexes, values)
-
-    @busy_effect
-    def autofilter_values(self, column):
-        """Return values for the autofilter menu of `column`."""
-        values = list()
-        source_model = self.sourceModel()
-        for source_row in range(source_model.rowCount()):
-            # Skip values rejected by autofilters from *other* columns
-            #if not self.autofilter_accepts_row(source_row, QModelIndex(), skip_source_column=[column]):
-            #    continue
-            value = source_model._main_data[source_row][column]
-            if value is None:
-                value = ""
-            values.append(value)
-        # Get values currently filtered in this column
-        try:
-            filtered_values = self.rule_dict[column]
-        except KeyError:
-            filtered_values = set()
-        return values, filtered_values
-
-    def add_rule(self, **kwargs):
-        """Add positive rules by taking the kwargs as individual statements (key = value).
-        Positive rules trigger a violation if met."""
-        self.filter_is_valid = False
-        for key, value in kwargs.items():
-            source_column = self.header_index(key)
-            self.rule_dict[source_column] = value
-        if value:
-            self.sourceModel().setHeaderData(source_column, Qt.Horizontal, self.italic_font, Qt.FontRole)
-        else:
-            self.sourceModel().setHeaderData(source_column, Qt.Horizontal, None, Qt.FontRole)
-
-    def autofilter_accepts_row(self, source_row, source_parent, skip_source_column=list()):
-        """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false.
-        All rules need to pass.
-        """
-        for source_column, value in self.rule_dict.items():
-            if source_column in skip_source_column:
-                continue
-            try:
-                data = self.sourceModel().index(source_row, source_column).data(Qt.DisplayRole)
-            except KeyError:
-                data = ""
-            if data == None:
-                data = ""
-            if data in value:
-                return False
-        return True
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        """Returns true if the item in the row indicated by the given source_row
-        and source_parent should be included in the model; otherwise returns false."""
-        return self.autofilter_accepts_row(source_row, source_parent)
-
-    @busy_effect
-    def apply_filter(self):
-        """Trigger filtering."""
-        if self.filter_is_valid:
-            return
-        self.layoutAboutToBeChanged.emit()
-        self.invalidateFilter()
-        self.layoutChanged.emit()
-        self.filter_is_valid = True
-
-    def clear_autofilter(self):
-        """Clear all rules."""
-        for column in self.rule_dict:
-            self.sourceModel().setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
-        self.rule_dict = dict()
 
 
 class JSONModel(EmptyRowModel):

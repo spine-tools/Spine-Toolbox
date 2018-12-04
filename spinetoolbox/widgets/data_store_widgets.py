@@ -701,11 +701,6 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.find_next_leaf)
-        # Autofilter parameter tables
-        self.ui.tableView_object_parameter_definition.filter_changed.connect(self.apply_autofilter)
-        self.ui.tableView_object_parameter_value.filter_changed.connect(self.apply_autofilter)
-        self.ui.tableView_relationship_parameter_definition.filter_changed.connect(self.apply_autofilter)
-        self.ui.tableView_relationship_parameter_value.filter_changed.connect(self.apply_autofilter)
         # Parameter value tables delegate json editor requested
         self.ui.tableView_object_parameter_value.itemDelegate().json_editor_requested.\
             connect(self.edit_object_parameter_json)
@@ -1227,14 +1222,6 @@ class TreeViewForm(DataStoreForm):
             relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
             self.selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
-
-    @Slot("QObject", "int", "QStringList", name="apply_autofilter")
-    def apply_autofilter(self, proxy_model, column, text_list):
-        """Called when the tableview wants to trigger the autofilter."""
-        header = proxy_model.sourceModel().horizontal_header_labels()
-        kwargs = {header[column]: text_list}
-        proxy_model.add_rule(**kwargs)
-        proxy_model.apply_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
