@@ -39,7 +39,9 @@ class TestSpineToolboxProject(unittest.TestCase):
         """
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
                 mock.patch("project.create_dir") as mock_create_dir, \
-                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs:
+                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs, \
+                mock.patch("os.path.split") as mock_split, \
+                mock.patch("configuration.create_dir") as mock_create_dir2:
             # logging.disable(level=logging.ERROR)  # Disable logging
             self.toolbox = ToolboxUI()
             self.toolbox.create_project("UnitTest Project", "")
