@@ -1055,7 +1055,7 @@ class MinimalTableModel(QAbstractTableModel):
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -1222,10 +1222,10 @@ class EmptyRowModel(MinimalTableModel):
         self.insertRows(0, 1, QModelIndex())
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
-    def _handle_data_changed(self, top_left, bottom_right, roles):
+    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
-        if Qt.EditRole not in roles:
+        if roles and Qt.EditRole not in roles:
             return
         last_row = self.rowCount() - 1
         for column, name in enumerate(self.header):
@@ -1272,7 +1272,7 @@ class EmptyRowModel(MinimalTableModel):
             return
         top_left = self.index(first, left)
         bottom_right = self.index(last, right)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(top_left, bottom_right)
 
     @Slot("QModelIndex", "int", "int", name="_handle_columns_inserted")
     def _handle_columns_inserted(self, parent, first, last):
@@ -1297,7 +1297,7 @@ class EmptyRowModel(MinimalTableModel):
             return
         top_left = self.index(0, left)
         bottom_right = self.index(self.rowCount() - 1, right)
-        self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(top_left, bottom_right)
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -2107,7 +2107,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         return True
 
     def relationships_on_the_fly(self, indexes):
@@ -2428,6 +2428,9 @@ class ObjectParameterModel(MinimalTableModel):
                      return self._tree_view_form.object_icon(object_class_name)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
+        if role == Qt.DecorationRole and column == self.object_class_name_column:
+             object_class_name = self.empty_row_model.index(row, column).data(Qt.DisplayRole)
+             return self._tree_view_form.object_icon(object_class_name)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -2484,7 +2487,7 @@ class ObjectParameterModel(MinimalTableModel):
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -2869,6 +2872,10 @@ class RelationshipParameterModel(MinimalTableModel):
                      return self._tree_view_form.relationship_icon(object_class_name_list)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
+        if role == Qt.DecorationRole and column == self.relationship_class_name_column:
+             object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).\
+                data(Qt.DisplayRole)
+             return self._tree_view_form.relationship_icon(object_class_name_list)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -2938,7 +2945,7 @@ class RelationshipParameterModel(MinimalTableModel):
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):

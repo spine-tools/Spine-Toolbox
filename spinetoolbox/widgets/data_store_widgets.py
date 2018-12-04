@@ -99,6 +99,10 @@ class DataStoreForm(QMainWindow):
         self.relationship_icon_dict = {}
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
+        self.selected_object_class_ids = set()
+        self.selected_object_ids = dict()
+        self.selected_relationship_class_ids = set()
+        self.selected_object_id_lists = dict()
         # Parameter value models
         self.object_parameter_value_model = ObjectParameterValueModel(self)
         self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
@@ -202,6 +206,8 @@ class DataStoreForm(QMainWindow):
 
     def object_icon(self, object_class_name):
         """An appropriate object icon for object_class_name."""
+        if not object_class_name:
+            return QIcon()
         try:
             icon = self.object_icon_dict[object_class_name]
         except KeyError:
@@ -211,6 +217,8 @@ class DataStoreForm(QMainWindow):
 
     def relationship_icon(self, object_class_name_list):
         """An appropriate relationship icon for object_class_name_list."""
+        if not object_class_name_list:
+            return QIcon()
         try:
             icon = self.relationship_icon_dict[object_class_name_list]
         except KeyError:
@@ -613,10 +621,6 @@ class TreeViewForm(DataStoreForm):
         super().__init__(data_store, db_map, database, tree_view_form_ui())
         # Object tree selected indexes
         self.selected_tree_indexes = {}
-        self.selected_object_class_ids = set()
-        self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = set()
-        self.selected_object_id_lists = dict()
         # JSON models
         self.object_parameter_json_model = JSONModel(self)
         self.relationship_parameter_json_model = JSONModel(self)
@@ -1459,8 +1463,7 @@ class TreeViewForm(DataStoreForm):
         For each item in the selection, add a parameter value row if needed.
         """
         model = self.object_parameter_value_model
-        proxy_index = self.ui.tableView_object_parameter_value.currentIndex()
-        index = self.object_parameter_value_proxy.mapToSource(proxy_index)
+        index = self.ui.tableView_object_parameter_value.currentIndex()
         row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
@@ -1487,7 +1490,7 @@ class TreeViewForm(DataStoreForm):
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
         self.ui.tabWidget_object_parameter.setCurrentIndex(0)
-        self.object_parameter_value_proxy.apply_filter()
+        model.update_filter()
 
     @Slot(name="add_relationship_parameter_values")
     def add_relationship_parameter_values(self):
@@ -1495,8 +1498,7 @@ class TreeViewForm(DataStoreForm):
         For each item in the selection, add a parameter value row if needed.
         """
         model = self.relationship_parameter_value_model
-        proxy_index = self.ui.tableView_relationship_parameter_value.currentIndex()
-        index = self.relationship_parameter_value_proxy.mapToSource(proxy_index)
+        index = self.ui.tableView_relationship_parameter_value.currentIndex()
         row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
@@ -1532,7 +1534,7 @@ class TreeViewForm(DataStoreForm):
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
         self.ui.tabWidget_relationship_parameter.setCurrentIndex(0)
-        self.relationship_parameter_value_proxy.apply_filter()
+        model.update_filter()
 
     @Slot(name="add_object_parameter_definitions")
     def add_object_parameter_definitions(self):
@@ -1540,8 +1542,7 @@ class TreeViewForm(DataStoreForm):
         For each item in the selection, add a parameter value row if needed.
         """
         model = self.object_parameter_definition_model
-        proxy_index = self.ui.tableView_object_parameter_definition.currentIndex()
-        index = self.object_parameter_definition_proxy.mapToSource(proxy_index)
+        index = self.ui.tableView_object_parameter_definition.currentIndex()
         row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
@@ -1564,7 +1565,7 @@ class TreeViewForm(DataStoreForm):
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
         self.ui.tabWidget_object_parameter.setCurrentIndex(1)
-        self.object_parameter_definition_proxy.apply_filter()
+        model.update_filter()
 
     @Slot(name="add_relationship_parameter_definitions")
     def add_relationship_parameter_definitions(self):
@@ -1572,8 +1573,7 @@ class TreeViewForm(DataStoreForm):
         For each item in the selection, add a parameter row if needed.
         """
         model = self.relationship_parameter_definition_model
-        proxy_index = self.ui.tableView_relationship_parameter_definition.currentIndex()
-        index = self.relationship_parameter_definition_proxy.mapToSource(proxy_index)
+        index = self.ui.tableView_relationship_parameter_definition.currentIndex()
         row = model.rowCount() - 1
         tree_selection = self.ui.treeView_object.selectionModel().selection()
         if not tree_selection.isEmpty():
@@ -1596,7 +1596,7 @@ class TreeViewForm(DataStoreForm):
                 indexes = [model.index(row, column) for row, column in row_column_tuples]
                 model.batch_set_data(indexes, data)
         self.ui.tabWidget_relationship_parameter.setCurrentIndex(1)
-        self.relationship_parameter_definition_proxy.apply_filter()
+        model.update_filter()
 
     @busy_effect
     @Slot(name="remove_object_parameter_values")
@@ -1818,7 +1818,6 @@ class GraphViewForm(DataStoreForm):
         self.restore_ui()
         self.add_toggle_view_actions()
         self.init_commit_rollback_actions()
-        self.build_graph()
         title = database + " (read only) " if read_only else database
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
         toc = time.clock()
@@ -1953,11 +1952,14 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QItemSelection", "QItemSelection", name="handle_object_tree_selection_changed")
     def handle_object_tree_selection_changed(self, selected, deselected):
-        """Select or deselect all children when selecting or deselecting the parent."""
+        """Build_graph."""
+        for index in selected.indexes():
+            if self.object_tree_model.canFetchMore(index):
+                self.object_tree_model.fetchMore(index)
         self.build_graph()
 
     def init_graph_data(self):
-        """Initialize graph data by querying db_map."""
+        """Initialize graph data."""
         rejected_object_names = [x.object_name for x in self.rejected_items]
         self.object_ids = list()
         self.object_names = list()
@@ -2242,45 +2244,28 @@ class GraphViewForm(DataStoreForm):
     def handle_scene_selection_changed(self):
         """Show parameters for selected items."""
         scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
-        current_items = scene.selectedItems()
-        previous_items = self.object_item_selection + self.arc_item_selection
-        selected = [x for x in current_items if x not in previous_items]
-        deselected = [x for x in previous_items if x not in current_items]
-        self.object_item_selection = [x for x in current_items if isinstance(x, ObjectItem)]
-        self.arc_item_selection = [x for x in current_items if isinstance(x, ArcItem)]
-        selected_object_ids = set()
-        selected_object_id_lists = set()
-        deselected_object_ids = set()
-        deselected_object_id_lists = set()
-        object_class_ids = set()
-        relationship_class_ids = set()
-        for item in selected:
+        selected_items = scene.selectedItems()
+        self.object_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
+        self.arc_item_selection = [x for x in selected_items if isinstance(x, ArcItem)]
+        self.selected_object_class_ids = set()
+        self.selected_object_ids = dict()
+        self.selected_relationship_class_ids = set()
+        self.selected_object_id_lists = dict()
+        for item in selected_items:
             if isinstance(item, ObjectItem):
-                selected_object_ids.add(item.object_id)
+                self.selected_object_class_ids.add(item.object_class_id)
+                self.selected_object_ids.setdefault(item.object_class_id, set()).add(item.object_id)
             elif isinstance(item, ArcItem):
-                selected_object_id_lists.add(item.object_id_list)
-        for item in deselected:
-            if isinstance(item, ObjectItem):
-                deselected_object_ids.add(item.object_id)
-            elif isinstance(item, ArcItem):
-                deselected_object_id_lists.add(item.object_id_list)
-        for item in current_items:
-            if isinstance(item, ObjectItem):
-                object_class_ids.add(item.object_class_id)
-            elif isinstance(item, ArcItem):
-                relationship_class_ids.add(item.relationship_class_id)
-        self.object_parameter_value_proxy.diff_update_object_id_set(deselected_object_ids)
-        self.object_parameter_value_proxy.update_object_id_set(selected_object_ids)
-        self.object_parameter_value_proxy.apply_filter()
-        self.object_parameter_definition_proxy.clear_object_class_id_set()
-        self.object_parameter_definition_proxy.update_object_class_id_set(object_class_ids)
-        self.object_parameter_definition_proxy.apply_filter()
-        self.relationship_parameter_value_proxy.diff_update_object_id_list_set(deselected_object_id_lists)
-        self.relationship_parameter_value_proxy.update_object_id_list_set(selected_object_id_lists)
-        self.relationship_parameter_value_proxy.apply_filter()
-        self.relationship_parameter_definition_proxy.clear_relationship_class_id_set()
-        self.relationship_parameter_definition_proxy.update_relationship_class_id_set(relationship_class_ids)
-        self.relationship_parameter_definition_proxy.apply_filter()
+                self.selected_relationship_class_ids.add(item.relationship_class_id)
+                self.selected_object_id_lists.setdefault(item.relationship_class_id, set()).add(item.object_id_list)
+        if self.ui.tabWidget_object_parameter.currentIndex() == 0:
+            self.object_parameter_value_model.update_filter()
+        else:
+            self.object_parameter_definition_model.update_filter()
+        if self.ui.tabWidget_relationship_parameter.currentIndex() == 0:
+            self.relationship_parameter_value_model.update_filter()
+        else:
+            self.relationship_parameter_definition_model.update_filter()
 
     @Slot("QList<QRectF>", name="handle_scene_changed")
     def handle_scene_changed(self, region):
