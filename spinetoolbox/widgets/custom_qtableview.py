@@ -145,6 +145,11 @@ class CopyPasteTableView(QTableView):
                 column += 1
             columns_append(column)
             column += 1
+        # Insert extra rows if needed:
+        last_row = max(rows)
+        row_count = self.model().rowCount()
+        if last_row >= row_count:
+            self.model().insertRows(row_count, last_row - row_count + 1)
         model_index = self.model().index
         for i, row in enumerate(rows):
             line = data[i]
@@ -230,7 +235,7 @@ class FilterWidget(QWidget):
     def set_values(self, values):
         """Set values to show in the 'menu'. Reset model using those values and update geometry."""
         self.model.reset_model([[None, "All"]] + values)
-        #self.set_ok_index_data()
+        self.set_ok_index_data()
         self.view.horizontalHeader().hideSection(2)  # Column 2 holds internal data (cls_id_set)
         self.view.resizeColumnsToContents()
         width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
@@ -270,7 +275,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         Otherwise the column is selected when pressing on the header."""
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
-        self.horizontalHeader().sectionPressed.connect(self.toggle_auto_filter)
+        self.horizontalHeader().sectionClicked.connect(self.toggle_auto_filter)
 
     @Slot(int, name="show_filter_menu")
     def toggle_auto_filter(self, logical_index):

@@ -1154,11 +1154,7 @@ class TreeViewForm(DataStoreForm):
         """Apply filters on parameter models according to selected and deselected object tree indexes."""
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
-            try:
-                self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
-            except KeyError:  # TODO: Find out why this happens after adding new items
-                logging.debug("KeyError {}".format(index))
-                pass
+            self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_tree_indexes.setdefault(item_type, set()).add(index)
@@ -2598,6 +2594,7 @@ class GraphViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_graph_items")
     def remove_graph_items(self, checked=False):
+        # FIXME: This is outdated
         """Remove all selected items in the graph."""
         if not self.object_item_selection + self.arc_item_selection:
             return
@@ -2605,7 +2602,7 @@ class GraphViewForm(DataStoreForm):
             "object": set(x.object_id for x in self.object_item_selection if x.object_id)
         }
         try:
-            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})  # FIXME: this is ugly
+            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})
             for key, value in removed_id_dict.items():
                 self.object_tree_model.remove_items(key, *value)
             for key, value in removed_id_dict.items():

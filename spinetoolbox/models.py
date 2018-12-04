@@ -1212,15 +1212,6 @@ class EmptyRowModel(MinimalTableModel):
                 return self.default_flags & ~Qt.ItemIsEditable
         return self.default_flags
 
-    def index(self, row, column, parent=QModelIndex()):
-        """Return index for given row and column.
-        Let the model grow if necessary."""
-        if row < 0 or column < 0 or column >= self.columnCount(parent):
-            return QModelIndex()
-        if row >= self.rowCount(parent):
-            self.insertRows(self.rowCount(parent), row - self.rowCount(parent) + 1, parent)
-        return super().index(row, column, parent)
-
     def set_default_row(self, **kwargs):
         """Set default row data."""
         self.default_row = kwargs
@@ -1979,21 +1970,11 @@ class EmptyParameterModel(EmptyRowModel):
         Set data in model first, then check if the database needs to be updated as well.
         Extend set of indexes as additional data is set (for emitting dataChanged at the end).
         Subclasses need to implement `items_to_add` and `add_items_to_db`."""
-        if not indexes:
+        if not super().batch_set_data(indexes, data ):
             return False
-        if len(indexes) != len(data):
-            return False
-        for k, index in enumerate(indexes):
-            self._main_data[index.row()][index.column()] = data[k]
         items_to_add = self.items_to_add(indexes)
         rows = self.add_items_to_db(items_to_add)
         self._parent.move_rows_to_sub_models(rows)
-        # Find square envelope of indexes to emit dataChanged
-        top = min(ind.row() for ind in indexes)
-        bottom = max(ind.row() for ind in indexes)
-        left = min(ind.column() for ind in indexes)
-        right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
         return True
 
 
@@ -2449,15 +2430,6 @@ class ObjectParameterModel(MinimalTableModel):
             row -= model.rowCount()
         return self.empty_row_model.index(row, column).data(role)
 
-    def index(self, row, column, parent=QModelIndex()):
-        """Let the empty row model grow on demand."""
-        if row < 0 or column < 0 or column >= self.columnCount(parent):
-            return QModelIndex()
-        if row >= self.rowCount(parent):
-            model = self.empty_row_model
-            model.insertRows(model.rowCount(), row - self.rowCount(parent) + 1)  # FIXME: this sometimes insert more rows than desired
-        return super().index(row, column, parent)
-
     def rowCount(self, parent=QModelIndex()):
         """Return the sum of rows in all models.
         Skip models whose object class id is not selected.
@@ -2515,10 +2487,21 @@ class ObjectParameterModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
         return True
 
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """Find the right sub-model (or the empty model) and call insertRows on it."""
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        for object_class_id, model in self.sub_models.items():
+            if selected_object_class_ids and object_class_id not in selected_object_class_ids:
+                continue
+            if row < model.rowCount():
+                return model.insertRows(row, count)
+            row -= model.rowCount()
+        return self.empty_row_model.insertRows(row, count)
+
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
-        inserted_row = self.rowCount() - 1
-        self.rowsInserted.emit(QModelIndex(), inserted_row, inserted_row)
+        offset = self.rowCount() - 1
+        self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
 
 
 class ObjectParameterValueModel(ObjectParameterModel):
@@ -2844,15 +2827,6 @@ class RelationshipParameterModel(MinimalTableModel):
             row -= model.rowCount()
         return self.empty_row_model.index(row, column).data(role)
 
-    def index(self, row, column, parent=QModelIndex()):
-        """Let the empty row model grow on demand."""
-        if row < 0 or column < 0 or column >= self.columnCount(parent):
-            return QModelIndex()
-        if row >= self.rowCount(parent):
-            model = self.empty_row_model
-            model.insertRows(model.rowCount(), row - self.rowCount(parent) + 1)
-        return super().index(row, column, parent)
-
     def rowCount(self, parent=QModelIndex()):
         """Return the sum of rows in all models.
         Models whose relationship class id is not selected are skipped.
@@ -2923,10 +2897,27 @@ class RelationshipParameterModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
         return True
 
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """Find the right sub-model (or the empty model) and call insertRows on it."""
+        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        for relationship_class_id, model in self.sub_models.items():
+            if selected_object_class_ids:
+                object_class_id_list = self.object_class_id_lists[relationship_class_id]
+                if not selected_object_class_ids.intersection(object_class_id_list):
+                    continue
+            if selected_relationship_class_ids:
+                if relationship_class_id not in selected_relationship_class_ids:
+                    continue
+            if row < model.rowCount():
+                return model.insertRows(row, count)
+            row -= model.rowCount()
+        return self.empty_row_model.insertRows(row, count)
+
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
-        inserted_row = self.rowCount() - 1
-        self.rowsInserted.emit(QModelIndex(), inserted_row, inserted_row)
+        offset = self.rowCount() - 1
+        self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
 
 
 class RelationshipParameterValueModel(RelationshipParameterModel):
@@ -3292,9 +3283,10 @@ class ObjectFilterProxyModel(QSortFilterProxyModel):
 
     def clear_filtered_out_values(self):
         """Clear the filtered out values."""
-        if self.filtered_out:
-            self.invalidateFilter()
+        if not self.filtered_out:
+            return
         self.filtered_out = dict()
+        self.invalidateFilter()
 
     def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=[]):
         """Accept or reject row."""
@@ -3352,9 +3344,10 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
 
     def clear_filtered_out_values(self):
         """Clear the set of values that need to be filtered out."""
-        if self.filtered_out:
-            self.invalidateFilter()
+        if not self.filtered_out:
+            return
         self.filtered_out = dict()
+        self.invalidateFilter()
 
     def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=[]):
         """Accept or reject row."""
