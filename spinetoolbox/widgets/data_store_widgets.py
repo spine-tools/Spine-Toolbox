@@ -1046,7 +1046,7 @@ class TreeViewForm(DataStoreForm):
     def handle_object_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
         """Called when the user edits the object parameter json table.
         Set json field in object parameter value table."""
-        if Qt.EditRole not in roles:
+        if roles and Qt.EditRole not in roles:
             return
         json = self.object_parameter_json_model.json()
         index = self.ui.tableView_object_parameter_value.currentIndex()
@@ -1056,7 +1056,7 @@ class TreeViewForm(DataStoreForm):
     def handle_relationship_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
         """Called when the user edits the relationship parameter json table.
         Set json field in relationship parameter value table."""
-        if Qt.EditRole not in roles:
+        if roles and Qt.EditRole not in roles:
             return
         json = self.relationship_parameter_json_model.json()
         index = self.ui.tableView_relationship_parameter_value.currentIndex()
@@ -1096,7 +1096,7 @@ class TreeViewForm(DataStoreForm):
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
-        # TODO: adapt to new parameter models
+        # TODO: Adapt to new parameter models
         selection = tree_selection = self.ui.treeView_object.selectionModel().selection()
         if selection.count() != 1:
             return

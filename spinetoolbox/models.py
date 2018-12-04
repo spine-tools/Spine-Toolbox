@@ -1219,7 +1219,7 @@ class EmptyRowModel(MinimalTableModel):
     @Slot(name="_handle_model_reset")
     def _handle_model_reset(self):
         """Insert a last empty row after reset."""
-        self.insertRows(0, 1, QModelIndex())
+        self.insertRows(self.rowCount(), 1, QModelIndex())
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
     def _handle_data_changed(self, top_left, bottom_right, roles=[]):
@@ -1929,6 +1929,18 @@ class SubParameterValueModel(SubParameterModel):
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self._parent._tree_view_form.msg_error.emit(e.msg)
             return False
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Limit the display of json array data."""
+        data = super().data(index, role)
+        if role != Qt.DisplayRole:
+            return data
+        if self._parent.header[index.column()] == 'json' and data:
+            split_data = data.split(",")
+            if len(split_data) > 2:
+                return split_data[0].strip() + ",...," + split_data[-1].strip()
+            return data
+        return data
 
 
 class SubParameterDefinitionModel(SubParameterModel):
