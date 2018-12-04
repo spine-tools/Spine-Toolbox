@@ -16,11 +16,11 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-from PySide2.QtWidgets import QTableView, QApplication, QAction
+from PySide2.QtWidgets import QTableView, QApplication, QAction, QWidget, QVBoxLayout, QPushButton
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
-from widgets.custom_menus import QOkMenu
-from models import JSONModel
+from widgets.custom_delegates import CheckBoxDelegate
+from models import MinimalTableModel
 
 
 class CopyPasteTableView(QTableView):
@@ -161,6 +161,46 @@ class CopyPasteTableView(QTableView):
         return True
 
 
+class FilterWidget(QWidget):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.model = MinimalTableModel(self)
+        self.view = QTableView(self)
+        self.view.setModel(self.model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        check_box_delegate = CheckBoxDelegate(self)
+        self.view.setItemDelegateForColumn(0, check_box_delegate)
+        check_box_delegate.commit_data.connect(self._handle_check_box_commit_data)
+        self.button = QPushButton("Ok", self)
+        layout.addWidget(self.view)
+        layout.addWidget(self.button)
+        self.button.clicked.connect(self.hide)
+        self.hide()
+
+    @Slot("QModelIndex", name="_handle_check_box_commit_data")
+    def _handle_check_box_commit_data(self, index):
+        data = index.data(Qt.EditRole)
+        index.model().setData(index, not data)
+
+    def set_values(self, values):
+        self.model.reset_model(values)
+        self.view.resizeColumnsToContents()
+        width = self.view.horizontalHeader().length()
+        # self.setFixedWidth(width + 2)
+        height = self.view.verticalHeader().length() + self.button.height()
+        parent_height = self.parent().height()
+        self.setFixedHeight(min(height, parent_height / 2) + 2)
+
+    def set_section_height(self, height):
+        self.view.verticalHeader().setDefaultSectionSize(height)
+        self.button.setFixedHeight(height)
+
+
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 
@@ -177,13 +217,51 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.action_all = None
         self.filter_text = None
         self.filter_column = None
+        self.filter_widget = FilterWidget(self)
+        self.filter_widget.button.clicked.connect(self.update_auto_filter)
+        self.verticalHeader().sectionResized.connect(self._handle_vertical_section_resized)
+
+    @Slot("bool", name="update_auto_filter")
+    def update_auto_filter(self, checked=False):
+        """Called when the user clicks the Ok button in the auto filter widget.
+        Add 'filtered out values' to auto filter."""
+        data = self.filter_widget.model._main_data
+        values = dict()
+        for checked, value, object_class_id_set in data:
+            if checked:
+                continue
+            for object_class_id in object_class_id_set:
+                values.setdefault(object_class_id, set()).add(value)
+        self.model().set_filtered_out_values(self.filter_column, values)
+
+    def _handle_vertical_section_resized(self, logical_index, old_size, new_size):
+        """Pass vertical section size on to the filter widget."""
+        if logical_index == 0:
+            self.filter_widget.set_section_height(new_size)
 
     def setModel(self, model):
         """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
         Otherwise the column is selected when pressing on the header."""
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
-        self.horizontalHeader().sectionPressed.connect(self.show_filter_menu)
+        self.horizontalHeader().sectionPressed.connect(self.toggle_auto_filter)
+
+    @Slot(int, name="show_filter_menu")
+    def toggle_auto_filter(self, logical_index):
+        """Called when user clicks on a horizontal section header.
+        Show/hide the autofilter widget."""
+        if self.filter_widget.isVisible() and self.filter_column == logical_index:
+            self.filter_widget.hide()
+            return
+        self.filter_column = logical_index
+        header_pos = self.mapToGlobal(self.horizontalHeader().pos())
+        pos_x = self.horizontalHeader().sectionViewportPosition(logical_index)
+        pos_y = self.horizontalHeader().height()
+        values = self.model().auto_filter_values(logical_index)
+        self.filter_widget.set_values(values)
+        width = self.horizontalHeader().sectionSize(logical_index)
+        self.filter_widget.move(pos_x, pos_y)
+        self.filter_widget.show()
 
     @Slot(int, name="show_filter_menu")
     def show_filter_menu(self, logical_index):

@@ -398,9 +398,9 @@ class QOkMenu(QMenu):
         super().__init__(parent)
 
     def mouseReleaseEvent(self, event):
-        """The super implementation triggers the action and closes the menu.
+        """The super class implementation triggers the action and closes the menu.
         Here, we only close the menu if the action is the 'Ok' action.
-        Otherwise we just trigger it.
+        Otherwise we just trigger the action.
         """
         action = self.activeAction()
         if action is None:

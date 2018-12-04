@@ -44,7 +44,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    AutoFilterProxyModel, JSONModel
+    JSONModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -251,9 +251,7 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_value_view(self):
         """Init object parameter value view."""
-        auto_filter_model = AutoFilterProxyModel(self)
-        auto_filter_model.setSourceModel(self.object_parameter_value_model)
-        self.ui.tableView_object_parameter_value.setModel(auto_filter_model)
+        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
@@ -266,9 +264,7 @@ class DataStoreForm(QMainWindow):
 
     def init_relationship_parameter_value_view(self):
         """Init relationship parameter value view."""
-        auto_filter_model = AutoFilterProxyModel(self)
-        auto_filter_model.setSourceModel(self.relationship_parameter_value_model)
-        self.ui.tableView_relationship_parameter_value.setModel(auto_filter_model)
+        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
@@ -285,9 +281,7 @@ class DataStoreForm(QMainWindow):
 
     def init_object_parameter_definition_view(self):
         """Init object parameter definition view."""
-        auto_filter_model = AutoFilterProxyModel(self)
-        auto_filter_model.setSourceModel(self.object_parameter_definition_model)
-        self.ui.tableView_object_parameter_definition.setModel(auto_filter_model)
+        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
@@ -298,9 +292,7 @@ class DataStoreForm(QMainWindow):
 
     def init_relationship_parameter_definition_view(self):
         """Init relationship parameter definition view."""
-        auto_filter_model = AutoFilterProxyModel(self)
-        auto_filter_model.setSourceModel(self.relationship_parameter_definition_model)
-        self.ui.tableView_relationship_parameter_definition.setModel(auto_filter_model)
+        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
         h = self.relationship_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
