@@ -1121,13 +1121,11 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if row < 0 or row >= self.rowCount():
+        if row < 0 or row + count - 1 >= self.rowCount():
             return False
-        if not count == 1:
-            logging.error("Remove 1 row at a time")
-            return False
-        self.beginRemoveRows(parent, row, row)
-        removed_main_data_row = self._main_data.pop(row)
+        self.beginRemoveRows(parent, row, row + count - 1)
+        for i in reversed(range(row, row + count)):
+            self._main_data.pop(i)
         self.endRemoveRows()
         return True
 
@@ -1158,29 +1156,6 @@ class MinimalTableModel(QAbstractTableModel):
             self._main_data = []
         # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
-        return True
-
-    def remove_row_set(self, row_set, parent=QModelIndex()):
-        """Removes a set of rows under parent.
-
-        Args:
-            row_set (set): Set of integer row numbers to remove
-            parent (QModelIndex): Parent index
-
-        Returns:
-            True if rows were removed successfully, False otherwise
-        """
-        try:
-            first = min(row_set)
-            last = max(row_set)
-        except ValueError:
-            return False
-        if first < 0 or last >= self.rowCount():
-            return False
-        self.beginRemoveRows(parent, first, last)
-        for row in reversed(sorted(row_set)):
-            self._main_data.pop(row)
-        self.endRemoveRows()
         return True
 
     def reset_model(self, main_data=[], aux_data=None):
@@ -2513,35 +2488,40 @@ class ObjectParameterModel(MinimalTableModel):
             row -= model.rowCount()
         return self.empty_row_model.insertRows(row, count)
 
-    def remove_row_set(self, row_set):
-        try:
-            first = min(row_set)
-            last = max(row_set)
-        except ValueError:
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Find the right sub-models (or empty model) and call removeRows on them."""
+        if row < 0 or row + count - 1 >= self.rowCount():
             return False
-        if first < 0 or last >= self.rowCount():
-            return False
-        self.beginRemoveRows(QModelIndex(), first, last)
+        self.beginRemoveRows(parent, row, row + count - 1)
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        model_row_sets = {}
-        for row in row_set:
+        model_row_sets = dict()
+        for i in range(row, row + count):
             for object_class_id, model in self.sub_models.items():
                 if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                     continue
-                if row < model.rowCount():
-                    model_row_sets.setdefault(model, set()).add(row)
+                if i < model.rowCount():
+                    model_row_sets.setdefault(model, set()).add(i)
                     break
-                row -= model.rowCount()
+                i -= model.rowCount()
             else:
-                model_row_sets.setdefault(self.empty_row_model, set()).add(row)
+                model_row_sets.setdefault(self.empty_row_model, set()).add(i)
         for model in self.sub_models.values():
-            if not model.remove_row_set(model_row_sets.get(model, set())):
-                self.endRemoveRows()
-                return False
-        val = self.empty_row_model.remove_row_set(model_row_sets.get(self.empty_row_model, set()))
+            try:
+                row_set = model_row_sets[model]
+                min_row = min(row_set)
+                max_row = max(row_set)
+                model.removeRows(min_row, max_row - min_row + 1)
+            except KeyError:
+                pass
+        try:
+            row_set = model_row_sets[self.empty_row_model]
+            min_row = min(row_set)
+            max_row = max(row_set)
+            self.empty_row_model.removeRows(min_row, max_row - min_row + 1)
+        except KeyError:
+            pass
         self.endRemoveRows()
-        return val
-
+        return True
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
@@ -2977,19 +2957,15 @@ class RelationshipParameterModel(MinimalTableModel):
             row -= model.rowCount()
         return self.empty_row_model.insertRows(row, count)
 
-    def remove_row_set(self, row_set):
-        try:
-            first = min(row_set)
-            last = max(row_set)
-        except ValueError:
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Find the right sub-models (or empty model) and call removeRows on them."""
+        if row < 0 or row + count - 1 >= self.rowCount():
             return False
-        if first < 0 or last >= self.rowCount():
-            return False
-        self.beginRemoveRows(QModelIndex(), first, last)
+        self.beginRemoveRows(parent, row, row + count - 1)
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
         model_row_sets = {}
-        for row in row_set:
+        for i in range(row, row + count):
             for relationship_class_id, model in self.sub_models.items():
                 if selected_object_class_ids:
                     object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2998,19 +2974,29 @@ class RelationshipParameterModel(MinimalTableModel):
                 if selected_relationship_class_ids:
                     if relationship_class_id not in selected_relationship_class_ids:
                         continue
-                if row < model.rowCount():
-                    model_row_sets.setdefault(model, set()).add(row)
+                if i < model.rowCount():
+                    model_row_sets.setdefault(model, set()).add(i)
                     break
-                row -= model.rowCount()
+                i -= model.rowCount()
             else:
-                model_row_sets.setdefault(self.empty_row_model, set()).add(row)
+                model_row_sets.setdefault(self.empty_row_model, set()).add(i)
         for model in self.sub_models.values():
-            if not model.remove_row_set(model_row_sets.get(model, set())):
-                self.endRemoveRows()
-                return False
-        val = self.empty_row_model.remove_row_set(model_row_sets.get(self.empty_row_model, set()))
+            try:
+                row_set = model_row_sets[model]
+                min_row = min(row_set)
+                max_row = max(row_set)
+                model.removeRows(min_row, max_row - min_row + 1)
+            except KeyError:
+                pass
+        try:
+            row_set = model_row_sets[self.empty_row_model]
+            min_row = min(row_set)
+            max_row = max(row_set)
+            self.empty_row_model.removeRows(min_row, max_row - min_row + 1)
+        except KeyError:
+            pass
         self.endRemoveRows()
-        return val
+        return True
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
@@ -3427,16 +3413,6 @@ class ObjectFilterProxyModel(QSortFilterProxyModel):
         source_indexes = [self.mapToSource(x) for x in indexes]
         return self.sourceModel().batch_set_data(source_indexes, data)
 
-    def remove_row_set(self, row_set):
-        source_row_set = [self.map_row_to_source(row) for row in row_set]
-        return self.sourceModel().remove_row_set(source_row_set)
-
-    def map_row_to_source(self, row):
-        index = self.index(row, 0)
-        source_index = self.mapToSource(index)
-        return source_index.row()
-
-
 
 class RelationshipFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for relationship parameter models."""
@@ -3500,15 +3476,6 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
     def batch_set_data(self, indexes, data):
         source_indexes = [self.mapToSource(x) for x in indexes]
         return self.sourceModel().batch_set_data(source_indexes, data)
-
-    def remove_row_set(self, row_set):
-        source_row_set = [self.map_row_to_source(row) for row in row_set]
-        return self.sourceModel().remove_row_set(source_row_set)
-
-    def map_row_to_source(self, row):
-        index = self.index(row, 0)
-        source_index = self.mapToSource(index)
-        return source_index.row()
 
 
 class JSONModel(EmptyRowModel):

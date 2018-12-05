@@ -1615,20 +1615,22 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        row_set = set()
+        row_dict = dict()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_set.update(range(top, bottom + 1))
+            row_dict[top] = bottom - top + 1
+        model = self.object_parameter_value_model
+        id_column = model.horizontal_header_labels().index("id")
         parameter_value_ids = set()
-        id_column = self.object_parameter_value_model.horizontal_header_labels().index("id")
-        for row in row_set:
-            index = self.object_parameter_value_model.index(row, id_column)
-            parameter_value_ids.add(index.data(Qt.EditRole))
+        for row, count in row_dict.items():
+            parameter_value_ids.update(model.index(i, id_column).data() for i in range(row, row + count))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            self.object_parameter_value_model.remove_row_set(row_set)
+            for row in reversed(sorted(row_dict)):
+                count = row_dict[row]
+                self.object_parameter_value_model.removeRows(row, count)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
@@ -1638,20 +1640,22 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        row_set = set()
+        row_dict = dict()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_set.update(range(top, bottom + 1))
+            row_dict[top] = bottom - top + 1
+        model = self.relationship_parameter_value_model
+        id_column = model.horizontal_header_labels().index("id")
         parameter_value_ids = set()
-        id_column = self.relationship_parameter_value_model.horizontal_header_labels().index("id")
-        for row in row_set:
-            index = self.relationship_parameter_value_model.index(row, id_column)
-            parameter_value_ids.add(index.data(Qt.EditRole))
+        for row, count in row_dict.items():
+            parameter_value_ids.update(model.index(i, id_column).data() for i in range(row, row + count))
         try:
             self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            self.relationship_parameter_value_model.remove_row_set(row_set)
+            for row in reversed(sorted(row_dict)):
+                count = row_dict[row]
+                self.relationship_parameter_value_model.removeRows(row, count)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
@@ -1661,26 +1665,29 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_object_parameter_definitions")
     def remove_object_parameter_definitions(self, checked=False):
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        row_set = set()
+        row_dict = dict()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_set.update(range(top, bottom + 1))
+            row_dict[top] = bottom - top + 1
+        model = self.object_parameter_definition_model
         parameter_ids = set()
         parameter_dict = dict()
-        header = self.object_parameter_definition_model.horizontal_header_labels()
+        header = model.horizontal_header_labels()
         object_class_id_column = header.index("object_class_id")
         id_column = header.index("id")
-        for row in row_set:
-            object_class_id = self.object_parameter_definition_model.index(row, object_class_id_column).\
-                data(Qt.DisplayRole)
-            id_ = self.object_parameter_definition_model.index(row, id_column).data(Qt.DisplayRole)
-            parameter_ids.add(id_)
-            parameter_dict.setdefault(object_class_id, set()).add(id_)
+        for row, count in row_dict.items():
+            for i in range(row, row + count):
+                object_class_id = model.index(i, object_class_id_column).data(Qt.DisplayRole)
+                id_ = model.index(i, id_column).data(Qt.DisplayRole)
+                parameter_ids.add(id_)
+                parameter_dict.setdefault(object_class_id, set()).add(id_)
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.object_parameter_definition_model.remove_row_set(row_set)
+            for row in reversed(sorted(row_dict)):
+                count = row_dict[row]
+                self.object_parameter_definition_model.removeRows(row, count)
             self.object_parameter_value_model.remove_parameters(parameter_dict)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter definitions.")
@@ -1691,26 +1698,29 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_relationship_parameter_definitions")
     def remove_relationship_parameter_definitions(self, checked=False):
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        row_set = set()
+        row_dict = dict()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_set.update(range(top, bottom + 1))
+            row_dict[top] = bottom - top + 1
+        model = self.relationship_parameter_definition_model
         parameter_ids = set()
         parameter_dict = dict()
-        header = self.relationship_parameter_definition_model.horizontal_header_labels()
+        header = model.horizontal_header_labels()
         relationship_class_id_column = header.index("relationship_class_id")
         id_column = header.index("id")
-        for row in row_set:
-            relationship_class_id = self.relationship_parameter_definition_model.\
-                index(row, relationship_class_id_column).data(Qt.DisplayRole)
-            id_ = self.relationship_parameter_definition_model.index(row, id_column).data(Qt.DisplayRole)
-            parameter_ids.add(id_)
-            parameter_dict.setdefault(relationship_class_id, set()).add(id_)
+        for row, count in row_dict.items():
+            for i in range(row, row + count):
+                relationship_class_id = model.index(i, relationship_class_id_column).data(Qt.DisplayRole)
+                id_ = model.index(i, id_column).data(Qt.DisplayRole)
+                parameter_ids.add(id_)
+                parameter_dict.setdefault(relationship_class_id, set()).add(id_)
         try:
             self.db_map.remove_items(parameter_ids=parameter_ids)
-            self.relationship_parameter_definition_model.remove_row_set(row_set)
+            for row in reversed(sorted(row_dict)):
+                count = row_dict[row]
+                self.relationship_parameter_definition_model.removeRows(row, count)
             self.relationship_parameter_value_model.remove_parameters(parameter_dict)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter definitions.")
