@@ -622,8 +622,6 @@ class TreeViewForm(DataStoreForm):
         # Object tree selected indexes
         self.selected_tree_indexes = {}
         # JSON models
-        self.object_parameter_json_model = JSONModel(self)
-        self.relationship_parameter_json_model = JSONModel(self)
         self.object_parameter_json_splitter_sizes = None
         self.relationship_parameter_json_splitter_sizes = None
         # Context menus
@@ -639,13 +637,13 @@ class TreeViewForm(DataStoreForm):
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
+        self.settings_key = 'treeViewWidget'
         # init models and views
         self.init_models()
         self.init_views()
         self.setup_delegates()
         self.setup_buttons()
         self.connect_signals()
-        self.settings_key = 'treeViewWidget'
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
@@ -724,10 +722,15 @@ class TreeViewForm(DataStoreForm):
             connect(self.handle_object_parameter_value_current_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().currentChanged.\
             connect(self.handle_relationship_parameter_value_current_changed)
-        # Parameter json models data changed
-        self.object_parameter_json_model.dataChanged.connect(self.handle_object_parameter_json_data_changed)
-        self.relationship_parameter_json_model.dataChanged.\
-            connect(self.handle_relationship_parameter_json_data_changed)
+        # JSON splitters moved
+        self.ui.splitter_object_parameter_value_json.splitterMoved.\
+            connect(self._handle_object_parameter_json_splitter_moved)
+        self.ui.splitter_relationship_parameter_value_json.splitterMoved.\
+            connect(self._handle_relationship_parameter_json_splitter_moved)
+        # Parameter json editor ok clicked
+        self.ui.pushButton_object_parameter_json.clicked.connect(self._handle_object_parameter_json_ok_clicked)
+        self.ui.pushButton_relationship_parameter_json.clicked.\
+            connect(self._handle_relationship_parameter_json_ok_clicked)
         # Parameter tabwidgets current changed
         self.ui.tabWidget_object_parameter.currentChanged.connect(self.handle_object_parameter_tab_changed)
         self.ui.tabWidget_relationship_parameter.currentChanged.connect(self.handle_relationship_parameter_tab_changed)
@@ -770,77 +773,71 @@ class TreeViewForm(DataStoreForm):
         except AttributeError:
             pass
 
+    @Slot("int", "int", name="_handle_object_parameter_json_splitter_moved")
+    def _handle_object_parameter_json_splitter_moved(self, pos, index):
+        """Save splitter sizes for later."""
+        self.object_parameter_json_splitter_sizes = self.ui.splitter_object_parameter_value_json.sizes()
+
+    @Slot("int", "int", name="_handle_relationship_parameter_json_splitter_moved")
+    def _handle_relationship_parameter_json_splitter_moved(self, pos, index):
+        """Save splitter sizes for later."""
+        self.relationship_parameter_json_splitter_sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
+
     @Slot("QModelIndex","QModelIndex", name="handle_object_parameter_value_current_changed")
     def handle_object_parameter_value_current_changed(self, current, previous):
         """Show/hide json table."""
         header = self.object_parameter_value_model.horizontal_header_labels()
         data = current.data(Qt.EditRole)
-        splitter = self.ui.tableView_object_parameter_json.parent()
+        splitter = self.ui.splitter_object_parameter_value_json
+        sizes = splitter.sizes()
+        width = sum(sizes)
         if header[current.column()] == "json":
-            # Reset json model
-            self.object_parameter_json_model.reset_model(data)
-            self.ui.tableView_object_parameter_json.resizeColumnsToContents()
-            if self.ui.tableView_object_parameter_json.isVisible():
-                return
+            # Set json text
+            self.ui.textEdit_object_parameter_json.setPlainText(data)
             if not self.object_parameter_json_splitter_sizes:
-                # Apply decent sizes
-                sizes = splitter.sizes()
-                width = self.ui.tableView_object_parameter_json.columnWidth(0)
-                if sizes[1] < width:
-                    sizes[0] = sum(sizes) - width
-                    sizes[1] = width
+                # Apply reasonable sizes
+                sizes[0] = .8 * width
+                sizes[1] = .2 * width
                 splitter.setSizes(sizes)
             else:
                 # Apply stored sizes
                 splitter.setSizes(self.object_parameter_json_splitter_sizes)
-            self.ui.tableView_object_parameter_json.show()
-        elif self.ui.tableView_object_parameter_json.isVisible():
-            # Save sizes and hide
-            self.object_parameter_json_splitter_sizes = splitter.sizes()
-            self.ui.tableView_object_parameter_json.hide()
+        else:
+            # Hide
+            splitter.setSizes([width, 0])
 
     @Slot("QModelIndex","QModelIndex", name="handle_relationship_parameter_value_current_changed")
     def handle_relationship_parameter_value_current_changed(self, current, previous):
         """Show/hide json table."""
         header = self.relationship_parameter_value_model.horizontal_header_labels()
         data = current.data(Qt.EditRole)
-        splitter = self.ui.tableView_relationship_parameter_json.parent()
+        splitter = self.ui.splitter_relationship_parameter_value_json
+        sizes = splitter.sizes()
+        width = sum(sizes)
         if header[current.column()] == "json":
-            # Reset json model
-            self.relationship_parameter_json_model.reset_model(data)
-            self.ui.tableView_relationship_parameter_json.resizeColumnsToContents()
-            if self.ui.tableView_relationship_parameter_json.isVisible():
-                return
+            # Set json text
+            self.ui.textEdit_relationship_parameter_json.setPlainText(data)
             if not self.relationship_parameter_json_splitter_sizes:
-                # Apply decent sizes
-                sizes = splitter.sizes()
-                width = self.ui.tableView_relationship_parameter_json.columnWidth(0)
-                if sizes[1] < width:
-                    sizes[0] = sum(sizes) - width
-                    sizes[1] = width
+                # Apply reasonable sizes
+                sizes[0] = .8 * width
+                sizes[1] = .2 * width
                 splitter.setSizes(sizes)
             else:
                 # Apply stored sizes
                 splitter.setSizes(self.relationship_parameter_json_splitter_sizes)
-            self.ui.tableView_relationship_parameter_json.show()
-        elif self.ui.tableView_relationship_parameter_json.isVisible():
-            # Save sizes and hide
-            self.relationship_parameter_json_splitter_sizes = splitter.sizes()
-            self.ui.tableView_relationship_parameter_json.hide()
+        else:
+            # Hide
+            splitter.setSizes([width, 0])
 
     @Slot(name="edit_object_parameter_json")
     def edit_object_parameter_json(self):
         """Start editing object parameter json."""
-        index = self.object_parameter_json_model.index(0, 0)
-        self.ui.tableView_object_parameter_json.scrollTo(index)
-        self.ui.tableView_object_parameter_json.edit(index)
+        self.ui.textEdit_object_parameter_json.setFocus()
 
     @Slot(name="edit_relationship_parameter_json")
     def edit_relationship_parameter_json(self):
         """Start editing relationship parameter json."""
-        index = self.relationship_parameter_json_model.index(0, 0)
-        self.ui.tableView_relationship_parameter_json.scrollTo(index)
-        self.ui.tableView_relationship_parameter_json.edit(index)
+        self.ui.textEdit_relationship_parameter_json.setFocus()
 
     @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_definition_selection_changed")
     def handle_object_parameter_definition_selection_changed(self, selected, deselected):
@@ -923,8 +920,9 @@ class TreeViewForm(DataStoreForm):
             focus_widget_name = "object parameter definition"
         elif self.focus_widget == self.ui.tableView_object_parameter_value:
             focus_widget_name = "object parameter value"
-        elif self.focus_widget == self.ui.tableView_object_parameter_json:
-            focus_widget_name = "object parameter json"
+        # FIXME
+        # elif self.focus_widget == self.ui.tableView_object_parameter_json:
+        #    focus_widget_name = "object parameter json"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_definition:
             focus_widget_name = "relationship parameter definition"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_value:
@@ -1029,36 +1027,28 @@ class TreeViewForm(DataStoreForm):
     def init_views(self):
         """Initialize model views."""
         super().init_views()
-        self.init_parameter_json_views()
+        self.init_parameter_json_text_edits()
 
-    def init_parameter_json_views(self):
-        """Init object and relationship parameter json views."""
-        self.ui.tableView_object_parameter_json.setModel(self.object_parameter_json_model)
-        self.ui.tableView_object_parameter_json.hide()
-        self.ui.tableView_object_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.ui.tableView_relationship_parameter_json.setModel(self.relationship_parameter_json_model)
-        self.ui.tableView_relationship_parameter_json.hide()
-        self.ui.tableView_relationship_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+    def init_parameter_json_text_edits(self):
+        """Init object and relationship parameter json text edits."""
+        sizes = self.ui.splitter_object_parameter_value_json.sizes()
+        self.ui.splitter_object_parameter_value_json.setSizes([sum(sizes), 0])
+        sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
+        self.ui.splitter_relationship_parameter_value_json.setSizes([sum(sizes), 0])
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_object_parameter_json_data_changed")
-    def handle_object_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
-        """Called when the user edits the object parameter json table.
+    @Slot("bool", name="_handle_object_parameter_json_ok_clicked")
+    def _handle_object_parameter_json_ok_clicked(self, checked=False):
+        """Called when the user clicks ok in the object parameter json editor.
         Set json field in object parameter value table."""
-        if roles and Qt.EditRole not in roles:
-            return
-        json = self.object_parameter_json_model.json()
+        json = self.ui.textEdit_object_parameter_json.toPlainText()
         index = self.ui.tableView_object_parameter_value.currentIndex()
         self.set_parameter_value_data(index, json)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="handle_relationship_parameter_json_data_changed")
-    def handle_relationship_parameter_json_data_changed(self, top_left, bottom_right, roles=[]):
-        """Called when the user edits the relationship parameter json table.
+    @Slot("bool", name="_handle_relationship_parameter_json_ok_clicked")
+    def _handle_relationship_parameter_json_ok_clicked(self, checked=False):
+        """Called when the user clicks ok in the relationship parameter json editor.
         Set json field in relationship parameter value table."""
-        if roles and Qt.EditRole not in roles:
-            return
-        json = self.relationship_parameter_json_model.json()
+        json = self.ui.textEdit_relationship_parameter_json.toPlainText()
         index = self.ui.tableView_relationship_parameter_value.currentIndex()
         self.set_parameter_value_data(index, json)
 
@@ -1614,6 +1604,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
+        """Remove selected rows from object parameter value table."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1639,6 +1630,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
+        """Remove selected rows from relationship parameter value table."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1664,6 +1656,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_object_parameter_definitions")
     def remove_object_parameter_definitions(self, checked=False):
+        """Remove selected rows from object parameter definition table."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1697,6 +1690,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_relationship_parameter_definitions")
     def remove_relationship_parameter_definitions(self, checked=False):
+        """Remove selected rows from relationship parameter definition table."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():

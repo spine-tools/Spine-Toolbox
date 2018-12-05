@@ -1911,9 +1911,8 @@ class SubParameterValueModel(SubParameterModel):
         if role != Qt.DisplayRole:
             return data
         if self._parent.header[index.column()] == 'json' and data:
-            split_data = data.split(",")
-            if len(split_data) > 2:
-                return split_data[0].strip() + ",...," + split_data[-1].strip()
+            if len(data) > 16:
+                return data[:8] + "..." + data[-8:]
             return data
         return data
 
@@ -3480,7 +3479,8 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
 
 class JSONModel(EmptyRowModel):
     """A model of JSON array data, used by TreeViewForm.
-    TODO: Handle the JSON object data type.
+    TODO: Handle the JSON object data type or remove if not needed
+    (right now we are using a text edit to show json in the tree view.)
 
     Attributes:
         parent (JSONEditor): the parent widget
