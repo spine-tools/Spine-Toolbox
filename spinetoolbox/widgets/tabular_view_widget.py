@@ -25,13 +25,14 @@ Spine Toolbox grid view
 """
 
 from PySide2.QtWidgets import QApplication, QTableView, QVBoxLayout, \
-    QComboBox, QListWidget, QAbstractItemView, QLabel, QMenu, QMainWindow, QDialog
+    QComboBox, QListWidget, QAbstractItemView, QLabel, QMenu, QMainWindow, QDialog, QPushButton
 from PySide2.QtCore import Qt, QModelIndex, Signal, QItemSelectionModel, Slot, \
     QPoint, QAbstractItemModel
 from PySide2.QtGui import QStandardItemModel, QKeySequence, QDropEvent
 from ui.tabular_view_form import Ui_MainWindow
 
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel, PivotModel
+from widgets.filter_menu_widget import FilterMenu
 from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError 
 import json
 import operator
@@ -94,74 +95,6 @@ def make_names_unique(names):
         unique_names.append(new_n)
     return unique_names
 
-# TODO: this is abit hacky, change to something else
-class CheckableComboBox(QComboBox):
-    listClosed = Signal(object)
-    def __init__(self):
-        super(CheckableComboBox, self).__init__()
-        self.view().pressed.connect(self.handleItemPressed)
-        self.setModel(QStandardItemModel(self))
-        self._changed = False
-        self.column = ""
-        
-    def all_selected(self):
-        return self.model().itemFromIndex(self.model().index(0, 0)).checkState() == Qt.Checked
-    
-    def set_state_all(self, state = Qt.Checked):
-        for i in range(self.count()):
-            self.model().itemFromIndex(self.model().index(i, 0)).setCheckState(state)
-
-    def handleItemPressed(self, index):
-        item = self.model().itemFromIndex(index)
-        if index.row() == 0:
-            # select all is pressed
-            self.handleSelectAllPressed()
-            self._changed = True
-            return
-        
-        if item.checkState() == Qt.Checked:
-            item.setCheckState(Qt.Unchecked)
-            # set "select all" to unchecked since atleast one is unchecked
-            self.model().itemFromIndex(self.model().index(0, 0)).setCheckState(Qt.Unchecked)
-        else:
-            item.setCheckState(Qt.Checked)
-        self._changed = True
-        
-    def handleSelectAllPressed(self):
-        if self.all_selected():
-            set_all = Qt.Unchecked
-        else:
-            set_all = Qt.Checked
-        self.set_state_all(set_all)
-    
-    def hidePopup(self):
-        if not self._changed:
-            super(CheckableComboBox, self).hidePopup()
-            self.listClosed.emit(self)
-        self._changed = False
-        
-    def add_items(self, inputList):
-        count_before = self.count()
-        for i, list_item in enumerate(inputList):
-            self.addItem(str(list_item))
-            item = self.model().item(i + count_before, 0)
-            item.setCheckState(Qt.Checked)
-            item.setData(list_item, Qt.UserRole)
-    
-    def setItemList(self, inputList):
-        inputList = ["(select all)", None] + sorted(inputList)
-        self.clear()
-        self._not_checked = set()
-        for (i, list_item) in enumerate(inputList):
-            if list_item == None:
-                self.addItem("(empty)")
-            else:    
-                self.addItem(str(list_item))
-            item = self.model().item(i, 0)
-            item.setCheckState(Qt.Checked)
-            item.setData(list_item, Qt.UserRole)
-
-
 class TabularViewForm(QMainWindow):
     """A widget to show and edit Spine objects in a data store.
 
@@ -202,7 +135,8 @@ class TabularViewForm(QMainWindow):
         self.parameters = []
         self.relationship_tuple_key = ()
         self.original_index_names = {}
-        self.filter = []
+        self.filter_buttons = []
+        self.filter_menus = []
         
         # history of selected pivot
         self.class_pivot_preferences = {}
@@ -239,7 +173,7 @@ class TabularViewForm(QMainWindow):
         self.ui.list_index.afterDrop.connect(self.change_pivot)
         self.ui.list_column.afterDrop.connect(self.change_pivot)
         self.ui.list_frozen.afterDrop.connect(self.change_pivot)
-        #self.model.indexEntriesChanged.connect(self.table_index_entries_changed)
+        self.model.index_entries_changed.connect(self.table_index_entries_changed)
         self.ui.table_frozen.selectionModel().selectionChanged.connect(self.change_frozen_value)
         self.ui.comboBox_value_type.currentTextChanged.connect(self.select_data)
         self.ui.list_select_class.itemClicked.connect(self.change_class)
@@ -644,30 +578,7 @@ class TabularViewForm(QMainWindow):
             db_edited = True
         return db_edited
 
-    def update_filters_to_new_model(self):
-        new_names = list(self.model.model.index_entries)
-        for i, name in enumerate(new_names):
-            if i < len(self.filter):
-                # filter exists, update
-                cblist = self.filter[i]
-                cblist[1].setText(name + ':')
-                cblist[0].column = name
-            else:
-                # doesn't exist, create new
-                cblist = self.create_filter_combobox(name)
-                self.filter.append(cblist)
-                self.ui.h_layout_filter.addLayout(cblist[2])
-            # update items in combobox
-            cblist[0].setItemList(self.model.model.index_entries[name])
-        # delete unused filters
-        for i in reversed(range(len(new_names), max(len(new_names), len(self.filter)))):
-            cblist = self.filter.pop(i)
-            self.ui.h_layout_filter.removeItem(cblist[2])
-            cblist[2].removeWidget(cblist[0])
-            cblist[2].removeWidget(cblist[1])
-            cblist[0].deleteLater()
-            cblist[1].deleteLater()
-            cblist[2].deleteLater()
+    
 
     def update_pivot_lists_to_new_model(self):
         self.ui.list_index.clear()
@@ -857,43 +768,50 @@ class TabularViewForm(QMainWindow):
         self.rcMenu.move(mPos)
         self.rcMenu.show()
 
-    def table_index_entries_changed(self, parent, deleted_enties, added_entries):
-        for flist in self.filter:
-            f = flist[0]
-            if f.column in deleted_enties:
-                for i in reversed(range(1,f.count())):
-                    if f.itemData(i, Qt.UserRole) in deleted_enties[f.column]:
-                        f.removeItem(i)
-            if f.column in added_entries:
-                f.add_items(list(added_entries[f.column]))
-                self.change_filter(f)
+    def table_index_entries_changed(self, added_entries, deleted_enties):
+        for button, menu in zip(self.filter_buttons, self.filter_menus):
+            name = button.text()
+            if name in deleted_enties:
+                menu.remove_items_from_filter_list(deleted_enties[name])
+            if name in added_entries:
+                menu.add_items_to_filter_list(added_entries[name])
+                
 
-    def add_filter_comboboxes(self, data, index_names):
-        for i, name in enumerate(index_names):
-            cblist = self.create_filter_combobox(name)
-            self.filter.append(cblist)
-            self.ui.h_layout_filter.addLayout(cblist[2])
-            cblist[0].setItemList(set([d[i] for d in data]))
+    def update_filters_to_new_model(self):
+        new_names = list(self.model.model.index_entries)
+        for i, name in enumerate(new_names):
+            if i < len(self.filter_buttons):
+                # filter exists, update
+                self.filter_buttons[i].setText(name)
+            else:
+                # doesn't exist, create new
+                button, menu = self.create_filter_widget(name)
+                self.filter_buttons.append(button)
+                self.filter_menus.append(menu)
+                self.ui.h_layout_filter.addWidget(button)
+            # update items in combobox
+            self.filter_menus[i].set_filter_list(self.model.model.index_entries[name])
+        # delete unused filters
+        for i in reversed(range(len(new_names), max(len(new_names), len(self.filter_buttons)))):
+            button = self.filter_buttons.pop(i)
+            menu = self.filter_menus.pop(i)
+            self.ui.h_layout_filter.removeWidget(button)
+            button.deleteLater()
+            menu.deleteLater()
+
+    def create_filter_widget(self, name):
+        button = QPushButton(name)
+        menu = FilterMenu(button)
+        menu.filterChanged.connect(self.change_filter)
+        button.setMenu(menu)
+        return button, menu
             
-    
-    def create_filter_combobox(self, name):
-        cb = CheckableComboBox()
-        cb.column = name
-        cb.listClosed.connect(self.change_filter)
-        l = QLabel(name + ":")
-        l.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
-        hb = QVBoxLayout()
-        hb.addWidget(l)
-        hb.addWidget(cb)
-        return [cb, l, hb]
-            
-    def change_filter(self, parent):
-        column = parent.column
-        checked_items = []
-        for i in range(parent.count()):
-            if parent.itemData(i, Qt.CheckStateRole) and parent.itemText(i) != "(select all)":
-                checked_items.append(parent.itemData(i, Qt.UserRole))
-        self.proxy_model.set_filter(column, checked_items)
+    def change_filter(self, menu, valid, has_filter):
+        checked_items = set()
+        name = self.filter_buttons[self.filter_menus.index(menu)].text()
+        if has_filter:
+            checked_items = valid
+        self.proxy_model.set_filter(name, checked_items)
     
     def change_pivot(self, parent, event):
         # TODO: when getting items from the list that was source of drop 
