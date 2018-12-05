@@ -46,7 +46,7 @@ class CopyPasteTableView(QTableView):
             if not self.copy():
                 super().keyPressEvent(event)
         elif event.matches(QKeySequence.Paste):
-            if not self.paste(self.clipboard_text):
+            if not self.paste():
                 super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
@@ -76,17 +76,18 @@ class CopyPasteTableView(QTableView):
         QApplication.clipboard().setText(content)
         return True
 
-    def paste(self, text):
+    def paste(self):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
         if len(selection.indexes()) > 1:
-            self.paste_on_selection(text)
+            self.paste_on_selection()
         else:
-            self.paste_normal(text)
+            self.paste_normal()
 
-    def paste_on_selection(self, text):
+    def paste_on_selection(self):
         """Paste clipboard data on selection, but not beyond.
         If data is smaller than selection, repeat data to fit selection."""
+        text = self.clipboard_text
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]
@@ -115,8 +116,9 @@ class CopyPasteTableView(QTableView):
         self.model().batch_set_data(indexes, values)
         return True
 
-    def paste_normal(self, text):
+    def paste_normal(self):
         """Paste clipboard data, overwritting cells if needed"""
+        text = self.clipboard_text
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]

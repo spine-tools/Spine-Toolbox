@@ -25,7 +25,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QInputDialog, QToolButton, \
     QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage, QPushButton, QLabel, \
-    QGraphicsScene, QGraphicsRectItem, QAction
+    QGraphicsScene, QGraphicsRectItem, QAction, QButtonGroup
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
@@ -44,7 +44,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    JSONModel
+    JSONArrayModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -127,7 +127,7 @@ class DataStoreForm(QMainWindow):
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionClose.triggered.connect(self.close)
         # Object tree
-        self.ui.treeView_object.selectionModel().selectionChanged.connect(self.handle_object_tree_selection_changed)
+        self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
         # Parameter tables delegate commit data
         self.ui.tableView_object_parameter_definition.itemDelegate().commit_model_data.\
             connect(self.set_parameter_definition_data)
@@ -622,6 +622,9 @@ class TreeViewForm(DataStoreForm):
         # Object tree selected indexes
         self.selected_tree_indexes = {}
         # JSON models
+        self.object_parameter_json_model = JSONArrayModel(self)
+        self.relationship_parameter_json_model = JSONArrayModel(self)
+        # JSON splitter sizes
         self.object_parameter_json_splitter_sizes = None
         self.relationship_parameter_json_splitter_sizes = None
         # Context menus
@@ -631,8 +634,6 @@ class TreeViewForm(DataStoreForm):
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
         # Others
-        self.clipboard = QApplication.clipboard()
-        self.clipboard_text = self.clipboard.text()
         self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
@@ -710,30 +711,34 @@ class TreeViewForm(DataStoreForm):
             connect(self.edit_relationship_parameter_json)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.\
-            connect(self.handle_object_parameter_definition_selection_changed)
+            connect(self._handle_object_parameter_definition_selection_changed)
         self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.\
-            connect(self.handle_object_parameter_value_selection_changed)
+            connect(self._handle_object_parameter_value_selection_changed)
         self.ui.tableView_relationship_parameter_definition.selectionModel().selectionChanged.\
-            connect(self.handle_relationship_parameter_definition_selection_changed)
+            connect(self._handle_relationship_parameter_definition_selection_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
-            connect(self.handle_relationship_parameter_value_selection_changed)
+            connect(self._handle_relationship_parameter_value_selection_changed)
         # Parameter value tables current changed
         self.ui.tableView_object_parameter_value.selectionModel().currentChanged.\
-            connect(self.handle_object_parameter_value_current_changed)
+            connect(self._handle_object_parameter_value_current_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().currentChanged.\
-            connect(self.handle_relationship_parameter_value_current_changed)
+            connect(self._handle_relationship_parameter_value_current_changed)
         # JSON splitters moved
         self.ui.splitter_object_parameter_value_json.splitterMoved.\
             connect(self._handle_object_parameter_json_splitter_moved)
         self.ui.splitter_relationship_parameter_value_json.splitterMoved.\
             connect(self._handle_relationship_parameter_json_splitter_moved)
+        # Parameter json editor tool buttons clicked
+        self.ui.toolButton_object_parameter_json_raw.toggled.connect(self._handle_object_parameter_json_raw_toggled)
+        self.ui.toolButton_relationship_parameter_json_raw.toggled.\
+            connect(self._handle_relationship_parameter_json_raw_toggled)
         # Parameter json editor ok clicked
-        self.ui.pushButton_object_parameter_json.clicked.connect(self._handle_object_parameter_json_ok_clicked)
-        self.ui.pushButton_relationship_parameter_json.clicked.\
+        self.ui.pushButton_object_parameter_json_ok.clicked.connect(self._handle_object_parameter_json_ok_clicked)
+        self.ui.pushButton_relationship_parameter_json_ok.clicked.\
             connect(self._handle_relationship_parameter_json_ok_clicked)
         # Parameter tabwidgets current changed
-        self.ui.tabWidget_object_parameter.currentChanged.connect(self.handle_object_parameter_tab_changed)
-        self.ui.tabWidget_relationship_parameter.currentChanged.connect(self.handle_relationship_parameter_tab_changed)
+        self.ui.tabWidget_object_parameter.currentChanged.connect(self._handle_object_parameter_tab_changed)
+        self.ui.tabWidget_relationship_parameter.currentChanged.connect(self._handle_relationship_parameter_tab_changed)
         # Parameter tables context menu requested
         self.ui.tableView_object_parameter_definition.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
@@ -743,17 +748,10 @@ class TreeViewForm(DataStoreForm):
             connect(self.show_relationship_parameter_context_menu)
         self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
             connect(self.show_relationship_parameter_value_context_menu)
-        # Clipboard data changed
-        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
         # Menu about to show
-        self.ui.menuFile.aboutToShow.connect(self.handle_menu_about_to_show)
-        self.ui.menuEdit.aboutToShow.connect(self.handle_menu_about_to_show)
-        self.ui.menuSession.aboutToShow.connect(self.handle_menu_about_to_show)
-
-    @Slot(name="clipboard_data_changed")
-    def clipboard_data_changed(self):
-        """Store data from clipboard."""
-        self.clipboard_text = self.clipboard.text()
+        self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):
@@ -769,7 +767,7 @@ class TreeViewForm(DataStoreForm):
         """Paste data from clipboard."""
         focus_widget = self.focusWidget()
         try:
-            focus_widget.paste(self.clipboard_text)
+            focus_widget.paste()
         except AttributeError:
             pass
 
@@ -783,17 +781,44 @@ class TreeViewForm(DataStoreForm):
         """Save splitter sizes for later."""
         self.relationship_parameter_json_splitter_sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
 
-    @Slot("QModelIndex","QModelIndex", name="handle_object_parameter_value_current_changed")
-    def handle_object_parameter_value_current_changed(self, current, previous):
-        """Show/hide json table."""
+    @Slot("QModelIndex","QModelIndex", name="_handle_object_parameter_value_current_changed")
+    def _handle_object_parameter_value_current_changed(self, current, previous):
+        """Call update object JSON editor."""
+        self.update_object_json_editor(current)
+
+    @Slot("QModelIndex","QModelIndex", name="_handle_relationship_parameter_value_current_changed")
+    def _handle_relationship_parameter_value_current_changed(self, current, previous):
+        """Call update relationship JSON editor."""
+        self.update_relationship_json_editor(current)
+
+    def update_object_json_editor(self, current):
+        """Update object JSON editor.
+        If current's column is the json column, then:
+        - if JSON data from current index is different than the one loaded
+        in the text edit or table view, reset them.
+        - Adjust splitter sizes.
+        Else (not the json column), fully collapse the editor.
+        """
         header = self.object_parameter_value_model.horizontal_header_labels()
         data = current.data(Qt.EditRole)
         splitter = self.ui.splitter_object_parameter_value_json
         sizes = splitter.sizes()
         width = sum(sizes)
         if header[current.column()] == "json":
-            # Set json text
-            self.ui.textEdit_object_parameter_json.setPlainText(data)
+            if self.ui.textEdit_object_parameter_json.toPlainText() != data:
+                formatted_data = json.dumps(json.loads(data), indent=4)
+                self.ui.textEdit_object_parameter_json.setPlainText(formatted_data)
+            if self.object_parameter_json_model.json != data:
+                if self.object_parameter_json_model.reset_model(data):
+                    self.ui.tableView_object_parameter_json.show()
+                    self.ui.tableView_object_parameter_json.resizeColumnsToContents()
+                    self.ui.label_object_parameter_json_error.hide()
+                else:
+                    self.ui.label_object_parameter_json_error.setText(
+                        "Unable to parse JSON as array."
+                    )
+                    self.ui.label_object_parameter_json_error.show()
+                    self.ui.tableView_object_parameter_json.hide()
             if not self.object_parameter_json_splitter_sizes:
                 # Apply reasonable sizes
                 sizes[0] = .8 * width
@@ -806,17 +831,34 @@ class TreeViewForm(DataStoreForm):
             # Hide
             splitter.setSizes([width, 0])
 
-    @Slot("QModelIndex","QModelIndex", name="handle_relationship_parameter_value_current_changed")
-    def handle_relationship_parameter_value_current_changed(self, current, previous):
-        """Show/hide json table."""
+    def update_relationship_json_editor(self, current):
+        """Update relationship JSON editor.
+        If current's column is the json column, then:
+        - if JSON data from current index is different than the one loaded
+        in the text edit or table view, reset them.
+        - Adjust splitter sizes.
+        Else (not the json column), fully collapse the editor.
+        """
         header = self.relationship_parameter_value_model.horizontal_header_labels()
         data = current.data(Qt.EditRole)
         splitter = self.ui.splitter_relationship_parameter_value_json
         sizes = splitter.sizes()
         width = sum(sizes)
         if header[current.column()] == "json":
-            # Set json text
-            self.ui.textEdit_relationship_parameter_json.setPlainText(data)
+            if self.ui.textEdit_relationship_parameter_json.toPlainText() != data:
+                formatted_data = json.dumps(json.loads(data), indent=4)
+                self.ui.textEdit_relationship_parameter_json.setPlainText(formatted_data)
+            if self.relationship_parameter_json_model.json != data:
+                if self.relationship_parameter_json_model.reset_model(data):
+                    self.ui.tableView_relationship_parameter_json.show()
+                    self.ui.tableView_relationship_parameter_json.resizeColumnsToContents()
+                    self.ui.label_relationship_parameter_json_error.hide()
+                else:
+                    self.ui.label_relationship_parameter_json_error.setText(
+                        "Unable to parse JSON as array."
+                    )
+                    self.ui.label_relationship_parameter_json_error.show()
+                    self.ui.tableView_relationship_parameter_json.hide()
             if not self.relationship_parameter_json_splitter_sizes:
                 # Apply reasonable sizes
                 sizes[0] = .8 * width
@@ -829,46 +871,101 @@ class TreeViewForm(DataStoreForm):
             # Hide
             splitter.setSizes([width, 0])
 
+    @Slot("bool", name="_handle_object_parameter_json_raw_toggled")
+    def _handle_object_parameter_json_raw_toggled(self, checked):
+        """Called when the user checks the obj { } button in the object parameter json editor.
+        Activate the proper tab in the tabwidget."""
+        if checked:
+            self.ui.tabWidget_object_parameter_json.setCurrentIndex(0)
+        else:
+            self.ui.tabWidget_object_parameter_json.setCurrentIndex(1)
+        current = self.ui.tableView_object_parameter_value.currentIndex()
+        self.update_object_json_editor(current)
+
+    @Slot("bool", name="_handle_relationship_parameter_json_raw_toggled")
+    def _handle_relationship_parameter_json_raw_toggled(self, checked):
+        """Called when the user checks the obj { } button in the relationship parameter json editor.
+        Activate the proper tab in the tabwidget."""
+        if checked:
+            self.ui.tabWidget_relationship_parameter_json.setCurrentIndex(0)
+        else:
+            self.ui.tabWidget_relationship_parameter_json.setCurrentIndex(1)
+        current = self.ui.tableView_relationship_parameter_value.currentIndex()
+        self.update_relationship_json_editor(current)
+
+    @Slot("bool", name="_handle_object_parameter_json_ok_clicked")
+    def _handle_object_parameter_json_ok_clicked(self, checked=False):
+        """Called when the user clicks ok in the object parameter json editor.
+        Set json field in object parameter value table."""
+        if self.ui.tabWidget_object_parameter_json.currentIndex() == 0:
+            json = self.ui.textEdit_object_parameter_json.toPlainText()
+        else:
+            json = self.object_parameter_json_model.json()
+        index = self.ui.tableView_object_parameter_value.currentIndex()
+        print(json)
+        self.set_parameter_value_data(index, json)
+
+    @Slot("bool", name="_handle_relationship_parameter_json_ok_clicked")
+    def _handle_relationship_parameter_json_ok_clicked(self, checked=False):
+        """Called when the user clicks ok in the relationship parameter json editor.
+        Set json field in relationship parameter value table."""
+        if self.ui.tabWidget_relationship_parameter_json.currentIndex() == 0:
+            json = self.ui.textEdit_relationship_parameter_json.toPlainText()
+        else:
+            json = self.relationship_parameter_json_model.json()
+        index = self.ui.tableView_relationship_parameter_value.currentIndex()
+        self.set_parameter_value_data(index, json)
+
     @Slot(name="edit_object_parameter_json")
     def edit_object_parameter_json(self):
         """Start editing object parameter json."""
-        self.ui.textEdit_object_parameter_json.setFocus()
+        if self.ui.tabWidget_object_parameter_json.currentIndex() == 0:
+            self.ui.textEdit_object_parameter_json.setFocus()
+        else:
+            index = self.object_parameter_json_model.index(0, 0)
+            self.ui.tableView_object_parameter_json.scrollTo(index)
+            self.ui.tableView_object_parameter_json.edit(index)
 
     @Slot(name="edit_relationship_parameter_json")
     def edit_relationship_parameter_json(self):
         """Start editing relationship parameter json."""
-        self.ui.textEdit_relationship_parameter_json.setFocus()
+        if self.ui.tabWidget_relationship_parameter_json.currentIndex() == 0:
+            self.ui.textEdit_relationship_parameter_json.setFocus()
+        else:
+            index = self.relationship_parameter_json_model.index(0, 0)
+            self.ui.tableView_relationship_parameter_json.scrollTo(index)
+            self.ui.tableView_relationship_parameter_json.edit(index)
 
-    @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_definition_selection_changed")
-    def handle_object_parameter_definition_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_definition_selection_changed")
+    def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         tab_index = self.ui.tabWidget_object_parameter.currentIndex()
         self.ui.actionRemove_object_parameter_definitions.setEnabled(tab_index == 1 and not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="handle_object_parameter_value_selection_changed")
-    def handle_object_parameter_value_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_value_selection_changed")
+    def _handle_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
         tab_index = self.ui.tabWidget_object_parameter.currentIndex()
         self.ui.actionRemove_object_parameter_values.setEnabled(tab_index == 0 and not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="handle_relationship_parameter_definition_selection_changed")
-    def handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_definition_selection_changed")
+    def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         tab_index = self.ui.tabWidget_relationship_parameter.currentIndex()
         self.ui.actionRemove_relationship_parameter_definitions.setEnabled(tab_index == 1 and not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="handle_relationship_parameter_value_selection_changed")
-    def handle_relationship_parameter_value_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_value_selection_changed")
+    def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         tab_index = self.ui.tabWidget_relationship_parameter.currentIndex()
         self.ui.actionRemove_relationship_parameter_values.setEnabled(tab_index == 0 and not selection.isEmpty())
 
-    @Slot("int", name="handle_object_parameter_tab_changed")
-    def handle_object_parameter_tab_changed(self, index):
+    @Slot("int", name="_handle_object_parameter_tab_changed")
+    def _handle_object_parameter_tab_changed(self, index):
         """Apply filter. Enable/disable the option to remove rows."""
         if index == 0:
             self.object_parameter_value_model.update_filter()
@@ -879,8 +976,8 @@ class TreeViewForm(DataStoreForm):
         selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
         self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
 
-    @Slot("int", name="handle_relationship_parameter_tab_changed")
-    def handle_relationship_parameter_tab_changed(self, index):
+    @Slot("int", name="_handle_relationship_parameter_tab_changed")
+    def _handle_relationship_parameter_tab_changed(self, index):
         """Apply filter. Enable/disable the option to remove rows."""
         if index == 0:
             self.relationship_parameter_value_model.update_filter()
@@ -891,8 +988,8 @@ class TreeViewForm(DataStoreForm):
         selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
 
-    @Slot(name="handle_menu_about_to_show")
-    def handle_menu_about_to_show(self):
+    @Slot(name="_handle_menu_about_to_show")
+    def _handle_menu_about_to_show(self):
         """Called when a menu from the menubar is about to show.
         Adjust copy paste actions depending on which widget has the focus.
         Enable/disable actions to edit object tree items depending on selection.
@@ -915,26 +1012,41 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionCopy.setEnabled(False)
         self.ui.actionPaste.setEnabled(False)
         if self.focus_widget == self.ui.treeView_object:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
             focus_widget_name = "object tree"
         elif self.focus_widget == self.ui.tableView_object_parameter_definition:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
             focus_widget_name = "object parameter definition"
         elif self.focus_widget == self.ui.tableView_object_parameter_value:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
             focus_widget_name = "object parameter value"
-        # FIXME
-        # elif self.focus_widget == self.ui.tableView_object_parameter_json:
-        #    focus_widget_name = "object parameter json"
+        elif self.focus_widget == self.ui.tableView_object_parameter_json:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
+            focus_widget_name = "object parameter json"
+        elif self.focus_widget == self.ui.textEdit_object_parameter_json:
+            can_copy = not self.focus_widget.textCursor().selection().isEmpty()
+            focus_widget_name = "object parameter json"
+        elif self.focus_widget == self.ui.tableView_relationship_parameter_json:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
+            focus_widget_name = "relationship parameter json"
+        elif self.focus_widget == self.ui.textEdit_relationship_parameter_json:
+            can_copy = not self.focus_widget.textCursor().selection().isEmpty()
+            focus_widget_name = "relationship parameter json"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_definition:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
             focus_widget_name = "relationship parameter definition"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_value:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
             focus_widget_name = "relationship parameter value"
         elif self.focus_widget == self.ui.tableView_relationship_parameter_json:
+            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
             focus_widget_name = "relationship parameter json"
         else:
             return
-        if not self.focus_widget.selectionModel().selection().isEmpty():
+        if can_copy:
             self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
             self.ui.actionCopy.setEnabled(True)
-        if focus_widget_name != "object tree" and self.clipboard_text:
+        if focus_widget_name != "object tree" and self.focus_widget.canPaste():
             self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
             self.ui.actionPaste.setEnabled(True)
 
@@ -1027,30 +1139,32 @@ class TreeViewForm(DataStoreForm):
     def init_views(self):
         """Initialize model views."""
         super().init_views()
-        self.init_parameter_json_text_edits()
+        self.init_parameter_json_editors()
 
-    def init_parameter_json_text_edits(self):
-        """Init object and relationship parameter json text edits."""
+    def init_parameter_json_editors(self):
+        """Init object and relationship parameter json editors."""
+        # Object
+        button_group = QButtonGroup(self)
+        button_group.addButton(self.ui.toolButton_object_parameter_json_raw)
+        button_group.addButton(self.ui.toolButton_object_parameter_json_table)
+        self.ui.tabWidget_object_parameter_json.tabBar().hide()
         sizes = self.ui.splitter_object_parameter_value_json.sizes()
         self.ui.splitter_object_parameter_value_json.setSizes([sum(sizes), 0])
+        self.ui.tableView_object_parameter_json.setModel(self.object_parameter_json_model)
+        self.ui.tableView_object_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_object_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.label_object_parameter_json_error.hide()
+        # Relationship
+        button_group = QButtonGroup(self)
+        button_group.addButton(self.ui.toolButton_relationship_parameter_json_raw)
+        button_group.addButton(self.ui.toolButton_relationship_parameter_json_table)
+        self.ui.tabWidget_relationship_parameter_json.tabBar().hide()
         sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
         self.ui.splitter_relationship_parameter_value_json.setSizes([sum(sizes), 0])
-
-    @Slot("bool", name="_handle_object_parameter_json_ok_clicked")
-    def _handle_object_parameter_json_ok_clicked(self, checked=False):
-        """Called when the user clicks ok in the object parameter json editor.
-        Set json field in object parameter value table."""
-        json = self.ui.textEdit_object_parameter_json.toPlainText()
-        index = self.ui.tableView_object_parameter_value.currentIndex()
-        self.set_parameter_value_data(index, json)
-
-    @Slot("bool", name="_handle_relationship_parameter_json_ok_clicked")
-    def _handle_relationship_parameter_json_ok_clicked(self, checked=False):
-        """Called when the user clicks ok in the relationship parameter json editor.
-        Set json field in relationship parameter value table."""
-        json = self.ui.textEdit_relationship_parameter_json.toPlainText()
-        index = self.ui.tableView_relationship_parameter_value.currentIndex()
-        self.set_parameter_value_data(index, json)
+        self.ui.tableView_relationship_parameter_json.setModel(self.relationship_parameter_json_model)
+        self.ui.tableView_relationship_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
+        self.ui.tableView_relationship_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+        self.ui.label_relationship_parameter_json_error.hide()
 
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
@@ -1077,12 +1191,20 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.expand(next_index)
 
     @busy_effect
-    @Slot("QItemSelection", "QItemSelection", name="handle_object_tree_selection_changed")
-    def handle_object_tree_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
+    def _handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
         self.set_default_parameter_rows()
         self.update_and_apply_filter(selected, deselected)
+        self.update_json_editors()
+
+    def update_json_editors(self):
+        """Update data in json editors."""
+        current = self.ui.tableView_object_parameter_value.currentIndex()
+        self.update_object_json_editor(current)
+        current = self.ui.tableView_relationship_parameter_value.currentIndex()
+        self.update_relationship_json_editor(current)
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
@@ -1393,7 +1515,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Copy":
             self.ui.tableView_object_parameter_value.copy()
         elif option == "Paste":
-            self.ui.tableView_object_parameter_value.paste(self.clipboard_text)
+            self.ui.tableView_object_parameter_value.paste()
         self.object_parameter_value_context_menu.deleteLater()
         self.object_parameter_value_context_menu = None
 
@@ -1414,7 +1536,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_value.copy()
         elif option == "Paste":
-            self.ui.tableView_relationship_parameter_value.paste(self.clipboard_text)
+            self.ui.tableView_relationship_parameter_value.paste()
         self.relationship_parameter_value_context_menu.deleteLater()
         self.relationship_parameter_value_context_menu = None
 
@@ -1435,7 +1557,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Copy":
             self.ui.tableView_object_parameter_definition.copy()
         elif option == "Paste":
-            self.ui.tableView_object_parameter_definition.paste(self.clipboard_text)
+            self.ui.tableView_object_parameter_definition.paste()
         self.object_parameter_context_menu.deleteLater()
         self.object_parameter_context_menu = None
 
@@ -1456,7 +1578,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_definition.copy()
         elif option == "Paste":
-            self.ui.tableView_relationship_parameter_definition.paste(self.clipboard_text)
+            self.ui.tableView_relationship_parameter_definition.paste()
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
@@ -1822,9 +1944,9 @@ class GraphViewForm(DataStoreForm):
         self.arc_item_selection = list()
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_parameter)
-        self.handle_parameter_dock_location_changed(area)
+        self._handle_parameter_dock_location_changed(area)
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
-        self.handle_item_palette_dock_location_changed(area)
+        self._handle_item_palette_dock_location_changed(area)
         # Initialize stuff
         self.init_models()
         self.init_views()
@@ -1903,25 +2025,25 @@ class GraphViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
-        self.ui.graphicsView.item_dropped.connect(self.handle_item_dropped)
-        self.ui.dockWidget_parameter.dockLocationChanged.connect(self.handle_parameter_dock_location_changed)
-        self.ui.dockWidget_item_palette.dockLocationChanged.connect(self.handle_item_palette_dock_location_changed)
+        self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
+        self.ui.dockWidget_parameter.dockLocationChanged.connect(self._handle_parameter_dock_location_changed)
+        self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
         self.ui.actionGraph_hide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
         self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
-        self.ui.menuGraph.aboutToShow.connect(self.handle_menu_about_to_show)
+        self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
 
-    @Slot(name="handle_menu_about_to_show")
-    def handle_menu_about_to_show(self):
+    @Slot(name="_handle_menu_about_to_show")
+    def _handle_menu_about_to_show(self):
         """Called when a menu from the menubar is about to show."""
         self.ui.actionGraph_hide_selected.setEnabled(len(self.object_item_selection) > 0)
         self.ui.actionGraph_show_hidden.setEnabled(len(self.hidden_items) > 0)
         self.ui.actionGraph_prune_selected.setEnabled(len(self.object_item_selection) > 0)
         self.ui.actionGraph_reinstate_pruned.setEnabled(len(self.rejected_items) > 0)
 
-    @Slot("Qt.DockWidgetArea", name="handle_parameter_dock_location_changed")
-    def handle_parameter_dock_location_changed(self, area):
+    @Slot("Qt.DockWidgetArea", name="_handle_parameter_dock_location_changed")
+    def _handle_parameter_dock_location_changed(self, area):
         """Called when the parameter dock widget location changes.
         Adjust splitter orientation accordingly."""
         if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
@@ -1929,8 +2051,8 @@ class GraphViewForm(DataStoreForm):
         else:
             self.ui.splitter_object_relationship_parameter.setOrientation(Qt.Horizontal)
 
-    @Slot("Qt.DockWidgetArea", name="handle_item_palette_dock_location_changed")
-    def handle_item_palette_dock_location_changed(self, area):
+    @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
+    def _handle_item_palette_dock_location_changed(self, area):
         """Called when the item palette dock widget location changes.
         Adjust splitter orientation accordingly."""
         if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
@@ -1967,8 +2089,8 @@ class GraphViewForm(DataStoreForm):
             self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         self.hidden_items = list()
 
-    @Slot("QItemSelection", "QItemSelection", name="handle_object_tree_selection_changed")
-    def handle_object_tree_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
+    def _handle_object_tree_selection_changed(self, selected, deselected):
         """Build_graph."""
         for index in selected.indexes():
             if self.object_tree_model.canFetchMore(index):
@@ -2253,12 +2375,12 @@ class GraphViewForm(DataStoreForm):
         scene = QGraphicsScene()
         self.ui.graphicsView.setScene(scene)
         scene.addItem(self._scene_bg)
-        scene.changed.connect(self.handle_scene_changed)
-        scene.selectionChanged.connect(self.handle_scene_selection_changed)
+        scene.changed.connect(self._handle_scene_changed)
+        scene.selectionChanged.connect(self._handle_scene_selection_changed)
         return scene
 
-    @Slot(name="handle_scene_selection_changed")
-    def handle_scene_selection_changed(self):
+    @Slot(name="_handle_scene_selection_changed")
+    def _handle_scene_selection_changed(self):
         """Show parameters for selected items."""
         scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
         selected_items = scene.selectedItems()
@@ -2284,8 +2406,8 @@ class GraphViewForm(DataStoreForm):
         else:
             self.relationship_parameter_definition_model.update_filter()
 
-    @Slot("QList<QRectF>", name="handle_scene_changed")
-    def handle_scene_changed(self, region):
+    @Slot("QList<QRectF>", name="_handle_scene_changed")
+    def _handle_scene_changed(self, region):
         """Make a new scene with usage instructions if previous is empty,
         where empty means the only item is the bg.
         """
@@ -2332,13 +2454,13 @@ class GraphViewForm(DataStoreForm):
             </html>
         """
         usage_item = CustomTextItem(usage, self.font)
-        usage_item.linkActivated.connect(self.handle_usage_link_activated)
+        usage_item.linkActivated.connect(self._handle_usage_link_activated)
         scene.addItem(usage_item)
         self._has_graph = False
         self.ui.graphicsView.scale_to_fit_scene()
 
-    @Slot("QString", name="handle_usage_link_activated")
-    def handle_usage_link_activated(self, link):
+    @Slot("QString", name="_handle_usage_link_activated")
+    def _handle_usage_link_activated(self, link):
         if link == "Object tree":
             self.ui.dockWidget_object_tree.show()
         elif link == "Parameter dock":
@@ -2346,8 +2468,8 @@ class GraphViewForm(DataStoreForm):
         elif link == "Item palette":
             self.ui.dockWidget_item_palette.show()
 
-    @Slot("QPoint", "QString", name="handle_item_dropped")
-    def handle_item_dropped(self, pos, text):
+    @Slot("QPoint", "QString", name="_handle_item_dropped")
+    def _handle_item_dropped(self, pos, text):
         if self._has_graph:
             scene = self.ui.graphicsView.scene()
         else:

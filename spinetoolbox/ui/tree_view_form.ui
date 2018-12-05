@@ -243,7 +243,7 @@
                   </layout>
                  </item>
                  <item>
-                  <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_value">
+                  <widget class="CopyPasteTableView" name="tableView_object_parameter_value">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                      <horstretch>2</horstretch>
@@ -299,26 +299,100 @@
                   <number>0</number>
                  </property>
                  <item>
-                  <widget class="QLabel" name="label">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                     <horstretch>1</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
+                  <widget class="QLabel" name="label_3">
                    <property name="text">
-                    <string>json editor</string>
+                    <string>JSON editor</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QTextEdit" name="textEdit_object_parameter_json">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>1</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
+                  <widget class="QTabWidget" name="tabWidget_object_parameter_json">
+                   <property name="currentIndex">
+                    <number>0</number>
                    </property>
+                   <widget class="QWidget" name="json_obj">
+                    <attribute name="title">
+                     <string>{ }</string>
+                    </attribute>
+                    <layout class="QVBoxLayout" name="verticalLayout_13">
+                     <property name="spacing">
+                      <number>0</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QTextEdit" name="textEdit_object_parameter_json">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                         <horstretch>1</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                   <widget class="QWidget" name="json_arr">
+                    <attribute name="title">
+                     <string>[ ]</string>
+                    </attribute>
+                    <layout class="QVBoxLayout" name="verticalLayout_14">
+                     <property name="spacing">
+                      <number>0</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="label_object_parameter_json_error">
+                       <property name="text">
+                        <string>err</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="CopyPasteTableView" name="tableView_object_parameter_json">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                         <horstretch>1</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                       <attribute name="horizontalHeaderVisible">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="horizontalHeaderHighlightSections">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="horizontalHeaderStretchLastSection">
+                        <bool>true</bool>
+                       </attribute>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
                   </widget>
                  </item>
                  <item>
@@ -326,6 +400,41 @@
                    <property name="spacing">
                     <number>0</number>
                    </property>
+                   <item>
+                    <widget class="QToolButton" name="toolButton_object_parameter_json_raw">
+                     <property name="maximumSize">
+                      <size>
+                       <width>1000</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Raw</string>
+                     </property>
+                     <property name="checkable">
+                      <bool>true</bool>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QToolButton" name="toolButton_object_parameter_json_table">
+                     <property name="maximumSize">
+                      <size>
+                       <width>1000</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Table</string>
+                     </property>
+                     <property name="checkable">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
                    <item>
                     <spacer name="horizontalSpacer">
                      <property name="orientation">
@@ -340,7 +449,7 @@
                     </spacer>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="pushButton_object_parameter_json">
+                    <widget class="QPushButton" name="pushButton_object_parameter_json_ok">
                      <property name="maximumSize">
                       <size>
                        <width>16777215</width>
@@ -618,18 +727,95 @@
                     </sizepolicy>
                    </property>
                    <property name="text">
-                    <string>json editor</string>
+                    <string>JSON editor</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QTextEdit" name="textEdit_relationship_parameter_json">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                     <horstretch>1</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
+                  <widget class="QTabWidget" name="tabWidget_relationship_parameter_json">
+                   <property name="tabPosition">
+                    <enum>QTabWidget::North</enum>
                    </property>
+                   <property name="currentIndex">
+                    <number>0</number>
+                   </property>
+                   <widget class="QWidget" name="tab">
+                    <attribute name="title">
+                     <string>{ }</string>
+                    </attribute>
+                    <layout class="QVBoxLayout" name="verticalLayout_15">
+                     <property name="spacing">
+                      <number>0</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QTextEdit" name="textEdit_relationship_parameter_json">
+                       <property name="sizePolicy">
+                        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                         <horstretch>1</horstretch>
+                         <verstretch>0</verstretch>
+                        </sizepolicy>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                   <widget class="QWidget" name="tab_2">
+                    <attribute name="title">
+                     <string>[ ]</string>
+                    </attribute>
+                    <layout class="QVBoxLayout" name="verticalLayout_16">
+                     <property name="spacing">
+                      <number>0</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>0</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>0</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="label_relationship_parameter_json_error">
+                       <property name="text">
+                        <string>err</string>
+                       </property>
+                       <property name="alignment">
+                        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <widget class="CopyPasteTableView" name="tableView_relationship_parameter_json">
+                       <attribute name="horizontalHeaderVisible">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="horizontalHeaderHighlightSections">
+                        <bool>false</bool>
+                       </attribute>
+                       <attribute name="horizontalHeaderStretchLastSection">
+                        <bool>true</bool>
+                       </attribute>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
                   </widget>
                  </item>
                  <item>
@@ -637,6 +823,41 @@
                    <property name="spacing">
                     <number>0</number>
                    </property>
+                   <item>
+                    <widget class="QToolButton" name="toolButton_relationship_parameter_json_raw">
+                     <property name="maximumSize">
+                      <size>
+                       <width>1000</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Raw</string>
+                     </property>
+                     <property name="checkable">
+                      <bool>true</bool>
+                     </property>
+                     <property name="checked">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QToolButton" name="toolButton_relationship_parameter_json_table">
+                     <property name="maximumSize">
+                      <size>
+                       <width>1000</width>
+                       <height>24</height>
+                      </size>
+                     </property>
+                     <property name="text">
+                      <string>Table</string>
+                     </property>
+                     <property name="checkable">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
                    <item>
                     <spacer name="horizontalSpacer_2">
                      <property name="orientation">
@@ -651,7 +872,7 @@
                     </spacer>
                    </item>
                    <item>
-                    <widget class="QPushButton" name="pushButton_relationship_parameter_json">
+                    <widget class="QPushButton" name="pushButton_relationship_parameter_json_ok">
                      <property name="maximumSize">
                       <size>
                        <width>16777215</width>
@@ -1166,6 +1387,35 @@
    <header>widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>treeView_object</tabstop>
+  <tabstop>tabWidget_object_parameter</tabstop>
+  <tabstop>toolButton_add_object_parameter_values</tabstop>
+  <tabstop>toolButton_remove_object_parameter_values</tabstop>
+  <tabstop>tableView_object_parameter_value</tabstop>
+  <tabstop>textEdit_object_parameter_json</tabstop>
+  <tabstop>tableView_object_parameter_json</tabstop>
+  <tabstop>toolButton_object_parameter_json_raw</tabstop>
+  <tabstop>toolButton_object_parameter_json_table</tabstop>
+  <tabstop>pushButton_object_parameter_json_ok</tabstop>
+  <tabstop>toolButton_add_object_parameter_definitions</tabstop>
+  <tabstop>toolButton_remove_object_parameter_definitions</tabstop>
+  <tabstop>tableView_object_parameter_definition</tabstop>
+  <tabstop>tabWidget_relationship_parameter</tabstop>
+  <tabstop>toolButton_add_relationship_parameter_values</tabstop>
+  <tabstop>toolButton_remove_relationship_parameter_values</tabstop>
+  <tabstop>tableView_relationship_parameter_value</tabstop>
+  <tabstop>textEdit_relationship_parameter_json</tabstop>
+  <tabstop>tableView_relationship_parameter_json</tabstop>
+  <tabstop>toolButton_relationship_parameter_json_raw</tabstop>
+  <tabstop>toolButton_relationship_parameter_json_table</tabstop>
+  <tabstop>pushButton_relationship_parameter_json_ok</tabstop>
+  <tabstop>toolButton_add_relationship_parameter_definitions</tabstop>
+  <tabstop>toolButton_remove_relationship_parameter_definitions</tabstop>
+  <tabstop>tableView_relationship_parameter_definition</tabstop>
+  <tabstop>tabWidget_object_parameter_json</tabstop>
+  <tabstop>tabWidget_relationship_parameter_json</tabstop>
+ </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
  </resources>

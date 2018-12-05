@@ -20,6 +20,7 @@ Note: These are Spine Toolbox internal data models.
 
 import logging
 import os
+import json
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, \
@@ -1183,8 +1184,12 @@ class EmptyRowModel(MinimalTableModel):
         if not index.isValid():
             return Qt.NoItemFlags
         if self.force_default:
-            if self.header[index.column()] in self.default_row:
-                return self.default_flags & ~Qt.ItemIsEditable
+            try:
+                name = self.header[index.column()]
+                if name in self.default_row:
+                    return self.default_flags & ~Qt.ItemIsEditable
+            except IndexError:
+                pass
         return self.default_flags
 
     def set_default_row(self, **kwargs):
@@ -1203,16 +1208,13 @@ class EmptyRowModel(MinimalTableModel):
         if roles and Qt.EditRole not in roles:
             return
         last_row = self.rowCount() - 1
-        for column, name in enumerate(self.header):
-            data = self._main_data[last_row][column]
+        for column in range(self.columnCount()):
             try:
-                default = self.default_row[name]
-            except KeyError:
-                # No default for this column, check if any data
-                if not data:
-                    continue
-                self.insertRows(self.rowCount(), 1)
-                break
+                name = self.header[column]
+            except IndexError:
+                name = None
+            data = self._main_data[last_row][column]
+            default = self.default_row.get(name)
             if data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
@@ -1259,10 +1261,7 @@ class EmptyRowModel(MinimalTableModel):
                 name = self.header[column]
             except IndexError:
                 continue
-            try:
-                default = self.default_row[name]
-            except KeyError:
-                default = None
+            default = self.default_row.get(name)
             if left is None:
                 left = column
             right = column
@@ -1433,27 +1432,31 @@ class ObjectTreeModel(QStandardItemModel):
         if not parent.isValid():
             return super().hasChildren(parent)
         parent_type = parent.data(Qt.UserRole)
-        if parent_type in 'root':
+        if parent_type == 'root':
             return super().hasChildren(parent)
         if parent_type == 'object_class':
             object_class_id = parent.data(Qt.UserRole + 1)['id']
-            if object_class_id not in self._fetched['object_class']:
-                return True
+            if object_class_id in self._fetched['object_class']:
+                return super().hasChildren(parent)
+            return True
         elif parent_type == 'object':
             if self.is_flat:
                 # The flat model doesn't go beyond the 'object' level
                 return False
-            object_id = parent.parent().data(Qt.UserRole + 1)['id']
-            if object_id not in self._fetched['object']:
-                return True
+            object_id = parent.data(Qt.UserRole + 1)['id']
+            object_class_id = parent.data(Qt.UserRole + 1)['class_id']
+            if object_id in self._fetched['object']:
+                return super().hasChildren(parent)
+            return True
         elif parent_type == 'relationship_class':
             if self.is_flat:
                 # The flat model doesn't go beyond the 'object' level
                 return False
             object_id = parent.parent().data(Qt.UserRole + 1)['id']
             relationship_class_id = parent.data(Qt.UserRole + 1)['id']
-            if (object_id, relationship_class_id) not in self._fetched['relationship_class']:
-                return True
+            if (object_id, relationship_class_id) in self._fetched['relationship_class']:
+                return super().hasChildren(parent)
+            return True
         elif parent_type == 'relationship':
             return False
         return super().hasChildren(parent)
@@ -1828,7 +1831,6 @@ class SubParameterModel(MinimalTableModel):
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
-        self._parent = parent
         self.gray_brush = self._parent._tree_view_form.palette().button()
 
     def flags(self, index):
@@ -1911,9 +1913,10 @@ class SubParameterValueModel(SubParameterModel):
         if role != Qt.DisplayRole:
             return data
         if self._parent.header[index.column()] == 'json' and data:
-            if len(data) > 16:
-                return data[:8] + "..." + data[-8:]
-            return data
+            stripped_data = json.dumps(json.loads(data))
+            if len(stripped_data) > 16:
+                return stripped_data[:8] + "..." + stripped_data[-8:]
+            return stripped_data
         return data
 
 
@@ -1956,7 +1959,7 @@ class EmptyParameterModel(EmptyRowModel):
         Set data in model first, then check if the database needs to be updated as well.
         Extend set of indexes as additional data is set (for emitting dataChanged at the end).
         Subclasses need to implement `items_to_add` and `add_items_to_db`."""
-        if not super().batch_set_data(indexes, data ):
+        if not super().batch_set_data(indexes, data):
             return False
         items_to_add = self.items_to_add(indexes)
         rows = self.add_items_to_db(items_to_add)
@@ -3477,10 +3480,8 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
         return self.sourceModel().batch_set_data(source_indexes, data)
 
 
-class JSONModel(EmptyRowModel):
+class JSONArrayModel(EmptyRowModel):
     """A model of JSON array data, used by TreeViewForm.
-    TODO: Handle the JSON object data type or remove if not needed
-    (right now we are using a text edit to show json in the tree view.)
 
     Attributes:
         parent (JSONEditor): the parent widget
@@ -3490,24 +3491,28 @@ class JSONModel(EmptyRowModel):
         """Initialize class"""
         super().__init__(parent)
         self._json = list()
-        self.set_horizontal_header_labels(["json"])
         self._stride = stride
 
-    def reset_model(self, json, flags=None):
+    def reset_model(self, data):
         """Store JSON array into a list.
         Initialize `stride` rows.
         """
-        if json:
-            self._json = [x.strip() for x in json[1:-1].split(",")]
-        if flags:
-            self.default_flags = flags
+        try:
+            self._json = json.loads(data)
+        except (TypeError, json.JSONDecodeError):
+            self._json = list()
+            return False
+        if not isinstance(self._json, list):
+            self._json = list()
+            return False
         data = list()
         for i in range(self._stride):
             try:
-                data.append([self._json.pop(0)])
+                data.append([json.dumps(self._json.pop(0))])
             except IndexError:
                 break
         super().reset_model(data)
+        return True
 
     def canFetchMore(self, parent):
         return len(self._json) > 0
@@ -3518,7 +3523,7 @@ class JSONModel(EmptyRowModel):
         count = 0
         for i in range(self._stride):
             try:
-                data.append(self._json.pop(0))
+                data.append(json.dumps(self._json.pop(0)))
                 count += 1
             except IndexError:
                 break
@@ -3530,11 +3535,11 @@ class JSONModel(EmptyRowModel):
     def json(self):
         """Return data into JSON array."""
         last_data_row = self.rowCount() - 1
-        new_json = [self.index(i, 0).data() for i in range(last_data_row)]
+        new_json = [json.loads(self._main_data[i][0]) for i in range(last_data_row)]
         new_json.extend(self._json)  # Whatever remains unfetched
         if not new_json:
             return None
-        return "[" + ", ".join(new_json) + "]"
+        return json.dumps(new_json)
 
 
 class DatapackageResourcesModel(QStandardItemModel):
