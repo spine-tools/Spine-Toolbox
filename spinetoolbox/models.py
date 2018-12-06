@@ -1377,6 +1377,7 @@ class ObjectTreeModel(QStandardItemModel):
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
         if role == Qt.ForegroundRole:
+            # print(index.data())
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class') and not self.hasChildren(index):
                 return QBrush(Qt.gray)
@@ -1613,9 +1614,9 @@ class ObjectTreeModel(QStandardItemModel):
             visited_object_class_item = self.root_item.child(i)
             visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
             if visited_object_class['display_order'] >= object_class.display_order:
-                self.root_item.insertRow(i, object_class_item)
+                self.root_item.insertRow(i, QStandardItem())
+                self.root_item.setChild(i, 0, object_class_item)
                 return
-        row = self.root_item.rowCount()
         self.root_item.appendRow(object_class_item)
 
     def add_object(self, object_, flat=False):
@@ -2577,6 +2578,13 @@ class ObjectParameterValueModel(ObjectParameterModel):
         self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
+    def invalidate_filter(self):
+        """Invalidate filter."""
+        self.layoutAboutToBeChanged.emit()
+        for model in self.sub_models.values():
+            model.invalidateFilter()
+        self.layoutChanged.emit()
+
     @busy_effect
     def auto_filter_values(self, column):
         """Return values to populate the auto filter of given column.
@@ -2643,6 +2651,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
                 model.setSourceModel(source_model)
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
+        self.invalidate_filter()
 
     def rename_object_classes(self, object_classes):
         """Rename object classes in model."""
@@ -3057,6 +3066,13 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
+    def invalidate_filter(self):
+        """Invalidate filter."""
+        self.layoutAboutToBeChanged.emit()
+        for model in self.sub_models.values():
+            model.invalidateFilter()
+        self.layoutChanged.emit()
+
     @busy_effect
     def auto_filter_values(self, column):
         """Return values to populate the auto filter of given column.
@@ -3130,6 +3146,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 self.sub_models[relationship_class_id] = model
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
+        self.invalidate_filter()
 
     def rename_object_classes(self, object_classes):
         """Rename object classes in model."""
