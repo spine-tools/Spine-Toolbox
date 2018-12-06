@@ -76,6 +76,9 @@ class CopyPasteTableView(QTableView):
         QApplication.clipboard().setText(content)
         return True
 
+    def canPaste(self):
+        return True
+
     def paste(self):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()

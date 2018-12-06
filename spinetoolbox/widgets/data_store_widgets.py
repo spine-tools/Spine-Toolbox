@@ -59,6 +59,7 @@ class DataStoreForm(QMainWindow):
         data_store (DataStore): The DataStore instance that owns this form
         db_map (DiffDatabaseMapping): The object relational database mapping
         database (str): The database name
+        ui (Ui_MainWindow(object)): The ui to load the form with
     """
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
@@ -806,8 +807,11 @@ class TreeViewForm(DataStoreForm):
         width = sum(sizes)
         if header[current.column()] == "json":
             if self.ui.textEdit_object_parameter_json.toPlainText() != data:
-                formatted_data = json.dumps(json.loads(data), indent=4)
-                self.ui.textEdit_object_parameter_json.setPlainText(formatted_data)
+                if data:
+                    formatted_data = json.dumps(json.loads(data), indent=4)
+                    self.ui.textEdit_object_parameter_json.setPlainText(formatted_data)
+                else:
+                    self.ui.textEdit_object_parameter_json.clear()
             if self.object_parameter_json_model.json != data:
                 if self.object_parameter_json_model.reset_model(data):
                     self.ui.tableView_object_parameter_json.show()
@@ -846,8 +850,11 @@ class TreeViewForm(DataStoreForm):
         width = sum(sizes)
         if header[current.column()] == "json":
             if self.ui.textEdit_relationship_parameter_json.toPlainText() != data:
-                formatted_data = json.dumps(json.loads(data), indent=4)
-                self.ui.textEdit_relationship_parameter_json.setPlainText(formatted_data)
+                if data:
+                    formatted_data = json.dumps(json.loads(data), indent=4)
+                    self.ui.textEdit_relationship_parameter_json.setPlainText(formatted_data)
+                else:
+                    self.ui.textEdit_relationship_parameter_json.clear()
             if self.relationship_parameter_json_model.json != data:
                 if self.relationship_parameter_json_model.reset_model(data):
                     self.ui.tableView_relationship_parameter_json.show()
