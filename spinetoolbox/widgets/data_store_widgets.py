@@ -365,8 +365,7 @@ class DataStoreForm(QMainWindow):
 
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
-        for object_class in object_classes:
-            self.object_tree_model.add_object_class(object_class)
+        self.object_tree_model.add_object_classes(object_classes)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
@@ -374,30 +373,24 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def add_objects(self, objects):
         """Insert new objects."""
-        for object_ in objects:
-            self.object_tree_model.add_object(object_)
+        self.object_tree_model.add_objects(objects)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added new object(s) '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
 
-    def add_relationship_classes(self, wide_relationship_classes):
+    def add_relationship_classes(self, relationship_classes):
         """Insert new relationship classes."""
-        object_name_list_lengths = list()
-        for wide_relationship_class in wide_relationship_classes:
-            self.object_tree_model.add_relationship_class(wide_relationship_class)
-            object_name_list_lengths.append(len(wide_relationship_class.object_class_id_list.split(',')))
-        object_name_list_length = max(object_name_list_lengths)
+        self.object_tree_model.add_relationship_classes(relationship_classes)
         self.set_commit_rollback_actions_enabled(True)
-        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
 
-    def add_relationships(self, wide_relationships):
+    def add_relationships(self, relationships):
         """Insert new relationships."""
-        for wide_relationship in wide_relationships:
-            self.object_tree_model.add_relationship(wide_relationship)
+        self.object_tree_model.add_relationship(relationships)
         self.set_commit_rollback_actions_enabled(True)
-        relationship_name_list = "', '".join([x.name for x in wide_relationships])
+        relationship_name_list = "', '".join([x.name for x in relationships])
         msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 

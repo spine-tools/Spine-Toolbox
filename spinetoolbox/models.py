@@ -1574,19 +1574,12 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
-    def new_object_item(self, object_, flat=False):
+    def new_object_item(self, object_):
         """Returns new object item."""
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
         object_item.setData(object_._asdict(), Qt.UserRole + 1)
         object_item.setData(object_.description, Qt.ToolTipRole)
-        if flat:
-            return object_item
-        relationship_class_item_list = list()
-        for wide_relationship_class in self.db_map.wide_relationship_class_list(object_class_id=object_.class_id):
-            relationship_class_item = self.new_relationship_class_item(wide_relationship_class, object_)
-            relationship_class_item_list.append(relationship_class_item)
-        object_item.appendRows(relationship_class_item_list)
         return object_item
 
     def new_relationship_class_item(self, wide_relationship_class, object_):
@@ -1605,83 +1598,115 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
         return relationship_item
 
-    def add_object_class(self, object_class):
-        """Add object class item to the model."""
-        object_class_item = self.new_object_class_item(object_class)
-        icon = self._tree_view_form.object_icon(object_class.name)
-        object_class_item.setData(icon, Qt.DecorationRole)
-        for i in range(self.root_item.rowCount()):
-            visited_object_class_item = self.root_item.child(i)
-            visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
-            if visited_object_class['display_order'] >= object_class.display_order:
-                self.root_item.insertRow(i, QStandardItem())
-                self.root_item.setChild(i, 0, object_class_item)
-                return
-        self.root_item.appendRow(object_class_item)
+    def add_object_classes(self, object_classes):
+        """Add object class items to the model."""
+        for object_class in object_classes:
+            object_class_item = self.new_object_class_item(object_class)
+            icon = self._tree_view_form.object_icon(object_class.name)
+            object_class_item.setData(icon, Qt.DecorationRole)
+            for i in range(self.root_item.rowCount()):
+                visited_object_class_item = self.root_item.child(i)
+                visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
+                if visited_object_class['display_order'] >= object_class.display_order:
+                    self.root_item.insertRow(i, QStandardItem())
+                    self.root_item.setChild(i, 0, object_class_item)
+                    return
+            self.root_item.appendRow(object_class_item)
 
-    def add_object(self, object_, flat=False):
-        """Add object item to the model."""
-        # find object class item among the children of the root
+    def add_objects(self, objects):
+        """Add object items to the model."""
+        object_dict = {}
+        for object_ in objects:
+            object_dict.setdefault(object_.class_id, list()).append(object_)
+        # Sweep first level and check if there's something to append
         for i in range(self.root_item.rowCount()):
             object_class_item = self.root_item.child(i)
-            object_class = object_class_item.data(Qt.UserRole + 1)
-            if object_class['id'] != object_.class_id:
+            object_class_id = object_class_item.data(Qt.UserRole + 1)['id']
+            try:
+                object_list = object_dict[object_class_id]
+            except KeyError:
                 continue
-            object_item = self.new_object_item(object_, flat=flat)
+            # If not fetched, fetch it and continue
             object_class_index = self.indexFromItem(object_class_item)
             if self.canFetchMore(object_class_index):
-                self.fetchMore(object_class_index)  # NOTE: this also appends the new item, which is now in the db
-            else:
-                object_class_item.appendRow(object_item)
-                object_class_name = object_class_item.data(Qt.DisplayRole)
+                self.fetchMore(object_class_index)  # NOTE: this also adds the new items, which are now in the db
+                continue
+            # Already fetched, add new items manually
+            object_item_list = list()
+            for object_ in object_list:
+                object_item = self.new_object_item(object_)
                 icon = object_class_item.data(Qt.DecorationRole)
                 object_item.setData(icon, Qt.DecorationRole)
-            break
-        else:
-            logging.error("Object class item not found in model. This may be a bug.")
+                object_item_list.append(object_item)
+            object_class_item.appendRows(object_item_list)
 
-    def add_relationship_class(self, wide_relationship_class):
-        """Add relationship class."""
+    def add_relationship_classes(self, relationship_classes):
+        """Add relationship class items to model."""
+        relationship_class_dict = {}
+        for relationship_class in relationship_classes:
+            relationship_class_dict.setdefault(
+                relationship_class.object_class_id_list,
+                list()
+            ).append(relationship_class)
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if not visited_type == 'object':
                 continue
             visited_object = visited_item.data(Qt.UserRole + 1)
-            object_class_id_list = wide_relationship_class.object_class_id_list
-            if visited_object['class_id'] not in [int(x) for x in object_class_id_list.split(',')]:
+            visited_object_class_id = visited_object['class_id']
+            relationship_class_list = list()
+            for object_class_id_list, relationship_classes in relationship_class_dict.items():
+                if visited_object_class_id in [int(x) for x in object_class_id_list.split(',')]:
+                    relationship_class_list.extend(relationship_classes)
+            if not relationship_class_list:
                 continue
+            # If not fetched, fetch it and continue
             visited_index = self.indexFromItem(visited_item)
             if self.canFetchMore(visited_index):
-                self.fetchMore(visited_index)  # NOTE: this also appends the new item, which is now in the db
-            else:
-                relationship_class_item = self.new_relationship_class_item(wide_relationship_class, visited_object)
-                icon = self._tree_view_form.relationship_icon(wide_relationship_class.object_class_name_list)
+                self.fetchMore(visited_index)  # NOTE: this also adds the new items, which are now in the db
+                continue
+            # Already fetched, add new items manually
+            relationship_class_item_list = list()
+            for relationship_class in relationship_class_list:
+                relationship_class_item = self.new_relationship_class_item(relationship_class, visited_object)
+                icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
                 relationship_class_item.setData(icon, Qt.DecorationRole)
-                visited_item.appendRow(relationship_class_item)
+                relationship_class_item_list.append(relationship_class_item)
+            visited_item.appendRows(relationship_class_item_list)
 
-    def add_relationship(self, wide_relationship):
-        """Add relationship item to model."""
+    def add_relationships(self, relationships):
+        """Add relationship items to model."""
+        relationship_dict = {}
+        for relationship in relationships:
+            relationship_dict.setdefault(relationship.class_id, list()).append(relationship)
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if not visited_type == 'relationship_class':
                 continue
-            visited_relationship_class = visited_item.data(Qt.UserRole + 1)
-            if not visited_relationship_class['id'] == wide_relationship.class_id:
+            visited_relationship_class_id = visited_item.data(Qt.UserRole + 1)['id']
+            try:
+                relationship_list = relationship_dict[visited_relationship_class_id]
+            except KeyError:
                 continue
-            visited_object = visited_item.parent().data(Qt.UserRole + 1)
-            object_id_list = wide_relationship.object_id_list
-            if visited_object['id'] not in [int(x) for x in object_id_list.split(',')]:
-                continue
+            # If not fetched, fetch it and continue
             visited_index = self.indexFromItem(visited_item)
             if self.canFetchMore(visited_index):
-                self.fetchMore(visited_index)  # NOTE: this also appends the new item, which is now in the db
-            else:
-                relationship_item = self.new_relationship_item(wide_relationship)
-                visited_item.appendRow(relationship_item)
+                self.fetchMore(visited_index)  # NOTE: this also adds the new items, which are now in the db
+                continue
+            # Already fetched, add new items manually
+            relationship_item_list = list()
+            visited_object_id = visited_item.parent().data(Qt.UserRole + 1)['id']
+            for relationship in relationship_list:
+                object_id_list = relationship.object_id_list
+                if visited_object_id not in [int(x) for x in object_id_list.split(',')]:
+                    continue
+                relationship_item = self.new_relationship_item(relationship)
                 icon = visited_item.data(Qt.DecorationRole)
                 relationship_item.setData(icon, Qt.DecorationRole)
+                relationship_item_list.append(relationship_item)
+            visited_item.appendRows(relationship_item_list)
 
     def update_object_classes(self, updated_items):
         """Update object classes in the model."""
