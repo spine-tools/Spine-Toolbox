@@ -10,20 +10,21 @@
 ######################################################################################################################
 
 """
-Unit tests for TreeViewForm class.
+Unit tests for TreeViewForm and GraphViewForm classes.
 
 :author: M. Marin (VTT)
 :date:   6.12.2018
 """
 
 import unittest
+import os
 from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication
 from PySide2.QtCore import Qt
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
-from sqlalchemy.util import KeyedTuple
+from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
 
 
 class TestDataStoreForm(unittest.TestCase):
@@ -41,50 +42,236 @@ class TestDataStoreForm(unittest.TestCase):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes.
         """
         # # Set logging level to Error to silence "Logging level: All messages" print
-        with mock.patch("data_store.DataStore") as mock_data_store, \
-                mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
+        with mock.patch("data_store.DataStore") as mock_data_store:
             logging.disable(level=logging.ERROR)  # Disable logging
-            self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
-            self.graph_view_form = GraphViewForm(mock_data_store, mock_db_map, "mock_db")
+            try:
+                os.remove('mock_db.sqlite')
+            except OSError:
+                pass
+            db_url = "sqlite:///mock_db.sqlite"
+            create_new_spine_database(db_url)
+            db_map = DiffDatabaseMapping(db_url, "Spine-Toolbox-test-suite")
+            db_map.reset_mapping()
+            self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
+            self.graph_view_form = GraphViewForm(mock_data_store, db_map, "mock_db")
             logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        self.tree_view_form = None
-        self.graph_view_form = None
+        self.tree_view_form.close()
+        self.graph_view_form.close()
 
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
-        fish = KeyedTuple([1, 'fish', 'A fish.', 1], labels=['id', 'name', 'description', 'display_order'])
-        dog = KeyedTuple([2, 'dog', 'A dog.', 3], labels=['id', 'name', 'description', 'display_order'])
-        cat = KeyedTuple([3, 'cat', 'A cat.', 2], labels=['id', 'name', 'description', 'display_order'])
-        object_classes= [fish, dog, cat]
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        cat = dict(
+            name='cat',
+            description='A cat.',
+            display_order=2
+        )
+        object_classes = self.tree_view_form.db_map.add_object_classes(fish, dog, cat)
         self.tree_view_form.add_object_classes(object_classes)
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         fish_type = fish_item.data(Qt.UserRole)
-        fish_id = fish_item.data(Qt.UserRole + 1)['id']
         fish_name = fish_item.data(Qt.UserRole + 1)['name']
         dog_item = root_item.child(2)
         dog_type = dog_item.data(Qt.UserRole)
-        dog_id = dog_item.data(Qt.UserRole + 1)['id']
         dog_name = dog_item.data(Qt.UserRole + 1)['name']
         cat_item = root_item.child(1)
         cat_type = cat_item.data(Qt.UserRole)
-        cat_id = cat_item.data(Qt.UserRole + 1)['id']
         cat_name = cat_item.data(Qt.UserRole + 1)['name']
         self.assertTrue(fish_type == "object_class", "Fish type is not 'object_class'")
-        self.assertTrue(fish_id == 1, "Fish id is not 1")
         self.assertTrue(fish_name == "fish", "Fish name is not 'fish'")
         self.assertTrue(dog_type == "object_class", "Dog type is not 'object_class'")
-        self.assertTrue(dog_id == 2, "Dog id is not 2")
         self.assertTrue(dog_name == "dog", "Dog name is not 'dog'")
         self.assertTrue(cat_type == "object_class", "Cat type is not 'object_class'")
-        self.assertTrue(cat_id == 3, "Cat id is not 3")
         self.assertTrue(cat_name == "cat", "Cat name is not 'cat'")
+        self.assertTrue(root_item.rowCount() == 3, "Row count is not 3")
+
+    def test_add_objects(self):
+        """Test that objects are added to the object tree model.
+        """
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
+        fish_class_id = fish_object_class.id
+        dog_class_id = dog_object_class.id
+        nemo = dict(
+            class_id=fish_class_id,
+            name='nemo',
+            description='The lost one.'
+        )
+        dory = dict(
+            class_id=fish_class_id,
+            name='dory',
+            description="Nemo's girl."
+        )
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        objects = self.tree_view_form.db_map.add_objects(nemo, dory, pluto, scooby)
+        self.tree_view_form.add_objects(objects)
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        dog_item = root_item.child(1)
+        nemo_item = fish_item.child(0)
+        nemo_type = nemo_item.data(Qt.UserRole)
+        nemo_class_id = nemo_item.data(Qt.UserRole + 1)['class_id']
+        nemo_id = nemo_item.data(Qt.UserRole + 1)['id']
+        nemo_name = nemo_item.data(Qt.UserRole + 1)['name']
+        dory_item = fish_item.child(1)
+        dory_type = dory_item.data(Qt.UserRole)
+        dory_class_id = dory_item.data(Qt.UserRole + 1)['class_id']
+        dory_id = dory_item.data(Qt.UserRole + 1)['id']
+        dory_name = dory_item.data(Qt.UserRole + 1)['name']
+        pluto_item = dog_item.child(0)
+        pluto_type = pluto_item.data(Qt.UserRole)
+        pluto_class_id = pluto_item.data(Qt.UserRole + 1)['class_id']
+        pluto_id = pluto_item.data(Qt.UserRole + 1)['id']
+        pluto_name = pluto_item.data(Qt.UserRole + 1)['name']
+        scooby_item = dog_item.child(1)
+        scooby_type = scooby_item.data(Qt.UserRole)
+        scooby_class_id = scooby_item.data(Qt.UserRole + 1)['class_id']
+        scooby_id = scooby_item.data(Qt.UserRole + 1)['id']
+        scooby_name = scooby_item.data(Qt.UserRole + 1)['name']
+        self.assertTrue(nemo_type == "object", "Nemo type is not 'object'")
+        self.assertTrue(nemo_class_id == fish_class_id, "Nemo class_id is not {}".format(fish_class_id))
+        self.assertTrue(nemo_id == 1, "Nemo id is not 1")
+        self.assertTrue(nemo_name == "nemo", "Nemo name is not 'nemo'")
+        self.assertTrue(dory_type == "object", "Dory type is not 'object'")
+        self.assertTrue(dory_class_id == fish_class_id, "Dory class_id is not {}".format(fish_class_id))
+        self.assertTrue(dory_id == 2, "Dory id is not 2")
+        self.assertTrue(dory_name == "dory", "Dory name is not 'dory'")
+        self.assertTrue(fish_item.rowCount() == 2, "Fish count is not 2")
+        self.assertTrue(pluto_type == "object", "Pluto type is not 'object'")
+        self.assertTrue(pluto_class_id == dog_class_id, "Pluto class_id is not {}".format(dog_class_id))
+        self.assertTrue(pluto_id == 3, "Pluto id is not 3")
+        self.assertTrue(pluto_name == "pluto", "Pluto name is not 'pluto'")
+        self.assertTrue(scooby_type == "object", "Pluto type is not 'object'")
+        self.assertTrue(scooby_class_id == dog_class_id, "Scooby class_id is not {}".format(dog_class_id))
+        self.assertTrue(scooby_id == 4, "Scooby id is not 4")
+        self.assertTrue(scooby_name == "scooby", "Scooby name is not 'scooby'")
+        self.assertTrue(fish_item.rowCount() == 2, "Dog count is not 2")
+
+    def test_add_relationship_classes(self):
+        """Test that relationship classes are added to the object tree model.
+        """
+        # Add fish and dog object classes
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
+        fish_class_id = fish_object_class.id
+        dog_class_id = dog_object_class.id
+        # Add nemo object before adding the relationships
+        nemo = dict(
+            class_id=fish_class_id,
+            name='nemo',
+            description='The lost one.'
+        )
+        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
+        self.tree_view_form.add_objects([nemo_object])
+        # Add dog__fish and fish__dog relationship classes
+        dog_fish = dict(
+            name="dog__fish",
+            object_class_id_list=[dog_class_id, fish_class_id]
+        )
+        fish_dog = dict(
+            name="fish__dog",
+            object_class_id_list=[fish_class_id, dog_class_id]
+        )
+        relationship_classes = self.tree_view_form.db_map.add_wide_relationship_classes(dog_fish, fish_dog)
+        self.tree_view_form.add_relationship_classes(relationship_classes)
+        # Add pluto object after adding the relationships
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
+        self.tree_view_form.add_objects([pluto_object])
+        # Check that nemo can't fetch more (adding the relationship class should have fetched it)
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        nemo_item = fish_item.child(0)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        can_nemo_fetch_more = self.tree_view_form.object_tree_model.canFetchMore(nemo_index)
+        self.assertTrue(can_nemo_fetch_more is False, "Nemo can fetch more.")
+        # Check that pluto *can* fetch more (since it wasn't there when adding the relationship class)
+        dog_item = root_item.child(1)
+        pluto_item = dog_item.child(0)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        can_pluto_fetch_more = self.tree_view_form.object_tree_model.canFetchMore(pluto_index)
+        self.assertTrue(can_pluto_fetch_more is True, "Pluto can't fetch more.")
+        self.tree_view_form.object_tree_model.fetchMore(pluto_index)
+        # Check relationship class items are good
+        # The first one under nemo
+        nemo_dog_fish_item = nemo_item.child(0)
+        nemo_dog_fish_type = nemo_dog_fish_item.data(Qt.UserRole)
+        nemo_dog_fish_name = nemo_dog_fish_item.data(Qt.UserRole + 1)['name']
+        nemo_dog_fish_object_class_id_list = nemo_dog_fish_item.data(Qt.UserRole + 1)['object_class_id_list']
+        nemo_dog_fish_object_class_name_list = nemo_dog_fish_item.data(Qt.UserRole + 1)['object_class_name_list']
+        self.assertTrue(nemo_dog_fish_type == "relationship_class", "Nemo_dog_fish type is not 'relationship_class'")
+        self.assertTrue(nemo_dog_fish_name == "dog__fish", "Nemo_dog_fish name is not 'dog__fish'")
+        split_nemo_dog_fish_object_class_id_list = [int(x) for x in nemo_dog_fish_object_class_id_list.split(",")]
+        self.assertTrue(split_nemo_dog_fish_object_class_id_list == [dog_class_id, fish_class_id],
+                        "Nemo_dog_fish object_class_id_list is not {}".format([dog_class_id, fish_class_id]))
+        self.assertTrue(nemo_dog_fish_object_class_name_list == "dog,fish",
+                        "Nemo_dog_fish name is not 'dog,fish'")
+        self.assertTrue(nemo_item.rowCount() == 2, "Nemo_dog_fish count is not 2")
+        # The second one under pluto
+        pluto_fish_dog_item = pluto_item.child(1)
+        pluto_fish_dog_type = pluto_fish_dog_item.data(Qt.UserRole)
+        pluto_fish_dog_name = pluto_fish_dog_item.data(Qt.UserRole + 1)['name']
+        pluto_fish_dog_object_class_id_list = pluto_fish_dog_item.data(Qt.UserRole + 1)['object_class_id_list']
+        pluto_fish_dog_object_class_name_list = pluto_fish_dog_item.data(Qt.UserRole + 1)['object_class_name_list']
+        self.assertTrue(pluto_fish_dog_type == "relationship_class", "Pluto_fish_dog type is not 'relationship_class'")
+        self.assertTrue(pluto_fish_dog_name == "fish__dog", "Pluto_fish_dog name is not 'fish__dog'")
+        split_pluto_fish_dog_object_class_id_list = [int(x) for x in pluto_fish_dog_object_class_id_list.split(",")]
+        self.assertTrue(split_pluto_fish_dog_object_class_id_list == [fish_class_id, dog_class_id],
+                        "Pluto_fish_dog object_class_id_list is not {}".format([fish_class_id, dog_class_id]))
+        self.assertTrue(pluto_fish_dog_object_class_name_list == "fish,dog",
+                        "Pluto_fish_dog name is not 'fish,dog'")
+        self.assertTrue(pluto_item.rowCount() == 2, "Pluto_fish_dog count is not 2")
 
 
 if __name__ == '__main__':
