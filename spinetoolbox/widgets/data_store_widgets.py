@@ -902,7 +902,6 @@ class TreeViewForm(DataStoreForm):
         else:
             json = self.object_parameter_json_model.json()
         index = self.ui.tableView_object_parameter_value.currentIndex()
-        print(json)
         self.set_parameter_value_data(index, json)
 
     @Slot("bool", name="_handle_relationship_parameter_json_ok_clicked")

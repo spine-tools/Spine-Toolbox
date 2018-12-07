@@ -21,10 +21,11 @@ import os
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import Qt
+from PySide2.QtWidgets import QApplication, QWidget, QStyleOptionViewItem
+from PySide2.QtCore import Qt, QItemSelectionModel
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
 
 
 class TestDataStoreForm(unittest.TestCase):
@@ -63,6 +64,7 @@ class TestDataStoreForm(unittest.TestCase):
         self.tree_view_form.close()
         self.graph_view_form.close()
 
+    @unittest.skip("DONE")
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
@@ -235,13 +237,13 @@ class TestDataStoreForm(unittest.TestCase):
         nemo_item = fish_item.child(0)
         nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
         can_nemo_fetch_more = self.tree_view_form.object_tree_model.canFetchMore(nemo_index)
-        self.assertTrue(can_nemo_fetch_more is False, "Nemo can fetch more.")
+        self.assertFalse(can_nemo_fetch_more, "Nemo can fetch more.")
         # Check that pluto *can* fetch more (since it wasn't there when adding the relationship class)
         dog_item = root_item.child(1)
         pluto_item = dog_item.child(0)
         pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
         can_pluto_fetch_more = self.tree_view_form.object_tree_model.canFetchMore(pluto_index)
-        self.assertTrue(can_pluto_fetch_more is True, "Pluto can't fetch more.")
+        self.assertTrue(can_pluto_fetch_more, "Pluto can't fetch more.")
         self.tree_view_form.object_tree_model.fetchMore(pluto_index)
         # Check relationship class items are good
         # The first one under nemo
@@ -470,6 +472,548 @@ class TestDataStoreForm(unittest.TestCase):
                         "Nemo_scooby item2 object_id_list is not {}".format([nemo_object.id, scooby_object.id]))
         self.assertTrue(nemo_scooby_item2_object_name_list == "nemo,scooby",
                         "Nemo_scooby item2 object_name_list is not 'nemo,scooby'")
+
+    def test_add_object_parameter_definitions(self):
+        """Test that object parameter definitions are added to the model.
+        """
+        # Add fish and dog object classes
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
+        fish_class_id = fish_object_class.id
+        dog_class_id = dog_object_class.id
+        # Add object parameter definition
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.header.index
+        # Enter object class name
+        obj_cls_name_index = model.index(0, header_index("object_class_name"))
+        self.assertTrue(obj_cls_name_index.data() is None,
+                        "Object class name is '{}' rather than None".format(obj_cls_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
+        view.itemDelegate().setEditorData(editor, obj_cls_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'fish', "Item 0 is '{}' rather than 'fish'".format(editor.itemText(0)))
+        self.assertTrue(editor.itemText(1) == 'dog', "Item 1 is '{}' rather than 'dog'".format(editor.itemText(1)))
+        editor.setCurrentIndex(1)
+        view.itemDelegate().setModelData(editor, model, obj_cls_name_index)
+        view.itemDelegate().destroyEditor(editor, obj_cls_name_index)
+        self.assertTrue(obj_cls_name_index.data() == 'dog',
+                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        obj_cls_id_index = model.index(0, header_index("object_class_id"))
+        self.assertTrue(obj_cls_id_index.data() == dog_class_id,
+                        "Object class id is '{}' rather than '{}'".format(obj_cls_id_index.data(), dog_class_id))
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertTrue(parameter_name_index.data() is None,
+                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertTrue(editor.text() is "", "Editor text is '{}' rather than ''".format(editor.text()))
+        editor.setText("breed")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        self.assertTrue(parameter_name_index.data() == 'breed',
+                        "Parameter name is '{}' rather than 'breed'".format(parameter_name_index.data()))
+        # Check the db
+        parameter_id = model.index(0, header_index("id")).data()
+        parameter = self.tree_view_form.db_map.single_parameter(id=parameter_id).one_or_none()
+        self.assertTrue(parameter.name == 'breed',
+                        "Parameter name is '{}' rather than 'breed'".format(parameter.name))
+        self.assertTrue(parameter.object_class_id == dog_class_id,
+                        "Parameter object class id is '{}' rather than '{}'".\
+                            format(parameter.object_class_id, dog_class_id))
+        self.assertTrue(parameter.relationship_class_id is None,
+                        "Parameter relationship class id is '{}' rather than None".\
+                            format(parameter.relationship_class_id))
+
+    def test_add_relationship_parameter_definitions(self):
+        """Test that relationship parameter definitions are added to the model.
+        """
+        # Add fish and dog object classes
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
+        fish_class_id = fish_object_class.id
+        dog_class_id = dog_object_class.id
+        # Add nemo and scooby objects
+        nemo = dict(
+            class_id=fish_class_id,
+            name='nemo',
+            description='The lost one.'
+        )
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
+        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
+        self.tree_view_form.add_objects([nemo_object, scooby_object])
+        # Add fish__dog and dog__fish relationship classes
+        fish_dog = dict(
+            name="fish__dog",
+            object_class_id_list=[fish_class_id, dog_class_id]
+        )
+        dog_fish = dict(
+            name="dog__fish",
+            object_class_id_list=[dog_class_id, fish_class_id]
+        )
+        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
+        dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
+        fish_dog_class_id = fish_dog_relationship_class.id
+        dog_fish_class_id = dog_fish_relationship_class.id
+        self.tree_view_form.add_relationship_classes([fish_dog_relationship_class, dog_fish_relationship_class])
+        # Add relationship parameter definition
+        model = self.tree_view_form.relationship_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
+        header_index = model.header.index
+        # Enter relationship class name
+        rel_cls_name_index = model.index(0, header_index("relationship_class_name"))
+        self.assertTrue(rel_cls_name_index.data() is None,
+                        "Relationship class name is '{}' rather than None".format(rel_cls_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), rel_cls_name_index)
+        view.itemDelegate().setEditorData(editor, rel_cls_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'fish__dog',
+                        "Item 0 is '{}' rather than 'fish__dog'".format(editor.itemText(0)))
+        self.assertTrue(editor.itemText(1) == 'dog__fish',
+                        "Item 1 is '{}' rather than 'dog__fish'".format(editor.itemText(1)))
+        editor.setCurrentIndex(1)
+        view.itemDelegate().setModelData(editor, model, rel_cls_name_index)
+        view.itemDelegate().destroyEditor(editor, rel_cls_name_index)
+        self.assertTrue(rel_cls_name_index.data() == 'dog__fish',
+                        "Relationship class name is '{}' rather than 'dog__fish'".format(rel_cls_name_index.data()))
+        rel_cls_id_index = model.index(0, header_index("relationship_class_id"))
+        self.assertTrue(rel_cls_id_index.data() == dog_fish_class_id,
+                        "Relationship class id is '{}' rather than '{}'".\
+                            format(rel_cls_id_index.data(), dog_fish_class_id))
+        obj_cls_name_list_index = model.index(0, header_index("object_class_name_list"))
+        self.assertTrue(obj_cls_name_list_index.data() == 'dog,fish',
+                        "Object class name list is '{}' rather than 'dog,fish'".format(obj_cls_name_list_index.data()))
+        obj_cls_id_list_index = model.index(0, header_index("object_class_id_list"))
+        split_obj_cls_id_list = [int(x) for x in obj_cls_id_list_index.data().split(",")]
+        self.assertTrue(split_obj_cls_id_list == [dog_class_id, fish_class_id],
+                        "Object class id list is '{}' rather than '{}'".\
+                            format(split_obj_cls_id_list, [dog_class_id, fish_class_id]))
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertTrue(parameter_name_index.data() is None,
+                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertTrue(editor.text() is "", "Editor text is '{}' rather than ''".format(editor.text()))
+        editor.setText("combined_mojo")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        self.assertTrue(parameter_name_index.data() == 'combined_mojo',
+                        "Parameter name is '{}' rather than 'combined_mojo'".format(parameter_name_index.data()))
+        # Check the db
+        parameter_id = model.index(0, header_index("id")).data()
+        parameter = self.tree_view_form.db_map.single_parameter(id=parameter_id).one_or_none()
+        self.assertTrue(parameter.name == 'combined_mojo',
+                        "Parameter name is '{}' rather than 'combined_mojo'".format(parameter.name))
+        self.assertTrue(parameter.relationship_class_id == dog_fish_class_id,
+                        "Parameter relationship class id is '{}' rather than '{}'".\
+                            format(parameter.relationship_class_id, dog_fish_class_id))
+        self.assertTrue(parameter.object_class_id is None,
+                        "Parameter object class id is '{}' rather than None".format(parameter.object_class_id))
+
+    def test_add_object_parameter_values(self):
+        """Test that object parameter values are added to the model.
+        """
+        # Add dog object class
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([dog_object_class])
+        dog_class_id = dog_object_class.id
+        # Add pluto and scooby objects
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
+        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
+        self.tree_view_form.add_objects([pluto_object, scooby_object])
+        # Add object parameter definition
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.header.index
+        # Enter object class name
+        obj_cls_name_index = model.index(0, header_index("object_class_name"))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
+        view.itemDelegate().setEditorData(editor, obj_cls_name_index)
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, obj_cls_name_index)
+        view.itemDelegate().destroyEditor(editor, obj_cls_name_index)
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        editor.setText("breed")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        # Add first object parameter value (for scooby), to test autofilling of object class from *object*
+        model = self.tree_view_form.object_parameter_value_model
+        view = self.tree_view_form.ui.tableView_object_parameter_value
+        header_index = model.header.index
+        # Enter object name
+        obj_name_index = model.index(0, header_index("object_name"))
+        self.assertTrue(obj_name_index.data() is None,
+                        "Object name is '{}' rather than None".format(obj_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_index)
+        view.itemDelegate().setEditorData(editor, obj_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'pluto', "Item 0 is '{}' rather than 'pluto'".format(editor.itemText(0)))
+        self.assertTrue(editor.itemText(1) == 'scooby',
+                        "Item 1 is '{}' rather than 'scooby'".format(editor.itemText(1)))
+        editor.setCurrentIndex(1)
+        view.itemDelegate().setModelData(editor, model, obj_name_index)
+        view.itemDelegate().destroyEditor(editor, obj_name_index)
+        self.assertTrue(obj_name_index.data() == 'scooby',
+                        "Object name is '{}' rather than 'scooby'".format(obj_name_index.data()))
+        obj_id_index = model.index(0, header_index("object_id"))
+        self.assertTrue(obj_id_index.data() == scooby_object.id,
+                        "Object id is '{}' rather than '{}'".format(obj_id_index.data(), scooby_object.id))
+        # Check objet class
+        obj_cls_name_index = model.index(0, header_index("object_class_name"))
+        self.assertTrue(obj_cls_name_index.data() == 'dog',
+                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        obj_cls_id_index = model.index(0, header_index("object_class_id"))
+        self.assertTrue(obj_cls_id_index.data() == dog_class_id,
+                        "Object class id is '{}' rather than '{}'".format(obj_cls_id_index.data(), dog_class_id))
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertTrue(parameter_name_index.data() is None,
+                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 1, "Editor count is '{}' rather than 1".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'breed',
+                        "Editor text is '{}' rather than 'breed'".format(editor.itemText(0)))
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        self.assertTrue(parameter_name_index.data() == 'breed',
+                        "Parameter name is '{}' rather than 'breed'".format(parameter_name_index.data()))
+        # Add second object parameter value (for pluto), to test autofilling of object class from *parameter*
+        model = self.tree_view_form.object_parameter_value_model
+        view = self.tree_view_form.ui.tableView_object_parameter_value
+        header_index = model.header.index
+        # Enter parameter name
+        parameter_name_index = model.index(1, header_index("parameter_name"))
+        self.assertTrue(parameter_name_index.data() is None,
+                "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 1, "Editor count is '{}' rather than 1".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'breed',
+                "Editor text is '{}' rather than 'breed'".format(editor.itemText(0)))
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        self.assertTrue(parameter_name_index.data() == 'breed',
+                "Parameter name is '{}' rather than 'breed'".format(parameter_name_index.data()))
+        # Check objet class
+        obj_cls_name_index = model.index(1, header_index("object_class_name"))
+        self.assertTrue(obj_cls_name_index.data() == 'dog',
+                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        obj_cls_id_index = model.index(1, header_index("object_class_id"))
+        self.assertTrue(obj_cls_id_index.data() == dog_class_id,
+                        "Object class id is '{}' rather than '{}'".format(obj_cls_id_index.data(), dog_class_id))
+        # Enter object name
+        obj_name_index = model.index(1, header_index("object_name"))
+        self.assertTrue(obj_name_index.data() is None,
+                        "Object name is '{}' rather than None".format(obj_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_index)
+        view.itemDelegate().setEditorData(editor, obj_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'pluto', "Item 0 is '{}' rather than 'pluto'".format(editor.itemText(0)))
+        self.assertTrue(editor.itemText(1) == 'scooby',
+                        "Item 1 is '{}' rather than 'scooby'".format(editor.itemText(1)))
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, obj_name_index)
+        view.itemDelegate().destroyEditor(editor, obj_name_index)
+        self.assertTrue(obj_name_index.data() == 'pluto',
+                        "Object name is '{}' rather than 'pluto'".format(obj_name_index.data()))
+        obj_id_index = model.index(1, header_index("object_id"))
+        self.assertTrue(obj_id_index.data() == pluto_object.id,
+                        "Object id is '{}' rather than '{}'".format(obj_id_index.data(), pluto_object.id))
+        # Check the db
+        # First (scooby)
+        parameter_id = model.index(0, header_index("parameter_id")).data()
+        parameter_value_id = model.index(0, header_index("id")).data()
+        parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
+        self.assertTrue(parameter_value.id == parameter_value_id,
+                        "Parameter value id is {} rather than {}".format(parameter_value.id, parameter_value_id))
+        self.assertTrue(parameter_value.parameter_id == parameter_id,
+                        "Parameter id is {} rather than {}".format(parameter_value.parameter_id, parameter_id))
+        self.assertTrue(parameter_value.object_id == scooby_object.id,
+                        "Parameter object id is '{}' rather than '{}'".\
+                            format(parameter_value.object_id, scooby_object.id))
+        self.assertTrue(parameter_value.relationship_id is None,
+                        "Parameter relationship id is '{}' rather than None".format(parameter_value.relationship_id))
+        # First (pluto)
+        parameter_id = model.index(1, header_index("parameter_id")).data()
+        parameter_value_id = model.index(1, header_index("id")).data()
+        parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
+        self.assertTrue(parameter_value.id == parameter_value_id,
+                        "Parameter value id is {} rather than {}".format(parameter_value.id, parameter_value_id))
+        self.assertTrue(parameter_value.parameter_id == parameter_id,
+                        "Parameter id is {} rather than {}".format(parameter_value.parameter_id, parameter_id))
+        self.assertTrue(parameter_value.object_id == pluto_object.id,
+                        "Parameter object id is '{}' rather than '{}'".\
+                            format(parameter_value.object_id, pluto_object.id))
+        self.assertTrue(parameter_value.relationship_id is None,
+                        "Parameter relationship id is '{}' rather than None".format(parameter_value.relationship_id))
+
+    def test_add_relationship_parameter_values(self):
+        """Test that relationship parameter values are added to the model.
+        """
+        # Add fish and dog object classes
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
+        fish_class_id = fish_object_class.id
+        dog_class_id = dog_object_class.id
+        # Add nemo and scooby objects
+        nemo = dict(
+            class_id=fish_class_id,
+            name='nemo',
+            description='The lost one.'
+        )
+        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
+        self.tree_view_form.add_objects([nemo_object, scooby_object])
+        # Add fish__dog relationship class
+        fish_dog = dict(
+            name="fish__dog",
+            object_class_id_list=[fish_class_id, dog_class_id]
+        )
+        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
+        self.tree_view_form.add_relationship_classes([fish_dog_relationship_class])
+        # Add nemo_pluto and nemo_scooby relationships
+        nemo_pluto = dict(
+            class_id=fish_dog_relationship_class.id,
+            object_id_list=[nemo_object.id, pluto_object.id],
+            name='fish__dog_nemo__pluto'
+        )
+        nemo_scooby = dict(
+            class_id=fish_dog_relationship_class.id,
+            object_id_list=[nemo_object.id, scooby_object.id],
+            name='fish__dog_nemo__scooby'
+        )
+        nemo_pluto_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_pluto)
+        nemo_scooby_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_scooby)
+        self.tree_view_form.add_relationships([nemo_pluto_relationship, nemo_scooby_relationship])
+        # Add relationship parameter definition
+        model = self.tree_view_form.relationship_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
+        header_index = model.header.index
+        # Enter relationship class name
+        rel_cls_name_index = model.index(0, header_index("relationship_class_name"))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), rel_cls_name_index)
+        view.itemDelegate().setEditorData(editor, rel_cls_name_index)
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, rel_cls_name_index)
+        view.itemDelegate().destroyEditor(editor, rel_cls_name_index)
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        editor.setText("combined_mojo")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        # Add relationship parameter value
+        model = self.tree_view_form.relationship_parameter_value_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_value
+        header_index = model.header.index
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertTrue(parameter_name_index.data() is None,
+                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
+        self.assertTrue(editor.count() == 1, "Editor count is '{}' rather than 1".format(editor.count()))
+        self.assertTrue(editor.itemText(0) == 'combined_mojo',
+                        "Editor text is '{}' rather than 'combined_mojo'".format(editor.itemText(0)))
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        self.assertTrue(parameter_name_index.data() == 'combined_mojo',
+                        "Parameter name is '{}' rather than 'combined_mojo'".format(parameter_name_index.data()))
+        # Check relationship class
+        rel_cls_name = model.index(0, header_index("relationship_class_name")).data()
+        self.assertTrue(rel_cls_name == 'fish__dog',
+                        "Relationship class name is '{}' rather than 'fish__dog'".format(rel_cls_name))
+        rel_cls_id = model.index(0, header_index("relationship_class_id")).data()
+        self.assertTrue(rel_cls_id == fish_dog_relationship_class.id,
+                        "Relationship class id is '{}' rather than '{}'".\
+                            format(rel_cls_id, fish_dog_relationship_class.id))
+        obj_cls_name_list_index = model.index(0, header_index("object_class_name_list"))
+        self.assertTrue(obj_cls_name_list_index.data() == 'fish,dog',
+                        "Object class name list is '{}' rather than 'fish,dog'".format(obj_cls_name_list_index.data()))
+        obj_cls_id_list_index = model.index(0, header_index("object_class_id_list"))
+        split_obj_cls_id_list = [int(x) for x in obj_cls_id_list_index.data().split(",")]
+        self.assertTrue(split_obj_cls_id_list == [fish_class_id, dog_class_id],
+                        "Object class id list is '{}' rather than '{}'".\
+                            format(split_obj_cls_id_list, [fish_class_id, dog_class_id]))
+        # Enter object name list
+        obj_name_list_index = model.index(0, header_index("object_name_list"))
+        self.assertTrue(obj_name_list_index.data() is None,
+                        "Object name list is '{}' rather than None".format(obj_name_list_index.data()))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_list_index)
+        view.itemDelegate().setEditorData(editor, obj_name_list_index)
+        self.assertTrue(isinstance(editor, ObjectNameListEditor), "Editor is not a 'ObjectNameListEditor'")
+        combos = editor.combos
+        self.assertTrue(len(combos) == 2, "Editor combos count is '{}' rather than 2".format(len(combos)))
+        self.assertTrue(combos[0].count() == 3,
+                        "Editor combo 0 count is '{}' rather than 3".format(combos[0].count()))
+        self.assertTrue(combos[0].itemText(0) == 'fish',
+                        "Editor combo 0 item 0 is '{}' rather than 'fish'".format(combos[0].itemText(0)))
+        self.assertTrue(combos[0].itemText(2) == 'nemo',
+                        "Editor combo 0 item 2 is '{}' rather than 'nemo'".format(combos[0].itemText(2)))
+        self.assertTrue(combos[1].count() == 4,
+                        "Editor combo 1 count is '{}' rather than 4".format(combos[1].count()))
+        self.assertTrue(combos[1].itemText(0) == 'dog',
+                        "Editor combo 1 item 0 is '{}' rather than 'dog'".format(combos[1].itemText(0)))
+        self.assertTrue(combos[1].itemText(2) == 'pluto',
+                        "Editor combo 1 item 2 is '{}' rather than 'pluto'".format(combos[1].itemText(2)))
+        self.assertTrue(combos[1].itemText(3) == 'scooby',
+                        "Editor combo 1 item 3 is '{}' rather than 'scooby'".format(combos[1].itemText(3)))
+        combos[0].setCurrentIndex(2)
+        combos[1].setCurrentIndex(2)
+        view.itemDelegate().setModelData(editor, model, obj_name_list_index)
+        view.itemDelegate().destroyEditor(editor, obj_name_list_index)
+        # Check relationship
+        relationship_id = model.index(0, header_index("relationship_id")).data()
+        self.assertTrue(relationship_id == nemo_pluto_relationship.id,
+                        "Relationship id is {} rather than {}".format(relationship_id, nemo_pluto_relationship.id))
+        obj_id_list_index = model.index(0, header_index("object_id_list"))
+        split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
+        self.assertTrue(split_obj_id_list == [nemo_object.id, pluto_object.id],
+                        "Obj id list is {} rather than {}".\
+                            format(split_obj_id_list, [nemo_object.id, pluto_object.id]))
+        # Check the db
+        parameter_id = model.index(0, header_index("parameter_id")).data()
+        parameter_value_id = model.index(0, header_index("id")).data()
+        parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
+        self.assertTrue(parameter_value.id == parameter_value_id,
+                        "Parameter value id is {} rather than {}".format(parameter_value.id, parameter_value_id))
+        self.assertTrue(parameter_value.parameter_id == parameter_id,
+                        "Parameter id is {} rather than {}".format(parameter_value.parameter_id, parameter_id))
+        self.assertTrue(parameter_value.relationship_id == nemo_pluto_relationship.id,
+                        "Parameter relationship id is '{}' rather than '{}'".\
+                            format(parameter_value.object_id, nemo_pluto_relationship.id))
+        self.assertTrue(parameter_value.object_id is None,
+                        "Parameter object id is '{}' rather than None".format(parameter_value.object_id))
+
+
+    @unittest.skip("DONE")
+    def test_set_object_parameter_definition_defaults(self):
+        """Test that defaults are set in parameter definition models according the object tree selection.
+        """
+        # Add fish and dog object classes
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        object_classes = self.tree_view_form.db_map.add_object_classes(fish, dog)
+        self.tree_view_form.add_object_classes(object_classes)
+        # Select fish item in object tree
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        fish_tree_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_tree_index, QItemSelectionModel.Select)
+        # Check default in object parameter definition
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.header.index
+        obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
+        self.assertTrue(obj_cls_name_index.data() == 'fish',
+                        "Object class name is '{}' rather than 'fish'".format(obj_cls_name_index.data()))
+        # Deselected fish and select dog item in object tree
+        dog_item = root_item.child(1)
+        dog_tree_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_tree_index, QItemSelectionModel.Deselect)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(dog_tree_index, QItemSelectionModel.Select)
+        obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
+        self.assertTrue(obj_cls_name_index.data() == 'dog',
+                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        # Clear object tree selection and select root
+        self.tree_view_form.ui.treeView_object.selectionModel().clearSelection()
+        root_tree_index = self.tree_view_form.object_tree_model.indexFromItem(root_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(root_tree_index, QItemSelectionModel.Select)
+        obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
+        self.assertTrue(obj_cls_name_index.data() is None,
+                        "Object class name is '{}' rather than None".format(obj_cls_name_index.data()))
+
 
 if __name__ == '__main__':
     unittest.main()

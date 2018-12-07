@@ -1377,7 +1377,6 @@ class ObjectTreeModel(QStandardItemModel):
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
         if role == Qt.ForegroundRole:
-            # print(index.data())
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class') and not self.hasChildren(index):
                 return QBrush(Qt.gray)
@@ -2811,6 +2810,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             model._main_data[row_count:row_count + len(data)] = data
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
+        self.update_filter()
 
     def rename_object_classes(self, object_classes):
         """Rename object classes in model."""
