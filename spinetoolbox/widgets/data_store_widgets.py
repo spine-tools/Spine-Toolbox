@@ -388,7 +388,7 @@ class DataStoreForm(QMainWindow):
 
     def add_relationships(self, relationships):
         """Insert new relationships."""
-        self.object_tree_model.add_relationship(relationships)
+        self.object_tree_model.add_relationships(relationships)
         self.set_commit_rollback_actions_enabled(True)
         relationship_name_list = "', '".join([x.name for x in relationships])
         msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)

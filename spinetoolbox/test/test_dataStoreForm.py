@@ -273,6 +273,203 @@ class TestDataStoreForm(unittest.TestCase):
                         "Pluto_fish_dog name is not 'fish,dog'")
         self.assertTrue(pluto_item.rowCount() == 2, "Pluto_fish_dog count is not 2")
 
+    def test_add_relationships(self):
+        """Test that relationships are added to the object tree model.
+        """
+        # Add fish and dog object classes
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
+        fish_class_id = fish_object_class.id
+        dog_class_id = dog_object_class.id
+        # Add nemo, pluto and scooby objects
+        nemo = dict(
+            class_id=fish_class_id,
+            name='nemo',
+            description='The lost one.'
+        )
+        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
+        self.tree_view_form.add_objects([nemo_object, pluto_object, scooby_object])
+        # Add dog__fish and fish__dog relationship classes
+        dog_fish = dict(
+            name="dog__fish",
+            object_class_id_list=[dog_class_id, fish_class_id]
+        )
+        fish_dog = dict(
+            name="fish__dog",
+            object_class_id_list=[fish_class_id, dog_class_id]
+        )
+        dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
+        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
+        # Add relationship classes
+        self.tree_view_form.add_relationship_classes([fish_dog_relationship_class, dog_fish_relationship_class])
+        # Add pluto_nemo, nemo_pluto and nemo_scooby relationships
+        pluto_nemo = dict(
+            class_id=dog_fish_relationship_class.id,
+            object_id_list=[pluto_object.id, nemo_object.id],
+            name='dog__fish_pluto__nemo'
+        )
+        nemo_pluto = dict(
+            class_id=fish_dog_relationship_class.id,
+            object_id_list=[nemo_object.id, pluto_object.id],
+            name='fish__dog_nemo__pluto'
+        )
+        nemo_scooby = dict(
+            class_id=fish_dog_relationship_class.id,
+            object_id_list=[nemo_object.id, scooby_object.id],
+            name='fish__dog_nemo__scooby'
+        )
+        relationships = self.tree_view_form.db_map.add_wide_relationships(pluto_nemo, nemo_pluto, nemo_scooby)
+        self.tree_view_form.add_relationships(relationships)
+        # Get items
+        root_item = self.tree_view_form.object_tree_model.root_item
+        # Object class items
+        fish_item = root_item.child(0)
+        dog_item = root_item.child(1)
+        # Object items
+        nemo_item = fish_item.child(0)
+        pluto_item = dog_item.child(0)
+        scooby_item = dog_item.child(1)
+        # Relationship class items
+        nemo_dog_fish_item = nemo_item.child(0)
+        nemo_fish_dog_item = nemo_item.child(1)
+        pluto_dog_fish_item = pluto_item.child(0)
+        pluto_fish_dog_item = pluto_item.child(1)
+        scooby_dog_fish_item = scooby_item.child(0)
+        scooby_fish_dog_item = scooby_item.child(1)
+        # Relationship items
+        pluto_nemo_item1 = pluto_dog_fish_item.child(0)
+        pluto_nemo_item2 = nemo_dog_fish_item.child(0)
+        nemo_pluto_item1 = pluto_fish_dog_item.child(0)
+        nemo_pluto_item2 = nemo_fish_dog_item.child(0)
+        nemo_scooby_item1 = scooby_fish_dog_item.child(0)
+        nemo_scooby_item2 = nemo_fish_dog_item.child(1)
+        # Check number of items is good
+        self.assertTrue(nemo_dog_fish_item.rowCount() == 1, "nemo_dog_fish_item count is not 1")
+        self.assertTrue(nemo_fish_dog_item.rowCount() == 2, "nemo_fish_dog_item count is not 2")
+        self.assertTrue(pluto_dog_fish_item.rowCount() == 1, "pluto_dog_fish_item count is not 1")
+        self.assertTrue(pluto_fish_dog_item.rowCount() == 1, "pluto_fish_dog_item count is not 1")
+        self.assertTrue(scooby_dog_fish_item.rowCount() == 0, "scooby_dog_fish_item count is not 0")
+        self.assertTrue(scooby_fish_dog_item.rowCount() == 1, "scooby_fish_dog_item count is not 1")
+        # Check relationship items are good
+        # pluto_nemo_item1
+        pluto_nemo_item1_type = pluto_nemo_item1.data(Qt.UserRole)
+        pluto_nemo_item1_name = pluto_nemo_item1.data(Qt.UserRole + 1)['name']
+        pluto_nemo_item1_class_id = pluto_nemo_item1.data(Qt.UserRole + 1)['class_id']
+        pluto_nemo_item1_object_id_list = pluto_nemo_item1.data(Qt.UserRole + 1)['object_id_list']
+        pluto_nemo_item1_object_name_list = pluto_nemo_item1.data(Qt.UserRole + 1)['object_name_list']
+        self.assertTrue(pluto_nemo_item1_type == "relationship", "Pluto_nemo item1 type is not 'relationship'")
+        self.assertTrue(pluto_nemo_item1_name == 'dog__fish_pluto__nemo',
+                        "Pluto_nemo item1 name is not dog__fish_pluto__nemo")
+        self.assertTrue(pluto_nemo_item1_class_id == dog_fish_relationship_class.id,
+                        "Pluto_nemo item1 class_id is not {}".format(dog_fish_relationship_class.id))
+        split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item1_object_id_list.split(",")]
+        self.assertTrue(split_pluto_nemo_object_id_list == [pluto_object.id, nemo_object.id],
+                        "Pluto_nemo item1 object_id_list is not {}".format([pluto_object.id, nemo_object.id]))
+        self.assertTrue(pluto_nemo_item1_object_name_list == "pluto,nemo",
+                        "Pluto_nemo item1 object_name_list is not 'pluto,nemo'")
+        # pluto_nemo_item2
+        pluto_nemo_item2_type = pluto_nemo_item2.data(Qt.UserRole)
+        pluto_nemo_item2_name = pluto_nemo_item2.data(Qt.UserRole + 1)['name']
+        pluto_nemo_item2_class_id = pluto_nemo_item2.data(Qt.UserRole + 1)['class_id']
+        pluto_nemo_item2_object_id_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_id_list']
+        pluto_nemo_item2_object_name_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_name_list']
+        self.assertTrue(pluto_nemo_item2_type == "relationship", "Pluto_nemo item2 type is not 'relationship'")
+        self.assertTrue(pluto_nemo_item2_name == 'dog__fish_pluto__nemo',
+                        "Pluto_nemo item2 name is not dog__fish_pluto__nemo")
+        self.assertTrue(pluto_nemo_item2_class_id == dog_fish_relationship_class.id,
+                        "Pluto_nemo item2 class_id is not {}".format(dog_fish_relationship_class.id))
+        split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item2_object_id_list.split(",")]
+        self.assertTrue(split_pluto_nemo_object_id_list == [pluto_object.id, nemo_object.id],
+                        "Pluto_nemo item2 object_id_list is not {}".format([pluto_object.id, nemo_object.id]))
+        self.assertTrue(pluto_nemo_item2_object_name_list == "pluto,nemo",
+                        "Pluto_nemo item2 object_name_list is not 'pluto,nemo'")
+        # nemo_pluto_item1
+        nemo_pluto_item1_type = nemo_pluto_item1.data(Qt.UserRole)
+        nemo_pluto_item1_name = nemo_pluto_item1.data(Qt.UserRole + 1)['name']
+        nemo_pluto_item1_class_id = nemo_pluto_item1.data(Qt.UserRole + 1)['class_id']
+        nemo_pluto_item1_object_id_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_id_list']
+        nemo_pluto_item1_object_name_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_name_list']
+        self.assertTrue(nemo_pluto_item1_type == "relationship", "Nemo_pluto item1 type is not 'relationship'")
+        self.assertTrue(nemo_pluto_item1_name == 'fish__dog_nemo__pluto',
+                        "Nemo_pluto item1 name is not fish__dog_nemo__pluto")
+        self.assertTrue(nemo_pluto_item1_class_id == fish_dog_relationship_class.id,
+                        "Nemo_pluto item1 class_id is not {}".format(fish_dog_relationship_class.id))
+        split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item1_object_id_list.split(",")]
+        self.assertTrue(split_pluto_nemo_object_id_list == [nemo_object.id, pluto_object.id],
+                        "Nemo_pluto item1 object_id_list is not {}".format([nemo_object.id, pluto_object.id]))
+        self.assertTrue(nemo_pluto_item1_object_name_list == "nemo,pluto",
+                        "Nemo_pluto item1 object_name_list is not 'nemo,pluto'")
+        # nemo_pluto_item2
+        nemo_pluto_item2_type = nemo_pluto_item2.data(Qt.UserRole)
+        nemo_pluto_item2_name = nemo_pluto_item2.data(Qt.UserRole + 1)['name']
+        nemo_pluto_item2_class_id = nemo_pluto_item2.data(Qt.UserRole + 1)['class_id']
+        nemo_pluto_item2_object_id_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_id_list']
+        nemo_pluto_item2_object_name_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_name_list']
+        self.assertTrue(nemo_pluto_item2_type == "relationship", "Nemo_pluto item2 type is not 'relationship'")
+        self.assertTrue(nemo_pluto_item2_name == 'fish__dog_nemo__pluto',
+                        "Nemo_pluto item2 name is not fish__dog_nemo__pluto")
+        self.assertTrue(nemo_pluto_item2_class_id == fish_dog_relationship_class.id,
+                        "Nemo_pluto item2 class_id is not {}".format(fish_dog_relationship_class.id))
+        split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item2_object_id_list.split(",")]
+        self.assertTrue(split_pluto_nemo_object_id_list == [nemo_object.id, pluto_object.id],
+                        "Nemo_pluto item2 object_id_list is not {}".format([nemo_object.id, pluto_object.id]))
+        self.assertTrue(nemo_pluto_item2_object_name_list == "nemo,pluto",
+                        "Nemo_pluto item2 object_name_list is not 'nemo,pluto'")
+        # nemo_scooby_item1
+        nemo_scooby_item1_type = nemo_scooby_item1.data(Qt.UserRole)
+        nemo_scooby_item1_name = nemo_scooby_item1.data(Qt.UserRole + 1)['name']
+        nemo_scooby_item1_class_id = nemo_scooby_item1.data(Qt.UserRole + 1)['class_id']
+        nemo_scooby_item1_object_id_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_id_list']
+        nemo_scooby_item1_object_name_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_name_list']
+        self.assertTrue(nemo_scooby_item1_type == "relationship", "Nemo_scooby item1 type is not 'relationship'")
+        self.assertTrue(nemo_scooby_item1_name == 'fish__dog_nemo__scooby',
+                        "Nemo_scooby item1 name is not fish__dog_nemo__scooby")
+        self.assertTrue(nemo_scooby_item1_class_id == fish_dog_relationship_class.id,
+                        "Nemo_scooby item1 class_id is not {}".format(fish_dog_relationship_class.id))
+        split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item1_object_id_list.split(",")]
+        self.assertTrue(split_scooby_nemo_object_id_list == [nemo_object.id, scooby_object.id],
+                        "Nemo_scooby item1 object_id_list is not {}".format([nemo_object.id, scooby_object.id]))
+        self.assertTrue(nemo_scooby_item1_object_name_list == "nemo,scooby",
+                        "Nemo_scooby item1 object_name_list is not 'nemo,scooby'")
+        # nemo_scooby_item2
+        nemo_scooby_item2_type = nemo_scooby_item2.data(Qt.UserRole)
+        nemo_scooby_item2_name = nemo_scooby_item2.data(Qt.UserRole + 1)['name']
+        nemo_scooby_item2_class_id = nemo_scooby_item2.data(Qt.UserRole + 1)['class_id']
+        nemo_scooby_item2_object_id_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_id_list']
+        nemo_scooby_item2_object_name_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_name_list']
+        self.assertTrue(nemo_scooby_item2_type == "relationship", "Nemo_scooby item2 type is not 'relationship'")
+        self.assertTrue(nemo_scooby_item2_name == 'fish__dog_nemo__scooby',
+                        "Nemo_scooby item2 name is not fish__dog_nemo__scooby")
+        self.assertTrue(nemo_scooby_item2_class_id == fish_dog_relationship_class.id,
+                        "Nemo_scooby item2 class_id is not {}".format(fish_dog_relationship_class.id))
+        split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item2_object_id_list.split(",")]
+        self.assertTrue(split_scooby_nemo_object_id_list == [nemo_object.id, scooby_object.id],
+                        "Nemo_scooby item2 object_id_list is not {}".format([nemo_object.id, scooby_object.id]))
+        self.assertTrue(nemo_scooby_item2_object_name_list == "nemo,scooby",
+                        "Nemo_scooby item2 object_name_list is not 'nemo,scooby'")
 
 if __name__ == '__main__':
     unittest.main()
