@@ -93,15 +93,15 @@ class SpineDatapackageWidget(QMainWindow):
         # Delegates
         # Resource data
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.commit_model_data.connect(self.update_resource_data)
+        lineedit_delegate.data_committed.connect(self.update_resource_data)
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Resource name
         resource_name_delegate = ResourceNameDelegate(self)
-        resource_name_delegate.commit_model_data.connect(self.update_resource_name)
+        resource_name_delegate.data_committed.connect(self.update_resource_name)
         self.ui.treeView_resources.setItemDelegateForColumn(0, resource_name_delegate)
         # Field name
         lineedit_delegate = LineEditDelegate(self)
-        lineedit_delegate.commit_model_data.connect(self.update_field_name)
+        lineedit_delegate.data_committed.connect(self.update_field_name)
         self.ui.treeView_fields.setItemDelegateForColumn(0, lineedit_delegate)
         # Primary key
         checkbox_delegate = CheckBoxDelegate(self)
@@ -110,7 +110,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_resource_data.setItemDelegate(lineedit_delegate)
         # Foreign keys
         foreign_keys_delegate = ForeignKeysDelegate(self)
-        foreign_keys_delegate.commit_model_data.connect(self.update_foreign_keys)
+        foreign_keys_delegate.data_committed.connect(self.update_foreign_keys)
         self.ui.treeView_foreign_keys.setItemDelegate(foreign_keys_delegate)
         # Selected resource changed
         self.ui.treeView_resources.selectionModel().selectionChanged.connect(self.reset_resource_models)

@@ -475,7 +475,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add object parameter definition
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter object class name
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
         self.assertIsNone(obj_cls_name_index.data())
@@ -560,7 +560,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add relationship parameter definition
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter relationship class name
         rel_cls_name_index = model.index(0, header_index("relationship_class_name"))
         self.assertIsNone(rel_cls_name_index.data())
@@ -629,7 +629,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add object parameter definition
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter object class name
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
@@ -647,7 +647,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add first object parameter value (for scooby), to test autofilling of object class from *object*
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter object name
         obj_name_index = model.index(0, header_index("object_name"))
         self.assertIsNone(obj_name_index.data())
@@ -683,7 +683,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add second object parameter value (for pluto), to test autofilling of object class from *parameter*
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter parameter name
         parameter_name_index = model.index(1, header_index("parameter_name"))
         self.assertIsNone(parameter_name_index.data())
@@ -798,7 +798,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add relationship parameter definition
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter relationship class name
         rel_cls_name_index = model.index(0, header_index("relationship_class_name"))
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), rel_cls_name_index)
@@ -816,7 +816,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add relationship parameter value
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter parameter name
         parameter_name_index = model.index(0, header_index("parameter_name"))
         self.assertIsNone(parameter_name_index.data())
@@ -909,7 +909,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Add object parameter definition
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         # Enter object class name
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
@@ -928,7 +928,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Paste data
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         clipboard_text = "pluto\tbreed\t\tbloodhound\nscooby\tbreed\t\tgreat dane\nbrian\tbreed\t\tlabrador\n"
         QApplication.clipboard().setText(clipboard_text)
         obj_name_index = model.index(0, header_index('object_name'))
@@ -1016,7 +1016,7 @@ class TestDataStoreForm(unittest.TestCase):
         # Check default in object parameter definition
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
-        header_index = model.header.index
+        header_index = model.horizontal_header_labels().index
         obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
         self.assertEqual(obj_cls_name_index.data(), 'fish')
         # Deselected fish and select dog item in object tree

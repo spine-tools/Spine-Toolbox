@@ -67,7 +67,7 @@ class TestAddItemsDialog(unittest.TestCase):
         except OSError:
             pass
 
-    def test_empty_row_and_remove_row_button(self):
+    def test_empty_row_has_remove_row_button(self):
         """Test that the model is loaded with an empty row, and this row has a button to remove it in the last column.
         """
         dialog = AddObjectClassesDialog(self.tree_view_form)
@@ -76,6 +76,28 @@ class TestAddItemsDialog(unittest.TestCase):
         button_index = dialog.model.index(0, 2)
         button = dialog.ui.tableView.indexWidget(button_index)
         self.assertTrue(isinstance(button, QToolButton))
+
+    def test_paste_data(self):
+        """Test that data is pasted and the model grows.
+        """
+        dialog = AddObjectClassesDialog(self.tree_view_form)
+        self.assertEqual(dialog.model.rowCount(), 1)
+        self.assertEqual(dialog.model.columnCount(), 3)
+        model = dialog.model
+        view = dialog.ui.tableView
+        header_index = model.horizontal_header_labels().index
+        clipboard_text = "fish\ndog\ncat\nmouse\noctopus\nchicken\n"
+        QApplication.clipboard().setText(clipboard_text)
+        obj_cls_name_index = model.index(0, header_index('object class name'))
+        view.setCurrentIndex(obj_cls_name_index)
+        view.paste()
+        self.assertEqual(model.rowCount(), 7)
+        self.assertEqual(model.index(0, header_index('object class name')).data(), 'fish')
+        self.assertEqual(model.index(1, header_index('object class name')).data(), 'dog')
+        self.assertEqual(model.index(2, header_index('object class name')).data(), 'cat')
+        self.assertEqual(model.index(3, header_index('object class name')).data(), 'mouse')
+        self.assertEqual(model.index(4, header_index('object class name')).data(), 'octopus')
+        self.assertEqual(model.index(5, header_index('object class name')).data(), 'chicken')
 
 
 if __name__ == '__main__':

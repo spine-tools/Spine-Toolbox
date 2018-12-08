@@ -121,7 +121,7 @@ class CopyPasteTableView(QTableView):
 
     def paste_normal(self):
         """Paste clipboard data, overwritting cells if needed"""
-        text = self.clipboard_text
+        text = self.clipboard_text.strip()
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]
