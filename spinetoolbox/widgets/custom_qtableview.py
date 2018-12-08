@@ -157,13 +157,15 @@ class CopyPasteTableView(QTableView):
             self.model().insertRows(row_count, last_row - row_count + 1)
         model_index = self.model().index
         for i, row in enumerate(rows):
-            line = data[i]
-            if not line:
-                continue
+            try:
+                line = data[i]
+            except IndexError:
+                break
             for j, column in enumerate(columns):
-                value = line[j]
-                if not value:
-                    continue
+                try:
+                    value = line[j]
+                except IndexError:
+                    break
                 index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)

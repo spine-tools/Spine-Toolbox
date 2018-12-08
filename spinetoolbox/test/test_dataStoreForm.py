@@ -68,6 +68,7 @@ class TestDataStoreForm(unittest.TestCase):
         except OSError:
             pass
 
+    # @unittest.skip("DONE")
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
@@ -106,6 +107,7 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(cat_name == "cat", "Cat name is not 'cat'")
         self.assertTrue(root_item.rowCount() == 3, "Row count is not 3")
 
+    # @unittest.skip("DONE")
     def test_add_objects(self):
         """Test that objects are added to the object tree model.
         """
@@ -188,6 +190,7 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(scooby_name == "scooby", "Scooby name is not 'scooby'")
         self.assertTrue(fish_item.rowCount() == 2, "Dog count is not 2")
 
+    # @unittest.skip("DONE")
     def test_add_relationship_classes(self):
         """Test that relationship classes are added to the object tree model.
         """
@@ -278,6 +281,7 @@ class TestDataStoreForm(unittest.TestCase):
                         "Pluto_fish_dog name is not 'fish,dog'")
         self.assertTrue(pluto_item.rowCount() == 2, "Pluto_fish_dog count is not 2")
 
+    # @unittest.skip("DONE")
     def test_add_relationships(self):
         """Test that relationships are added to the object tree model.
         """
@@ -476,6 +480,7 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(nemo_scooby_item2_object_name_list == "nemo,scooby",
                         "Nemo_scooby item2 object_name_list is not 'nemo,scooby'")
 
+    # @unittest.skip("DONE")
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model.
         """
@@ -542,6 +547,7 @@ class TestDataStoreForm(unittest.TestCase):
                         "Parameter relationship class id is '{}' rather than None".\
                             format(parameter.relationship_class_id))
 
+    # @unittest.skip("DONE")
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model.
         """
@@ -646,6 +652,7 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(parameter.object_class_id is None,
                         "Parameter object class id is '{}' rather than None".format(parameter.object_class_id))
 
+    # @unittest.skip("DONE")
     def test_add_object_parameter_values(self):
         """Test that object parameter values are added to the model.
         """
@@ -808,6 +815,7 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(parameter_value.relationship_id is None,
                         "Parameter relationship id is '{}' rather than None".format(parameter_value.relationship_id))
 
+    # @unittest.skip("DONE")
     def test_add_relationship_parameter_values(self):
         """Test that relationship parameter values are added to the model.
         """
@@ -971,6 +979,147 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(parameter_value.object_id is None,
                         "Parameter object id is '{}' rather than None".format(parameter_value.object_id))
 
+    # @unittest.skip("DONE")
+    def test_paste_add_object_parameter_values(self):
+        """Test that data is pasted onto the view and object parameter values are added to the model.
+        """
+        # Add dog object class
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        self.tree_view_form.add_object_classes([dog_object_class])
+        dog_class_id = dog_object_class.id
+        # Add pluto and scooby objects
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        brian = dict(
+            class_id=dog_class_id,
+            name='brian',
+            description="Brian Griffin."
+        )
+        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
+        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
+        brian_object = self.tree_view_form.db_map.add_object(**brian)
+        self.tree_view_form.add_objects([pluto_object, scooby_object, brian_object])
+        # Add object parameter definition
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.header.index
+        # Enter object class name
+        obj_cls_name_index = model.index(0, header_index("object_class_name"))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
+        view.itemDelegate().setEditorData(editor, obj_cls_name_index)
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, obj_cls_name_index)
+        view.itemDelegate().destroyEditor(editor, obj_cls_name_index)
+        # Enter parameter name
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        editor.setText("breed")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        breed_parameter_id = model.index(0, header_index('id')).data()
+        # Paste data
+        model = self.tree_view_form.object_parameter_value_model
+        view = self.tree_view_form.ui.tableView_object_parameter_value
+        header_index = model.header.index
+        clipboard_text = "pluto\tbreed\t\tbloodhound\nscooby\tbreed\t\tgreat dane\nbrian\tbreed\t\tlabrador\n"
+        QApplication.clipboard().setText(clipboard_text)
+        obj_name_index = model.index(0, header_index('object_name'))
+        view.setCurrentIndex(obj_name_index)
+        view.paste()
+        # Check model
+        for row in range(3):
+            # Object class name and id
+            obj_cls_name = model.index(row, header_index("object_class_name")).data()
+            self.assertTrue(obj_cls_name == 'dog',
+                            "Object class name is '{}' rather than 'dog'".format(obj_cls_name))
+            obj_cls_id = model.index(row, header_index("object_class_id")).data()
+            self.assertTrue(obj_cls_id == dog_class_id,
+                            "Object class id is '{}' rather than '{}'".format(obj_cls_id, dog_class_id))
+            # Parameter name and id
+            parameter_name = model.index(row, header_index("parameter_name")).data()
+            self.assertTrue(parameter_name == 'breed',
+                            "Parameter name is '{}' rather than 'breed'".format(parameter_name))
+            parameter_id = model.index(row, header_index("parameter_id")).data()
+            self.assertTrue(parameter_id == breed_parameter_id,
+                            "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        # Object name and id
+        obj_name = model.index(0, header_index("object_name")).data()
+        self.assertTrue(obj_name == 'pluto', "Object name is '{}' rather than 'pluto'".format(obj_name))
+        obj_id = model.index(0, header_index("object_id")).data()
+        self.assertTrue(obj_id == pluto_object.id,
+                        "Object id is '{}' rather than '{}'".format(obj_id, pluto_object.id))
+        obj_name = model.index(1, header_index("object_name")).data()
+        self.assertTrue(obj_name == 'scooby', "Object name is '{}' rather than 'scooby'".format(obj_name))
+        obj_id = model.index(1, header_index("object_id")).data()
+        self.assertTrue(obj_id == scooby_object.id,
+                        "Object id is '{}' rather than '{}'".format(obj_id, scooby_object.id))
+        obj_name = model.index(2, header_index("object_name")).data()
+        self.assertTrue(obj_name == 'brian', "Object name is '{}' rather than 'brian'".format(obj_name))
+        obj_id = model.index(2, header_index("object_id")).data()
+        self.assertTrue(obj_id == brian_object.id,
+                        "Object id is '{}' rather than '{}'".format(obj_id, brian_object.id))
+        # Parameter value and id
+        value = model.index(0, header_index("value")).data()
+        self.assertTrue(value == 'bloodhound', "Value is '{}' rather than 'bloodhound'".format(value))
+        parameter_id = model.index(0, header_index("parameter_id")).data()
+        self.assertTrue(parameter_id == breed_parameter_id,
+                        "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        value = model.index(1, header_index("value")).data()
+        self.assertTrue(value == 'great dane', "Value is '{}' rather than 'great dane'".format(value))
+        parameter_id = model.index(1, header_index("parameter_id")).data()
+        self.assertTrue(parameter_id == breed_parameter_id,
+                        "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        value = model.index(2, header_index("value")).data()
+        self.assertTrue(value == 'labrador', "Value is '{}' rather than 'labrador'".format(value))
+        parameter_id = model.index(2, header_index("parameter_id")).data()
+        self.assertTrue(parameter_id == breed_parameter_id,
+                        "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        # Check db
+        pluto_breed, scooby_breed, brian_breed = self.tree_view_form.db_map.parameter_value_list().all()
+        # Object id
+        self.assertTrue(pluto_breed.object_id == pluto_object.id,
+                        "Object id is '{}' rather than '{}'".format(pluto_breed.object_id, pluto_object.id))
+        self.assertTrue(scooby_breed.object_id == scooby_object.id,
+                        "Object id is '{}' rather than '{}'".format(scooby_breed.object_id, scooby_object.id))
+        self.assertTrue(brian_breed.object_id == brian_object.id,
+                        "Object id is '{}' rather than '{}'".format(brian_breed.object_id, brian_object.id))
+        # Relationship id (None)
+        self.assertTrue(pluto_breed.relationship_id is None,
+                        "Relationship id is '{}' rather than None".format(pluto_breed.relationship_id))
+        self.assertTrue(scooby_breed.relationship_id is None,
+                        "Relationship id is '{}' rather than None".format(scooby_breed.relationship_id))
+        self.assertTrue(brian_breed.relationship_id is None,
+                        "Relationship id is '{}' rather than None".format(brian_breed.relationship_id))
+        # Parameter id
+        self.assertTrue(pluto_breed.parameter_id == breed_parameter_id,
+                        "Parameter id is '{}' rather than '{}'".format(pluto_breed.parameter_id, breed_parameter_id))
+        self.assertTrue(scooby_breed.parameter_id == breed_parameter_id,
+                        "Parameter id is '{}' rather than '{}'".format(scooby_breed.parameter_id, breed_parameter_id))
+        self.assertTrue(brian_breed.parameter_id == breed_parameter_id,
+                        "Parameter id is '{}' rather than '{}'".format(brian_breed.parameter_id, breed_parameter_id))
+        # Value
+        self.assertTrue(pluto_breed.value == 'bloodhound',
+                        "Value is '{}' rather than 'bloodhound'".format(pluto_breed.value))
+        self.assertTrue(scooby_breed.value == 'great dane',
+                        "Value is '{}' rather than 'great dane'".format(scooby_breed.value))
+        self.assertTrue(brian_breed.value == 'labrador',
+                        "Value is '{}' rather than 'labrador'".format(brian_breed.value))
+
+    # @unittest.skip("DONE")
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in parameter definition models according the object tree selection.
         """

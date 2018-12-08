@@ -60,7 +60,6 @@ class TestDataStore(unittest.TestCase):
             os.remove(self.toolbox.project().path)
         except OSError:
             pass
-        self.toolbox.close()
         self.toolbox = None
 
     def test_create_new_spine_database(self):
