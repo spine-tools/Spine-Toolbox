@@ -61,22 +61,21 @@ class AddItemsDialog(QDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
-        self.model.dataChanged.connect(self.model_data_changed)
-        self.model.modelReset.connect(self.model_reset)
-        self.model.rowsInserted.connect(self.model_rows_inserted)
+        self.ui.tableView.itemDelegate().data_committed.connect(self._handle_data_committed)
+        self.model.dataChanged.connect(self._handle_model_data_changed)
+        self.model.modelAboutToBeReset.connect(self._handle_model_about_to_be_reset)
+        self.model.rowsInserted.connect(self._handle_model_rows_inserted)
 
-    @Slot(name="model_reset")
-    def model_reset(self):
+    @Slot(name="_handle_model_about_to_be_reset")
+    def _handle_model_about_to_be_reset(self):
         column_count = self.model.columnCount()
-        self.model.insertColumns(column_count, 1)
         self.model.insert_horizontal_header_labels(column_count, [""])
         self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
 
-    @Slot("QModelIndex", "int", "int", name="model_rows_inserted")
-    def model_rows_inserted(self, parent, first, last):
+    @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
+    def _handle_model_rows_inserted(self, parent, first, last):
         column = self.model.columnCount() - 1
         for row in range(first, last + 1):
             index = self.model.index(row, column, parent)
@@ -96,15 +95,15 @@ class AddItemsDialog(QDialog):
                 self.model.removeRows(row, 1)
                 break
 
-    @Slot("QModelIndex", "QVariant", name='data_committed')
-    def data_committed(self, index, data):
-        """Update 'object x' field with data from combobox editor."""
+    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
+    def _handle_data_committed(self, index, data):
+        """Update model data."""
         if data is None:
             return
         self.model.setData(index, data, Qt.EditRole)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
-    def model_data_changed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement this method in subclasses to handle changes in model data."""
         pass
 
@@ -125,10 +124,10 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.model.clear()
         # Add items to combobox
-        insert_position_list = ['Insert new classes at the top']
-        insert_position_list.extend(
+        insert_at_position_list = ['Insert new classes at the top']
+        insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
-        self.ui.comboBox.addItems(insert_position_list)
+        self.ui.comboBox.addItems(insert_at_position_list)
         self.ui.tableView.resizeColumnsToContents()
 
     @busy_effect
@@ -189,8 +188,8 @@ class AddObjectsDialog(AddItemsDialog):
         self.model.clear()
         self.ui.tableView.resizeColumnsToContents()
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
-    def model_data_changed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Set decoration role data."""
         if Qt.EditRole not in roles:
             return
@@ -307,8 +306,8 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         column_size += self.ui.tableView.horizontalHeader().sectionSize(column)
         self.ui.tableView.horizontalHeader().resizeSection(column, column_size)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="model_data_changed")
-    def model_data_changed(self, top_left, bottom_right, roles):
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
         if Qt.EditRole not in roles:
             return
         header = self.model.horizontal_header_labels()
@@ -758,11 +757,11 @@ class EditRelationshipsDialog(EditItemsDialog):
             model_data.append(row_data)
         self.model.reset_model(model_data)
         self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.ui.tableView.itemDelegate().commit_model_data.connect(self.data_committed)
+        self.ui.tableView.itemDelegate().data_committed.connect(self._handle_data_committed)
         self.ui.tableView.resizeColumnsToContents()
 
-    @Slot("QModelIndex", "QVariant", name='data_committed')
-    def data_committed(self, index, data):
+    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
+    def _handle_data_committed(self, index, data):
         """Update 'object x' field with data from combobox editor."""
         if data is None:
             return

@@ -30,7 +30,7 @@ class LineEditDelegate(QItemDelegate):
     Attributes:
         parent (QMainWindow): either data store or spine datapackage widget
     """
-    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -45,7 +45,7 @@ class LineEditDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
-        self.commit_model_data.emit(index, editor.data())
+        self.data_committed.emit(index, editor.data())
 
 
 class CheckBoxDelegate(QItemDelegate):
@@ -139,7 +139,7 @@ class ParameterDelegate(QItemDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
-    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
     json_editor_requested = Signal(name="json_editor_requested")
 
     def __init__(self, parent):
@@ -149,7 +149,7 @@ class ParameterDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
-        self.commit_model_data.emit(index, editor.data())
+        self.data_committed.emit(index, editor.data())
 
 
 class ObjectParameterValueDelegate(ParameterDelegate):
@@ -432,7 +432,7 @@ class ResourceNameDelegate(QItemDelegate):
     Attributes:
         parent (SpineDatapackageWidget): spine datapackage widget
     """
-    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -449,7 +449,7 @@ class ResourceNameDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
-        self.commit_model_data.emit(index, editor.data())
+        self.data_committed.emit(index, editor.data())
 
 
 class ForeignKeysDelegate(QItemDelegate):
@@ -458,7 +458,7 @@ class ForeignKeysDelegate(QItemDelegate):
     Attributes:
         parent (SpineDatapackageWidget): spine datapackage widget
     """
-    commit_model_data = Signal("QModelIndex", "QVariant", name="commit_model_data")
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -500,4 +500,4 @@ class ForeignKeysDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Send signal."""
-        self.commit_model_data.emit(index, editor.data())
+        self.data_committed.emit(index, editor.data())

@@ -1173,7 +1173,6 @@ class EmptyRowModel(MinimalTableModel):
         super().__init__(parent)
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
-        self.modelReset.connect(self._handle_model_reset)
         self.dataChanged.connect(self._handle_data_changed)
         self.rowsAboutToBeRemoved.connect(self._handle_rows_about_to_be_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
@@ -1196,9 +1195,12 @@ class EmptyRowModel(MinimalTableModel):
         """Set default row data."""
         self.default_row = kwargs
 
-    @Slot(name="_handle_model_reset")
-    def _handle_model_reset(self):
-        """Insert a last empty row after reset."""
+    def clear(self):
+        super().clear()
+        self.insertRows(self.rowCount(), 1, QModelIndex())
+
+    def reset_model(self, data):
+        super().reset_model(data)
         self.insertRows(self.rowCount(), 1, QModelIndex())
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
@@ -1235,11 +1237,12 @@ class EmptyRowModel(MinimalTableModel):
         """Set default data in newly inserted rows."""
         left = None
         right = None
-        for column, name in enumerate(self.header):
+        for column in range(self.columnCount()):
             try:
-                default = self.default_row[name]
-            except KeyError:
-                default = None
+                name = self.header[column]
+            except IndexError:
+                name = None
+            default = self.default_row.get(name)
             if left is None:
                 left = column
             right = column

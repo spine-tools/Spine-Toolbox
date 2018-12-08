@@ -130,13 +130,13 @@ class DataStoreForm(QMainWindow):
         # Object tree
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
         # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter_definition.itemDelegate().commit_model_data.\
+        self.ui.tableView_object_parameter_definition.itemDelegate().data_committed.\
             connect(self.set_parameter_definition_data)
-        self.ui.tableView_object_parameter_value.itemDelegate().commit_model_data.\
+        self.ui.tableView_object_parameter_value.itemDelegate().data_committed.\
             connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter_definition.itemDelegate().commit_model_data.\
+        self.ui.tableView_relationship_parameter_definition.itemDelegate().data_committed.\
             connect(self.set_parameter_definition_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().commit_model_data.\
+        self.ui.tableView_relationship_parameter_value.itemDelegate().data_committed.\
             connect(self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
