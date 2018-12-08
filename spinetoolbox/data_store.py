@@ -22,7 +22,7 @@ import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
+from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QApplication
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from graphics_items import DataStoreImage
@@ -71,7 +71,7 @@ class DataStore(ProjectItem):
                                          " Check permissions.".format(self.data_dir))
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
-        self.load_reference(reference)
+        self.load_reference_into_selections()
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
@@ -83,7 +83,8 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
-        s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_new_spine.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_copy_db_url.clicked] = self.copy_db_url
         s[self._toolbox.ui.lineEdit_SQLite_file.file_dropped] = self.set_path_to_sqlite_file
         return s
 
@@ -136,7 +137,7 @@ class DataStore(ProjectItem):
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
 
     def reference(self):
-        """Stored reference. Used (at least) by the view item to populate its list of input references."""
+        """Reference attribute."""
         return self._reference
 
     def project(self):
@@ -174,21 +175,21 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
         self._toolbox.ui.lineEdit_password.clear()
 
-    def load_reference(self, reference):
-        """Load reference into shared widget selections.
+    def load_reference_into_selections(self):
+        """Load reference attribute into shared widget selections.
         Used when loading the project, and creating a new Spine db."""
         # TODO: now it only handles SQLite references, but should handle all types of reference
-        if not reference:  # This probably does not happen anymore
+        if not self._reference:  # This probably does not happen anymore
             return
         # Keep compatibility with previous versions where reference was a list
-        if isinstance(reference, list):
-            reference = reference[0]
-        db_url = reference['url']
+        if isinstance(self._reference, list):
+            self._reference = self._reference[0]
+        db_url = self._reference['url']
         if not db_url or db_url == "":
             # No point in checking further
             return
-        database = reference['database']
-        username = reference['username']
+        database = self._reference['database']
+        username = self._reference['username']
         try:
             dialect_dbapi = db_url.split('://')[0]
         except IndexError:
@@ -230,17 +231,17 @@ class DataStore(ProjectItem):
 
     def current_reference(self):
         """Returns the current state of the reference according to user's selections.
-        Used when saving the project."""
-        # Save selections if item is currently selected.
+        Used when saving the project and by the View item."""
+        # If the item is currently selected, we save selections so we can use `dump_selections_into_reference`
         current = self._toolbox.ui.treeView_project.currentIndex()
         current_item = self._toolbox.project_item_model.project_item(current)
         if current_item == self:
             self.save_selections()
-        self.save_reference()
+        self.dump_selections_into_reference()
         return self._reference
 
-    def save_reference(self):
-        """Update reference from selections."""
+    def dump_selections_into_reference(self):
+        """Dump selections into reference attribute."""
         if not self.selected_dialect:
             self._reference = None
             return
@@ -276,8 +277,8 @@ class DataStore(ProjectItem):
             port = self.selected_port
             username = self.selected_username
             password = self.selected_password
-            dbapi = SQL_DIALECT_API[dialect]
-            url = "+".join([dialect, dbapi]) + "://"
+            dbapi = SQL_DIALECT_API[self.selected_dialect]
+            url = "+".join([self.selected_dialect, dbapi]) + "://"
             if username:
                 url += username
             if password:
@@ -286,7 +287,7 @@ class DataStore(ProjectItem):
             if port:
                 url += ":" + port
             url += "/" + database
-        # Save reference
+        # Set reference attribute
         self._reference = {
             'database': database,
             'username': username,
@@ -443,7 +444,7 @@ class DataStore(ProjectItem):
     def make_reference(self):
         """Return a reference based on the current state of the ui,
         or None if something is bad/missing.
-        Used when opening the data store treeview form."""
+        Used when opening the data store tree view or graph view forms."""
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return None
@@ -640,36 +641,43 @@ class DataStore(ProjectItem):
                     return path
         return None
 
+    @Slot(bool, name="copy_db_url")
+    def copy_db_url(self, checked=False):
+        """Copy db url to clipboard."""
+        reference = self.make_reference()
+        if not reference:
+            self._toolbox.msg_error.emit("Unable to copy database url to clipboard.")
+            return
+        db_url = reference['url']
+        QApplication.clipboard().setText(db_url)
+        self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(db_url))
+
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
-        """Create new (empty) Spine SQLite database file in data directory."""
-        answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
-        database = answer[0]
-        if not database:
+        """Create new (empty) Spine SQLite database file."""
+        answer = QFileDialog.getSaveFileName(self._toolbox,
+                                             "Create new Spine SQLite database",
+                                             self.data_dir,
+                                             "SQlite database (*.sqlite *.db)")
+        file_path = answer[0]
+        if not file_path:
             return
-        filename = os.path.join(self.data_dir, database + ".sqlite")
-        if os.path.isfile(filename):
-            msg = "File <b>{}</b> already in <b>{}</b> project directory.<br/><br/>Overwrite?"\
-                .format(database + ".sqlite", os.path.basename(self.data_dir))
-            answer = QMessageBox.question(self._toolbox, 'Overwrite file?', msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                return
+        extension = os.path.splitext(file_path)[1]
+        if not extension:
+            file_path += ".sqlite"
+        # We need to remove the file first so `create_new_spine_database` doesn't complain
         try:
-            os.remove(filename)
+            os.remove(file_path)
         except OSError:
             pass
-        url = "sqlite:///" + filename
+        url = "sqlite:///" + file_path
         create_new_spine_database(url)
+        database = os.path.basename(file_path)
         username = getpass.getuser()
-        self._reference = {
-            'database': database,
-            'username': username,
-            'url': url
-        }
         # Update UI
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-        self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(filename))
+        self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
         self._toolbox.ui.lineEdit_host.clear()
         self._toolbox.ui.lineEdit_port.clear()
         self._toolbox.ui.lineEdit_database.setText(database)

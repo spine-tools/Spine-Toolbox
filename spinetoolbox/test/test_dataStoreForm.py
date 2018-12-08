@@ -12,7 +12,7 @@
 """
 Unit tests for TreeViewForm and GraphViewForm classes.
 
-:author: M. Marin (VTT)
+:author: M. Marin (KTH)
 :date:   6.12.2018
 """
 
@@ -30,7 +30,7 @@ from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNa
 
 class TestDataStoreForm(unittest.TestCase):
 
-    app = QApplication()  # QApplication must be instantiated here unless you want a segmentation fault
+    app = QApplication()  # must create a QApplication before creating QWidgets
 
     @classmethod
     def setUpClass(cls):
@@ -63,8 +63,11 @@ class TestDataStoreForm(unittest.TestCase):
         """
         self.tree_view_form.close()
         self.graph_view_form.close()
+        try:
+            os.remove('mock_db.sqlite')
+        except OSError:
+            pass
 
-    @unittest.skip("DONE")
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
@@ -968,8 +971,6 @@ class TestDataStoreForm(unittest.TestCase):
         self.assertTrue(parameter_value.object_id is None,
                         "Parameter object id is '{}' rather than None".format(parameter_value.object_id))
 
-
-    @unittest.skip("DONE")
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in parameter definition models according the object tree selection.
         """
