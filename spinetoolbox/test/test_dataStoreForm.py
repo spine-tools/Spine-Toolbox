@@ -21,7 +21,7 @@ import os
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication, QWidget, QStyleOptionViewItem
+from PySide2.QtWidgets import QApplication, QStyleOptionViewItem
 from PySide2.QtCore import Qt, QItemSelectionModel
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
@@ -51,7 +51,7 @@ class TestDataStoreForm(unittest.TestCase):
                 pass
             db_url = "sqlite:///mock_db.sqlite"
             create_new_spine_database(db_url)
-            db_map = DiffDatabaseMapping(db_url, "Spine-Toolbox-test-suite")
+            db_map = DiffDatabaseMapping(db_url, "UnitTest")
             db_map.reset_mapping()
             self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
             self.graph_view_form = GraphViewForm(mock_data_store, db_map, "mock_db")
@@ -99,13 +99,13 @@ class TestDataStoreForm(unittest.TestCase):
         cat_item = root_item.child(1)
         cat_type = cat_item.data(Qt.UserRole)
         cat_name = cat_item.data(Qt.UserRole + 1)['name']
-        self.assertTrue(fish_type == "object_class", "Fish type is not 'object_class'")
-        self.assertTrue(fish_name == "fish", "Fish name is not 'fish'")
-        self.assertTrue(dog_type == "object_class", "Dog type is not 'object_class'")
-        self.assertTrue(dog_name == "dog", "Dog name is not 'dog'")
-        self.assertTrue(cat_type == "object_class", "Cat type is not 'object_class'")
-        self.assertTrue(cat_name == "cat", "Cat name is not 'cat'")
-        self.assertTrue(root_item.rowCount() == 3, "Row count is not 3")
+        self.assertEqual(fish_type, "object_class")
+        self.assertEqual(fish_name, "fish")
+        self.assertEqual(dog_type, "object_class")
+        self.assertEqual(dog_name, "dog")
+        self.assertEqual(cat_type, "object_class")
+        self.assertEqual(cat_name, "cat")
+        self.assertEqual(root_item.rowCount(), 3)
 
     # @unittest.skip("DONE")
     def test_add_objects(self):
@@ -171,24 +171,24 @@ class TestDataStoreForm(unittest.TestCase):
         scooby_class_id = scooby_item.data(Qt.UserRole + 1)['class_id']
         scooby_id = scooby_item.data(Qt.UserRole + 1)['id']
         scooby_name = scooby_item.data(Qt.UserRole + 1)['name']
-        self.assertTrue(nemo_type == "object", "Nemo type is not 'object'")
-        self.assertTrue(nemo_class_id == fish_class_id, "Nemo class_id is not {}".format(fish_class_id))
-        self.assertTrue(nemo_id == 1, "Nemo id is not 1")
-        self.assertTrue(nemo_name == "nemo", "Nemo name is not 'nemo'")
-        self.assertTrue(dory_type == "object", "Dory type is not 'object'")
-        self.assertTrue(dory_class_id == fish_class_id, "Dory class_id is not {}".format(fish_class_id))
-        self.assertTrue(dory_id == 2, "Dory id is not 2")
-        self.assertTrue(dory_name == "dory", "Dory name is not 'dory'")
-        self.assertTrue(fish_item.rowCount() == 2, "Fish count is not 2")
-        self.assertTrue(pluto_type == "object", "Pluto type is not 'object'")
-        self.assertTrue(pluto_class_id == dog_class_id, "Pluto class_id is not {}".format(dog_class_id))
-        self.assertTrue(pluto_id == 3, "Pluto id is not 3")
-        self.assertTrue(pluto_name == "pluto", "Pluto name is not 'pluto'")
-        self.assertTrue(scooby_type == "object", "Pluto type is not 'object'")
-        self.assertTrue(scooby_class_id == dog_class_id, "Scooby class_id is not {}".format(dog_class_id))
-        self.assertTrue(scooby_id == 4, "Scooby id is not 4")
-        self.assertTrue(scooby_name == "scooby", "Scooby name is not 'scooby'")
-        self.assertTrue(fish_item.rowCount() == 2, "Dog count is not 2")
+        self.assertEqual(nemo_type, "object")
+        self.assertEqual(nemo_class_id, fish_class_id)
+        self.assertEqual(nemo_id, 1)
+        self.assertEqual(nemo_name, "nemo")
+        self.assertEqual(dory_type, "object")
+        self.assertEqual(dory_class_id, fish_class_id)
+        self.assertEqual(dory_id, 2)
+        self.assertEqual(dory_name, "dory")
+        self.assertEqual(fish_item.rowCount(), 2)
+        self.assertEqual(pluto_type, "object")
+        self.assertEqual(pluto_class_id, dog_class_id)
+        self.assertEqual(pluto_id, 3)
+        self.assertEqual(pluto_name, "pluto")
+        self.assertEqual(scooby_type, "object")
+        self.assertEqual(scooby_class_id, dog_class_id)
+        self.assertEqual(scooby_id, 4)
+        self.assertEqual(scooby_name, "scooby")
+        self.assertEqual(fish_item.rowCount(), 2)
 
     # @unittest.skip("DONE")
     def test_add_relationship_classes(self):
@@ -258,28 +258,24 @@ class TestDataStoreForm(unittest.TestCase):
         nemo_dog_fish_name = nemo_dog_fish_item.data(Qt.UserRole + 1)['name']
         nemo_dog_fish_object_class_id_list = nemo_dog_fish_item.data(Qt.UserRole + 1)['object_class_id_list']
         nemo_dog_fish_object_class_name_list = nemo_dog_fish_item.data(Qt.UserRole + 1)['object_class_name_list']
-        self.assertTrue(nemo_dog_fish_type == "relationship_class", "Nemo_dog_fish type is not 'relationship_class'")
-        self.assertTrue(nemo_dog_fish_name == "dog__fish", "Nemo_dog_fish name is not 'dog__fish'")
+        self.assertEqual(nemo_dog_fish_type, "relationship_class")
+        self.assertEqual(nemo_dog_fish_name, "dog__fish")
         split_nemo_dog_fish_object_class_id_list = [int(x) for x in nemo_dog_fish_object_class_id_list.split(",")]
-        self.assertTrue(split_nemo_dog_fish_object_class_id_list == [dog_class_id, fish_class_id],
-                        "Nemo_dog_fish object_class_id_list is not {}".format([dog_class_id, fish_class_id]))
-        self.assertTrue(nemo_dog_fish_object_class_name_list == "dog,fish",
-                        "Nemo_dog_fish name is not 'dog,fish'")
-        self.assertTrue(nemo_item.rowCount() == 2, "Nemo_dog_fish count is not 2")
+        self.assertEqual(split_nemo_dog_fish_object_class_id_list, [dog_class_id, fish_class_id])
+        self.assertEqual(nemo_dog_fish_object_class_name_list, "dog,fish")
+        self.assertEqual(nemo_item.rowCount(), 2)
         # The second one under pluto
         pluto_fish_dog_item = pluto_item.child(1)
         pluto_fish_dog_type = pluto_fish_dog_item.data(Qt.UserRole)
         pluto_fish_dog_name = pluto_fish_dog_item.data(Qt.UserRole + 1)['name']
         pluto_fish_dog_object_class_id_list = pluto_fish_dog_item.data(Qt.UserRole + 1)['object_class_id_list']
         pluto_fish_dog_object_class_name_list = pluto_fish_dog_item.data(Qt.UserRole + 1)['object_class_name_list']
-        self.assertTrue(pluto_fish_dog_type == "relationship_class", "Pluto_fish_dog type is not 'relationship_class'")
-        self.assertTrue(pluto_fish_dog_name == "fish__dog", "Pluto_fish_dog name is not 'fish__dog'")
+        self.assertEqual(pluto_fish_dog_type, "relationship_class")
+        self.assertEqual(pluto_fish_dog_name, "fish__dog")
         split_pluto_fish_dog_object_class_id_list = [int(x) for x in pluto_fish_dog_object_class_id_list.split(",")]
-        self.assertTrue(split_pluto_fish_dog_object_class_id_list == [fish_class_id, dog_class_id],
-                        "Pluto_fish_dog object_class_id_list is not {}".format([fish_class_id, dog_class_id]))
-        self.assertTrue(pluto_fish_dog_object_class_name_list == "fish,dog",
-                        "Pluto_fish_dog name is not 'fish,dog'")
-        self.assertTrue(pluto_item.rowCount() == 2, "Pluto_fish_dog count is not 2")
+        self.assertEqual(split_pluto_fish_dog_object_class_id_list, [fish_class_id, dog_class_id])
+        self.assertEqual(pluto_fish_dog_object_class_name_list, "fish,dog")
+        self.assertEqual(pluto_item.rowCount(), 2)
 
     # @unittest.skip("DONE")
     def test_add_relationships(self):
@@ -376,12 +372,12 @@ class TestDataStoreForm(unittest.TestCase):
         nemo_scooby_item1 = scooby_fish_dog_item.child(0)
         nemo_scooby_item2 = nemo_fish_dog_item.child(1)
         # Check number of items is good
-        self.assertTrue(nemo_dog_fish_item.rowCount() == 1, "nemo_dog_fish_item count is not 1")
-        self.assertTrue(nemo_fish_dog_item.rowCount() == 2, "nemo_fish_dog_item count is not 2")
-        self.assertTrue(pluto_dog_fish_item.rowCount() == 1, "pluto_dog_fish_item count is not 1")
-        self.assertTrue(pluto_fish_dog_item.rowCount() == 1, "pluto_fish_dog_item count is not 1")
-        self.assertTrue(scooby_dog_fish_item.rowCount() == 0, "scooby_dog_fish_item count is not 0")
-        self.assertTrue(scooby_fish_dog_item.rowCount() == 1, "scooby_fish_dog_item count is not 1")
+        self.assertEqual(nemo_dog_fish_item.rowCount(), 1)
+        self.assertEqual(nemo_fish_dog_item.rowCount(), 2)
+        self.assertEqual(pluto_dog_fish_item.rowCount(), 1)
+        self.assertEqual(pluto_fish_dog_item.rowCount(), 1)
+        self.assertEqual(scooby_dog_fish_item.rowCount(), 0)
+        self.assertEqual(scooby_fish_dog_item.rowCount(), 1)
         # Check relationship items are good
         # pluto_nemo_item1
         pluto_nemo_item1_type = pluto_nemo_item1.data(Qt.UserRole)
@@ -389,96 +385,72 @@ class TestDataStoreForm(unittest.TestCase):
         pluto_nemo_item1_class_id = pluto_nemo_item1.data(Qt.UserRole + 1)['class_id']
         pluto_nemo_item1_object_id_list = pluto_nemo_item1.data(Qt.UserRole + 1)['object_id_list']
         pluto_nemo_item1_object_name_list = pluto_nemo_item1.data(Qt.UserRole + 1)['object_name_list']
-        self.assertTrue(pluto_nemo_item1_type == "relationship", "Pluto_nemo item1 type is not 'relationship'")
-        self.assertTrue(pluto_nemo_item1_name == 'dog__fish_pluto__nemo',
-                        "Pluto_nemo item1 name is not dog__fish_pluto__nemo")
-        self.assertTrue(pluto_nemo_item1_class_id == dog_fish_relationship_class.id,
-                        "Pluto_nemo item1 class_id is not {}".format(dog_fish_relationship_class.id))
+        self.assertEqual(pluto_nemo_item1_type, "relationship")
+        self.assertEqual(pluto_nemo_item1_name, 'dog__fish_pluto__nemo')
+        self.assertEqual(pluto_nemo_item1_class_id, dog_fish_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item1_object_id_list.split(",")]
-        self.assertTrue(split_pluto_nemo_object_id_list == [pluto_object.id, nemo_object.id],
-                        "Pluto_nemo item1 object_id_list is not {}".format([pluto_object.id, nemo_object.id]))
-        self.assertTrue(pluto_nemo_item1_object_name_list == "pluto,nemo",
-                        "Pluto_nemo item1 object_name_list is not 'pluto,nemo'")
+        self.assertEqual(split_pluto_nemo_object_id_list, [pluto_object.id, nemo_object.id])
+        self.assertEqual(pluto_nemo_item1_object_name_list, "pluto,nemo")
         # pluto_nemo_item2
         pluto_nemo_item2_type = pluto_nemo_item2.data(Qt.UserRole)
         pluto_nemo_item2_name = pluto_nemo_item2.data(Qt.UserRole + 1)['name']
         pluto_nemo_item2_class_id = pluto_nemo_item2.data(Qt.UserRole + 1)['class_id']
         pluto_nemo_item2_object_id_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_id_list']
         pluto_nemo_item2_object_name_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_name_list']
-        self.assertTrue(pluto_nemo_item2_type == "relationship", "Pluto_nemo item2 type is not 'relationship'")
-        self.assertTrue(pluto_nemo_item2_name == 'dog__fish_pluto__nemo',
-                        "Pluto_nemo item2 name is not dog__fish_pluto__nemo")
-        self.assertTrue(pluto_nemo_item2_class_id == dog_fish_relationship_class.id,
-                        "Pluto_nemo item2 class_id is not {}".format(dog_fish_relationship_class.id))
+        self.assertEqual(pluto_nemo_item2_type, "relationship", "Pluto_nemo item2 type is not 'relationship'")
+        self.assertEqual(pluto_nemo_item2_name, 'dog__fish_pluto__nemo')
+        self.assertEqual(pluto_nemo_item2_class_id, dog_fish_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item2_object_id_list.split(",")]
-        self.assertTrue(split_pluto_nemo_object_id_list == [pluto_object.id, nemo_object.id],
-                        "Pluto_nemo item2 object_id_list is not {}".format([pluto_object.id, nemo_object.id]))
-        self.assertTrue(pluto_nemo_item2_object_name_list == "pluto,nemo",
-                        "Pluto_nemo item2 object_name_list is not 'pluto,nemo'")
+        self.assertEqual(split_pluto_nemo_object_id_list, [pluto_object.id, nemo_object.id])
+        self.assertEqual(pluto_nemo_item2_object_name_list, "pluto,nemo")
         # nemo_pluto_item1
         nemo_pluto_item1_type = nemo_pluto_item1.data(Qt.UserRole)
         nemo_pluto_item1_name = nemo_pluto_item1.data(Qt.UserRole + 1)['name']
         nemo_pluto_item1_class_id = nemo_pluto_item1.data(Qt.UserRole + 1)['class_id']
         nemo_pluto_item1_object_id_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_id_list']
         nemo_pluto_item1_object_name_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_name_list']
-        self.assertTrue(nemo_pluto_item1_type == "relationship", "Nemo_pluto item1 type is not 'relationship'")
-        self.assertTrue(nemo_pluto_item1_name == 'fish__dog_nemo__pluto',
-                        "Nemo_pluto item1 name is not fish__dog_nemo__pluto")
-        self.assertTrue(nemo_pluto_item1_class_id == fish_dog_relationship_class.id,
-                        "Nemo_pluto item1 class_id is not {}".format(fish_dog_relationship_class.id))
+        self.assertEqual(nemo_pluto_item1_type, "relationship", "Nemo_pluto item1 type is not 'relationship'")
+        self.assertEqual(nemo_pluto_item1_name, 'fish__dog_nemo__pluto')
+        self.assertEqual(nemo_pluto_item1_class_id, fish_dog_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item1_object_id_list.split(",")]
-        self.assertTrue(split_pluto_nemo_object_id_list == [nemo_object.id, pluto_object.id],
-                        "Nemo_pluto item1 object_id_list is not {}".format([nemo_object.id, pluto_object.id]))
-        self.assertTrue(nemo_pluto_item1_object_name_list == "nemo,pluto",
-                        "Nemo_pluto item1 object_name_list is not 'nemo,pluto'")
+        self.assertEqual(split_pluto_nemo_object_id_list, [nemo_object.id, pluto_object.id])
+        self.assertEqual(nemo_pluto_item1_object_name_list, "nemo,pluto")
         # nemo_pluto_item2
         nemo_pluto_item2_type = nemo_pluto_item2.data(Qt.UserRole)
         nemo_pluto_item2_name = nemo_pluto_item2.data(Qt.UserRole + 1)['name']
         nemo_pluto_item2_class_id = nemo_pluto_item2.data(Qt.UserRole + 1)['class_id']
         nemo_pluto_item2_object_id_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_id_list']
         nemo_pluto_item2_object_name_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_name_list']
-        self.assertTrue(nemo_pluto_item2_type == "relationship", "Nemo_pluto item2 type is not 'relationship'")
-        self.assertTrue(nemo_pluto_item2_name == 'fish__dog_nemo__pluto',
-                        "Nemo_pluto item2 name is not fish__dog_nemo__pluto")
-        self.assertTrue(nemo_pluto_item2_class_id == fish_dog_relationship_class.id,
-                        "Nemo_pluto item2 class_id is not {}".format(fish_dog_relationship_class.id))
+        self.assertEqual(nemo_pluto_item2_type, "relationship", "Nemo_pluto item2 type is not 'relationship'")
+        self.assertEqual(nemo_pluto_item2_name, 'fish__dog_nemo__pluto')
+        self.assertEqual(nemo_pluto_item2_class_id, fish_dog_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item2_object_id_list.split(",")]
-        self.assertTrue(split_pluto_nemo_object_id_list == [nemo_object.id, pluto_object.id],
-                        "Nemo_pluto item2 object_id_list is not {}".format([nemo_object.id, pluto_object.id]))
-        self.assertTrue(nemo_pluto_item2_object_name_list == "nemo,pluto",
-                        "Nemo_pluto item2 object_name_list is not 'nemo,pluto'")
+        self.assertEqual(split_pluto_nemo_object_id_list, [nemo_object.id, pluto_object.id])
+        self.assertEqual(nemo_pluto_item2_object_name_list, "nemo,pluto")
         # nemo_scooby_item1
         nemo_scooby_item1_type = nemo_scooby_item1.data(Qt.UserRole)
         nemo_scooby_item1_name = nemo_scooby_item1.data(Qt.UserRole + 1)['name']
         nemo_scooby_item1_class_id = nemo_scooby_item1.data(Qt.UserRole + 1)['class_id']
         nemo_scooby_item1_object_id_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_id_list']
         nemo_scooby_item1_object_name_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_name_list']
-        self.assertTrue(nemo_scooby_item1_type == "relationship", "Nemo_scooby item1 type is not 'relationship'")
-        self.assertTrue(nemo_scooby_item1_name == 'fish__dog_nemo__scooby',
-                        "Nemo_scooby item1 name is not fish__dog_nemo__scooby")
-        self.assertTrue(nemo_scooby_item1_class_id == fish_dog_relationship_class.id,
-                        "Nemo_scooby item1 class_id is not {}".format(fish_dog_relationship_class.id))
+        self.assertEqual(nemo_scooby_item1_type, "relationship", "Nemo_scooby item1 type is not 'relationship'")
+        self.assertEqual(nemo_scooby_item1_name, 'fish__dog_nemo__scooby')
+        self.assertEqual(nemo_scooby_item1_class_id, fish_dog_relationship_class.id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item1_object_id_list.split(",")]
-        self.assertTrue(split_scooby_nemo_object_id_list == [nemo_object.id, scooby_object.id],
-                        "Nemo_scooby item1 object_id_list is not {}".format([nemo_object.id, scooby_object.id]))
-        self.assertTrue(nemo_scooby_item1_object_name_list == "nemo,scooby",
-                        "Nemo_scooby item1 object_name_list is not 'nemo,scooby'")
+        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(nemo_scooby_item1_object_name_list, "nemo,scooby")
         # nemo_scooby_item2
         nemo_scooby_item2_type = nemo_scooby_item2.data(Qt.UserRole)
         nemo_scooby_item2_name = nemo_scooby_item2.data(Qt.UserRole + 1)['name']
         nemo_scooby_item2_class_id = nemo_scooby_item2.data(Qt.UserRole + 1)['class_id']
         nemo_scooby_item2_object_id_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_id_list']
         nemo_scooby_item2_object_name_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_name_list']
-        self.assertTrue(nemo_scooby_item2_type == "relationship", "Nemo_scooby item2 type is not 'relationship'")
-        self.assertTrue(nemo_scooby_item2_name == 'fish__dog_nemo__scooby',
-                        "Nemo_scooby item2 name is not fish__dog_nemo__scooby")
-        self.assertTrue(nemo_scooby_item2_class_id == fish_dog_relationship_class.id,
-                        "Nemo_scooby item2 class_id is not {}".format(fish_dog_relationship_class.id))
+        self.assertEqual(nemo_scooby_item2_type, "relationship", "Nemo_scooby item2 type is not 'relationship'")
+        self.assertEqual(nemo_scooby_item2_name, 'fish__dog_nemo__scooby')
+        self.assertEqual(nemo_scooby_item2_class_id, fish_dog_relationship_class.id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item2_object_id_list.split(",")]
-        self.assertTrue(split_scooby_nemo_object_id_list == [nemo_object.id, scooby_object.id],
-                        "Nemo_scooby item2 object_id_list is not {}".format([nemo_object.id, scooby_object.id]))
-        self.assertTrue(nemo_scooby_item2_object_name_list == "nemo,scooby",
-                        "Nemo_scooby item2 object_name_list is not 'nemo,scooby'")
+        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
     # @unittest.skip("DONE")
     def test_add_object_parameter_definitions(self):
@@ -506,46 +478,36 @@ class TestDataStoreForm(unittest.TestCase):
         header_index = model.header.index
         # Enter object class name
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
-        self.assertTrue(obj_cls_name_index.data() is None,
-                        "Object class name is '{}' rather than None".format(obj_cls_name_index.data()))
+        self.assertIsNone(obj_cls_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
         view.itemDelegate().setEditorData(editor, obj_cls_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'fish', "Item 0 is '{}' rather than 'fish'".format(editor.itemText(0)))
-        self.assertTrue(editor.itemText(1) == 'dog', "Item 1 is '{}' rather than 'dog'".format(editor.itemText(1)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(0), 'fish')
+        self.assertEqual(editor.itemText(1), 'dog')
         editor.setCurrentIndex(1)
         view.itemDelegate().setModelData(editor, model, obj_cls_name_index)
         view.itemDelegate().destroyEditor(editor, obj_cls_name_index)
-        self.assertTrue(obj_cls_name_index.data() == 'dog',
-                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        self.assertEqual(obj_cls_name_index.data(), 'dog')
         obj_cls_id_index = model.index(0, header_index("object_class_id"))
-        self.assertTrue(obj_cls_id_index.data() == dog_class_id,
-                        "Object class id is '{}' rather than '{}'".format(obj_cls_id_index.data(), dog_class_id))
+        self.assertEqual(obj_cls_id_index.data(), dog_class_id)
         # Enter parameter name
         parameter_name_index = model.index(0, header_index("parameter_name"))
-        self.assertTrue(parameter_name_index.data() is None,
-                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        self.assertIsNone(parameter_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
         self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
-        self.assertTrue(editor.text() is "", "Editor text is '{}' rather than ''".format(editor.text()))
+        self.assertEqual(editor.text(), "")
         editor.setText("breed")
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertTrue(parameter_name_index.data() == 'breed',
-                        "Parameter name is '{}' rather than 'breed'".format(parameter_name_index.data()))
+        self.assertEqual(parameter_name_index.data(), 'breed')
         # Check the db
         parameter_id = model.index(0, header_index("id")).data()
         parameter = self.tree_view_form.db_map.single_parameter(id=parameter_id).one_or_none()
-        self.assertTrue(parameter.name == 'breed',
-                        "Parameter name is '{}' rather than 'breed'".format(parameter.name))
-        self.assertTrue(parameter.object_class_id == dog_class_id,
-                        "Parameter object class id is '{}' rather than '{}'".\
-                            format(parameter.object_class_id, dog_class_id))
-        self.assertTrue(parameter.relationship_class_id is None,
-                        "Parameter relationship class id is '{}' rather than None".\
-                            format(parameter.relationship_class_id))
+        self.assertEqual(parameter.name, 'breed')
+        self.assertEqual(parameter.object_class_id, dog_class_id)
+        self.assertIsNone(parameter.relationship_class_id)
 
     # @unittest.skip("DONE")
     def test_add_relationship_parameter_definitions(self):
@@ -601,56 +563,41 @@ class TestDataStoreForm(unittest.TestCase):
         header_index = model.header.index
         # Enter relationship class name
         rel_cls_name_index = model.index(0, header_index("relationship_class_name"))
-        self.assertTrue(rel_cls_name_index.data() is None,
-                        "Relationship class name is '{}' rather than None".format(rel_cls_name_index.data()))
+        self.assertIsNone(rel_cls_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), rel_cls_name_index)
         view.itemDelegate().setEditorData(editor, rel_cls_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'fish__dog',
-                        "Item 0 is '{}' rather than 'fish__dog'".format(editor.itemText(0)))
-        self.assertTrue(editor.itemText(1) == 'dog__fish',
-                        "Item 1 is '{}' rather than 'dog__fish'".format(editor.itemText(1)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(0), 'fish__dog')
+        self.assertEqual(editor.itemText(1), 'dog__fish')
         editor.setCurrentIndex(1)
         view.itemDelegate().setModelData(editor, model, rel_cls_name_index)
         view.itemDelegate().destroyEditor(editor, rel_cls_name_index)
-        self.assertTrue(rel_cls_name_index.data() == 'dog__fish',
-                        "Relationship class name is '{}' rather than 'dog__fish'".format(rel_cls_name_index.data()))
+        self.assertEqual(rel_cls_name_index.data(), 'dog__fish')
         rel_cls_id_index = model.index(0, header_index("relationship_class_id"))
-        self.assertTrue(rel_cls_id_index.data() == dog_fish_class_id,
-                        "Relationship class id is '{}' rather than '{}'".\
-                            format(rel_cls_id_index.data(), dog_fish_class_id))
+        self.assertEqual(rel_cls_id_index.data(), dog_fish_class_id)
         obj_cls_name_list_index = model.index(0, header_index("object_class_name_list"))
-        self.assertTrue(obj_cls_name_list_index.data() == 'dog,fish',
-                        "Object class name list is '{}' rather than 'dog,fish'".format(obj_cls_name_list_index.data()))
+        self.assertEqual(obj_cls_name_list_index.data(), 'dog,fish')
         obj_cls_id_list_index = model.index(0, header_index("object_class_id_list"))
         split_obj_cls_id_list = [int(x) for x in obj_cls_id_list_index.data().split(",")]
-        self.assertTrue(split_obj_cls_id_list == [dog_class_id, fish_class_id],
-                        "Object class id list is '{}' rather than '{}'".\
-                            format(split_obj_cls_id_list, [dog_class_id, fish_class_id]))
+        self.assertEqual(split_obj_cls_id_list, [dog_class_id, fish_class_id])
         # Enter parameter name
         parameter_name_index = model.index(0, header_index("parameter_name"))
-        self.assertTrue(parameter_name_index.data() is None,
-                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        self.assertIsNone(parameter_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
-        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
-        self.assertTrue(editor.text() is "", "Editor text is '{}' rather than ''".format(editor.text()))
+        self.assertTrue(isinstance(editor, CustomLineEditor))
+        self.assertEqual(editor.text(), "")
         editor.setText("combined_mojo")
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertTrue(parameter_name_index.data() == 'combined_mojo',
-                        "Parameter name is '{}' rather than 'combined_mojo'".format(parameter_name_index.data()))
+        self.assertEqual(parameter_name_index.data(), 'combined_mojo')
         # Check the db
         parameter_id = model.index(0, header_index("id")).data()
         parameter = self.tree_view_form.db_map.single_parameter(id=parameter_id).one_or_none()
-        self.assertTrue(parameter.name == 'combined_mojo',
-                        "Parameter name is '{}' rather than 'combined_mojo'".format(parameter.name))
-        self.assertTrue(parameter.relationship_class_id == dog_fish_class_id,
-                        "Parameter relationship class id is '{}' rather than '{}'".\
-                            format(parameter.relationship_class_id, dog_fish_class_id))
-        self.assertTrue(parameter.object_class_id is None,
-                        "Parameter object class id is '{}' rather than None".format(parameter.object_class_id))
+        self.assertEqual(parameter.name, 'combined_mojo')
+        self.assertEqual(parameter.relationship_class_id, dog_fish_class_id)
+        self.assertIsNone(parameter.object_class_id)
 
     # @unittest.skip("DONE")
     def test_add_object_parameter_values(self):
@@ -703,117 +650,89 @@ class TestDataStoreForm(unittest.TestCase):
         header_index = model.header.index
         # Enter object name
         obj_name_index = model.index(0, header_index("object_name"))
-        self.assertTrue(obj_name_index.data() is None,
-                        "Object name is '{}' rather than None".format(obj_name_index.data()))
+        self.assertIsNone(obj_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_index)
         view.itemDelegate().setEditorData(editor, obj_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'pluto', "Item 0 is '{}' rather than 'pluto'".format(editor.itemText(0)))
-        self.assertTrue(editor.itemText(1) == 'scooby',
-                        "Item 1 is '{}' rather than 'scooby'".format(editor.itemText(1)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(0), 'pluto')
+        self.assertEqual(editor.itemText(1), 'scooby')
         editor.setCurrentIndex(1)
         view.itemDelegate().setModelData(editor, model, obj_name_index)
         view.itemDelegate().destroyEditor(editor, obj_name_index)
-        self.assertTrue(obj_name_index.data() == 'scooby',
-                        "Object name is '{}' rather than 'scooby'".format(obj_name_index.data()))
+        self.assertEqual(obj_name_index.data(), 'scooby')
         obj_id_index = model.index(0, header_index("object_id"))
-        self.assertTrue(obj_id_index.data() == scooby_object.id,
-                        "Object id is '{}' rather than '{}'".format(obj_id_index.data(), scooby_object.id))
+        self.assertEqual(obj_id_index.data(), scooby_object.id)
         # Check objet class
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
-        self.assertTrue(obj_cls_name_index.data() == 'dog',
-                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        self.assertEqual(obj_cls_name_index.data(), 'dog')
         obj_cls_id_index = model.index(0, header_index("object_class_id"))
-        self.assertTrue(obj_cls_id_index.data() == dog_class_id,
-                        "Object class id is '{}' rather than '{}'".format(obj_cls_id_index.data(), dog_class_id))
+        self.assertEqual(obj_cls_id_index.data(), dog_class_id)
         # Enter parameter name
         parameter_name_index = model.index(0, header_index("parameter_name"))
-        self.assertTrue(parameter_name_index.data() is None,
-                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        self.assertIsNone(parameter_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 1, "Editor count is '{}' rather than 1".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'breed',
-                        "Editor text is '{}' rather than 'breed'".format(editor.itemText(0)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 1)
+        self.assertEqual(editor.itemText(0), 'breed')
         editor.setCurrentIndex(0)
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertTrue(parameter_name_index.data() == 'breed',
-                        "Parameter name is '{}' rather than 'breed'".format(parameter_name_index.data()))
+        self.assertEqual(parameter_name_index.data(), 'breed')
         # Add second object parameter value (for pluto), to test autofilling of object class from *parameter*
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
         header_index = model.header.index
         # Enter parameter name
         parameter_name_index = model.index(1, header_index("parameter_name"))
-        self.assertTrue(parameter_name_index.data() is None,
-                "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        self.assertIsNone(parameter_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 1, "Editor count is '{}' rather than 1".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'breed',
-                "Editor text is '{}' rather than 'breed'".format(editor.itemText(0)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 1)
+        self.assertEqual(editor.itemText(0), 'breed')
         editor.setCurrentIndex(0)
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertTrue(parameter_name_index.data() == 'breed',
-                "Parameter name is '{}' rather than 'breed'".format(parameter_name_index.data()))
+        self.assertEqual(parameter_name_index.data(), 'breed')
         # Check objet class
         obj_cls_name_index = model.index(1, header_index("object_class_name"))
-        self.assertTrue(obj_cls_name_index.data() == 'dog',
-                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        self.assertEqual(obj_cls_name_index.data(), 'dog')
         obj_cls_id_index = model.index(1, header_index("object_class_id"))
-        self.assertTrue(obj_cls_id_index.data() == dog_class_id,
-                        "Object class id is '{}' rather than '{}'".format(obj_cls_id_index.data(), dog_class_id))
+        self.assertEqual(obj_cls_id_index.data(), dog_class_id)
         # Enter object name
         obj_name_index = model.index(1, header_index("object_name"))
-        self.assertTrue(obj_name_index.data() is None,
-                        "Object name is '{}' rather than None".format(obj_name_index.data()))
+        self.assertIsNone(obj_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_index)
         view.itemDelegate().setEditorData(editor, obj_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 2, "Editor count is '{}' rather than 2".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'pluto', "Item 0 is '{}' rather than 'pluto'".format(editor.itemText(0)))
-        self.assertTrue(editor.itemText(1) == 'scooby',
-                        "Item 1 is '{}' rather than 'scooby'".format(editor.itemText(1)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(0), 'pluto')
+        self.assertEqual(editor.itemText(1), 'scooby')
         editor.setCurrentIndex(0)
         view.itemDelegate().setModelData(editor, model, obj_name_index)
         view.itemDelegate().destroyEditor(editor, obj_name_index)
-        self.assertTrue(obj_name_index.data() == 'pluto',
-                        "Object name is '{}' rather than 'pluto'".format(obj_name_index.data()))
+        self.assertEqual(obj_name_index.data(), 'pluto')
         obj_id_index = model.index(1, header_index("object_id"))
-        self.assertTrue(obj_id_index.data() == pluto_object.id,
-                        "Object id is '{}' rather than '{}'".format(obj_id_index.data(), pluto_object.id))
+        self.assertEqual(obj_id_index.data(), pluto_object.id)
         # Check the db
         # First (scooby)
         parameter_id = model.index(0, header_index("parameter_id")).data()
         parameter_value_id = model.index(0, header_index("id")).data()
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
-        self.assertTrue(parameter_value.id == parameter_value_id,
-                        "Parameter value id is {} rather than {}".format(parameter_value.id, parameter_value_id))
-        self.assertTrue(parameter_value.parameter_id == parameter_id,
-                        "Parameter id is {} rather than {}".format(parameter_value.parameter_id, parameter_id))
-        self.assertTrue(parameter_value.object_id == scooby_object.id,
-                        "Parameter object id is '{}' rather than '{}'".\
-                            format(parameter_value.object_id, scooby_object.id))
-        self.assertTrue(parameter_value.relationship_id is None,
-                        "Parameter relationship id is '{}' rather than None".format(parameter_value.relationship_id))
-        # First (pluto)
+        self.assertEqual(parameter_value.id, parameter_value_id)
+        self.assertEqual(parameter_value.parameter_id, parameter_id)
+        self.assertEqual(parameter_value.object_id, scooby_object.id)
+        self.assertIsNone(parameter_value.relationship_id)
+        # Second (pluto)
         parameter_id = model.index(1, header_index("parameter_id")).data()
         parameter_value_id = model.index(1, header_index("id")).data()
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
-        self.assertTrue(parameter_value.id == parameter_value_id,
-                        "Parameter value id is {} rather than {}".format(parameter_value.id, parameter_value_id))
-        self.assertTrue(parameter_value.parameter_id == parameter_id,
-                        "Parameter id is {} rather than {}".format(parameter_value.parameter_id, parameter_id))
-        self.assertTrue(parameter_value.object_id == pluto_object.id,
-                        "Parameter object id is '{}' rather than '{}'".\
-                            format(parameter_value.object_id, pluto_object.id))
-        self.assertTrue(parameter_value.relationship_id is None,
-                        "Parameter relationship id is '{}' rather than None".format(parameter_value.relationship_id))
+        self.assertEqual(parameter_value.id, parameter_value_id)
+        self.assertEqual(parameter_value.parameter_id, parameter_id)
+        self.assertEqual(parameter_value.object_id, pluto_object.id)
+        self.assertIsNone(parameter_value.relationship_id)
 
     # @unittest.skip("DONE")
     def test_add_relationship_parameter_values(self):
@@ -900,84 +819,59 @@ class TestDataStoreForm(unittest.TestCase):
         header_index = model.header.index
         # Enter parameter name
         parameter_name_index = model.index(0, header_index("parameter_name"))
-        self.assertTrue(parameter_name_index.data() is None,
-                        "Parameter name is '{}' rather than None".format(parameter_name_index.data()))
+        self.assertIsNone(parameter_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
-        self.assertTrue(isinstance(editor, CustomComboEditor), "Editor is not a 'CustomComboEditor'")
-        self.assertTrue(editor.count() == 1, "Editor count is '{}' rather than 1".format(editor.count()))
-        self.assertTrue(editor.itemText(0) == 'combined_mojo',
-                        "Editor text is '{}' rather than 'combined_mojo'".format(editor.itemText(0)))
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 1)
+        self.assertEqual(editor.itemText(0), 'combined_mojo')
         editor.setCurrentIndex(0)
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertTrue(parameter_name_index.data() == 'combined_mojo',
-                        "Parameter name is '{}' rather than 'combined_mojo'".format(parameter_name_index.data()))
+        self.assertEqual(parameter_name_index.data(), 'combined_mojo')
         # Check relationship class
         rel_cls_name = model.index(0, header_index("relationship_class_name")).data()
-        self.assertTrue(rel_cls_name == 'fish__dog',
-                        "Relationship class name is '{}' rather than 'fish__dog'".format(rel_cls_name))
+        self.assertEqual(rel_cls_name, 'fish__dog')
         rel_cls_id = model.index(0, header_index("relationship_class_id")).data()
-        self.assertTrue(rel_cls_id == fish_dog_relationship_class.id,
-                        "Relationship class id is '{}' rather than '{}'".\
-                            format(rel_cls_id, fish_dog_relationship_class.id))
+        self.assertEqual(rel_cls_id, fish_dog_relationship_class.id)
         obj_cls_name_list_index = model.index(0, header_index("object_class_name_list"))
-        self.assertTrue(obj_cls_name_list_index.data() == 'fish,dog',
-                        "Object class name list is '{}' rather than 'fish,dog'".format(obj_cls_name_list_index.data()))
+        self.assertEqual(obj_cls_name_list_index.data(), 'fish,dog')
         obj_cls_id_list_index = model.index(0, header_index("object_class_id_list"))
         split_obj_cls_id_list = [int(x) for x in obj_cls_id_list_index.data().split(",")]
-        self.assertTrue(split_obj_cls_id_list == [fish_class_id, dog_class_id],
-                        "Object class id list is '{}' rather than '{}'".\
-                            format(split_obj_cls_id_list, [fish_class_id, dog_class_id]))
+        self.assertEqual(split_obj_cls_id_list, [fish_class_id, dog_class_id])
         # Enter object name list
         obj_name_list_index = model.index(0, header_index("object_name_list"))
-        self.assertTrue(obj_name_list_index.data() is None,
-                        "Object name list is '{}' rather than None".format(obj_name_list_index.data()))
+        self.assertIsNone(obj_name_list_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_list_index)
         view.itemDelegate().setEditorData(editor, obj_name_list_index)
-        self.assertTrue(isinstance(editor, ObjectNameListEditor), "Editor is not a 'ObjectNameListEditor'")
+        self.assertTrue(isinstance(editor, ObjectNameListEditor))
         combos = editor.combos
-        self.assertTrue(len(combos) == 2, "Editor combos count is '{}' rather than 2".format(len(combos)))
-        self.assertTrue(combos[0].count() == 3,
-                        "Editor combo 0 count is '{}' rather than 3".format(combos[0].count()))
-        self.assertTrue(combos[0].itemText(0) == 'fish',
-                        "Editor combo 0 item 0 is '{}' rather than 'fish'".format(combos[0].itemText(0)))
-        self.assertTrue(combos[0].itemText(2) == 'nemo',
-                        "Editor combo 0 item 2 is '{}' rather than 'nemo'".format(combos[0].itemText(2)))
-        self.assertTrue(combos[1].count() == 4,
-                        "Editor combo 1 count is '{}' rather than 4".format(combos[1].count()))
-        self.assertTrue(combos[1].itemText(0) == 'dog',
-                        "Editor combo 1 item 0 is '{}' rather than 'dog'".format(combos[1].itemText(0)))
-        self.assertTrue(combos[1].itemText(2) == 'pluto',
-                        "Editor combo 1 item 2 is '{}' rather than 'pluto'".format(combos[1].itemText(2)))
-        self.assertTrue(combos[1].itemText(3) == 'scooby',
-                        "Editor combo 1 item 3 is '{}' rather than 'scooby'".format(combos[1].itemText(3)))
+        self.assertEqual(len(combos), 2)
+        self.assertEqual(combos[0].count(), 3)
+        self.assertEqual(combos[0].itemText(0), 'fish')
+        self.assertEqual(combos[0].itemText(2), 'nemo')
+        self.assertEqual(combos[1].count(), 4)
+        self.assertEqual(combos[1].itemText(0), 'dog')
+        self.assertEqual(combos[1].itemText(2), 'pluto')
+        self.assertEqual(combos[1].itemText(3), 'scooby')
         combos[0].setCurrentIndex(2)
         combos[1].setCurrentIndex(2)
         view.itemDelegate().setModelData(editor, model, obj_name_list_index)
         view.itemDelegate().destroyEditor(editor, obj_name_list_index)
         # Check relationship
         relationship_id = model.index(0, header_index("relationship_id")).data()
-        self.assertTrue(relationship_id == nemo_pluto_relationship.id,
-                        "Relationship id is {} rather than {}".format(relationship_id, nemo_pluto_relationship.id))
+        self.assertEqual(relationship_id, nemo_pluto_relationship.id)
         obj_id_list_index = model.index(0, header_index("object_id_list"))
         split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
-        self.assertTrue(split_obj_id_list == [nemo_object.id, pluto_object.id],
-                        "Obj id list is {} rather than {}".\
-                            format(split_obj_id_list, [nemo_object.id, pluto_object.id]))
+        self.assertEqual(split_obj_id_list, [nemo_object.id, pluto_object.id])
         # Check the db
         parameter_id = model.index(0, header_index("parameter_id")).data()
         parameter_value_id = model.index(0, header_index("id")).data()
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
-        self.assertTrue(parameter_value.id == parameter_value_id,
-                        "Parameter value id is {} rather than {}".format(parameter_value.id, parameter_value_id))
-        self.assertTrue(parameter_value.parameter_id == parameter_id,
-                        "Parameter id is {} rather than {}".format(parameter_value.parameter_id, parameter_id))
-        self.assertTrue(parameter_value.relationship_id == nemo_pluto_relationship.id,
-                        "Parameter relationship id is '{}' rather than '{}'".\
-                            format(parameter_value.object_id, nemo_pluto_relationship.id))
-        self.assertTrue(parameter_value.object_id is None,
-                        "Parameter object id is '{}' rather than None".format(parameter_value.object_id))
+        self.assertEqual(parameter_value.id, parameter_value_id)
+        self.assertEqual(parameter_value.parameter_id, parameter_id)
+        self.assertEqual(parameter_value.relationship_id, nemo_pluto_relationship.id)
+        self.assertIsNone(parameter_value.object_id)
 
     # @unittest.skip("DONE")
     def test_paste_add_object_parameter_values(self):
@@ -1044,80 +938,58 @@ class TestDataStoreForm(unittest.TestCase):
         for row in range(3):
             # Object class name and id
             obj_cls_name = model.index(row, header_index("object_class_name")).data()
-            self.assertTrue(obj_cls_name == 'dog',
-                            "Object class name is '{}' rather than 'dog'".format(obj_cls_name))
+            self.assertEqual(obj_cls_name, 'dog')
             obj_cls_id = model.index(row, header_index("object_class_id")).data()
-            self.assertTrue(obj_cls_id == dog_class_id,
-                            "Object class id is '{}' rather than '{}'".format(obj_cls_id, dog_class_id))
+            self.assertEqual(obj_cls_id, dog_class_id)
             # Parameter name and id
             parameter_name = model.index(row, header_index("parameter_name")).data()
-            self.assertTrue(parameter_name == 'breed',
-                            "Parameter name is '{}' rather than 'breed'".format(parameter_name))
+            self.assertEqual(parameter_name, 'breed')
             parameter_id = model.index(row, header_index("parameter_id")).data()
-            self.assertTrue(parameter_id == breed_parameter_id,
-                            "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+            self.assertEqual(parameter_id, breed_parameter_id)
         # Object name and id
         obj_name = model.index(0, header_index("object_name")).data()
-        self.assertTrue(obj_name == 'pluto', "Object name is '{}' rather than 'pluto'".format(obj_name))
+        self.assertEqual(obj_name, 'pluto')
         obj_id = model.index(0, header_index("object_id")).data()
-        self.assertTrue(obj_id == pluto_object.id,
-                        "Object id is '{}' rather than '{}'".format(obj_id, pluto_object.id))
+        self.assertEqual(obj_id, pluto_object.id)
         obj_name = model.index(1, header_index("object_name")).data()
-        self.assertTrue(obj_name == 'scooby', "Object name is '{}' rather than 'scooby'".format(obj_name))
+        self.assertEqual(obj_name, 'scooby')
         obj_id = model.index(1, header_index("object_id")).data()
-        self.assertTrue(obj_id == scooby_object.id,
-                        "Object id is '{}' rather than '{}'".format(obj_id, scooby_object.id))
+        self.assertEqual(obj_id, scooby_object.id)
         obj_name = model.index(2, header_index("object_name")).data()
-        self.assertTrue(obj_name == 'brian', "Object name is '{}' rather than 'brian'".format(obj_name))
+        self.assertEqual(obj_name, 'brian')
         obj_id = model.index(2, header_index("object_id")).data()
-        self.assertTrue(obj_id == brian_object.id,
-                        "Object id is '{}' rather than '{}'".format(obj_id, brian_object.id))
+        self.assertEqual(obj_id, brian_object.id)
         # Parameter value and id
         value = model.index(0, header_index("value")).data()
-        self.assertTrue(value == 'bloodhound', "Value is '{}' rather than 'bloodhound'".format(value))
+        self.assertEqual(value, 'bloodhound')
         parameter_id = model.index(0, header_index("parameter_id")).data()
-        self.assertTrue(parameter_id == breed_parameter_id,
-                        "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        self.assertEqual(parameter_id, breed_parameter_id)
         value = model.index(1, header_index("value")).data()
-        self.assertTrue(value == 'great dane', "Value is '{}' rather than 'great dane'".format(value))
+        self.assertEqual(value, 'great dane')
         parameter_id = model.index(1, header_index("parameter_id")).data()
-        self.assertTrue(parameter_id == breed_parameter_id,
-                        "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        self.assertEqual(parameter_id, breed_parameter_id)
         value = model.index(2, header_index("value")).data()
-        self.assertTrue(value == 'labrador', "Value is '{}' rather than 'labrador'".format(value))
+        self.assertEqual(value, 'labrador')
         parameter_id = model.index(2, header_index("parameter_id")).data()
-        self.assertTrue(parameter_id == breed_parameter_id,
-                        "Parameter id is '{}' rather than '{}'".format(parameter_id, breed_parameter_id))
+        self.assertEqual(parameter_id, breed_parameter_id)
         # Check db
         pluto_breed, scooby_breed, brian_breed = self.tree_view_form.db_map.parameter_value_list().all()
         # Object id
-        self.assertTrue(pluto_breed.object_id == pluto_object.id,
-                        "Object id is '{}' rather than '{}'".format(pluto_breed.object_id, pluto_object.id))
-        self.assertTrue(scooby_breed.object_id == scooby_object.id,
-                        "Object id is '{}' rather than '{}'".format(scooby_breed.object_id, scooby_object.id))
-        self.assertTrue(brian_breed.object_id == brian_object.id,
-                        "Object id is '{}' rather than '{}'".format(brian_breed.object_id, brian_object.id))
+        self.assertEqual(pluto_breed.object_id, pluto_object.id)
+        self.assertEqual(scooby_breed.object_id, scooby_object.id)
+        self.assertEqual(brian_breed.object_id, brian_object.id)
         # Relationship id (None)
-        self.assertTrue(pluto_breed.relationship_id is None,
-                        "Relationship id is '{}' rather than None".format(pluto_breed.relationship_id))
-        self.assertTrue(scooby_breed.relationship_id is None,
-                        "Relationship id is '{}' rather than None".format(scooby_breed.relationship_id))
-        self.assertTrue(brian_breed.relationship_id is None,
-                        "Relationship id is '{}' rather than None".format(brian_breed.relationship_id))
+        self.assertIsNone(pluto_breed.relationship_id)
+        self.assertIsNone(scooby_breed.relationship_id)
+        self.assertIsNone(brian_breed.relationship_id)
         # Parameter id
-        self.assertTrue(pluto_breed.parameter_id == breed_parameter_id,
-                        "Parameter id is '{}' rather than '{}'".format(pluto_breed.parameter_id, breed_parameter_id))
-        self.assertTrue(scooby_breed.parameter_id == breed_parameter_id,
-                        "Parameter id is '{}' rather than '{}'".format(scooby_breed.parameter_id, breed_parameter_id))
-        self.assertTrue(brian_breed.parameter_id == breed_parameter_id,
-                        "Parameter id is '{}' rather than '{}'".format(brian_breed.parameter_id, breed_parameter_id))
+        self.assertEqual(pluto_breed.parameter_id, breed_parameter_id)
+        self.assertEqual(scooby_breed.parameter_id, breed_parameter_id)
+        self.assertEqual(brian_breed.parameter_id, breed_parameter_id)
         # Value
-        self.assertTrue(pluto_breed.value == 'bloodhound',
-                        "Value is '{}' rather than 'bloodhound'".format(pluto_breed.value))
-        self.assertTrue(scooby_breed.value == 'great dane',
-                        "Value is '{}' rather than 'great dane'".format(scooby_breed.value))
-        self.assertTrue(brian_breed.value == 'labrador',
-                        "Value is '{}' rather than 'labrador'".format(brian_breed.value))
+        self.assertEqual(pluto_breed.value, 'bloodhound')
+        self.assertEqual(scooby_breed.value, 'great dane')
+        self.assertEqual(brian_breed.value, 'labrador')
 
     # @unittest.skip("DONE")
     def test_set_object_parameter_definition_defaults(self):
@@ -1146,23 +1018,20 @@ class TestDataStoreForm(unittest.TestCase):
         view = self.tree_view_form.ui.tableView_object_parameter_definition
         header_index = model.header.index
         obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
-        self.assertTrue(obj_cls_name_index.data() == 'fish',
-                        "Object class name is '{}' rather than 'fish'".format(obj_cls_name_index.data()))
+        self.assertEqual(obj_cls_name_index.data(), 'fish')
         # Deselected fish and select dog item in object tree
         dog_item = root_item.child(1)
         dog_tree_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
         self.tree_view_form.ui.treeView_object.selectionModel().select(fish_tree_index, QItemSelectionModel.Deselect)
         self.tree_view_form.ui.treeView_object.selectionModel().select(dog_tree_index, QItemSelectionModel.Select)
         obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
-        self.assertTrue(obj_cls_name_index.data() == 'dog',
-                        "Object class name is '{}' rather than 'dog'".format(obj_cls_name_index.data()))
+        self.assertEqual(obj_cls_name_index.data(), 'dog')
         # Clear object tree selection and select root
         self.tree_view_form.ui.treeView_object.selectionModel().clearSelection()
         root_tree_index = self.tree_view_form.object_tree_model.indexFromItem(root_item)
         self.tree_view_form.ui.treeView_object.selectionModel().select(root_tree_index, QItemSelectionModel.Select)
         obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
-        self.assertTrue(obj_cls_name_index.data() is None,
-                        "Object class name is '{}' rather than None".format(obj_cls_name_index.data()))
+        self.assertIsNone(obj_cls_name_index.data())
 
 
 if __name__ == '__main__':

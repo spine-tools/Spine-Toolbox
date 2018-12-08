@@ -73,12 +73,10 @@ class TestDataStore(unittest.TestCase):
             self.toolbox.ui.toolButton_new_spine.click()
             self.assertTrue(os.path.isfile(file_path), "mock_db.sqlite file not found.")
             sqlite_file = self.toolbox.ui.lineEdit_SQLite_file.text()
-            self.assertTrue(sqlite_file == file_path,
-                            "SQlite file path is '{}' rather than '{}'".format(sqlite_file, file_path))
+            self.assertEqual(sqlite_file, file_path)
             database = self.toolbox.ui.lineEdit_database.text()
             basename = os.path.basename(file_path)
-            self.assertTrue(database == basename,
-                            "Database is '{}' rather than '{}'".format(database, basename))
+            self.assertEqual(database, basename)
 
     def test_load_reference(self):
         """Test that reference is loaded into selections on Data Store creation,
@@ -96,9 +94,9 @@ class TestDataStore(unittest.TestCase):
         dialect = self.toolbox.ui.comboBox_dialect.currentText()
         database = self.toolbox.ui.lineEdit_database.text()
         username = self.toolbox.ui.lineEdit_username.text()
-        self.assertTrue(dialect == 'sqlite', "Dialect is '{}' rather than 'sqlite'".format(dialect))
-        self.assertTrue(database == 'foo', "Database is '{}' rather than 'foo'".format(database))
-        self.assertTrue(username == 'bar', "Username is '{}' rather than 'bar'".format(username))
+        self.assertEqual(dialect, 'sqlite')
+        self.assertEqual(database, 'foo')
+        self.assertEqual(username, 'bar')
 
     def test_save_and_restore_selections(self):
         """Test that selections are saved and restored when deactivating a Data Store and activating it again.
@@ -118,11 +116,11 @@ class TestDataStore(unittest.TestCase):
         port = self.toolbox.ui.lineEdit_port.text()
         database = self.toolbox.ui.lineEdit_database.text()
         username = self.toolbox.ui.lineEdit_username.text()
-        self.assertTrue(dialect == 'mysql', "Dialect is '{}' rather than 'mysql'".format(dialect))
-        self.assertTrue(host == 'localhost', "Host is '{}' rather than 'localhost'".format(host))
-        self.assertTrue(port == '8080', "Port is '{}' rather than '8080'".format(port))
-        self.assertTrue(database == 'foo', "Database is '{}' rather than 'foo'".format(database))
-        self.assertTrue(username == 'bar', "Username is '{}' rather than 'bar'".format(username))
+        self.assertEqual(dialect, 'mysql')
+        self.assertEqual(host, 'localhost')
+        self.assertEqual(port, '8080')
+        self.assertEqual(database, 'foo')
+        self.assertEqual(username, 'bar')
 
     def test_copy_db_url_to_clipboard(self):
         """Test that the database url from current selections is copied to clipboard.
@@ -138,7 +136,7 @@ class TestDataStore(unittest.TestCase):
         data_store.activate()
         self.toolbox.ui.toolButton_copy_db_url.click()
         clipboard_text = QApplication.clipboard().text()
-        self.assertTrue(clipboard_text == url, "Clipboard text is '{}' rather than '{}'".format(clipboard_text, url))
+        self.assertEqual(clipboard_text, url)
 
 
 
