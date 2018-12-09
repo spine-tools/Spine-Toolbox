@@ -1961,6 +1961,11 @@ class GraphViewForm(DataStoreForm):
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
+    def show(self):
+        """Show usage message together with the form."""
+        super().show()
+        self.show_usage_msg()
+
     def init_models(self):
         """Initialize models."""
         super().init_models()
@@ -1976,16 +1981,12 @@ class GraphViewForm(DataStoreForm):
         self.object_parameter_value_model.has_empty_row = not self.read_only
         self.relationship_parameter_value_model.has_empty_row = not self.read_only
         super().init_parameter_value_models()
-        # self.object_parameter_value_proxy.default = False
-        # self.relationship_parameter_value_proxy.default = False
 
     def init_parameter_definition_models(self):
         """Initialize parameter (definition) models from source database."""
         self.object_parameter_definition_model.has_empty_row = not self.read_only
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
         super().init_parameter_definition_models()
-        # self.object_parameter_definition_proxy.default = False
-        # self.relationship_parameter_definition_proxy.default = False
 
     def init_views(self):
         super().init_views()
@@ -1993,7 +1994,7 @@ class GraphViewForm(DataStoreForm):
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
 
     def create_add_more_actions(self):
-        """Setup 'Add more' action and button."""
+        """Create and 'Add more' action and button for the Item Palette views."""
         # object class
         index = self.object_class_list_model.add_more_index
         action = QAction()
@@ -2084,20 +2085,21 @@ class GraphViewForm(DataStoreForm):
         self._has_graph = self.make_graph()
         if self._has_graph:
             self.ui.graphicsView.scale_to_fit_scene()
+            self.extend_scene_bg()
             toc = time.clock()
             self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
+        else:
+            self.show_usage_msg()
         self.hidden_items = list()
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Build_graph."""
-        for index in selected.indexes():
-            if self.object_tree_model.canFetchMore(index):
-                self.object_tree_model.fetchMore(index)
         self.build_graph()
 
     def init_graph_data(self):
-        """Initialize graph data."""
+        """Initialize graph data.
+        """
         rejected_object_names = [x.object_name for x in self.rejected_items]
         self.object_ids = list()
         self.object_names = list()
@@ -2112,6 +2114,10 @@ class GraphViewForm(DataStoreForm):
             object_class_name = object_class_item.data(Qt.UserRole + 1)['name']
             index = self.object_tree_model.indexFromItem(object_class_item)
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
+            # Fetch object class if needed
+            if is_root_selected or is_object_class_selected:
+                 if self.object_tree_model.canFetchMore(index):
+                     self.object_tree_model.fetchMore(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
                 object_id = object_item.data(Qt.UserRole + 1)["id"]
@@ -2174,26 +2180,26 @@ class GraphViewForm(DataStoreForm):
                 self.arc_label_object_class_name_lists.append(arc_label_object_class_name_list)
         # Add template items hanging around
         scene = self.ui.graphicsView.scene()
-        if scene:
-            self.heavy_positions = {}
-            object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
-            object_ind = len(self.object_ids)
-            self.template_id_dims = {}
-            self.is_template = {}
-            object_ind_dict = {}
-            for item in object_items:
-                object_id = item.object_id
-                object_name = item.object_name
-                try:
-                    found_ind = self.object_ids.index(object_id)
-                    is_template = self.is_template.get(found_ind)
-                    if not is_template:
-                        self.template_id_dims[found_ind] = item.template_id_dim
-                        self.is_template[found_ind] = False
-                        self.heavy_positions[found_ind] = item.pos()
-                        continue
-                except ValueError:
-                    pass
+        if not scene:
+            return
+        self.heavy_positions = {}
+        template_object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
+        object_ind = len(self.object_ids)
+        self.template_id_dims = {}
+        self.is_template = {}
+        object_ind_dict = {}  # Dict of object indexes added from this point
+        object_ids_copy = self.object_ids.copy()  # Object ids added until this point
+        for item in template_object_items:
+            object_id = item.object_id
+            object_name = item.object_name
+            try:
+                found_ind = object_ids_copy.index(object_id)
+                # Object id is already in list; complete its template information and make it heavy
+                self.template_id_dims[found_ind] = item.template_id_dim
+                self.is_template[found_ind] = False
+                self.heavy_positions[found_ind] = item.pos()
+            except ValueError:
+                # Object id is not in list; add it together with its template info, and make it heavy
                 object_class_id = item.object_class_id
                 object_class_name = item.object_class_name
                 self.object_ids.append(object_id)
@@ -2205,35 +2211,35 @@ class GraphViewForm(DataStoreForm):
                 self.heavy_positions[object_ind] = item.pos()
                 object_ind_dict[item] = object_ind
                 object_ind += 1
-            arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-            arc_ind = len(self.arc_label_object_name_lists)
-            self.arc_template_ids = {}
-            for item in arc_items:
-                src_item = item.src_item
-                dst_item = item.dst_item
-                try:
-                    src_ind = object_ind_dict[src_item]
-                except KeyError:
-                    src_object_id = src_item.object_id
-                    src_ind = self.object_ids.index(src_object_id)
-                try:
-                    dst_ind = object_ind_dict[dst_item]
-                except KeyError:
-                    dst_object_id = dst_item.object_id
-                    dst_ind = self.object_ids.index(dst_object_id)
-                self.src_ind_list.append(src_ind)
-                self.dst_ind_list.append(dst_ind)
-                # NOTE: These arcs correspond to template arcs.
-                relationship_class_id = item.relationship_class_id
-                object_class_name_list = item.object_class_name_list
-                self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
-                self.arc_relationship_class_ids.append(relationship_class_id)
-                self.arc_object_class_name_lists.append(object_class_name_list)
-                # Label don't matter
-                self.arc_label_object_name_lists.append("")
-                self.arc_label_object_class_name_lists.append("")
-                self.arc_template_ids[arc_ind] = item.template_id
-                arc_ind += 1
+        template_arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
+        arc_ind = len(self.arc_label_object_name_lists)
+        self.arc_template_ids = {}
+        for item in template_arc_items:
+            src_item = item.src_item
+            dst_item = item.dst_item
+            try:
+                src_ind = object_ind_dict[src_item]
+            except KeyError:
+                src_object_id = src_item.object_id
+                src_ind = self.object_ids.index(src_object_id)
+            try:
+                dst_ind = object_ind_dict[dst_item]
+            except KeyError:
+                dst_object_id = dst_item.object_id
+                dst_ind = self.object_ids.index(dst_object_id)
+            self.src_ind_list.append(src_ind)
+            self.dst_ind_list.append(dst_ind)
+            # NOTE: These arcs correspond to template arcs.
+            relationship_class_id = item.relationship_class_id
+            object_class_name_list = item.object_class_name_list
+            self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
+            self.arc_relationship_class_ids.append(relationship_class_id)
+            self.arc_object_class_name_lists.append(object_class_name_list)
+            # Label don't matter
+            self.arc_label_object_name_lists.append("")
+            self.arc_label_object_class_name_lists.append("")
+            self.arc_template_ids[arc_ind] = item.template_id
+            arc_ind += 1
 
     def shortest_path_matrix(self, object_name_list, src_ind_list, dst_ind_list, spread):
         """Return the shortest-path matrix."""
@@ -2285,11 +2291,6 @@ class GraphViewForm(DataStoreForm):
         heavy_ind = arr(heavy_ind_list)
         heavy_pos = arr(heavy_pos_list)
         if heavy_ind.any():
-            # Shift random layout to the center of heavy position
-            shift = np.mean(matrix[heavy_ind, :][:, heavy_ind], axis=0)
-            layout[:, 0] += shift[0]
-            layout[:, 1] += shift[1]
-            # Apply heavy positions
             layout[heavy_ind, :] = heavy_pos
         weights = matrix ** weight_exp  # bus-pair weights (lower for distant buses)
         maxstep = 1 / np.min(weights[mask])
@@ -2309,16 +2310,15 @@ class GraphViewForm(DataStoreForm):
                 layout[v1, :] += dx1  # update position
                 layout[v2, :] += dx2
                 if heavy_ind.any():
-                    # Apply heavy positions
                     layout[heavy_ind, :] = heavy_pos
         return layout[:, 0], layout[:, 1]
 
     def make_graph(self):
         """Make graph."""
-        scene = self.new_scene()
         d = self.shortest_path_matrix(self.object_names, self.src_ind_list, self.dst_ind_list, self._spread)
         if d is None:
             return False
+        scene = self.new_scene()
         x, y = self.vertex_coordinates(d, self.heavy_positions)
         object_items = list()
         for i in range(len(self.object_names)):
@@ -2352,8 +2352,8 @@ class GraphViewForm(DataStoreForm):
                 relationship_class_id=relationship_class_id)
             arc_item = ArcItem(
                 self, object_id_list, relationship_class_id, label_object_class_names, # object_class_names,
-                object_items[i], object_items[j], .25 * self.extent,
-                self.arc_color, label_color=self.arc_label_color, label_parts=label_parts)
+                object_items[i], object_items[j], .25 * self.extent, self.arc_color,
+                token_color=self.object_label_color, label_color=self.arc_label_color, label_parts=label_parts)
             try:
                 template_id = self.arc_template_ids[k]
                 arc_item.template_id = template_id
@@ -2377,6 +2377,14 @@ class GraphViewForm(DataStoreForm):
         scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
         return scene
+
+    def extend_scene_bg(self):
+        # Make scene background the size of the view
+        view_rect = self.ui.graphicsView.viewport().rect()
+        top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
+        bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
+        rectf = QRectF(top_left, bottom_right)
+        self._scene_bg.setRect(rectf)
 
     @Slot(name="_handle_scene_selection_changed")
     def _handle_scene_selection_changed(self):
@@ -2407,11 +2415,15 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QList<QRectF>", name="_handle_scene_changed")
     def _handle_scene_changed(self, region):
-        """Make a new scene with usage instructions if previous is empty,
-        where empty means the only item is the bg.
+        """Handle scene changed. Show usage message if no items other than the bg.
         """
         if len(self.ui.graphicsView.scene().items()) > 1:  # TODO: should we use sender() here?
             return
+        self.show_usage_msg()
+
+    def show_usage_msg(self):
+        """Show usage instructions in new scene.
+        """
         scene = self.new_scene()
         usage = """
             <html>
@@ -2473,12 +2485,7 @@ class GraphViewForm(DataStoreForm):
             scene = self.ui.graphicsView.scene()
         else:
             scene = self.new_scene()
-        # Make scene background the size of the scene
-        view_rect = self.ui.graphicsView.viewport().rect()
-        top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
-        bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
-        rectf = QRectF(top_left, bottom_right)
-        self._scene_bg.setRect(rectf)
+        self.extend_scene_bg()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         data = eval(text)
         if data["type"] == "object_class":
@@ -2727,27 +2734,22 @@ class GraphViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_graph_items")
     def remove_graph_items(self, checked=False):
-        # FIXME: This is outdated
         """Remove all selected items in the graph."""
-        if not self.object_item_selection + self.arc_item_selection:
+        if not self.object_item_selection:
             return
-        removed_id_dict = {
-            "object": set(x.object_id for x in self.object_item_selection if x.object_id)
-        }
+        removed_objects = list(
+            dict(class_id=x.object_class_id, id=x.object_id) for x in self.object_item_selection if x.object_id
+        )
+        object_ids = set(x['id'] for x in removed_objects)
         try:
-            self.db_map.remove_items(**{k + "_ids": v for k, v in removed_id_dict.items()})
-            for key, value in removed_id_dict.items():
-                self.object_tree_model.remove_items(key, *value)
-            for key, value in removed_id_dict.items():
-                self.object_parameter_definition_model.remove_items(key, *value)
-                self.object_parameter_value_model.remove_items(key, *value)
-                self.relationship_parameter_definition_model.remove_items(key, *value)
-                self.relationship_parameter_value_model.remove_items(key, *value)
+            self.db_map.remove_items(object_ids=object_ids)
+            self.object_tree_model.remove_items("object", object_ids)
+            # Parameter models
+            self.object_parameter_value_model.remove_objects(removed_objects)
+            self.relationship_parameter_value_model.remove_objects(removed_objects)
+            self.set_commit_rollback_actions_enabled(True)
             for item in self.object_item_selection:
                 item.wipe_out()
-            #for item in self.arc_item_selection:
-            #    item.scene().removeItem(item)
-            self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)

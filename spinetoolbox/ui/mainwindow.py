@@ -1092,7 +1092,7 @@ class Ui_MainWindow(object):
         self.dockWidget_process_output.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Process Log", None, -1))
         self.dockWidget_item.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Properties", None, -1))
         self.label_ds_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
-        self.label_db_config.setText(QtWidgets.QApplication.translate("MainWindow", "Database configuration", None, -1))
+        self.label_db_config.setText(QtWidgets.QApplication.translate("MainWindow", "Connection details", None, -1))
         self.toolButton_copy_db_url.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Copy database url to clipboard</p></body></html>", None, -1))
         self.toolButton_copy_db_url.setText(QtWidgets.QApplication.translate("MainWindow", "...", None, -1))
         self.toolButton_new_spine.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create new Spine (sqlite) database.</p></body></html>", None, -1))
@@ -1194,8 +1194,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
-from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

@@ -1390,12 +1390,13 @@ class ArcItem(QGraphicsLineItem):
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
-        color (QColor): color
+        arc_color (QColor): arc color
+        token_color (QColor): bg color for the token
         label_color (QColor): color
         label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
     """
     def __init__(self, graph_view_form, object_id_list, relationship_class_id, object_class_name_list,
-                 src_item, dst_item, width, color, label_color=QColor(), label_parts=()):
+                 src_item, dst_item, width, arc_color, token_color=QColor(), label_color=QColor(), label_parts=()):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
@@ -1417,13 +1418,12 @@ class ArcItem(QGraphicsLineItem):
         self.setLine(src_x, src_y, dst_x, dst_y)
         self.normal_pen = QPen()
         self.normal_pen.setWidth(self.width)
-        self.normal_pen.setColor(color)
+        self.normal_pen.setColor(arc_color)
         self.normal_pen.setStyle(Qt.SolidLine)
         self.normal_pen.setCapStyle(Qt.RoundCap)
         self.selected_pen = QPen(self.normal_pen)
         self.selected_pen.setColor(graph_view_form.palette().highlight().color())
         self.setPen(self.normal_pen)
-        self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setZValue(-2)
         self.shape_item = QGraphicsLineItem()
@@ -1434,26 +1434,28 @@ class ArcItem(QGraphicsLineItem):
         self.shape_item.hide()
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
-        self.pixmap_item = QGraphicsPixmapItem()
+        # Token item
+        self.token_item = QGraphicsPixmapItem()
         if object_class_name_list:
-            if len(object_class_name_list) > 1:
-                extent = 3 * width
-                join_object_class_name_list = ",".join(object_class_name_list)
-                pixmap = self._graph_view_form.relationship_icon(join_object_class_name_list).pixmap(extent)
-            else:
-                extent = 2 * width
-                object_class_name = object_class_name_list[0]
-                pixmap = self._graph_view_form.object_icon(object_class_name).pixmap(extent)
-            self.pixmap_item.setPixmap(pixmap.scaled(extent, extent))
-            self.pixmap_item.setOffset(-0.5 * extent, -0.5 * extent)
+            extent = 3 * width
+            join_object_class_name_list = ",".join(object_class_name_list)
+            pixmap = self._graph_view_form.relationship_icon(join_object_class_name_list).pixmap(extent)
+            self.token_item.setPixmap(pixmap.scaled(extent, extent))
+            self.token_item.setOffset(-0.5 * extent, -0.5 * extent)
             diameter = extent / sin(pi / 4)
             delta = (diameter - extent) / 2
-            rectf = self.pixmap_item.boundingRect().adjusted(-delta, -delta, delta, delta)
+            rectf = self.token_item.boundingRect().adjusted(-delta, -delta, delta, delta)
             ellipse_item = QGraphicsEllipseItem(rectf)
-            ellipse_item.setParentItem(self.pixmap_item)
+            ellipse_item.setParentItem(self.token_item)
             ellipse_item.setPen(Qt.NoPen)
-            ellipse_item.setBrush(label_color)
+            ellipse_item.setBrush(token_color)
             ellipse_item.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+            # Override hover events
+            self.token_item.hoverEnterEvent = self.token_hover_enter_event
+            self.token_item.hoverMoveEvent = self.token_hover_move_event
+            self.token_item.hoverLeaveEvent = self.token_hover_leave_event
+            self.token_item.shape = ellipse_item.shape
+            self.token_item.setAcceptHoverEvents(True)
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
@@ -1469,11 +1471,11 @@ class ArcItem(QGraphicsLineItem):
         if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
             scene = value
             value.addItem(self.label_item)
-            value.addItem(self.pixmap_item)
+            value.addItem(self.token_item)
             self.label_item.hide()
             self.label_item.setZValue(2)  # Arc label over everything
-            self.place_pixmap_item()
-            self.pixmap_item.setZValue(-1)  # Arc pixmap only above arc
+            self.place_token_item()
+            self.token_item.setZValue(-1)  # Arc pixmap only above arc
         return super().itemChange(change, value)
 
     def make_template(self):
@@ -1498,7 +1500,7 @@ class ArcItem(QGraphicsLineItem):
         line.setP1(line.p1() + pos_diff)
         self.setLine(line)
         self.shape_item.setLine(line)
-        self.place_pixmap_item()
+        self.place_token_item()
 
     def move_dst_by(self, pos_diff):
         """Move destination point by pos_diff. Used when moving ObjectItems around."""
@@ -1506,14 +1508,14 @@ class ArcItem(QGraphicsLineItem):
         line.setP2(line.p2() + pos_diff)
         self.setLine(line)
         self.shape_item.setLine(line)
-        self.place_pixmap_item()
+        self.place_token_item()
 
-    def place_pixmap_item(self):
+    def place_token_item(self):
         """Put pixmap item in position."""
         middle = (self.dst_item.pos() + self.src_item.pos()) / 2
-        self.pixmap_item.setPos(middle)
+        self.token_item.setPos(middle)
 
-    def hoverEnterEvent(self, event):
+    def token_hover_enter_event(self, event):
         """Show label if src and dst are not hovered."""
         self.label_item.setPos(
             event.scenePos().x() - self.label_item.boundingRect().x() + 16,
@@ -1522,7 +1524,7 @@ class ArcItem(QGraphicsLineItem):
             return
         self.label_item.show()
 
-    def hoverMoveEvent(self, event):
+    def token_hover_move_event(self, event):
         """Show label if src and dst are not hovered."""
         self.label_item.setPos(
             event.scenePos().x() - self.label_item.boundingRect().x() + 16,
@@ -1531,7 +1533,7 @@ class ArcItem(QGraphicsLineItem):
             return
         self.label_item.show()
 
-    def hoverLeaveEvent(self, event):
+    def token_hover_leave_event(self, event):
         """Hide label."""
         self.label_item.hide()
 

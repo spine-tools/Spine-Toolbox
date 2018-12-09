@@ -302,18 +302,21 @@ def object_pixmap(object_class_name):
 def relationship_pixmap(object_class_name_list):
     """A pixmap rendered by painting several object pixmaps together."""
     extent = 64
-    x_step = 56
-    y_offset = 50
+    x_step = extent - 8
+    y_offset = extent - 16 + 2
     pixmap_list = list()
     for object_class_name in object_class_name_list:
         pixmap = object_pixmap(object_class_name)
         pixmap_list.append(pixmap.scaled(extent, extent))
-    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)]
+    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)] # Two pixmaps per row...
     combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
     combo_height = extent + y_offset
     combo_extent = max(combo_width, combo_height)
     x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
     y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
+    # Add extra vertical padding in case the list contains only one element, so this one's centered
+    if len(object_class_name_list) == 1:
+        y_padding += y_offset / 2
     relationship_pixmap = QPixmap(combo_extent, combo_extent)
     relationship_pixmap.fill(Qt.transparent)
     painter = QPainter(relationship_pixmap)
