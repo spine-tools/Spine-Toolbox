@@ -23,12 +23,12 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QStyleOptionViewItem
 from PySide2.QtCore import Qt, QItemSelectionModel
-from widgets.data_store_widgets import TreeViewForm, GraphViewForm
+from widgets.data_store_widgets import TreeViewForm
 from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
 
 
-class TestDataStoreForm(unittest.TestCase):
+class TestTreeViewForm(unittest.TestCase):
 
     app = QApplication()  # must create a QApplication before creating QWidgets
 
@@ -54,7 +54,6 @@ class TestDataStoreForm(unittest.TestCase):
             db_map = DiffDatabaseMapping(db_url, "UnitTest")
             db_map.reset_mapping()
             self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
-            self.graph_view_form = GraphViewForm(mock_data_store, db_map, "mock_db")
             logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
@@ -62,7 +61,6 @@ class TestDataStoreForm(unittest.TestCase):
         Use this to free resources after a test if needed.
         """
         self.tree_view_form.close()
-        self.graph_view_form.close()
         try:
             os.remove('mock_db.sqlite')
         except OSError:
