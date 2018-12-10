@@ -492,7 +492,10 @@ class PivotModel():
     
     def row(self, row):
         if self.pivot_rows:
-            return self._row_data_header[row]
+            if self._row_data_header:
+                return self._row_data_header[row]
+            else:
+                return tuple(None for _ in self.pivot_rows)
         else:
             if row == 0:
                 return ()
@@ -501,7 +504,10 @@ class PivotModel():
     
     def column(self, col):
         if self.pivot_columns:
-            return self._column_data_header[col]
+            if self._column_data_header:
+                return self._column_data_header[col]
+            else:
+                return tuple(None for _ in self.pivot_columns)
         else:
             if col == 0:
                 return ()
