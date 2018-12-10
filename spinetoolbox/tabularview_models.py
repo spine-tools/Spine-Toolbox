@@ -67,10 +67,10 @@ class PivotModel():
         """clears data that is tracked"""
         self._edit_data = {}
         self._deleted_data = {}
-        self._added_index_entries = {}
+        self._added_index_entries = {self._unique_name_2_name[n]: set() for n in self.index_names}
         self._added_tuple_index_entries = {}
         self._deleted_tuple_index_entries = {}
-        self._deleted_index_entries = {}
+        self._deleted_index_entries = {self._unique_name_2_name[n]: set() for n in self.index_names}
     
     def set_new_data(self, data, index_names, index_type, rows=(), columns=(),
                      frozen=(), frozen_value=() , index_entries={}, valid_index_values={}, 
