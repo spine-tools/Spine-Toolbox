@@ -843,6 +843,42 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model._added_index_entries['test1'], set())
         self.assertEqual(model._deleted_index_entries['test1'], set())
         
+    def test_delete_tuple_index_values_with_frozen_pivot1(self):
+        """test that delete_tuple_index_values deletes data when pivot has frozen dimension"""
+        model = PivotModel()
+        tuple_entries = {('test1','test2'):set()}
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=tuple_entries)
+        model.set_pivot(['test1','test3'], [], ['test2'], ('aa',))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._row_data_header, [])
+    
+    def test_delete_tuple_index_values_with_frozen_pivot2(self):
+        """test that delete_tuple_index_values doesn't delete data when pivot has frozen dimension when frozen value doesn't match delete value"""
+        model = PivotModel()
+        tuple_entries = {('test1','test2'):set()}
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=tuple_entries)
+        model.set_pivot(['test1','test3'], [], ['test2'], ('aa',))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','bb')])})
+        self.assertEqual(model._row_data_header, [('a',1),('a',None)])
+    
+    def test_delete_tuple_index_values_with_frozen_pivot3(self):
+        """test that delete_tuple_index_values deletes data when pivot has frozen dimension, column"""
+        model = PivotModel()
+        tuple_entries = {('test1','test2'):set()}
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=tuple_entries)
+        model.set_pivot([], ['test1','test3'], ['test2'], ('aa',))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','aa')])})
+        self.assertEqual(model._column_data_header, [])
+    
+    def test_delete_tuple_index_values_with_frozen_pivot4(self):
+        """test that delete_tuple_index_values doesn't delete data when pivot has frozen dimension when frozen value doesn't match delete value, column"""
+        model = PivotModel()
+        tuple_entries = {('test1','test2'):set()}
+        model.set_new_data(self.data, self.index_names, self.index_types, tuple_index_entries=tuple_entries)
+        model.set_pivot([], ['test1','test3'], ['test2'], ('aa',))
+        model.delete_tuple_index_values({('test1', 'test2'): set([('a','bb')])})
+        self.assertEqual(model._column_data_header, [('a',1),('a',None)])
+        
 
 
 if __name__ == '__main__':

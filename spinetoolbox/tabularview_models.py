@@ -572,20 +572,36 @@ class PivotModel():
                     getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                     delete_values.update(set(k for k in self._data if getter(k) in indexes))
                     # delete values from headers
-                    if all(n in self.pivot_rows for n in tk):
+                    if all(n in self.pivot_rows + self.pivot_frozen for n in tk):
                         # tuple exists over rows
                         pos = [tk.index(n) for n in self.pivot_rows if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
-                        row_indexes = set(getter(i) for i in indexes)
+                        if any(n in self.pivot_frozen for n in tk):
+                            # has frozen dimension, filter by frozen value
+                            pos_frozen = [tk.index(n) for n in self.pivot_frozen if n in tk]
+                            getter_frozen = tuple_itemgetter(operator.itemgetter(*pos_frozen), len(pos_frozen))
+                            pos_index_frozen = [self.pivot_frozen.index(n) for n in tk if n in self.pivot_frozen]
+                            getter_index_frozen = tuple_itemgetter(operator.itemgetter(*pos_index_frozen), len(pos_index_frozen))
+                            row_indexes = set(getter(i) for i in indexes if getter_frozen(i) == getter_index_frozen(self.frozen_value))
+                        else:
+                            row_indexes = set(getter(i) for i in indexes)
                         pos = [self.pivot_rows.index(n) for n in self.pivot_rows if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                         delete_values_row.update(set(n for n in self._row_data_header if getter(n) in row_indexes))
                     # delete values from column headers
-                    if all(n in self.pivot_columns for n in tk):
+                    if all(n in self.pivot_columns + self.pivot_frozen for n in tk):
                         # tuple exists over columns
                         pos = [tk.index(n) for n in self.pivot_columns if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
-                        column_indexes = set(getter(i) for i in indexes)
+                        if any(n in self.pivot_frozen for n in tk):
+                            # has frozen dimension, filter by frozen value
+                            pos_frozen = [tk.index(n) for n in self.pivot_frozen if n in tk]
+                            getter_frozen = tuple_itemgetter(operator.itemgetter(*pos_frozen), len(pos_frozen))
+                            pos_index_frozen = [self.pivot_frozen.index(n) for n in tk if n in self.pivot_frozen]
+                            getter_index_frozen = tuple_itemgetter(operator.itemgetter(*pos_index_frozen), len(pos_index_frozen))
+                            column_indexes = set(getter(i) for i in indexes if getter_frozen(i) == getter_index_frozen(self.frozen_value))
+                        else:
+                            column_indexes = set(getter(i) for i in indexes)
                         pos = [self.pivot_columns.index(n) for n in self.pivot_columns if n in tk]
                         getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
                         delete_values_column.update(set(n for n in self._column_data_header if getter(n) in column_indexes))
