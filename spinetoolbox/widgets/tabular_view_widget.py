@@ -247,8 +247,8 @@ class TabularViewForm(QMainWindow):
     
     def show_commit_session_dialog(self):
         """Query user for a commit message and commit changes to source database."""
-        if not self.db_map.has_pending_changes():
-            self.msg.emit("Nothing to commit yet.")
+        if not self.db_map.has_pending_changes() and not self.model_has_changes():
+            #self.msg.emit("Nothing to commit yet.")
             return
         dialog = CommitDialog(self, self.database)
         answer = dialog.exec_()
@@ -273,6 +273,22 @@ class TabularViewForm(QMainWindow):
             #self.msg_error.emit(e.msg)
             return
         self.select_data()
+    
+    def model_has_changes(self):
+        """checks if PivotModel has any changes"""
+        if self.model.model._edit_data:
+            return True
+        if self.model.model._delete_data:
+            return True
+        if any(len(v) > 0 for k, v in self.model.model._added_index_entries.items() if k not in [INDEX_NAME, JSON_TIME_NAME]):
+            return True
+        if any(len(v) > 0 for k, v in self.model.model._deleted_index_entries.items() if k not in [INDEX_NAME, JSON_TIME_NAME]):
+            return True
+        if any(len(v) > 0 for k, v in self.model.model._added_tuple_index_entries.items()):
+            return True
+        if any(len(v) > 0 for k, v in self.model.model._deleted_tuple_index_entries.items()):
+            return True
+        return False
     
     def change_frozen_value(self, newSelection):
         item = self.ui.table_frozen.get_selected_row()
