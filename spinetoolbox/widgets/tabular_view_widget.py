@@ -1,21 +1,13 @@
-#############################################################################
-# Copyright (C) 2017 - 2018 VTT Technical Research Centre of Finland
-#
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
 # This file is part of Spine Toolbox.
-#
-# Spine Toolbox is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU Lesser General Public License for more details.
-#
-# You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#############################################################################
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
 """
 Spine Toolbox grid view
@@ -24,25 +16,25 @@ Spine Toolbox grid view
 :date:   1.11.2018
 """
 
-from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton
-from PySide2.QtCore import Qt, QPoint
-from ui.tabular_view_form import Ui_MainWindow
-
-from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
-from widgets.filter_menu_widget import FilterMenu
-from spinedatabase_api import SpineDBAPIError 
 import json
 import operator
 from collections import namedtuple
+from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton
+from PySide2.QtCore import Qt, QPoint
+from PySide2.QtGui import QIcon
 from sqlalchemy.sql import literal_column
-
+from spinedatabase_api import SpineDBAPIError
+from ui.tabular_view_form import Ui_MainWindow
+from widgets.filter_menu_widget import FilterMenu
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     AddRelationshipClassesDialog, AddRelationshipsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
-    
+from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
+from config import MAINWINDOW_SS
+
 ParameterValue = namedtuple('ParameterValue',['id','has_value','has_json'])
 
 # constant strings
@@ -91,6 +83,7 @@ def make_names_unique(names):
         unique_names.append(new_n)
     return unique_names
 
+
 class TabularViewForm(QMainWindow):
     """A widget to show and edit Spine objects in a data store.
 
@@ -99,17 +92,14 @@ class TabularViewForm(QMainWindow):
         db_map (DatabaseMapping): The object relational database mapping
         database (str): The database name
     """
-
     def __init__(self, data_store, db_map, database):
         super().__init__(flags=Qt.Window)
         # TODO: change the list_select_class to something nicer
-        # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
-        # reimplementing the window minimizing and maximizing actions as well as setting the window modality
-        # NOTE: Alternatively, make this class inherit from QWidget rather than QMainWindow,
-        # and implement the menubar by hand
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        self.setStyleSheet(MAINWINDOW_SS)
 
         # database
         self.db_map = db_map
@@ -177,7 +167,10 @@ class TabularViewForm(QMainWindow):
         self.load_class_data()
         self.load_objects()
         self.update_class_list()
-        
+
+        # Set window title
+        self.setWindowTitle("Data store tabular view    -- {} --".format(self.database))
+
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
     
