@@ -19,8 +19,9 @@ from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
     QTextEdit
 from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor, \
-    ObjectNameListEditor
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor, FieldNameListEditor, \
+    CustomSpinBoxEditor
+from models import MinimalTableModel
 import logging
 
 
@@ -56,7 +57,7 @@ class CheckBoxDelegate(QItemDelegate):
         centered (bool): whether or not the checkbox should be center-aligned in the widget
     """
 
-    commit_data = Signal("QModelIndex", name="commit_data")
+    data_committed = Signal("QModelIndex", name="data_committed")
 
     def __init__(self, parent, centered=True):
         super().__init__(parent)
@@ -111,14 +112,14 @@ class CheckBoxDelegate(QItemDelegate):
             checkbox_rect = self.get_checkbox_rect(option)
             if checkbox_rect.contains(self.mouse_press_point) and checkbox_rect.contains(event.pos()):
                 # Change the checkbox-state
-                self.commit_data.emit(index)
+                self.data_committed.emit(index)
                 self.mouse_press_point = QPoint()
                 return True
             self.mouse_press_point = QPoint()
         return False
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `commit_data` signal."""
+        """Do nothing. Model data is updated by handling the `data_committed` signal."""
         pass
 
     def get_checkbox_rect(self, option):
@@ -426,32 +427,6 @@ class AddRelationshipsDelegate(ParameterDelegate):
         return "__".join(object_name_list)
 
 
-class ResourceNameDelegate(QItemDelegate):
-    """A QComboBox delegate with checkboxes.
-
-    Attributes:
-        parent (SpineDatapackageWidget): spine datapackage widget
-    """
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self._parent = parent
-
-    def createEditor(self, parent, option, index):
-        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
-        return CustomComboEditor(parent)
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        items = self._parent.object_class_name_list
-        editor.set_data(index.data(Qt.EditRole), items)
-
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        self.data_committed.emit(index, editor.data())
-
-
 class ForeignKeysDelegate(QItemDelegate):
     """A QComboBox delegate with checkboxes.
 
@@ -460,35 +435,55 @@ class ForeignKeysDelegate(QItemDelegate):
     """
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
+    def close_field_name_list_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.data_committed.emit(index, editor.data())
+
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.datapackage = parent.datapackage
+        self.datapackage = None
         self.selected_resource_name = None
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'fields':
-            return CustomSimpleToolButtonEditor(parent)
+        if header[index.column()] == 'length':
+            return CustomSpinBoxEditor(parent)
+        elif header[index.column()] == 'fields':
+            editor = FieldNameListEditor(parent)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
+            return editor
         elif header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'reference fields':
-            return CustomSimpleToolButtonEditor(parent)
+            editor = FieldNameListEditor(parent)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
+            return editor
         else:
             return None
 
     def setEditorData(self, editor, index):
         """Set editor data."""
+        self.datapackage = self._parent.datapackage
         self.selected_resource_name = self._parent.selected_resource_name
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'fields':
+        h = header.index
+        if header[index.column()] == 'length':
+            editor.set_data(index.data(Qt.EditRole), minimum=1)
+        elif header[index.column()] == 'fields':
+            length = int(index.sibling(index.row(), h('length')).data(Qt.DisplayRole))
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
-            editor.set_data(field_names, current_field_names)
+            editor.set_data(length, field_names, current_field_names)
         elif header[index.column()] == 'reference resource':
             editor.set_data(index.data(Qt.EditRole), self.datapackage.resource_names)
         elif header[index.column()] == 'reference fields':
+            length = int(index.sibling(index.row(), h('length')).data(Qt.DisplayRole))
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             reference_resource_name = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
             reference_resource = self.datapackage.get_resource(reference_resource_name)
@@ -496,7 +491,7 @@ class ForeignKeysDelegate(QItemDelegate):
                 field_names = []
             else:
                 field_names = reference_resource.schema.field_names
-            editor.set_data(field_names, current_field_names)
+            editor.set_data(length, field_names, current_field_names)
 
     def setModelData(self, editor, model, index):
         """Send signal."""

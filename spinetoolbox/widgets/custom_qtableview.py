@@ -191,7 +191,7 @@ class FilterWidget(QWidget):
         self.view.setShowGrid(False)
         check_box_delegate = CheckBoxDelegate(self)
         self.view.setItemDelegateForColumn(0, check_box_delegate)
-        check_box_delegate.commit_data.connect(self._handle_check_box_commit_data)
+        check_box_delegate.data_committed.connect(self._handle_check_box_data_committed)
         self.button = QPushButton("Ok", self)
         self.button.setFlat(True)
         layout.addWidget(self.view)
@@ -208,8 +208,8 @@ class FilterWidget(QWidget):
             return ~Qt.ItemIsEditable
         return Qt.ItemIsEditable
 
-    @Slot("QModelIndex", name="_handle_check_box_commit_data")
-    def _handle_check_box_commit_data(self, index):
+    @Slot("QModelIndex", name="_handle_check_box_data_committed")
+    def _handle_check_box_data_committed(self, index):
         """Called when checkbox delegate wants to edit data. Toggle the index's value."""
         data = index.data(Qt.EditRole)
         model_data = self.model._main_data

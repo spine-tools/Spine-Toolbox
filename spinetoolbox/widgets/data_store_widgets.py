@@ -48,7 +48,7 @@ from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListM
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
-from datapackage_import_export import import_datapackage
+from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity
 
 
@@ -1064,12 +1064,12 @@ class TreeViewForm(DataStoreForm):
         """Import data from file into current database."""
         if file_path.lower().endswith('datapackage.json'):
             try:
-                import_datapackage(self, file_path)
-                self.init_parameter_value_models()
-                self.init_parameter_definition_models()
+                datapackage_to_spine(self.db_map, file_path)
                 self.msg.emit("Datapackage successfully imported.")
-            except SpineDBAPIError as e:
-                self.msg_error.emit("Unable to import datapackage: {}.".format(e.msg))
+                self.set_commit_rollback_actions_enabled(True)
+                self.init_models()
+            except (SpineDBAPIError, SpineIntegrityError) as e:
+                self.msg_error.emit(e.msg)
         elif file_path.lower().endswith('xlsx'):
             error_log = []
             try:
@@ -1087,7 +1087,7 @@ class TreeViewForm(DataStoreForm):
                     msg = "Something went wrong in importing an Excel file " \
                           "into the current session. Here is the error log:\n\n{0}".format(error_log)
                     # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-                    QMessageBox.information(self, "Excel import may have failed", msg)
+                    self.msg_error.emit(msg)
                     # logging.debug(error_log)
 
     @Slot("bool", name="show_export_file_dialog")

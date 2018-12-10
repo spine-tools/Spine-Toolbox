@@ -27,8 +27,8 @@ from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
 from config import APPLICATION_PATH, HEADER_POINTSIZE
-from datapackage import Package
 from graphics_items import DataConnectionImage
+from helpers import busy_effect
 
 
 class DataConnection(ProjectItem):
@@ -80,7 +80,7 @@ class DataConnection(ProjectItem):
         s[self._toolbox.ui.toolButton_plus.clicked] = self.add_references
         s[self._toolbox.ui.toolButton_minus.clicked] = self.remove_references
         s[self._toolbox.ui.toolButton_add.clicked] = self.copy_to_project
-        s[self._toolbox.ui.toolButton_datapackage.clicked] = self.call_infer_datapackage
+        s[self._toolbox.ui.pushButton_datapackage.clicked] = self.show_spine_datapackage_form
         s[self._toolbox.ui.treeView_dc_references.doubleClicked] = self.open_reference
         s[self._toolbox.ui.treeView_dc_data.doubleClicked] = self.open_data_file
         s[self.data_dir_watcher.directoryChanged] = self.refresh
@@ -243,70 +243,19 @@ class DataConnection(ProjectItem):
             return
         else:
             data_file = self.data_files()[index.row()]
-            if data_file == "datapackage.json":
-                self.show_spine_datapackage_form()
-            else:
-                url = "file:///" + os.path.join(self.data_dir, data_file)
-                # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-                res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-                if not res:
-                    self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
+            url = "file:///" + os.path.join(self.data_dir, data_file)
+            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+            if not res:
+                self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
 
-    @Slot(bool, name="call_infer_datapackage")
-    def call_infer_datapackage(self, checked=False):
-        """Infer datapackage from CSV files in data directory."""
-        data_files = self.data_files()
-        if not ".csv" in [os.path.splitext(f)[1] for f in data_files]:
-            self._toolbox.msg_error.emit("The folder <b>{0}</b> does not have any CSV files. "
-                                         "Add some and try again".format(self.data_dir))
-            return
-        self.infer_datapackage()
-
-    def infer_datapackage(self):
-        """Infer datapackage from CSV files in data directory and save it."""
-        msg = "Inferring datapackage from {}".format(self.data_dir)
-        self._toolbox.msg.emit(msg)
-        datapackage = CustomPackage(base_path=self.data_dir)
-        datapackage.infer(os.path.join(self.data_dir, '*.csv'))
-        self.save_datapackage(datapackage)
-
-    def save_datapackage(self, datapackage):
-        """Write datapackage to file 'datapackage.json' in data directory."""
-        if os.path.isfile(os.path.join(self.data_dir, "datapackage.json")):
-            msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. '
-                   'Are you sure?').format(os.path.basename(self.data_dir))
-            # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(
-                self._toolbox, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                return False
-        if datapackage.save(os.path.join(self.data_dir, 'datapackage.json')):
-            msg = '"datapackage.json" saved in {}'.format(self.data_dir)
-            self._toolbox.msg.emit(msg)
-            return True
-        msg = 'Failed to save "datapackage.json" in {}'.format(self.data_dir)
-        self._toolbox.msg_error.emit(msg)
-        return False
-
-    def load_datapackage(self):
-        """Load datapackage from 'datapackage.json' file in data directory."""
-        file_path = os.path.join(self.data_dir, "datapackage.json")
-        if not os.path.exists(file_path):
-            return None
-        datapackage = CustomPackage(file_path)
-        msg = "Datapackage loaded from {}".format(file_path)
-        self._toolbox.msg.emit(msg)
-        return datapackage
-
+    @busy_effect
     def show_spine_datapackage_form(self):
         """Show spine_datapackage_form widget."""
         if self.spine_datapackage_form:
             self.spine_datapackage_form.raise_()
             return
-        datapackage = self.load_datapackage()
-        if not datapackage:
-            return
-        self.spine_datapackage_form = SpineDatapackageWidget(self._toolbox, self, datapackage)
+        self.spine_datapackage_form = SpineDatapackageWidget(self)
         self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
         self.spine_datapackage_form.show()
 
@@ -416,111 +365,3 @@ class DataConnection(ProjectItem):
     def update_name_label(self):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_dc_name.setText(self.name)
-
-
-class CustomPackage(Package):
-    """Custom datapackage class."""
-    def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
-        super().__init__(descriptor, base_path, strict, storage)
-
-    def rename_resource(self, old, new):
-        resource_index = self.resource_names.index(old)
-        self.descriptor['resources'][resource_index]['name'] = new
-        self.commit()
-
-    def rename_field(self, resource, old, new):
-        resource_index = self.resource_names.index(resource)
-        resource_dict = self.descriptor['resources'][resource_index]
-        resource_schema = self.get_resource(resource).schema
-        field_index = resource_schema.field_names.index(old)
-        resource_dict['schema']['fields'][field_index]['name'] = new
-        primary_key = resource_schema.primary_key
-        if old in primary_key:
-            primary_key_index = primary_key.index(old)
-            resource_dict['schema']['primaryKey'][primary_key_index] = new
-        # TODO: also rename the field in foreign keys
-        self.commit()
-
-    def primary_keys_data(self):
-        """Return primary keys in a 2-column list"""
-        data = list()
-        for resource in self.resources:
-            for field in resource.schema.primary_key:
-                table = resource.name
-                data.append([table, field])
-        return data
-
-    def foreign_keys_data(self):
-        """Return foreign keys in a 4-column list"""
-        data = list()
-        for resource in self.resources:
-            for fk in resource.schema.foreign_keys:
-                child_table = resource.name
-                child_field = fk['fields'][0]
-                parent_table = fk['reference']['resource']
-                parent_field = fk['reference']['fields'][0]
-                data.append([child_table, child_field, parent_table, parent_field])
-        return data
-
-    def set_primary_key(self, resource, *primary_key):
-        """Set primary key for a given resource in the package"""
-        i = self.resource_names.index(resource)
-        self.descriptor['resources'][i]['schema']['primaryKey'] = primary_key
-        self.commit()
-
-    def append_to_primary_key(self, resource, field):
-        """Append field to resources's primary key."""
-        i = self.resource_names.index(resource)
-        primary_key = self.descriptor['resources'][i]['schema'].setdefault('primaryKey', [])
-        if field not in primary_key:
-            primary_key.append(field)
-        self.commit()
-
-    def remove_from_primary_key(self, resource, field):
-        """Remove field from resources's primary key."""
-        i = self.resource_names.index(resource)
-        primary_key = self.descriptor['resources'][i]['schema'].get('primaryKey')
-        if not primary_key:
-            return
-        if field in primary_key:
-            primary_key.remove(field)
-        self.commit()
-
-    def add_foreign_key(self, child_table, child_field, parent_table, parent_field):
-        """Add foreign key to a given resource in the package"""
-        foreign_key = {
-            "fields": [child_field],
-            "reference": {
-                "resource": parent_table,
-                "fields": [parent_field]
-            }
-        }
-        i = self.resource_names.index(child_table)
-        self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
-        if foreign_key not in self.descriptor['resources'][i]['schema']['foreignKeys']:
-            self.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
-            self.commit()
-
-    def remove_primary_key(self, resource, *primary_key):
-        """Remove the primary key for a given resource in the package"""
-        i = self.resource_names.index(resource)
-        if 'primaryKey' in self.descriptor['resources'][i]['schema']:
-            descriptor_primary_key = self.descriptor['resources'][i]['schema']['primaryKey']
-            if Counter(descriptor_primary_key) == Counter(primary_key):
-                del self.descriptor['resources'][i]['schema']['primaryKey']
-                self.commit()
-
-    def remove_foreign_key(self, child_table, child_field, parent_table, parent_field):
-        """Remove foreign key from the package"""
-        i = self.resource_names.index(child_table)
-        foreign_key = {
-            "fields": [child_field],
-            "reference": {
-                "resource": parent_table,
-                "fields": [parent_field]
-            }
-        }
-        if 'foreignKeys' in self.descriptor['resources'][i]['schema']:
-            if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
-                self.descriptor['resources'][i]['schema']['foreignKeys'].remove(foreign_key)
-                self.commit()

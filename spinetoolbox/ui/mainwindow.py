@@ -582,18 +582,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout_2.addWidget(self.toolButton_add)
         spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem3)
-        self.toolButton_datapackage = QtWidgets.QToolButton(self.tab_data_connection)
-        self.toolButton_datapackage.setEnabled(True)
-        self.toolButton_datapackage.setMinimumSize(QtCore.QSize(22, 22))
-        self.toolButton_datapackage.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_datapackage.setText("")
-        icon5 = QtGui.QIcon()
-        icon5.addPixmap(QtGui.QPixmap(":/icons/datapkg.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.toolButton_datapackage.setIcon(icon5)
-        self.toolButton_datapackage.setIconSize(QtCore.QSize(16, 16))
-        self.toolButton_datapackage.setPopupMode(QtWidgets.QToolButton.InstantPopup)
-        self.toolButton_datapackage.setObjectName("toolButton_datapackage")
-        self.horizontalLayout_2.addWidget(self.toolButton_datapackage)
         self.verticalLayout_8.addLayout(self.horizontalLayout_2)
         self.treeView_dc_data = DataTreeView(self.tab_data_connection)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -614,6 +602,13 @@ class Ui_MainWindow(object):
         self.verticalLayout_8.addWidget(self.treeView_dc_data)
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.pushButton_datapackage = QtWidgets.QPushButton(self.tab_data_connection)
+        self.pushButton_datapackage.setMinimumSize(QtCore.QSize(0, 23))
+        icon5 = QtGui.QIcon()
+        icon5.addPixmap(QtGui.QPixmap(":/icons/datapkg.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.pushButton_datapackage.setIcon(icon5)
+        self.pushButton_datapackage.setObjectName("pushButton_datapackage")
+        self.horizontalLayout_3.addWidget(self.pushButton_datapackage)
         spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_3.addItem(spacerItem4)
         self.pushButton_dc_open = QtWidgets.QPushButton(self.tab_data_connection)
@@ -1038,7 +1033,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_properties.setCurrentIndex(0)
+        self.tabWidget_item_properties.setCurrentIndex(1)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -1065,8 +1060,7 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.treeView_dc_references, self.toolButton_plus)
         MainWindow.setTabOrder(self.toolButton_plus, self.toolButton_minus)
         MainWindow.setTabOrder(self.toolButton_minus, self.toolButton_add)
-        MainWindow.setTabOrder(self.toolButton_add, self.toolButton_datapackage)
-        MainWindow.setTabOrder(self.toolButton_datapackage, self.treeView_dc_data)
+        MainWindow.setTabOrder(self.toolButton_add, self.treeView_dc_data)
         MainWindow.setTabOrder(self.treeView_dc_data, self.pushButton_dc_open)
         MainWindow.setTabOrder(self.pushButton_dc_open, self.comboBox_tool)
         MainWindow.setTabOrder(self.comboBox_tool, self.toolButton_tool_template)
@@ -1121,8 +1115,9 @@ class Ui_MainWindow(object):
         self.toolButton_plus.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Add references</p></body></html>", None, -1))
         self.toolButton_minus.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove selected references or all if nothing is selected</p></body></html>", None, -1))
         self.toolButton_add.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Add references to project. Copies files to Data connection\'s directory.</p></body></html>", None, -1))
-        self.toolButton_datapackage.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create datapackage from CSV files in directory.</p></body></html>", None, -1))
         self.treeView_dc_data.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Drag-and-drop files here, they will be copied to the data directory.</p></body></html>", None, -1))
+        self.pushButton_datapackage.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open datapackage view.</p></body></html>", None, -1))
+        self.pushButton_datapackage.setText(QtWidgets.QApplication.translate("MainWindow", "Datapackage", None, -1))
         self.pushButton_dc_open.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Data Connection directory in file browser</p></body></html>", None, -1))
         self.pushButton_dc_open.setText(QtWidgets.QApplication.translate("MainWindow", "Open dir...", None, -1))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_data_connection), QtWidgets.QApplication.translate("MainWindow", "Data Connection", None, -1))
@@ -1194,8 +1189,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc
