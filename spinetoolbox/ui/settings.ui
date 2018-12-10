@@ -190,6 +190,18 @@
           </item>
           <item>
            <widget class="QLineEdit" name="lineEdit_project_dir">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>20</height>
+             </size>
+            </property>
             <property name="focusPolicy">
              <enum>Qt::NoFocus</enum>
             </property>
@@ -234,6 +246,18 @@
           </item>
           <item row="2" column="0">
            <widget class="QLineEdit" name="lineEdit_gams_path">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>20</height>
+             </size>
+            </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to directory where GAMS and GAMSIDE executables are found&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
@@ -279,6 +303,18 @@
           </item>
           <item row="3" column="0">
            <widget class="QLineEdit" name="lineEdit_julia_path">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>20</height>
+             </size>
+            </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path where julia executable is found&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
@@ -379,6 +415,18 @@
           </item>
           <item>
            <widget class="QLineEdit" name="lineEdit_project_name">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>20</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>16777215</width>
+              <height>20</height>
+             </size>
+            </property>
             <property name="cursor">
              <cursorShape>ArrowCursor</cursorShape>
             </property>
@@ -462,6 +510,18 @@ p, li { white-space: pre-wrap; }
            <layout class="QHBoxLayout" name="horizontalLayout_3">
             <item>
              <widget class="QLineEdit" name="lineEdit_work_dir">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>20</height>
+               </size>
+              </property>
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave this empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
