@@ -952,20 +952,28 @@ def export_object_parameters_spine_db(db, data):
                   if p[0] in obj_class_name_2_id.keys()]
 
     # existing parameters in database
-    db_parameters = db.object_parameter_list().\
-        filter(db.Parameter.name.in_([p[2] for p in parameters])).all()
-    db_parameters = [[d.object_class_name, d.parameter_name]
-                     for d in db_parameters]
-
-    # remove already existing parameters
-    parameters = [{"name": p[2], "object_class_id": p[0]} for p in parameters if [p[1], p[2]] not in db_parameters]
+    db_parameters = db.object_parameter_list().all()
+    db_parameter_names = set(d.parameter_name for d in db_parameters)
+    db_parameters = set((d.object_class_name, d.parameter_name)
+                        for d in db_parameters)
+    new_parameters = []
+    for p in parameters:
+        if p[2] in db_parameter_names:
+            # name already exists
+            if not (p[1], p[2]) in db_parameters:
+                # parameter name has a different class than the one in db.
+                error_log.append(["object_parameter", p[2],
+                                  "parameter {} allready exists in database with a different parent class".format(p[2])])
+        else:
+            # new parameter with unqiue name
+            new_parameters.append({"name": p[2], "object_class_id": p[0]})
 
     import_log = []
     try:
-        db.add_parameters(*parameters)
-        import_log = import_log + [["object_parameter", p["name"]] for p in parameters]
+        db.add_parameters(*new_parameters)
+        import_log = import_log + [["object_parameter", p["name"]] for p in new_parameters]
     except SpineDBAPIError as e:
-        error_log = error_log + [["object_parameter", p["name"], e.msg] for p in parameters]
+        error_log = error_log + [["object_parameter", p["name"], e.msg] for p in new_parameters]
 
     return import_log, error_log
 
@@ -1320,7 +1328,7 @@ def export_relationships_parameters_to_spine_db(db, data):
     rels = [list(zip([o.class_name]*len(o.parameters), o.parameters)) for o in data]
     rels = [item for sublist in rels for item in sublist]
 
-    rel_class = set([r[0] for r in rels])
+    rel_class = set(r[0] for r in rels)
 
     # existing relationship classes
     db_rel_classes = db.relationship_class_list().\
@@ -1337,7 +1345,9 @@ def export_relationships_parameters_to_spine_db(db, data):
                                             [v.object_class_id for v in val])
 
     db_parameters = db.relationship_parameter_list().all()
-    db_parameters = [[d.relationship_class_name, d.parameter_name] for d in db_parameters]
+    db_parameter_names = set(d.parameter_name for d in db_parameters)
+    db_parameters = set((d.relationship_class_name, d.parameter_name)
+                        for d in db_parameters)
 
     error_log = []
     valid_relationships_parameters = []
@@ -1348,9 +1358,13 @@ def export_relationships_parameters_to_spine_db(db, data):
                               "relationship class does not exist in db"])
             continue
         # if a parameter with same class exists don't add
-        if list(r) in db_parameters:
-            continue
-        valid_relationships_parameters.append({'relationship_class_id': db_rel_class_dict[r[0]].id, 'name': r[1]})
+        if r[1] in db_parameter_names:
+            # name already exists
+            if not (r[0], r[1]) in db_parameters:
+                 error_log.append(["relationship_parameter", r[1],
+                                  "parameter {} allready exists in database with a different parent class".format(r[1])])
+        else:
+            valid_relationships_parameters.append({'relationship_class_id': db_rel_class_dict[r[0]].id, 'name': r[1]})
 
     # insert relationship classes
     import_log = []

@@ -23,14 +23,14 @@ import json
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QInputDialog, QToolButton, \
-    QMessageBox, QCheckBox, QFileDialog, QApplication, QErrorMessage, QPushButton, QLabel, \
-    QGraphicsScene, QGraphicsRectItem, QAction, QButtonGroup
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QItemSelection, QItemSelectionModel, QSize
+from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
+    QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
+    QButtonGroup, QSizePolicy, QHBoxLayout, QWidget
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
-from config import STATUSBAR_SS
+from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, \
     ObjectItemContextMenu, GraphViewContextMenu
@@ -67,30 +67,19 @@ class DataStoreForm(QMainWindow):
     def __init__(self, data_store, db_map, database, ui):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
-        # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
-        # reimplementing the window minimizing and maximizing actions as well as setting the window modality
         self._data_store = data_store
         # Setup UI from Qt Designer file
         self.ui = ui
         self.ui.setupUi(self)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
-        # Set up status bar
+        # Set up status bar and apply style sheet
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
+        self.setStyleSheet(MAINWINDOW_SS)
         # Set up corner widgets
-        icon = QIcon(":/icons/relationship_parameter_icon.png")
-        button = QPushButton(icon, "Relationship parameter")
-        button.setFlat(True)
-        button.setLayoutDirection(Qt.LeftToRight)
-        button.mousePressEvent = lambda e: e.ignore()
-        self.ui.tabWidget_relationship_parameter.setCornerWidget(button, Qt.TopRightCorner)
-        icon = QIcon(":/icons/object_parameter_icon.png")
-        button = QPushButton(icon, "Object parameter")
-        button.setLayoutDirection(Qt.LeftToRight)
-        button.setFlat(True)
-        button.mousePressEvent = lambda e: e.ignore()
-        self.ui.tabWidget_object_parameter.setCornerWidget(button, Qt.TopRightCorner)
+        self.set_corner_widgets()
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB db_map
@@ -140,6 +129,40 @@ class DataStoreForm(QMainWindow):
             connect(self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
+
+    def set_corner_widgets(self):
+        """Set corner widgets (icon and text on the tab bar) to both QTabWidgets."""
+        icon_size_policy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # Corner widget for object parameter tab widget
+        corner_widget1 = QWidget()
+        icon_label1 = QLabel()
+        icon_label1.setSizePolicy(icon_size_policy)
+        icon_label1.setMinimumSize(QSize(16, 16))
+        icon_label1.setMaximumSize(QSize(16, 16))
+        icon_label1.setPixmap(QPixmap(":/icons/object_parameter_icon.png"))
+        icon_label1.setScaledContents(True)
+        text_label1 = QLabel("Object parameter")
+        obj_layout = QHBoxLayout()
+        obj_layout.setContentsMargins(6, 2, 0, 2)
+        obj_layout.addWidget(text_label1)
+        obj_layout.addWidget(icon_label1)
+        corner_widget1.setLayout(obj_layout)
+        self.ui.tabWidget_object_parameter.setCornerWidget(corner_widget1, Qt.TopRightCorner)
+        # Corner widget for relationship parameter tab widget
+        corner_widget2 = QWidget()
+        icon_label2 = QLabel()
+        icon_label2.setSizePolicy(icon_size_policy)
+        icon_label2.setMinimumSize(QSize(16, 16))
+        icon_label2.setMaximumSize(QSize(16, 16))
+        icon_label2.setPixmap(QPixmap(":/icons/relationship_parameter_icon.png"))
+        icon_label2.setScaledContents(True)
+        text_label2 = QLabel("Relationship parameter")
+        rel_layout = QHBoxLayout()
+        rel_layout.addWidget(text_label2)
+        rel_layout.addWidget(icon_label2)
+        rel_layout.setContentsMargins(6, 2, 0, 2)
+        corner_widget2.setLayout(rel_layout)
+        self.ui.tabWidget_relationship_parameter.setCornerWidget(corner_widget2, Qt.TopRightCorner)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):

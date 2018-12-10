@@ -320,6 +320,6 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
 
-from widgets.custom_qgraphicsview import GraphViewGraphicsView
 from widgets.custom_qlistview import DragListView
+from widgets.custom_qgraphicsview import GraphViewGraphicsView
 import resources_icons_rc

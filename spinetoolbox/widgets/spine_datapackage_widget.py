@@ -26,6 +26,8 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QPushButton
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
+from ui.spine_datapackage_form import Ui_MainWindow
+from widgets.custom_delegates import ResourceNameDelegate, ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from spinedatabase_api import OBJECT_CLASS_NAMES
 from datapackage import Package
 
@@ -66,6 +68,7 @@ class SpineDatapackageWidget(QMainWindow):
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
         # Add status bar to form

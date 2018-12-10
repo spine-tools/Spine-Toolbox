@@ -105,6 +105,7 @@ STATUSBAR_SS = "QStatusBar{" \
 SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                 "QLabel{color: white;}" \
                 "QCheckBox{color: white;}" \
+                "QLineEdit{font-size: 11px;}" \
                 "QGroupBox{border: 2px solid gray; " \
                     "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #004AC2, stop: 1 #80B0FF);" \
                     "border-radius: 5px;" \
