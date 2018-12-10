@@ -18,10 +18,11 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide2.QtCore import Signal, Slot, Qt, QRectF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import LinkDrawer, Link, ItemImage
 from widgets.toolbars import DraggableWidget
+from widgets.custom_qlistview import DragListView
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -56,13 +57,15 @@ class CustomQGraphicsView(QGraphicsView):
     @Slot("QList<QRectF>", name='scene_changed')
     def scene_changed(self, changed_qrects):
         """Resize scene as it changes."""
-        # logging.debug("scene changed. {0}".format(changed_qrects))
         self.resize_scene()
 
     def make_new_scene(self):
         """Make a new, clean scene. Needed when clearing the UI for a new project
         so that new items are correctly placed."""
-        self._scene.changed.disconnect(self.scene_changed)
+        try:
+            self._scene.changed.disconnect(self.scene_changed)
+        except RuntimeError:
+            logging.error("RuntimeError in disconnecting changed signal")
         self._scene = CustomQGraphicsScene(self, self._toolbox)
         self.setScene(self._scene)
         self._scene.addItem(self.link_drawer)
@@ -73,14 +76,6 @@ class CustomQGraphicsView(QGraphicsView):
         """
         self._scene.changed.connect(self.scene_changed)
         self.resize_scene(recenter=True)
-        # TODO: try to make a nice scene background, or remove if nothing seems good
-        # pixmap = QPixmap(":/symbols/Spine_symbol.png").scaled(64, 64)
-        # painter = QPainter(pixmap)
-        # alpha = QPixmap(pixmap.size())
-        # alpha.fill(QColor(255, 255, 255, 255-24))
-        # painter.drawPixmap(0, 0, alpha)
-        # painter.end()
-        # self.setBackgroundBrush(QBrush(pixmap))
 
     def resize_scene(self, recenter=False):
         """Make the scene at least as big as the viewport."""
@@ -293,8 +288,162 @@ class CustomQGraphicsView(QGraphicsView):
         self.resize_scene(recenter=True)
 
 
+class GraphViewGraphicsView(QGraphicsView):
+    """A QGraphicsView to use with the GraphViewForm."""
+
+    item_dropped = Signal("QPoint", "QString", name="item_dropped")
+
+    def __init__(self, parent):
+        """Init class."""
+        super().__init__(parent)
+        self._graph_view_form = None
+        self._zoom_factor_base = 1.0015
+        self.target_viewport_pos = None
+        self.target_scene_pos = QPointF(0, 0)
+        self._num_scheduled_scalings = 0
+        self.anim = None
+
+    def mouseMoveEvent(self, event):
+        """Register mouse position to recenter the scene after zoom."""
+        super().mouseMoveEvent(event)
+        if self.target_viewport_pos is not None:
+            delta = self.target_viewport_pos - event.pos()
+            if delta.manhattanLength() <= 3:
+                return
+        self.target_viewport_pos = event.pos()
+        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
+
+    # def wheelEvent(self, event):
+    #    """Zoom in/out."""
+    #    if event.orientation() != Qt.Vertical:
+    #        event.ignore()
+    #        return
+    #    event.accept()
+    #    angle = event.angleDelta().y()
+    #    self.gentle_zoom(angle)
+
+    # def gentle_zoom(self, angle):
+    #    """Perform the zoom."""
+    #    factor = self._zoom_factor_base ** angle
+    #    self.scale(factor, factor)
+    #    self.centerOn(self.target_scene_pos)
+    #    delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+    #    viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+    #    self.centerOn(self.mapToScene(viewport_center))
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        if event.orientation() != Qt.Vertical:
+            event.ignore()
+            return
+        event.accept()
+        num_degrees = event.delta() / 8
+        num_steps = num_degrees / 15
+        self._num_scheduled_scalings += num_steps
+        if self._num_scheduled_scalings * num_steps < 0:
+            self._num_scheduled_scalings = num_steps
+        if self.anim:
+            self.anim.deleteLater()
+        self.anim = QTimeLine(200, self)
+        self.anim.setUpdateInterval(20)
+        self.anim.valueChanged.connect(self.scaling_time)
+        self.anim.finished.connect(self.anim_finished)
+        self.anim.start()
+
+    def scaling_time(self, x):
+        factor = 1.0 + self._num_scheduled_scalings / 100.0
+        self.scale(factor, factor)
+        self.centerOn(self.target_scene_pos)
+        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+        self.centerOn(self.mapToScene(viewport_center))
+
+    def anim_finished(self):
+        if self._num_scheduled_scalings > 0:
+            self._num_scheduled_scalings -= 1
+        else:
+            self._num_scheduled_scalings += 1
+        self.sender().deleteLater()
+        self.anim = None
+
+    def scale_to_fit_scene(self):
+        """Scale view so the scene fits best in it."""
+        if not self.isVisible():
+            return
+        scene_rect = self.sceneRect()
+        scene_extent = max(scene_rect.width(), scene_rect.height())
+        if not scene_extent:
+            return
+        self.resetTransform()
+        size = self.size()
+        extent = min(size.height(), size.width())
+        factor = extent / scene_extent
+        self.scale(factor, factor)
+
+    def mousePressEvent(self, event):
+        """Set rubber band drag mode if control pressed."""
+        if event.modifiers() & Qt.ControlModifier:
+            self.setDragMode(QGraphicsView.RubberBandDrag)
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Restablish scroll hand drag mode."""
+        super().mouseReleaseEvent(event)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+
+    def dragLeaveEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not DragListView."""
+        event.accept()
+
+    def dragEnterEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not DragListView."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, DragListView):
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        """Accept event. Then call the super class method
+        only if drag source is not DragListView."""
+        event.accept()
+        source = event.source()
+        if not isinstance(source, DragListView):
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        """Only accept drops when the source is an instance of DragListView.
+        Capture text from event's mimedata and emit signal.
+        """
+        source = event.source()
+        if not isinstance(source, DragListView):
+            super().dropEvent(event)
+            return
+        event.acceptProposedAction()
+        text = event.mimeData().text()
+        pos = event.pos()
+        self.item_dropped.emit(pos, text)
+
+    def contextMenuEvent(self, e):
+        """Show context menu.
+
+        Args:
+            e (QContextMenuEvent): Context menu event
+        """
+        super().contextMenuEvent(e)
+        if e.isAccepted():
+            return
+        if not self._graph_view_form:
+            e.ignore()
+            return
+        e.accept()
+        self._graph_view_form.show_graph_view_context_menu(e.globalPos())
+
+
 class CustomQGraphicsScene(QGraphicsScene):
-    """A scene that handles drag and drop events."""
+    """A scene that handles drag and drop events of DraggableWidget sources."""
+
     files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
 
     def __init__(self, parent, toolbox):
@@ -307,9 +456,6 @@ class CustomQGraphicsScene(QGraphicsScene):
         """Accept event. Then call the super class method
         only if drag source is not a DraggableWidget (from Add Item toolbar)."""
         event.accept()
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dragLeaveEvent(event)
 
     def dragEnterEvent(self, event):
         """Accept event. Then call the super class method

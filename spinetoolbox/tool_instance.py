@@ -136,7 +136,7 @@ class ToolInstance(QObject):
             if self.tool_process.execution_failed_to_start:
                 # TODO: This should be a choice given to the user. It's a bit confusing now.
                 self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tExecuting Tool template in a subprocess instead")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
@@ -241,7 +241,7 @@ class ToolInstance(QObject):
             create_dir(result_path)
         except OSError:
             self._toolbox.msg_error.emit("\tError creating timestamped output directory. "
-                                         "Tool output files not copied. Check folder permissions.")
+                                         "Tool template output files not copied. Please check directory permissions.")
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
             return
@@ -249,18 +249,20 @@ class ToolInstance(QObject):
         # Make link to output folder
         result_anchor = "<a style='color:#BB99FF;' title='" + result_path + "' href='file:///" + result_path \
                         + "'>results directory</a>"
-        self._toolbox.msg.emit("*** Saving Tool output files to {0} ***".format(result_anchor))
+        self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
         if not self.outputfiles:
-            self._toolbox.msg_warning.emit("\tNo files to save. You can add output "
-                                           "files to Tool template to archive them.")
+            tip_anchor = "<a style='color:#99CCFF;' title='When you add output files to the Tool template,\n " \
+                         "they will be archived into results directory. Also, output files are passed to\n " \
+                         "subsequent project items.' href='#'>Tip</a>"
+            self._toolbox.msg_warning.emit("\tNo output files defined for this Tool template. {0}".format(tip_anchor))
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if len(saved_files) == 0:
                 # If no files were saved
-                self._toolbox.msg_error.emit("\tNo files saved to output directory")
+                self._toolbox.msg_error.emit("\tNo files saved")
             if len(saved_files) > 0:
                 # If there are saved files
-                self._toolbox.msg.emit("\tThe following output files were saved successfully")
+                self._toolbox.msg.emit("\tThe following output files were saved to results directory")
                 for i in range(len(saved_files)):
                     fname = os.path.split(saved_files[i])[1]
                     self._toolbox.msg.emit("\t\t<b>{0}</b>".format(fname))

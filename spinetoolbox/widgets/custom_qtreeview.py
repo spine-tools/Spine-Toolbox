@@ -23,7 +23,7 @@ from PySide2.QtGui import QPixmap, QDrag
 
 
 class ObjectTreeView(QTreeView):
-    """Custom QTreeView class for object tree in Data Store form.
+    """Custom QTreeView class for object tree in TreeViewForm.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -36,8 +36,8 @@ class ObjectTreeView(QTreeView):
 
     @Slot("QModelIndex", "EditTrigger", "QEvent", name="edit")
     def edit(self, index, trigger, event):
-        """Send signal instead of editing item.
-        The DataStoreWidget will catch this signal and open a custom QDialog
+        """Send signal instead of editing item, so
+        the TreeViewForm can catch this signal and open a custom QDialog
         for edition.
         """
         if trigger == QTreeView.EditKeyPressed:

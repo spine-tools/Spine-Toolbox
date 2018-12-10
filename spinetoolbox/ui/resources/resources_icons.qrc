@@ -1,6 +1,7 @@
 <RCC>
   <qresource prefix="symbols">
     <file>Spine_symbol.png</file>
+    <file>app.ico</file>
   </qresource>
   <qresource prefix="icons">
     <file>minus_object_icon.png</file>
@@ -44,5 +45,16 @@
     <file>view_icon.png</file>
     <file>object_icon.png</file>
     <file>relationship_icon.png</file>
+  </qresource>
+  <qresource prefix="object_class_icons">
+    <file alias="direction.png">object_class_icons/direction.png</file>
+    <file alias="unit.png">object_class_icons/unit.png</file>
+    <file alias="commodity.png">object_class_icons/commodity.png</file>
+    <file alias="node.png">object_class_icons/node.png</file>
+    <file alias="connection.png">object_class_icons/connection.png</file>
+    <file alias="grid.png">object_class_icons/grid.png</file>
+    <file alias="time_stage.png">object_class_icons/time_stage.png</file>
+    <file alias="unit_group.png">object_class_icons/unit_group.png</file>
+    <file alias="commodity_group.png">object_class_icons/commodity_group.png</file>
   </qresource>
 </RCC>

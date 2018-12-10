@@ -10,15 +10,71 @@
 ######################################################################################################################
 
 """
-Classes for custom context menus and pop-up menus.
+Classes for custom QListView.
 
-:author: P. Savolainen (VTT)
-:date:   4.11.2018
+:author: M. Marin (KTH)
+:date:   14.11.2018
 """
 
-from PySide2.QtWidgets import QListWidget, QAbstractItemView
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QDropEvent
+from PySide2.QtWidgets import QListView, QApplication, QListWidget, QAbstractItemView
+from PySide2.QtGui import QIcon, QPixmap, QDrag, QDropEvent
+from PySide2.QtCore import Qt, QMimeData, Signal
+
+
+class DragListView(QListView):
+    """Custom QListView class with dragging support.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+        self.drag_start_pos = None
+        self.pixmap = None
+        self.mime_data = None
+
+    def mousePressEvent(self, event):
+        """Register drag start position"""
+        super().mousePressEvent(event)
+        if event.button() == Qt.LeftButton:
+            index = self.indexAt(event.pos())
+            if not index.isValid():
+                self.drag_start_pos = None
+                self.pixmap = None
+                self.mime_data = None
+                return
+            self.drag_start_pos = event.pos()
+            self.pixmap = index.data(Qt.DecorationRole).pixmap(self.iconSize())
+            data = index.data(Qt.UserRole + 1)
+            self.mime_data = QMimeData()
+            self.mime_data.setText(str(data))
+
+    def mouseMoveEvent(self, event):
+        """Start dragging action if needed"""
+        if not event.buttons() & Qt.LeftButton:
+            return
+        if not self.drag_start_pos:
+            return
+        if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return
+        drag = QDrag(self)
+        drag.setPixmap(self.pixmap)
+        drag.setMimeData(self.mime_data)
+        drag.setHotSpot(self.pixmap.rect().center())
+        dropAction = drag.exec_()
+        self.drag_start_pos = None
+        self.pixmap = None
+        self.mime_data = None
+
+    def mouseReleaseEvent(self, event):
+        """Forget drag start position"""
+        super().mouseReleaseEvent(event)
+        self.drag_start_pos = None
+        self.pixmap = None
+        self.mime_data = None
+
 
 # TODO: rename this class to something better
 class TestListView(QListWidget):
@@ -42,5 +98,3 @@ class TestListView(QListWidget):
         if event.source() == self or event.source() in self.allowedDragLists:
             super(TestListView, self).dropEvent(event)
             self.afterDrop.emit(self, event)
-
-

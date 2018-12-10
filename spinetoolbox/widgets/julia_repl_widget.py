@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QMessageBox, QAction
 from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
-from jupyter_client.kernelspec import find_kernel_specs
+from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from qtconsole.manager import QtKernelRestarter
 from config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
 from widgets.toolbars import DraggableWidget
@@ -73,7 +73,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.command = None
         self.kernel_execution_state = None
         self.ijulia_process = None  # IJulia installation/reconfiguration process (QSubProcess)
-        self.ijulia_process_succeeded = False  # True if IJulia installation was successful
+        self.ijulia_fix = None  # Either "Installing" or "Re-building"
+        self.julia_exe = None
         self.execution_failed_to_start = False
         self.starting = False
         self.normal_cursor = self._control.viewport().cursor()
@@ -88,20 +89,20 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Return the name of the julia kernel specification, according to julia executable from settings.
         Return None if julia version can't be determined.
         """
-        self._toolbox.msg.emit("\tFinding out Julia version...")
+        self._toolbox.msg.emit("\tInitializing Julia...")
         julia_dir = self._toolbox._config.get("settings", "julia_path")
         if not julia_dir == '':
-            julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+            self.julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
-            julia_exe = JULIA_EXECUTABLE
-        program = "{0}".format(julia_exe)
+            self.julia_exe = JULIA_EXECUTABLE
+        program = "{0}".format(self.julia_exe)
         args = list()
         args.append("-e")
         args.append("println(VERSION)")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("\tCouldn't determine julia version. "
+            self._toolbox.msg_error.emit("\tCouldn't determine Julia version. "
                                          "Make sure that Julia is installed properly on your computer "
                                          "and try again.")
             return None
@@ -114,7 +115,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         return kernel_name
 
     def start_jupyter_kernel(self):
-        """Start the julia jupyter kernel.
+        """Start a Julia Jupyter kernel if available.
 
         Returns:
             True if the kernel is started, or in process of being started (installing/reconfiguring IJulia)
@@ -131,13 +132,13 @@ class JuliaREPLWidget(RichJupyterWidget):
         kernel_specs = find_kernel_specs()
         julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
         if self.kernel_name in julia_kernel_names:
-            return self.start_new_jupyter_kernel()
+            return self.start_available_jupyter_kernel()
         else:
             self._toolbox.msg_error.emit("\tCouldn't find the {0} kernel specification".format(self.kernel_name))
-            return self.prompt_to_install_ijulia()
+            return self.handle_repl_failed_to_start()
 
-    def start_new_jupyter_kernel(self):
-        """Start a new Jupyter kernel with a presumably correct kernel specification.
+    def start_available_jupyter_kernel(self):
+        """Start a Jupyter kernel which is available (from the attribute `kernel_name`)
 
         Returns:
             True if the kernel is started, or in process of being started (reconfiguring IJulia)
@@ -153,95 +154,78 @@ class JuliaREPLWidget(RichJupyterWidget):
             self.setup_client()
             return True
         except FileNotFoundError:
-            self._toolbox.msg_error.emit("\tCouldn't find the specified Julia Jupyter kernel.")
-            return self.prompt_to_reconfigure_ijulia()
+            self._toolbox.msg_error.emit("\tCouldn't find the Julia executable specified by the Jupyter kernel.")
+            return self.handle_repl_failed_to_start()
+        except NoSuchKernel:  # TODO: in which case this exactly happens
+            self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find the specified Julia Jupyter kernel.")
+            return self.handle_repl_failed_to_start()
 
-    def prompt_to_install_ijulia(self):
-        """Prompt user to install IJulia via QSubProcess.
+    def is_ijulia_installed(self):
+        """Check if IJulia is installed, returns True, False, or None if unable to determine."""
+        self._toolbox.msg.emit("\tFinding out whether IJulia is installed or not...")
+        program = "{0}".format(self.julia_exe)
+        args = list()
+        args.append("-e")
+        args.append("try using Pkg catch; end; try using IJulia; println(ARGS[1]) catch; println(ARGS[2]) end")
+        args.append("True")
+        args.append("False")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        if not q_process.wait_for_finished(msecs=5000):
+            self._toolbox.msg_error.emit("\tCouldn't determine if IJulia is installed. "
+                                         "Make sure that Julia is installed properly on your computer "
+                                         "and try again.")
+            return None
+        if q_process.output == "True":
+            self._toolbox.msg.emit("\tIJulia is installed")
+            return True
+        self._toolbox.msg.emit("\tIJulia is not installed")
+        return False
+
+    def handle_repl_failed_to_start(self):
+        """Prompt user to install IJulia if missing, or rebuild it otherwise.
 
         Returns:
             Bolean value depending on whether or not the user chooses to proceed.
         """
-        title = "Unable to find Julia kernel for Jupyter"
-        if not self.ijulia_process_succeeded:
-            message = "There is no Julia kernel for Jupyter available in your system. "\
-                      "A Julia kernel is provided by the <b>IJulia</b> package. "\
-                      "<p>Do you want to install it now?</p>"
+        is_ijulia_installed = self.is_ijulia_installed()
+        if is_ijulia_installed is None:
+            return False
+        title = "Julia REPL failed to start"
+        if not is_ijulia_installed:
+            self.ijulia_fix = "Installing"
+            message = "The Julia REPL failed to start because "\
+                      "the <a href='https://github.com/JuliaLang/IJulia.jl'>IJulia</a> package "\
+                      "is missing."\
+                      "<p>Do you want to install <b>IJulia</b> now?</p>"\
+                      "<p>Note: after installation, "\
+                      "the current operation will resume automatically.".\
+                      format(self.kernel_name)
         else:
-            message = "The Julia kernel for Jupyter couldn't be found "\
-                      "even though IJulia was correctly installed. "\
-                      "This may be due to a couple of reasons: <ul>"\
-                      "<li> An issue that the automatic installation process cannot handle. "\
-                      "In this case, manual installation of IJulia may solve the problem "\
-                      "(check out instructions <a href='https://github.com/JuliaLang/IJulia.jl'> here</a>).</li>"\
-                      "<li> A change in Julia or IJulia made by another program. "\
-                      "This can be solved by running the automatic installation process again.</li>"\
-                      "</ul><p>Do you want to run the automatic installation process again?</p>"
+            self.ijulia_fix = "Re-building"
+            message = "The Julia REPL failed to start because of a problem "\
+                      "with the Julia Jupyter kernel specification ({0})."\
+                      "<p>Re-building the <a href='https://github.com/JuliaLang/IJulia.jl'>IJulia</a> "\
+                      "package may help to fix this problem."\
+                      "<p>Do you want to re-build <b>IJulia</b> now?</p>"\
+                      "<p>Note: after re-building, "\
+                      "the current operation will resume automatically.".\
+                      format(self.kernel_name)
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             self.starting = False
             self._control.viewport().setCursor(self.normal_cursor)
             return False
-        self._toolbox.msg.emit("*** Installing <b>IJulia</b> ***")
-        self._toolbox.msg_warning.emit("Depending on your system, this process can take a few minutes...")
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
-            julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
-        else:
-            julia_exe = JULIA_EXECUTABLE
+        self._toolbox.msg.emit("*** {0} <b>IJulia</b> ***".format(self.ijulia_fix))
+        self._toolbox.msg_warning.emit("<b>Depending on your system, this process can take a few minutes...</b>")
         # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
-        command = "{0}".format(julia_exe)
+        command = "{0}".format(self.julia_exe)
         args = list()
         args.append("-e")
-        args.append("try using Pkg catch; end; ENV[ARGS[1]] = ARGS[2]; Pkg.add(ARGS[3])")
-        args.append("JUPYTER")
-        args.append("jupyter")
-        args.append("IJulia")
-        self.ijulia_process = qsubprocess.QSubProcess(self._toolbox, command, args)
-        self.ijulia_process.subprocess_finished_signal.connect(self.ijulia_process_finished)
-        self.ijulia_process.start_process()
-        return True
-
-    def prompt_to_reconfigure_ijulia(self):
-        """Prompt user to reconfigure IJulia via QSubProcess.
-
-        Returns:
-            Bolean value depending on whether or not the user chooses to proceed.
-        """
-        title = "Unable to start Julia kernel for Jupyter"
-        if not self.ijulia_process_succeeded:
-            message = "The Julia kernel for Jupyter failed to start. "\
-                      "This may be due to a configuration problem in the <b>IJulia</b> package. "\
-                      "<p>Do you want to reconfigure it now?</p>"
+        if self.ijulia_fix == "Installing":
+            args.append("try using Pkg catch; end; Pkg.add(ARGS[1])")
         else:
-            message = "The Julia kernel for Jupyter failed to start. "\
-                      "even though IJulia was correctly reconfigured. "\
-                      "This may be due to a couple of reasons: <ul>"\
-                      "<li> An issue that the automatic reconfiguration process cannot handle. "\
-                      "In this case, manual reconfiguration may solve the problem "\
-                      "(check out instructions <a href='https://github.com/JuliaLang/IJulia.jl'> here</a>).</li>"\
-                      "<li> A change in Julia or IJulia made by another program. "\
-                      "This can be solved by running the automatic reconfiguration process again.</li>"\
-                      "</ul><p>Do you want to run the automatic reconfiguration process again?</p>"
-        answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
-        if not answer == QMessageBox.Yes:
-            self.starting = False
-            self._control.viewport().setCursor(self.normal_cursor)
-            return False
-        self._toolbox.msg.emit("*** Reconfiguring <b>IJulia</b> ***")
-        self._toolbox.msg_warning.emit("Depending on your system, this process can take a few minutes...")
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
-            julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
-        else:
-            julia_exe = JULIA_EXECUTABLE
-        # Follow installation instructions in https://github.com/JuliaLang/IJulia.jl
-        command = "{0}".format(julia_exe)
-        args = list()
-        args.append("-e")
-        args.append("try using Pkg catch; end; ENV[ARGS[1]] = ARGS[2]; Pkg.build(ARGS[3])")
-        args.append("JUPYTER")
-        args.append("jupyter")
+            args.append("try using Pkg catch; end; Pkg.build(ARGS[1])")
         args.append("IJulia")
         self.ijulia_process = qsubprocess.QSubProcess(self._toolbox, command, args)
         self.ijulia_process.subprocess_finished_signal.connect(self.ijulia_process_finished)
@@ -268,11 +252,11 @@ class JuliaREPLWidget(RichJupyterWidget):
             kernel_specs = find_kernel_specs()
             julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
             if self.kernel_name in julia_kernel_names:
-                self.start_new_jupyter_kernel()
+                self.start_available_jupyter_kernel()
             else:
                 self._toolbox.msg_error.emit("\tCouldn't find a Jupyter kernel "
                                              "specification for {}".format(self.kernel_name))
-                self.prompt_to_install_ijulia()
+                self.handle_repl_failed_to_start()
 
     def setup_client(self):
         if not self.kernel_manager:
@@ -301,7 +285,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                                      "(attempt {0} of {0})".format(restart_limit))
         self.kernel_manager = None
         self.kernel_client = None  # TODO: needed?
-        self.prompt_to_install_ijulia()
+        self.handle_repl_failed_to_start()
 
     @Slot(int, name="ijulia_process_finished")
     def ijulia_process_finished(self, ret):
@@ -318,10 +302,12 @@ class JuliaREPLWidget(RichJupyterWidget):
                 self.execution_finished_signal.emit(-9999)
                 self.command = None
         else:
-            self._toolbox.msg.emit("Julia kernel for Jupyter successfully installed.")
-            self.ijulia_process_succeeded = True
+            if self.ijulia_fix == "Installing":
+                self._toolbox.msg.emit("Julia kernel for Jupyter successfully installed.")
+            else:
+                self._toolbox.msg.emit("Julia kernel for Jupyter successfully re-built.")
             # Try to start jupyter kernel again now IJulia is installed/reconfigured
-            self.start_new_jupyter_kernel()
+            self.start_available_jupyter_kernel()
         self.ijulia_process.deleteLater()
         self.ijulia_process = None
 
@@ -353,6 +339,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                                                "the {} kernel specification".format(self.kernel_name))
                 self._control.viewport().setCursor(self.normal_cursor)
             elif self.command and not self.running:
+                self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
                 self.running = True
                 self.execute(self.command)
 
@@ -379,6 +366,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         # Kernel is started or in process of being started
         if self.kernel_execution_state == 'idle' and not self.running:
+            self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
             self.running = True
             self.execute(self.command)
 

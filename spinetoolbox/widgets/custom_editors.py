@@ -16,9 +16,9 @@ Custom editors for model/view programming.
 :author: M. Marin (KTH)
 :date:   2.9.2018
 """
-from PySide2.QtCore import Qt, Slot, Signal
-from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu
-from PySide2.QtGui import QIntValidator
+from PySide2.QtCore import Qt, Slot, Signal, QRect
+from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QWidget, QHBoxLayout
+from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 from widgets.custom_menus import QOkMenu
 
 
@@ -35,7 +35,7 @@ class CustomComboEditor(QComboBox):
 
     def set_data(self, current_text, items):
         self.addItems(items)
-        if current_text:
+        if current_text and current_text in items:
             self.setCurrentText(current_text)
         else:
             self.setCurrentIndex(-1)
@@ -63,6 +63,68 @@ class CustomLineEditor(QLineEdit):
 
     def data(self):
         return self.text()
+
+
+class ObjectNameListEditor(QWidget):
+    """A custom QWidget to edit object name lists."""
+
+    data_committed = Signal(name="data_committed")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.missing_dimensions = set()
+        self.combos = list()
+        layout = QHBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+    def set_data(self, object_icons, object_class_names, object_names, object_names_dict):
+        for i, object_class_name in enumerate(object_class_names):
+            combo = QComboBox(self)
+            model = QStandardItemModel()
+            icon = object_icons[i]
+            qitem = QStandardItem(icon, object_class_name)
+            qitem.setFlags(~Qt.ItemIsSelectable)
+            model.appendRow(qitem)
+            all_object_names = object_names_dict[object_class_name]
+            for object_name in all_object_names:
+                qitem = QStandardItem(object_name)
+                model.appendRow(qitem)
+            combo.setModel(model)
+            combo.insertSeparator(1)
+            combo.activated.connect(lambda index, i=i: self.remove_missing_dimension(i))
+            self.layout().addWidget(combo)
+            self.combos.append(combo)
+            try:
+                object_name = object_names[i]
+            except IndexError:
+                self.missing_dimensions.add(i)
+                continue
+            if object_name:
+                combo.setCurrentText(object_name)
+            else:
+                self.missing_dimensions.add(i)
+
+    def remove_missing_dimension(self, dim):
+        combo = self.combos[dim]
+        try:
+            self.missing_dimensions.remove(dim)
+        except KeyError:
+            pass
+        if not self.missing_dimensions:
+            self.data_committed.emit()
+
+    def data(self):
+        layout = self.layout()
+        object_name_list = list()
+        for combo in self.combos:
+            if combo.currentIndex() == 0:
+                object_name = ''
+            else:
+                object_name = combo.currentText()
+            object_name_list.append(object_name)
+        return ','.join(object_name_list)
 
 
 class CustomSimpleToolButtonEditor(QToolButton):

@@ -20,6 +20,7 @@ import logging
 from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot
+from helpers import fix_name_ambiguity
 
 
 class CustomContextMenu(QMenu):
@@ -80,7 +81,8 @@ class ProjectItemContextMenu(CustomContextMenu):
         if d.item_type == "Data Connection":
             self.add_action("Open directory...")
         elif d.item_type == "Data Store":
-            self.add_action("Open treeview...")
+            self.add_action("Open tree view...")
+            self.add_action("Open graph view...")
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Execute")
@@ -154,10 +156,10 @@ class ToolTemplateContextMenu(CustomContextMenu):
 
 
 class ObjectTreeContextMenu(CustomContextMenu):
-    """Context menu class for object tree items in Data store form.
+    """Context menu class for object tree items in tree view form.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (DataStoreForm)
+        parent (QWidget): Parent for menu widget (TreeViewForm)
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -169,8 +171,8 @@ class ObjectTreeContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         plus_object_icon = self._parent.ui.actionAdd_objects.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameters.icon()
-        plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameters.icon()
+        plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameter_values.icon()
+        plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameter_values.icon()
         edit_object_icon = self._parent.ui.actionEdit_objects.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
         minus_object_icon = self._parent.ui.actionRemove_object_tree_items.icon()
@@ -215,10 +217,10 @@ class ObjectTreeContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter (value) items in Data Store.
+    """Context menu class for object (relationship) parameter (value) items in tree views.
 
     Attributes:
-        parent (QWidget): Parent for menu widget (DataStoreForm)
+        parent (QWidget): Parent for menu widget (TreeViewForm)
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
@@ -233,6 +235,81 @@ class ParameterContextMenu(CustomContextMenu):
         self.add_action("Paste", paste_icon)
         self.addSeparator()
         self.add_action("Remove selected", remove_icon)
+        self.exec_(position)
+
+
+class GraphViewContextMenu(CustomContextMenu):
+    """Context menu class for qgraphics view in graph view.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (GraphViewForm)
+        position (QPoint): Position on screen
+    """
+    def __init__(self, parent, position):
+        """Class constructor."""
+        super().__init__(parent)
+        self.add_action("Hide selected items", enabled=len(parent.object_item_selection) > 0)
+        self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
+        self.addSeparator()
+        self.add_action("Prune selected items", enabled=len(parent.object_item_selection) > 0)
+        self.add_action("Reinstate pruned items", enabled=len(parent.rejected_items) > 0)
+        self.exec_(position)
+
+
+class ObjectItemContextMenu(CustomContextMenu):
+    """Context menu class for object graphic items in graph view.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (GraphViewForm)
+        position (QPoint): Position on screen
+        graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
+    """
+    def __init__(self, parent, position, graphics_item):
+        """Class constructor."""
+        super().__init__(parent)
+        self.relationship_class_dict = dict()
+        object_item_selection_length = len(parent.object_item_selection)
+        self.add_action('Hide')
+        self.add_action('Prune')
+        if parent.read_only:
+            self.exec_(position)
+            return
+        self.addSeparator()
+        if graphics_item.is_template:
+            self.add_action("Set name", enabled=object_item_selection_length == 1)
+        else:
+            self.add_action("Rename", enabled=object_item_selection_length == 1)
+        self.add_action("Remove")
+        self.addSeparator()
+        if graphics_item.is_template or object_item_selection_length > 1:
+            self.exec_(position)
+            return
+        for item in parent.relationship_class_list_model.findItems('*', Qt.MatchWildcard):
+            relationship_class = item.data(Qt.UserRole + 1)
+            if not relationship_class:
+                continue
+            relationship_class_id = relationship_class['id']
+            relationship_class_name = relationship_class['name']
+            object_class_id_list = [int(x) for x in relationship_class["object_class_id_list"].split(",")]
+            object_class_name_list = relationship_class["object_class_name_list"].split(",")
+            fixed_object_class_name_list = object_class_name_list.copy()
+            fix_name_ambiguity(fixed_object_class_name_list)
+            for i, object_class_name in enumerate(object_class_name_list):
+                if object_class_name != graphics_item.object_class_name:
+                    continue
+                option = "Add '{}' relationship".format(relationship_class['name'])
+                fixed_object_class_name = fixed_object_class_name_list[i]
+                if object_class_name != fixed_object_class_name:
+                    option += " as '{}'".format(fixed_object_class_name)
+                self.add_action(option)
+                self.relationship_class_dict[option] = {
+                    'id': relationship_class_id,
+                    'name': relationship_class_name,
+                    'object_class_id_list': object_class_id_list,
+                    'object_class_name_list': object_class_name_list,
+                    'object_name_list': fixed_object_class_name_list,
+                    'dimension': i
+                }
         self.exec_(position)
 
 
@@ -321,9 +398,9 @@ class QOkMenu(QMenu):
         super().__init__(parent)
 
     def mouseReleaseEvent(self, event):
-        """The super implementation triggers the action and closes the menu.
+        """The super class implementation triggers the action and closes the menu.
         Here, we only close the menu if the action is the 'Ok' action.
-        Otherwise we just trigger it.
+        Otherwise we just trigger the action.
         """
         action = self.activeAction()
         if action is None:

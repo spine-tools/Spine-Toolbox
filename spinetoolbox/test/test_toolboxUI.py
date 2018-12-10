@@ -19,16 +19,11 @@ Unit tests for ToolboxUI class.
 import unittest
 from unittest import mock
 import logging
-import os
 import sys
 from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import Qt, SIGNAL
+from PySide2.QtCore import SIGNAL
 from ui_main import ToolboxUI
 from project import SpineToolboxProject
-from data_store import DataStore
-from data_connection import DataConnection
-from tool import Tool
-from view import View
 
 
 class TestToolboxUI(unittest.TestCase):
@@ -47,7 +42,9 @@ class TestToolboxUI(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        with mock.patch('ui_main.CONFIGURATION_FILE') as mocked_file_path:
+        with mock.patch("ui_main.CONFIGURATION_FILE") as mocked_file_path, \
+                mock.patch("os.path.split") as mock_split, \
+                mock.patch("configuration.create_dir") as mock_create_dir:
             # # Set logging level to Error to silence "Logging level: All messages" print
             logging.disable(level=logging.ERROR)  # Disable logging
             self.mw = ToolboxUI()
@@ -88,18 +85,18 @@ class TestToolboxUI(unittest.TestCase):
         # Check that there's only one column
         self.assertEqual(self.mw.project_item_model.columnCount(), 1)
         # Check that the items DisplayRoles are (In this particular order)
-        item1 = self.mw.project_item_model.item(0, 0)
-        self.assertTrue(item1.data(Qt.DisplayRole) == "Data Stores", "Item (0,0) is not 'Data Stores'")
-        self.assertFalse(item1.index().parent().isValid(), "Parent index of item (0,0) is valid. Should be invalid.")
-        item2 = self.mw.project_item_model.item(1, 0)
-        self.assertTrue(item2.data(Qt.DisplayRole) == "Data Connections", "Item (1,0) is not 'Data Connections'")
-        self.assertFalse(item2.index().parent().isValid(), "Parent index of item (1,0) is valid. Should be invalid.")
-        item3 = self.mw.project_item_model.item(2, 0)
-        self.assertTrue(item3.data(Qt.DisplayRole) == "Tools", "Item (2,0) is not 'Tools'")
-        self.assertFalse(item3.index().parent().isValid(), "Parent index of item (0,0) is valid. Should be invalid.")
-        item4 = self.mw.project_item_model.item(3, 0)
-        self.assertTrue(item4.data(Qt.DisplayRole) == "Views", "Item (3,0) is not 'Views'")
-        self.assertFalse(item4.index().parent().isValid(), "Parent index of item (0,0) is valid. Should be invalid.")
+        item1 = self.mw.project_item_model.root().child(0)
+        self.assertTrue(item1.name == "Data Stores", "Item on row 0 is not 'Data Stores'")
+        self.assertTrue(item1.parent().is_root, "Parent item of category item on row 0 should be root")
+        item2 = self.mw.project_item_model.root().child(1)
+        self.assertTrue(item2.name == "Data Connections", "Item on row 1 is not 'Data Connections'")
+        self.assertTrue(item2.parent().is_root, "Parent item of category item on row 1 should be root")
+        item3 = self.mw.project_item_model.root().child(2)
+        self.assertTrue(item3.name == "Tools", "Item on row 2 is not 'Tools'")
+        self.assertTrue(item3.parent().is_root, "Parent item of category item on row 2 should be root")
+        item4 = self.mw.project_item_model.root().child(3)
+        self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
+        self.assertTrue(item4.parent().is_root, "Parent item of category item on row 3 should be root")
 
     def test_init_tool_template_model(self):
         """Check that tool template model only has the "No Tool" string and that
@@ -142,89 +139,12 @@ class TestToolboxUI(unittest.TestCase):
             self.mw.create_project("Unit Test Project", "Project for unit tests.")
         self.assertIsInstance(self.mw.project(), SpineToolboxProject)  # Check that a project is open
 
-    def test_add_item_to_model(self):
-        """Test that adding items works as expected. Four items are added in order DS->DC->Tool->View.
-        NOTE: ToolboxUI project_refs list is updated in SpineToolboxProject add_data_store() method
-        TODO: Update project_refs list in add_item_model() method
-        """
-        # Create project
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir, \
-                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs:
-            self.mw.create_project("Unit Test Project", "Project for unit tests.")
-
-        # Add Data Store item
-        ds_name = "DS"
-        with mock.patch("data_store.create_dir") as mock_create_dir:
-            ds_item = DataStore(self.mw, ds_name, "", reference=None, x=0, y=0)
-        retval = self.mw.add_item_to_model("Data Stores", ds_name, ds_item)
-        self.assertTrue(retval)
-        # Check that new item is found from project_item_model
-        found_item = self.mw.project_item_model.find_item(ds_name, Qt.MatchExactly | Qt.MatchRecursive)  # QStandardItem
-        self.assertEqual(found_item.data(Qt.UserRole), ds_item)
-        # Check that connection model has been updated
-        self.assertEqual(self.mw.connection_model.rowCount(), 1)
-        self.assertEqual(self.mw.connection_model.columnCount(), 1)
-        self.assertEqual(self.mw.connection_model.find_index_in_header(ds_name), 0)
-
-        # Add Data Connection item
-        dc_name = "DC"
-        with mock.patch("data_connection.create_dir") as mock_create_dir:
-            dc_item = DataConnection(self.mw, dc_name, "", references=None, x=0, y=0)
-        retval = self.mw.add_item_to_model("Data Connections", dc_name, dc_item)
-        self.assertTrue(retval)
-        # Check that new item is found from project_item_model
-        found_item = self.mw.project_item_model.find_item(dc_name, Qt.MatchExactly | Qt.MatchRecursive)
-        self.assertEqual(found_item.data(Qt.UserRole), dc_item)
-        # Check that connection model has been updated
-        self.assertEqual(self.mw.connection_model.rowCount(), 2)
-        self.assertEqual(self.mw.connection_model.columnCount(), 2)
-        self.assertEqual(self.mw.connection_model.find_index_in_header(dc_name), 1)
-
-        # Add Tool item
-        tool_name = "Tool"
-        with mock.patch("tool.create_dir") as mock_create_dir:
-            tool_item = Tool(self.mw, tool_name, "", tool_template=None, x=0, y=0)
-        retval = self.mw.add_item_to_model("Tools", tool_name, tool_item)
-        self.assertTrue(retval)
-        # Check that new item is found from project_item_model
-        found_item = self.mw.project_item_model.find_item(tool_name, Qt.MatchExactly | Qt.MatchRecursive)
-        self.assertEqual(found_item.data(Qt.UserRole), tool_item)
-        # Check that connection model has been updated
-        self.assertEqual(self.mw.connection_model.rowCount(), 3)
-        self.assertEqual(self.mw.connection_model.columnCount(), 3)
-        self.assertEqual(self.mw.connection_model.find_index_in_header(tool_name), 2)
-
-        # Add View item
-        view_name = "View"
-        view_item = View(self.mw, view_name, "", 0, 0)
-        retval = self.mw.add_item_to_model("Views", view_name, view_item)
-        self.assertTrue(retval)
-        # Check that new item is found from project_item_model
-        found_item = self.mw.project_item_model.find_item(view_name, Qt.MatchExactly | Qt.MatchRecursive)
-        self.assertEqual(found_item.data(Qt.UserRole), view_item)
-        # Check that connection model has been updated
-        self.assertEqual(self.mw.connection_model.rowCount(), 4)
-        self.assertEqual(self.mw.connection_model.columnCount(), 4)
-        self.assertEqual(self.mw.connection_model.find_index_in_header(view_name), 3)
-        # There should now be 4 items in the model
-        self.assertEqual(self.mw.project_item_model.n_items("all"), 4)
-
-    @unittest.skip("TODO")
-    def test_add_item_to_model_in_random_order(self):
-        """Add items to model in order DC->View->Tool->DS and check that it still works."""
-        self.fail()
-
     @unittest.skip("TODO")
     def test_remove_item(self):
         self.fail()
 
     @unittest.skip("TODO")
     def test_add_tool_template(self):
-        self.fail()
-
-    @unittest.skip("TODO")
-    def test_reattach_tool_templates(self):
         self.fail()
 
     @unittest.skip("TODO")

@@ -17,9 +17,10 @@ A widget for presenting basic information about the application.
 """
 
 from PySide2.QtWidgets import QWidget
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QTextCursor
 import ui.about
+import spinedatabase_api
 
 
 class AboutWidget(QWidget):
@@ -31,19 +32,32 @@ class AboutWidget(QWidget):
     """
     def __init__(self, toolbox, version):
         """Initializes About widget."""
-        super().__init__(parent=toolbox, f=Qt.Window)  # Setting the parent inherits the stylesheet
+        super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox
         # Set up the user interface from Designer file.
         self.ui = ui.about.Ui_Form()
         self.ui.setupUi(self)
-        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Popup)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.label_version_str.setText("v{0}".format(version))
+        self.ui.label_api_version_str.setText("v{0}".format(spinedatabase_api.__version__))
         self.setup_license_text()
         self._mousePressPos = None
         self._mouseReleasePos = None
         self._mouseMovePos = None
+        # Move About Popup to correct position
+        pos = self.calc_pos()
+        self.move(pos)
+
+    def calc_pos(self):
+        """Calculate the top-left corner position of this widget in relation to main window
+        position and size in order to show about window in the middle of the main window."""
+        mw_center = self.parent().frameGeometry().center()
+        about_x = mw_center.x() - self.frameGeometry().width()/2
+        about_y = mw_center.y() - self.frameGeometry().height()/2
+        about_topleft = QPoint(about_x, about_y)
+        return about_topleft
 
     def setup_license_text(self):
         """Add license to QTextBrowser."""

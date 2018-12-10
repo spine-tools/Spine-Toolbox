@@ -294,8 +294,11 @@
      <x>0</x>
      <y>0</y>
      <width>921</width>
-     <height>27</height>
+     <height>25</height>
     </rect>
+   </property>
+   <property name="nativeMenuBar">
+    <bool>false</bool>
    </property>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -337,7 +340,7 @@
     <string>Close</string>
    </property>
    <property name="shortcut">
-    <string>Esc</string>
+    <string>Ctrl+W</string>
    </property>
   </action>
   <action name="actionInfer_datapackage">

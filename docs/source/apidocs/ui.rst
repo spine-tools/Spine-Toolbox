@@ -84,14 +84,6 @@ ui.add\_view module
     :undoc-members:
     :show-inheritance:
 
-ui.data\_store\_form module
----------------------------
-
-.. automodule:: ui.data_store_form
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ui.edit\_data\_items module
 ---------------------------
 
@@ -100,18 +92,18 @@ ui.edit\_data\_items module
     :undoc-members:
     :show-inheritance:
 
-ui.mainwindow module
---------------------
+ui.graph\_view\_form module
+---------------------------
 
-.. automodule:: ui.mainwindow
+.. automodule:: ui.graph_view_form
     :members:
     :undoc-members:
     :show-inheritance:
 
-ui.network\_map\_form module
-----------------------------
+ui.mainwindow module
+--------------------
 
-.. automodule:: ui.network_map_form
+.. automodule:: ui.mainwindow
     :members:
     :undoc-members:
     :show-inheritance:
@@ -144,6 +136,14 @@ ui.tool\_template\_form module
 ------------------------------
 
 .. automodule:: ui.tool_template_form
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.tree\_view\_form module
+--------------------------
+
+.. automodule:: ui.tree_view_form
     :members:
     :undoc-members:
     :show-inheritance:

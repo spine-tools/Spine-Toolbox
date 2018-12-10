@@ -23,7 +23,7 @@ import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
@@ -42,7 +42,7 @@ from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
     MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
-from helpers import project_dir, get_datetime, erase_dir, busy_effect
+from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
 
@@ -66,6 +66,8 @@ class ToolboxUI(QMainWindow):
         # Setup the user interface from Qt Designer files
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
+        set_taskbar_icon()  # in helpers
         self.ui.graphicsView.set_ui(self)
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
@@ -106,6 +108,8 @@ class ToolboxUI(QMainWindow):
         # QActions
         self.show_connections_tab = QAction(self)  # self is for PySide 5.6
         self.show_item_tabbar = QAction(self)
+        self.show_supported_img_formats = QAction(self)
+        self.set_debug_qactions()
         self.hide_tabs()
         # Add toggleview actions
         self.add_toggle_view_actions()
@@ -118,7 +122,7 @@ class ToolboxUI(QMainWindow):
 
     def init_conf(self):
         """Load settings from configuration file."""
-        self._config = ConfigurationParser(CONFIGURATION_FILE, defaults=SETTINGS)
+        self._config = ConfigurationParser(self, CONFIGURATION_FILE, defaults=SETTINGS)
         self._config.load()
 
     # noinspection PyArgumentList, PyUnresolvedReferences
@@ -146,9 +150,10 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        # Other QActions
+        # Debug QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
         self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
+        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
         # Project TreeView
@@ -472,7 +477,7 @@ class ToolboxUI(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="selected_item_changed")
     def selected_item_changed(self, current, previous):
         """Disconnect signals of previous item, connect signals of current item
-        and update tab of the new item."""
+        and show correct properties tab for the current item."""
         for selected_item in self.ui.graphicsView.scene().selectedItems():
             selected_item.setSelected(False)  # Clear QGraphicsItem selections
         if not current.isValid():  # Current item is root
@@ -494,11 +499,11 @@ class ToolboxUI(QMainWindow):
                 if not ret:
                     self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
                 # Show No Selection tab because the item has been deactivated anyway
-                for i in range(self.ui.tabWidget_item_info.count()):
-                    if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                        self.ui.tabWidget_item_info.setCurrentIndex(i)
+                for i in range(self.ui.tabWidget_item_properties.count()):
+                    if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                        self.ui.tabWidget_item_properties.setCurrentIndex(i)
                         break
-                self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+                self.ui.dockWidget_item.setWindowTitle("Properties")
             return
         current_item = self.project_item_model.project_item(current)
         if not previous:
@@ -522,7 +527,8 @@ class ToolboxUI(QMainWindow):
         self.activate_item_tab(current_item)
 
     def activate_item_tab(self, item=None):
-        """Show project item tab according to item type. If no item given, sets the No Selection tab active.
+        """Show project item properties tab according to item type.
+        If no item given, sets the No Selection tab active.
 
         Args:
             item (ProjectItem): Instance of a project item
@@ -531,19 +537,19 @@ class ToolboxUI(QMainWindow):
             # Set No Selection Tab active and clear item selections
             self.ui.treeView_project.clearSelection()
             self.ui.graphicsView.scene().clearSelection()
-            for i in range(self.ui.tabWidget_item_info.count()):
-                if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                    self.ui.tabWidget_item_info.setCurrentIndex(i)
+            for i in range(self.ui.tabWidget_item_properties.count()):
+                if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                    self.ui.tabWidget_item_properties.setCurrentIndex(i)
                     break
-            self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+            self.ui.dockWidget_item.setWindowTitle("Properties")
         else:
             # Find tab index according to item type
-            for i in range(self.ui.tabWidget_item_info.count()):
-                if self.ui.tabWidget_item_info.tabText(i) == item.item_type:
-                    self.ui.tabWidget_item_info.setCurrentIndex(i)
+            for i in range(self.ui.tabWidget_item_properties.count()):
+                if self.ui.tabWidget_item_properties.tabText(i) == item.item_type:
+                    self.ui.tabWidget_item_properties.setCurrentIndex(i)
                     break
             # Set QDockWidget title to selected item's type
-            self.ui.dockWidget_item.setWindowTitle("Selected: " + item.item_type)
+            self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
@@ -726,13 +732,13 @@ class ToolboxUI(QMainWindow):
             return
         for name in item_names:
             ind = self.project_item_model.find_item(name)
-            self.remove_item(ind, delete_item=True)
+            self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"))
         self.msg.emit("All {0} items removed from project".format(n))
-        for i in range(self.ui.tabWidget_item_info.count()):
-            if self.ui.tabWidget_item_info.tabText(i) == "No Selection":
-                self.ui.tabWidget_item_info.setCurrentIndex(i)
+        for i in range(self.ui.tabWidget_item_properties.count()):
+            if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                self.ui.tabWidget_item_properties.setCurrentIndex(i)
                 break
-        self.ui.dockWidget_item.setWindowTitle("Nothing selected")
+        self.ui.dockWidget_item.setWindowTitle("Properties")
 
     def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.
@@ -751,8 +757,13 @@ class ToolboxUI(QMainWindow):
         project_item = self.project_item_model.project_item(ind)
         name = project_item.name
         if check_dialog:
-            msg = "Are you sure? Item's data will be deleted from you project.\n\n" \
-                  "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            if not delete_item:
+                msg = "Are you sure? If Yes, item data directory will still be available in " \
+                      "the project directory after this operation.\n\n" \
+                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+            else:
+                msg = "Are you sure? If Yes, item data directory will be deleted from your project.\n\n" \
+                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
             # noinspection PyCallByClass, PyTypeChecker
             answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -790,6 +801,8 @@ class ToolboxUI(QMainWindow):
         Args:
             qurl (QUrl): Directory path or a file to open
         """
+        if qurl.url() == "#":  # This is a Tip so do not try to open the URL
+            return
         path = qurl.toLocalFile()  # Path to result folder
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(qurl)
@@ -898,14 +911,19 @@ class ToolboxUI(QMainWindow):
             if dock.isFloating():
                 dock.setFloating(False)
 
+    def set_debug_qactions(self):
+        """Set shortcuts for QActions that may be needed in debugging."""
+        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
+        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
+        self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
+        self.addAction(self.show_item_tabbar)
+        self.addAction(self.show_connections_tab)
+        self.addAction(self.show_supported_img_formats)
+
     def hide_tabs(self):
         """Hides project item info tab bar and connections tab in project item QTreeView.
         Makes (hidden) actions on how to show them if needed for debugging purposes."""
-        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
-        self.addAction(self.show_item_tabbar)
-        self.addAction(self.show_connections_tab)
-        self.ui.tabWidget_item_info.tabBar().hide()  # Hide project item info QTabBar
+        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide project item info QTabBar
         self.connections_tab = self.ui.tabWidget.widget(2)
         self.ui.tabWidget.removeTab(2)  # Remove connections tab
 
@@ -920,10 +938,10 @@ class ToolboxUI(QMainWindow):
 
     def toggle_tabbar_visibility(self):
         """Shows or hides the tab bar in project item info tab widget. For debugging purposes."""
-        if self.ui.tabWidget_item_info.tabBar().isVisible():
-            self.ui.tabWidget_item_info.tabBar().hide()
+        if self.ui.tabWidget_item_properties.tabBar().isVisible():
+            self.ui.tabWidget_item_properties.tabBar().hide()
         else:
-            self.ui.tabWidget_item_info.tabBar().show()
+            self.ui.tabWidget_item_properties.tabBar().show()
 
     def toggle_connections_tab_visibility(self):
         """Shows or hides connections tab in the project item QTreeView. For debugging purposes."""
@@ -1118,8 +1136,10 @@ class ToolboxUI(QMainWindow):
         d = self.project_item_model.project_item(ind)
         if option == "Open directory...":
             d.open_directory()  # Open data_dir of Data Connection or Data Store
-        elif option == "Open treeview...":
-            d.open_treeview()  # Open treeview of Data Store
+        elif option == "Open tree view...":
+            d.open_tree_view()  # Open tree view of Data Store
+        elif option == "Open graph view...":
+            d.open_graph_view()  # Open graph view of Data Store
         elif option == "Execute":
             d.execute()
         elif option == "Results...":
@@ -1145,7 +1165,7 @@ class ToolboxUI(QMainWindow):
                 new_name = answer[0]
                 self.project_item_model.setData(ind, new_name)
         elif option == "Remove Item":
-            self.remove_item(ind, delete_item=True, check_dialog=True)
+            self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"), check_dialog=True)
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
@@ -1193,6 +1213,19 @@ class ToolboxUI(QMainWindow):
             pass
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
+
+    def close_view_forms(self):
+        """Close all GraphViewForm and TreeViewForm instances opened in Data Stores and Views."""
+        if not self._project:
+            return
+        for data_store in self.project_item_model.items("Data Stores"):
+            if data_store.tree_view_form:
+                data_store.tree_view_form.close()
+            if data_store.graph_view_form:
+                data_store.graph_view_form.close()
+        for view in self.project_item_model.items("Views"):
+            for graph_view_form in view.graph_view_form_refs.values():
+                graph_view_form.close()
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.
@@ -1288,6 +1321,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self.qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
+        self.close_view_forms()
         if event:
             event.accept()
         # noinspection PyArgumentList
