@@ -24,21 +24,17 @@ Spine Toolbox grid view
 :date:   1.11.2018
 """
 
-from PySide2.QtWidgets import QApplication, QTableView, QVBoxLayout, \
-    QComboBox, QListWidget, QAbstractItemView, QLabel, QMenu, QMainWindow, QDialog, QPushButton
-from PySide2.QtCore import Qt, QModelIndex, Signal, QItemSelectionModel, Slot, \
-    QPoint, QAbstractItemModel
-from PySide2.QtGui import QStandardItemModel, QKeySequence, QDropEvent
+from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton
+from PySide2.QtCore import Qt, QPoint
 from ui.tabular_view_form import Ui_MainWindow
 
-from tabularview_models import PivotTableSortFilterProxy, PivotTableModel, PivotModel
+from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from widgets.filter_menu_widget import FilterMenu
-from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError 
+from spinedatabase_api import SpineDBAPIError 
 import json
 import operator
 from collections import namedtuple
 from sqlalchemy.sql import literal_column
-from widgets.custom_qtableview import FrozenTableView, CustomQTableView
 
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
@@ -106,7 +102,6 @@ class TabularViewForm(QMainWindow):
 
     def __init__(self, data_store, db_map, database):
         super().__init__(flags=Qt.Window)
-        # TODO: the filter comboboxes are hacked togheter, might not work on all OS:s, build a panel with list that pops up instead.
         # TODO: change the list_select_class to something nicer
         # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
         # reimplementing the window minimizing and maximizing actions as well as setting the window modality
@@ -115,11 +110,8 @@ class TabularViewForm(QMainWindow):
         # Setup UI from Qt Designer file
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        #self.ui.setupUi(self)
-        
-        
-        #self.db_map = DiffDatabaseMapping("sqlite:///C:/repos/spinetoolbox/projects/hydro_test/data/hydro.sqlite", "test")
-        #self.database = 'hydro.sqlite'
+
+        # database
         self.db_map = db_map
         self.database = database
         self._data_store = data_store
@@ -142,7 +134,7 @@ class TabularViewForm(QMainWindow):
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
 
-        
+        # availible settings for values
         self.ui.comboBox_value_type.addItems([DATA_VALUE, DATA_JSON, DATA_SET])
 
         # set allowed drop for pivot index lists
@@ -156,6 +148,7 @@ class TabularViewForm(QMainWindow):
         self.proxy_model.setSourceModel(self.model)
         self.ui.pivot_table.setModel(self.proxy_model)
 
+        # TODO: move this to it's own class
         # context menu for pivot_table
         self.rcMenu=QMenu(self.ui.pivot_table)
         delete_values = self.rcMenu.addAction('Delete selected values')
@@ -183,11 +176,10 @@ class TabularViewForm(QMainWindow):
         # load db data
         self.load_class_data()
         self.load_objects()
-        
         self.update_class_list()
         
-        # update models to data
-        #self.select_data()
+        # Ensure this window gets garbage-collected when closed
+        self.setAttribute(Qt.WA_DeleteOnClose)
     
     def load_class_data(self):
         self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}
@@ -270,7 +262,7 @@ class TabularViewForm(QMainWindow):
             self.db_map.commit_session(commit_msg)
             #self.set_commit_rollback_actions_enabled(False)
         except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            #self.msg_error.emit(e.msg)
             return
     
     def rollback_session(self):
@@ -278,7 +270,7 @@ class TabularViewForm(QMainWindow):
             self.db_map.rollback_session()
             #self.set_commit_rollback_actions_enabled(False)
         except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            #self.msg_error.emit(e.msg)
             return
         self.select_data()
     
