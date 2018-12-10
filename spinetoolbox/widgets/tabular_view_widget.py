@@ -870,9 +870,17 @@ class TabularViewForm(QMainWindow):
         return sorted(frozen_values)
 
     def closeEvent(self, event=None):
+        """Handle close window.
+
+        Args:
+            event (QEvent): Closing event if 'X' is clicked.
+        """
+        if self.db_map.has_pending_changes() or self.model_has_changes():
+            self.show_commit_session_prompt()
         self.db_map.close()
         if event:
             event.accept()
+
 
 if __name__ == '__main__':
     import sys
