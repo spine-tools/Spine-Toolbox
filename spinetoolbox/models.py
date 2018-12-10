@@ -3613,7 +3613,7 @@ class DatapackageResourcesModel(QStandardItemModel):
             self.setData(index, None, Qt.ToolTipRole)
         else:
             tool_tip = ("<html>Set this resource's name to one of Spine object classes "
-                       "to be able to import it.</html>")
+                        "to be able to import it.</html>")
             self.setData(index, self.nok_icon, Qt.DecorationRole)
             self.setData(index, tool_tip, Qt.ToolTipRole)
 
@@ -3646,7 +3646,7 @@ class DatapackageForeignKeysModel(MinimalTableModel):
     """A model of datapackage foreign key data, used by SpineDatapackageWidget."""
     def __init__(self, parent=None):
         """Initialize class"""
-        super().__init__(parent, has_empty_row=True)
+        super().__init__(parent)
         # TODO: Change parent (attribute name) to something else
         self.schema = None
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])

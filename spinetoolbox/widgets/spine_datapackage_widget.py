@@ -17,14 +17,14 @@ in Data Connection item.
 :date:   7.7.2018
 """
 
-from config import STATUSBAR_SS
-from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.custom_delegates import ResourceNameDelegate, ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel
-from PySide2.QtGui import QGuiApplication
+from PySide2.QtGui import QGuiApplication, QIcon
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
+from ui.spine_datapackage_form import Ui_MainWindow
+from widgets.custom_delegates import ResourceNameDelegate, ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from spinedatabase_api import OBJECT_CLASS_NAMES
+from config import MAINWINDOW_SS, STATUSBAR_SS
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -41,9 +41,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     def __init__(self, toolbox, data_connection, datapackage):
         """Initialize class."""
-        super().__init__(flags=Qt.Window)  # TODO: Set parent as toolbox here if it makes sense
-        # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
-        # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
+        super().__init__(flags=Qt.Window)
         self._toolbox = toolbox
         self._data_connection = data_connection
         self.object_class_name_list = OBJECT_CLASS_NAMES
@@ -58,6 +56,7 @@ class SpineDatapackageWidget(QMainWindow):
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
         self.ui.toolButton_remove_foreign_keys.setDefaultAction(self.ui.actionRemove_foreign_keys)
@@ -66,6 +65,9 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
+        # Set style sheet
+        self.setStyleSheet(MAINWINDOW_SS)
+        # Set models to views and init views
         self.ui.treeView_resources.setModel(self.resources_model)
         self.ui.treeView_fields.setModel(self.fields_model)
         self.ui.treeView_foreign_keys.setModel(self.foreign_keys_model)
@@ -157,7 +159,9 @@ class SpineDatapackageWidget(QMainWindow):
         """Show error message in message box.
 
         Args:
-            msg (str): String to show in QMessageBox
+            title (str): Message box title
+            text (str): Message box text
+            info (str): Extra information
         """
         msg_box = QMessageBox()
         msg_box.setIcon(QMessageBox.Critical)
@@ -260,8 +264,6 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QModelIndex", name="update_primary_key")
     def update_primary_key(self, index):
-        # TODO: Should 'name' be in arguments?
-        # Not sure: the `commit_data` signal from `CheckBoxDelegate` only passes an index
         """Called when checkbox delegate wants to edit primary key data.
         Add or remove primary key field accordingly.
         """
