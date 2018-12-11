@@ -16,12 +16,12 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-from PySide2.QtWidgets import QTableView, QApplication, QAction, QWidget, QVBoxLayout, QPushButton, \
-    QStyle, QAbstractItemView
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
+from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
 from widgets.custom_delegates import CheckBoxDelegate
-from models import MinimalTableModel, TableModel
+from widgets.filter_menu_widget import AutoFilterWidget
+from models import TableModel
 
 
 class CopyPasteTableView(QTableView):
@@ -174,89 +174,6 @@ class CopyPasteTableView(QTableView):
         return True
 
 
-class FilterWidget(QWidget):
-    """A widget to show the auto filter 'menu'."""
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.model = MinimalTableModel(self)
-        self.model.flags = self.model_flags
-        self.view = QTableView(self)
-        self.view.setModel(self.model)
-        self.view.verticalHeader().hide()
-        self.view.horizontalHeader().hide()
-        self.view.setShowGrid(False)
-        check_box_delegate = CheckBoxDelegate(self)
-        self.view.setItemDelegateForColumn(0, check_box_delegate)
-        check_box_delegate.data_committed.connect(self._handle_check_box_data_committed)
-        self.button = QPushButton("Ok", self)
-        self.button.setFlat(True)
-        layout.addWidget(self.view)
-        layout.addWidget(self.button)
-        self.button.clicked.connect(self.hide)
-        self.hide()
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
-
-    def model_flags(self, index):
-        """Return index flags."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-        if index.column() == 1:
-            return ~Qt.ItemIsEditable
-        return Qt.ItemIsEditable
-
-    @Slot("QModelIndex", name="_handle_check_box_data_committed")
-    def _handle_check_box_data_committed(self, index):
-        """Called when checkbox delegate wants to edit data. Toggle the index's value."""
-        data = index.data(Qt.EditRole)
-        model_data = self.model._main_data
-        row_count = self.model.rowCount()
-        if index.row() == 0:
-            # Ok row
-            value = data in (None, False)
-            for row in range(row_count):
-                model_data[row][0] = value
-            self.model.dataChanged.emit(self.model.index(0, 0), self.model.index(row_count - 1, 0))
-        else:
-            # Data row
-            self.model.setData(index, not data)
-            self.set_ok_index_data()
-
-    def set_ok_index_data(self):
-        """Set data for ok index based on data from all other indexes."""
-        ok_index = self.model.index(0, 0)
-        true_count = 0
-        for row_data in self.model._main_data[1:]:
-            if row_data[0] == True:
-                true_count += 1
-        if true_count == len(self.model._main_data) - 1:
-            self.model.setData(ok_index, True)
-        elif true_count == 0:
-            self.model.setData(ok_index, False)
-        else:
-            self.model.setData(ok_index, None)
-
-    def set_values(self, values):
-        """Set values to show in the 'menu'. Reset model using those values and update geometry."""
-        self.model.reset_model([[None, "All"]] + values)
-        self.set_ok_index_data()
-        self.view.horizontalHeader().hideSection(2)  # Column 2 holds internal data (cls_id_set)
-        self.view.resizeColumnsToContents()
-        width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        self.setFixedWidth(width + 2)
-        height = self.view.verticalHeader().length() + self.button.height()
-        parent_height = self.parent().height()
-        self.setFixedHeight(min(height, parent_height / 2) + 2)
-
-    def set_section_height(self, height):
-        """Set vertical header default section size as well as button height."""
-        self.view.verticalHeader().setDefaultSectionSize(height)
-        self.button.setFixedHeight(height)
-
-
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
     """Custom QTableView class with autofilter functionality.
 
@@ -273,8 +190,8 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.action_all = None
         self.filter_text = None
         self.filter_column = None
-        self.filter_widget = FilterWidget(self)
-        self.filter_widget.button.clicked.connect(self.update_auto_filter)
+        self.auto_filter_widget = AutoFilterWidget(self)
+        self.auto_filter_widget.button.clicked.connect(self.update_auto_filter)
         self.verticalHeader().sectionResized.connect(self._handle_vertical_section_resized)
 
     def setModel(self, model):
@@ -293,21 +210,21 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
         values = self.model().auto_filter_values(logical_index)
-        self.filter_widget.set_values(values)
+        self.auto_filter_widget.set_values(values)
         width = self.horizontalHeader().sectionSize(logical_index)
-        self.filter_widget.move(pos_x, pos_y)
-        self.filter_widget.show()
+        self.auto_filter_widget.move(pos_x, pos_y)
+        self.auto_filter_widget.show()
 
     def _handle_vertical_section_resized(self, logical_index, old_size, new_size):
         """Pass vertical section size on to the filter widget."""
         if logical_index == 0:
-            self.filter_widget.set_section_height(new_size)
+            self.auto_filter_widget.set_section_height(new_size)
 
     @Slot("bool", name="update_auto_filter")
     def update_auto_filter(self, checked=False):
         """Called when the user clicks the Ok button in the auto filter widget.
         Set 'filtered out values' in auto filter model."""
-        data = self.filter_widget.model._main_data
+        data = self.auto_filter_widget.model._main_data
         values = dict()
         for checked, value, object_class_id_set in data[1:]:
             if checked:

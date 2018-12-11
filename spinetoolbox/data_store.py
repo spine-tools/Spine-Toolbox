@@ -139,6 +139,10 @@ class DataStore(ProjectItem):
         self.selected_username = self._toolbox.ui.lineEdit_username.text()
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
 
+    def set_reference(self, reference):
+        """Set reference attribute. Used by Tool when passing on results."""
+        self._reference = reference
+
     def reference(self):
         """Reference attribute."""
         return self._reference

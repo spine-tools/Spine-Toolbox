@@ -454,7 +454,8 @@ class Tool(ProjectItem):
                         'database': output_file,
                         'username': getpass.getuser()
                     }
-                    item.load_reference(reference)
+                    item.set_reference(reference)
+                    item.load_reference_into_selections()
                     self._toolbox.msg.emit("\tCreated <b>1</b> reference")
                     break
                 else:
