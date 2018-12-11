@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -154,7 +154,7 @@
           <layout class="QHBoxLayout" name="h_layout_filter"/>
          </item>
          <item>
-          <widget class="CustomQTableView" name="pivot_table"/>
+          <widget class="SimpleCopyPasteTableView" name="pivot_table"/>
          </item>
         </layout>
        </widget>
@@ -169,7 +169,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuSession">
@@ -235,7 +235,7 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>CustomQTableView</class>
+   <class>SimpleCopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

@@ -882,6 +882,42 @@ class TabularViewForm(QMainWindow):
                 frozen_values.update(new_set)
         return sorted(frozen_values)
 
+    def show_commit_session_prompt(self):
+        """Shows the commit session message box."""
+        config = self._data_store._toolbox._config
+        commit_at_exit = config.get("settings", "commit_at_exit")
+        if commit_at_exit == "0":
+            # Don't commit session and don't show message box
+            return
+        elif commit_at_exit == "1":  # Default
+            # Show message box
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Commit pending changes")
+            msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
+            msg.setInformativeText("WARNING: If you choose not to commit, all changes will be lost.")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            chkbox = QCheckBox()
+            chkbox.setText("Do not ask me again")
+            msg.setCheckBox(chkbox)
+            answer = msg.exec_()
+            chk = chkbox.checkState()
+            if answer == QMessageBox.Yes:
+                self.show_commit_session_dialog()
+                if chk == 2:
+                    # Save preference into config file
+                    config.set("settings", "commit_at_exit", "2")
+            else:
+                if chk == 2:
+                    # Save preference into config file
+                    config.set("settings", "commit_at_exit", "0")
+        elif commit_at_exit == "2":
+            # Commit session and don't show message box
+            self.show_commit_session_dialog()
+        else:
+            config.set("settings", "commit_at_exit", "1")
+        return
+
     def closeEvent(self, event=None):
         """Handle close window.
 
@@ -889,7 +925,7 @@ class TabularViewForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         if self.db_map.has_pending_changes() or self.model_has_changes():
-            self.show_commit_session_dialog()
+            self.show_commit_session_prompt()
         self.db_map.close()
         if event:
             event.accept()

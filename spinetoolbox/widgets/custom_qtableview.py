@@ -25,7 +25,7 @@ from models import TableModel
 
 
 class CopyPasteTableView(QTableView):
-    """Custom QTableView class with copy-paste functionality.
+    """Custom QTableView class with copy and paste methods.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -267,8 +267,8 @@ class FrozenTableView(QTableView):
         self.selectionModel().blockSignals(False)
 
 
-class CustomQTableView(QTableView):
-    """Custom QTableView class with copy-paste functionality.
+class SimpleCopyPasteTableView(QTableView):
+    """Custom QTableView class that copies and paste data in response to key press events.
 
     Attributes:
         parent (QWidget): The parent of this view

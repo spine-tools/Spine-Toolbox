@@ -116,13 +116,13 @@ class Ui_MainWindow(object):
         self.h_layout_filter = QtWidgets.QHBoxLayout()
         self.h_layout_filter.setObjectName("h_layout_filter")
         self.verticalLayout_6.addLayout(self.h_layout_filter)
-        self.pivot_table = CustomQTableView(self.verticalLayoutWidget_6)
+        self.pivot_table = SimpleCopyPasteTableView(self.verticalLayoutWidget_6)
         self.pivot_table.setObjectName("pivot_table")
         self.verticalLayout_6.addWidget(self.pivot_table)
         self.verticalLayout_7.addWidget(self.splitter_3)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 28))
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
         self.menuSession.setObjectName("menuSession")
@@ -175,5 +175,5 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from widgets.custom_qtableview import CustomQTableView, FrozenTableView
+from widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
 from widgets.custom_qlistview import TestListView

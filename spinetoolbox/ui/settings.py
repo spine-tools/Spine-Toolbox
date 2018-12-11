@@ -288,9 +288,9 @@ class Ui_SettingsForm(object):
         self.lineEdit_julia_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path where julia executable is found</p></body></html>", None, -1))
         self.lineEdit_julia_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using Julia executable in system path", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Path to Julia executable", None, -1))
-        self.groupBox_data_store.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Data store", None, -1))
+        self.groupBox_data_store.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Data store views", None, -1))
         self.checkBox_commit_at_exit.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Unchecked: Does not commit session and does not show message box</p><p>Partially checked: Shows message box (default)</p><p>Checked: Commits session and does not show message box</p><p><br/></p></body></html>", None, -1))
-        self.checkBox_commit_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Commit session at treeview exit", None, -1))
+        self.checkBox_commit_at_exit.setText(QtWidgets.QApplication.translate("SettingsForm", "Commit session at exit", None, -1))
         self.groupBox_project.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Project", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("SettingsForm", "Name", None, -1))
         self.lineEdit_project_name.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>You can rename project from main window menu <span style=\" font-weight:600;\">File -&gt; Save As...</span></p></body></html>", None, -1))
@@ -300,8 +300,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'Cantarell\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'MS Shell Dlg 2\'; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave this empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))
