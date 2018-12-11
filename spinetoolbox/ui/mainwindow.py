@@ -1189,8 +1189,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

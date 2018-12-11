@@ -23,15 +23,14 @@ from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QPushButton, QErrorMessage, QAction, \
-    QToolButton, QFileDialog
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize
+    QToolButton, QFileDialog, QProgressBar
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize, QThreadPool
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
-from spinedatabase_api import create_new_spine_database, DiffDatabaseMapping
 from datapackage import Package
-from datapackage_import_export import datapackage_to_spine
+from datapackage_import_export import DatapackageToSpineConverter
 from helpers import busy_effect
 
 
@@ -45,6 +44,7 @@ class SpineDatapackageWidget(QMainWindow):
         datapackage (CustomPackage): Datapackage to load and use
     """
     msg = Signal(str, name="msg")
+    msg_proc = Signal(str, name="msg_proc")
     msg_error = Signal(str, name="msg_error")
 
     def __init__(self, data_connection):
@@ -67,6 +67,8 @@ class SpineDatapackageWidget(QMainWindow):
         self.visible_rows = int(max_screen_height / self.default_row_height)
         self.err_msg = QErrorMessage(self)
         self.remove_row_icon = QIcon(":/icons/minus.png")
+        self.progress_bar = QProgressBar()
+        self.progress_bar.hide()
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -77,6 +79,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
+        self.ui.statusbar.addPermanentWidget(self.progress_bar)
         # Set up corner widgets
         button = QPushButton("Descriptor")
         button.setFlat(True)
@@ -125,6 +128,7 @@ class SpineDatapackageWidget(QMainWindow):
         """Connect signals to slots."""
         # Message actions
         self.msg.connect(self.add_message)
+        self.msg_proc.connect(self.add_process_message)
         self.msg_error.connect(self.add_error_message)
         # DC destroyed
         self._data_connection.destroyed.connect(self.close)
@@ -177,13 +181,22 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
-        """Append regular message to status bar.
+        """Prepend regular message to status bar.
 
         Args:
             msg (str): String to show in QStatusBar
         """
-        current_msg = self.ui.statusbar.currentMessage()
-        self.ui.statusbar.showMessage(current_msg + " " + msg, 5000)
+        msg += "\t" + self.ui.statusbar.currentMessage()
+        self.ui.statusbar.showMessage(msg, 5000)
+
+    @Slot(str, name="add_process_message")
+    def add_process_message(self, msg):
+        """Show process message in status bar. This messages stays until replaced.
+
+        Args:
+            msg (str): String to show in QStatusBar
+        """
+        self.ui.statusbar.showMessage(msg, 0)
 
     @Slot(str, name="add_error_message")
     def add_error_message(self, msg):
@@ -254,18 +267,32 @@ class SpineDatapackageWidget(QMainWindow):
             os.remove(file_path)
         except OSError:
             pass
-        dst_url = 'sqlite:///{0}'.format(file_path)
-        create_new_spine_database(dst_url)
-        username = getpass.getuser()
-        db_map = DiffDatabaseMapping(dst_url, username)
-        try:
-            datapackage_path = os.path.join(self.datapackage.base_path, "datapackage.json")
-            datapackage_to_spine(db_map, datapackage_path)
-            db_map.commit_session("Automatically converted from '{}'".format(datapackage_path))
-            db_map.close()
-            self.msg.emit("Datapackage successfully exported.")
-        except (SpineDBAPIError, SpineIntegrityError) as e:
-            self.msg_error.emit(e.msg)
+        db_url = 'sqlite:///{0}'.format(file_path)
+        datapackage_path = os.path.join(self.datapackage.base_path, "datapackage.json")
+        self.progress_bar.show()
+        converter = DatapackageToSpineConverter(db_url, datapackage_path)
+        converter.signaler.finished.connect(self._handle_converter_finished)
+        converter.signaler.failed.connect(self._handle_converter_failed)
+        converter.signaler.progressed.connect(self._handle_converter_progressed)
+        self.progress_bar.setRange(0, converter.number_of_steps())
+        self.progress_bar.reset()
+        QThreadPool.globalInstance().start(converter)
+
+    @Slot("int", "QString", name="_handle_converter_progressed")
+    def _handle_converter_progressed(self, step, msg):
+        self.progress_bar.setValue(step)
+        if msg:
+            self.msg_proc.emit(msg)
+
+    @Slot("QString", name="_handle_converter_failed")
+    def _handle_converter_failed(self, msg):
+        self.progress_bar.hide()
+        self.msg_error.emit("Unable to export datapackage: {}.".format(msg))
+
+    @Slot(name="_handle_converter_finished")
+    def _handle_converter_finished(self):
+        self.progress_bar.hide()
+        self.msg.emit("Datapackage successfully exported.")
 
     def load_resource_data(self):
         """Load resource data into a local list of tables."""
