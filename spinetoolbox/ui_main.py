@@ -1215,7 +1215,11 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu = None
 
     def close_view_forms(self):
-        """Close all GraphViewForm and TreeViewForm instances opened in Data Stores and Views."""
+        """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.
+        This ensures that the `close` method is called on the corresponding DiffDatabaseMapping instances,
+        so that the database is cleaned up.
+        Also close all SpineDatapackageWidget instances opened in Data Connections.
+        """
         if not self._project:
             return
         for data_store in self.project_item_model.items("Data Stores"):
