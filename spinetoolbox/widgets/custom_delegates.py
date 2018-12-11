@@ -17,10 +17,8 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
-    QTextEdit
-from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor, FieldNameListEditor, \
-    CustomSpinBoxEditor
+    QTextEdit, QWidget, QVBoxLayout, QPushButton, QTableView
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
 from models import MinimalTableModel
 import logging
 
@@ -427,6 +425,74 @@ class AddRelationshipsDelegate(ParameterDelegate):
         return "__".join(object_name_list)
 
 
+class FieldNameListEditor(QWidget):
+    """A widget to edit foreign keys' field name lists."""
+
+    data_committed = Signal(name="data_committed")
+
+    def __init__(self, parent, option, index):
+        """Initialize class."""
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.model = MinimalTableModel(self)
+        self.model.flags = self.model_flags
+        self.view = QTableView(self)
+        self.view.setModel(self.model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        self.view.setShowGrid(False)
+        check_box_delegate = CheckBoxDelegate(self)
+        self.view.setItemDelegateForColumn(0, check_box_delegate)
+        check_box_delegate.data_committed.connect(self._handle_check_box_data_committed)
+        self.button = QPushButton("Ok", self)
+        self.button.setFlat(True)
+        self.view.verticalHeader().setDefaultSectionSize(option.rect.height())
+        self.button.setFixedHeight(option.rect.height())
+        layout.addWidget(self.view)
+        layout.addWidget(self.button)
+        self.button.clicked.connect(self._handle_ok_button_clicked)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        x_offset = parent.parent().columnViewportPosition(index.column())
+        y_offset = parent.parent().rowViewportPosition(index.row())
+        self.position = parent.mapToGlobal(QPoint(0, 0)) + QPoint(x_offset, y_offset)
+
+    def model_flags(self, index):
+        """Return index flags."""
+        if not index.isValid():
+            return Qt.NoItemFlags
+        if index.column() != 0:
+            return ~Qt.ItemIsEditable
+        return Qt.ItemIsEditable
+
+    @Slot("QModelIndex", name="_handle_check_box_data_committed")
+    def _handle_check_box_data_committed(self, index):
+        """Called when checkbox delegate wants to edit data. Toggle the index's value."""
+        data = index.data(Qt.EditRole)
+        self.model.setData(index, not data)
+
+    @Slot("bool", name="_handle_ok_button_clicked")
+    def _handle_ok_button_clicked(self, checked=False):
+        """Called when user pressed Ok."""
+        self.data_committed.emit()
+
+    def set_data(self, field_names, current_field_names):
+        """Set values to show in the 'menu'. Reset model using those values and update geometry."""
+        data = [[name in current_field_names, name] for name in field_names]
+        self.model.reset_model(data)
+        self.view.resizeColumnsToContents()
+        width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setFixedWidth(width + 2)
+        height = self.view.verticalHeader().length() + self.button.height()
+        parent_height = self.parent().height()
+        self.setFixedHeight(min(height, parent_height / 2) + 2)
+        self.move(self.position)
+
+    def data(self):
+        return ",".join([name for checked, name in self.model._main_data if checked])
+
+
 class ForeignKeysDelegate(QItemDelegate):
     """A QComboBox delegate with checkboxes.
 
@@ -448,10 +514,8 @@ class ForeignKeysDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'length':
-            return CustomSpinBoxEditor(parent)
-        elif header[index.column()] == 'fields':
-            editor = FieldNameListEditor(parent)
+        if header[index.column()] == 'fields':
+            editor = FieldNameListEditor(parent, option, index)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
@@ -459,7 +523,7 @@ class ForeignKeysDelegate(QItemDelegate):
         elif header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'reference fields':
-            editor = FieldNameListEditor(parent)
+            editor = FieldNameListEditor(parent, option, index)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
@@ -473,17 +537,13 @@ class ForeignKeysDelegate(QItemDelegate):
         self.selected_resource_name = self._parent.selected_resource_name
         header = index.model().horizontal_header_labels()
         h = header.index
-        if header[index.column()] == 'length':
-            editor.set_data(index.data(Qt.EditRole), minimum=1)
-        elif header[index.column()] == 'fields':
-            length = int(index.sibling(index.row(), h('length')).data(Qt.DisplayRole))
+        if header[index.column()] == 'fields':
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
-            editor.set_data(length, field_names, current_field_names)
+            editor.set_data(field_names, current_field_names)
         elif header[index.column()] == 'reference resource':
             editor.set_data(index.data(Qt.EditRole), self.datapackage.resource_names)
         elif header[index.column()] == 'reference fields':
-            length = int(index.sibling(index.row(), h('length')).data(Qt.DisplayRole))
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             reference_resource_name = index.sibling(index.row(), h('reference resource')).data(Qt.DisplayRole)
             reference_resource = self.datapackage.get_resource(reference_resource_name)
@@ -491,7 +551,7 @@ class ForeignKeysDelegate(QItemDelegate):
                 field_names = []
             else:
                 field_names = reference_resource.schema.field_names
-            editor.set_data(length, field_names, current_field_names)
+            editor.set_data(field_names, current_field_names)
 
     def setModelData(self, editor, model, index):
         """Send signal."""

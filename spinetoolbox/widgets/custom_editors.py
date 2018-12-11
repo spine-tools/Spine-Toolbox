@@ -17,26 +17,8 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot, Signal, QRect
-from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QWidget, QHBoxLayout, QTableView, \
-    QSpinBox
+from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QHBoxLayout
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
-
-
-class CustomSpinBoxEditor(QSpinBox):
-    """A custom QSpinBox to handle data from models.
-
-    Attributes:
-        parent (QWidget): the widget that wants to edit the data
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-
-    def set_data(self, current_value, minimum=0):
-        self.setValue(current_value)
-        self.setMinimum(minimum)
-
-    def data(self):
-        return self.value()
 
 
 class CustomComboEditor(QComboBox):
@@ -139,52 +121,3 @@ class ObjectNameListEditor(QWidget):
                 object_name = combo.currentText()
             object_name_list.append(object_name)
         return ','.join(object_name_list)
-
-
-class FieldNameListEditor(QWidget):
-    """A custom QWidget to edit object name lists."""
-
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.field_names = list()
-        self.missing_dimensions = set()
-        self.combos = list()
-        layout = QHBoxLayout()
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-
-    def set_data(self, length, field_names, current_field_names):
-        """Set data."""
-        for i in range(length):
-            combo = QComboBox(self)
-            combo.addItems(field_names)
-            combo.activated.connect(lambda index, i=i: self.remove_missing_dimension(i))
-            self.layout().addWidget(combo)
-            self.combos.append(combo)
-            try:
-                field_name = current_field_names[i]
-            except IndexError:
-                self.missing_dimensions.add(i)
-                continue
-            if field_name:
-                combo.setCurrentText(field_name)
-            else:
-                self.missing_dimensions.add(i)
-
-    def remove_missing_dimension(self, dim):
-        combo = self.combos[dim]
-        try:
-            self.missing_dimensions.remove(dim)
-        except KeyError:
-            pass
-        if not self.missing_dimensions:
-            self.data_committed.emit()
-
-    def data(self):
-        field_name_list = list()
-        for combo in self.combos:
-            field_name_list.append(combo.currentText())
-        return ','.join(field_name_list)

@@ -3636,12 +3636,12 @@ class DatapackageForeignKeysModel(EmptyRowModel):
 
     def reset_model(self, schema):
         self.clear()
-        self.set_horizontal_header_labels(["length", "fields", "reference resource", "reference fields", ""])
+        self.set_horizontal_header_labels(["fields", "reference resource", "reference fields", ""])
         self.schema = schema
         data = list()
         for foreign_key in schema.foreign_keys:
             fields = ",".join(foreign_key['fields'])
             reference_resource = foreign_key['reference']['resource']
             reference_fields = ",".join(foreign_key['reference']['fields'])
-            data.append([len(foreign_key['fields']), fields, reference_resource, reference_fields, None])
+            data.append([fields, reference_resource, reference_fields, None])
         super().reset_model(data)

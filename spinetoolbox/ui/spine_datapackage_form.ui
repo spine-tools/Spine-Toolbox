@@ -288,7 +288,7 @@
     <addaction name="actionSave_datapackage"/>
     <addaction name="separator"/>
     <addaction name="separator"/>
-    <addaction name="actionExport_to_Spine"/>
+    <addaction name="actionExport_to_spine"/>
     <addaction name="separator"/>
     <addaction name="actionClose"/>
    </widget>
@@ -338,7 +338,7 @@
     <string>Ctrl+L</string>
    </property>
   </action>
-  <action name="actionExport_to_Spine">
+  <action name="actionExport_to_spine">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>

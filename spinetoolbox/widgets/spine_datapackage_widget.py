@@ -17,19 +17,22 @@ in Data Connection item.
 :date:   7.7.2018
 """
 
+import getpass
 import os
 from config import STATUSBAR_SS
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QPushButton, QErrorMessage, QAction, \
-    QToolButton
+    QToolButton, QFileDialog
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon
 from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.custom_delegates import ResourceNameDelegate, ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
-from spinedatabase_api import OBJECT_CLASS_NAMES
+from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
+from spinedatabase_api import create_new_spine_database, DiffDatabaseMapping
 from datapackage import Package
+from datapackage_import_export import datapackage_to_spine
+from helpers import busy_effect
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -50,7 +53,6 @@ class SpineDatapackageWidget(QMainWindow):
         # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
         # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
         self._data_connection = data_connection
-        self.object_class_name_list = OBJECT_CLASS_NAMES
         self.datapackage = None
         self.descriptor_tree_context_menu = None
         self.selected_resource_name = None
@@ -107,7 +109,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.load_datapackage()
 
     @Slot(bool, name="load_datapackage")
-    def load_datapackage(self):
+    def load_datapackage(self, checked=False):
         """Try and initialize datapackage, and reset resource model if successful"""
         if not self.init_datapackage():
             return
@@ -151,7 +153,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         self.ui.actionLoad_datapackage.triggered.connect(self.load_datapackage)
-        # self.ui.actionExport_to_Spine.triggered.connect(self.export)
+        self.ui.actionExport_to_spine.triggered.connect(self.show_export_to_spine_dialog)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -213,7 +215,8 @@ class SpineDatapackageWidget(QMainWindow):
                             "and try again".format(self._data_connection.data_dir))
         return False
 
-    def save_datapackage(self):
+    @Slot(bool, name="save_datapackage")
+    def save_datapackage(self, checked=False):
         """Write datapackage to file 'datapackage.json' in data directory."""
         if os.path.isfile(os.path.join(self._data_connection.data_dir, "datapackage.json")):
             msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. '
@@ -230,6 +233,39 @@ class SpineDatapackageWidget(QMainWindow):
         msg = 'Failed to save "datapackage.json" in {}'.format(self._data_connection.data_dir)
         self.msg_error.emit(msg)
         return False
+
+    @Slot(bool, name="show_export_to_spine_dialog")
+    def show_export_to_spine_dialog(self, checked=False):
+        """Show dialog to allow user to select a file to export."""
+        answer = QFileDialog.getSaveFileName(self,
+                                             "Export to file",
+                                             self._data_connection._project.project_dir,
+                                             "SQlite database (*.sqlite *.db)")
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        self.export_to_spine(file_path)
+
+    @busy_effect
+    def export_to_spine(self, file_path):
+        """Export datapackage into Spine SQlite file."""
+        # Remove file if exists (at this point, the user has confirmed that overwritting is ok)
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        dst_url = 'sqlite:///{0}'.format(file_path)
+        create_new_spine_database(dst_url)
+        username = getpass.getuser()
+        db_map = DiffDatabaseMapping(dst_url, username)
+        try:
+            datapackage_path = os.path.join(self.datapackage.base_path, "datapackage.json")
+            datapackage_to_spine(db_map, datapackage_path)
+            db_map.commit_session("Automatically converted from '{}'".format(datapackage_path))
+            db_map.close()
+            self.msg.emit("Datapackage successfully exported.")
+        except (SpineDBAPIError, SpineIntegrityError) as e:
+            self.msg_error.emit(e.msg)
 
     def load_resource_data(self):
         """Load resource data into a local list of tables."""
@@ -325,7 +361,7 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot("QModelIndex", "QVariant", name="_handle_foreign_keys_data_committed")
     def _handle_foreign_keys_data_committed(self, index, value):
         # Store previous data in case we need to remove a foreign key
-        previous_row_data = self.foreign_keys_model._main_data[index.row()][1:4]
+        previous_row_data = self.foreign_keys_model._main_data[index.row()][0:3]
         if not self.foreign_keys_model.setData(index, value, Qt.EditRole):
             return
         resource = self.selected_resource_name
@@ -338,7 +374,7 @@ class SpineDatapackageWidget(QMainWindow):
             self.datapackage.remove_foreign_key(resource, fields, reference_resource, reference_fields)
             previous_removed = True
         # Check if we're ready to add a foreing key
-        row_data = self.foreign_keys_model._main_data[index.row()][1:4]
+        row_data = self.foreign_keys_model._main_data[index.row()][0:3]
         if all(row_data):
             fields_str, reference_resource, reference_fields_str = row_data
             fields = fields_str.split(",")
@@ -376,7 +412,7 @@ class SpineDatapackageWidget(QMainWindow):
             if button != self.ui.tableView_foreign_keys.indexWidget(index):
                 continue
             # Remove fk from datapackage descriptor
-            row_data = self.foreign_keys_model._main_data[row][1:4]
+            row_data = self.foreign_keys_model._main_data[row][0:3]
             self.foreign_keys_model.removeRows(row, 1)
             if not all(row_data):
                 # Something is missing
