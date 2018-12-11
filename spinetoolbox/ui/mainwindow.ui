@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -340,7 +340,7 @@
      <item>
       <widget class="QTabWidget" name="tabWidget_item_properties">
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">

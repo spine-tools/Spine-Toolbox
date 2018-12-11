@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 909, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -1038,7 +1038,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_properties.setCurrentIndex(0)
+        self.tabWidget_item_properties.setCurrentIndex(4)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -1195,7 +1195,7 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
 from widgets.custom_qgraphicsview import CustomQGraphicsView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc
