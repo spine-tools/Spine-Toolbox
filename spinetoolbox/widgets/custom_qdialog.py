@@ -79,13 +79,17 @@ class AddItemsDialog(QDialog):
         column = self.model.columnCount() - 1
         for row in range(first, last + 1):
             index = self.model.index(row, column, parent)
-            action = QAction()
-            action.setIcon(self.remove_row_icon)
-            button = QToolButton()
-            button.setDefaultAction(action)
-            button.setIconSize(QSize(20, 20))
-            self.ui.tableView.setIndexWidget(index, button)
-            action.triggered.connect(lambda: self.remove_clicked_row(button))
+            self.create_remove_row_button(index)
+
+    def create_remove_row_button(self, index):
+        """Create button to remove row."""
+        action = QAction()
+        action.setIcon(self.remove_row_icon)
+        button = QToolButton()
+        button.setDefaultAction(action)
+        button.setIconSize(QSize(20, 20))
+        self.ui.tableView.setIndexWidget(index, button)
+        action.triggered.connect(lambda: self.remove_clicked_row(button))
 
     def remove_clicked_row(self, button):
         column = self.model.columnCount() - 1
@@ -117,7 +121,7 @@ class AddObjectClassesDialog(AddItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.object_class_list = self._parent.db_map.object_class_list()
-        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_object_icon.png"))
+        self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
         self.setup_ui(ui.add_object_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
         self.connect_signals()
@@ -177,7 +181,7 @@ class AddObjectsDialog(AddItemsDialog):
     """
     def __init__(self, parent, class_id=None, force_default=False):
         super().__init__(parent, force_default=force_default)
-        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_object_icon.png"))
+        self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
         self.setup_ui(ui.add_objects.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
@@ -254,7 +258,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     """
     def __init__(self, parent, object_class_one_id=None, force_default=False):
         super().__init__(parent, force_default=force_default)
-        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_relationship_icon.png"))
+        self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
         self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
         self.connect_signals()
@@ -381,7 +385,7 @@ class AddRelationshipsDialog(AddItemsDialog):
     """
     def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None, force_default=False):
         super().__init__(parent, force_default=force_default)
-        self.remove_row_icon = QIcon(QPixmap(":/icons/minus_relationship_icon.png"))
+        self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
         self.relationship_class_list = \
             [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
         self.relationship_class = None

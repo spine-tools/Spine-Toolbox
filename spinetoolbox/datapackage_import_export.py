@@ -16,182 +16,424 @@ Functions to import/export between spine database and frictionless data's datapa
 :date:   28.8.2018
 """
 
+import getpass
+from PySide2.QtCore import QRunnable, Signal, QObject
 from datapackage import Package
-from spinedatabase_api import SpineDBAPIError
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError, DiffDatabaseMapping, \
+    create_new_spine_database
 from helpers import busy_effect
 import logging
 
 
+class Signaler(QObject):
+    finished = Signal(name="finished")
+    failed = Signal("QString", name="failed")
+    progressed = Signal("int", "QString", name="progressed")
+
+
+class DatapackageToSpineConverter(QRunnable):
+
+    def __init__(self, db_url, datapackage_file_path):
+        super().__init__()
+        self.db_url = db_url
+        self.datapackage_file_path = datapackage_file_path
+        create_new_spine_database(self.db_url)
+        self.db_map = DiffDatabaseMapping(db_url, getpass.getuser())
+        self.datapackage = Package(datapackage_file_path)
+        self.signaler = Signaler()
+        self.resource_data = dict()
+        for resource in self.datapackage.resources:
+            self.resource_data[resource.name] = resource.read(cast=False)
+
+    def number_of_steps(self):
+        k = 0
+        # Packing object classes, relationship classes, and parameters
+        for resource in self.datapackage.resources:
+            for field in resource.schema.fields:
+                k += 1
+        # Packing objects and parameters values
+        for resource in self.datapackage.resources:
+            for row in resource.read(cast=False):
+                for field_name in resource.schema.field_names:
+                    k += 1
+        # Packing relationships
+        reference_resource_dict = dict()
+        for resource in self.datapackage.resources:
+            foreign_keys = resource.schema.foreign_keys
+            for foreign_key in foreign_keys:
+                k += 1
+                reference_resource_name = foreign_key["reference"]["resource"]
+                reference_fields_names = foreign_key["reference"]["fields"]
+                reference_resource_dict.setdefault(reference_resource_name, list()).\
+                    append(reference_fields_names)
+        for reference_resource_name, reference_fields_names_list in reference_resource_dict.items():
+            reference_resource = self.datapackage.get_resource(reference_resource_name)
+            for reference_fields_names in reference_fields_names_list:
+                for row in reference_resource.read(cast=False):
+                    k += 1
+        # Create list of relationships
+        for resource in self.datapackage.resources:
+            foreign_keys = resource.schema.foreign_keys
+            for row in resource.read(cast=False):
+                for fk in foreign_keys:
+                    k += 1
+        return k
+
+    def run(self):
+        try:
+            self._run()
+            self.signaler.finished.emit()
+        except (SpineDBAPIError, SpineIntegrityError) as e:
+            self.signaler.failed.emit(e.msg)
+
+    def _run(self):
+        k = 0
+        self.signaler.progressed.emit(k, "Packing object classes, relationship classes, and parameters...")
+        object_class_names = [x.name for x in self.db_map.object_class_list()]
+        parameter_names = [x.name for x in self.db_map.parameter_list()]
+        object_class_name_lists = [
+            x.object_class_name_list.split(",") for x in self.db_map.wide_relationship_class_list()]
+        object_classes = list()
+        pre_relationship_classes = list()
+        pre_parameters = list()
+        for resource in self.datapackage.resources:
+            self.signaler.progressed.emit(k, "")
+            if resource.name not in object_class_names:
+                object_classes.append(dict(name=resource.name))
+                object_class_names.append(resource.name)
+            primary_key = resource.schema.primary_key
+            foreign_keys = resource.schema.foreign_keys
+            reference_resource_names = [fk["reference"]["resource"] for fk in foreign_keys]
+            for reference_resource_name in reference_resource_names:
+                if reference_resource_name not in object_class_names:
+                    object_classes.append(dict(name=reference_resource_name))
+                    object_class_names.append(reference_resource_name)
+            if reference_resource_names:
+                object_class_name_list = [resource.name] + reference_resource_names
+                relationship_class_name = "__".join(object_class_name_list)
+                pre_relationship_classes.append(dict(
+                    object_class_name_list=object_class_name_list,
+                    name=relationship_class_name
+                ))
+                object_class_name_lists.append(object_class_name_list)
+            for field in resource.schema.fields:
+                k += 1
+                # Skip fields in primary key
+                if field.name in primary_key:
+                    continue
+                # Skip fields in any foreign key
+                if field in [x for fk in foreign_keys for x in fk["fields"]]:
+                    continue
+                parameter_name = resource.name + "_" + field.name
+                if parameter_name not in parameter_names:
+                    pre_parameters.append(dict(object_class_name=resource.name, name=parameter_name))
+                    parameter_names.append(parameter_name)
+        self.signaler.progressed.emit(k, "Adding object classes...")
+        self.db_map.add_object_classes(*object_classes)
+        object_class_name_id = {x.name: x.id for x in self.db_map.object_class_list()}
+        relationship_classes = [
+            dict(
+                object_class_id_list=[object_class_name_id[n] for n in r['object_class_name_list']],
+                name=r['name']
+            ) for r in pre_relationship_classes
+        ]
+        self.signaler.progressed.emit(k, "Adding relationship classes...")
+        self.db_map.add_wide_relationship_classes(*relationship_classes)
+        parameters = [
+            dict(
+                object_class_id=object_class_name_id[p['object_class_name']],
+                name=p['name']
+            ) for p in pre_parameters
+        ]
+        self.signaler.progressed.emit(k, "Adding parameters...")
+        self.db_map.add_parameters(*parameters)
+        self.signaler.progressed.emit(k, "Packing objects and parameters values...")
+        relationship_class_name_id = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
+        parameter_name_id = {x.name: x.id for x in self.db_map.parameter_list()}
+        object_names = [x.name for x in self.db_map.object_list()]
+        # Create list of object and preliminary parameter value dicts.
+        objects = list()
+        pre_parameter_values = list()
+        for resource in self.datapackage.resources:
+            self.signaler.progressed.emit(k, "")
+            object_class_id = object_class_name_id[resource.name]
+            primary_key = resource.schema.primary_key
+            foreign_keys = resource.schema.foreign_keys
+            foreign_keys_fields = [x for fk in foreign_keys for x in fk["fields"]]
+            for i, row in enumerate(self.resource_data[resource.name]):
+                row_dict = dict(zip(resource.schema.field_names, row))
+                if primary_key:
+                    object_name = "_".join(row_dict[field] for field in primary_key)
+                else:
+                    object_name = resource.name + str(i)
+                if not object_name in object_names:
+                    objects.append(dict(class_id=object_class_id, name=object_name))
+                    object_names.append(object_name)
+                for field_name, value in row_dict.items():
+                    k += 1
+                    if field_name in primary_key:
+                        continue
+                    if field_name in foreign_keys_fields:
+                        continue
+                    parameter_name = resource.name + "_" + field_name
+                    parameter_id = parameter_name_id[parameter_name]
+                    pre_parameter_values.append(dict(
+                        object_name=object_name,
+                        parameter_id=parameter_id,
+                        value=value
+                    ))
+        self.signaler.progressed.emit(k, "Adding objects...")
+        self.db_map.add_objects(*objects)
+        object_name_id = {x.name: x.id for x in self.db_map.object_list()}
+        parameter_values = [
+            dict(
+                object_id=object_name_id[p['object_name']],
+                parameter_id=p['parameter_id'],
+                value=p['value']
+            ) for p in pre_parameter_values
+        ]
+        self.signaler.progressed.emit(k, "Adding parameter values...")
+        self.db_map.add_parameter_values(*parameter_values)
+        self.signaler.progressed.emit(k, "Packing relationships...")
+        # Create dictionary of reference resource names => list of reference fields names
+        reference_resource_dict = dict()
+        for resource in self.datapackage.resources:
+            self.signaler.progressed.emit(k, "")
+            foreign_keys = resource.schema.foreign_keys
+            for foreign_key in foreign_keys:
+                k += 1
+                reference_resource_name = foreign_key["reference"]["resource"]
+                reference_fields_names = foreign_key["reference"]["fields"]
+                reference_resource_dict.setdefault(reference_resource_name, list()).\
+                    append(reference_fields_names)
+        # Create dictionary of reference resource name => reference fields names
+        # => reference key => object id
+        reference_object_id_dict = dict()
+        for reference_resource_name, reference_fields_names_list in reference_resource_dict.items():
+            self.signaler.progressed.emit(k, "")
+            reference_resource = self.datapackage.get_resource(reference_resource_name)
+            reference_primary_key = reference_resource.schema.primary_key
+            reference_object_id_dict[reference_resource_name] = d1 = dict()
+            for reference_fields_names in reference_fields_names_list:
+                d1[",".join(reference_fields_names)] = d2 = dict()
+                for i, row in enumerate(self.resource_data[reference_resource.name]):
+                    k += 1
+                    row_dict = dict(zip(reference_resource.schema.field_names, row))
+                    # Find object id
+                    if reference_primary_key:
+                        reference_object_name = "_".join(row_dict[field] for field in reference_primary_key)
+                    else:
+                        reference_object_name = reference_resource_name + str(i)
+                    reference_object_id = object_name_id[reference_object_name]
+                    key = ",".join([row_dict[x] for x in reference_fields_names])
+                    d2[key] = (reference_object_id, reference_object_name)
+        # Create list of relationships
+        relationships = list()
+        for resource in self.datapackage.resources:
+            self.signaler.progressed.emit(k, "")
+            primary_key = resource.schema.primary_key
+            foreign_keys = resource.schema.foreign_keys
+            reference_resource_names = [fk['reference']['resource'] for fk in foreign_keys]
+            if not reference_resource_names:
+                continue
+            object_class_name_list = [resource.name] + reference_resource_names
+            relationship_class_name = "__".join(object_class_name_list)
+            relationship_class_id = relationship_class_name_id[relationship_class_name]
+            for i, row in enumerate(self.resource_data[reference_resource.name]):
+                row_dict = dict(zip(resource.schema.field_names, row))
+                if primary_key:
+                    object_name = "_".join(row_dict[field] for field in primary_key)
+                else:
+                    object_name = resource.name + str(i)
+                object_id = object_name_id[object_name]
+                object_id_list = [object_id]
+                object_name_list = [object_name]
+                for fk in foreign_keys:
+                    k += 1
+                    fields_names = fk['fields']
+                    reference_resource_name = fk['reference']['resource']
+                    reference_fields_names = fk['reference']['fields']
+                    key = ",".join([row_dict[x] for x in fields_names])
+                    d1 = reference_object_id_dict[reference_resource_name]
+                    d2 = d1[",".join(reference_fields_names)]
+                    reference_object_id, reference_object_name = d2[key]
+                    object_id_list.append(reference_object_id)
+                    object_name_list.append(reference_object_name)
+                relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
+                relationships.append(dict(
+                    class_id=relationship_class_id,
+                    object_id_list=object_id_list,
+                    name=relationship_name
+                ))
+        self.signaler.progressed.emit(k, "Adding relationships...")
+        self.db_map.add_wide_relationships(*relationships)
+        self.db_map.commit_session("Automatically converted from '{}'".format(self.datapackage_file_path))
+        self.db_map.close()
+        self.signaler.progressed.emit(k, "")
+
+
 @busy_effect
-def import_datapackage(data_store_form, datapackage_path):
-    """Import datapackage from `datapackage_path` into `data_store_form`."""
-    data_store_form.msg.emit("Importing datapackage... ")
-    mapping = data_store_form.mapping
-    object_class_name_list = [x.name for x in mapping.object_class_list()]
-    datapackage = Package(datapackage_path)
+def datapackage_to_spine(db_map, datapackage_file_path):
+    """Convert datapackage from `datapackage_file_path` into Spine `db_map`."""
+    insert_log = []
+    error_log = []
+    datapackage = Package(datapackage_file_path)
+    object_class_names = [x.name for x in db_map.object_class_list()]
+    parameter_names = [x.name for x in db_map.parameter_list()]
+    object_class_name_lists = [x.object_class_name_list.split(",") for x in db_map.wide_relationship_class_list()]
+    object_classes = list()
+    pre_relationship_classes = list()
+    pre_parameters = list()
     for resource in datapackage.resources:
-        if resource.name not in object_class_name_list:
-            logging.debug("Ignoring resource '{}'.".format(resource.name))
-            continue
-        logging.debug("Importing resource '{}'.".format(resource.name))
-        object_class_name = resource.name
-        object_class = mapping.single_object_class(name=object_class_name).one_or_none()
-        if not object_class:
-            continue
-        object_class_id = object_class.id
+        if resource.name not in object_class_names:
+            object_classes.append(dict(name=resource.name))
+            object_class_names.append(resource.name)
         primary_key = resource.schema.primary_key
         foreign_keys = resource.schema.foreign_keys
+        reference_resource_names = [fk["reference"]["resource"] for fk in foreign_keys]
+        for reference_resource_name in reference_resource_names:
+            if reference_resource_name not in object_class_names:
+                object_classes.append(dict(name=reference_resource_name))
+                object_class_names.append(reference_resource_name)
+        if reference_resource_names:
+            object_class_name_list = [resource.name] + reference_resource_names
+            relationship_class_name = "__".join(object_class_name_list)
+            pre_relationship_classes.append(dict(
+                object_class_name_list=object_class_name_list,
+                name=relationship_class_name
+            ))
+            object_class_name_lists.append(object_class_name_list)
         for field in resource.schema.fields:
-            logging.debug("Checking field '{}'.".format(field.name))
             # Skip fields in primary key
             if field.name in primary_key:
                 continue
-            # Find field in foreign keys, and prepare list of child object classes
-            child_object_class_name_list = list()
-            for foreign_key in foreign_keys:
-                if field.name in foreign_key['fields']:
-                    child_object_class_name = foreign_key['reference']['resource']
-                    if child_object_class_name not in object_class_name_list:
-                        continue
-                    child_object_class_name_list.append(child_object_class_name)
-            # If field is not in any foreign keys, use it to create a parameter
-            if not child_object_class_name_list:
-                try:
-                    parameter = mapping.add_parameter(object_class_id=object_class_id, name=field.name)
-                except SpineDBAPIError as e:
-                    logging.error(e.msg)
+            # Skip fields in any foreign key
+            if field in [x for fk in foreign_keys for x in fk["fields"]]:
                 continue
-            # Create relationship classes
-            for child_object_class_name in child_object_class_name_list:
-                child_object_class = mapping.single_object_class(name=child_object_class_name).\
-                    one_or_none()
-                if not child_object_class:
-                    continue
-                relationship_class_name = object_class_name + "_" + child_object_class.name
-                try:
-                    wide_relationship_class = mapping.add_wide_relationship_class(
-                        object_class_id_list=[object_class_id, child_object_class.id],
-                        name=relationship_class_name
-                    )
-                    data_store_form.object_tree_model.add_relationship_class(wide_relationship_class._asdict())
-                except SpineDBAPIError as e:
-                    logging.error(e.msg)
-        # Iterate over resource rows to create objects and parameter values
-        for i, row in enumerate(resource.read(cast=False)):  # TODO: try and get field keys from read method too
+            parameter_name = resource.name + "_" + field.name
+            if parameter_name not in parameter_names:
+                pre_parameters.append(dict(object_class_name=resource.name, name=parameter_name))
+                parameter_names.append(parameter_name)
+    db_map.add_object_classes(*object_classes)
+    object_class_name_id = {x.name: x.id for x in db_map.object_class_list()}
+    relationship_classes = [
+        dict(
+            object_class_id_list=[object_class_name_id[n] for n in r['object_class_name_list']],
+            name=r['name']
+        ) for r in pre_relationship_classes
+    ]
+    db_map.add_wide_relationship_classes(*relationship_classes)
+    parameters = [
+        dict(
+            object_class_id=object_class_name_id[p['object_class_name']],
+            name=p['name']
+        ) for p in pre_parameters
+    ]
+    db_map.add_parameters(*parameters)
+    relationship_class_name_id = {x.name: x.id for x in db_map.wide_relationship_class_list()}
+    parameter_name_id = {x.name: x.id for x in db_map.parameter_list()}
+    object_names = [x.name for x in db_map.object_list()]
+    # Create list of object and preliminary parameter value dicts.
+    objects = list()
+    pre_parameter_values = list()
+    for resource in datapackage.resources:
+        object_class_id = object_class_name_id[resource.name]
+        primary_key = resource.schema.primary_key
+        foreign_keys = resource.schema.foreign_keys
+        foreign_keys_fields = [x for fk in foreign_keys for x in fk["fields"]]
+        for i, row in enumerate(resource.read(cast=False)):  # TODO: try and get row_dict directly from read method
             row_dict = dict(zip(resource.schema.field_names, row))
-            # Create object
             if primary_key:
                 object_name = "_".join(row_dict[field] for field in primary_key)
             else:
-                object_name = object_class_name + str(i)
-            try:
-                object_ = mapping.add_object(class_id=object_class_id, name=object_name)
-                data_store_form.object_tree_model.add_object(object_.__dict__)
-            except SpineDBAPIError as e:
-                logging.error(e.msg)
-                continue
-            # Create parameters
-            object_id = object_.id
+                object_name = resource.name + str(i)
+            if not object_name in object_names:
+                objects.append(dict(class_id=object_class_id, name=object_name))
+                object_names.append(object_name)
             for field_name, value in row_dict.items():
                 if field_name in primary_key:
                     continue
-                if field_name in [x for a in foreign_keys for x in a["fields"]]:  # TODO: compute this outside the loop
+                if field_name in foreign_keys_fields:
                     continue
-                parameter = mapping.single_parameter(name=field_name).one_or_none()
-                if not parameter:
-                    continue
-                try:
-                    parameter_value = mapping.add_parameter_value(
-                        object_id=object_id,
-                        parameter_id=parameter.id,
-                        value=value
-                    )
-                except SpineDBAPIError as e:
-                    logging.error(e.msg)
-
-        # TODO: Import relationships from foreign keys
-        # Iterate over resources (again) to create relationships
-        # for resource in self.datapackage.resources:
-        #    parent_object_class_name = resource.name
-        #    if parent_object_class_name not in self.object_class_name_list:
-        #        continue
-        #    relationship_class_id_dict = dict()
-        #    child_object_class_id_dict = dict()
-        #    for field in resource.schema.fields:
-        #        # A field whose named starts with the object_class is an index and should be skipped
-        #        if field.name.startswith(parent_object_class_name):
-        #            continue
-        #        # Fields whose name ends with an object class name are foreign keys
-        #        # and used to create relationships
-        #        child_object_class_name = None
-        #        for x in self.object_class_name_list:
-        #            if field.name.endswith(x):
-        #                child_object_class_name = x
-        #                break
-        #        if child_object_class_name:
-        #            relationship_class_name = resource.name + "_" + field.name
-        #            relationship_class_id_dict[field.name] = self.session.query(self.RelationshipClass.id).\
-        #                filter_by(name=relationship_class_name).one().id
-        #            child_object_class_id_dict[field.name] = self.session.query(self.ObjectClass.id).\
-        #                filter_by(name=child_object_class_name).one().id
-        #    for i, row in enumerate(self.resource_tables[resource.name][1:]):
-        #        row_dict = dict(zip(resource.schema.field_names, row))
-        #        if parent_object_class_name in row_dict:
-        #            parent_object_name = row_dict[parent_object_class_name]
-        #        else:
-        #            parent_object_name = parent_object_class_name + str(i)
-        #        parent_object_id = self.session.query(self.Object.id).\
-        #            filter_by(name=parent_object_name).one().id
-        #        for field_name, value in row_dict.items():
-        #            if field_name in relationship_class_id_dict:
-        #                relationship_class_id = relationship_class_id_dict[field_name]
-        #                child_object_name = None
-        #                child_object_ref = value
-        #                child_object_class_id = child_object_class_id_dict[field_name]
-        #                child_object_class_name = self.session.query(self.ObjectClass.name).\
-        #                    filter_by(id=child_object_class_id).one().name
-        #                child_resource = self.datapackage.get_resource(child_object_class_name)
-        #                # Collect index and primary key columns in child resource
-        #                indices = list()
-        #                primary_key = None
-        #                for j, field in enumerate(child_resource.schema.fields):
-        #                    # A field whose named starts with the object_class is an index
-        #                    if field.name.startswith(child_object_class_name):
-        #                        indices.append(j)
-        #                        # A field named exactly as the object_class is the primary key
-        #                        if field.name == child_object_class_name:
-        #                            primary_key = j
-        #                # Look up the child object ref. in the child resource table
-        #                for k, row in enumerate(self.resource_tables[child_resource.name][1:]):
-        #                    if child_object_ref in [row[j] for j in indices]:
-        #                        # Found reference in index values
-        #                        if primary_key is not None:
-        #                            child_object_name = row[primary_key]
-        #                        else:
-        #                            child_object_name = child_object_class_name + str(k)
-        #                        break
-        #                if child_object_name is None:
-        #                    msg = "Couldn't find object ref {} to create relationship for field {}".\
-        #                        format(child_object_ref, field_name)
-        #                    self.ui.statusbar.showMessage(msg, 5000)
-        #                    continue
-        #                child_object_id = self.session.query(self.Object.id).\
-        #                    filter_by(name=child_object_name, class_id=child_object_class_id).one().id
-        #                relationship_name = parent_object_name + field_name + child_object_name
-        #                relationship = self.Relationship(
-        #                    commit_id=1,
-        #                    class_id=relationship_class_id,
-        #                    parent_object_id=parent_object_id,
-        #                    child_object_id=child_object_id,
-        #                    name=relationship_name
-        #                )
-        #                try:
-        #                    self.session.add(relationship)
-        #                    self.session.flush()
-        #                    object_id = object_.id
-        #                except DBAPIError as e:
-        #                    msg = "Failed to insert relationship {0} for object {1} of class {2}: {3}".\
-        #                        format(field_name, parent_object_name, parent_object_class_name, e.orig.args)
-        #                    self.ui.statusbar.showMessage(msg, 5000)
-        #                    self.session.rollback()
-        #                    return False
+                parameter_name = resource.name + "_" + field_name
+                parameter_id = parameter_name_id[parameter_name]
+                pre_parameter_values.append(dict(
+                    object_name=object_name,
+                    parameter_id=parameter_id,
+                    value=value
+                ))
+    db_map.add_objects(*objects)
+    object_name_id = {x.name: x.id for x in db_map.object_list()}
+    parameter_values = [
+        dict(
+            object_id=object_name_id[p['object_name']],
+            parameter_id=p['parameter_id'],
+            value=p['value']
+        ) for p in pre_parameter_values
+    ]
+    db_map.add_parameter_values(*parameter_values)
+    # Create dictionary of reference resource names => list of reference fields names
+    reference_resource_dict = dict()
+    for resource in datapackage.resources:
+        foreign_keys = resource.schema.foreign_keys
+        for foreign_key in foreign_keys:
+            reference_resource_name = foreign_key["reference"]["resource"]
+            reference_fields_names = foreign_key["reference"]["fields"]
+            reference_resource_dict.setdefault(reference_resource_name, list()).\
+                append(reference_fields_names)
+    # Create dictionary of reference resource name => reference fields names
+    # => reference key => object id
+    reference_object_id_dict = dict()
+    for reference_resource_name, reference_fields_names_list in reference_resource_dict.items():
+        reference_resource = datapackage.get_resource(reference_resource_name)
+        reference_primary_key = reference_resource.schema.primary_key
+        reference_object_id_dict[reference_resource_name] = d1 = dict()
+        for reference_fields_names in reference_fields_names_list:
+            d1[",".join(reference_fields_names)] = d2 = dict()
+            for i, row in enumerate(reference_resource.read(cast=False)):
+                row_dict = dict(zip(reference_resource.schema.field_names, row))
+                # Find object id
+                if reference_primary_key:
+                    reference_object_name = "_".join(row_dict[field] for field in reference_primary_key)
+                else:
+                    reference_object_name = reference_resource_name + str(i)
+                reference_object_id = object_name_id[reference_object_name]
+                key = ",".join([row_dict[x] for x in reference_fields_names])
+                d2[key] = (reference_object_id, reference_object_name)
+    # Create list of relationships
+    relationships = list()
+    for resource in datapackage.resources:
+        primary_key = resource.schema.primary_key
+        foreign_keys = resource.schema.foreign_keys
+        reference_resource_names = [fk['reference']['resource'] for fk in foreign_keys]
+        if not reference_resource_names:
+            continue
+        object_class_name_list = [resource.name] + reference_resource_names
+        relationship_class_name = "__".join(object_class_name_list)
+        relationship_class_id = relationship_class_name_id[relationship_class_name]
+        for i, row in enumerate(resource.read(cast=False)):
+            row_dict = dict(zip(resource.schema.field_names, row))
+            if primary_key:
+                object_name = "_".join(row_dict[field] for field in primary_key)
+            else:
+                object_name = resource.name + str(i)
+            object_id = object_name_id[object_name]
+            object_id_list = [object_id]
+            object_name_list = [object_name]
+            for fk in foreign_keys:
+                fields_names = fk['fields']
+                reference_resource_name = fk['reference']['resource']
+                reference_fields_names = fk['reference']['fields']
+                key = ",".join([row_dict[x] for x in fields_names])
+                d1 = reference_object_id_dict[reference_resource_name]
+                d2 = d1[",".join(reference_fields_names)]
+                reference_object_id, reference_object_name = d2[key]
+                object_id_list.append(reference_object_id)
+                object_name_list.append(reference_object_name)
+            relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
+            relationships.append(dict(
+                class_id=relationship_class_id,
+                object_id_list=object_id_list,
+                name=relationship_name
+            ))
+    db_map.add_wide_relationships(*relationships)

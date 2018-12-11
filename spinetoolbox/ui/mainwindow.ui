@@ -1364,44 +1364,6 @@ color: rgb(255, 255, 255);</string>
              </property>
             </spacer>
            </item>
-           <item>
-            <widget class="QToolButton" name="toolButton_datapackage">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create datapackage from CSV files in directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>16</width>
-               <height>16</height>
-              </size>
-             </property>
-             <property name="popupMode">
-              <enum>QToolButton::InstantPopup</enum>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
          <item>
@@ -1442,6 +1404,26 @@ color: rgb(255, 255, 255);</string>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
+           <item>
+            <widget class="QPushButton" name="pushButton_datapackage">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open datapackage view.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Datapackage</string>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
+             </property>
+            </widget>
+           </item>
            <item>
             <spacer name="horizontalSpacer_3">
              <property name="orientation">
@@ -2500,7 +2482,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
-  <tabstop>toolButton_datapackage</tabstop>
   <tabstop>treeView_dc_data</tabstop>
   <tabstop>pushButton_dc_open</tabstop>
   <tabstop>comboBox_tool</tabstop>

@@ -416,7 +416,7 @@ class ToolboxUI(QMainWindow):
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
         self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
-        self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
+        self.ui.tableView_connections.itemDelegate().data_committed.connect(self.connection_data_changed)
         self.ui.graphicsView.set_connection_model(self.connection_model)
 
     def init_shared_widgets(self):

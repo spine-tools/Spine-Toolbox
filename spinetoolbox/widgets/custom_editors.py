@@ -17,9 +17,8 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot, Signal, QRect
-from PySide2.QtWidgets import QComboBox, QLineEdit, QToolButton, QMenu, QWidget, QHBoxLayout
+from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QHBoxLayout
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
-from widgets.custom_menus import QOkMenu
 
 
 class CustomComboEditor(QComboBox):
@@ -28,8 +27,6 @@ class CustomComboEditor(QComboBox):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
-    commit_data = Signal("QWidget", name="commit_data")
-
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -116,7 +113,6 @@ class ObjectNameListEditor(QWidget):
             self.data_committed.emit()
 
     def data(self):
-        layout = self.layout()
         object_name_list = list()
         for combo in self.combos:
             if combo.currentIndex() == 0:
@@ -125,44 +121,3 @@ class ObjectNameListEditor(QWidget):
                 object_name = combo.currentText()
             object_name_list.append(object_name)
         return ','.join(object_name_list)
-
-
-class CustomSimpleToolButtonEditor(QToolButton):
-    """A custom QToolButton to popup a Qmenu.
-
-    Attributes:
-        parent (SpineDatapackageWidget): spine datapackage widget
-    """
-    commit_data = Signal("QWidget", name="commit_data")
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._text = None
-        self.setPopupMode(QToolButton.InstantPopup)
-        self.menu = QOkMenu(parent)
-
-    @Slot("bool", name="_handle_ok_clicked")
-    def _handle_ok_clicked(self, checked=False):
-        field_name_list = list()
-        for action in self.menu.actions():
-            if action.isChecked():
-                field_name_list.append(action.text())
-        self._text = ",".join(field_name_list)
-        self.commit_data.emit(self)
-        self.close()
-
-    def set_data(self, field_name_list, current_field_name_list):
-        for field_name in field_name_list:
-            action = self.menu.addAction(field_name)
-            action.setCheckable(True)
-            if field_name in current_field_name_list:
-                action.setChecked(True)
-        self.menu.addSeparator()
-        action_ok = self.menu.addAction("Ok")
-        action_ok.triggered.connect(self._handle_ok_clicked)
-        self.setMenu(self.menu)
-        self.click()
-
-    def data(self):
-        return self._text

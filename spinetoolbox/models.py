@@ -3589,15 +3589,14 @@ class JSONArrayModel(EmptyRowModel):
 
 class DatapackageResourcesModel(QStandardItemModel):
     """A model of datapackage resource data, used by SpineDatapackageWidget."""
-    def __init__(self, spine_datapackage_widget=None):
+    def __init__(self, spine_datapackage_widget):
         """Initialize class"""
         super().__init__(spine_datapackage_widget)
         self.datapackage = None
-        self.setHorizontalHeaderLabels(["name", "source"])
-        self.ok_icon = QIcon(QPixmap(":/icons/ok.png"))
-        self.nok_icon = QIcon(QPixmap(":/icons/nok.png"))
 
     def reset_model(self, datapackage):
+        self.clear()
+        self.setHorizontalHeaderLabels(["name", "source"])
         self.datapackage = datapackage
         for row, resource in enumerate(self.datapackage.resources):
             name = resource.name
@@ -3607,59 +3606,44 @@ class DatapackageResourcesModel(QStandardItemModel):
             source_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
             self.appendRow([name_item, source_item])
 
-    def set_name_valid(self, index, on):
-        if on:
-            self.setData(index, self.ok_icon, Qt.DecorationRole)
-            self.setData(index, None, Qt.ToolTipRole)
-        else:
-            tool_tip = ("<html>Set this resource's name to one of Spine object classes "
-                        "to be able to import it.</html>")
-            self.setData(index, self.nok_icon, Qt.DecorationRole)
-            self.setData(index, tool_tip, Qt.ToolTipRole)
 
-
-class DatapackageFieldsModel(QStandardItemModel):
+class DatapackageFieldsModel(MinimalTableModel):
     """A model of datapackage field data, used by SpineDatapackageWidget."""
-    def __init__(self, spine_datapackage_widget=None):
+    def __init__(self, spine_datapackage_widget):
         """Initialize class"""
         super().__init__(spine_datapackage_widget)
         self.schema = None
 
     def reset_model(self, schema):
         self.clear()
-        self.setHorizontalHeaderLabels(["name", "type", "primary key?", ""])
-        # NOTE: A dummy section is added at the end so primary key field is not stretched
+        self.set_horizontal_header_labels(["name", "type", "primary key?"])
         self.schema = schema
+        data = list()
         for field in schema.fields:
             name = field.name
             type_ = field.type
             primary_key = True if name in schema.primary_key else False
-            name_item = QStandardItem(name)
-            type_item = QStandardItem(type_)
-            type_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
-            primary_key_item = QStandardItem(primary_key)
-            primary_key_item.setData(primary_key, Qt.EditRole)
-            self.appendRow([name_item, type_item, primary_key_item])
+            data.append([name, type_, primary_key])
+        super().reset_model(data)
 
 
-class DatapackageForeignKeysModel(MinimalTableModel):
+class DatapackageForeignKeysModel(EmptyRowModel):
     """A model of datapackage foreign key data, used by SpineDatapackageWidget."""
-    def __init__(self, parent=None):
+    def __init__(self, spine_datapackage_widget):
         """Initialize class"""
-        super().__init__(parent)
-        # TODO: Change parent (attribute name) to something else
+        super().__init__(spine_datapackage_widget)
         self.schema = None
-        self.set_horizontal_header_labels(["fields", "reference resource", "reference fields"])
-        self.clear()
 
     def reset_model(self, schema):
+        self.clear()
+        self.set_horizontal_header_labels(["fields", "reference resource", "reference fields", ""])
         self.schema = schema
         data = list()
         for foreign_key in schema.foreign_keys:
-            fields = foreign_key['fields']
+            fields = ",".join(foreign_key['fields'])
             reference_resource = foreign_key['reference']['resource']
-            reference_fields = foreign_key['reference']['fields']
-            data.append([fields, reference_resource, reference_fields])
+            reference_fields = ",".join(foreign_key['reference']['fields'])
+            data.append([fields, reference_resource, reference_fields, None])
         super().reset_model(data)
 
 

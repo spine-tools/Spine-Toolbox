@@ -243,7 +243,7 @@
                   </layout>
                  </item>
                  <item>
-                  <widget class="CopyPasteTableView" name="tableView_object_parameter_value">
+                  <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_value">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                      <horstretch>2</horstretch>
@@ -1372,17 +1372,17 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>CopyPasteTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
    <class>ObjectTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
-   <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
-  </customwidget>
-  <customwidget>
-   <class>CopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
   </customwidget>

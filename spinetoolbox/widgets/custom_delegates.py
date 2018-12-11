@@ -17,10 +17,9 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
-    QTextEdit
-from PySide2.QtGui import QPen
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, CustomSimpleToolButtonEditor, \
-    ObjectNameListEditor
+    QTextEdit, QWidget, QVBoxLayout, QPushButton, QTableView
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
+from models import MinimalTableModel
 import logging
 
 
@@ -56,7 +55,7 @@ class CheckBoxDelegate(QItemDelegate):
         centered (bool): whether or not the checkbox should be center-aligned in the widget
     """
 
-    commit_data = Signal("QModelIndex", name="commit_data")
+    data_committed = Signal("QModelIndex", name="data_committed")
 
     def __init__(self, parent, centered=True):
         super().__init__(parent)
@@ -111,14 +110,14 @@ class CheckBoxDelegate(QItemDelegate):
             checkbox_rect = self.get_checkbox_rect(option)
             if checkbox_rect.contains(self.mouse_press_point) and checkbox_rect.contains(event.pos()):
                 # Change the checkbox-state
-                self.commit_data.emit(index)
+                self.data_committed.emit(index)
                 self.mouse_press_point = QPoint()
                 return True
             self.mouse_press_point = QPoint()
         return False
 
     def setModelData(self, editor, model, index):
-        """Do nothing. Model data is updated by handling the `commit_data` signal."""
+        """Do nothing. Model data is updated by handling the `data_committed` signal."""
         pass
 
     def get_checkbox_rect(self, option):
@@ -426,30 +425,72 @@ class AddRelationshipsDelegate(ParameterDelegate):
         return "__".join(object_name_list)
 
 
-class ResourceNameDelegate(QItemDelegate):
-    """A QComboBox delegate with checkboxes.
+class FieldNameListEditor(QWidget):
+    """A widget to edit foreign keys' field name lists."""
 
-    Attributes:
-        parent (SpineDatapackageWidget): spine datapackage widget
-    """
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+    data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
+    def __init__(self, parent, option, index):
+        """Initialize class."""
         super().__init__(parent)
-        self._parent = parent
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.model = MinimalTableModel(self)
+        self.model.flags = self.model_flags
+        self.view = QTableView(self)
+        self.view.setModel(self.model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        self.view.setShowGrid(False)
+        check_box_delegate = CheckBoxDelegate(self)
+        self.view.setItemDelegateForColumn(0, check_box_delegate)
+        check_box_delegate.data_committed.connect(self._handle_check_box_data_committed)
+        self.button = QPushButton("Ok", self)
+        self.button.setFlat(True)
+        self.view.verticalHeader().setDefaultSectionSize(option.rect.height())
+        self.button.setFixedHeight(option.rect.height())
+        layout.addWidget(self.view)
+        layout.addWidget(self.button)
+        self.button.clicked.connect(self._handle_ok_button_clicked)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        x_offset = parent.parent().columnViewportPosition(index.column())
+        y_offset = parent.parent().rowViewportPosition(index.row())
+        self.position = parent.mapToGlobal(QPoint(0, 0)) + QPoint(x_offset, y_offset)
 
-    def createEditor(self, parent, option, index):
-        """Return CustomComboEditor. Combo items are obtained from index's Qt.UserRole."""
-        return CustomComboEditor(parent)
+    def model_flags(self, index):
+        """Return index flags."""
+        if not index.isValid():
+            return Qt.NoItemFlags
+        if index.column() != 0:
+            return ~Qt.ItemIsEditable
+        return Qt.ItemIsEditable
 
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        items = self._parent.object_class_name_list
-        editor.set_data(index.data(Qt.EditRole), items)
+    @Slot("QModelIndex", name="_handle_check_box_data_committed")
+    def _handle_check_box_data_committed(self, index):
+        """Called when checkbox delegate wants to edit data. Toggle the index's value."""
+        data = index.data(Qt.EditRole)
+        self.model.setData(index, not data)
 
-    def setModelData(self, editor, model, index):
-        """Send signal."""
-        self.data_committed.emit(index, editor.data())
+    @Slot("bool", name="_handle_ok_button_clicked")
+    def _handle_ok_button_clicked(self, checked=False):
+        """Called when user pressed Ok."""
+        self.data_committed.emit()
+
+    def set_data(self, field_names, current_field_names):
+        """Set values to show in the 'menu'. Reset model using those values and update geometry."""
+        data = [[name in current_field_names, name] for name in field_names]
+        self.model.reset_model(data)
+        self.view.resizeColumnsToContents()
+        width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setFixedWidth(width + 2)
+        height = self.view.verticalHeader().length() + self.button.height()
+        parent_height = self.parent().height()
+        self.setFixedHeight(min(height, parent_height / 2) + 2)
+        self.move(self.position)
+
+    def data(self):
+        return ",".join([name for checked, name in self.model._main_data if checked])
 
 
 class ForeignKeysDelegate(QItemDelegate):
@@ -460,28 +501,42 @@ class ForeignKeysDelegate(QItemDelegate):
     """
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
+    def close_field_name_list_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.data_committed.emit(index, editor.data())
+
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.datapackage = parent.datapackage
+        self.datapackage = None
         self.selected_resource_name = None
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'fields':
-            return CustomSimpleToolButtonEditor(parent)
+            editor = FieldNameListEditor(parent, option, index)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
+            return editor
         elif header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'reference fields':
-            return CustomSimpleToolButtonEditor(parent)
+            editor = FieldNameListEditor(parent, option, index)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
+            return editor
         else:
             return None
 
     def setEditorData(self, editor, index):
         """Set editor data."""
+        self.datapackage = self._parent.datapackage
         self.selected_resource_name = self._parent.selected_resource_name
         header = index.model().horizontal_header_labels()
+        h = header.index
         if header[index.column()] == 'fields':
             current_field_names = index.data(Qt.DisplayRole).split(',') if index.data(Qt.DisplayRole) else []
             field_names = self.datapackage.get_resource(self.selected_resource_name).schema.field_names
