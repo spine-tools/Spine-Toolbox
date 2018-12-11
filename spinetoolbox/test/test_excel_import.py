@@ -665,7 +665,6 @@ class TestStackUnstack(unittest.TestCase):
         """Test transformation of unpivoted table into a pivoted table"""
 
         fieldnames = ["col1", "col2", "pivot_col1", "pivot_col2"]
-        TestDataTuple = namedtuple("Data", fieldnames)
         headers = ["col1", "col2", "parameter", "value"]
         key_cols = [0, 1]
         value_name_col = 2
@@ -676,23 +675,19 @@ class TestStackUnstack(unittest.TestCase):
                    ["col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"],
                    ["col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"]]
 
-        data_out = [TestDataTuple("col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"),
-                    TestDataTuple("col1_v2", "col2_v2",
-                                  "pivot_col1_v2", "pivot_col2_v2"),
-                    TestDataTuple("col1_v3", "col2_v3", None, "pivot_col2_v3")]
+        data_out = [["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
+                    ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
+                    ["col1_v3", "col2_v3", None, "pivot_col2_v3"]]
 
-        test_data_out = sorted(unstack_list_of_tuples(
-            data_in, headers, key_cols, value_name_col, value_col))
+        test_data_out, new_headers  = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
 
-        for d, t in zip(data_out, test_data_out):
-            for f in fieldnames:
-                self.assertEqual(getattr(d, f), getattr(t, f))
+        self.assertEqual(test_data_out, data_out)
+        self.assertEqual(new_headers, fieldnames)
 
     def test_unstack_list_of_tuples_with_bad_names(self):
         """Test transformation of unpivoted table into a pivoted table when column to pivot has name not supported by namedtuple"""
 
-        fieldnames = ["col1", "col2", "pivot_col1", "pivot_col2"]
-        TestDataTuple = namedtuple("Data", fieldnames)
+        fieldnames = ["col1", "col2", "pivot col1", "pivot col2"]
         headers = ["col1", "col2", "parameter", "value"]
         key_cols = [0, 1]
         value_name_col = 2
@@ -703,22 +698,18 @@ class TestStackUnstack(unittest.TestCase):
                    ["col1_v2", "col2_v2", "pivot col2", "pivot_col2_v2"],
                    ["col1_v3", "col2_v3", "pivot col2", "pivot_col2_v3"]]
 
-        data_out = [TestDataTuple("col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"),
-                    TestDataTuple("col1_v2", "col2_v2",
-                                  "pivot_col1_v2", "pivot_col2_v2"),
-                    TestDataTuple("col1_v3", "col2_v3", None, "pivot_col2_v3")]
+        data_out = [["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
+                    ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
+                    ["col1_v3", "col2_v3", None, "pivot_col2_v3"]]
 
-        test_data_out = sorted(unstack_list_of_tuples(
-            data_in, headers, key_cols, value_name_col, value_col))
+        test_data_out, new_headers = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
 
-        for d, t in zip(data_out, test_data_out):
-            for f in fieldnames:
-                self.assertEqual(getattr(d, f), getattr(t, f))
+        self.assertEqual(test_data_out, data_out)
+        self.assertEqual(new_headers, fieldnames)
 
     # TODO: add functionality to function
     def test_unstack_list_of_tuples_multiple_pivot_cols(self):
         """Test transformation of unpivoted table into a pivoted table with multiple pivot columns"""
-        self.fail()
         headers = ["col1", "col2", "parameter", "value"]
         key_cols = [0]
         value_name_col = [1, 2]
@@ -729,20 +720,20 @@ class TestStackUnstack(unittest.TestCase):
                    ["col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"],
                    ["col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"]]
 
-        headers_out = [["col1"],
-                       ["col2_v1", "pivot_col1"],
-                       ["col2_v1", "pivot_col2"],
-                       ["col2_v2", "pivot_col1"],
-                       ["col2_v2", "pivot_col2"],
-                       ["col2_v3", "pivot_col2"]]
+        headers_out = ["col1",
+                       ("col2_v1", "pivot_col1"),
+                       ("col2_v1", "pivot_col2"),
+                       ("col2_v2", "pivot_col1"),
+                       ("col2_v2", "pivot_col2"),
+                       ("col2_v3", "pivot_col2")]
         data_out = [["col1_v1", "pivot_col1_v1", "pivot_col2_v1", None, None, None],
                     ["col1_v2", None, None, "pivot_col1_v2", "pivot_col2_v2", None],
-                    ["col1_v2", None, None, None, None, "pivot_col2_v3"]]
+                    ["col1_v3", None, None, None, None, "pivot_col2_v3"]]
 
-        #test_data_out, test_header_out = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
+        test_data_out, test_header_out = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
 
-        #self.assertEqual(data_out, test_data_out)
-        #self.assertEqual(headers_out, test_header_out)
+        self.assertEqual(data_out, test_data_out)
+        self.assertEqual(headers_out, test_header_out)
 
 
 if __name__ == '__main__':
