@@ -25,6 +25,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from spinedatabase_api import SpineDBAPIError
 import logging
+from operator import itemgetter
 
 
 SheetData = namedtuple("SheetData", ["sheet_name", "class_name", "object_classes",
@@ -186,47 +187,42 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
         value_col (Int): index to column containg value to value_name_col
 
     Returns:
-        (List[namedtuple]): List of namedtuples whit fields given by headers
-        and unqiue names in value_name_col column
+        (List[List]): List of list with headers in headers list
+        (List): List of header names for each item in inner list
     """
-
+    # find header names
+    if (isinstance(value_name_col, list) or isinstance(value_name_col, list)) and len(value_name_col) > 1:
+        value_name_getter = itemgetter(*value_name_col)
+        value_names = sorted(set(value_name_getter(x) for x in data if not any(i is None for i in value_name_getter(x))))
+    else:
+        if isinstance(value_name_col, list) or isinstance(value_name_col, list):
+            value_name_col = value_name_col[0]
+        value_name_getter = itemgetter(value_name_col)
+        value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
+        
+    
+    
     key_names = [headers[n] for n in key_cols]
-
-    # find unique rows for key names.
-    unique_keys = []
-    values = []
-    keyfunc = lambda x: [x[k] for k in key_cols]
-
-    # value names with invalid key_cols
-    value_names = [x[value_name_col] for x in data if None in keyfunc(x)]
+    #value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
+    headers = key_names + value_names
 
     # remove data with invalid key cols
+    keyfunc = lambda x: [x[k] for k in key_cols]
     data = [x for x in data if None not in keyfunc(x)]
     data = sorted(data, key=keyfunc)
-    for k, g in groupby(data, key=keyfunc):
-        if not None in k:
-            unique_keys.append(k)
-        vn = {gv[value_name_col]: gv[value_col] for gv in g if gv[value_name_col] is not None}
-        values.append(vn)
-        value_names = value_names + list(vn.keys())
-
-    # names of values to create pivoted values for
-    value_names = list(set([v for v in value_names if v is not None]))
-
-    # pivot/unstack data
-    PivotedData = namedtuple("Data", key_names+value_names)
-
+    
+    # unstack data
     data_list_out = []
-    for k, value_dict in zip(unique_keys, values):
-        value_list = []
-        for key in value_names:
-            if key in value_dict:
-                value_list.append(value_dict[key])
-            else:
-                value_list.append(None)
-        data_list_out.append(PivotedData._make(k+value_list))
+    for k, k_data in groupby(data, key=keyfunc):
+        if None in k:
+            continue
+        line_data = [None]*len(value_names)
+        for d in k_data:
+            if value_name_getter(d) in value_names and d[value_col] is not None:
+                line_data[value_names.index(value_name_getter(d))] = d[value_col]
+        data_list_out.append(k + line_data)
 
-    return data_list_out
+    return data_list_out, headers
 
 
 def stack_list_of_tuples(data, headers, key_cols, value_cols):
@@ -328,12 +324,12 @@ def get_unstacked_relationships(db):
     data = sorted(data, key=keyfunc)
     for k, v in groupby(data, key=keyfunc):
         values = list(v)
-        rel = unstack_list_of_tuples(values, ["relationship_class", "relationship", "parameter", "value"], [0, 1], 2, 3)
+        rel, par_names = unstack_list_of_tuples(values, ["relationship_class", "relationship", "parameter", "value"], [0, 1], 2, 3)
         if len(rel) > 0:
-            parameters = list(rel[0]._fields[2:])
+            parameters = par_names[2:]
         else:
             parameters = list(set([p[2] for p in values]))
-        rel = [r.relationship.split(',') + list(r[2:]) for r in rel]
+        rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
     return stacked_rels, parsed_json
@@ -372,11 +368,11 @@ def get_unstacked_objects(db):
     data = sorted(data, key=keyfunc)
     for k, v in groupby(data, key=keyfunc):
         values = list(v)
-        obj = unstack_list_of_tuples(values, ["object_class", "object", "parameter", "value"], [0, 1], 2, 3)
+        obj, par_names = unstack_list_of_tuples(values, ["object_class", "object", "parameter", "value"], [0, 1], 2, 3)
         if len(obj) > 0:
-            parameters = list(obj[0]._fields[2:])
+            parameters = par_names[2:]
         else:
-            parameters = list(set([p[2] for p in values]))
+            parameters = list(set([p[2] for p in values if p[2] is not None]))
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
