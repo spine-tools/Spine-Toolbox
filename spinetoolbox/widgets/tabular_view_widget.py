@@ -645,6 +645,7 @@ class TabularViewForm(QMainWindow):
             object_class_names = tuple(self.relationship_classes[self.current_class_name].object_class_name_list.split(','))
             used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
             index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.relationship_class_id == self.relationship_classes[self.current_class_name].id)
+            tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
             for oc in object_class_names:
                 index_entries[oc] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id)
             tuple_entries[tuple(make_names_unique(object_class_names))] = set(tuple(r.object_name_list.split(',')) for r in self.relationships.values())
@@ -652,6 +653,8 @@ class TabularViewForm(QMainWindow):
             used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
             index_entries[self.current_class_name] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id)
             index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.object_class_id == self.object_classes[self.current_class_name].id)
+            tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
+            tuple_entries[(self.current_class_name,)] = set((i,) for i in index_entries[self.current_class_name])
         
         return index_entries, tuple_entries, valid_index_values, used_index_entries
 
