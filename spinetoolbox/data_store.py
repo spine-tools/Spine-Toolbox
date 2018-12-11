@@ -25,6 +25,7 @@ from PySide2.QtCore import Slot, QUrl
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QApplication
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
+from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
@@ -62,6 +63,7 @@ class DataStore(ProjectItem):
         self.selected_password = ""
         self.tree_view_form = None
         self.graph_view_form = None
+        self.tabular_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -81,6 +83,7 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
         s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.call_open_tree_view
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
+        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.call_open_tabular_view
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_new_spine.clicked] = self.create_new_spine_database
@@ -596,6 +599,44 @@ class DataStore(ProjectItem):
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
+    @Slot(bool, name="call_open_tabular_view")
+    def call_open_tabular_view(self, checked=False):
+        """Call method to open the tabular view."""
+        # NOTE: This is just so we can use @busy_effect with the open_tabular_view method
+        self.open_tabular_view()
+
+    @busy_effect
+    def open_tabular_view(self, checked=False):
+        """Open reference in Data Store tabular view."""
+        if self.tabular_view_form:
+            self.tabular_view_form.raise_()
+            return
+        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
+            self._toolbox.msg_warning.emit("Please select dialect first")
+            return
+        reference = self.make_reference()
+        if not reference:
+            return
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            db_map = DiffDatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        try:
+            self.tabular_view_form = TabularViewForm(self, db_map, database)
+        except:
+            db_map.close()
+            raise
+        self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
+        self.tabular_view_form.show()
+
+    @Slot(name="tabular_view_form_destroyed")
+    def tabular_view_form_destroyed(self):
+        print("destroyed")
+        self.tabular_view_form = None
     @Slot(name="graph_view_form_destroyed")
     def graph_view_form_destroyed(self):
         self.graph_view_form = None

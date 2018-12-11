@@ -145,7 +145,7 @@ class Ui_MainWindow(object):
         self.dockWidget_process_output.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_process_output)
         self.dockWidget_item = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_item.setMinimumSize(QtCore.QSize(300, 424))
+        self.dockWidget_item.setMinimumSize(QtCore.QSize(362, 424))
         self.dockWidget_item.setObjectName("dockWidget_item")
         self.dockWidgetContents_3 = QtWidgets.QWidget()
         self.dockWidgetContents_3.setObjectName("dockWidgetContents_3")
@@ -449,6 +449,16 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_7.setSpacing(6)
         self.horizontalLayout_7.setObjectName("horizontalLayout_7")
+        self.pushButton_ds_tabular_view = QtWidgets.QPushButton(self.tab_data_store)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.pushButton_ds_tabular_view.sizePolicy().hasHeightForWidth())
+        self.pushButton_ds_tabular_view.setSizePolicy(sizePolicy)
+        self.pushButton_ds_tabular_view.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_tabular_view.setMaximumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_tabular_view.setObjectName("pushButton_ds_tabular_view")
+        self.horizontalLayout_7.addWidget(self.pushButton_ds_tabular_view)
         self.pushButton_ds_tree_view = QtWidgets.QPushButton(self.tab_data_store)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -1109,6 +1119,7 @@ class Ui_MainWindow(object):
         self.label_database.setText(QtWidgets.QApplication.translate("MainWindow", "Database", None, -1))
         self.label_dialect.setText(QtWidgets.QApplication.translate("MainWindow", "Dialect", None, -1))
         self.label_username.setText(QtWidgets.QApplication.translate("MainWindow", "Username", None, -1))
+        self.pushButton_ds_tabular_view.setText(QtWidgets.QApplication.translate("MainWindow", "Tabular view", None, -1))
         self.pushButton_ds_tree_view.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Tree view</p></body></html>", None, -1))
         self.pushButton_ds_tree_view.setText(QtWidgets.QApplication.translate("MainWindow", "Tree view", None, -1))
         self.pushButton_ds_graph_view.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open Graph view</p></body></html>", None, -1))
@@ -1198,4 +1209,7 @@ from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

@@ -16,9 +16,9 @@ Classes for custom QListView.
 :date:   14.11.2018
 """
 
-from PySide2.QtWidgets import QListView, QApplication
-from PySide2.QtGui import QIcon, QPixmap, QDrag
-from PySide2.QtCore import Qt, QMimeData
+from PySide2.QtWidgets import QListView, QApplication, QListWidget, QAbstractItemView
+from PySide2.QtGui import QIcon, QPixmap, QDrag, QDropEvent
+from PySide2.QtCore import Qt, QMimeData, Signal
 
 
 class DragListView(QListView):
@@ -74,3 +74,27 @@ class DragListView(QListView):
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
+
+
+# TODO: rename this class to something better
+class TestListView(QListWidget):
+    afterDrop = Signal(object, QDropEvent)
+    allowedDragLists = []
+    
+    def __init__(self, parent=None):
+        super(TestListView, self).__init__(parent)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
+        self.setDragDropOverwriteMode(False)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragEnabled(True)
+
+    def dragEnterEvent(self, event):
+        if event.source() == self or event.source() in self.allowedDragLists:
+            event.accept()
+
+    def dropEvent(self, event):
+        if event.source() == self or event.source() in self.allowedDragLists:
+            super(TestListView, self).dropEvent(event)
+            self.afterDrop.emit(self, event)
