@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -66,14 +66,13 @@
      <x>0</x>
      <y>0</y>
      <width>954</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGraph">
     <property name="title">
      <string>Graph</string>
     </property>
-    <addaction name="separator"/>
     <addaction name="actionGraph_hide_selected"/>
     <addaction name="actionGraph_show_hidden"/>
     <addaction name="separator"/>

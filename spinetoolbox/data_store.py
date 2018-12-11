@@ -599,6 +599,10 @@ class DataStore(ProjectItem):
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
+    @Slot(name="graph_view_form_destroyed")
+    def graph_view_form_destroyed(self):
+        self.graph_view_form = None
+
     @Slot(bool, name="call_open_tabular_view")
     def call_open_tabular_view(self, checked=False):
         """Call method to open the tabular view."""
@@ -606,7 +610,7 @@ class DataStore(ProjectItem):
         self.open_tabular_view()
 
     @busy_effect
-    def open_tabular_view(self, checked=False):
+    def open_tabular_view(self):
         """Open reference in Data Store tabular view."""
         if self.tabular_view_form:
             self.tabular_view_form.raise_()
@@ -635,11 +639,7 @@ class DataStore(ProjectItem):
 
     @Slot(name="tabular_view_form_destroyed")
     def tabular_view_form_destroyed(self):
-        print("destroyed")
         self.tabular_view_form = None
-    @Slot(name="graph_view_form_destroyed")
-    def graph_view_form_destroyed(self):
-        self.graph_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):

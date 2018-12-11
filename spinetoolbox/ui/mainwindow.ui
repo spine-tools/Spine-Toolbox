@@ -310,7 +310,7 @@
   <widget class="QDockWidget" name="dockWidget_item">
    <property name="minimumSize">
     <size>
-     <width>300</width>
+     <width>356</width>
      <height>424</height>
     </size>
    </property>
@@ -966,7 +966,7 @@ color: rgb(255, 255, 255);</string>
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>12</height>
+             <height>40</height>
             </size>
            </property>
           </spacer>
@@ -976,25 +976,6 @@ color: rgb(255, 255, 255);</string>
            <property name="spacing">
             <number>6</number>
            </property>
-           <item>
-            <widget class="QPushButton" name="pushButton_ds_tabular_view">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>120</width>
-               <height>23</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>Tabular view</string>
-             </property>
-            </widget>
-           </item>
            <item>
             <widget class="QPushButton" name="pushButton_ds_tree_view">
              <property name="sizePolicy">
@@ -1020,6 +1001,47 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="text">
               <string>Tree view</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_9">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_ds_tabular_view">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>75</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>75</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tabular view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Tabular view</string>
              </property>
             </widget>
            </item>
@@ -1064,6 +1086,10 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_13">
            <item>
             <spacer name="horizontalSpacer_4">
              <property name="orientation">
@@ -2470,7 +2496,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>lineEdit_database</tabstop>
   <tabstop>pushButton_ds_tree_view</tabstop>
   <tabstop>pushButton_ds_graph_view</tabstop>
-  <tabstop>pushButton_ds_open_directory</tabstop>
   <tabstop>treeView_dc_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>

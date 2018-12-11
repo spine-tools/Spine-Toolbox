@@ -21,7 +21,7 @@ import operator
 from collections import namedtuple
 from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton
 from PySide2.QtCore import Qt, QPoint
-from PySide2.QtGui import QIcon
+from PySide2.QtGui import QIcon, QPixmap
 from sqlalchemy.sql import literal_column
 from spinedatabase_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
@@ -100,6 +100,15 @@ class TabularViewForm(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
+        # Add icons to menu items
+        close_icon = QIcon(QPixmap(":/icons/close.png"))
+        refresh_icon = QIcon(QPixmap(":/icons/refresh.png"))
+        commit_icon = QIcon(QPixmap(":/icons/ok.png"))
+        rollback_icon = QIcon(QPixmap(":/icons/nok.png"))
+        self.ui.actionClose.setIcon(close_icon)
+        self.ui.actionRefresh.setIcon(refresh_icon)
+        self.ui.actionCommit.setIcon(commit_icon)
+        self.ui.actionRollback.setIcon(rollback_icon)
 
         # database
         self.db_map = db_map
@@ -162,6 +171,7 @@ class TabularViewForm(QMainWindow):
         self.ui.list_select_class.itemClicked.connect(self.change_class)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
+        self.ui.actionClose.triggered.connect(self.close)
         
         # load db data
         self.load_class_data()

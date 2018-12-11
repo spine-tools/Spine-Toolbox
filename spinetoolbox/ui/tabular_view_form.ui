@@ -1,4 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+-->
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -167,7 +179,15 @@
     <addaction name="actionRefresh"/>
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
+    <addaction name="separator"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionClose"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuSession"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -178,6 +198,9 @@
    <property name="text">
     <string>Refresh</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Return</string>
+   </property>
   </action>
   <action name="actionCommit">
    <property name="enabled">
@@ -186,6 +209,9 @@
    <property name="text">
     <string>Commit</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Return</string>
+   </property>
   </action>
   <action name="actionRollback">
    <property name="enabled">
@@ -193,6 +219,17 @@
    </property>
    <property name="text">
     <string>Rollback</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Backspace</string>
+   </property>
+  </action>
+  <action name="actionClose">
+   <property name="text">
+    <string>Close</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+W</string>
    </property>
   </action>
  </widget>

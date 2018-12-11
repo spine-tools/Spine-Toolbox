@@ -1,9 +1,19 @@
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'c:\repos\spinetoolbox\spinetoolbox\ui\tabular_view_form.ui'
+# Form implementation generated from reading ui file '../spinetoolbox/ui/tabular_view_form.ui',
+# licensing of '../spinetoolbox/ui/tabular_view_form.ui' applies.
 #
-# Created: Thu Nov  1 15:51:33 2018
-#      by: pyside2-uic 2.0.0 running on PySide2 5.6.0~a1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -116,6 +126,8 @@ class Ui_MainWindow(object):
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
         self.menuSession.setObjectName("menuSession")
+        self.menuFile = QtWidgets.QMenu(self.menubar)
+        self.menuFile.setObjectName("menuFile")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -129,9 +141,14 @@ class Ui_MainWindow(object):
         self.actionRollback = QtWidgets.QAction(MainWindow)
         self.actionRollback.setEnabled(True)
         self.actionRollback.setObjectName("actionRollback")
+        self.actionClose = QtWidgets.QAction(MainWindow)
+        self.actionClose.setObjectName("actionClose")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
+        self.menuSession.addSeparator()
+        self.menuFile.addAction(self.actionClose)
+        self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuSession.menuAction())
 
         self.retranslateUi(MainWindow)
@@ -148,9 +165,15 @@ class Ui_MainWindow(object):
         self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Frozen:", None, -1))
         self.label_4.setText(QtWidgets.QApplication.translate("MainWindow", "Frozen values:", None, -1))
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
+        self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
         self.actionRefresh.setText(QtWidgets.QApplication.translate("MainWindow", "Refresh", None, -1))
+        self.actionRefresh.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+Return", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
+        self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
+        self.actionRollback.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Backspace", None, -1))
+        self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
+        self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from widgets.custom_qtableview import FrozenTableView, CustomQTableView
+from widgets.custom_qtableview import CustomQTableView, FrozenTableView
 from widgets.custom_qlistview import TestListView

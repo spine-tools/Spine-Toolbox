@@ -41,7 +41,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 954, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 954, 21))
         self.menubar.setObjectName("menubar")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
         self.menuGraph.setObjectName("menuGraph")
@@ -268,7 +268,6 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setObjectName("actionGraph_show_hidden")
         self.actionGraph_prune_selected = QtWidgets.QAction(MainWindow)
         self.actionGraph_prune_selected.setObjectName("actionGraph_prune_selected")
-        self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionGraph_hide_selected)
         self.menuGraph.addAction(self.actionGraph_show_hidden)
         self.menuGraph.addSeparator()
@@ -320,6 +319,6 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
 
-from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsview import GraphViewGraphicsView
+from widgets.custom_qlistview import DragListView
 import resources_icons_rc
