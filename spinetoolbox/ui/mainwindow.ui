@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>909</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -311,7 +311,7 @@
    <property name="minimumSize">
     <size>
      <width>356</width>
-     <height>424</height>
+     <height>536</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -340,7 +340,7 @@
      <item>
       <widget class="QTabWidget" name="tabWidget_item_properties">
        <property name="currentIndex">
-        <number>4</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -592,6 +592,12 @@ color: rgb(255, 255, 255);</string>
               <widget class="QToolButton" name="toolButton_browse">
                <property name="enabled">
                 <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
                <property name="minimumSize">
                 <size>
@@ -877,6 +883,12 @@ color: rgb(255, 255, 255);</string>
              <property name="enabled">
               <bool>false</bool>
              </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
                <width>0</width>
@@ -972,68 +984,58 @@ color: rgb(255, 255, 255);</string>
           </spacer>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_7">
-           <property name="spacing">
-            <number>6</number>
+          <layout class="QHBoxLayout" name="horizontalLayout_7"/>
+         </item>
+         <item>
+          <layout class="QGridLayout" name="gridLayout_2">
+           <property name="horizontalSpacing">
+            <number>0</number>
            </property>
-           <item>
-            <widget class="QPushButton" name="pushButton_ds_tree_view">
+           <item row="0" column="4">
+            <widget class="QPushButton" name="pushButton_ds_open_directory">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tree view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Tree view</string>
+              <string>Open dir...</string>
              </property>
             </widget>
            </item>
-           <item>
-            <spacer name="horizontalSpacer_9">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
+           <item row="1" column="2">
             <widget class="QPushButton" name="pushButton_ds_tabular_view">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
@@ -1045,36 +1047,36 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
-           <item>
-            <spacer name="horizontalSpacer_8">
+           <item row="1" column="1">
+            <spacer name="horizontalSpacer_4">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>40</width>
+               <width>1</width>
                <height>20</height>
               </size>
              </property>
             </spacer>
            </item>
-           <item>
+           <item row="1" column="4">
             <widget class="QPushButton" name="pushButton_ds_graph_view">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
@@ -1086,50 +1088,46 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
-          </layout>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_13">
-           <item>
-            <spacer name="horizontalSpacer_4">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pushButton_ds_open_directory">
+           <item row="1" column="0">
+            <widget class="QPushButton" name="pushButton_ds_tree_view">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>75</width>
+               <width>90</width>
                <height>23</height>
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tree view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Open dir...</string>
+              <string>Tree view</string>
              </property>
             </widget>
+           </item>
+           <item row="1" column="3">
+            <spacer name="horizontalSpacer_8">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>1</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
@@ -2476,8 +2474,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>lineEdit_SQLite_file</tabstop>
   <tabstop>toolButton_browse</tabstop>
   <tabstop>lineEdit_database</tabstop>
-  <tabstop>pushButton_ds_tree_view</tabstop>
-  <tabstop>pushButton_ds_graph_view</tabstop>
   <tabstop>treeView_dc_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>

@@ -1165,6 +1165,14 @@ class TreeViewForm(DataStoreForm):
 
     def init_parameter_json_editors(self):
         """Init object and relationship parameter json editors."""
+        # Monospace font fot json text edits
+        font = QFont()
+        font.setFamily("Courier")
+        font.setStyleHint(QFont.Monospace)
+        font.setFixedPitch(True)
+        font.setPointSize(10)
+        metrics = QFontMetrics(font)
+        tab_stop_width = 4 * metrics.width(' ')
         # Object
         button_group = QButtonGroup(self)
         button_group.addButton(self.ui.toolButton_object_parameter_json_raw)
@@ -1176,6 +1184,9 @@ class TreeViewForm(DataStoreForm):
         self.ui.tableView_object_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.label_object_parameter_json_error.hide()
+        self.ui.textEdit_relationship_parameter_json
+        self.ui.textEdit_object_parameter_json.setFont(font)
+        self.ui.textEdit_object_parameter_json.setTabStopWidth(tab_stop_width)
         # Relationship
         button_group = QButtonGroup(self)
         button_group.addButton(self.ui.toolButton_relationship_parameter_json_raw)
@@ -1187,6 +1198,8 @@ class TreeViewForm(DataStoreForm):
         self.ui.tableView_relationship_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.label_relationship_parameter_json_error.hide()
+        self.ui.textEdit_relationship_parameter_json.setFont(font)
+        self.ui.textEdit_relationship_parameter_json.setTabStopWidth(tab_stop_width)
 
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
