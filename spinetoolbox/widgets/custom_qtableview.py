@@ -21,7 +21,6 @@ from PySide2.QtWidgets import QTableView, QApplication, QAction, QWidget, QVBoxL
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
 from widgets.custom_delegates import CheckBoxDelegate
-from widgets.custom_menus import QOkMenu
 from models import MinimalTableModel, TableModel
 
 
@@ -331,7 +330,7 @@ class FrozenTableView(QTableView):
 
     def clear(self):
         self.model.set_data([], [])
-    
+
     def get_selected_row(self):
         if self.model.columnCount() == 0:
             return ()
@@ -343,7 +342,7 @@ class FrozenTableView(QTableView):
         else:
             index = self.selectedIndexes()[0]
             return self.model.row(index)
-    
+
     def set_data(self, headers, values):
         self.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
         self.model.set_data(values, headers)
@@ -406,4 +405,3 @@ class CustomQTableView(QTableView):
             self.model().paste_data(top_left_index, data)
         else:
             super().keyPressEvent(event)
-
