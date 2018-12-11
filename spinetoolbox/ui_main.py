@@ -1221,8 +1221,13 @@ class ToolboxUI(QMainWindow):
         for data_store in self.project_item_model.items("Data Stores"):
             if data_store.tree_view_form:
                 data_store.tree_view_form.close()
+            if data_store.tabular_view_form:
+                data_store.tabular_view_form.close()
             if data_store.graph_view_form:
                 data_store.graph_view_form.close()
+        for data_connection in self.project_item_model.items("Data Connections"):
+            if data_connection.spine_datapackage_form:
+                data_connection.spine_datapackage_form.close()
         for view in self.project_item_model.items("Views"):
             for graph_view_form in view.graph_view_form_refs.values():
                 graph_view_form.close()
