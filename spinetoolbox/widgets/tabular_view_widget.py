@@ -281,7 +281,7 @@ class TabularViewForm(QMainWindow):
         """checks if PivotModel has any changes"""
         if self.model.model._edit_data:
             return True
-        if self.model.model._delete_data:
+        if self.model.model._deleted_data:
             return True
         if any(len(v) > 0 for k, v in self.model.model._added_index_entries.items() if k not in [INDEX_NAME, JSON_TIME_NAME]):
             return True
