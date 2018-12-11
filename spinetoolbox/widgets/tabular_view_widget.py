@@ -876,7 +876,7 @@ class TabularViewForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         if self.db_map.has_pending_changes() or self.model_has_changes():
-            self.show_commit_session_prompt()
+            self.show_commit_session_dialog()
         self.db_map.close()
         if event:
             event.accept()
