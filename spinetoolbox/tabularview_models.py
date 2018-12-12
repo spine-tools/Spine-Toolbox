@@ -630,21 +630,25 @@ class PivotModel():
             if k not in self.index_real_names or not indexes:
                 continue
             dv = set(indexes)
-            if k in self.pivot_rows:
-                delete_values_row[self.pivot_rows.index(k)] = dv
-            if k in self.pivot_columns:
-                delete_values_column[self.pivot_columns.index(k)] = dv
-            # add existing entries to deleted entries
-            self._deleted_index_entries[k].update(self.index_entries[k].intersection(dv))
+            deleted_entries = dv.intersection(self.index_entries[k])
+            if not deleted_entries:
+                # deleted entries not in index, do nothing:
+                continue
             # uppdate existing entries
-            self.index_entries[k].difference_update(dv)
+            self.index_entries[k].difference_update(deleted_entries)
+            if k in self.pivot_rows:
+                delete_values_row[self.pivot_rows.index(k)] = deleted_entries
+            if k in self.pivot_columns:
+                delete_values_column[self.pivot_columns.index(k)] = deleted_entries
+            # add existing entries to deleted entries
+            self._deleted_index_entries[k].update(deleted_entries)
             # remove any entries in added indexes
-            self._added_index_entries[k].difference_update(dv)
-            # remove any entries in used values
+            self._added_index_entries[k].difference_update(deleted_entries)
+            # remove only entries that was deleted from index_entries from used values
             for u_name, v in self._used_index_values.items():
-                if k in u_name:
-                    v.difference_update(dv)
-            delete_values[self.index_names.index(k)] = dv
+                if k in u_name and deleted_entries:
+                    v.difference_update(deleted_entries)
+            delete_values[self.index_names.index(k)] = deleted_entries
         # delete from tuple indexes
         for tk in self.tuple_index_entries.keys():
             for k, indexes in delete_indexes.items():

@@ -878,6 +878,14 @@ class TestPivotModel(unittest.TestCase):
         model.set_pivot([], ['test1','test3'], ['test2'], ('aa',))
         model.delete_tuple_index_values({('test1', 'test2'): set([('a','bb')])})
         self.assertEqual(model._column_data_header, [('a',1),('a',None)])
+    
+    def test_delete_entries_with_wrong_index(self):
+        """Test that deleting an entrie with wrong index doesn't delete from used_index_values"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, used_index_values = {('test1', 'test2'): set(['wrong_index'])})
+        model._add_index_value('wrong_index','test1')
+        model.delete_index_values({'test2': set(['wrong_index'])})
+        self.assertEqual(model._used_index_values, {('test1', 'test2'): set(['wrong_index'])})
         
 
 
