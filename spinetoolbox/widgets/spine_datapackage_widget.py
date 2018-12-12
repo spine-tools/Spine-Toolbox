@@ -69,28 +69,19 @@ class SpineDatapackageWidget(QMainWindow):
         self.remove_row_icon = QIcon(":/icons/minus.png")
         self.progress_bar = QProgressBar()
         self.progress_bar.hide()
+        self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         #  Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.restore_ui()
+        self.add_toggle_view_actions()
         # Add status bar to form
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.statusbar.addPermanentWidget(self.progress_bar)
-        # Set up corner widgets
-        button = QPushButton("Descriptor")
-        button.setFlat(True)
-        button.setLayoutDirection(Qt.LeftToRight)
-        button.mousePressEvent = lambda e: e.ignore()
-        self.ui.tabWidget_resources.setCornerWidget(button, Qt.TopRightCorner)
-        button = QPushButton("Resource")
-        button.setLayoutDirection(Qt.LeftToRight)
-        button.setFlat(True)
-        button.mousePressEvent = lambda e: e.ignore()
-        self.ui.tabWidget_data_schema.setCornerWidget(button, Qt.TopRightCorner)
         self.ui.treeView_resources.setModel(self.resources_model)
         self.ui.tableView_fields.setModel(self.fields_model)
         self.ui.tableView_foreign_keys.setModel(self.foreign_keys_model)
@@ -105,6 +96,11 @@ class SpineDatapackageWidget(QMainWindow):
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_foreign_keys.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_fields.toggleViewAction())
 
     def show(self):
         """Show form and init datapackage."""
@@ -132,6 +128,9 @@ class SpineDatapackageWidget(QMainWindow):
         self.msg_error.connect(self.add_error_message)
         # DC destroyed
         self._data_connection.destroyed.connect(self.close)
+        # Copy and paste
+        self.ui.actionCopy.triggered.connect(self.copy)
+        self.ui.actionPaste.triggered.connect(self.paste)
         # Delegates
         # Resource name
         line_edit_delegate = LineEditDelegate(self)
@@ -158,6 +157,10 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
         self.ui.actionLoad_datapackage.triggered.connect(self.load_datapackage)
         self.ui.actionExport_to_spine.triggered.connect(self.show_export_to_spine_dialog)
+        # Menu about to show
+        self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -165,6 +168,7 @@ class SpineDatapackageWidget(QMainWindow):
         window_pos = self.qsettings.value("dataPackageWidget/windowPosition")
         splitter_state = self.qsettings.value("dataPackageWidget/splitterState")
         window_maximized = self.qsettings.value("dataPackageWidget/windowMaximized", defaultValue='false')
+        window_state = self.qsettings.value("dataPackageWidget/windowState")
         n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)
         if window_size:
             self.resize(window_size)
@@ -172,12 +176,43 @@ class SpineDatapackageWidget(QMainWindow):
             self.move(window_pos)
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
+        if window_state:
+            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if splitter_state:
             self.ui.splitter.restoreState(splitter_state)
         # noinspection PyArgumentList
         if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
+
+    @Slot(name="_handle_menu_about_to_show")
+    def _handle_menu_about_to_show(self):
+        """Called when a menu from the menubar is about to show.
+        Adjust copy paste actions depending on which widget has the focus.
+        TODO Enable/disable action to save datapackage depending on status.
+        """
+        self.ui.actionCopy.setText("Copy")
+        self.ui.actionPaste.setText("Paste")
+        self.ui.actionCopy.setEnabled(False)
+        self.ui.actionPaste.setEnabled(False)
+        if self.focusWidget() != self.ui.menubar:
+            self.focus_widget = self.focusWidget()
+        if self.focus_widget == self.ui.treeView_resources:
+            focus_widget_name = "resources"
+        elif self.focus_widget == self.ui.tableView_resource_data:
+            focus_widget_name = "data"
+        elif self.focus_widget == self.ui.tableView_fields:
+            focus_widget_name = "fields"
+        elif self.focus_widget == self.ui.tableView_foreign_keys:
+            focus_widget_name = "foreign keys"
+        else:
+            return
+        if not self.focus_widget.selectionModel().selection().isEmpty():
+            self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
+            self.ui.actionCopy.setEnabled(True)
+        if True: #self.focus_widget.canPaste():
+            self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
+            self.ui.actionPaste.setEnabled(True)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -295,6 +330,24 @@ class SpineDatapackageWidget(QMainWindow):
         self.progress_bar.hide()
         self.msg_proc.emit("Datapackage successfully exported.")
 
+    @Slot("bool", name="copy")
+    def copy(self, checked=False):
+        """Copy data to clipboard."""
+        focus_widget = self.focusWidget()
+        try:
+            focus_widget.copy()
+        except AttributeError:
+            pass
+
+    @Slot("bool", name="paste")
+    def paste(self, checked=False):
+        """Paste data from clipboard."""
+        focus_widget = self.focusWidget()
+        try:
+            focus_widget.paste()
+        except AttributeError:
+            pass
+
     def load_resource_data(self):
         """Load resource data into a local list of tables."""
         for resource in self.datapackage.resources:
@@ -303,6 +356,8 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot("QModelIndex", "QModelIndex", name="reset_resource_models")
     def reset_resource_models(self, current, previous):
         """Reset resource data and schema models whenever a new resource is selected."""
+        if current.column() != 0:
+            return
         new_selected_resource_name = current.data(Qt.DisplayRole)
         self.selected_resource_name = new_selected_resource_name
         self.reset_resource_data_model()
@@ -463,6 +518,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.qsettings.setValue("dataPackageWidget/splitterState", self.ui.splitter.saveState())
         self.qsettings.setValue("dataPackageWidget/windowSize", self.size())
         self.qsettings.setValue("dataPackageWidget/windowPosition", self.pos())
+        self.qsettings.setValue("dataPackageWidget/windowState", self.saveState(version=1))
         if self.windowState() == Qt.WindowMaximized:
             self.qsettings.setValue("dataPackageWidget/windowMaximized", True)
         else:

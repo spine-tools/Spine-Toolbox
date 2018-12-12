@@ -2203,8 +2203,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             items = list(relationships_to_add.values())
             rows = list(relationships_to_add.keys())
             relationships = self._parent.db_map.add_wide_relationships(*items)
-            for relationship in relationships:
-                self._parent._tree_view_form.object_tree_model.add_relationship(relationship)
+            self._parent._tree_view_form.object_tree_model.add_relationships(relationships)
             msg = "Successfully added new relationships on the fly."
             self._parent._tree_view_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
