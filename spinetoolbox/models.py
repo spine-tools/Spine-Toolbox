@@ -1941,7 +1941,10 @@ class SubParameterValueModel(SubParameterModel):
         if role != Qt.DisplayRole:
             return data
         if self._parent.header[index.column()] == 'json' and data:
-            stripped_data = json.dumps(json.loads(data))
+            try:
+                stripped_data = json.dumps(json.loads(data))
+            except json.JSONDecodeError:
+                stripped_data = data
             if len(stripped_data) > 16:
                 return stripped_data[:8] + "..." + stripped_data[-8:]
             return stripped_data
@@ -3653,13 +3656,13 @@ class TableModel(QAbstractItemModel):
         super(TableModel, self).__init__()
         self._data = data
         self._headers = headers
-    
+
     def parent(self, child = QModelIndex()):
         return QModelIndex()
 
     def index(self, row, column, parent = QModelIndex()):
         return self.createIndex(row, column, parent)
-    
+
     def set_data(self, data, headers):
         if data and len(data[0]) != len(headers):
             raise ValueError("'data[0]' must be same length as 'headers'")
