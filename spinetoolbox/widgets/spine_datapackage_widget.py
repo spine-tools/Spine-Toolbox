@@ -274,6 +274,7 @@ class SpineDatapackageWidget(QMainWindow):
         converter.signaler.finished.connect(self._handle_converter_finished)
         converter.signaler.failed.connect(self._handle_converter_failed)
         converter.signaler.progressed.connect(self._handle_converter_progressed)
+        self.msg_proc.emit("Estimating work load...")
         self.progress_bar.setRange(0, converter.number_of_steps())
         self.progress_bar.reset()
         QThreadPool.globalInstance().start(converter)
@@ -292,7 +293,7 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(name="_handle_converter_finished")
     def _handle_converter_finished(self):
         self.progress_bar.hide()
-        self.msg.emit("Datapackage successfully exported.")
+        self.msg_proc.emit("Datapackage successfully exported.")
 
     def load_resource_data(self):
         """Load resource data into a local list of tables."""

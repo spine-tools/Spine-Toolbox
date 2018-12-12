@@ -42,42 +42,36 @@ class DatapackageToSpineConverter(QRunnable):
         self.datapackage = Package(datapackage_file_path)
         self.signaler = Signaler()
         self.resource_data = dict()
+        self.object_class_count = None
+        self.object_count = None
+        self.relationship_class_count = None
+        self.relationship_count = None
+        self.parameter_count = None
+        self.parameter_value_count = None
         for resource in self.datapackage.resources:
             self.resource_data[resource.name] = resource.read(cast=False)
 
     def number_of_steps(self):
-        k = 0
-        # Packing object classes, relationship classes, and parameters
-        for resource in self.datapackage.resources:
-            for field in resource.schema.fields:
-                k += 1
-        # Packing objects and parameters values
-        for resource in self.datapackage.resources:
-            for row in resource.read(cast=False):
-                for field_name in resource.schema.field_names:
-                    k += 1
-        # Packing relationships
-        reference_resource_dict = dict()
-        for resource in self.datapackage.resources:
-            foreign_keys = resource.schema.foreign_keys
-            for foreign_key in foreign_keys:
-                k += 1
-                reference_resource_name = foreign_key["reference"]["resource"]
-                reference_fields_names = foreign_key["reference"]["fields"]
-                reference_resource_dict.setdefault(reference_resource_name, list()).\
-                    append(reference_fields_names)
-        for reference_resource_name, reference_fields_names_list in reference_resource_dict.items():
-            reference_resource = self.datapackage.get_resource(reference_resource_name)
-            for reference_fields_names in reference_fields_names_list:
-                for row in reference_resource.read(cast=False):
-                    k += 1
-        # Create list of relationships
-        for resource in self.datapackage.resources:
-            foreign_keys = resource.schema.foreign_keys
-            for row in resource.read(cast=False):
-                for fk in foreign_keys:
-                    k += 1
-        return k
+        self.object_class_count = len(self.datapackage.resources)
+        self.object_count = sum(len(self.resource_data[x.name]) for x in self.datapackage.resources)
+        self.relationship_class_count = len([x for x in self.datapackage.resources if x.schema.foreign_keys])
+        self.relationship_count = sum(
+            len(self.resource_data[x.name]) for x in self.datapackage.resources if x.schema.foreign_keys)
+        self.parameter_count = sum(
+            len(x.schema.fields) - len(x.schema.primary_key) \
+            - len([i for fk in x.schema.foreign_keys for i in fk["fields"]])
+            for x in self.datapackage.resources)
+        self.parameter_value_count = sum(
+            len(self.resource_data[x.name]) \
+                * (len(x.schema.fields) - len(x.schema.primary_key) \
+                - len([i for fk in x.schema.foreign_keys for i in fk["fields"]]))
+            for x in self.datapackage.resources)
+        return self.object_class_count \
+            + self.object_count \
+            + self.relationship_class_count \
+            + self.relationship_count \
+            + self.parameter_count \
+            + self.parameter_value_count
 
     def run(self):
         try:
@@ -87,8 +81,8 @@ class DatapackageToSpineConverter(QRunnable):
             self.signaler.failed.emit(e.msg)
 
     def _run(self):
-        k = 0
-        self.signaler.progressed.emit(k, "Packing object classes, relationship classes, and parameters...")
+        step = 0
+        self.signaler.progressed.emit(step, "")
         object_class_names = [x.name for x in self.db_map.object_class_list()]
         parameter_names = [x.name for x in self.db_map.parameter_list()]
         object_class_name_lists = [
@@ -97,7 +91,6 @@ class DatapackageToSpineConverter(QRunnable):
         pre_relationship_classes = list()
         pre_parameters = list()
         for resource in self.datapackage.resources:
-            self.signaler.progressed.emit(k, "")
             if resource.name not in object_class_names:
                 object_classes.append(dict(name=resource.name))
                 object_class_names.append(resource.name)
@@ -117,7 +110,6 @@ class DatapackageToSpineConverter(QRunnable):
                 ))
                 object_class_name_lists.append(object_class_name_list)
             for field in resource.schema.fields:
-                k += 1
                 # Skip fields in primary key
                 if field.name in primary_key:
                     continue
@@ -128,8 +120,9 @@ class DatapackageToSpineConverter(QRunnable):
                 if parameter_name not in parameter_names:
                     pre_parameters.append(dict(object_class_name=resource.name, name=parameter_name))
                     parameter_names.append(parameter_name)
-        self.signaler.progressed.emit(k, "Adding object classes...")
+        self.signaler.progressed.emit(step, "Adding object classes...")
         self.db_map.add_object_classes(*object_classes)
+        step += self.object_class_count
         object_class_name_id = {x.name: x.id for x in self.db_map.object_class_list()}
         relationship_classes = [
             dict(
@@ -137,17 +130,18 @@ class DatapackageToSpineConverter(QRunnable):
                 name=r['name']
             ) for r in pre_relationship_classes
         ]
-        self.signaler.progressed.emit(k, "Adding relationship classes...")
+        self.signaler.progressed.emit(step, "Adding relationship classes...")
         self.db_map.add_wide_relationship_classes(*relationship_classes)
+        step += self.relationship_class_count
         parameters = [
             dict(
                 object_class_id=object_class_name_id[p['object_class_name']],
                 name=p['name']
             ) for p in pre_parameters
         ]
-        self.signaler.progressed.emit(k, "Adding parameters...")
+        self.signaler.progressed.emit(step, "Adding parameters...")
         self.db_map.add_parameters(*parameters)
-        self.signaler.progressed.emit(k, "Packing objects and parameters values...")
+        step += self.parameter_count
         relationship_class_name_id = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
         parameter_name_id = {x.name: x.id for x in self.db_map.parameter_list()}
         object_names = [x.name for x in self.db_map.object_list()]
@@ -155,7 +149,6 @@ class DatapackageToSpineConverter(QRunnable):
         objects = list()
         pre_parameter_values = list()
         for resource in self.datapackage.resources:
-            self.signaler.progressed.emit(k, "")
             object_class_id = object_class_name_id[resource.name]
             primary_key = resource.schema.primary_key
             foreign_keys = resource.schema.foreign_keys
@@ -163,14 +156,14 @@ class DatapackageToSpineConverter(QRunnable):
             for i, row in enumerate(self.resource_data[resource.name]):
                 row_dict = dict(zip(resource.schema.field_names, row))
                 if primary_key:
-                    object_name = "_".join(row_dict[field] for field in primary_key)
+                    object_name_suffix = "_".join(row_dict[field] for field in primary_key)
                 else:
-                    object_name = resource.name + str(i)
+                    object_name_suffix = str(i)
+                object_name = resource.name + object_name_suffix
                 if not object_name in object_names:
                     objects.append(dict(class_id=object_class_id, name=object_name))
                     object_names.append(object_name)
                 for field_name, value in row_dict.items():
-                    k += 1
                     if field_name in primary_key:
                         continue
                     if field_name in foreign_keys_fields:
@@ -182,8 +175,9 @@ class DatapackageToSpineConverter(QRunnable):
                         parameter_id=parameter_id,
                         value=value
                     ))
-        self.signaler.progressed.emit(k, "Adding objects...")
+        self.signaler.progressed.emit(step, "Adding objects...")
         self.db_map.add_objects(*objects)
+        step += self.object_count
         object_name_id = {x.name: x.id for x in self.db_map.object_list()}
         parameter_values = [
             dict(
@@ -192,16 +186,14 @@ class DatapackageToSpineConverter(QRunnable):
                 value=p['value']
             ) for p in pre_parameter_values
         ]
-        self.signaler.progressed.emit(k, "Adding parameter values...")
+        self.signaler.progressed.emit(step, "Adding parameter values...")
         self.db_map.add_parameter_values(*parameter_values)
-        self.signaler.progressed.emit(k, "Packing relationships...")
+        step += self.parameter_value_count
         # Create dictionary of reference resource names => list of reference fields names
         reference_resource_dict = dict()
         for resource in self.datapackage.resources:
-            self.signaler.progressed.emit(k, "")
             foreign_keys = resource.schema.foreign_keys
             for foreign_key in foreign_keys:
-                k += 1
                 reference_resource_name = foreign_key["reference"]["resource"]
                 reference_fields_names = foreign_key["reference"]["fields"]
                 reference_resource_dict.setdefault(reference_resource_name, list()).\
@@ -210,27 +202,25 @@ class DatapackageToSpineConverter(QRunnable):
         # => reference key => object id
         reference_object_id_dict = dict()
         for reference_resource_name, reference_fields_names_list in reference_resource_dict.items():
-            self.signaler.progressed.emit(k, "")
             reference_resource = self.datapackage.get_resource(reference_resource_name)
             reference_primary_key = reference_resource.schema.primary_key
             reference_object_id_dict[reference_resource_name] = d1 = dict()
             for reference_fields_names in reference_fields_names_list:
                 d1[",".join(reference_fields_names)] = d2 = dict()
-                for i, row in enumerate(self.resource_data[reference_resource.name]):
-                    k += 1
+                for i, row in enumerate(self.resource_data[reference_resource_name]):
                     row_dict = dict(zip(reference_resource.schema.field_names, row))
                     # Find object id
                     if reference_primary_key:
-                        reference_object_name = "_".join(row_dict[field] for field in reference_primary_key)
+                        reference_object_name_suffix = "_".join(row_dict[field] for field in reference_primary_key)
                     else:
-                        reference_object_name = reference_resource_name + str(i)
+                        reference_object_name_suffix = str(i)
+                    reference_object_name = reference_resource_name + reference_object_name_suffix
                     reference_object_id = object_name_id[reference_object_name]
                     key = ",".join([row_dict[x] for x in reference_fields_names])
                     d2[key] = (reference_object_id, reference_object_name)
         # Create list of relationships
         relationships = list()
         for resource in self.datapackage.resources:
-            self.signaler.progressed.emit(k, "")
             primary_key = resource.schema.primary_key
             foreign_keys = resource.schema.foreign_keys
             reference_resource_names = [fk['reference']['resource'] for fk in foreign_keys]
@@ -239,37 +229,42 @@ class DatapackageToSpineConverter(QRunnable):
             object_class_name_list = [resource.name] + reference_resource_names
             relationship_class_name = "__".join(object_class_name_list)
             relationship_class_id = relationship_class_name_id[relationship_class_name]
-            for i, row in enumerate(self.resource_data[reference_resource.name]):
+            for i, row in enumerate(self.resource_data[resource.name]):
                 row_dict = dict(zip(resource.schema.field_names, row))
                 if primary_key:
-                    object_name = "_".join(row_dict[field] for field in primary_key)
+                    object_name_suffix = "_".join(row_dict[field] for field in primary_key)
                 else:
-                    object_name = resource.name + str(i)
+                    object_name_suffix = str(i)
+                object_name = resource.name + object_name_suffix
                 object_id = object_name_id[object_name]
                 object_id_list = [object_id]
                 object_name_list = [object_name]
                 for fk in foreign_keys:
-                    k += 1
                     fields_names = fk['fields']
                     reference_resource_name = fk['reference']['resource']
                     reference_fields_names = fk['reference']['fields']
                     key = ",".join([row_dict[x] for x in fields_names])
                     d1 = reference_object_id_dict[reference_resource_name]
                     d2 = d1[",".join(reference_fields_names)]
-                    reference_object_id, reference_object_name = d2[key]
+                    try:
+                        reference_object_id, reference_object_name = d2[key]
+                    except KeyError:
+                        break
                     object_id_list.append(reference_object_id)
                     object_name_list.append(reference_object_name)
-                relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
-                relationships.append(dict(
-                    class_id=relationship_class_id,
-                    object_id_list=object_id_list,
-                    name=relationship_name
-                ))
-        self.signaler.progressed.emit(k, "Adding relationships...")
+                else:
+                    relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
+                    relationships.append(dict(
+                        class_id=relationship_class_id,
+                        object_id_list=object_id_list,
+                        name=relationship_name
+                    ))
+        self.signaler.progressed.emit(step, "Adding relationships...")
         self.db_map.add_wide_relationships(*relationships)
+        step += self.relationship_count
         self.db_map.commit_session("Automatically converted from '{}'".format(self.datapackage_file_path))
         self.db_map.close()
-        self.signaler.progressed.emit(k, "")
+        self.signaler.progressed.emit(step, "")
 
 
 @busy_effect
