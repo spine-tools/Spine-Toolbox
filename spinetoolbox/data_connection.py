@@ -76,7 +76,7 @@ class DataConnection(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.pushButton_dc_open.clicked] = self.open_directory
+        s[self._toolbox.ui.toolButton_dc_open_dir.clicked] = self.open_directory
         s[self._toolbox.ui.toolButton_plus.clicked] = self.add_references
         s[self._toolbox.ui.toolButton_minus.clicked] = self.remove_references
         s[self._toolbox.ui.toolButton_add.clicked] = self.copy_to_project

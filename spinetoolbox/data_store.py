@@ -80,7 +80,7 @@ class DataStore(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
+        s[self._toolbox.ui.toolButton_ds_open_dir.clicked] = self.open_directory
         s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.call_open_tree_view
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
         s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.call_open_tabular_view

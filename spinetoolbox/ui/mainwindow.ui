@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -18,7 +18,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>909</width>
+    <width>862</width>
     <height>707</height>
    </rect>
   </property>
@@ -117,8 +117,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>909</width>
-     <height>28</height>
+     <width>862</width>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -189,8 +189,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>80</width>
-     <height>100</height>
+     <width>95</width>
+     <height>113</height>
     </size>
    </property>
    <property name="features">
@@ -250,8 +250,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>80</width>
-     <height>100</height>
+     <width>95</width>
+     <height>113</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -339,14 +339,29 @@
      </property>
      <item>
       <widget class="QTabWidget" name="tabWidget_item_properties">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
          <string>Data Store</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_11">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_ds_name">
            <property name="sizePolicy">
@@ -358,25 +373,24 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(0,255, 255);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
            </property>
            <property name="frameShape">
             <enum>QFrame::NoFrame</enum>
@@ -407,7 +421,7 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="font">
               <font>
-               <pointsize>11</pointsize>
+               <pointsize>10</pointsize>
               </font>
              </property>
              <property name="text">
@@ -984,27 +998,24 @@ color: rgb(255, 255, 255);</string>
           </spacer>
          </item>
          <item>
-          <layout class="QGridLayout" name="gridLayout_2">
-           <property name="horizontalSpacing">
-            <number>0</number>
-           </property>
-           <item row="2" column="2">
+          <layout class="QHBoxLayout" name="horizontalLayout_13">
+           <item>
             <widget class="QPushButton" name="pushButton_ds_tree_view">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>90</width>
+               <width>75</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>90</width>
+               <width>75</width>
                <height>23</height>
               </size>
              </property>
@@ -1016,7 +1027,7 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
-           <item row="2" column="1">
+           <item>
             <spacer name="horizontalSpacer_8">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -1029,51 +1040,23 @@ color: rgb(255, 255, 255);</string>
              </property>
             </spacer>
            </item>
-           <item row="2" column="0">
-            <widget class="QPushButton" name="pushButton_ds_open_directory">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>90</width>
-               <height>23</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>90</width>
-               <height>23</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Open dir...</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
+           <item>
             <widget class="QPushButton" name="pushButton_ds_graph_view">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>90</width>
+               <width>75</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>90</width>
+               <width>75</width>
                <height>23</height>
               </size>
              </property>
@@ -1085,23 +1068,36 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="2">
+           <item>
+            <spacer name="horizontalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
             <widget class="QPushButton" name="pushButton_ds_tabular_view">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
              <property name="minimumSize">
               <size>
-               <width>90</width>
+               <width>75</width>
                <height>23</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>90</width>
+               <width>75</width>
                <height>23</height>
               </size>
              </property>
@@ -1115,6 +1111,58 @@ color: rgb(255, 255, 255);</string>
            </item>
           </layout>
          </item>
+         <item>
+          <widget class="Line" name="line_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_14">
+           <item>
+            <spacer name="horizontalSpacer_9">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_ds_open_dir">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Store's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="tab_data_connection">
@@ -1122,6 +1170,18 @@ color: rgb(255, 255, 255);</string>
          <string>Data Connection</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_8">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_dc_name">
            <property name="sizePolicy">
@@ -1133,25 +1193,24 @@ color: rgb(255, 255, 255);</string>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(0, 0, 255);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1388,14 +1447,26 @@ color: rgb(255, 255, 255);</string>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
             <widget class="QPushButton" name="pushButton_datapackage">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="minimumSize">
               <size>
                <width>0</width>
                <height>23</height>
               </size>
              </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>23</height>
+              </size>
+             </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open datapackage view.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Spine datapackage editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
               <string>Datapackage</string>
@@ -1419,8 +1490,32 @@ color: rgb(255, 255, 255);</string>
              </property>
             </spacer>
            </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="Line" name="line_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="QPushButton" name="pushButton_dc_open">
+            <spacer name="horizontalSpacer_10">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_dc_open_dir">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -1429,21 +1524,18 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
-               <height>23</height>
+               <width>18</width>
+               <height>18</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>75</width>
-               <height>23</height>
+               <width>18</width>
+               <height>18</height>
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Connection directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Open dir...</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
@@ -1456,6 +1548,18 @@ color: rgb(255, 255, 255);</string>
          <string>Tool</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_13">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_tool_name">
            <property name="enabled">
@@ -1470,19 +1574,24 @@ color: rgb(255, 255, 255);</string>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 0, 0);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1797,6 +1906,49 @@ color: rgb(255, 255, 255);</string>
            </item>
           </layout>
          </item>
+         <item>
+          <widget class="Line" name="line_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_15">
+           <item>
+            <spacer name="horizontalSpacer_11">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_tool_open_dir">
+             <property name="minimumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Tool's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="tab_view">
@@ -1804,6 +1956,18 @@ color: rgb(255, 255, 255);</string>
          <string>View</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_12">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_view_name">
            <property name="sizePolicy">
@@ -1815,25 +1979,24 @@ color: rgb(255, 255, 255);</string>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(0, 255, 0);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1867,19 +2030,6 @@ color: rgb(255, 255, 255);</string>
             <number>6</number>
            </property>
            <item>
-            <spacer name="horizontalSpacer_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
             <widget class="QPushButton" name="pushButton_open_network_map">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -1904,6 +2054,62 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="text">
               <string>Graph view</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="Line" name="line_5">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_16">
+           <item>
+            <spacer name="horizontalSpacer_12">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_view_open_dir">
+             <property name="minimumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this View's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
@@ -1936,7 +2142,7 @@ color: rgb(255, 255, 255);</string>
   <widget class="QDockWidget" name="dockWidget_julia_repl">
    <property name="minimumSize">
     <size>
-     <width>80</width>
+     <width>95</width>
      <height>80</height>
     </size>
    </property>
@@ -1972,8 +2178,8 @@ color: rgb(255, 255, 255);</string>
   <widget class="QDockWidget" name="dockWidget_project">
    <property name="minimumSize">
     <size>
-     <width>127</width>
-     <height>165</height>
+     <width>135</width>
+     <height>173</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -2443,7 +2649,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>tabWidget</tabstop>
   <tabstop>treeView_project</tabstop>
   <tabstop>graphicsView</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
   <tabstop>toolButton_remove_tool_template</tabstop>
@@ -2463,7 +2668,6 @@ color: rgb(255, 255, 255);</string>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
   <tabstop>treeView_dc_data</tabstop>
-  <tabstop>pushButton_dc_open</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
   <tabstop>treeView_input_files</tabstop>

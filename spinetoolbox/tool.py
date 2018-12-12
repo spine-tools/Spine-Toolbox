@@ -74,6 +74,7 @@ class Tool(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
+        s[self._toolbox.ui.toolButton_tool_open_dir.clicked] = self.open_directory
         s[self._toolbox.ui.pushButton_tool_stop.clicked] = self.stop_process
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
         s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
@@ -575,3 +576,12 @@ class Tool(ProjectItem):
     def update_name_label(self):
         """Update Tool tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_tool_name.setText(self.name)
+
+    @Slot(bool, name="open_directory")
+    def open_directory(self, checked=False):
+        """Open file explorer in Tool data directory."""
+        url = "file:///" + self.data_dir
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))

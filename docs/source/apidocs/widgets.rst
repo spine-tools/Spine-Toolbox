@@ -124,10 +124,18 @@ widgets.custom\_qtreeview module
     :undoc-members:
     :show-inheritance:
 
-widgets.graph\_view\_widget module
-----------------------------------
+widgets.data\_store\_widgets module
+-----------------------------------
 
-.. automodule:: widgets.graph_view_widget
+.. automodule:: widgets.data_store_widgets
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.filter\_menu\_widget module
+-----------------------------------
+
+.. automodule:: widgets.filter_menu_widget
     :members:
     :undoc-members:
     :show-inheritance:
@@ -164,6 +172,14 @@ widgets.spine\_datapackage\_widget module
     :undoc-members:
     :show-inheritance:
 
+widgets.tabular\_view\_widget module
+------------------------------------
+
+.. automodule:: widgets.tabular_view_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.tool\_template\_widget module
 -------------------------------------
 
@@ -176,14 +192,6 @@ widgets.toolbars module
 -----------------------
 
 .. automodule:: widgets.toolbars
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-widgets.tree\_view\_widget module
----------------------------------
-
-.. automodule:: widgets.tree_view_widget
     :members:
     :undoc-members:
     :show-inheritance:

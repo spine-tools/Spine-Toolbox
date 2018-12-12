@@ -132,6 +132,14 @@ ui.spine\_datapackage\_form module
     :undoc-members:
     :show-inheritance:
 
+ui.tabular\_view\_form module
+-----------------------------
+
+.. automodule:: ui.tabular_view_form
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ui.tool\_template\_form module
 ------------------------------
 
