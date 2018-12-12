@@ -19,9 +19,9 @@ Spine Toolbox grid view
 import json
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton
-from PySide2.QtCore import Qt, QPoint
-from PySide2.QtGui import QIcon, QPixmap
+from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox
+from PySide2.QtCore import Qt, QPoint, QSettings
+from PySide2.QtGui import QIcon, QPixmap, QGuiApplication
 from sqlalchemy.sql import literal_column
 from spinedatabase_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
@@ -109,6 +109,10 @@ class TabularViewForm(QMainWindow):
         self.ui.actionRefresh.setIcon(refresh_icon)
         self.ui.actionCommit.setIcon(commit_icon)
         self.ui.actionRollback.setIcon(rollback_icon)
+        
+        # settings
+        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        self.settings_key = 'tabularViewWidget'
 
         # database
         self.db_map = db_map
@@ -180,6 +184,9 @@ class TabularViewForm(QMainWindow):
 
         # Set window title
         self.setWindowTitle("Data store tabular view    -- {} --".format(self.database))
+        
+        # restore previous ui state
+        self.restore_ui()
 
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -917,6 +924,46 @@ class TabularViewForm(QMainWindow):
         else:
             config.set("settings", "commit_at_exit", "1")
         return
+    
+    def restore_ui(self):
+        """Restore UI state from previous session."""
+        window_size = self.qsettings.value("{0}/windowSize".format(self.settings_key))
+        window_pos = self.qsettings.value("{0}/windowPosition".format(self.settings_key))
+        window_maximized = self.qsettings.value("{0}/windowMaximized".format(self.settings_key), defaultValue='false')
+        n_screens = self.qsettings.value("{0}/n_screens".format(self.settings_key), defaultValue=1)
+        if window_size:
+            self.resize(window_size)
+        if window_pos:
+            self.move(window_pos)
+        if window_maximized == 'true':
+            self.setWindowState(Qt.WindowMaximized)
+        # noinspection PyArgumentList
+        if len(QGuiApplication.screens()) < int(n_screens):
+            # There are less screens available now than on previous application startup
+            self.move(0, 0)  # Move this widget to primary screen position (0,0)
+        #restore splitters
+        splitters = [self.ui.splitter_3, self.ui.splitter_2, self.ui.splitter]
+        splitter_keys = ["/splitterSelectTable", "/splitterTableFilter", "/splitterPivotFrozen"]
+        splitter_states = [self.qsettings.value(s) for s in (self.settings_key + p for p in splitter_keys)]
+        for state, splitter in zip(splitter_states, splitters):
+            if state:
+                splitter.restoreState(state)
+    
+    def save_ui(self):
+        """Saves UI state"""
+        # save qsettings
+        self.qsettings.setValue("{}/windowSize".format(self.settings_key), self.size())
+        self.qsettings.setValue("{}/windowPosition".format(self.settings_key), self.pos())
+        self.qsettings.setValue("{}/windowMaximized".format(self.settings_key), self.windowState() == Qt.WindowMaximized)
+        self.qsettings.setValue(
+            "{}/splitterSelectTable".format(self.settings_key),
+            self.ui.splitter_3.saveState())
+        self.qsettings.setValue(
+            "{}/splitterTableFilter".format(self.settings_key),
+            self.ui.splitter_2.saveState())
+        self.qsettings.setValue(
+            "{}/splitterPivotFrozen".format(self.settings_key),
+            self.ui.splitter.saveState())
 
     def closeEvent(self, event=None):
         """Handle close window.
@@ -924,8 +971,12 @@ class TabularViewForm(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+        # show commit dialog if pending changes
         if self.db_map.has_pending_changes() or self.model_has_changes():
             self.show_commit_session_prompt()
+        # save ui state
+        self.save_ui()
+        # close db
         self.db_map.close()
         if event:
             event.accept()
