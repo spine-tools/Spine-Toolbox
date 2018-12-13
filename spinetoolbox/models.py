@@ -3659,41 +3659,6 @@ class DatapackageForeignKeysModel(EmptyRowModel):
             data.append([fields, reference_resource, reference_fields, None])
         super().reset_model(data)
 
-    def batch_set_data(self, indexes, data):
-        """Set data and then check if foreign keys need to be updated in datapackage."""
-        previous_data = dict()
-        unique_rows = {ind.row() for ind in indexes}
-        for row in unique_rows:
-            previous_data.update({row: self._main_data[row][0:3]})
-        if not super().batch_set_data(indexes, data):
-            return False
-        resource = self._parent.selected_resource_name
-        anything_updated = False
-        for row in unique_rows:
-            # Remove previous foreign keys if any
-            previous_row_data = previous_data[row]
-            if all(previous_row_data):
-                fields_str, reference_resource, reference_fields_str = previous_row_data
-                fields = fields_str.split(",")
-                reference_fields = reference_fields_str.split(",")
-                self._parent.datapackage.remove_foreign_key(resource, fields, reference_resource, reference_fields)
-                anything_updated = True
-            # Add new foreign key if possible
-            row_data = self._main_data[row][0:3]
-            if all(row_data):
-                fields_str, reference_resource, reference_fields_str = row_data
-                fields = fields_str.split(",")
-                reference_fields = reference_fields_str.split(",")
-                if len(fields) != len(reference_fields):
-                    msg = "Both 'fields' and 'reference fields' should have the same number of elements."
-                    self._parent.msg_error.emit(msg)
-                    return
-                self._parent.datapackage.add_foreign_key(resource, fields, reference_resource, reference_fields)
-                anything_updated = True
-        if anything_updated:
-            self._parent.msg.emit("Successfully updated foreign keys.")
-        return True
-
 
 class TableModel(QAbstractItemModel):
     def __init__(self, headers = [], data = []):

@@ -30,6 +30,7 @@ from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFiel
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from datapackage import Package
+from datapackage.exceptions import DataPackageException
 from datapackage_import_export import DatapackageToSpineConverter
 from helpers import busy_effect
 
@@ -189,6 +190,8 @@ class SpineDatapackageWidget(QMainWindow):
         self.foreign_keys_model.rowsInserted.connect(self._handle_foreign_keys_model_rows_inserted)
         # Selected resource changed
         self.ui.tableView_resources.selectionModel().currentChanged.connect(self.reset_resource_models)
+        # Foreign keys data changed
+        self.foreign_keys_model.dataChanged.connect(self._handle_foreign_keys_data_changed)
         # Actions
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
@@ -466,6 +469,37 @@ class SpineDatapackageWidget(QMainWindow):
     def _handle_foreign_keys_data_committed(self, index, value):
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
+    @Slot("QModelIndex", "QModelIndex", "QVector<int>", name="_handle_foreign_keys_data_changed")
+    def _handle_foreign_keys_data_changed(self, top_left, bottom_right, roles=list()):
+        """Called when foreign keys data is updated in model.
+        Update descriptor accordingly."""
+        if roles and Qt.EditRole not in roles:
+            return
+        resource = self.selected_resource_name
+        foreign_keys = self.datapackage.get_resource(resource).schema.foreign_keys
+        anything_updated = False
+        rows = range(top_left.row(), bottom_right.row() + 1)
+        error_log = ""
+        for row in rows:
+            # Remove previous foreign key
+            self.datapackage.remove_foreign_keys_row(row, resource)
+            # Add new foreign key if possible
+            row_data = self.foreign_keys_model._main_data[row][0:3]
+            if all(row_data):
+                fields_str, reference_resource, reference_fields_str = row_data
+                fields = fields_str.split(",")
+                reference_fields = reference_fields_str.split(",")
+                try:
+                    self.datapackage.insert_foreign_key(row, resource, fields, reference_resource, reference_fields)
+                    anything_updated = True
+                except DataPackageException as e:
+                    v_section = self.foreign_keys_model.headerData(row, Qt.Vertical)
+                    error_log += "<p>Unable to add foreign key at row {0}: '{1}'</p>".format(v_section, e)
+        if anything_updated:
+            self.msg.emit("Successfully updated foreign keys.")
+        if error_log:
+            self.msg_error.emit(error_log)
+
     @Slot("QModelIndex", "int", "int", name="_handle_foreign_keys_model_rows_inserted")
     def _handle_foreign_keys_model_rows_inserted(self, parent, first, last):
         column = self.foreign_keys_model.columnCount() - 1
@@ -490,17 +524,10 @@ class SpineDatapackageWidget(QMainWindow):
             if button != self.ui.tableView_foreign_keys.indexWidget(index):
                 continue
             # Remove fk from datapackage descriptor
-            row_data = self.foreign_keys_model._main_data[row][0:3]
             self.foreign_keys_model.removeRows(row, 1)
-            if not all(row_data):
-                # Something is missing
-                break
-            fields_str, reference_resource, reference_fields_str = row_data
-            fields = fields_str.split(",")
-            reference_fields = reference_fields_str.split(",")
             resource = self.selected_resource_name
-            self.datapackage.remove_foreign_key(resource, fields, reference_resource, reference_fields)
-            self.msg.emit("Successfully removed foreing key.")
+            self.datapackage.remove_foreign_keys_row(row, resource)
+            self.msg.emit("Successfully removed foreign key.")
             break
 
     def closeEvent(self, event=None):
@@ -552,36 +579,21 @@ class CustomPackage(Package):
                     resource_dict['schema']['foreignKeys'][i]['reference']['fields'][j] = new
         self.commit()
 
-    def primary_keys_data(self):
-        """Return primary keys in a 2-column list"""
-        data = list()
-        for resource in self.resources:
-            for field in resource.schema.primary_key:
-                table = resource.name
-                data.append([table, field])
-        return data
-
-    def foreign_keys_data(self):
-        """Return foreign keys in a 4-column list"""
-        data = list()
-        for resource in self.resources:
-            for fk in resource.schema.foreign_keys:
-                child_table = resource.name
-                child_field = fk['fields'][0]
-                parent_table = fk['reference']['resource']
-                parent_field = fk['reference']['fields'][0]
-                data.append([child_table, child_field, parent_table, parent_field])
-        return data
-
     def set_primary_key(self, resource, *primary_key):
         """Set primary key for a given resource in the package"""
-        i = self.resource_names.index(resource)
+        try:
+            i = self.resource_names.index(resource)
+        except ValueError:
+            return
         self.descriptor['resources'][i]['schema']['primaryKey'] = primary_key
         self.commit()
 
     def append_to_primary_key(self, resource, field):
         """Append field to resources's primary key."""
-        i = self.resource_names.index(resource)
+        try:
+            i = self.resource_names.index(resource)
+        except ValueError:
+            return
         primary_key = self.descriptor['resources'][i]['schema'].setdefault('primaryKey', [])
         if field not in primary_key:
             primary_key.append(field)
@@ -589,7 +601,10 @@ class CustomPackage(Package):
 
     def remove_from_primary_key(self, resource, field):
         """Remove field from resources's primary key."""
-        i = self.resource_names.index(resource)
+        try:
+            i = self.resource_names.index(resource)
+        except ValueError:
+            return
         primary_key = self.descriptor['resources'][i]['schema'].get('primaryKey')
         if not primary_key:
             return
@@ -597,24 +612,45 @@ class CustomPackage(Package):
             primary_key.remove(field)
         self.commit()
 
-    def add_foreign_key(self, resource, fields, reference_resource, reference_fields):
-        """Add foreign key to a given resource in the package"""
-        i = self.resource_names.index(resource)
+    def insert_foreign_key(
+            self, row, resource_name, field_names, reference_resource_name, reference_field_names):
+        """Insert foreign key to a given resource in the package at a given row."""
+        if len(field_names) != len(reference_field_names):
+            raise DataPackageException(
+                "Both 'fields' and 'reference fields' should have the same number of elements.")
+        resource = self.get_resource(resource_name)
+        if not resource:
+            raise DataPackageException("Resource '{}' not in datapackage". format(resource_name))
+        for field_name in field_names:
+            if field_name not in resource.schema.field_names:
+                raise DataPackageException("Field '{}' not in '{}' schema". format(field_name, resource_name))
+        reference_resource = self.get_resource(reference_resource_name)
+        if not reference_resource:
+            raise DataPackageException("Resource '{}' not in datapackage". format(reference_resource_name))
+        for reference_field_name in reference_field_names:
+            if reference_field_name not in reference_resource.schema.field_names:
+                raise DataPackageException(
+                    "Field '{}' not in '{}' schema". format(reference_field_name, reference_resource_name))
         foreign_key = {
-            "fields": fields,
+            "fields": field_names,
             "reference": {
-                "resource": reference_resource,
-                "fields": reference_fields
+                "resource": reference_resource_name,
+                "fields": reference_field_names
             }
         }
+        i = self.resource_names.index(resource_name)
         foreign_keys = self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
-        if foreign_key not in self.descriptor['resources'][i]['schema']['foreignKeys']:
-            self.descriptor['resources'][i]['schema']['foreignKeys'].append(foreign_key)
-            self.commit()
+        if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
+            raise DataPackageException("Foreign key already in '{}' schema".format(resource_name))
+        self.descriptor['resources'][i]['schema']['foreignKeys'].insert(row, foreign_key)
+        self.commit()
 
     def remove_primary_key(self, resource, *primary_key):
         """Remove the primary key for a given resource in the package"""
-        i = self.resource_names.index(resource)
+        try:
+            i = self.resource_names.index(resource)
+        except ValueError:
+            return
         if 'primaryKey' in self.descriptor['resources'][i]['schema']:
             descriptor_primary_key = self.descriptor['resources'][i]['schema']['primaryKey']
             if Counter(descriptor_primary_key) == Counter(primary_key):
@@ -623,7 +659,10 @@ class CustomPackage(Package):
 
     def remove_foreign_key(self, resource, fields, reference_resource, reference_fields):
         """Remove foreign key from the package"""
-        i = self.resource_names.index(resource)
+        try:
+            i = self.resource_names.index(resource)
+        except ValueError:
+            return
         foreign_key = {
             "fields": fields,
             "reference": {
@@ -638,5 +677,21 @@ class CustomPackage(Package):
         try:
             self.descriptor['resources'][i]['schema']['foreignKeys'].remove(foreign_key)
         except ValueError:
+            return
+        self.commit()
+
+    def remove_foreign_keys_row(self, row, resource):
+        """Remove foreign keys row from the package"""
+        try:
+            i = self.resource_names.index(resource)
+        except ValueError:
+            return
+        try:
+            foreign_keys = self.descriptor['resources'][i]['schema']['foreignKeys']
+        except KeyError:
+            return
+        try:
+            foreign_keys.pop(row)
+        except IndexError:
             return
         self.commit()

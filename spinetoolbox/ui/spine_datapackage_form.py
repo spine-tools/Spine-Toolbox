@@ -150,7 +150,7 @@ class Ui_MainWindow(object):
         self.tableView_foreign_keys.setGridStyle(QtCore.Qt.SolidLine)
         self.tableView_foreign_keys.setObjectName("tableView_foreign_keys")
         self.tableView_foreign_keys.horizontalHeader().setHighlightSections(False)
-        self.tableView_foreign_keys.verticalHeader().setVisible(False)
+        self.tableView_foreign_keys.verticalHeader().setVisible(True)
         self.verticalLayout_9.addWidget(self.tableView_foreign_keys)
         self.dockWidget_foreign_keys.setWidget(self.dockWidgetContents_6)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(2), self.dockWidget_foreign_keys)
