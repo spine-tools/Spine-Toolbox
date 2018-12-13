@@ -90,7 +90,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTreeView" name="treeView_resources">
+         <widget class="CopyPasteTableView" name="tableView_resources">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
             <horstretch>1</horstretch>
@@ -103,6 +103,15 @@
           <property name="selectionBehavior">
            <enum>QAbstractItemView::SelectItems</enum>
           </property>
+          <property name="showGrid">
+           <bool>false</bool>
+          </property>
+          <attribute name="horizontalHeaderHighlightSections">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
          </widget>
         </item>
        </layout>

@@ -82,11 +82,11 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.statusbar.addPermanentWidget(self.progress_bar)
-        self.ui.treeView_resources.setModel(self.resources_model)
+        self.ui.tableView_resources.setModel(self.resources_model)
         self.ui.tableView_fields.setModel(self.fields_model)
         self.ui.tableView_foreign_keys.setModel(self.foreign_keys_model)
         self.ui.tableView_resource_data.setModel(self.resource_data_model)
-        # self.ui.tableView_resource_data.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView_resources.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_resource_data.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_resource_data.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_fields.verticalHeader().setDefaultSectionSize(self.default_row_height)
@@ -117,7 +117,7 @@ class SpineDatapackageWidget(QMainWindow):
         first_index = self.resources_model.index(0, 0)
         if not first_index.isValid():
             return
-        self.ui.treeView_resources.selectionModel().select(first_index, QItemSelectionModel.Select)
+        self.ui.tableView_resources.selectionModel().select(first_index, QItemSelectionModel.Select)
         self.reset_resource_models(first_index, QModelIndex())
 
     def connect_signals(self):
@@ -135,7 +135,7 @@ class SpineDatapackageWidget(QMainWindow):
         # Resource name
         line_edit_delegate = LineEditDelegate(self)
         line_edit_delegate.data_committed.connect(self._handle_resource_name_data_committed)
-        self.ui.treeView_resources.setItemDelegateForColumn(0, line_edit_delegate)
+        self.ui.tableView_resources.setItemDelegateForColumn(0, line_edit_delegate)
         # Field name
         line_edit_delegate = LineEditDelegate(self)
         line_edit_delegate.data_committed.connect(self._handle_field_name_data_committed)
@@ -151,7 +151,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_foreign_keys.setItemDelegate(foreign_keys_delegate)
         self.foreign_keys_model.rowsInserted.connect(self._handle_foreign_keys_model_rows_inserted)
         # Selected resource changed
-        self.ui.treeView_resources.selectionModel().currentChanged.connect(self.reset_resource_models)
+        self.ui.tableView_resources.selectionModel().currentChanged.connect(self.reset_resource_models)
         # Actions
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
@@ -197,7 +197,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.actionPaste.setEnabled(False)
         if self.focusWidget() != self.ui.menubar:
             self.focus_widget = self.focusWidget()
-        if self.focus_widget == self.ui.treeView_resources:
+        if self.focus_widget == self.ui.tableView_resources:
             focus_widget_name = "resources"
         elif self.focus_widget == self.ui.tableView_resource_data:
             focus_widget_name = "data"
@@ -210,7 +210,7 @@ class SpineDatapackageWidget(QMainWindow):
         if not self.focus_widget.selectionModel().selection().isEmpty():
             self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
             self.ui.actionCopy.setEnabled(True)
-        if True: #self.focus_widget.canPaste():
+        if self.focus_widget.canPaste():
             self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
             self.ui.actionPaste.setEnabled(True)
 

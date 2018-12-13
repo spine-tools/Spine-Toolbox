@@ -3589,7 +3589,7 @@ class JSONArrayModel(EmptyRowModel):
         return json.dumps(new_json)
 
 
-class DatapackageResourcesModel(QStandardItemModel):
+class DatapackageResourcesModel(MinimalTableModel):
     """A model of datapackage resource data, used by SpineDatapackageWidget."""
     def __init__(self, spine_datapackage_widget):
         """Initialize class"""
@@ -3598,15 +3598,19 @@ class DatapackageResourcesModel(QStandardItemModel):
 
     def reset_model(self, datapackage):
         self.clear()
-        self.setHorizontalHeaderLabels(["name", "source"])
+        self.set_horizontal_header_labels(["name", "source"])
         self.datapackage = datapackage
+        data = list()
         for row, resource in enumerate(self.datapackage.resources):
             name = resource.name
             source = os.path.basename(resource.source)
-            name_item = QStandardItem(name)
-            source_item = QStandardItem(source)
-            source_item.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsSelectable)
-            self.appendRow([name_item, source_item])
+            data.append([name, source])
+        super().reset_model(data)
+
+    def flags(self, index):
+        if index.column() == 1:
+            return ~Qt.ItemIsEditable & ~Qt.ItemIsSelectable
+        return super().flags(index)
 
 
 class DatapackageFieldsModel(MinimalTableModel):
