@@ -26,6 +26,7 @@ Spine Toolbox grid view
 
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel, QAbstractListModel
 from PySide2.QtGui import QColor
+from helpers import tuple_itemgetter
 import operator
 import bisect
 
@@ -1288,17 +1289,6 @@ class PivotTableModel(QAbstractTableModel):
             elif index_entry in self.model._added_index_entries[index_name]:
                 # color added indexes
                 return QColor(Qt.green)
-            
-
-
-def tuple_itemgetter(itemgetter_func, num_indexes):
-    """Change output of itemgetter to always be a tuple even for one index"""
-    if num_indexes == 1:
-        def g(item):
-            return (itemgetter_func(item),)
-        return g
-    else:
-        return itemgetter_func
 
 
 class PivotTableSortFilterProxy(QSortFilterProxyModel):

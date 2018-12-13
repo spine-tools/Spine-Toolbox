@@ -26,6 +26,7 @@ from sqlalchemy.sql import literal_column
 from spinedatabase_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu
+from helpers import fix_name_ambiguity, tuple_itemgetter
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     AddRelationshipClassesDialog, AddRelationshipsDialog, \
@@ -49,15 +50,6 @@ INDEX_NAME = "db index"
 JSON_TIME_NAME = "json time"
 PARAMETER_NAME = "db parameter"
 
-# TODO: move to helper file
-def tuple_itemgetter(itemgetter_func, num_indexes):
-    """Change output of itemgetter to always be a tuple even for one index"""
-    if num_indexes == 1:
-        def g(item):
-            return (itemgetter_func(item),)
-        return g
-    else:
-        return itemgetter_func
 
 def unpack_json(data):
     expanded_data = []
@@ -67,21 +59,6 @@ def unpack_json(data):
         new_data = [a + [b, c] for a, b, c in zip([d[:-1]]*len(json_array), json_index, json_array)]
         expanded_data = expanded_data + new_data
     return expanded_data
-
-# TODO: change use of this function to existing in helpers or move to helpers
-def make_names_unique(names):
-    # appends number after repeted string in list
-    name_dict = {}
-    unique_names = []
-    for n in names:
-        if n in name_dict.keys():
-            new_n = n + str(name_dict[n])
-            name_dict[n] = name_dict[n] + 1
-        else:
-            name_dict[n] = 1
-            new_n = n
-        unique_names.append(new_n)
-    return unique_names
 
 
 class TabularViewForm(QMainWindow):
@@ -655,7 +632,9 @@ class TabularViewForm(QMainWindow):
             tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
             for oc in object_class_names:
                 index_entries[oc] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id)
-            tuple_entries[tuple(make_names_unique(object_class_names))] = set(tuple(r.object_name_list.split(',')) for r in self.relationships.values())
+            unique_class_names = list(object_class_names)
+            fix_name_ambiguity(unique_class_names)
+            tuple_entries[tuple(unique_class_names)] = set(tuple(r.object_name_list.split(',')) for r in self.relationships.values())
         else:
             used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
             index_entries[self.current_class_name] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id)
@@ -679,15 +658,15 @@ class TabularViewForm(QMainWindow):
             index_entries.pop(PARAMETER_NAME, None)
         else:
             data, index_names, index_types, parameter_values = self.load_parameter_values()
-
             self.parameter_values = parameter_values
-        if self.current_class_type == RELATIONSHIP_CLASS:
-            self.relationship_tuple_key = tuple(self.current_object_class_list())
 
         # make names unique
         real_names = index_names
-        unique_names = make_names_unique(index_names)
+        unique_names = list(index_names)
+        fix_name_ambiguity(unique_names)
         self.original_index_names = {u: r for u, r in zip(unique_names, real_names)}
+        if self.current_class_type == RELATIONSHIP_CLASS:
+            self.relationship_tuple_key = tuple(unique_names[:len(self.current_object_class_list())])
         # get pivot preference for current selection
         selection_key = (self.current_class_name, self.current_class_type, self.current_value_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key, unique_names)

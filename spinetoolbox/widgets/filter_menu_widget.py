@@ -197,15 +197,3 @@ class FilterWidget(QWidget):
         # is edited before last time is out.
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
-
-
-if __name__ == '__main__':
-    import sys
-    app = QApplication(sys.argv)
-    b = QPushButton()
-    b.show()
-    m = FilterMenu(None)
-    b.setMenu(m)
-
-    #w.show()
-    sys.exit(app.exec_())

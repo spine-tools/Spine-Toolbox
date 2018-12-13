@@ -346,3 +346,13 @@ def fix_name_ambiguity(name_list, offset=0):
         ocurrence = ocurrences.setdefault(name, 1)
         name_list[i] = name + str(offset + ocurrence)
         ocurrences[name] = ocurrence + 1
+
+
+def tuple_itemgetter(itemgetter_func, num_indexes):
+    """Change output of itemgetter to always be a tuple even for one index"""
+    if num_indexes == 1:
+        def g(item):
+            return (itemgetter_func(item),)
+        return g
+    else:
+        return itemgetter_func
