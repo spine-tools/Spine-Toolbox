@@ -122,7 +122,10 @@ class Tool(ProjectItem):
 
     @Slot(int, name="work_checkbox_state_changed")
     def work_checkbox_state_changed(self, state):
-        logging.debug("New state is:{0}".format(state))
+        """Slot for handling the use work directory check box state changed signal.
+        Args:
+            state (int): New state of the checkbox (0: Qt.Unchecked, 2: Qt.Checked)
+        """
         self.execute_in_work = True if state == Qt.Checked else False
 
     @Slot(int, name="update_tool_template")
