@@ -66,7 +66,7 @@ class TestTreeViewForm(unittest.TestCase):
         except OSError:
             pass
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
@@ -105,7 +105,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(cat_name, "cat")
         self.assertEqual(root_item.rowCount(), 3)
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_objects(self):
         """Test that objects are added to the object tree model.
         """
@@ -188,7 +188,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(scooby_name, "scooby")
         self.assertEqual(fish_item.rowCount(), 2)
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_relationship_classes(self):
         """Test that relationship classes are added to the object tree model.
         """
@@ -275,7 +275,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(pluto_fish_dog_object_class_name_list, "fish,dog")
         self.assertEqual(pluto_item.rowCount(), 2)
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_relationships(self):
         """Test that relationships are added to the object tree model.
         """
@@ -395,7 +395,7 @@ class TestTreeViewForm(unittest.TestCase):
         pluto_nemo_item2_class_id = pluto_nemo_item2.data(Qt.UserRole + 1)['class_id']
         pluto_nemo_item2_object_id_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_id_list']
         pluto_nemo_item2_object_name_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_name_list']
-        self.assertEqual(pluto_nemo_item2_type, "relationship", "Pluto_nemo item2 type is not 'relationship'")
+        self.assertEqual(pluto_nemo_item2_type, "relationship")
         self.assertEqual(pluto_nemo_item2_name, 'dog__fish_pluto__nemo')
         self.assertEqual(pluto_nemo_item2_class_id, dog_fish_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item2_object_id_list.split(",")]
@@ -407,7 +407,7 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_pluto_item1_class_id = nemo_pluto_item1.data(Qt.UserRole + 1)['class_id']
         nemo_pluto_item1_object_id_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_id_list']
         nemo_pluto_item1_object_name_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_name_list']
-        self.assertEqual(nemo_pluto_item1_type, "relationship", "Nemo_pluto item1 type is not 'relationship'")
+        self.assertEqual(nemo_pluto_item1_type, "relationship")
         self.assertEqual(nemo_pluto_item1_name, 'fish__dog_nemo__pluto')
         self.assertEqual(nemo_pluto_item1_class_id, fish_dog_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item1_object_id_list.split(",")]
@@ -419,7 +419,7 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_pluto_item2_class_id = nemo_pluto_item2.data(Qt.UserRole + 1)['class_id']
         nemo_pluto_item2_object_id_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_id_list']
         nemo_pluto_item2_object_name_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_name_list']
-        self.assertEqual(nemo_pluto_item2_type, "relationship", "Nemo_pluto item2 type is not 'relationship'")
+        self.assertEqual(nemo_pluto_item2_type, "relationship")
         self.assertEqual(nemo_pluto_item2_name, 'fish__dog_nemo__pluto')
         self.assertEqual(nemo_pluto_item2_class_id, fish_dog_relationship_class.id)
         split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item2_object_id_list.split(",")]
@@ -431,7 +431,7 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_scooby_item1_class_id = nemo_scooby_item1.data(Qt.UserRole + 1)['class_id']
         nemo_scooby_item1_object_id_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_id_list']
         nemo_scooby_item1_object_name_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_name_list']
-        self.assertEqual(nemo_scooby_item1_type, "relationship", "Nemo_scooby item1 type is not 'relationship'")
+        self.assertEqual(nemo_scooby_item1_type, "relationship")
         self.assertEqual(nemo_scooby_item1_name, 'fish__dog_nemo__scooby')
         self.assertEqual(nemo_scooby_item1_class_id, fish_dog_relationship_class.id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item1_object_id_list.split(",")]
@@ -443,14 +443,14 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_scooby_item2_class_id = nemo_scooby_item2.data(Qt.UserRole + 1)['class_id']
         nemo_scooby_item2_object_id_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_id_list']
         nemo_scooby_item2_object_name_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_name_list']
-        self.assertEqual(nemo_scooby_item2_type, "relationship", "Nemo_scooby item2 type is not 'relationship'")
+        self.assertEqual(nemo_scooby_item2_type, "relationship")
         self.assertEqual(nemo_scooby_item2_name, 'fish__dog_nemo__scooby')
         self.assertEqual(nemo_scooby_item2_class_id, fish_dog_relationship_class.id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item2_object_id_list.split(",")]
         self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
         self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model.
         """
@@ -507,7 +507,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter.object_class_id, dog_class_id)
         self.assertIsNone(parameter.relationship_class_id)
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model.
         """
@@ -597,7 +597,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter.relationship_class_id, dog_fish_class_id)
         self.assertIsNone(parameter.object_class_id)
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_add_object_parameter_values(self):
         """Test that object parameter values are added to the model.
         """
@@ -679,9 +679,6 @@ class TestTreeViewForm(unittest.TestCase):
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
         self.assertEqual(parameter_name_index.data(), 'breed')
         # Add second object parameter value (for pluto), to test autofilling of object class from *parameter*
-        model = self.tree_view_form.object_parameter_value_model
-        view = self.tree_view_form.ui.tableView_object_parameter_value
-        header_index = model.horizontal_header_labels().index
         # Enter parameter name
         parameter_name_index = model.index(1, header_index("parameter_name"))
         self.assertIsNone(parameter_name_index.data())
@@ -771,7 +768,7 @@ class TestTreeViewForm(unittest.TestCase):
             description="Scooby-Dooby-Doo."
         )
         scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        self.tree_view_form.add_objects([nemo_object, scooby_object])
+        self.tree_view_form.add_objects([nemo_object, pluto_object, scooby_object])
         # Add fish__dog relationship class
         fish_dog = dict(
             name="fish__dog",
@@ -779,20 +776,22 @@ class TestTreeViewForm(unittest.TestCase):
         )
         fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
         self.tree_view_form.add_relationship_classes([fish_dog_relationship_class])
-        # Add nemo_pluto and nemo_scooby relationships
+        # Fetch fish__dog
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        nemo_item = fish_item.child(0)
+        nemo_fish_dog_item = nemo_item.child(0)
+        nemo_fish__dog_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_fish_dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_fish__dog_index)
+        # Add nemo_pluto relationship
         nemo_pluto = dict(
             class_id=fish_dog_relationship_class.id,
             object_id_list=[nemo_object.id, pluto_object.id],
             name='fish__dog_nemo__pluto'
         )
-        nemo_scooby = dict(
-            class_id=fish_dog_relationship_class.id,
-            object_id_list=[nemo_object.id, scooby_object.id],
-            name='fish__dog_nemo__scooby'
-        )
+        # Don't add nemo_scooby since that one we want to add 'on the fly'
         nemo_pluto_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_pluto)
-        nemo_scooby_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_scooby)
-        self.tree_view_form.add_relationships([nemo_pluto_relationship, nemo_scooby_relationship])
+        self.tree_view_form.add_relationships([nemo_pluto_relationship])
         # Add relationship parameter definition
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -811,7 +810,7 @@ class TestTreeViewForm(unittest.TestCase):
         editor.setText("combined_mojo")
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        # Add relationship parameter value
+        # Add first relationship parameter value (for existing relationship)
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
         header_index = model.horizontal_header_labels().index
@@ -862,7 +861,53 @@ class TestTreeViewForm(unittest.TestCase):
         obj_id_list_index = model.index(0, header_index("object_id_list"))
         split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
         self.assertEqual(split_obj_id_list, [nemo_object.id, pluto_object.id])
+        # Add second relationship parameter value (relationship on the fly)
+        parameter_name_index = model.index(1, header_index("parameter_name"))
+        self.assertIsNone(parameter_name_index.data())
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomComboEditor))
+        self.assertEqual(editor.count(), 1)
+        self.assertEqual(editor.itemText(0), 'combined_mojo')
+        editor.setCurrentIndex(0)
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        self.assertEqual(parameter_name_index.data(), 'combined_mojo')
+        # Check relationship class
+        rel_cls_name = model.index(1, header_index("relationship_class_name")).data()
+        self.assertEqual(rel_cls_name, 'fish__dog')
+        rel_cls_id = model.index(1, header_index("relationship_class_id")).data()
+        self.assertEqual(rel_cls_id, fish_dog_relationship_class.id)
+        obj_cls_name_list_index = model.index(1, header_index("object_class_name_list"))
+        self.assertEqual(obj_cls_name_list_index.data(), 'fish,dog')
+        obj_cls_id_list_index = model.index(1, header_index("object_class_id_list"))
+        split_obj_cls_id_list = [int(x) for x in obj_cls_id_list_index.data().split(",")]
+        self.assertEqual(split_obj_cls_id_list, [fish_class_id, dog_class_id])
+        # Enter object name list
+        obj_name_list_index = model.index(1, header_index("object_name_list"))
+        self.assertIsNone(obj_name_list_index.data())
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_list_index)
+        view.itemDelegate().setEditorData(editor, obj_name_list_index)
+        self.assertTrue(isinstance(editor, ObjectNameListEditor))
+        combos = editor.combos
+        self.assertEqual(len(combos), 2)
+        self.assertEqual(combos[0].count(), 3)
+        self.assertEqual(combos[0].itemText(0), 'fish')
+        self.assertEqual(combos[0].itemText(2), 'nemo')
+        self.assertEqual(combos[1].count(), 4)
+        self.assertEqual(combos[1].itemText(0), 'dog')
+        self.assertEqual(combos[1].itemText(2), 'pluto')
+        self.assertEqual(combos[1].itemText(3), 'scooby')
+        combos[0].setCurrentIndex(2)
+        combos[1].setCurrentIndex(3)
+        view.itemDelegate().setModelData(editor, model, obj_name_list_index)
+        view.itemDelegate().destroyEditor(editor, obj_name_list_index)
+        # Check relationship
+        obj_id_list_index = model.index(1, header_index("object_id_list"))
+        split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
+        self.assertEqual(split_obj_id_list, [nemo_object.id, scooby_object.id])
         # Check the db
+        # First (nemo_pluto)
         parameter_id = model.index(0, header_index("parameter_id")).data()
         parameter_value_id = model.index(0, header_index("id")).data()
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
@@ -870,8 +915,34 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter_value.parameter_id, parameter_id)
         self.assertEqual(parameter_value.relationship_id, nemo_pluto_relationship.id)
         self.assertIsNone(parameter_value.object_id)
+        # Second (nemo_scooby)
+        nemo_scooby_relationship_id = model.index(1, header_index("relationship_id")).data()
+        nemo_scooby_relationship = self.tree_view_form.db_map.single_wide_relationship(
+            id=nemo_scooby_relationship_id).one_or_none()
+        split_obj_id_list = [int(x) for x in nemo_scooby_relationship.object_id_list.split(',')]
+        self.assertEqual(split_obj_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(nemo_scooby_relationship.object_name_list, 'nemo,scooby')
+        parameter_id = model.index(1, header_index("parameter_id")).data()
+        parameter_value_id = model.index(1, header_index("id")).data()
+        parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
+        self.assertEqual(parameter_value.id, parameter_value_id)
+        self.assertEqual(parameter_value.parameter_id, parameter_id)
+        self.assertEqual(parameter_value.relationship_id, nemo_scooby_relationship_id)
+        self.assertIsNone(parameter_value.object_id)
+        # Last, check that relationship is in object tree
+        nemo_scooby_item = nemo_fish_dog_item.child(1)
+        nemo_scooby_item_type = nemo_scooby_item.data(Qt.UserRole)
+        nemo_scooby_item_name = nemo_scooby_item.data(Qt.UserRole + 1)['name']
+        nemo_scooby_item_class_id = nemo_scooby_item.data(Qt.UserRole + 1)['class_id']
+        nemo_scooby_item_object_id_list = nemo_scooby_item.data(Qt.UserRole + 1)['object_id_list']
+        nemo_scooby_item_object_name_list = nemo_scooby_item.data(Qt.UserRole + 1)['object_name_list']
+        self.assertEqual(nemo_scooby_item_type, "relationship")
+        self.assertEqual(nemo_scooby_item_class_id, fish_dog_relationship_class.id)
+        split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item_object_id_list.split(",")]
+        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(nemo_scooby_item_object_name_list, "nemo,scooby")
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_paste_add_object_parameter_values(self):
         """Test that data is pasted onto the view and object parameter values are added to the model.
         """
@@ -989,7 +1060,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(scooby_breed.value, 'great dane')
         self.assertEqual(brian_breed.value, 'labrador')
 
-    # @unittest.skip("DONE")
+    @unittest.skip("DONE")
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in parameter definition models according the object tree selection.
         """
