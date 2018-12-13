@@ -25,7 +25,7 @@ from PySide2.QtGui import QIcon, QPixmap, QGuiApplication
 from sqlalchemy.sql import literal_column
 from spinedatabase_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
-from widgets.custom_menus import FilterMenu
+from widgets.custom_menus import FilterMenu, PivotTableModelMenu
 from helpers import fix_name_ambiguity, tuple_itemgetter
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
@@ -127,22 +127,11 @@ class TabularViewForm(QMainWindow):
         self.model = PivotTableModel()
         self.proxy_model.setSourceModel(self.model)
         self.ui.pivot_table.setModel(self.proxy_model)
-
-        # TODO: move this to it's own class
-        # context menu for pivot_table
-        self.rcMenu=QMenu(self.ui.pivot_table)
-        delete_values = self.rcMenu.addAction('Delete selected values')
-        restore_values = self.rcMenu.addAction('Restore selected values')
-        self.delete_index_action = self.rcMenu.addAction('Delete index')
-        self.delete_relationship_action = self.rcMenu.addAction('Delete relationships')
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.pivot_table_menu = PivotTableModelMenu(self.model, self.proxy_model, self.ui.pivot_table)
 
         # connect signals
-        self.ui.pivot_table.customContextMenuRequested.connect(self.onRightClick)
-        restore_values.triggered.connect(self.restore_values)
-        delete_values.triggered.connect(self.delete_values)
-        self.delete_index_action.triggered.connect(self.delete_index_values)
-        self.delete_relationship_action.triggered.connect(self.delete_relationship_values)
+        self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
         self.ui.list_index.afterDrop.connect(self.change_pivot)
         self.ui.list_column.afterDrop.connect(self.change_pivot)
         self.ui.list_frozen.afterDrop.connect(self.change_pivot)
@@ -289,7 +278,6 @@ class TabularViewForm(QMainWindow):
             text = text.split(': ')
             return text[0], text[1]
         return None, None
-
 
     def pack_dict_json(self):
         """Pack down values with json_index into a json_array"""
@@ -573,8 +561,6 @@ class TabularViewForm(QMainWindow):
             db_edited = True
         return db_edited
 
-
-
     def update_pivot_lists_to_new_model(self):
         self.ui.list_index.clear()
         self.ui.list_column.clear()
@@ -603,6 +589,8 @@ class TabularViewForm(QMainWindow):
     def change_class(self):
         self.save_model()
         self.select_data()
+        self.pivot_table_menu.relationship_tuple_key = self.relationship_tuple_key
+        self.pivot_table_menu.class_type = self.current_class_type
 
     def get_pivot_preferences(self, selection_key, index_names):
         if selection_key in self.class_pivot_preferences:
@@ -677,96 +665,6 @@ class TabularViewForm(QMainWindow):
         self.update_filters_to_new_model()
         self.update_pivot_lists_to_new_model()
         self.update_frozen_table_to_model()
-
-    def delete_values(self):
-        """deletes selected indexes in pivot_table"""
-        self.proxy_model.delete_values(self.ui.pivot_table.selectedIndexes())
-
-    def restore_values(self):
-        """restores edited selected indexes in pivot_table"""
-        self.proxy_model.restore_values(self.ui.pivot_table.selectedIndexes())
-
-    def delete_index_values(self):
-        """finds selected index items and deletes"""
-        indexes = [self.proxy_model.mapToSource(i) for i in self.ui.pivot_table.selectedIndexes()]
-        delete_dict = {}
-        for i in indexes:
-            index_name = None
-            if self.model.index_in_column_headers(i):
-                value = self.model.data(i)
-                if value:
-                    index_name = self.model.model.pivot_columns[i.row()]
-            elif self.model.index_in_row_headers(i):
-                value = self.model.data(i)
-                if value:
-                    index_name = self.model.model.pivot_rows[i.column()]
-            if index_name:
-                if index_name in delete_dict:
-                    delete_dict[index_name].add(value)
-                else:
-                    delete_dict[index_name] = set([value])
-        self.model.delete_index_values(delete_dict)
-
-    def delete_relationship_values(self):
-        """finds selected relationships deletes"""
-        if not self.current_class_type == RELATIONSHIP_CLASS:
-            return
-        indexes = [self.proxy_model.mapToSource(i) for i in self.ui.pivot_table.selectedIndexes()]
-        pos = [self.model.model.index_names.index(n) for n in self.relationship_tuple_key]
-        getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
-        delete_dict = {self.relationship_tuple_key: set()}
-        for i in indexes:
-            if self.model.index_in_column_headers(i) or self.model.index_in_row_headers(i):
-                key = self.model.get_key(i)
-                key = getter(key)
-                if all(key):
-                    delete_dict[self.relationship_tuple_key].add(key)
-        self.model.delete_tuple_index_values(delete_dict)
-
-    def onRightClick(self, QPos=None):
-        class_type = self.current_class_type
-        indexes = [self.proxy_model.mapToSource(i) for i in self.ui.pivot_table.selectedIndexes()]
-        self.delete_index_action.setText("Delete index values")
-        self.delete_index_action.setEnabled(False)
-        self.delete_relationship_action.setText("Delete relationships")
-        self.delete_relationship_action.setEnabled(False)
-        if len(indexes) > 1:
-            if (any(self.model.index_in_column_headers(i) for i in indexes) or
-                any(self.model.index_in_row_headers(i) for i in indexes)):
-                self.delete_index_action.setText("Delete selected index values")
-                self.delete_index_action.setEnabled(True)
-                if class_type == RELATIONSHIP_CLASS:
-                    self.delete_relationship_action.setText("Delete selected relationships")
-                    self.delete_relationship_action.setEnabled(True)
-
-        elif len(indexes) == 1:
-            index = indexes[0]
-            if self.model.index_in_column_headers(index):
-                value = self.model.data(index)
-                if value:
-                    index_name = self.model.model.pivot_columns[index.row()]
-                    self.delete_index_action.setText("Delete {}: {}".format(index_name, value))
-                    self.delete_index_action.setEnabled(True)
-            elif self.model.index_in_row_headers(index):
-                value = self.model.data(index)
-                if value:
-                    index_name = self.model.model.pivot_rows[index.column()]
-                    self.delete_index_action.setText("Delete {}: {}".format(index_name, value))
-                    self.delete_index_action.setEnabled(True)
-            if class_type == RELATIONSHIP_CLASS and (self.model.index_in_column_headers(index) or self.model.index_in_row_headers(index)):
-                pos = [self.model.model.index_names.index(n) for n in self.relationship_tuple_key]
-                getter = tuple_itemgetter(operator.itemgetter(*pos), len(pos))
-                key = self.model.get_key(index)
-                key = getter(key)
-                if all(key):
-                    self.delete_relationship_action.setText("Delete relationship: {}".format(", ".join(key)))
-                    self.delete_relationship_action.setEnabled(True)
-
-        parent=self.sender()
-        pPos=parent.mapToGlobal(QPoint(5, 20))
-        mPos=pPos+QPos
-        self.rcMenu.move(mPos)
-        self.rcMenu.show()
 
     def table_index_entries_changed(self, added_entries, deleted_enties):
         for button, menu in zip(self.filter_buttons, self.filter_menus):
