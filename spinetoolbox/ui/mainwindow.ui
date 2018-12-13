@@ -1907,6 +1907,19 @@
           </layout>
          </item>
          <item>
+          <widget class="QCheckBox" name="checkBox_execute_in_work">
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Tool template is executed in the work directory.&lt;/p&gt;&lt;p&gt;If not checked, Tool template is executed in the source directory where the main program file is located.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="text">
+            <string>Execute in work directory</string>
+           </property>
+           <property name="checked">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="Line" name="line_4">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>

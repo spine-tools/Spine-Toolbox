@@ -23,7 +23,7 @@ import getpass
 from project_item import ProjectItem
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QStyle, QFileIconProvider
+from PySide2.QtWidgets import QFileIconProvider
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
 from graphics_items import ToolImage
@@ -39,10 +39,11 @@ class Tool(ProjectItem):
         name (str): Object name
         description (str): Object description
         tool_template (ToolTemplate): Template for this Tool
+        use_work (bool): Execute associated Tool template in work (True) or source directory (False)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, toolbox, name, description, tool_template, x, y):
+    def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -58,6 +59,7 @@ class Tool(ProjectItem):
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
+        self.execute_in_work = use_work
         # Make project directory for this Tool
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -79,6 +81,7 @@ class Tool(ProjectItem):
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
         s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
+        s[self._toolbox.ui.checkBox_execute_in_work.stateChanged] = self.work_checkbox_state_changed
         return s
 
     def activate(self):
@@ -106,6 +109,8 @@ class Tool(ProjectItem):
             self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
             tool_template = self._toolbox.tool_template_model.tool_template(self._tool_template_index.row())
             self.set_tool_template(tool_template)
+        exec_work_state = Qt.Checked if self.execute_in_work else Qt.Unchecked
+        self._toolbox.ui.checkBox_execute_in_work.setCheckState(exec_work_state)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -113,6 +118,12 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         else:
             self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        self.execute_in_work = True if self._toolbox.ui.checkBox_execute_in_work.isChecked() else False
+
+    @Slot(int, name="work_checkbox_state_changed")
+    def work_checkbox_state_changed(self, state):
+        logging.debug("New state is:{0}".format(state))
+        self.execute_in_work = True if state == Qt.Checked else False
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
@@ -225,7 +236,8 @@ class Tool(ProjectItem):
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
-                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
+                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
+                                                 self._project, self.execute_in_work)
                 except OSError as e:
                     self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                     return
@@ -249,7 +261,8 @@ class Tool(ProjectItem):
                 pass
         else:  # Tool template does not have requirements
             try:
-                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
+                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
+                                             self._project, self.execute_in_work)
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 return
