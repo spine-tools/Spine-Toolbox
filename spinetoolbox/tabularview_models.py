@@ -25,7 +25,7 @@ Spine Toolbox grid view
 """
 
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel, QAbstractListModel
-from PySide2.QtGui import QColor
+from PySide2.QtGui import QColor, QFont
 from helpers import tuple_itemgetter
 import operator
 import bisect
@@ -1226,6 +1226,11 @@ class PivotTableModel(QAbstractTableModel):
                 return self._data_header[index.row()][index.column()]
             else:
                 return None
+        elif role == Qt.FontRole:
+            if self.index_in_top_left(index):
+                font = QFont()
+                font.setBold(True)
+                return font
         elif role == Qt.BackgroundColorRole:
             return self.data_color(index)
         elif role == Qt.ToolTipRole:
