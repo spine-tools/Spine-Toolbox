@@ -147,9 +147,9 @@ class PivotModel():
             self._added_index_entries[name] = set()
             self._deleted_index_entries[name] = set()
         for k, v in index_entries.items():
-            name = self._unique_name_2_name[k]
-            if name in self.index_entries:
-                self.index_entries[name].update(set(v))
+            #name = self._unique_name_2_name[k]
+            if k in self.index_entries:
+                self.index_entries[k].update(set(v))
         # add tuple entries
         for k, v in tuple_index_entries.items():
             keys = tuple(self._index_ind[i] for i in k)
@@ -637,10 +637,12 @@ class PivotModel():
                 continue
             # uppdate existing entries
             self.index_entries[k].difference_update(deleted_entries)
-            if k in self.pivot_rows:
-                delete_values_row[self.pivot_rows.index(k)] = deleted_entries
-            if k in self.pivot_columns:
-                delete_values_column[self.pivot_columns.index(k)] = deleted_entries
+            k_unique = [u for u, v in self._unique_name_2_name.items() if v == k]
+            for u in k_unique:
+                if u in self.pivot_rows:
+                    delete_values_row[self.pivot_rows.index(u)] = deleted_entries
+                if u in self.pivot_columns:
+                    delete_values_column[self.pivot_columns.index(u)] = deleted_entries
             # add existing entries to deleted entries
             self._deleted_index_entries[k].update(deleted_entries)
             # remove any entries in added indexes
@@ -649,13 +651,17 @@ class PivotModel():
             for u_name, v in self._used_index_values.items():
                 if k in u_name and deleted_entries:
                     v.difference_update(deleted_entries)
-            delete_values[self.index_names.index(k)] = deleted_entries
+            for u in k_unique:
+                delete_values[self.index_names.index(u)] = deleted_entries
         # delete from tuple indexes
         for tk in self.tuple_index_entries.keys():
+            # real names
+            tk_real = [self._unique_name_2_name[t] for t in tk]
             for k, indexes in delete_indexes.items():
-                if k in tk:
-                    pos = tk.index(k)
-                    remove_set = set(row for row in self.tuple_index_entries[tk] if row[pos] in indexes)
+                if k in tk_real:
+                    # all indexes of real name index
+                    pos = [i for i, x in enumerate(tk_real) if x == k]
+                    remove_set = set(row for row in self.tuple_index_entries[tk] if any(row[p] in indexes for p in pos))
                     self.tuple_index_entries[tk].difference_update(remove_set)
                     if tk in self._added_tuple_index_entries:
                         self._added_tuple_index_entries[tk].difference_update(remove_set)
@@ -673,18 +679,22 @@ class PivotModel():
             for key in delete_keys:
                 self._delete_data(key)
         # delete from index headers
+        del_i = set()
         if delete_values_row:
             for i, key in reversed(list(enumerate(self._row_data_header))):
                 for ind, values in delete_values_row.items():
-                    if key[ind] in values:
+                    if key[ind] in values and i not in del_i:
                         del_key = self._row_data_header.pop(i)
                         self._row_data_header_set.discard(del_key)
+                        del_i.add(i)
+        del_i = set()
         if delete_values_column:
             for i, key in reversed(list(enumerate(self._column_data_header))):
                 for ind, values in delete_values_column.items():
-                    if key[ind] in values:
+                    if key[ind] in values and i not in del_i:
                         del_key = self._column_data_header.pop(i)
                         self._column_data_header_set.discard(del_key)
+                        del_i.add(i)
 
     def _data_to_header(self, data, start_index, index_values, index_names, mask, direction):
         edit_index = []

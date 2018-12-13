@@ -886,6 +886,46 @@ class TestPivotModel(unittest.TestCase):
         model._add_index_value('wrong_index','test1')
         model.delete_index_values({'test2': set(['wrong_index'])})
         self.assertEqual(model._used_index_values, {('test1', 'test2'): set(['wrong_index'])})
+    
+    def test_add_indexes_with_same_name(self):
+        """Test that adding indexes with same name only creates one entry in index_entries"""
+        model = PivotModel()
+        model.set_new_data(self.data, self.index_names, self.index_types, index_real_names = ['test','test','test3'])
+        self.assertEqual(model.index_entries['test'], set(['a','b','c','d','e','aa','bb','cc','dd','ee']))
+        self.assertEqual(sorted(list(model.index_entries.keys())), ['test','test3'])
+    
+    def test_delete_index_values_with_same_name(self):
+        """Test that deleteing indexes with same name deletes all rows"""
+        model = PivotModel()
+        data = [['a', 'b', 'c', 1], ['d', 'a', 'c', 1] , ['c','d','e', 1]]
+        model.set_new_data(data, self.index_names, self.index_types, index_real_names = ['test','test','test3'])
+        model.delete_index_values({'test': set(['a'])})
+        self.assertEqual(model._row_data_header, [('c','d','e')])
+        self.assertEqual(model._row_data_header_set, set([('c','d','e')]))
+    
+    def test_delete_index_values_with_same_name2(self):
+        """Test that deleteing indexes with same name deletes all data"""
+        model = PivotModel()
+        data = [['a', 'b', 'c', 1], ['d', 'a', 'c', 1] , ['c','d','e', 1]]
+        model.set_new_data(data, self.index_names, self.index_types, index_real_names = ['test','test','test3'])
+        model.delete_index_values({'test': set(['a'])})
+        self.assertEqual(model._data, {('c','d','e'): 1})
+    
+    def test_delete_index_values_with_same_name3(self):
+        """Test that deleteing indexes with same name deletes all tuple_index_entries"""
+        model = PivotModel()
+        data = [['a', 'b', 'c', 1], ['d', 'a', 'c', 1] , ['c','d','e', 1]]
+        model.set_new_data(data, self.index_names, self.index_types, index_real_names = ['test','test','test3'], tuple_index_entries={('test1','test2','test3'): set()})
+        model.delete_index_values({'test': set(['a'])})
+        self.assertEqual(model.tuple_index_entries[('test1','test2','test3')], set([('c','d','e')]))
+    
+    def test_delete_index_values_with_same_name4(self):
+        """Test that deleteing indexes with same name deletes all in _used_index_entries"""
+        model = PivotModel()
+        data = [['a', 'b', 'c', 1], ['d', 'a', 'c', 1] , ['c','d','e', 1]]
+        model.set_new_data(data, self.index_names, self.index_types, index_real_names = ['test','test','test3'], used_index_values={('test',): set(['a','b','c','d'])})
+        model.delete_index_values({'test': set(['a'])})
+        self.assertEqual(model._used_index_values[('test',)], set(['b','c','d']))
         
 
 

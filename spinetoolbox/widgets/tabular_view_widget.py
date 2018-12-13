@@ -776,9 +776,8 @@ class TabularViewForm(QMainWindow):
             if name in added_entries:
                 menu.add_items_to_filter_list(added_entries[name])
 
-
     def update_filters_to_new_model(self):
-        new_names = list(self.model.model.index_entries)
+        new_names = list(self.model.model.index_entries.keys())
         for i, name in enumerate(new_names):
             if i < len(self.filter_buttons):
                 # filter exists, update
