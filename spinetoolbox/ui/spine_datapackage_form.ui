@@ -208,7 +208,7 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <addaction name="actionLoad_datapackage"/>
+    <addaction name="actionInfer_datapackage"/>
     <addaction name="actionSave_datapackage"/>
     <addaction name="separator"/>
     <addaction name="separator"/>
@@ -345,12 +345,15 @@
     <string>Remove selected foreign keys.</string>
    </property>
   </action>
-  <action name="actionLoad_datapackage">
+  <action name="actionInfer_datapackage">
    <property name="text">
-    <string>Load datapackage</string>
+    <string>Infer datapackage</string>
+   </property>
+   <property name="toolTip">
+    <string>(Re)infer datapackage from CSV files in data directory.</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+L</string>
+    <string>Ctrl+I</string>
    </property>
   </action>
   <action name="actionExport_to_spine">

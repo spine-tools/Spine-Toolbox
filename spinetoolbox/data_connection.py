@@ -360,6 +360,8 @@ class DataConnection(ProjectItem):
                 else:
                     qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                     # qitem.setData(self._toolbox.style().standardIcon(QStyle.SP_FileIcon), Qt.DecorationRole)
+                full_path = os.path.join(self.data_dir, item)  # For drag and drop
+                qitem.setData(full_path, Qt.UserRole)
                 self.data_model.appendRow(qitem)
 
     def update_name_label(self):

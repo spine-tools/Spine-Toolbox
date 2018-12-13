@@ -3590,18 +3590,20 @@ class JSONArrayModel(EmptyRowModel):
 
 
 class DatapackageResourcesModel(MinimalTableModel):
-    """A model of datapackage resource data, used by SpineDatapackageWidget."""
-    def __init__(self, spine_datapackage_widget):
-        """Initialize class"""
-        super().__init__(spine_datapackage_widget)
-        self.datapackage = None
+    """A model of datapackage resource data, used by SpineDatapackageWidget.
 
-    def reset_model(self, datapackage):
+    Attributes:
+        parent (SpineDatapackageWidget)
+    """
+    def __init__(self, parent):
+        """Initialize class"""
+        super().__init__(parent)
+
+    def reset_model(self, resources):
         self.clear()
         self.set_horizontal_header_labels(["name", "source"])
-        self.datapackage = datapackage
         data = list()
-        for row, resource in enumerate(self.datapackage.resources):
+        for row, resource in enumerate(resources):
             name = resource.name
             source = os.path.basename(resource.source)
             data.append([name, source])
@@ -3614,16 +3616,18 @@ class DatapackageResourcesModel(MinimalTableModel):
 
 
 class DatapackageFieldsModel(MinimalTableModel):
-    """A model of datapackage field data, used by SpineDatapackageWidget."""
-    def __init__(self, spine_datapackage_widget):
+    """A model of datapackage field data, used by SpineDatapackageWidget.
+
+    Attributes:
+        parent (SpineDatapackageWidget)
+    """
+    def __init__(self, parent):
         """Initialize class"""
-        super().__init__(spine_datapackage_widget)
-        self.schema = None
+        super().__init__(parent)
 
     def reset_model(self, schema):
         self.clear()
         self.set_horizontal_header_labels(["name", "type", "primary key?"])
-        self.schema = schema
         data = list()
         for field in schema.fields:
             name = field.name
@@ -3634,23 +3638,61 @@ class DatapackageFieldsModel(MinimalTableModel):
 
 
 class DatapackageForeignKeysModel(EmptyRowModel):
-    """A model of datapackage foreign key data, used by SpineDatapackageWidget."""
-    def __init__(self, spine_datapackage_widget):
-        """Initialize class"""
-        super().__init__(spine_datapackage_widget)
-        self.schema = None
+    """A model of datapackage foreign key data, used by SpineDatapackageWidget.
 
-    def reset_model(self, schema):
+    Attributes:
+        parent (SpineDatapackageWidget)
+    """
+    def __init__(self, parent):
+        """Initialize class"""
+        super().__init__(parent)
+        self._parent = parent
+
+    def reset_model(self, foreign_keys):
         self.clear()
         self.set_horizontal_header_labels(["fields", "reference resource", "reference fields", ""])
-        self.schema = schema
         data = list()
-        for foreign_key in schema.foreign_keys:
+        for foreign_key in foreign_keys:
             fields = ",".join(foreign_key['fields'])
             reference_resource = foreign_key['reference']['resource']
             reference_fields = ",".join(foreign_key['reference']['fields'])
             data.append([fields, reference_resource, reference_fields, None])
         super().reset_model(data)
+
+    def batch_set_data(self, indexes, data):
+        """Set data and then check if foreign keys need to be updated in datapackage."""
+        previous_data = dict()
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
+            previous_data.update({row: self._main_data[row][0:3]})
+        if not super().batch_set_data(indexes, data):
+            return False
+        resource = self._parent.selected_resource_name
+        anything_updated = False
+        for row in unique_rows:
+            # Remove previous foreign keys if any
+            previous_row_data = previous_data[row]
+            if all(previous_row_data):
+                fields_str, reference_resource, reference_fields_str = previous_row_data
+                fields = fields_str.split(",")
+                reference_fields = reference_fields_str.split(",")
+                self._parent.datapackage.remove_foreign_key(resource, fields, reference_resource, reference_fields)
+                anything_updated = True
+            # Add new foreign key if possible
+            row_data = self._main_data[row][0:3]
+            if all(row_data):
+                fields_str, reference_resource, reference_fields_str = row_data
+                fields = fields_str.split(",")
+                reference_fields = reference_fields_str.split(",")
+                if len(fields) != len(reference_fields):
+                    msg = "Both 'fields' and 'reference fields' should have the same number of elements."
+                    self._parent.msg_error.emit(msg)
+                    return
+                self._parent.datapackage.add_foreign_key(resource, fields, reference_resource, reference_fields)
+                anything_updated = True
+        if anything_updated:
+            self._parent.msg.emit("Successfully updated foreign keys.")
+        return True
 
 
 class TableModel(QAbstractItemModel):

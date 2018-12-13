@@ -103,17 +103,54 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_fields.toggleViewAction())
 
     def show(self):
-        """Show form and init datapackage."""
+        """Called when the form shows. Init datapackage
+        (either from existing datapackage.json or by inferring a new one from sources)
+        and update ui."""
         super().show()
-        self.load_datapackage()
+        if not self.load_datapackage():
+            return
+        self.update_ui()
 
-    @Slot(bool, name="load_datapackage")
-    def load_datapackage(self, checked=False):
-        """Try and initialize datapackage, and reset resource model if successful"""
-        if not self.init_datapackage():
+    @Slot(bool, name="infer_datapackage")
+    def infer_datapackage(self, checked=False):
+        """Called when the user triggers the infer action.
+        Infer datapackage from sources and update ui."""
+        if not self.infer_datapackage_():
+            return
+        self.update_ui()
+
+    def load_datapackage(self):
+        """Load datapackage from 'datapackage.json' file in data directory,
+        or infer one from CSV files in that directory."""
+        file_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
+        if os.path.exists(file_path):
+            self.datapackage = CustomPackage(file_path)
+            msg = "Datapackage succesfully loaded from {}".format(file_path)
+            self.msg.emit(msg)
+            return True
+        return self.infer_datapackage()
+
+    def infer_datapackage_(self):
+        """Infer datapackage from CSV files in data directory."""
+        data_files = self._data_connection.data_files()
+        if ".csv" in [os.path.splitext(f)[1] for f in data_files]:
+            self.datapackage = CustomPackage(base_path=self._data_connection.data_dir)
+            self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
+            msg = "Datapackage succesfully inferred from {}".format(self._data_connection.data_dir)
+            self.msg.emit(msg)
+            return True
+        self.msg_error.emit("Unable to infer a datapackage from <b>{0}</b>. "
+                            "Please add some CSV files to that folder,  "
+                            "and then select the <b>Infer datapackage</b> option "
+                            "from the <b>File</b> menu.".format(self._data_connection.data_dir))
+        return False
+
+    def update_ui(self):
+        """Update ui from datapackage attribute."""
+        if not self.datapackage:
             return
         self.load_resource_data()
-        self.resources_model.reset_model(self.datapackage)
+        self.resources_model.reset_model(self.datapackage.resources)
         first_index = self.resources_model.index(0, 0)
         if not first_index.isValid():
             return
@@ -155,7 +192,7 @@ class SpineDatapackageWidget(QMainWindow):
         # Actions
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.actionSave_datapackage.triggered.connect(self.save_datapackage)
-        self.ui.actionLoad_datapackage.triggered.connect(self.load_datapackage)
+        self.ui.actionInfer_datapackage.triggered.connect(self.infer_datapackage)
         self.ui.actionExport_to_spine.triggered.connect(self.show_export_to_spine_dialog)
         # Menu about to show
         self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
@@ -188,9 +225,14 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
         """Called when a menu from the menubar is about to show.
+        Adjust infer action depending on whether or not we have a datapackage.
         Adjust copy paste actions depending on which widget has the focus.
         TODO Enable/disable action to save datapackage depending on status.
         """
+        if self.datapackage:
+            self.ui.actionInfer_datapackage.setText("Re-infer datapackage")
+        else:
+            self.ui.actionInfer_datapackage.setText("Infer datapackage")
         self.ui.actionCopy.setText("Copy")
         self.ui.actionPaste.setText("Paste")
         self.ui.actionCopy.setEnabled(False)
@@ -241,27 +283,6 @@ class SpineDatapackageWidget(QMainWindow):
             msg (str): String to show
         """
         self.err_msg.showMessage(msg)
-
-    def init_datapackage(self):
-        """Init datapackage from 'datapackage.json' file in data directory,
-        or infer one from CSV files in that directory."""
-        file_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
-        if os.path.exists(file_path):
-            self.datapackage = CustomPackage(file_path)
-            msg = "Datapackage succesfully loaded from {}".format(file_path)
-            self.msg.emit(msg)
-            return True
-        data_files = self._data_connection.data_files()
-        if ".csv" in [os.path.splitext(f)[1] for f in data_files]:
-            self.datapackage = CustomPackage(base_path=self._data_connection.data_dir)
-            self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
-            msg = "Datapackage succesfully inferred from {}".format(self._data_connection.data_dir)
-            self.msg.emit(msg)
-            return True
-        self.msg_error.emit("Unable to load a datapackage from <b>{0}</b>. "
-                            "Please add some CSV files to that folder  "
-                            "and try again".format(self._data_connection.data_dir))
-        return False
 
     @Slot(bool, name="save_datapackage")
     def save_datapackage(self, checked=False):
@@ -363,7 +384,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.reset_resource_data_model()
         schema = self.datapackage.get_resource(self.selected_resource_name).schema
         self.fields_model.reset_model(schema)
-        self.foreign_keys_model.reset_model(schema)
+        self.foreign_keys_model.reset_model(schema.foreign_keys)
         self.ui.tableView_fields.resizeColumnsToContents()
         self.ui.tableView_foreign_keys.resizeColumnsToContents()
         # Add buttons
@@ -425,7 +446,7 @@ class SpineDatapackageWidget(QMainWindow):
         self.resource_data_model.set_horizontal_header_labels(field_names)
         self.ui.tableView_resource_data.resizeColumnsToContents()
         schema = self.datapackage.get_resource(self.selected_resource_name).schema
-        self.foreign_keys_model.reset_model(schema)
+        self.foreign_keys_model.reset_model(schema.foreign_keys)
 
     @Slot("QModelIndex", name="_handle_primary_key_data_committed")
     def _handle_primary_key_data_committed(self, index):
@@ -443,33 +464,7 @@ class SpineDatapackageWidget(QMainWindow):
 
     @Slot("QModelIndex", "QVariant", name="_handle_foreign_keys_data_committed")
     def _handle_foreign_keys_data_committed(self, index, value):
-        # Store previous data in case we need to remove a foreign key
-        previous_row_data = self.foreign_keys_model._main_data[index.row()][0:3]
-        if not self.foreign_keys_model.setData(index, value, Qt.EditRole):
-            return
-        resource = self.selected_resource_name
-        # Remove previous foreign key if any
-        previous_removed = False
-        if all(previous_row_data):
-            fields_str, reference_resource, reference_fields_str = previous_row_data
-            fields = fields_str.split(",")
-            reference_fields = reference_fields_str.split(",")
-            self.datapackage.remove_foreign_key(resource, fields, reference_resource, reference_fields)
-            previous_removed = True
-        # Check if we're ready to add a foreing key
-        row_data = self.foreign_keys_model._main_data[index.row()][0:3]
-        if all(row_data):
-            fields_str, reference_resource, reference_fields_str = row_data
-            fields = fields_str.split(",")
-            reference_fields = reference_fields_str.split(",")
-            if len(fields) != len(reference_fields):
-                self.msg_error.emit("Both 'fields' and 'reference fields' lists should have the same lenght.")
-                return
-            self.datapackage.add_foreign_key(resource, fields, reference_resource, reference_fields)
-            if not previous_removed:
-                self.msg.emit("Successfully added foreing key.")
-            else:
-                self.msg.emit("Successfully updated foreing key.")
+        self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
     @Slot("QModelIndex", "int", "int", name="_handle_foreign_keys_model_rows_inserted")
     def _handle_foreign_keys_model_rows_inserted(self, parent, first, last):
