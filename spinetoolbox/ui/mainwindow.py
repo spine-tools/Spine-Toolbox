@@ -1213,8 +1213,8 @@ class Ui_MainWindow(object):
         self.pushButton_tool_results.setText(QtWidgets.QApplication.translate("MainWindow", "Results...", None, -1))
         self.pushButton_tool_execute.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Execute tool</p></body></html>", None, -1))
         self.pushButton_tool_execute.setText(QtWidgets.QApplication.translate("MainWindow", "Execute", None, -1))
-        self.checkBox_execute_in_work.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>If checked, Tool template is executed in the work directory.</p><p>If not checked, Tool template is executed in the source directory where the main program file is located.</p></body></html>", None, -1))
-        self.checkBox_execute_in_work.setText(QtWidgets.QApplication.translate("MainWindow", "Execute in work directory", None, -1))
+        self.checkBox_execute_in_work.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>You can override the Tool template setting here for individual Tools</p></body></html>", None, -1))
+        self.checkBox_execute_in_work.setText(QtWidgets.QApplication.translate("MainWindow", "Execute this Tool in work directory", None, -1))
         self.toolButton_tool_open_dir.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open this Tool\'s project directory in file browser</p></body></html>", None, -1))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_tool), QtWidgets.QApplication.translate("MainWindow", "Tool", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
@@ -1271,8 +1271,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

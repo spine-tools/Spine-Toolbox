@@ -83,6 +83,8 @@ class ToolTemplateWidget(QWidget):
         # if a template is given, fill the form with data from it
         if tool_template:
             self.ui.lineEdit_name.setText(tool_template.name)
+            check_state = Qt.Checked if tool_template.execute_in_work else Qt.Unchecked
+            self.ui.checkBox_execute_in_work.setCheckState(check_state)
             self.ui.textEdit_description.setPlainText(tool_template.description)
             self.ui.lineEdit_args.setText(tool_template.cmdline_args)
             tool_types = [x.lower() for x in TOOL_TYPES]
@@ -331,29 +333,6 @@ class ToolTemplateWidget(QWidget):
                 if self.ui.lineEdit_main_program.text().strip() == "":
                     self.program_path = None
                     self.ui.label_mainpath.clear()
-            # elif 0 in rows:  # main program was removed
-            #     # new main is the first one still in the list
-            #     # TODO: isn't it better to pick the new main as the one with the smallest path?
-            #     dirname = os.path.dirname(self.sourcefiles_model.item(0).text())
-            #     new_main_path = os.path.join(self.program_path, dirname)
-            #     old_main_path = self.program_path
-            #     row = 0
-            #     while True:
-            #         if row == self.sourcefiles_model.rowCount():
-            #             break
-            #         path = self.sourcefiles_model.item(row).text()
-            #         old_path = os.path.join(old_main_path, path)
-            #         if os.path.commonprefix([new_main_path, old_path]) == new_main_path:
-            #             # path is still valid (update item and increase row counter)
-            #             new_path = os.path.relpath(old_path, new_main_path)
-            #             index = self.sourcefiles_model.index(row, 0)
-            #             self.sourcefiles_model.setData(index, new_path)
-            #             row = row + 1
-            #             continue
-            #         # path is no longer valid (remove item and don't increase row counter)
-            #         self.sourcefiles_model.removeRow(row)
-            #     self.program_path = new_main_path
-            #     self.ui.label_mainpath.setText(self.program_path)
             self.statusbar.showMessage("Selected source files removed", 3000)
 
     @Slot(bool, name="add_inputfiles")
@@ -452,26 +431,27 @@ class ToolTemplateWidget(QWidget):
         if self.ui.comboBox_tooltype.currentIndex() == 0:
             self.statusbar.showMessage("Tool type not selected", 3000)
             return
-        self.definition['name'] = self.ui.lineEdit_name.text()
-        self.definition['description'] = self.ui.textEdit_description.toPlainText()
-        self.definition['tooltype'] = self.ui.comboBox_tooltype.currentText().lower()
+        self.definition["name"] = self.ui.lineEdit_name.text()
+        self.definition["description"] = self.ui.textEdit_description.toPlainText()
+        self.definition["tooltype"] = self.ui.comboBox_tooltype.currentText().lower()
         flags = Qt.MatchContains
         # Check that main program file is valid before saving it
         if not os.path.isfile(self.ui.lineEdit_main_program.text().strip()):
             self.statusbar.showMessage("Main program file is not valid", 6000)
             return
-        self.definition['includes'] = [os.path.split(self.ui.lineEdit_main_program.text().strip())[1]]
-        self.definition['includes'] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
-        self.definition['inputfiles'] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
-        self.definition['inputfiles_opt'] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
-        self.definition['outputfiles'] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
-        self.definition['cmdline_args'] = self.ui.lineEdit_args.text()
+        self.definition["execute_in_work"] = True if self.ui.checkBox_execute_in_work.isChecked() else False
+        self.definition["includes"] = [os.path.split(self.ui.lineEdit_main_program.text().strip())[1]]
+        self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
+        self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
+        self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
+        self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
+        self.definition["cmdline_args"] = self.ui.lineEdit_args.text()
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k.capitalize()), 3000)
                 return
         # Create new Template
-        short_name = self.definition['name'].lower().replace(' ', '_')
+        short_name = self.definition["name"].lower().replace(" ", "_")
         self.def_file_path = os.path.join(self.program_path, short_name + ".json")
         if self.call_add_tool_template():
             self.close()
@@ -503,8 +483,8 @@ class ToolTemplateWidget(QWidget):
             self._toolbox.update_tool_template(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getSaveFileName(self, 'Save tool template file', self.def_file_path, 'JSON (*.json)')
-            if answer[0] == '':  # Cancel button clicked
+            answer = QFileDialog.getSaveFileName(self, "Save tool template file", self.def_file_path, "JSON (*.json)")
+            if answer[0] == "":  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])
             tool.set_def_path(def_file)
@@ -512,9 +492,9 @@ class ToolTemplateWidget(QWidget):
         # Save path of main program file relative to definition file in case they differ
         def_path = os.path.dirname(def_file)
         if def_path != self.program_path:
-            self.definition['includes_main_path'] = os.path.relpath(self.program_path, def_path)
+            self.definition["includes_main_path"] = os.path.relpath(self.program_path, def_path)
         # Save file descriptor
-        with open(def_file, 'w') as fp:
+        with open(def_file, "w") as fp:
             try:
                 json.dump(self.definition, fp, indent=4)
             except ValueError:

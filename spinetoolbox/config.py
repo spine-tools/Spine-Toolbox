@@ -70,7 +70,8 @@ TOOL_TYPES = ["GAMS", "Julia", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
-OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt', 'outputfiles', 'cmdline_args']
+OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt',
+                 'outputfiles', 'cmdline_args', 'execute_in_work']
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 SQL_DIALECT_API = {

@@ -160,6 +160,7 @@ class Tool(ProjectItem):
             self._toolbox.ui.lineEdit_tool_args.setText("")
             self.populate_input_files_list(None)
             self.populate_output_files_list(None)
+            self._toolbox.ui.checkBox_execute_in_work.setCheckState(Qt.Checked)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_input_files_list(self.tool_template().inputfiles)

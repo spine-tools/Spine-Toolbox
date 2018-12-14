@@ -329,7 +329,7 @@ class SpineToolboxProject(MetaObject):
             return None
         # Infer path to the main program
         try:
-            includes_main_path = definition['includes_main_path']  # path to main program relative to definition file
+            includes_main_path = definition["includes_main_path"]  # path to main program relative to definition file
         except KeyError:
             includes_main_path = "."  # assume main program and definition file are on the same path
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
@@ -346,7 +346,7 @@ class SpineToolboxProject(MetaObject):
             Instance of a subclass if Tool
         """
         try:
-            _tooltype = definition['tooltype'].lower()
+            _tooltype = definition["tooltype"].lower()
         except KeyError:
             self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
                                          "'gams', 'julia' and 'executable'")
