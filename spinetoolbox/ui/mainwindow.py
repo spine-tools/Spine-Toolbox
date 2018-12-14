@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 26))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -964,6 +964,7 @@ class Ui_MainWindow(object):
         self.treeView_project.setSizePolicy(sizePolicy)
         self.treeView_project.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_project.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.treeView_project.setAnimated(True)
         self.treeView_project.setObjectName("treeView_project")
         self.verticalLayout_2.addWidget(self.treeView_project)
         self.tabWidget.addTab(self.tab_items, "")
@@ -1270,8 +1271,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc
