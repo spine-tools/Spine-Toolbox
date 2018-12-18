@@ -81,7 +81,7 @@ class Tool(ProjectItem):
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
         s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
-        s[self._toolbox.ui.checkBox_execute_in_work.stateChanged] = self.work_checkbox_state_changed
+        s[self._toolbox.ui.checkBox_execution_mode.stateChanged] = self.work_checkbox_state_changed
         return s
 
     def activate(self):
@@ -110,7 +110,8 @@ class Tool(ProjectItem):
             tool_template = self._toolbox.tool_template_model.tool_template(self._tool_template_index.row())
             self.set_tool_template(tool_template)
         exec_work_state = Qt.Checked if self.execute_in_work else Qt.Unchecked
-        self._toolbox.ui.checkBox_execute_in_work.setCheckState(exec_work_state)
+        self._toolbox.ui.checkBox_execution_mode.setCheckState(exec_work_state)
+        self.work_checkbox_state_changed(exec_work_state)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -118,7 +119,7 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         else:
             self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        self.execute_in_work = True if self._toolbox.ui.checkBox_execute_in_work.isChecked() else False
+        self.execute_in_work = True if self._toolbox.ui.checkBox_execution_mode.isChecked() else False
 
     @Slot(int, name="work_checkbox_state_changed")
     def work_checkbox_state_changed(self, state):
@@ -126,7 +127,25 @@ class Tool(ProjectItem):
         Args:
             state (int): New state of the checkbox (0: Qt.Unchecked, 2: Qt.Checked)
         """
-        self.execute_in_work = True if state == Qt.Checked else False
+        if state == 0:  # Qt.Unchecked
+            self.execute_in_work = False
+            if not self.tool_template():
+                self._toolbox.ui.checkBox_execution_mode.setText("Source directory")
+                return
+            if not self.tool_template().execute_in_work:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Source directory (template default)")
+            else:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Source directory")
+        else:  # Qt.Checked
+            self.execute_in_work = True
+            if not self.tool_template():
+                self._toolbox.ui.checkBox_execution_mode.setText("Work directory")
+                return
+            if self.tool_template().execute_in_work:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Work directory (template default)")
+            else:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Work directory")
+        return
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
@@ -160,7 +179,7 @@ class Tool(ProjectItem):
             self._toolbox.ui.lineEdit_tool_args.setText("")
             self.populate_input_files_list(None)
             self.populate_output_files_list(None)
-            self._toolbox.ui.checkBox_execute_in_work.setCheckState(Qt.Checked)
+            self._toolbox.ui.checkBox_execution_mode.setCheckState(Qt.Checked)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_input_files_list(self.tool_template().inputfiles)

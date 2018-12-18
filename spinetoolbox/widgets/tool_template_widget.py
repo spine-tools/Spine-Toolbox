@@ -272,7 +272,7 @@ class ToolTemplateWidget(QWidget):
             self.ui.label_mainpath.setText(self.program_path)
             path_to_add = file_pattern
         else:
-            # check if path is a descendant of main dir. TODO: Is os.path.abspath() the answer?
+            # check if path is a descendant of main dir.
             common_prefix = os.path.commonprefix([os.path.abspath(self.program_path), os.path.abspath(path)])
             # logging.debug("common_prefix:{0}".format(common_prefix))
             if common_prefix != self.program_path:
@@ -448,7 +448,7 @@ class ToolTemplateWidget(QWidget):
         self.definition["cmdline_args"] = self.ui.lineEdit_args.text()
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
-                self.statusbar.showMessage("{} missing".format(k.capitalize()), 3000)
+                self.statusbar.showMessage("{} missing".format(k), 3000)
                 return
         # Create new Template
         short_name = self.definition["name"].lower().replace(" ", "_")
@@ -459,11 +459,10 @@ class ToolTemplateWidget(QWidget):
     def call_add_tool_template(self):
         """Add or update Tool Template according to user's selections.
         If the name is the same as an existing tool template, it is updated and
-        auto-saved to the definition file. (The user is editing an existing
-        tool template.)
-        If the name is not in the tool template model, create a new tool template and
-        offer to save the definition file. (The user is creating a new tool template
-        from scratch or spawning from an existing one).
+        auto-saved to the definition file. (User is editing an existing
+        tool template.) If the name is not in the tool template model, create
+        a new tool template and offer to save the definition file. (User is
+        creating a new tool template from scratch or spawning from an existing one).
         """
         # Load tool template
         path = self.program_path

@@ -119,7 +119,7 @@ class SpineToolboxProject(MetaObject):
         """
         # Check for illegal characters
         if name.strip() == '' or name.lower() == self.name.lower():
-            logging.error("Given name is empty or same as the current name")
+            self._toolbox.msg_warning.emit("Renaming project cancelled")
             return False
         # Check if new short name is the same as the current one
         new_short_name = name.lower().replace(" ", "_")

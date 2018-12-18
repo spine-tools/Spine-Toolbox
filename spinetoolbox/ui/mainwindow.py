@@ -821,10 +821,6 @@ class Ui_MainWindow(object):
         self.pushButton_tool_execute.setObjectName("pushButton_tool_execute")
         self.horizontalLayout_11.addWidget(self.pushButton_tool_execute)
         self.verticalLayout_13.addLayout(self.horizontalLayout_11)
-        self.checkBox_execute_in_work = QtWidgets.QCheckBox(self.tab_tool)
-        self.checkBox_execute_in_work.setChecked(True)
-        self.checkBox_execute_in_work.setObjectName("checkBox_execute_in_work")
-        self.verticalLayout_13.addWidget(self.checkBox_execute_in_work)
         self.line_4 = QtWidgets.QFrame(self.tab_tool)
         self.line_4.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_4.setFrameShadow(QtWidgets.QFrame.Sunken)
@@ -832,6 +828,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.addWidget(self.line_4)
         self.horizontalLayout_15 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_15.setObjectName("horizontalLayout_15")
+        self.checkBox_execution_mode = QtWidgets.QCheckBox(self.tab_tool)
+        self.checkBox_execution_mode.setChecked(False)
+        self.checkBox_execution_mode.setTristate(False)
+        self.checkBox_execution_mode.setObjectName("checkBox_execution_mode")
+        self.horizontalLayout_15.addWidget(self.checkBox_execution_mode)
         spacerItem9 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_15.addItem(spacerItem9)
         self.toolButton_tool_open_dir = QtWidgets.QToolButton(self.tab_tool)
@@ -1213,8 +1214,8 @@ class Ui_MainWindow(object):
         self.pushButton_tool_results.setText(QtWidgets.QApplication.translate("MainWindow", "Results...", None, -1))
         self.pushButton_tool_execute.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Execute tool</p></body></html>", None, -1))
         self.pushButton_tool_execute.setText(QtWidgets.QApplication.translate("MainWindow", "Execute", None, -1))
-        self.checkBox_execute_in_work.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>You can override the Tool template setting here for individual Tools</p></body></html>", None, -1))
-        self.checkBox_execute_in_work.setText(QtWidgets.QApplication.translate("MainWindow", "Execute this Tool in work directory", None, -1))
+        self.checkBox_execution_mode.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>You can override the Tool template setting here for individual Tools</p></body></html>", None, -1))
+        self.checkBox_execution_mode.setText(QtWidgets.QApplication.translate("MainWindow", "Execution mode", None, -1))
         self.toolButton_tool_open_dir.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open this Tool\'s project directory in file browser</p></body></html>", None, -1))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_tool), QtWidgets.QApplication.translate("MainWindow", "Tool", None, -1))
         self.label_view_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
@@ -1271,8 +1272,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc
