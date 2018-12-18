@@ -23,7 +23,7 @@ import getpass
 from project_item import ProjectItem
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QStyle, QFileIconProvider
+from PySide2.QtWidgets import QFileIconProvider
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
 from graphics_items import ToolImage
@@ -39,10 +39,11 @@ class Tool(ProjectItem):
         name (str): Object name
         description (str): Object description
         tool_template (ToolTemplate): Template for this Tool
+        use_work (bool): Execute associated Tool template in work (True) or source directory (False)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-    def __init__(self, toolbox, name, description, tool_template, x, y):
+    def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -58,6 +59,7 @@ class Tool(ProjectItem):
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
+        self.execute_in_work = use_work
         # Make project directory for this Tool
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -79,6 +81,7 @@ class Tool(ProjectItem):
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
         s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
+        s[self._toolbox.ui.checkBox_execution_mode.stateChanged] = self.work_checkbox_state_changed
         return s
 
     def activate(self):
@@ -106,6 +109,9 @@ class Tool(ProjectItem):
             self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
             tool_template = self._toolbox.tool_template_model.tool_template(self._tool_template_index.row())
             self.set_tool_template(tool_template)
+        exec_work_state = Qt.Checked if self.execute_in_work else Qt.Unchecked
+        self._toolbox.ui.checkBox_execution_mode.setCheckState(exec_work_state)
+        self.work_checkbox_state_changed(exec_work_state)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -113,6 +119,33 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         else:
             self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        self.execute_in_work = True if self._toolbox.ui.checkBox_execution_mode.isChecked() else False
+
+    @Slot(int, name="work_checkbox_state_changed")
+    def work_checkbox_state_changed(self, state):
+        """Slot for handling the use work directory check box state changed signal.
+        Args:
+            state (int): New state of the checkbox (0: Qt.Unchecked, 2: Qt.Checked)
+        """
+        if state == 0:  # Qt.Unchecked
+            self.execute_in_work = False
+            if not self.tool_template():
+                self._toolbox.ui.checkBox_execution_mode.setText("Source directory")
+                return
+            if not self.tool_template().execute_in_work:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Source directory (template default)")
+            else:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Source directory")
+        else:  # Qt.Checked
+            self.execute_in_work = True
+            if not self.tool_template():
+                self._toolbox.ui.checkBox_execution_mode.setText("Work directory")
+                return
+            if self.tool_template().execute_in_work:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Work directory (template default)")
+            else:
+                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Work directory")
+        return
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
@@ -146,6 +179,7 @@ class Tool(ProjectItem):
             self._toolbox.ui.lineEdit_tool_args.setText("")
             self.populate_input_files_list(None)
             self.populate_output_files_list(None)
+            self._toolbox.ui.checkBox_execution_mode.setCheckState(Qt.Checked)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_input_files_list(self.tool_template().inputfiles)
@@ -200,13 +234,17 @@ class Tool(ProjectItem):
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
                 self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
         if not self.tool_template():
-            self._toolbox.msg_warning.emit("No Tool template attached to Tool <b>{0}</b>".format(self.name))
+            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
             return
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("----------------------------")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("----------------------------")
         self._toolbox.msg.emit("")
+        if self.execute_in_work:
+            self._toolbox.msg.emit("*** Executing in <b>work</b> directory mode ***")
+        else:
+            self._toolbox.msg.emit("*** Executing in <b>source</b> directory mode ***")
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool template requirements ***")
@@ -225,31 +263,38 @@ class Tool(ProjectItem):
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
-                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
+                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
+                                                 self._project, self.execute_in_work)
                 except OSError as e:
-                    self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
+                    self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
                     return
-                self._toolbox.msg.emit("*** Copying input files to work directory ***")
-                # Copy input files to ToolInstance work directory
+                if self.execute_in_work:
+                    self._toolbox.msg.emit("*** Copying input files to work directory ***")
+                else:
+                    self._toolbox.msg.emit("*** Copying input files to source directory ***")
+                # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_copy_paths):
-                    self._toolbox.msg_error.emit("Unable to copy input files to work directory. "
-                                                 "Tool execution aborted.")
+                    self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
                     return
             else:  # just for testing
                 # logging.debug("No input files to copy")
                 pass
             if n_dirs > 0:
-                self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
-                if not self.create_dirs_to_work():
+                if self.execute_in_work:
+                    self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
+                else:
+                    self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
+                if not self.create_subdirectories():
                     # Creating directories failed -> abort
-                    self._toolbox.msg_error.emit("Creating directories to work failed. Tool execution aborted")
+                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted")
                     return
             else:  # just for testing
                 # logging.debug("No directories to create")
                 pass
         else:  # Tool template does not have requirements
             try:
-                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir, self._project)
+                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
+                                             self._project, self.execute_in_work)
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 return
@@ -282,10 +327,10 @@ class Tool(ProjectItem):
                 n_file += 1
         return n_dir, n_file
 
-    def create_dirs_to_work(self):
+    def create_subdirectories(self):
         """Iterate items in required input files and check
         if there are any directories to create. Create found
-        directories directly to instance work folder.
+        directories directly to ToolInstance base directory.
 
         Returns:
             Boolean variable depending on success
@@ -304,7 +349,7 @@ class Tool(ProjectItem):
                     self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                                  " Check permissions.".format(path_to_create))
                     return False
-                self._toolbox.msg.emit("\tDirectory <b>{0}</b> created".format(path_to_create))
+                self._toolbox.msg.emit("\tDirectory <b>{0}{1}</b> created".format(os.path.sep, path))
             else:
                 # It's a file -> skip
                 pass
@@ -367,7 +412,8 @@ class Tool(ProjectItem):
         return path
 
     def copy_input_files(self, paths):
-        """Copy files from given paths to the directories in work directory, where the Tool requires them to be.
+        """Copy input files from given paths to work or source directory, depending on
+        where the Tool template requires them to be.
 
         Args:
             paths (dict): Key is path to destination file, value is path to source file.
@@ -382,13 +428,13 @@ class Tool(ProjectItem):
                 return False
             # Join work directory path to dst (dst is the filename including possible subfolders, e.g. 'input/f.csv')
             dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst))
-            # Create subdirectories to work if necessary
+            # Create subdirectories if necessary
             dst_subdir, fname = os.path.split(dst)
             if not dst_subdir:
                 # No subdirectories to create
-                self._toolbox.msg.emit("\tCopying <b>{0}</b> -> work directory".format(fname))
+                self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
             else:
-                # Create subdirectory structure to work (Skip if already done in create_dirs_to_work() method)
+                # Create subdirectory structure to work or source directory
                 work_subdir_path = os.path.abspath(os.path.join(self.instance.basedir, dst_subdir))
                 if not os.path.exists(work_subdir_path):
                     try:
@@ -397,15 +443,26 @@ class Tool(ProjectItem):
                         self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
                                                      .format(work_subdir_path))
                         return False
-                    self._toolbox.msg.emit("\tCopying <b>{0}</b> -> work subdirectory <b>{1}</b>"
-                                           .format(fname, dst_subdir))
+                self._toolbox.msg.emit("\tCopying file <b>{0}</b> into subdirectory <b>{2}{1}</b>"
+                                       .format(fname, dst_subdir, os.path.sep))
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
             except OSError as e:
-                logging.error(e)
-                self._toolbox.msg_error.emit("\t[OSError] Copying file <b>{0}</b> to <b>{1}</b> failed"
+                self._toolbox.msg_error.emit("Copying file <b>{0}</b> to <b>{1}</b> failed"
                                              .format(src_path, dst_path))
+                self._toolbox.msg_error.emit("{0}".format(e))
+                if e.errno == 22:
+                    msg = "The reason might be:\n" \
+                          "[1] The destination file already exists and it cannot be " \
+                          "overwritten because it is locked by Julia or some other application.\n" \
+                          "[2] You don't have the necessary permissions to overwrite the file.\n" \
+                          "To solve the problem, you can try the following:\n[1] Execute the Tool in work " \
+                          "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to " \
+                          "Julia 0.7 or newer.\n" \
+                          "[3] Close any other background application(s) that may have locked the file.\n" \
+                          "And try again.\n"
+                    self._toolbox.msg_warning.emit(msg)
                 return False
         self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
         return True

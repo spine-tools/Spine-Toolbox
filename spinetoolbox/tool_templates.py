@@ -36,10 +36,11 @@ class ToolTemplate(MetaObject):
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
+        execute_in_work (bool): Execute in work folder?
     """
     def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None):
+                 outputfiles=None, cmdline_args=None, execute_in_work=True):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -55,6 +56,7 @@ class ToolTemplate(MetaObject):
         self.outputfiles = set(outputfiles) if outputfiles else set()
         self.return_codes = {}
         self.def_file_path = ''  # JSON tool definition file path
+        self.execute_in_work = execute_in_work
 
     def set_return_code(self, code, description):
         """Set a return code and associated text description for the tool.
@@ -83,7 +85,7 @@ class ToolTemplate(MetaObject):
         the required keys and that it is in correct format.
 
         Args:
-            ui (ToolboxUI): Spine Toolbox QMainWindow instance
+            ui (ToolboxUI): QMainWindow instance
             data (dict): Tool template definition
 
         Returns:
@@ -127,11 +129,11 @@ class GAMSTool(ToolTemplate):
     """
     def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None):
+                 outputfiles=None, cmdline_args=None, execute_in_work=True):
         """Class constructor."""
         super().__init__(toolbox, name, tooltype, path, includes,
                          description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args)
+                         cmdline_args, execute_in_work)
         main_file = includes[0]
         # Add .lst file to list of output files
         self.lst_file = os.path.splitext(main_file)[0] + '.lst'
@@ -212,11 +214,11 @@ class JuliaTool(ToolTemplate):
     """
     def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None):
+                 outputfiles=None, cmdline_args=None, execute_in_work=True):
         """Class constructor."""
         super().__init__(toolbox, name, tooltype, path, includes,
                          description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args)
+                         cmdline_args, execute_in_work)
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.julia_options = OrderedDict()
@@ -273,11 +275,11 @@ class ExecutableTool(ToolTemplate):
     """
     def __init__(self, toolbox, name, tooltype, path, includes,
                  description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None):
+                 outputfiles=None, cmdline_args=None, execute_in_work=True):
         """Class constructor."""
         super().__init__(toolbox, name, tooltype, path, includes,
                          description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args)
+                         cmdline_args, execute_in_work)
         main_file = includes[0]
         # TODO: This does not do anything because main_file is always just file name
         self.main_dir, self.main_prgm = os.path.split(main_file)

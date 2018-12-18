@@ -286,6 +286,9 @@ class SettingsWidget(QWidget):
         # logging.debug("MouseMoveEvent globalpos:%s" % e.globalPos())
         currentpos = self.pos()
         globalpos = e.globalPos()
+        if not self._mouseMovePos:
+            e.ignore()
+            return
         diff = globalpos - self._mouseMovePos
         newpos = currentpos + diff
         self.move(newpos)
