@@ -21,7 +21,7 @@ import os
 import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl
+from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QApplication
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
@@ -544,7 +544,13 @@ class DataStore(ProjectItem):
         if self.tree_view_form:
             # If the url hasn't changed, just raise the current form
             if self.tree_view_form.db_map.db_url == reference['url']:
-                self.tree_view_form.raise_()
+                if self.tree_view_form.windowState() & Qt.WindowMinimized:
+                    # Remove minimized status and restore window with the previous state (maximized/normal state)
+                    self.tree_view_form.setWindowState(self.tree_view_form.windowState()
+                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.tree_view_form.activateWindow()
+                else:
+                    self.tree_view_form.raise_()
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
@@ -583,7 +589,13 @@ class DataStore(ProjectItem):
         if self.graph_view_form:
             # If the url hasn't changed, just raise the current form
             if self.graph_view_form.db_map.db_url == reference['url']:
-                self.graph_view_form.raise_()
+                if self.graph_view_form.windowState() & Qt.WindowMinimized:
+                    # Remove minimized status and restore window with the previous state (maximized/normal state)
+                    self.graph_view_form.setWindowState(self.graph_view_form.windowState()
+                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.graph_view_form.activateWindow()
+                else:
+                    self.graph_view_form.raise_()
                 return
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
@@ -617,7 +629,13 @@ class DataStore(ProjectItem):
     def open_tabular_view(self):
         """Open reference in Data Store tabular view."""
         if self.tabular_view_form:
-            self.tabular_view_form.raise_()
+            if self.tabular_view_form.windowState() & Qt.WindowMinimized:
+                # Remove minimized status and restore window with the previous state (maximized/normal state)
+                self.tabular_view_form.setWindowState(self.tabular_view_form.windowState()
+                                                    & ~Qt.WindowMinimized | Qt.WindowActive)
+                self.tabular_view_form.activateWindow()
+            else:
+                self.tabular_view_form.raise_()
             return
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
