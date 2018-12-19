@@ -142,6 +142,7 @@ class TabularViewForm(QMainWindow):
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionClose.triggered.connect(self.close)
+        self.ui.menuSession.aboutToShow.connect(self.set_session_menu_enable)
 
         # load db data
         self.load_class_data()
@@ -156,6 +157,16 @@ class TabularViewForm(QMainWindow):
 
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+    def set_session_menu_enable(self):
+        """Checks if session can commit or rollback and updates session menu actions"""
+        if not self.db_map.has_pending_changes() and not self.model_has_changes():
+            # nothing new to commit
+            self.ui.actionCommit.setDisabled(True)
+            self.ui.actionRollback.setDisabled(True)
+        else:
+            self.ui.actionCommit.setEnabled(True)
+            self.ui.actionRollback.setEnabled(True)
 
     def load_class_data(self):
         self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}

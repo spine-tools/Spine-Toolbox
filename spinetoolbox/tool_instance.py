@@ -37,18 +37,22 @@ class ToolInstance(QObject):
     """
     instance_finished_signal = Signal(int, name="instance_finished_signal")
 
-    def __init__(self, tool_template, toolbox, tool_output_dir, project):
+    def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
         """Tool instance constructor."""
         super().__init__()
         self.tool_template = tool_template
         self._toolbox = toolbox
         self._project = project
+        self.execute_in_work = execute_in_work
         self.tool_process = None
         self.tool_output_dir = tool_output_dir
         # Directory where results were saved
         self.output_dir = None
-        wrk_dir = self._project.work_dir
-        self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
+        if self.execute_in_work:  # Execute in work directory
+            wrk_dir = self._project.work_dir
+            self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
+        else:  # Execute in source directory
+            self.basedir = self.tool_template.path
         self.julia_repl_command = None
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
@@ -57,9 +61,16 @@ class ToolInstance(QObject):
         self.outputfiles = [os.path.join(self.basedir, f) for f in tool_template.outputfiles]
         # Check that required output directories are created
         self.make_work_output_dirs()
-        # Checkout Tool
-        if not self._checkout:
-            raise OSError("Could not create Tool instance")
+        # Checkout Tool template to work directory
+        if self.execute_in_work:
+            if not self._checkout:
+                raise OSError("Could not create Tool instance")
+        else:
+            # Make source directory anchor with path as tooltip
+            src_dir_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" + self.basedir \
+                          + "'>source directory</a>"
+            self._toolbox.msg.emit("*** Executing Tool template <b>{0}</b> in {1} ***"
+                                   .format(self.tool_template.name, src_dir_anchor))
 
     @property
     def _checkout(self):

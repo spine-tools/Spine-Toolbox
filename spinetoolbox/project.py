@@ -119,7 +119,7 @@ class SpineToolboxProject(MetaObject):
         """
         # Check for illegal characters
         if name.strip() == '' or name.lower() == self.name.lower():
-            logging.error("Given name is empty or same as the current name")
+            self._toolbox.msg_warning.emit("Renaming project cancelled")
             return False
         # Check if new short name is the same as the current one
         new_short_name = name.lower().replace(" ", "_")
@@ -203,6 +203,7 @@ class SpineToolboxProject(MetaObject):
                         item_dict[category][name]["tool"] = ""
                     else:
                         item_dict[category][name]["tool"] = item.tool_template().name
+                    item_dict[category][name]["execute_in_work"] = item.execute_in_work
                 elif item.item_type == "View":
                     pass
                 else:
@@ -287,7 +288,11 @@ class SpineToolboxProject(MetaObject):
             except KeyError:
                 x = 0
                 y = 0
-            self.add_tool(name, desc, tool_template, x, y, verbosity=False)
+            try:
+                execute_in_work = tools[name]["execute_in_work"]  # boolean
+            except KeyError:
+                execute_in_work = True
+            self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
         # Recreate Views
         for name in views.keys():
             short_name = views[name]['short name']
@@ -324,7 +329,7 @@ class SpineToolboxProject(MetaObject):
             return None
         # Infer path to the main program
         try:
-            includes_main_path = definition['includes_main_path']  # path to main program relative to definition file
+            includes_main_path = definition["includes_main_path"]  # path to main program relative to definition file
         except KeyError:
             includes_main_path = "."  # assume main program and definition file are on the same path
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
@@ -341,7 +346,7 @@ class SpineToolboxProject(MetaObject):
             Instance of a subclass if Tool
         """
         try:
-            _tooltype = definition['tooltype'].lower()
+            _tooltype = definition["tooltype"].lower()
         except KeyError:
             self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
                                          "'gams', 'julia' and 'executable'")
@@ -402,20 +407,21 @@ class SpineToolboxProject(MetaObject):
         if set_selected:
             self.set_item_selected(data_connection)
 
-    def add_tool(self, name, description, tool_template, x=0, y=0, set_selected=False, verbosity=True):
+    def add_tool(self, name, description, tool_template, use_work=True, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Tool to project item model.
 
         Args:
             name (str): Name
             description (str): Description of item
             tool_template (ToolTemplate): Tool template of this tool
+            use_work (bool): Execute in work directory
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         category = "Tools"
-        tool = Tool(self._toolbox, name, description, tool_template, x, y)
+        tool = Tool(self._toolbox, name, description, tool_template, use_work, x, y)
         tool_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(tool, tool_category)
         # Append connection model

@@ -10,6 +10,9 @@ This section is for upcoming changes.
 - New Setting (F1). You can now select whether to delete project item's data directory
 when removing a project item.
 - Graph View is also available from Data Store items, allowing to insert new relationships more graphically.
+- You can now execute Tools in the work directory or the source directory (where the 
+main program file is located). The setting is in the Tool template editor and in the Tool 
+properties
 
 ### Fixed
 

@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>779</height>
+    <height>743</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -131,11 +131,24 @@
       </layout>
      </item>
      <item>
+      <widget class="QCheckBox" name="checkBox_execute_in_work">
+       <property name="toolTip">
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Tool template is executed in the work directory.&lt;/p&gt;&lt;p&gt;If not checked, Tool template is executed in the source directory where the main program file is located.&lt;/p&gt;&lt;p&gt;It is recommended to uncheck this for &lt;span style=&quot; font-weight:600;&quot;&gt;Executable&lt;/span&gt; Tool templates.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+       </property>
+       <property name="text">
+        <string>Execute in work directory</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QTextEdit" name="textEdit_description">
        <property name="maximumSize">
         <size>
          <width>16777215</width>
-         <height>150</height>
+         <height>80</height>
         </size>
        </property>
        <property name="focusPolicy">
@@ -839,8 +852,10 @@
     </layout>
    </item>
   </layout>
+  <zorder>textEdit_description</zorder>
+  <zorder>lineEdit_args</zorder>
   <zorder></zorder>
-  <zorder></zorder>
+  <zorder>checkBox_execute_in_work</zorder>
  </widget>
  <customwidgets>
   <customwidget>
@@ -852,6 +867,7 @@
  <tabstops>
   <tabstop>lineEdit_name</tabstop>
   <tabstop>comboBox_tooltype</tabstop>
+  <tabstop>checkBox_execute_in_work</tabstop>
   <tabstop>textEdit_description</tabstop>
   <tabstop>lineEdit_main_program</tabstop>
   <tabstop>toolButton_add_main_program</tabstop>
