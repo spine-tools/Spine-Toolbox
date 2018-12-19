@@ -253,7 +253,13 @@ class DataConnection(ProjectItem):
     def show_spine_datapackage_form(self):
         """Show spine_datapackage_form widget."""
         if self.spine_datapackage_form:
-            self.spine_datapackage_form.raise_()
+            if self.spine_datapackage_form.windowState() & Qt.WindowMinimized:
+                # Remove minimized status and restore window with the previous state (maximized/normal state)
+                self.spine_datapackage_form.setWindowState(self.spine_datapackage_form.windowState()
+                                                           & ~Qt.WindowMinimized | Qt.WindowActive)
+                self.spine_datapackage_form.activateWindow()
+            else:
+                self.spine_datapackage_form.raise_()
             return
         self.spine_datapackage_form = SpineDatapackageWidget(self)
         self.spine_datapackage_form.destroyed.connect(self.datapackage_form_destroyed)
