@@ -306,11 +306,11 @@ class ToolInstance(QObject):
             """
             failed_files = list()
             saved_files = list()
-            logging.debug("Saving result files to <{0}>".format(target_dir))
+            # logging.debug("Saving result files to <{0}>".format(target_dir))
             for pattern in self.tool_template.outputfiles:
                 # Create subdirectories if necessary
                 dst_subdir, fname_pattern = os.path.split(pattern)
-                logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern, dst_subdir, fname_pattern))
+                # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern, dst_subdir, fname_pattern))
                 if not dst_subdir:
                     # No subdirectories to create
                     # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
@@ -338,13 +338,13 @@ class ToolInstance(QObject):
                     #     saved_files.append(fname)
                 else:
                     output_file = os.path.join(self.basedir, pattern)
-                    logging.debug("Looking for {0}".format(output_file))
+                    # logging.debug("Looking for {0}".format(output_file))
                     if not os.path.isfile(output_file):
                         failed_files.append(pattern)
                         continue
                     # logging.debug("Saving file {0}".format(fname_pattern))
                     dst = os.path.join(target, fname_pattern)
-                    logging.debug("Copying to {0}".format(dst))
+                    # logging.debug("Copying to {0}".format(dst))
                     shutil.copy(output_file, dst)
                     saved_files.append(pattern)
             return saved_files, failed_files

@@ -9,12 +9,17 @@ This section is for upcoming changes.
 ### Added
 - New Setting (F1). You can now select whether to delete project item's data directory
 when removing a project item.
-- Graph View is also available from Data Store items, allowing to insert new relationships more graphically.
+- Graph View is also available from Data Store items, allowing to insert new 
+relationships more graphically.
 - You can now execute Tools in the work directory or the source directory (where the 
-main program file is located). The setting is in the Tool template editor and in the Tool 
-properties
+main program file is located). The setting is in the Tool template editor and in Tool 
+properties.
+- Tool properties now shows the Tool template main program file and the optional input
+files
 
 ### Fixed
+- Tool template optional input files. You can now use Unix style wildcards (`*` and `?`) 
+to specify the optional files that a Tool may exploit, e.g. `*.csv`.
 
 ### Changed
 
