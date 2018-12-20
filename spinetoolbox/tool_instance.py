@@ -275,8 +275,8 @@ class ToolInstance(QObject):
                 # If there are saved files
                 self._toolbox.msg.emit("\tThe following output files were saved to results directory")
                 for i in range(len(saved_files)):
-                    fname = os.path.split(saved_files[i])[1]
-                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(fname))
+                    # fname = os.path.split(saved_files[i])[1]
+                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(saved_files[i]))
             if len(failed_files) > 0:
                 # If saving some or all files failed
                 self._toolbox.msg_warning.emit("\tThe following output files were not found")
@@ -306,20 +306,46 @@ class ToolInstance(QObject):
             """
             failed_files = list()
             saved_files = list()
-            # logging.debug("Saving result files to <{0}>".format(target_dir))
-            for pattern in self.outputfiles:
-                # Check for wildcards in pattern
-                if ('*' in pattern) or ('?' in pattern):
-                    for fname in glob.glob(pattern):
-                        # logging.debug("Match for pattern <{0}> found. Saving file {1}".format(pattern, fname))
-                        shutil.copy(fname, target_dir)
-                        saved_files.append(fname)
+            logging.debug("Saving result files to <{0}>".format(target_dir))
+            for pattern in self.tool_template.outputfiles:
+                # Create subdirectories if necessary
+                dst_subdir, fname_pattern = os.path.split(pattern)
+                logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern, dst_subdir, fname_pattern))
+                if not dst_subdir:
+                    # No subdirectories to create
+                    # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
+                    target = target_dir
                 else:
-                    if not os.path.isfile(pattern):
+                    # Create subdirectory structure to result directory
+                    result_subdir_path = os.path.abspath(os.path.join(target_dir, dst_subdir))
+                    if not os.path.exists(result_subdir_path):
+                        try:
+                            create_dir(result_subdir_path)
+                        except OSError:
+                            self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
+                                                         .format(result_subdir_path))
+                            continue
+                        self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>"
+                                               .format(os.path.sep, dst_subdir))
+                    target = result_subdir_path
+                # Check for wildcards in pattern
+                if ('*' in fname_pattern) or ('?' in fname_pattern):
+                    self._toolbox.msg_warning.emit("Wildcards for output files not implemented yet")
+                    continue
+                    # for fname in glob.glob(os.path.join(target, fname_pattern)):
+                    #     logging.debug("Match for pattern <{0}> found. Saving file {1}".format(pattern, fname))
+                    #     shutil.copy(fname, target)
+                    #     saved_files.append(fname)
+                else:
+                    output_file = os.path.join(self.basedir, pattern)
+                    logging.debug("Looking for {0}".format(output_file))
+                    if not os.path.isfile(output_file):
                         failed_files.append(pattern)
                         continue
-                    # logging.debug("Saving file {0}".format(pattern))
-                    shutil.copy(pattern, target_dir)
+                    # logging.debug("Saving file {0}".format(fname_pattern))
+                    dst = os.path.join(target, fname_pattern)
+                    logging.debug("Copying to {0}".format(dst))
+                    shutil.copy(output_file, dst)
                     saved_files.append(pattern)
             return saved_files, failed_files
 
