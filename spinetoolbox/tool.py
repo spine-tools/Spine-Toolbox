@@ -25,7 +25,7 @@ from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, HEADER_POINTSIZE
+from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
 from graphics_items import ToolImage
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
@@ -50,9 +50,12 @@ class Tool(ProjectItem):
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.input_file_model = QStandardItemModel()
-        self.populate_input_files_list(None)
+        self.populate_input_file_model(None)
+        self.opt_input_file_model = QStandardItemModel()
+        self.populate_opt_input_file_model(None)
         self.output_file_model = QStandardItemModel()
-        self.populate_output_files_list(None)
+        self.populate_output_file_model(None)
+        self.source_files = list()
         self._tool_template = None
         self._tool_template_index = None
         self.set_tool_template(tool_template)
@@ -101,6 +104,7 @@ class Tool(ProjectItem):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_tool_name.setText(self.name)
         self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
+        self._toolbox.ui.treeView_opt_input_files.setModel(self.opt_input_file_model)
         self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
         if not self._tool_template_index:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
@@ -177,13 +181,17 @@ class Tool(ProjectItem):
         """Update Tool UI to show Tool template details."""
         if not self.tool_template():
             self._toolbox.ui.lineEdit_tool_args.setText("")
-            self.populate_input_files_list(None)
-            self.populate_output_files_list(None)
+            self._toolbox.ui.lineEdit_main_program.setText("")
+            self.populate_input_file_model(None)
+            self.populate_opt_input_file_model(None)
+            self.populate_output_file_model(None)
             self._toolbox.ui.checkBox_execution_mode.setCheckState(Qt.Checked)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-            self.populate_input_files_list(self.tool_template().inputfiles)
-            self.populate_output_files_list(self.tool_template().outputfiles)
+            self._toolbox.ui.lineEdit_main_program.setText(self.tool_template().main_prgm)
+            self.populate_input_file_model(self.tool_template().inputfiles)
+            self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
+            self.populate_output_file_model(self.tool_template().outputfiles)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
         self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
 
@@ -257,8 +265,8 @@ class Tool(ProjectItem):
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
                 self._toolbox.msg.emit("*** Searching for required input files ***")
-                file_copy_paths = self.find_input_files()
-                if not file_copy_paths:
+                file_paths = self.find_input_files()
+                if not file_paths:
                     self._toolbox.msg_error.emit("Input files not found. Tool execution aborted.")
                     return
                 # Required files and dirs should have been found at this point, so create instance
@@ -273,7 +281,7 @@ class Tool(ProjectItem):
                 else:
                     self._toolbox.msg.emit("*** Copying input files to source directory ***")
                 # Copy input files to ToolInstance work or source directory
-                if not self.copy_input_files(file_copy_paths):
+                if not self.copy_input_files(file_paths):
                     self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
                     return
             else:  # just for testing
@@ -298,7 +306,14 @@ class Tool(ProjectItem):
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 return
-
+        # Check if there are any optional input files to copy
+        if self.opt_input_file_model.rowCount() > 0:
+            self._toolbox.msg.emit("*** Searching for optional input files ***")
+            optional_file_paths = self.find_optional_input_files()
+            for k, v in optional_file_paths.items():
+                self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
+            if not self.copy_optional_input_files(optional_file_paths):
+                self._toolbox.msg_warning.emit("Copying optional input files failed")
         self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
         self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
         self._graphics_item.start_wheel_animation()
@@ -374,8 +389,29 @@ class Tool(ProjectItem):
                 self._toolbox.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
                 return None
             else:
-                # file_paths.append(found_file)
                 file_paths[req_file_path] = found_file
+        return file_paths
+
+    def find_optional_input_files(self):
+        """Find optional input files from connected items.
+
+        Returns:
+            Dictionary of optional input file paths or None if no files found. Key is the
+            optional input item and value is a list of paths that matches the item.
+        """
+        file_paths = dict()
+        for i in range(self.opt_input_file_model.rowCount()):
+            file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Just get the filename if there is a path attached to the file
+            path, filename = os.path.split(file_path)
+            if not filename:
+                # It's a directory
+                continue
+            found_files = self.find_files(filename)
+            if not found_files:
+                self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(filename))
+            else:
+                file_paths[file_path] = found_files
         return file_paths
 
     def find_file(self, fname):
@@ -410,6 +446,36 @@ class Tool(ProjectItem):
                 # TODO: Find file from output files of parent Tools
                 pass
         return path
+
+    def find_files(self, pattern):
+        """Finds optional input files that match the given search word. Searches files from Data
+        Connection or Data Store items that are input items for this Tool. These in turn
+        will search on their own input items and stop when an infinite recursion is detected.
+
+        Args:
+            pattern (str): File name (may have wildcards)
+
+        Returns:
+            List of paths to files that match the pattern or an empty list if no matches.
+        """
+        paths = list()
+        # Find file from immediate parent items
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            # self._toolbox.msg.emit("Searching for optional file <b>{0}</b> from item <b>{1}</b>"
+            #                        .format(pattern, input_item))
+            # Find item from project model
+            found_item_index = self._toolbox.project_item_model.find_item(input_item)
+            found_item = self._toolbox.project_item_model.project_item(found_item_index)
+            if not found_item:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                return paths
+            # Find file from parent Data Stores and Data Connections
+            if found_item.item_type in ["Data Store", "Data Connection"]:
+                visited_items = list()
+                matching_paths = found_item.find_files(pattern, visited_items)
+                if matching_paths is not None:
+                    paths = paths + matching_paths
+        return paths
 
     def copy_input_files(self, paths):
         """Copy input files from given paths to work or source directory, depending on
@@ -465,6 +531,69 @@ class Tool(ProjectItem):
                     self._toolbox.msg_warning.emit(msg)
                 return False
         self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
+        return True
+
+    def copy_optional_input_files(self, paths):
+        """Copy optional input files from given paths to work or source directory, depending on
+        where the Tool template requires them to be.
+
+        Args:
+            paths (dict): Key is the optional file name pattern, value is a list of paths to source files.
+
+        Returns:
+            Boolean variable depending on operation success
+        """
+        n_copied_files = 0
+        for dst, src_paths in paths.items():
+            if not isinstance(src_paths, list):
+                self._toolbox.msg_error.emit("Copying optional input files failed. src_paths should be a list.")
+                return False
+            for src_path in src_paths:
+                if not os.path.exists(src_path):
+                    self._toolbox.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
+                    continue
+                # Get file name that matched the search pattern
+                src_dir, dst_fname = os.path.split(src_path)
+                # Check if the search pattern included subdirectories (e.g. 'input/*.csv')
+                # This means that /input/ directory should be created to work (or source) directory
+                # before copying the files
+                dst_subdir, _search_pattern = os.path.split(dst)
+                if not dst_subdir:
+                    # No subdirectories to create
+                    self._toolbox.msg.emit("\tCopying optional file <b>{0}</b>".format(dst_fname))
+                    dst_path = os.path.abspath(os.path.join(self.instance.basedir, dst_fname))
+                else:
+                    # Create subdirectory structure to work or source directory
+                    work_subdir_path = os.path.abspath(os.path.join(self.instance.basedir, dst_subdir))
+                    if not os.path.exists(work_subdir_path):
+                        try:
+                            create_dir(work_subdir_path)
+                        except OSError:
+                            self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
+                                                         .format(work_subdir_path))
+                            continue
+                    self._toolbox.msg.emit("\tCopying optional file <b>{0}</b> into subdirectory <b>{2}{1}</b>"
+                                           .format(dst_fname, dst_subdir, os.path.sep))
+                    dst_path = os.path.abspath(os.path.join(work_subdir_path, dst_fname))
+                try:
+                    shutil.copyfile(src_path, dst_path)
+                    n_copied_files += 1
+                except OSError as e:
+                    self._toolbox.msg_error.emit("Copying optional file <b>{0}</b> to <b>{1}</b> failed"
+                                                 .format(src_path, dst_path))
+                    self._toolbox.msg_error.emit("{0}".format(e))
+                    if e.errno == 22:
+                        msg = "The reason might be:\n" \
+                              "[1] The destination file already exists and it cannot be " \
+                              "overwritten because it is locked by Julia or some other application.\n" \
+                              "[2] You don't have the necessary permissions to overwrite the file.\n" \
+                              "To solve the problem, you can try the following:\n[1] Execute the Tool in work " \
+                              "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to " \
+                              "Julia 0.7 or newer.\n" \
+                              "[3] Close any other background application(s) that may have locked the file.\n" \
+                              "And try again.\n"
+                        self._toolbox.msg_warning.emit(msg)
+        self._toolbox.msg.emit("\tCopied <b>{0}</b> optional input file(s)".format(n_copied_files))
         return True
 
     def find_output_items(self):
@@ -588,29 +717,11 @@ class Tool(ProjectItem):
             # Tool template cmdline args is a space delimited string. Add them to a list.
             self.instance.args += self.tool_template().cmdline_args.split(" ")
 
-    def make_header_for_input_files(self):
-        """Add header to input files model."""
-        h = QStandardItem("Input files")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.input_file_model.setHorizontalHeaderItem(0, h)
-
-    def make_header_for_output_files(self):
-        """Add header to output files model."""
-        h = QStandardItem("Output files")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.output_file_model.setHorizontalHeaderItem(0, h)
-
-    def populate_input_files_list(self, items):
+    def populate_input_file_model(self, items):
         """Add required Tool input files into a model.
         If items is None or an empty list, model is cleared."""
         self.input_file_model.clear()
-        self.make_header_for_input_files()
+        self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -618,11 +729,23 @@ class Tool(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.input_file_model.appendRow(qitem)
 
-    def populate_output_files_list(self, items):
+    def populate_opt_input_file_model(self, items):
+        """Add optional Tool template files into a model.
+        If items is None or an empty list, model is cleared."""
+        self.opt_input_file_model.clear()
+        self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
+                self.opt_input_file_model.appendRow(qitem)
+
+    def populate_output_file_model(self, items):
         """Add Tool output files into a model.
          If items is None or an empty list, model is cleared."""
         self.output_file_model.clear()
-        self.make_header_for_output_files()
+        self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)

@@ -41,7 +41,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
+    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, TREEVIEW_HEADER_SS
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -427,16 +427,17 @@ class ToolboxUI(QMainWindow):
         self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Data Connections
-        self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.pushButton_tool_stop.setEnabled(False)
-        self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
-        self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        self.ui.treeView_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_opt_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_output_files.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
-        self.ui.treeView_view.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
     def restore_ui(self):

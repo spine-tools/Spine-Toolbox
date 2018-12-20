@@ -19,14 +19,14 @@ Module for data connection class.
 import os
 import shutil
 import logging
-from collections import Counter
+import fnmatch
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
-from PySide2.QtWidgets import QFileDialog, QMessageBox, QStyle, QFileIconProvider
+from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider
 from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
-from config import APPLICATION_PATH, HEADER_POINTSIZE
+from config import APPLICATION_PATH
 from graphics_items import DataConnectionImage
 from helpers import busy_effect
 
@@ -247,7 +247,7 @@ class DataConnection(ProjectItem):
             # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
             res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
             if not res:
-                self._toolbox.msg_error.emit("Failed to open file:<b>{0}</b>".format(data_file))
+                self._toolbox.msg_error.emit("Opening file <b>{0}</b> failed".format(data_file))
 
     @busy_effect
     def show_spine_datapackage_form(self):
@@ -287,7 +287,14 @@ class DataConnection(ProjectItem):
         self.populate_data_list(d)
 
     def find_file(self, fname, visited_items):
-        """Search for filename in references and data and return the path if found."""
+        """Search for filename in references and data and return the path if found.
+        Args:
+            fname (str): File name (no path)
+            visited_items (list): List of project item names that have been visited
+
+        Returns:
+            Full path to file that matches the given file name or None if not found.
+        """
         # logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
         if self in visited_items:
             self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
@@ -319,30 +326,57 @@ class DataConnection(ProjectItem):
                     return path
         return None
 
-    def add_reference_header(self):
-        """Add header to files model. I.e. External Data Connection files."""
-        h = QStandardItem("References")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.reference_model.setHorizontalHeaderItem(0, h)
+    def find_files(self, pattern, visited_items):
+        """Search for files matching the given pattern (with wildcards) in references
+        and data and return a list of matching paths.
 
-    def add_data_header(self):
-        """Add header to data model. I.e. Internal Data Connection files."""
-        h = QStandardItem("Data")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.data_model.setHorizontalHeaderItem(0, h)
+        Args:
+            pattern (str): File name (no path). May contain wildcards.
+            visited_items (list): List of project item names that have been visited
+
+        Returns:
+            List of matching paths. List is empty if no matches found.
+        """
+        paths = list()
+        if self in visited_items:
+            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
+                                           "connections and try again. Detected at {0}.".format(self.name))
+            return paths
+        # Search files that match the pattern from this Data Connection's data directory
+        for data_file in self.data_files():  # data_file is a filename (no path)
+            if fnmatch.fnmatch(data_file, pattern):
+                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Connection <b>{2}</b>"
+                #                        .format(data_file, pattern, self.name))
+                path = os.path.join(self.data_dir, data_file)
+                paths.append(path)
+        # Search files that match the pattern from this Data Connection's references
+        for ref_file in self.file_references():  # List of paths including file name
+            p, fn = os.path.split(ref_file)
+            if fnmatch.fnmatch(fn, pattern):
+                # self._toolbox.msg.emit("\tReference <b>{0}</b> matches pattern <b>{1}</b> "
+                #                        "in Data Connection <b>{2}</b>".format(fn, pattern, self.name))
+                paths.append(ref_file)
+        visited_items.append(self)
+        # Find items that are connected to this Data Connection
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            found_index = self._toolbox.project_item_model.find_item(input_item)
+            if not found_index:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item = self._toolbox.project_item_model.project_item(found_index)
+            if item.item_type in ["Data Store", "Data Connection"]:
+                matching_paths = item.find_files(pattern, visited_items)
+                if matching_paths is not None:
+                    paths = paths + matching_paths
+                    return paths
+        return paths
 
     def populate_reference_list(self, items):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
         """
         self.reference_model.clear()
-        self.add_reference_header()
+        self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -356,7 +390,7 @@ class DataConnection(ProjectItem):
         If items is None or empty list, model is cleared.
         """
         self.data_model.clear()
-        self.add_data_header()
+        self.data_model.setHorizontalHeaderItem(0, QStandardItem("Data"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)

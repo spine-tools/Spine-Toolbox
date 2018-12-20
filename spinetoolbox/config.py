@@ -125,7 +125,7 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-left: 3px;}" \
                 "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}"
 
-    # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
+# NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
 # (known Qt issue)
 ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                     "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
@@ -160,13 +160,5 @@ MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray;
                 "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QTextEdit:focus{border-color: black; border-width: 2px; border-style: ridge;}" \
                 "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
-TOOL_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
-DC_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
-TT_TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ffe6cc;}"
-HEADER_POINTSIZE = 8
 
-# "QPushButton{border: 1px outset brown; border-radius: 2px; min-width: 70px; min-height: 20px;" \
-# "background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #d9d9d9, stop: 1 #f2f2f2);}" \
-# "QPushButton:focus{background-color: #f2f2f0; border: 1px inset brown; outline: 1px dashed brown}" \
-# "QPushButton:hover{background-color: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #f2f2f2, stop: 1 #d9d9d9);}" \
-# "QPushButton:pressed{background-color: #f2f2f2;}" \
+TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"

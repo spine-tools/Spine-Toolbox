@@ -25,7 +25,6 @@ from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError
 from widgets.data_store_widgets import GraphViewForm
 from graphics_items import ViewImage
 from helpers import busy_effect, create_dir
-from config import HEADER_POINTSIZE
 
 
 class View(ProjectItem):
@@ -196,20 +195,11 @@ class View(ProjectItem):
         graph_view_form.destroyed.connect(lambda : self.graph_view_form_refs.pop(db_url))
         self.graph_view_form_refs[db_url] = graph_view_form
 
-    def add_reference_header(self):
-        """Add header to reference model."""
-        h = QStandardItem("References")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.reference_model.setHorizontalHeaderItem(0, h)
-
     def populate_reference_list(self, items):
         """Add given list of items to the reference model. If None or
         an empty list given, the model is cleared."""
         self.reference_model.clear()
-        self.add_reference_header()
+        self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item['database'])

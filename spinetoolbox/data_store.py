@@ -20,9 +20,10 @@ import sys
 import os
 import getpass
 import logging
+import fnmatch
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog, QApplication
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
@@ -672,6 +673,12 @@ class DataStore(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
+    def data_files(self):
+        """Return a list of files that are in this items data directory."""
+        if not os.path.isdir(self.data_dir):
+            return None
+        return os.listdir(self.data_dir)
+
     def find_file(self, fname, visited_items):
         """Search for filename in data and return the path if found."""
         # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
@@ -703,6 +710,57 @@ class DataStore(ProjectItem):
                 if path is not None:
                     return path
         return None
+
+    def find_files(self, pattern, visited_items):
+        """Search for files matching the given pattern (with wildcards) in data directory
+        and return a list of matching paths.
+
+        Args:
+            pattern (str): File name (no path). May contain wildcards.
+            visited_items (list): List of project item names that have been visited
+
+        Returns:
+            List of matching paths. List is empty if no matches found.
+        """
+        paths = list()
+        if self in visited_items:
+            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
+                                           "connections and try again. Detected at {0}.".format(self.name))
+            return paths
+        # Check the current reference. If it is an sqlite file, this is a possible match
+        # If dialect is not sqlite, the reference is ignored
+        reference = self.current_reference()
+        db_url = reference['url']
+        if db_url.lower().startswith('sqlite'):
+            file_path = os.path.abspath(db_url.split(':///')[1])
+            if os.path.exists(file_path):
+                if fnmatch.fnmatch(file_path, pattern):  # fname == os.path.basename(file_path):
+                    # self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
+                    paths.append(file_path)
+        else:  # Not an SQLite reference
+            pass
+        # Search files that match the pattern from this Data Store's data directory
+        for data_file in self.data_files():  # data_file is a filename (no path)
+            if fnmatch.fnmatch(data_file, pattern):
+                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Store <b>{2}</b>"
+                #                        .format(data_file, pattern, self.name))
+                path = os.path.join(self.data_dir, data_file)
+                if path not in paths:  # Skip if the sqlite file was already added from the reference
+                    paths.append(path)
+        visited_items.append(self)
+        # Find items that are connected to this Data Connection
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            found_index = self._toolbox.project_item_model.find_item(input_item)
+            if not found_index:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item = self._toolbox.project_item_model.project_item(found_index)
+            if item.item_type in ["Data Store", "Data Connection"]:
+                matching_paths = item.find_files(pattern, visited_items)
+                if matching_paths is not None:
+                    paths = paths + matching_paths
+                    return paths
+        return paths
 
     @Slot(bool, name="copy_db_url")
     def copy_db_url(self, checked=False):

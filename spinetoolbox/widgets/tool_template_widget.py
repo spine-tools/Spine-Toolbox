@@ -14,7 +14,7 @@ QWidget that is used to create or edit Tool Templates.
 In the former case it is presented empty, but in the latter it
 is filled with all the information from the template being edited.
 
-:author: M. Marin (KTH)
+:author: M. Marin (KTH), P. Savolainen (VTT)
 :date:   12.4.2018
 """
 
@@ -26,8 +26,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QS
 from PySide2.QtCore import Slot, Qt, QUrl
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, TT_TREEVIEW_HEADER_SS,\
-    APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
+from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
 from helpers import busy_effect
 from widgets.custom_menus import AddIncludesPopupMenu
 
@@ -74,10 +73,10 @@ class ToolTemplateWidget(QWidget):
         self.ui.treeView_inputfiles.setModel(self.inputfiles_model)
         self.ui.treeView_inputfiles_opt.setModel(self.inputfiles_opt_model)
         self.ui.treeView_outputfiles.setModel(self.outputfiles_model)
-        self.ui.treeView_sourcefiles.setStyleSheet(TT_TREEVIEW_HEADER_SS)
-        self.ui.treeView_inputfiles.setStyleSheet(TT_TREEVIEW_HEADER_SS)
-        self.ui.treeView_inputfiles_opt.setStyleSheet(TT_TREEVIEW_HEADER_SS)
-        self.ui.treeView_outputfiles.setStyleSheet(TT_TREEVIEW_HEADER_SS)
+        self.ui.treeView_sourcefiles.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_inputfiles.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_inputfiles_opt.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_outputfiles.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.comboBox_tooltype.addItem("Select tool type...")
         self.ui.comboBox_tooltype.addItems(TOOL_TYPES)
         # if a template is given, fill the form with data from it
@@ -135,32 +134,12 @@ class ToolTemplateWidget(QWidget):
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
 
-    def make_header_for_includes(self):
-        """Add header to includes model. I.e. tool source files and necessary folders."""
-        h = QStandardItem("Source files")
-        self.sourcefiles_model.setHorizontalHeaderItem(0, h)
-
-    def make_header_for_inputfiles(self):
-        """Add header to inputfiles model. I.e. tool input files."""
-        h = QStandardItem("Input files")
-        self.inputfiles_model.setHorizontalHeaderItem(0, h)
-
-    def make_header_for_inputfiles_opt(self):
-        """Add header to inputfiles model. I.e. tool optional input files."""
-        h = QStandardItem("Optional input files")
-        self.inputfiles_opt_model.setHorizontalHeaderItem(0, h)
-
-    def make_header_for_outputfiles(self):
-        """Add header to outputfiles model. I.e. tool output files."""
-        h = QStandardItem("Output files")
-        self.outputfiles_model.setHorizontalHeaderItem(0, h)
-
     def populate_sourcefile_list(self, items):
         """List source files in QTreeView.
         If items is None or empty list, model is cleared.
         """
         self.sourcefiles_model.clear()
-        self.make_header_for_includes()
+        self.sourcefiles_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -172,7 +151,7 @@ class ToolTemplateWidget(QWidget):
         If items is None or empty list, model is cleared.
         """
         self.inputfiles_model.clear()
-        self.make_header_for_inputfiles()
+        self.inputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -183,7 +162,7 @@ class ToolTemplateWidget(QWidget):
         If items is None or empty list, model is cleared.
         """
         self.inputfiles_opt_model.clear()
-        self.make_header_for_inputfiles_opt()
+        self.inputfiles_opt_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -194,7 +173,7 @@ class ToolTemplateWidget(QWidget):
         If items is None or empty list, model is cleared.
         """
         self.outputfiles_model.clear()
-        self.make_header_for_outputfiles()
+        self.outputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -319,7 +298,7 @@ class ToolTemplateWidget(QWidget):
         indexes = self.ui.treeView_sourcefiles.selectedIndexes()
         if not indexes:  # Nothing selected
             self.sourcefiles_model.clear()
-            self.make_header_for_includes()
+            self.sourcefiles_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
             if self.ui.lineEdit_main_program.text().strip() == "":
                 self.program_path = None
                 self.ui.label_mainpath.clear()
@@ -359,7 +338,7 @@ class ToolTemplateWidget(QWidget):
         indexes = self.ui.treeView_inputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
             self.inputfiles_model.clear()
-            self.make_header_for_inputfiles()
+            self.inputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
             self.statusbar.showMessage("All input files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
@@ -387,7 +366,7 @@ class ToolTemplateWidget(QWidget):
         indexes = self.ui.treeView_inputfiles_opt.selectedIndexes()
         if not indexes:  # Nothing selected
             self.inputfiles_opt_model.clear()
-            self.make_header_for_inputfiles_opt()
+            self.inputfiles_opt_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
             self.statusbar.showMessage("All optional input files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
@@ -415,7 +394,7 @@ class ToolTemplateWidget(QWidget):
         indexes = self.ui.treeView_outputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
             self.outputfiles_model.clear()
-            self.make_header_for_outputfiles()
+            self.outputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
             self.statusbar.showMessage("All output files removed", 3000)
         else:
             rows = [ind.row() for ind in indexes]
