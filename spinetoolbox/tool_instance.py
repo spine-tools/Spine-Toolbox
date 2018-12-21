@@ -310,7 +310,8 @@ class ToolInstance(QObject):
             for pattern in self.tool_template.outputfiles:
                 # Create subdirectories if necessary
                 dst_subdir, fname_pattern = os.path.split(pattern)
-                # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern, dst_subdir, fname_pattern))
+                # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern,
+                #                                                                     dst_subdir, fname_pattern))
                 if not dst_subdir:
                     # No subdirectories to create
                     # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
@@ -329,13 +330,12 @@ class ToolInstance(QObject):
                                                .format(os.path.sep, dst_subdir))
                     target = result_subdir_path
                 # Check for wildcards in pattern
-                if ('*' in fname_pattern) or ('?' in fname_pattern):
-                    self._toolbox.msg_warning.emit("Wildcards for output files not implemented yet")
-                    continue
-                    # for fname in glob.glob(os.path.join(target, fname_pattern)):
-                    #     logging.debug("Match for pattern <{0}> found. Saving file {1}".format(pattern, fname))
-                    #     shutil.copy(fname, target)
-                    #     saved_files.append(fname)
+                if ('*' in pattern) or ('?' in pattern):
+                    for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
+                        fname = os.path.split(fname_path)[1]  # File name (no path)
+                        dst = os.path.join(target, fname)
+                        shutil.copy(fname_path, dst)
+                        saved_files.append(os.path.join(dst_subdir, fname))
                 else:
                     output_file = os.path.join(self.basedir, pattern)
                     # logging.debug("Looking for {0}".format(output_file))
