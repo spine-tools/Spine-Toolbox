@@ -11,17 +11,16 @@
         "input/sub-folder1/*.gms"
     ],
     "inputfiles": [
-        "input/required_file.txt",
-        "input/data.gdx"
+        "input/data.gdx",
+        "input/required_file.txt"
     ],
     "inputfiles_opt": [
-        "input/changes.inc",
-        "input/magic_*.dat"
+        "input/magic_*.dat",
+        "input/changes.inc"
     ],
     "outputfiles": [
-        "output\\report.gdx",
-        "output\\investments.gdx",
-        "magic.lst"
+        "magic.lst",
+        "output/*.*"
     ],
     "cmdline_args": "--INVEST=yes"
 }
