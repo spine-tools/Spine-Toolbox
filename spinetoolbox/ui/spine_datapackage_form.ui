@@ -18,268 +18,169 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>921</width>
-    <height>548</height>
+    <width>1088</width>
+    <height>824</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Spine datapackage editor</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_8">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
      <widget class="QSplitter" name="splitter">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
       </property>
-      <widget class="QGroupBox" name="groupBox">
-       <property name="title">
-        <string>Descriptor</string>
+      <widget class="QFrame" name="frame">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <property name="spacing">
+         <number>6</number>
+        </property>
         <property name="leftMargin">
-         <number>0</number>
+         <number>9</number>
         </property>
         <property name="topMargin">
          <number>0</number>
         </property>
         <property name="rightMargin">
-         <number>0</number>
+         <number>9</number>
         </property>
         <property name="bottomMargin">
-         <number>0</number>
+         <number>9</number>
         </property>
         <item>
-         <widget class="QTabWidget" name="tabWidget_resources">
-          <property name="tabPosition">
-           <enum>QTabWidget::West</enum>
+         <widget class="QLabel" name="label">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="currentIndex">
-           <number>0</number>
+          <property name="text">
+           <string>Resources</string>
           </property>
-          <widget class="QWidget" name="tab">
-           <attribute name="title">
-            <string>Resources</string>
-           </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_2">
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <property name="leftMargin">
-             <number>1</number>
-            </property>
-            <property name="topMargin">
-             <number>1</number>
-            </property>
-            <property name="rightMargin">
-             <number>1</number>
-            </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <item>
-             <widget class="QTreeView" name="treeView_resources">
-              <property name="selectionBehavior">
-               <enum>QAbstractItemView::SelectItems</enum>
-              </property>
-              <property name="rootIsDecorated">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_2">
-           <attribute name="title">
-            <string>Metadata</string>
-           </attribute>
-          </widget>
+         </widget>
+        </item>
+        <item>
+         <widget class="CopyPasteTableView" name="tableView_resources">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>1</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectItems</enum>
+          </property>
+          <property name="showGrid">
+           <bool>false</bool>
+          </property>
+          <attribute name="horizontalHeaderHighlightSections">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
          </widget>
         </item>
        </layout>
       </widget>
-      <widget class="QGroupBox" name="groupBox_2">
-       <property name="title">
-        <string>Resource</string>
+      <widget class="QFrame" name="frame_2">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+         <horstretch>3</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_7">
+       <property name="frameShape">
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
         <property name="leftMargin">
-         <number>0</number>
+         <number>9</number>
         </property>
         <property name="topMargin">
          <number>0</number>
         </property>
         <property name="rightMargin">
-         <number>0</number>
+         <number>9</number>
         </property>
         <property name="bottomMargin">
-         <number>0</number>
+         <number>9</number>
         </property>
         <item>
-         <widget class="QTabWidget" name="tabWidget_data_schema">
-          <property name="tabPosition">
-           <enum>QTabWidget::West</enum>
+         <widget class="QLabel" name="label_2">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>2</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="tabShape">
-           <enum>QTabWidget::Rounded</enum>
+          <property name="text">
+           <string>Data</string>
           </property>
-          <property name="currentIndex">
-           <number>0</number>
+         </widget>
+        </item>
+        <item>
+         <widget class="CopyPasteTableView" name="tableView_resource_data">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>2</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="tabsClosable">
+          <property name="layoutDirection">
+           <enum>Qt::LeftToRight</enum>
+          </property>
+          <property name="tabKeyNavigation">
            <bool>false</bool>
           </property>
-          <widget class="QWidget" name="tab_data">
-           <attribute name="title">
-            <string>Data</string>
-           </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout">
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <property name="leftMargin">
-             <number>1</number>
-            </property>
-            <property name="topMargin">
-             <number>1</number>
-            </property>
-            <property name="rightMargin">
-             <number>1</number>
-            </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <item>
-             <widget class="CopyPasteTableView" name="tableView_resource_data">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>2</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="tabKeyNavigation">
-               <bool>false</bool>
-              </property>
-              <attribute name="horizontalHeaderVisible">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="horizontalHeaderHighlightSections">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderVisible">
-               <bool>false</bool>
-              </attribute>
-              <attribute name="verticalHeaderHighlightSections">
-               <bool>false</bool>
-              </attribute>
-             </widget>
-            </item>
-           </layout>
-          </widget>
-          <widget class="QWidget" name="tab_schema">
-           <attribute name="title">
-            <string>Schema</string>
-           </attribute>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
-            <property name="spacing">
-             <number>2</number>
-            </property>
-            <property name="leftMargin">
-             <number>1</number>
-            </property>
-            <property name="topMargin">
-             <number>1</number>
-            </property>
-            <property name="rightMargin">
-             <number>1</number>
-            </property>
-            <property name="bottomMargin">
-             <number>1</number>
-            </property>
-            <item>
-             <widget class="QLabel" name="label">
-              <property name="font">
-               <font>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Fields</string>
-              </property>
-              <property name="alignment">
-               <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QTreeView" name="treeView_fields">
-              <property name="selectionBehavior">
-               <enum>QAbstractItemView::SelectItems</enum>
-              </property>
-              <property name="rootIsDecorated">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout">
-              <property name="spacing">
-               <number>0</number>
-              </property>
-              <item>
-               <widget class="QLabel" name="label_2">
-                <property name="font">
-                 <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Foreign keys</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="horizontalSpacer">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QToolButton" name="toolButton_remove_foreign_keys">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="text">
-                 <string>...</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <widget class="QTreeView" name="treeView_foreign_keys">
-              <property name="selectionBehavior">
-               <enum>QAbstractItemView::SelectItems</enum>
-              </property>
-              <property name="rootIsDecorated">
-               <bool>false</bool>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
+          <attribute name="horizontalHeaderVisible">
+           <bool>true</bool>
+          </attribute>
+          <attribute name="horizontalHeaderHighlightSections">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="verticalHeaderVisible">
+           <bool>false</bool>
+          </attribute>
+          <attribute name="verticalHeaderHighlightSections">
+           <bool>false</bool>
+          </attribute>
          </widget>
         </item>
        </layout>
@@ -293,8 +194,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>921</width>
-     <height>25</height>
+     <width>1088</width>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -307,15 +208,111 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionInfer_datapackage"/>
     <addaction name="actionSave_datapackage"/>
-    <addaction name="actionQuit"/>
+    <addaction name="separator"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_to_spine"/>
+    <addaction name="separator"/>
+    <addaction name="actionClose"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <widget class="QMenu" name="menuDock_Widgets">
+     <property name="title">
+      <string>Dock Widgets</string>
+     </property>
+    </widget>
+    <addaction name="menuDock_Widgets"/>
    </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuView"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QDockWidget" name="dockWidget_fields">
+   <property name="allowedAreas">
+    <set>Qt::AllDockWidgetAreas</set>
+   </property>
+   <property name="windowTitle">
+    <string>Fields</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_5">
+    <layout class="QVBoxLayout" name="verticalLayout_8">
+     <item>
+      <widget class="CopyPasteTableView" name="tableView_fields">
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="selectionBehavior">
+        <enum>QAbstractItemView::SelectItems</enum>
+       </property>
+       <property name="showGrid">
+        <bool>true</bool>
+       </property>
+       <attribute name="horizontalHeaderHighlightSections">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="horizontalHeaderShowSortIndicator" stdset="0">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderVisible">
+        <bool>false</bool>
+       </attribute>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_foreign_keys">
+   <property name="windowTitle">
+    <string>Foreign keys</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_6">
+    <layout class="QVBoxLayout" name="verticalLayout_9">
+     <item>
+      <widget class="CopyPasteTableView" name="tableView_foreign_keys">
+       <property name="layoutDirection">
+        <enum>Qt::LeftToRight</enum>
+       </property>
+       <property name="selectionBehavior">
+        <enum>QAbstractItemView::SelectItems</enum>
+       </property>
+       <property name="showGrid">
+        <bool>true</bool>
+       </property>
+       <property name="gridStyle">
+        <enum>Qt::SolidLine</enum>
+       </property>
+       <attribute name="horizontalHeaderHighlightSections">
+        <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderVisible">
+        <bool>true</bool>
+       </attribute>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionSave_datapackage">
    <property name="text">
-    <string>Save descriptor</string>
+    <string>Save &quot;datapackage.json&quot;</string>
    </property>
    <property name="toolTip">
     <string>Save as 'datapackage.json'</string>
@@ -324,45 +321,16 @@
     <string>Ctrl+S</string>
    </property>
   </action>
-  <action name="actionExport">
-   <property name="text">
-    <string>Export to 'Spine.sqlite'</string>
+  <action name="actionClose">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
    </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Export datapackage as an '.sqlite' file in Spine EAV format, to every Data Store connected to the output of this Data Connection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
-   </property>
-  </action>
-  <action name="actionQuit">
    <property name="text">
     <string>Close</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+W</string>
-   </property>
-  </action>
-  <action name="actionInfer_datapackage">
-   <property name="text">
-    <string>Infer from CSV</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Infer datapackage from '.csv' files present in this Data Connection's directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+I</string>
-   </property>
-  </action>
-  <action name="actionLoad_datapackage">
-   <property name="text">
-    <string>Load from descriptor</string>
-   </property>
-   <property name="toolTip">
-    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Load datapackage from a descriptor file called 'datapackage.json' in this Data Connection's directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="actionRemove_foreign_keys">
@@ -375,6 +343,58 @@
    </property>
    <property name="toolTip">
     <string>Remove selected foreign keys.</string>
+   </property>
+  </action>
+  <action name="actionInfer_datapackage">
+   <property name="text">
+    <string>Infer datapackage</string>
+   </property>
+   <property name="toolTip">
+    <string>(Re)infer datapackage from CSV files in data directory.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionExport_to_spine">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Export to Spine format</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionCopy">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
+   </property>
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/paste.png</normaloff>:/icons/paste.png</iconset>
+   </property>
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionxx">
+   <property name="text">
+    <string>xx</string>
    </property>
   </action>
  </widget>

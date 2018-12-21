@@ -18,7 +18,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>909</width>
+    <width>862</width>
     <height>707</height>
    </rect>
   </property>
@@ -117,7 +117,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>909</width>
+     <width>862</width>
      <height>21</height>
     </rect>
    </property>
@@ -189,8 +189,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>80</width>
-     <height>80</height>
+     <width>95</width>
+     <height>113</height>
     </size>
    </property>
    <property name="features">
@@ -250,8 +250,8 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>80</width>
-     <height>80</height>
+     <width>95</width>
+     <height>113</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -310,8 +310,8 @@
   <widget class="QDockWidget" name="dockWidget_item">
    <property name="minimumSize">
     <size>
-     <width>300</width>
-     <height>332</height>
+     <width>356</width>
+     <height>536</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -339,6 +339,9 @@
      </property>
      <item>
       <widget class="QTabWidget" name="tabWidget_item_properties">
+       <property name="styleSheet">
+        <string notr="true"/>
+       </property>
        <property name="currentIndex">
         <number>4</number>
        </property>
@@ -347,6 +350,18 @@
          <string>Data Store</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_11">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_ds_name">
            <property name="sizePolicy">
@@ -358,28 +373,30 @@
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(0,255, 255);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
            </property>
            <property name="frameShape">
-            <enum>QFrame::NoFrame</enum>
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
            </property>
            <property name="lineWidth">
             <number>1</number>
@@ -396,69 +413,263 @@ color: rgb(255, 255, 255);</string>
           </widget>
          </item>
          <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_12">
+           <item>
+            <widget class="QLabel" name="label_db_config">
+             <property name="minimumSize">
+              <size>
+               <width>47</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Connection details</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_copy_db_url">
+             <property name="minimumSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy database url to clipboard&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>...</string>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_new_spine">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>24</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine (sqlite) database.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
+             </property>
+             <property name="iconSize">
+              <size>
+               <width>16</width>
+               <height>16</height>
+              </size>
+             </property>
+             <property name="popupMode">
+              <enum>QToolButton::InstantPopup</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="Line" name="line">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
           <layout class="QGridLayout" name="gridLayout">
-           <item row="0" column="1" colspan="2">
-            <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <item row="5" column="1" colspan="2">
+            <widget class="QLineEdit" name="lineEdit_username">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>5000</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Username (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="placeholderText">
+              <string/>
+             </property>
+             <property name="clearButtonEnabled">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item row="3" column="0">
+            <widget class="QLabel" name="label_host">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="text">
+              <string>Host</string>
+             </property>
+            </widget>
+           </item>
+           <item row="2" column="1" colspan="2">
+            <layout class="QHBoxLayout" name="horizontalLayout_6">
              <item>
-              <widget class="QComboBox" name="comboBox_dialect">
+              <widget class="CustomQLineEdit" name="lineEdit_SQLite_file">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>24</height>
+                </size>
+               </property>
                <property name="maximumSize">
                 <size>
                  <width>16777215</width>
-                 <height>20</height>
+                 <height>24</height>
                 </size>
                </property>
                <property name="font">
                 <font>
-                 <pointsize>10</pointsize>
+                 <pointsize>8</pointsize>
                 </font>
+               </property>
+               <property name="cursor">
+                <cursorShape>IBeamCursor</cursorShape>
+               </property>
+               <property name="placeholderText">
+                <string/>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QToolButton" name="toolButton_spine">
+              <widget class="QToolButton" name="toolButton_browse">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
                <property name="sizePolicy">
-                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                  <horstretch>0</horstretch>
                  <verstretch>0</verstretch>
                 </sizepolicy>
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>22</width>
-                 <height>22</height>
+                 <width>24</width>
+                 <height>24</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>22</width>
-                 <height>22</height>
+                 <width>24</width>
+                 <height>24</height>
                 </size>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create fresh (empty) Spine database into an SQLite file in Data store's directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="icon">
-                <iconset resource="resources/resources_icons.qrc">
-                 <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
-               </property>
-               <property name="iconSize">
-                <size>
-                 <width>16</width>
-                 <height>16</height>
-                </size>
-               </property>
-               <property name="popupMode">
-                <enum>QToolButton::InstantPopup</enum>
                </property>
               </widget>
              </item>
             </layout>
+           </item>
+           <item row="4" column="1" colspan="2">
+            <widget class="QLineEdit" name="lineEdit_database">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>5000</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Database (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="placeholderText">
+              <string/>
+             </property>
+             <property name="clearButtonEnabled">
+              <bool>true</bool>
+             </property>
+            </widget>
            </item>
            <item row="6" column="1" colspan="2">
             <widget class="QLineEdit" name="lineEdit_password">
@@ -474,13 +685,13 @@ color: rgb(255, 255, 255);</string>
              <property name="minimumSize">
               <size>
                <width>0</width>
-               <height>20</height>
+               <height>24</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
                <width>5000</width>
-               <height>5000</height>
+               <height>24</height>
               </size>
              </property>
              <property name="font">
@@ -502,27 +713,52 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
-           <item row="1" column="1" colspan="2">
-            <widget class="QComboBox" name="comboBox_dsn">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>20</height>
-              </size>
+           <item row="0" column="1" colspan="2">
+            <layout class="QHBoxLayout" name="horizontalLayout_4">
+             <item>
+              <widget class="QComboBox" name="comboBox_dialect">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>24</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>24</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="6" column="0">
+            <widget class="QLabel" name="label_password">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
              </property>
              <property name="font">
               <font>
-               <pointsize>10</pointsize>
+               <pointsize>8</pointsize>
               </font>
+             </property>
+             <property name="text">
+              <string>Password</string>
              </property>
             </widget>
            </item>
@@ -542,13 +778,13 @@ color: rgb(255, 255, 255);</string>
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>20</height>
+                 <height>24</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>5000</width>
-                 <height>5000</height>
+                 <height>24</height>
                 </size>
                </property>
                <property name="font">
@@ -599,13 +835,13 @@ color: rgb(255, 255, 255);</string>
                <property name="minimumSize">
                 <size>
                  <width>0</width>
-                 <height>20</height>
+                 <height>24</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
                  <width>80</width>
-                 <height>5000</height>
+                 <height>24</height>
                 </size>
                </property>
                <property name="font">
@@ -623,139 +859,8 @@ color: rgb(255, 255, 255);</string>
              </item>
             </layout>
            </item>
-           <item row="5" column="1" colspan="2">
-            <widget class="QLineEdit" name="lineEdit_username">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>5000</width>
-               <height>5000</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Username (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="placeholderText">
-              <string/>
-             </property>
-             <property name="clearButtonEnabled">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1" colspan="2">
-            <layout class="QHBoxLayout" name="horizontalLayout_6">
-             <item>
-              <widget class="CustomQLineEdit" name="lineEdit_SQLite_file">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>20</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="cursor">
-                <cursorShape>IBeamCursor</cursorShape>
-               </property>
-               <property name="placeholderText">
-                <string/>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QToolButton" name="toolButton_browse">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>22</width>
-                 <height>22</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>22</width>
-                 <height>22</height>
-                </size>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item row="4" column="1" colspan="2">
-            <widget class="QLineEdit" name="lineEdit_database">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>5000</width>
-               <height>5000</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Database (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="placeholderText">
-              <string/>
-             </property>
-             <property name="clearButtonEnabled">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="5" column="0">
-            <widget class="QLabel" name="label_username">
+           <item row="1" column="0">
+            <widget class="QLabel" name="label_dsn">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -768,12 +873,12 @@ color: rgb(255, 255, 255);</string>
               </font>
              </property>
              <property name="text">
-              <string>Username</string>
+              <string>DSN</string>
              </property>
             </widget>
            </item>
-           <item row="3" column="0">
-            <widget class="QLabel" name="label_host">
+           <item row="2" column="0">
+            <widget class="QLabel" name="label_path">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -786,7 +891,37 @@ color: rgb(255, 255, 255);</string>
               </font>
              </property>
              <property name="text">
-              <string>Host</string>
+              <string>Path</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1" colspan="2">
+            <widget class="QComboBox" name="comboBox_dsn">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="font">
+              <font>
+               <pointsize>10</pointsize>
+              </font>
              </property>
             </widget>
            </item>
@@ -832,8 +967,8 @@ color: rgb(255, 255, 255);</string>
              </property>
             </widget>
            </item>
-           <item row="6" column="0">
-            <widget class="QLabel" name="label_password">
+           <item row="5" column="0">
+            <widget class="QLabel" name="label_username">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -846,43 +981,7 @@ color: rgb(255, 255, 255);</string>
               </font>
              </property>
              <property name="text">
-              <string>Password</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_dsn">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>DSN</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_path">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Path</string>
+              <string>Username</string>
              </property>
             </widget>
            </item>
@@ -896,16 +995,13 @@ color: rgb(255, 255, 255);</string>
            <property name="sizeHint" stdset="0">
             <size>
              <width>20</width>
-             <height>12</height>
+             <height>40</height>
             </size>
            </property>
           </spacer>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_7">
-           <property name="spacing">
-            <number>6</number>
-           </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_13">
            <item>
             <widget class="QPushButton" name="pushButton_ds_tree_view">
              <property name="sizePolicy">
@@ -941,7 +1037,7 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>40</width>
+               <width>1</width>
                <height>20</height>
               </size>
              </property>
@@ -989,7 +1085,7 @@ color: rgb(255, 255, 255);</string>
             </spacer>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton_ds_open_directory">
+            <widget class="QPushButton" name="pushButton_ds_tabular_view">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -1009,10 +1105,62 @@ color: rgb(255, 255, 255);</string>
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Store directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tabular view&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
              <property name="text">
-              <string>Open dir...</string>
+              <string>Tabular view</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="Line" name="line_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_14">
+           <item>
+            <spacer name="horizontalSpacer_9">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_ds_open_dir">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Store's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string/>
              </property>
             </widget>
            </item>
@@ -1025,6 +1173,18 @@ color: rgb(255, 255, 255);</string>
          <string>Data Connection</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_8">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_dc_name">
            <property name="sizePolicy">
@@ -1036,25 +1196,30 @@ color: rgb(255, 255, 255);</string>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(0, 0, 255);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1249,44 +1414,6 @@ color: rgb(255, 255, 255);</string>
              </property>
             </spacer>
            </item>
-           <item>
-            <widget class="QToolButton" name="toolButton_datapackage">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create datapackage from CSV files in directory.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>16</width>
-               <height>16</height>
-              </size>
-             </property>
-             <property name="popupMode">
-              <enum>QToolButton::InstantPopup</enum>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
          <item>
@@ -1328,6 +1455,38 @@ color: rgb(255, 255, 255);</string>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_3">
            <item>
+            <widget class="QPushButton" name="pushButton_datapackage">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>23</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Spine datapackage editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Datapackage</string>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/datapkg.png</normaloff>:/icons/datapkg.png</iconset>
+             </property>
+            </widget>
+           </item>
+           <item>
             <spacer name="horizontalSpacer_3">
              <property name="orientation">
               <enum>Qt::Horizontal</enum>
@@ -1340,8 +1499,32 @@ color: rgb(255, 255, 255);</string>
              </property>
             </spacer>
            </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="Line" name="line_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_7">
            <item>
-            <widget class="QPushButton" name="pushButton_dc_open">
+            <spacer name="horizontalSpacer_10">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_dc_open_dir">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -1350,21 +1533,18 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
-               <height>23</height>
+               <width>18</width>
+               <height>18</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>75</width>
-               <height>23</height>
+               <width>18</width>
+               <height>18</height>
               </size>
              </property>
              <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Data Connection directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="text">
-              <string>Open dir...</string>
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
@@ -1377,6 +1557,18 @@ color: rgb(255, 255, 255);</string>
          <string>Tool</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_13">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_tool_name">
            <property name="enabled">
@@ -1391,19 +1583,30 @@ color: rgb(255, 255, 255);</string>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(255, 0, 0);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1493,53 +1696,53 @@ color: rgb(255, 255, 255);</string>
           </layout>
          </item>
          <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_10">
-           <property name="spacing">
-            <number>4</number>
+          <widget class="QLineEdit" name="lineEdit_main_program">
+           <property name="enabled">
+            <bool>true</bool>
            </property>
-           <item>
-            <widget class="QLabel" name="label_tool_args">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Args</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="lineEdit_tool_args">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="cursor">
-              <cursorShape>ArrowCursor</cursorShape>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::NoFocus</enum>
-             </property>
-             <property name="toolTip">
-              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool command line arguments. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-             </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
+           <property name="cursor">
+            <cursorShape>ArrowCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool template main program file. Edit Tool template to change this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+           <property name="placeholderText">
+            <string>Main program file</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="lineEdit_tool_args">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="cursor">
+            <cursorShape>ArrowCursor</cursorShape>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Command line arguments used when starting the main program. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+           <property name="placeholderText">
+            <string>Command line arguments</string>
+           </property>
+          </widget>
          </item>
          <item>
           <widget class="QTreeView" name="treeView_input_files">
@@ -1554,8 +1757,44 @@ color: rgb(255, 255, 255);</string>
              <pointsize>8</pointsize>
             </font>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Files and directories the Tool template requires in order to run. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::NoSelection</enum>
+           </property>
+           <property name="selectionBehavior">
+            <enum>QAbstractItemView::SelectRows</enum>
+           </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <property name="indentation">
+            <number>5</number>
+           </property>
+           <property name="uniformRowHeights">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTreeView" name="treeView_opt_input_files">
+           <property name="font">
+            <font>
+             <pointsize>8</pointsize>
+            </font>
+           </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
+           <property name="toolTip">
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Optional files. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::NoSelection</enum>
            </property>
            <property name="verticalScrollMode">
             <enum>QAbstractItemView::ScrollPerPixel</enum>
@@ -1581,8 +1820,14 @@ color: rgb(255, 255, 255);</string>
              <pointsize>8</pointsize>
             </font>
            </property>
+           <property name="focusPolicy">
+            <enum>Qt::NoFocus</enum>
+           </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output files produced by the Tool template. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+           </property>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::NoSelection</enum>
            </property>
            <property name="verticalScrollMode">
             <enum>QAbstractItemView::ScrollPerPixel</enum>
@@ -1718,6 +1963,65 @@ color: rgb(255, 255, 255);</string>
            </item>
           </layout>
          </item>
+         <item>
+          <widget class="Line" name="line_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_15">
+           <item>
+            <widget class="QCheckBox" name="checkBox_execution_mode">
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can override the Tool template setting here for individual Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="text">
+              <string>Execution mode</string>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+             <property name="tristate">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_11">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_tool_open_dir">
+             <property name="minimumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Tool's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
         </layout>
        </widget>
        <widget class="QWidget" name="tab_view">
@@ -1725,6 +2029,18 @@ color: rgb(255, 255, 255);</string>
          <string>View</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_12">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
          <item>
           <widget class="QLabel" name="label_view_name">
            <property name="sizePolicy">
@@ -1736,25 +2052,30 @@ color: rgb(255, 255, 255);</string>
            <property name="minimumSize">
             <size>
              <width>0</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>18</height>
+             <height>20</height>
             </size>
            </property>
            <property name="font">
             <font>
              <pointsize>10</pointsize>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="styleSheet">
-            <string notr="true">background-color: rgb(0, 255, 0);
-color: rgb(255, 255, 255);</string>
+            <string notr="true">background-color: #ecd8c6;</string>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
            </property>
            <property name="text">
             <string>Name</string>
@@ -1788,19 +2109,6 @@ color: rgb(255, 255, 255);</string>
             <number>6</number>
            </property>
            <item>
-            <spacer name="horizontalSpacer_5">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
             <widget class="QPushButton" name="pushButton_open_network_map">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -1825,6 +2133,62 @@ color: rgb(255, 255, 255);</string>
              </property>
              <property name="text">
               <string>Graph view</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <widget class="Line" name="line_5">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_16">
+           <item>
+            <spacer name="horizontalSpacer_12">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_view_open_dir">
+             <property name="minimumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>18</width>
+               <height>18</height>
+              </size>
+             </property>
+             <property name="toolTip">
+              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this View's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
             </widget>
            </item>
@@ -1857,7 +2221,7 @@ color: rgb(255, 255, 255);</string>
   <widget class="QDockWidget" name="dockWidget_julia_repl">
    <property name="minimumSize">
     <size>
-     <width>80</width>
+     <width>95</width>
      <height>80</height>
     </size>
    </property>
@@ -1893,8 +2257,8 @@ color: rgb(255, 255, 255);</string>
   <widget class="QDockWidget" name="dockWidget_project">
    <property name="minimumSize">
     <size>
-     <width>127</width>
-     <height>150</height>
+     <width>135</width>
+     <height>173</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -1976,6 +2340,9 @@ color: rgb(255, 255, 255);</string>
            </property>
            <property name="editTriggers">
             <set>QAbstractItemView::NoEditTriggers</set>
+           </property>
+           <property name="animated">
+            <bool>true</bool>
            </property>
           </widget>
          </item>
@@ -2364,14 +2731,12 @@ color: rgb(255, 255, 255);</string>
   <tabstop>tabWidget</tabstop>
   <tabstop>treeView_project</tabstop>
   <tabstop>graphicsView</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
   <tabstop>toolButton_remove_tool_template</tabstop>
   <tabstop>listView_tool_templates</tabstop>
   <tabstop>toolButton_add_tool_template</tabstop>
   <tabstop>comboBox_dialect</tabstop>
-  <tabstop>toolButton_spine</tabstop>
   <tabstop>lineEdit_password</tabstop>
   <tabstop>comboBox_dsn</tabstop>
   <tabstop>lineEdit_host</tabstop>
@@ -2380,16 +2745,11 @@ color: rgb(255, 255, 255);</string>
   <tabstop>lineEdit_SQLite_file</tabstop>
   <tabstop>toolButton_browse</tabstop>
   <tabstop>lineEdit_database</tabstop>
-  <tabstop>pushButton_ds_tree_view</tabstop>
-  <tabstop>pushButton_ds_graph_view</tabstop>
-  <tabstop>pushButton_ds_open_directory</tabstop>
   <tabstop>treeView_dc_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
-  <tabstop>toolButton_datapackage</tabstop>
   <tabstop>treeView_dc_data</tabstop>
-  <tabstop>pushButton_dc_open</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
   <tabstop>treeView_input_files</tabstop>

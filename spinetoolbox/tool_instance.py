@@ -37,18 +37,22 @@ class ToolInstance(QObject):
     """
     instance_finished_signal = Signal(int, name="instance_finished_signal")
 
-    def __init__(self, tool_template, toolbox, tool_output_dir, project):
+    def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
         """Tool instance constructor."""
         super().__init__()
         self.tool_template = tool_template
         self._toolbox = toolbox
         self._project = project
+        self.execute_in_work = execute_in_work
         self.tool_process = None
         self.tool_output_dir = tool_output_dir
         # Directory where results were saved
         self.output_dir = None
-        wrk_dir = self._project.work_dir
-        self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
+        if self.execute_in_work:  # Execute in work directory
+            wrk_dir = self._project.work_dir
+            self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
+        else:  # Execute in source directory
+            self.basedir = self.tool_template.path
         self.julia_repl_command = None
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
@@ -57,9 +61,16 @@ class ToolInstance(QObject):
         self.outputfiles = [os.path.join(self.basedir, f) for f in tool_template.outputfiles]
         # Check that required output directories are created
         self.make_work_output_dirs()
-        # Checkout Tool
-        if not self._checkout:
-            raise OSError("Could not create Tool instance")
+        # Checkout Tool template to work directory
+        if self.execute_in_work:
+            if not self._checkout:
+                raise OSError("Could not create Tool instance")
+        else:
+            # Make source directory anchor with path as tooltip
+            src_dir_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" + self.basedir \
+                          + "'>source directory</a>"
+            self._toolbox.msg.emit("*** Executing Tool template <b>{0}</b> in {1} ***"
+                                   .format(self.tool_template.name, src_dir_anchor))
 
     @property
     def _checkout(self):
@@ -264,8 +275,8 @@ class ToolInstance(QObject):
                 # If there are saved files
                 self._toolbox.msg.emit("\tThe following output files were saved to results directory")
                 for i in range(len(saved_files)):
-                    fname = os.path.split(saved_files[i])[1]
-                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(fname))
+                    # fname = os.path.split(saved_files[i])[1]
+                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(saved_files[i]))
             if len(failed_files) > 0:
                 # If saving some or all files failed
                 self._toolbox.msg_warning.emit("\tThe following output files were not found")
@@ -296,19 +307,45 @@ class ToolInstance(QObject):
             failed_files = list()
             saved_files = list()
             # logging.debug("Saving result files to <{0}>".format(target_dir))
-            for pattern in self.outputfiles:
+            for pattern in self.tool_template.outputfiles:
+                # Create subdirectories if necessary
+                dst_subdir, fname_pattern = os.path.split(pattern)
+                # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern,
+                #                                                                     dst_subdir, fname_pattern))
+                if not dst_subdir:
+                    # No subdirectories to create
+                    # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
+                    target = target_dir
+                else:
+                    # Create subdirectory structure to result directory
+                    result_subdir_path = os.path.abspath(os.path.join(target_dir, dst_subdir))
+                    if not os.path.exists(result_subdir_path):
+                        try:
+                            create_dir(result_subdir_path)
+                        except OSError:
+                            self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
+                                                         .format(result_subdir_path))
+                            continue
+                        self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>"
+                                               .format(os.path.sep, dst_subdir))
+                    target = result_subdir_path
                 # Check for wildcards in pattern
                 if ('*' in pattern) or ('?' in pattern):
-                    for fname in glob.glob(pattern):
-                        # logging.debug("Match for pattern <{0}> found. Saving file {1}".format(pattern, fname))
-                        shutil.copy(fname, target_dir)
-                        saved_files.append(fname)
+                    for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
+                        fname = os.path.split(fname_path)[1]  # File name (no path)
+                        dst = os.path.join(target, fname)
+                        shutil.copy(fname_path, dst)
+                        saved_files.append(os.path.join(dst_subdir, fname))
                 else:
-                    if not os.path.isfile(pattern):
+                    output_file = os.path.join(self.basedir, pattern)
+                    # logging.debug("Looking for {0}".format(output_file))
+                    if not os.path.isfile(output_file):
                         failed_files.append(pattern)
                         continue
-                    # logging.debug("Saving file {0}".format(pattern))
-                    shutil.copy(pattern, target_dir)
+                    # logging.debug("Saving file {0}".format(fname_pattern))
+                    dst = os.path.join(target, fname_pattern)
+                    # logging.debug("Copying to {0}".format(dst))
+                    shutil.copy(output_file, dst)
                     saved_files.append(pattern)
             return saved_files, failed_files
 

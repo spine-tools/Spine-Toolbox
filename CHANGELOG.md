@@ -7,8 +7,19 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 This section is for upcoming changes.
 
 ### Added
+- New Setting (F1). You can now select whether to delete project item's data directory
+when removing a project item.
+- Graph View is also available from Data Store items, allowing to insert new 
+relationships more graphically.
+- You can now execute Tools in the work directory or the source directory (where the 
+main program file is located). The setting is in the Tool template editor and in Tool 
+properties.
+- Tool properties now shows the Tool template main program file and the optional input
+files
 
 ### Fixed
+- Tool template optional input files. You can now use Unix style wildcards (`*` and `?`) 
+to specify the optional files that a Tool may exploit, e.g. `*.csv`.
 
 ### Changed
 
@@ -21,26 +32,26 @@ This section is for upcoming changes.
 ## [0.1.75] - 2018-11-23
 
 ### Added
-- New Setting (F1). You can now select whether to delete project item's data 
+- New Setting (F1). You can now select whether to delete project item's data
 directory when removing a project item.
 - Application icon (Spine symbol)
 - New installer for 64-bit Windows:
     - Installation file extension is now *.exe* instead of *.msi*
     - Show license file before installation (users must agree to continue)
-    - Default install folder is now `C:\Program Files\ `. 
-    - **No** need to *Run as Administrator* even if installed to the default location 
-    because write permissions for sub-folders that need them (\conf, \projects, 
+    - Default install folder is now `C:\Program Files\ `.
+    - **No** need to *Run as Administrator* even if installed to the default location
+    because write permissions for sub-folders that need them (\conf, \projects,
     \work) are set automatically
     - Create a shortcut on desktop (if wanted)
     - Create a Start Menu folder (if wanted)
-    - Uninstaller. Available in the Start Menu folder or in Windows 
+    - Uninstaller. Available in the Start Menu folder or in Windows
     Add/Remove Programs
     - Remove app related registry entries when uninstalling (if wanted)
 
 ### Fixed
 - Data Package editor. Some files were missing from the tabulator package.
-- Bug when exiting the app when there is no project open in close_view_forms() when 
-exiting the application without a project open 
+- Bug when exiting the app when there is no project open in close_view_forms() when
+exiting the application without a project open
 
 ### Changed
 - settings.conf file is now in /conf directory
@@ -86,7 +97,7 @@ which can be used to enter data more easily.
 second one.
 - Work folder is not created for Tools if the Tool template requirements are not met.
 - Result folder is not created if the Tool template fails to start.
-- The embedded Julia REPL now uses the Julia that is given in application Settings (F1). 
+- The embedded Julia REPL now uses the Julia that is given in application Settings (F1).
 Previously, this used the default Julia of your OS.
 
 ### Removed

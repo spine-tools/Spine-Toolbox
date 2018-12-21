@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -18,7 +18,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1125</width>
+    <width>954</width>
     <height>653</height>
    </rect>
   </property>
@@ -65,17 +65,19 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1125</width>
-     <height>25</height>
+     <width>954</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGraph">
     <property name="title">
      <string>Graph</string>
     </property>
-    <addaction name="actionBuild"/>
+    <addaction name="actionGraph_hide_selected"/>
+    <addaction name="actionGraph_show_hidden"/>
     <addaction name="separator"/>
-    <addaction name="actionClose"/>
+    <addaction name="actionGraph_prune_selected"/>
+    <addaction name="actionGraph_reinstate_pruned"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -96,6 +98,13 @@
     <addaction name="actionCommit"/>
     <addaction name="actionRollback"/>
    </widget>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionClose"/>
+   </widget>
+   <addaction name="menuFile"/>
    <addaction name="menuGraph"/>
    <addaction name="menuView"/>
    <addaction name="menuSession"/>
@@ -126,7 +135,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QSplitter" name="splitter">
+      <widget class="QSplitter" name="splitter_object_relationship_class">
        <property name="orientation">
         <enum>Qt::Vertical</enum>
        </property>
@@ -368,7 +377,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTreeView" name="treeView">
+      <widget class="QTreeView" name="treeView_object">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
          <horstretch>1</horstretch>
@@ -389,12 +398,190 @@
     </layout>
    </widget>
   </widget>
-  <action name="actionBuild">
-   <property name="text">
-    <string>Rebuild</string>
+  <widget class="QDockWidget" name="dockWidget_parameter">
+   <property name="windowTitle">
+    <string>Parameter dock</string>
    </property>
-   <property name="shortcut">
-    <string>F5</string>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_parameter">
+    <layout class="QVBoxLayout" name="verticalLayout_7">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QSplitter" name="splitter_object_relationship_parameter">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="handleWidth">
+        <number>6</number>
+       </property>
+       <widget class="QTabWidget" name="tabWidget_object_parameter">
+        <property name="layoutDirection">
+         <enum>Qt::RightToLeft</enum>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="tab_5">
+         <attribute name="title">
+          <string>value</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_8">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QTableView" name="tableView_object_parameter_value">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_6">
+         <attribute name="title">
+          <string>definition</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QTableView" name="tableView_object_parameter_definition">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+       <widget class="QTabWidget" name="tabWidget_relationship_parameter">
+        <property name="layoutDirection">
+         <enum>Qt::RightToLeft</enum>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <widget class="QWidget" name="tab_7">
+         <attribute name="title">
+          <string>value</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_9">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QTableView" name="tableView_relationship_parameter_value">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="tab_8">
+         <attribute name="title">
+          <string>definition</string>
+         </attribute>
+         <layout class="QVBoxLayout" name="verticalLayout_10">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QTableView" name="tableView_relationship_parameter_definition">
+            <property name="layoutDirection">
+             <enum>Qt::LeftToRight</enum>
+            </property>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <action name="actionGraph_reinstate_pruned">
+   <property name="text">
+    <string>Reinstate pruned items</string>
    </property>
   </action>
   <action name="actionDock_widgets">
@@ -453,6 +640,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+W</string>
+   </property>
+  </action>
+  <action name="actionGraph_hide_selected">
+   <property name="text">
+    <string>Hide selected items</string>
+   </property>
+  </action>
+  <action name="actionGraph_show_hidden">
+   <property name="text">
+    <string>Show hidden items</string>
+   </property>
+  </action>
+  <action name="actionGraph_prune_selected">
+   <property name="text">
+    <string>Prune selected items</string>
    </property>
   </action>
  </widget>

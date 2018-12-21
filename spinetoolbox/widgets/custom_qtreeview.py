@@ -142,9 +142,8 @@ class DataTreeView(QTreeView):
             return
         drag = QDrag(self)
         mimeData = QMimeData()
-        data_dir = self.parent().owner().data_dir
-        filename = self.drag_index.data(Qt.DisplayRole)
-        url = QUrl.fromLocalFile(os.path.join(data_dir, filename))
+        file_path = self.drag_index.data(Qt.UserRole)
+        url = QUrl.fromLocalFile(file_path)
         mimeData.setUrls([url])
         drag.setMimeData(mimeData)
         icon = self.drag_index.data(Qt.DecorationRole)

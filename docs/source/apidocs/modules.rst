@@ -21,6 +21,7 @@ spinetoolbox
    resources_logos_rc
    setup
    spinetoolbox
+   tabularview_models
    test
    tool
    tool_instance

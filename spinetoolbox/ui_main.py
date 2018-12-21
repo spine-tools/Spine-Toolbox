@@ -41,7 +41,7 @@ import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
 from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, DC_TREEVIEW_HEADER_SS, TOOL_TREEVIEW_HEADER_SS
+    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, TREEVIEW_HEADER_SS
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -416,7 +416,7 @@ class ToolboxUI(QMainWindow):
         self.connection_model = ConnectionModel(self)
         self.ui.tableView_connections.setModel(self.connection_model)
         self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
-        self.ui.tableView_connections.itemDelegate().commit_data.connect(self.connection_data_changed)
+        self.ui.tableView_connections.itemDelegate().data_committed.connect(self.connection_data_changed)
         self.ui.graphicsView.set_connection_model(self.connection_model)
 
     def init_shared_widgets(self):
@@ -425,15 +425,20 @@ class ToolboxUI(QMainWindow):
         self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
         self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Data Connections
-        self.ui.treeView_dc_references.setStyleSheet(DC_TREEVIEW_HEADER_SS)
-        self.ui.treeView_dc_data.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.pushButton_tool_stop.setEnabled(False)
-        self.ui.treeView_input_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
-        self.ui.treeView_output_files.setStyleSheet(TOOL_TREEVIEW_HEADER_SS)
+        self.ui.treeView_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_opt_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_output_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
-        self.ui.treeView_view.setStyleSheet(DC_TREEVIEW_HEADER_SS)
+        self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -642,7 +647,11 @@ class ToolboxUI(QMainWindow):
                 continue
             elif tool.tool_template().name == tool_template.name:
                 tool.set_tool_template(template)
+                tool.execute_in_work = template.execute_in_work
                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
+        # Update current selected Tool execute in work checkbox state
+        chk_state = Qt.Checked if template.execute_in_work else Qt.Unchecked
+        self.ui.checkBox_execution_mode.setCheckState(chk_state)
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
@@ -1215,14 +1224,23 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu = None
 
     def close_view_forms(self):
-        """Close all GraphViewForm and TreeViewForm instances opened in Data Stores and Views."""
+        """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.
+        This ensures that the `close` method is called on the corresponding DiffDatabaseMapping instances,
+        so that the database is cleaned up.
+        Also close all SpineDatapackageWidget instances opened in Data Connections.
+        """
         if not self._project:
             return
         for data_store in self.project_item_model.items("Data Stores"):
             if data_store.tree_view_form:
                 data_store.tree_view_form.close()
+            if data_store.tabular_view_form:
+                data_store.tabular_view_form.close()
             if data_store.graph_view_form:
                 data_store.graph_view_form.close()
+        for data_connection in self.project_item_model.items("Data Connections"):
+            if data_connection.spine_datapackage_form:
+                data_connection.spine_datapackage_form.close()
         for view in self.project_item_model.items("Views"):
             for graph_view_form in view.graph_view_form_refs.values():
                 graph_view_form.close()

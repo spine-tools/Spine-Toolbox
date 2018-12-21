@@ -25,6 +25,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from spinedatabase_api import SpineDBAPIError
 import logging
+from operator import itemgetter
 
 
 SheetData = namedtuple("SheetData", ["sheet_name", "class_name", "object_classes",
@@ -186,47 +187,42 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
         value_col (Int): index to column containg value to value_name_col
 
     Returns:
-        (List[namedtuple]): List of namedtuples whit fields given by headers
-        and unqiue names in value_name_col column
+        (List[List]): List of list with headers in headers list
+        (List): List of header names for each item in inner list
     """
-
+    # find header names
+    if (isinstance(value_name_col, list) or isinstance(value_name_col, list)) and len(value_name_col) > 1:
+        value_name_getter = itemgetter(*value_name_col)
+        value_names = sorted(set(value_name_getter(x) for x in data if not any(i is None for i in value_name_getter(x))))
+    else:
+        if isinstance(value_name_col, list) or isinstance(value_name_col, list):
+            value_name_col = value_name_col[0]
+        value_name_getter = itemgetter(value_name_col)
+        value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
+        
+    
+    
     key_names = [headers[n] for n in key_cols]
-
-    # find unique rows for key names.
-    unique_keys = []
-    values = []
-    keyfunc = lambda x: [x[k] for k in key_cols]
-
-    # value names with invalid key_cols
-    value_names = [x[value_name_col] for x in data if None in keyfunc(x)]
+    #value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
+    headers = key_names + value_names
 
     # remove data with invalid key cols
+    keyfunc = lambda x: [x[k] for k in key_cols]
     data = [x for x in data if None not in keyfunc(x)]
     data = sorted(data, key=keyfunc)
-    for k, g in groupby(data, key=keyfunc):
-        if not None in k:
-            unique_keys.append(k)
-        vn = {gv[value_name_col]: gv[value_col] for gv in g if gv[value_name_col] is not None}
-        values.append(vn)
-        value_names = value_names + list(vn.keys())
-
-    # names of values to create pivoted values for
-    value_names = list(set([v for v in value_names if v is not None]))
-
-    # pivot/unstack data
-    PivotedData = namedtuple("Data", key_names+value_names)
-
+    
+    # unstack data
     data_list_out = []
-    for k, value_dict in zip(unique_keys, values):
-        value_list = []
-        for key in value_names:
-            if key in value_dict:
-                value_list.append(value_dict[key])
-            else:
-                value_list.append(None)
-        data_list_out.append(PivotedData._make(k+value_list))
+    for k, k_data in groupby(data, key=keyfunc):
+        if None in k:
+            continue
+        line_data = [None]*len(value_names)
+        for d in k_data:
+            if value_name_getter(d) in value_names and d[value_col] is not None:
+                line_data[value_names.index(value_name_getter(d))] = d[value_col]
+        data_list_out.append(k + line_data)
 
-    return data_list_out
+    return data_list_out, headers
 
 
 def stack_list_of_tuples(data, headers, key_cols, value_cols):
@@ -328,12 +324,12 @@ def get_unstacked_relationships(db):
     data = sorted(data, key=keyfunc)
     for k, v in groupby(data, key=keyfunc):
         values = list(v)
-        rel = unstack_list_of_tuples(values, ["relationship_class", "relationship", "parameter", "value"], [0, 1], 2, 3)
+        rel, par_names = unstack_list_of_tuples(values, ["relationship_class", "relationship", "parameter", "value"], [0, 1], 2, 3)
         if len(rel) > 0:
-            parameters = list(rel[0]._fields[2:])
+            parameters = par_names[2:]
         else:
             parameters = list(set([p[2] for p in values]))
-        rel = [r.relationship.split(',') + list(r[2:]) for r in rel]
+        rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
     return stacked_rels, parsed_json
@@ -372,11 +368,11 @@ def get_unstacked_objects(db):
     data = sorted(data, key=keyfunc)
     for k, v in groupby(data, key=keyfunc):
         values = list(v)
-        obj = unstack_list_of_tuples(values, ["object_class", "object", "parameter", "value"], [0, 1], 2, 3)
+        obj, par_names = unstack_list_of_tuples(values, ["object_class", "object", "parameter", "value"], [0, 1], 2, 3)
         if len(obj) > 0:
-            parameters = list(obj[0]._fields[2:])
+            parameters = par_names[2:]
         else:
-            parameters = list(set([p[2] for p in values]))
+            parameters = list(set([p[2] for p in values if p[2] is not None]))
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
@@ -952,20 +948,28 @@ def export_object_parameters_spine_db(db, data):
                   if p[0] in obj_class_name_2_id.keys()]
 
     # existing parameters in database
-    db_parameters = db.object_parameter_list().\
-        filter(db.Parameter.name.in_([p[2] for p in parameters])).all()
-    db_parameters = [[d.object_class_name, d.parameter_name]
-                     for d in db_parameters]
-
-    # remove already existing parameters
-    parameters = [{"name": p[2], "object_class_id": p[0]} for p in parameters if [p[1], p[2]] not in db_parameters]
+    db_parameters = db.object_parameter_list().all()
+    db_parameter_names = set(d.parameter_name for d in db_parameters)
+    db_parameters = set((d.object_class_name, d.parameter_name)
+                        for d in db_parameters)
+    new_parameters = []
+    for p in parameters:
+        if p[2] in db_parameter_names:
+            # name already exists
+            if not (p[1], p[2]) in db_parameters:
+                # parameter name has a different class than the one in db.
+                error_log.append(["object_parameter", p[2],
+                                  "parameter {} allready exists in database with a different parent class".format(p[2])])
+        else:
+            # new parameter with unqiue name
+            new_parameters.append({"name": p[2], "object_class_id": p[0]})
 
     import_log = []
     try:
-        db.add_parameters(*parameters)
-        import_log = import_log + [["object_parameter", p["name"]] for p in parameters]
+        db.add_parameters(*new_parameters)
+        import_log = import_log + [["object_parameter", p["name"]] for p in new_parameters]
     except SpineDBAPIError as e:
-        error_log = error_log + [["object_parameter", p["name"], e.msg] for p in parameters]
+        error_log = error_log + [["object_parameter", p["name"], e.msg] for p in new_parameters]
 
     return import_log, error_log
 
@@ -1320,7 +1324,7 @@ def export_relationships_parameters_to_spine_db(db, data):
     rels = [list(zip([o.class_name]*len(o.parameters), o.parameters)) for o in data]
     rels = [item for sublist in rels for item in sublist]
 
-    rel_class = set([r[0] for r in rels])
+    rel_class = set(r[0] for r in rels)
 
     # existing relationship classes
     db_rel_classes = db.relationship_class_list().\
@@ -1337,7 +1341,9 @@ def export_relationships_parameters_to_spine_db(db, data):
                                             [v.object_class_id for v in val])
 
     db_parameters = db.relationship_parameter_list().all()
-    db_parameters = [[d.relationship_class_name, d.parameter_name] for d in db_parameters]
+    db_parameter_names = set(d.parameter_name for d in db_parameters)
+    db_parameters = set((d.relationship_class_name, d.parameter_name)
+                        for d in db_parameters)
 
     error_log = []
     valid_relationships_parameters = []
@@ -1348,9 +1354,13 @@ def export_relationships_parameters_to_spine_db(db, data):
                               "relationship class does not exist in db"])
             continue
         # if a parameter with same class exists don't add
-        if list(r) in db_parameters:
-            continue
-        valid_relationships_parameters.append({'relationship_class_id': db_rel_class_dict[r[0]].id, 'name': r[1]})
+        if r[1] in db_parameter_names:
+            # name already exists
+            if not (r[0], r[1]) in db_parameters:
+                 error_log.append(["relationship_parameter", r[1],
+                                  "parameter {} allready exists in database with a different parent class".format(r[1])])
+        else:
+            valid_relationships_parameters.append({'relationship_class_id': db_rel_class_dict[r[0]].id, 'name': r[1]})
 
     # insert relationship classes
     import_log = []

@@ -20,12 +20,13 @@ import sys
 import os
 import getpass
 import logging
+import fnmatch
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl
-from PySide2.QtWidgets import QInputDialog, QMessageBox, QFileDialog
+from PySide2.QtCore import Slot, QUrl, Qt
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from project_item import ProjectItem
-from widgets.tree_view_widget import TreeViewForm
-from widgets.graph_view_widget import GraphViewForm
+from widgets.data_store_widgets import TreeViewForm, GraphViewForm
+from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreImage
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
@@ -63,6 +64,7 @@ class DataStore(ProjectItem):
         self.selected_password = ""
         self.tree_view_form = None
         self.graph_view_form = None
+        self.tabular_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -72,19 +74,21 @@ class DataStore(ProjectItem):
                                          " Check permissions.".format(self.data_dir))
         self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
-        self.load_reference(reference)
+        self.load_reference_into_selections()
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.pushButton_ds_open_directory.clicked] = self.open_directory
+        s[self._toolbox.ui.toolButton_ds_open_dir.clicked] = self.open_directory
         s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.call_open_tree_view
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
+        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.call_open_tabular_view
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
-        s[self._toolbox.ui.toolButton_spine.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_new_spine.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_copy_db_url.clicked] = self.copy_db_url
         s[self._toolbox.ui.lineEdit_SQLite_file.file_dropped] = self.set_path_to_sqlite_file
         return s
 
@@ -136,8 +140,12 @@ class DataStore(ProjectItem):
         self.selected_username = self._toolbox.ui.lineEdit_username.text()
         self.selected_password = self._toolbox.ui.lineEdit_password.text()
 
+    def set_reference(self, reference):
+        """Set reference attribute. Used by Tool when passing on results."""
+        self._reference = reference
+
     def reference(self):
-        """Stored reference. Used (at least) by the view item to populate its list of input references."""
+        """Reference attribute."""
         return self._reference
 
     def project(self):
@@ -175,21 +183,21 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
         self._toolbox.ui.lineEdit_password.clear()
 
-    def load_reference(self, reference):
-        """Load reference into shared widget selections.
+    def load_reference_into_selections(self):
+        """Load reference attribute into shared widget selections.
         Used when loading the project, and creating a new Spine db."""
         # TODO: now it only handles SQLite references, but should handle all types of reference
-        if not reference:  # This probably does not happen anymore
+        if not self._reference:  # This probably does not happen anymore
             return
         # Keep compatibility with previous versions where reference was a list
-        if isinstance(reference, list):
-            reference = reference[0]
-        db_url = reference['url']
+        if isinstance(self._reference, list):
+            self._reference = self._reference[0]
+        db_url = self._reference['url']
         if not db_url or db_url == "":
             # No point in checking further
             return
-        database = reference['database']
-        username = reference['username']
+        database = self._reference['database']
+        username = self._reference['username']
         try:
             dialect_dbapi = db_url.split('://')[0]
         except IndexError:
@@ -231,17 +239,17 @@ class DataStore(ProjectItem):
 
     def current_reference(self):
         """Returns the current state of the reference according to user's selections.
-        Used when saving the project."""
-        # Save selections if item is currently selected.
+        Used when saving the project and by the View item."""
+        # If the item is currently selected, we save selections so we can use `dump_selections_into_reference`
         current = self._toolbox.ui.treeView_project.currentIndex()
         current_item = self._toolbox.project_item_model.project_item(current)
         if current_item == self:
             self.save_selections()
-        self.save_reference()
+        self.dump_selections_into_reference()
         return self._reference
 
-    def save_reference(self):
-        """Update reference from selections."""
+    def dump_selections_into_reference(self):
+        """Dump selections into reference attribute."""
         if not self.selected_dialect:
             self._reference = None
             return
@@ -277,8 +285,8 @@ class DataStore(ProjectItem):
             port = self.selected_port
             username = self.selected_username
             password = self.selected_password
-            dbapi = SQL_DIALECT_API[dialect]
-            url = "+".join([dialect, dbapi]) + "://"
+            dbapi = SQL_DIALECT_API[self.selected_dialect]
+            url = "+".join([self.selected_dialect, dbapi]) + "://"
             if username:
                 url += username
             if password:
@@ -287,7 +295,7 @@ class DataStore(ProjectItem):
             if port:
                 url += ":" + port
             url += "/" + database
-        # Save reference
+        # Set reference attribute
         self._reference = {
             'database': database,
             'username': username,
@@ -444,7 +452,7 @@ class DataStore(ProjectItem):
     def make_reference(self):
         """Return a reference based on the current state of the ui,
         or None if something is bad/missing.
-        Used when opening the data store treeview form."""
+        Used when opening the data store tree view or graph view forms."""
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return None
@@ -537,7 +545,13 @@ class DataStore(ProjectItem):
         if self.tree_view_form:
             # If the url hasn't changed, just raise the current form
             if self.tree_view_form.db_map.db_url == reference['url']:
-                self.tree_view_form.raise_()
+                if self.tree_view_form.windowState() & Qt.WindowMinimized:
+                    # Remove minimized status and restore window with the previous state (maximized/normal state)
+                    self.tree_view_form.setWindowState(self.tree_view_form.windowState()
+                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.tree_view_form.activateWindow()
+                else:
+                    self.tree_view_form.raise_()
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
@@ -549,7 +563,11 @@ class DataStore(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.tree_view_form = TreeViewForm(self, db_map, database)
+        try:
+            self.tree_view_form = TreeViewForm(self, db_map, database)
+        except:
+            db_map.close()
+            raise
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -572,7 +590,13 @@ class DataStore(ProjectItem):
         if self.graph_view_form:
             # If the url hasn't changed, just raise the current form
             if self.graph_view_form.db_map.db_url == reference['url']:
-                self.graph_view_form.raise_()
+                if self.graph_view_form.windowState() & Qt.WindowMinimized:
+                    # Remove minimized status and restore window with the previous state (maximized/normal state)
+                    self.graph_view_form.setWindowState(self.graph_view_form.windowState()
+                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.graph_view_form.activateWindow()
+                else:
+                    self.graph_view_form.raise_()
                 return
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
@@ -584,13 +608,61 @@ class DataStore(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        try:
+            self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        except:
+            db_map.close()
+            raise
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
     @Slot(name="graph_view_form_destroyed")
     def graph_view_form_destroyed(self):
         self.graph_view_form = None
+
+    @Slot(bool, name="call_open_tabular_view")
+    def call_open_tabular_view(self, checked=False):
+        """Call method to open the tabular view."""
+        # NOTE: This is just so we can use @busy_effect with the open_tabular_view method
+        self.open_tabular_view()
+
+    @busy_effect
+    def open_tabular_view(self):
+        """Open reference in Data Store tabular view."""
+        if self.tabular_view_form:
+            if self.tabular_view_form.windowState() & Qt.WindowMinimized:
+                # Remove minimized status and restore window with the previous state (maximized/normal state)
+                self.tabular_view_form.setWindowState(self.tabular_view_form.windowState()
+                                                    & ~Qt.WindowMinimized | Qt.WindowActive)
+                self.tabular_view_form.activateWindow()
+            else:
+                self.tabular_view_form.raise_()
+            return
+        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
+            self._toolbox.msg_warning.emit("Please select dialect first")
+            return
+        reference = self.make_reference()
+        if not reference:
+            return
+        db_url = reference['url']
+        database = reference['database']
+        username = reference['username']
+        try:
+            db_map = DiffDatabaseMapping(db_url, username)
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return
+        try:
+            self.tabular_view_form = TabularViewForm(self, db_map, database)
+        except:
+            db_map.close()
+            raise
+        self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
+        self.tabular_view_form.show()
+
+    @Slot(name="tabular_view_form_destroyed")
+    def tabular_view_form_destroyed(self):
+        self.tabular_view_form = None
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
@@ -600,6 +672,12 @@ class DataStore(ProjectItem):
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+
+    def data_files(self):
+        """Return a list of files that are in this items data directory."""
+        if not os.path.isdir(self.data_dir):
+            return None
+        return os.listdir(self.data_dir)
 
     def find_file(self, fname, visited_items):
         """Search for filename in data and return the path if found."""
@@ -633,36 +711,94 @@ class DataStore(ProjectItem):
                     return path
         return None
 
+    def find_files(self, pattern, visited_items):
+        """Search for files matching the given pattern (with wildcards) in data directory
+        and return a list of matching paths.
+
+        Args:
+            pattern (str): File name (no path). May contain wildcards.
+            visited_items (list): List of project item names that have been visited
+
+        Returns:
+            List of matching paths. List is empty if no matches found.
+        """
+        paths = list()
+        if self in visited_items:
+            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
+                                           "connections and try again. Detected at {0}.".format(self.name))
+            return paths
+        # Check the current reference. If it is an sqlite file, this is a possible match
+        # If dialect is not sqlite, the reference is ignored
+        reference = self.current_reference()
+        db_url = reference['url']
+        if db_url.lower().startswith('sqlite'):
+            file_path = os.path.abspath(db_url.split(':///')[1])
+            if os.path.exists(file_path):
+                if fnmatch.fnmatch(file_path, pattern):  # fname == os.path.basename(file_path):
+                    # self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
+                    paths.append(file_path)
+        else:  # Not an SQLite reference
+            pass
+        # Search files that match the pattern from this Data Store's data directory
+        for data_file in self.data_files():  # data_file is a filename (no path)
+            if fnmatch.fnmatch(data_file, pattern):
+                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Store <b>{2}</b>"
+                #                        .format(data_file, pattern, self.name))
+                path = os.path.join(self.data_dir, data_file)
+                if path not in paths:  # Skip if the sqlite file was already added from the reference
+                    paths.append(path)
+        visited_items.append(self)
+        # Find items that are connected to this Data Connection
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            found_index = self._toolbox.project_item_model.find_item(input_item)
+            if not found_index:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item = self._toolbox.project_item_model.project_item(found_index)
+            if item.item_type in ["Data Store", "Data Connection"]:
+                matching_paths = item.find_files(pattern, visited_items)
+                if matching_paths is not None:
+                    paths = paths + matching_paths
+                    return paths
+        return paths
+
+    @Slot(bool, name="copy_db_url")
+    def copy_db_url(self, checked=False):
+        """Copy db url to clipboard."""
+        reference = self.make_reference()
+        if not reference:
+            self._toolbox.msg_error.emit("Unable to copy database url to clipboard.")
+            return
+        db_url = reference['url']
+        QApplication.clipboard().setText(db_url)
+        self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(db_url))
+
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
-        """Create new (empty) Spine SQLite database file in data directory."""
-        answer = QInputDialog.getText(self._toolbox, "Create fresh Spine database", "Database name:")
-        database = answer[0]
-        if not database:
+        """Create new (empty) Spine SQLite database file."""
+        answer = QFileDialog.getSaveFileName(self._toolbox,
+                                             "Create new Spine SQLite database",
+                                             self.data_dir,
+                                             "SQlite database (*.sqlite *.db)")
+        file_path = answer[0]
+        if not file_path:
             return
-        filename = os.path.join(self.data_dir, database + ".sqlite")
-        if os.path.isfile(filename):
-            msg = "File <b>{}</b> already in <b>{}</b> project directory.<br/><br/>Overwrite?"\
-                .format(database + ".sqlite", os.path.basename(self.data_dir))
-            answer = QMessageBox.question(self._toolbox, 'Overwrite file?', msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                return
+        extension = os.path.splitext(file_path)[1]
+        if not extension:
+            file_path += ".sqlite"
+        # We need to remove the file first so `create_new_spine_database` doesn't complain
         try:
-            os.remove(filename)
+            os.remove(file_path)
         except OSError:
             pass
-        url = "sqlite:///" + filename
+        url = "sqlite:///" + file_path
         create_new_spine_database(url)
+        database = os.path.basename(file_path)
         username = getpass.getuser()
-        self._reference = {
-            'database': database,
-            'username': username,
-            'url': url
-        }
         # Update UI
         self._toolbox.ui.comboBox_dsn.clear()
         self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-        self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(filename))
+        self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
         self._toolbox.ui.lineEdit_host.clear()
         self._toolbox.ui.lineEdit_port.clear()
         self._toolbox.ui.lineEdit_database.setText(database)

@@ -16,15 +16,16 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-from PySide2.QtWidgets import QTableView, QApplication, QAction
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QModelIndex
+from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
-from widgets.custom_menus import QOkMenu
-from models import JSONModel
+from widgets.custom_delegates import CheckBoxDelegate
+from widgets.filter_menu_widget import AutoFilterWidget
+from models import TableModel
 
 
 class CopyPasteTableView(QTableView):
-    """Custom QTableView class with copy-paste functionality.
+    """Custom QTableView class with copy and paste methods.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -45,7 +46,7 @@ class CopyPasteTableView(QTableView):
             if not self.copy():
                 super().keyPressEvent(event)
         elif event.matches(QKeySequence.Paste):
-            if not self.paste(self.clipboard_text):
+            if not self.paste():
                 super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
@@ -75,75 +76,100 @@ class CopyPasteTableView(QTableView):
         QApplication.clipboard().setText(content)
         return True
 
-    def paste(self, text):
+    def canPaste(self):
+        return True
+
+    def paste(self):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
         if len(selection.indexes()) > 1:
-            self.paste_on_selection(text)
+            self.paste_on_selection()
         else:
-            self.paste_normal(text)
+            self.paste_normal()
 
-    def paste_on_selection(self, text):
+    def paste_on_selection(self):
         """Paste clipboard data on selection, but not beyond.
         If data is smaller than selection, repeat data to fit selection."""
+        text = self.clipboard_text
         if not text:
+            return False
+        data = [line.split('\t') for line in text.split('\n')]
+        if not data:
             return False
         selection = self.selectionModel().selection()
         if selection.isEmpty():
             return False
         first = selection.first()
-        data = [line.split('\t') for line in text.split('\n')]
-        v_header = self.verticalHeader()
-        h_header = self.horizontalHeader()
         indexes = list()
         values = list()
-        for i in range(first.top(), first.bottom() + 1):
-            if v_header.isSectionHidden(i):
-                continue
-            for j in range(first.left(), first.right() + 1):
-                if h_header.isSectionHidden(j):
-                    continue
-                index = self.model().index(i, j)
+        is_row_hidden = self.verticalHeader().isSectionHidden
+        rows = [x for x in range(first.top(), first.bottom() + 1) if not is_row_hidden(x)]
+        is_column_hidden = self.horizontalHeader().isSectionHidden
+        columns = [x for x in range(first.left(), first.right() + 1) if not is_column_hidden(x)]
+        model_index = self.model().index
+        for row in rows:
+            for column in columns:
+                index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
-                    ii = (i - first.top()) % len(data)
-                    jj = (j - first.left()) % len(data[ii])
-                    value = data[ii][jj]
+                    i = (row - rows[0]) % len(data)
+                    j = (column - columns[0]) % len(data[i])
+                    value = data[i][j]
                     indexes.append(index)
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
 
-    def paste_normal(self, text):
+    def paste_normal(self):
         """Paste clipboard data, overwritting cells if needed"""
+        text = self.clipboard_text.strip()
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]
-        top_left_index = self.currentIndex()
-        if not top_left_index.isValid():
+        if not data:
             return False
-        v_header = self.verticalHeader()
-        h_header = self.horizontalHeader()
-        row = top_left_index.row()
+        current = self.currentIndex()
+        if not current.isValid():
+            return False
         indexes = list()
         values = list()
-        for line in data:
-            if not line:
-                continue
-            if v_header.isSectionHidden(row):
+        row = current.row()
+        rows = []
+        rows_append = rows.append
+        is_row_hidden = self.verticalHeader().isSectionHidden
+        for x in range(len(data)):
+            while is_row_hidden(row):
                 row += 1
-            column = top_left_index.column()
-            for value in line:
-                if not value:
-                    column += 1
-                    continue
-                if h_header.isSectionHidden(column):
-                    column += 1
-                index = self.model().index(row, column)  # NOTE: This should make the model grow if needed
+            rows_append(row)
+            row += 1
+        column = current.column()
+        columns = []
+        columns_append = columns.append
+        is_column_hidden = self.horizontalHeader().isSectionHidden
+        for x in range(len(data[0])):
+            while is_column_hidden(column):
+                column += 1
+            columns_append(column)
+            column += 1
+        # Insert extra rows if needed:
+        last_row = max(rows)
+        row_count = self.model().rowCount()
+        if last_row >= row_count:
+            self.model().insertRows(row_count, last_row - row_count + 1)
+        model_index = self.model().index
+        for i, row in enumerate(rows):
+            try:
+                line = data[i]
+            except IndexError:
+                break
+            for j, column in enumerate(columns):
+                try:
+                    value = line[j]
+                except IndexError:
+                    break
+                index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
                     values.append(value)
-                column += 1
-            row += 1
         self.model().batch_set_data(indexes, values)
         return True
 
@@ -164,136 +190,135 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.action_all = None
         self.filter_text = None
         self.filter_column = None
+        self.auto_filter_widget = AutoFilterWidget(self)
+        self.auto_filter_widget.button.clicked.connect(self.update_auto_filter)
+        self.verticalHeader().sectionResized.connect(self._handle_vertical_section_resized)
 
     def setModel(self, model):
         """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
         Otherwise the column is selected when pressing on the header."""
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
-        self.horizontalHeader().sectionPressed.connect(self.show_filter_menu)
+        self.horizontalHeader().sectionClicked.connect(self.toggle_auto_filter)
 
     @Slot(int, name="show_filter_menu")
-    def show_filter_menu(self, logical_index):
+    def toggle_auto_filter(self, logical_index):
         """Called when user clicks on a horizontal section header.
-        Show the menu to select a filter."""
+        Show/hide the auto filter widget."""
         self.filter_column = logical_index
-        model = self.model()
-        filter_menu = QOkMenu(self)
-        self.filter_action_list = list()
-        # Add 'All' action
-        self.action_all = QAction("All", self)
-        self.action_all.setCheckable(True)
-        self.action_all.triggered.connect(self.action_all_triggered)
-        filter_menu.addAction(self.action_all)
-        filter_menu.addSeparator()
-        values, filtered_values = model.autofilter_values(self.filter_column)
-        # Add filter actions
-        self.filter_action_list = list()
-        for i, value in enumerate(sorted(list(values))):
-            action = QAction(str(value), self)
-            action.setCheckable(True)
-            action.triggered.connect(self.update_action_all_checked)
-            filter_menu.addAction(action)
-            self.filter_action_list.append(action)
-            if value in filtered_values:
-                action.setChecked(True)
-            action.trigger()  # Note: this toggles the checked property
-        # 'Ok' action
-        action_ok = QAction("Ok", self)
-        action_ok.triggered.connect(self.update_and_apply_filter)
-        filter_menu.addSeparator()
-        filter_menu.addAction(action_ok)
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
-        filter_menu.exec_(QPoint(pos_x, pos_y))
+        values = self.model().auto_filter_values(logical_index)
+        self.auto_filter_widget.set_values(values)
+        width = self.horizontalHeader().sectionSize(logical_index)
+        self.auto_filter_widget.move(pos_x, pos_y)
+        self.auto_filter_widget.show()
 
-    @Slot("bool", name="update_action_all_checked")
-    def update_action_all_checked(self, checked=False):
-        """Called when one filter action is triggered.
-        In case they are all checked, check to 'All' action too.
-        """
-        self.action_all.setChecked(all([a.isChecked() for a in self.filter_action_list]))
+    def _handle_vertical_section_resized(self, logical_index, old_size, new_size):
+        """Pass vertical section size on to the filter widget."""
+        if logical_index == 0:
+            self.auto_filter_widget.set_section_height(new_size)
 
-    @Slot("bool", name="action_all_triggered")
-    def action_all_triggered(self, checked=False):
-        """Check or uncheck all filter actions."""
-        checked = self.action_all.isChecked()
-        for action in self.filter_action_list:
-            action.setChecked(checked)
-
-    @Slot(name="update_and_apply_filter")
-    def update_and_apply_filter(self):
-        """Called when user clicks Ok in a filter. Emit `filter_changed` signal."""
-        filter_text_list = list()
-        for action in self.filter_action_list:
-            if not action.isChecked():
-                filter_text_list.append(action.text())
-        self.filter_changed.emit(self.model(), self.filter_column, filter_text_list)
-
-
-class JSONEditor(CopyPasteTableView):
-    """A custom CopyPasteTableView to edit JSON data.
-
-    Attributes:
-        parent (QWidget): the widget that wants to edit the data
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
-        self.setMinimumSize(200, 200)
-        self.json_model = JSONModel(self)
-        self.setModel(self.json_model)
-        self.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.horizontalHeader().setStretchLastSection(True)
-
-    def set_data(self, data, flags=None, has_empty_row=True):
-        self.json_model.reset_model(data, flags=flags, has_empty_row=has_empty_row)
-
-    def data(self):
-        return self.json_model.json()
+    @Slot("bool", name="update_auto_filter")
+    def update_auto_filter(self, checked=False):
+        """Called when the user clicks the Ok button in the auto filter widget.
+        Set 'filtered out values' in auto filter model."""
+        data = self.auto_filter_widget.model._main_data
+        values = dict()
+        for checked, value, object_class_id_set in data[1:]:
+            if checked:
+                continue
+            for object_class_id in object_class_id_set:
+                values.setdefault(object_class_id, set()).add(value)
+        self.model().set_filtered_out_values(self.filter_column, values)
 
 
-class JSONPopupTableView(AutoFilterCopyPasteTableView):
-    """Custom QTableView class with a JSON popup.
+class FrozenTableView(QTableView):
+    def __init__(self, parent=None):
+        super(FrozenTableView, self).__init__(parent)
+        self.model = TableModel()
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.verticalHeader().setVisible(False)
+        self.setSortingEnabled(True)
+        self.setModel(self.model)
+        self.is_updating = False
+
+    def clear(self):
+        self.model.set_data([], [])
+
+    def get_selected_row(self):
+        if self.model.columnCount() == 0:
+            return ()
+        if self.model.rowCount() == 0:
+            return tuple(None for _ in range(self.model.columnCount()))
+        index = self.selectedIndexes()
+        if not index:
+            return tuple(None for _ in range(self.model.columnCount()))
+        else:
+            index = self.selectedIndexes()[0]
+            return self.model.row(index)
+
+    def set_data(self, headers, values):
+        self.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
+        self.model.set_data(values, headers)
+        self.selectRow(0)
+        self.selectionModel().blockSignals(False)
+
+
+class SimpleCopyPasteTableView(QTableView):
+    """Custom QTableView class that copies and paste data in response to key press events.
 
     Attributes:
         parent (QWidget): The parent of this view
     """
-    def __init__(self, parent):
+
+    def __init__(self, parent = None):
         """Initialize the class."""
-        super().__init__(parent=parent)
-        self._json_popup = JSONEditor(self)
-        self._json_popup.json_model.set_horizontal_header_labels(["json (preview)"])
-        self._json_popup.hide()
+        super().__init__(parent)
+        # self.editing = False
+        self.clipboard = QApplication.clipboard()
+        self.clipboard_text = self.clipboard.text()
+        self.clipboard.dataChanged.connect(self.clipboard_data_changed)
 
-    def edit(self, index, trigger, event):
-        self._json_popup.hide()
-        return super().edit(index, trigger, event)
+    @Slot(name="clipboard_data_changed")
+    def clipboard_data_changed(self):
+        self.clipboard_text = self.clipboard.text()
 
-    def leaveEvent(self, event):
-        self._json_popup.hide()
-        super().leaveEvent(event)
-
-    def mouseMoveEvent(self, event):
-        super().mouseMoveEvent(event)
-        pos = event.pos()
-        index = self.indexAt(pos)
-        header = self.model().horizontal_header_labels()
-        if header[index.column()] == 'json':
-            index_data = index.data(Qt.EditRole)
-            if index_data:
-                x = self.columnViewportPosition(index.column() + 1) + self.verticalHeader().width()
-                y = self.rowViewportPosition(index.row()) + self.horizontalHeader().height()
-                if y + self._json_popup.height() > self.height():
-                    y -= self._json_popup.height() - self._json_popup.default_row_height
-                self._json_popup.move(x, y)
-                self._json_popup.set_data(index_data, flags=~Qt.ItemIsEditable, has_empty_row=False)
-                self._json_popup.show()
-                event.accept()
-            else:
-                self._json_popup.hide()
-                event.ignore()
+    def keyPressEvent(self, event):
+        """Copy and paste to and from clipboard in Excel-like format."""
+        if event.matches(QKeySequence.Copy):
+            selection = self.selectionModel().selection()
+            if not selection:
+                super().keyPressEvent(event)
+                return
+            # Take only the first selection in case of multiple selection.
+            first = selection.first()
+            content = ""
+            v_header = self.verticalHeader()
+            h_header = self.horizontalHeader()
+            for i in range(first.top(), first.bottom()+1):
+                if v_header.isSectionHidden(i):
+                    continue
+                row = list()
+                for j in range(first.left(), first.right()+1):
+                    if h_header.isSectionHidden(j):
+                        continue
+                    row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))
+                content += "\t".join(row)
+                content += "\n"
+            self.clipboard.setText(content)
+        elif event.matches(QKeySequence.Paste):
+            if not self.clipboard_text:
+                super().keyPressEvent(event)
+                return
+            top_left_index = self.currentIndex()
+            if not top_left_index.isValid():
+                super().keyPressEvent(event)
+                return
+            data = [line.split('\t') for line in self.clipboard_text.split('\n')[0:-1]]
+            self.selectionModel().select(top_left_index, QItemSelectionModel.Select)
+            self.model().paste_data(top_left_index, data)
         else:
-            self._json_popup.hide()
-            event.ignore()
+            super().keyPressEvent(event)

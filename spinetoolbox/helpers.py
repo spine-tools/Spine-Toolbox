@@ -290,23 +290,33 @@ def rename_dir(widget, old_dir, new_dir):
         return False
     return True
 
+
+def object_pixmap(object_class_name):
+    """An object pixmap defined for `object_class_name` if any, or a generic one if none."""
+    pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
+    if pixmap.isNull():
+        pixmap = QPixmap(":/icons/object_icon.png")
+    return pixmap
+
+
 def relationship_pixmap(object_class_name_list):
     """A pixmap rendered by painting several object pixmaps together."""
     extent = 64
-    x_step = 56
-    y_offset = 50
+    x_step = extent - 8
+    y_offset = extent - 16 + 2
     pixmap_list = list()
     for object_class_name in object_class_name_list:
-        pixmap = QPixmap(":/object_class_icons/" + object_class_name + ".png")
-        if pixmap.isNull():
-            pixmap = QPixmap(":/icons/object_icon.png")
+        pixmap = object_pixmap(object_class_name)
         pixmap_list.append(pixmap.scaled(extent, extent))
-    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)]
+    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)] # Two pixmaps per row...
     combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
     combo_height = extent + y_offset
     combo_extent = max(combo_width, combo_height)
     x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
     y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
+    # Add extra vertical padding in case the list contains only one element, so this one's centered
+    if len(object_class_name_list) == 1:
+        y_padding += y_offset / 2
     relationship_pixmap = QPixmap(combo_extent, combo_extent)
     relationship_pixmap.fill(Qt.transparent)
     painter = QPainter(relationship_pixmap)
@@ -324,3 +334,25 @@ def relationship_pixmap(object_class_name_list):
         x_offset += x_step
     painter.end()
     return relationship_pixmap
+
+def fix_name_ambiguity(name_list, offset=0):
+    """Modify repeated entries in name list by appending an increasing integer."""
+    ref_name_list = name_list.copy()
+    ocurrences = {}
+    for i, name in enumerate(name_list):
+        n_ocurrences = ref_name_list.count(name)
+        if n_ocurrences == 1:
+            continue
+        ocurrence = ocurrences.setdefault(name, 1)
+        name_list[i] = name + str(offset + ocurrence)
+        ocurrences[name] = ocurrence + 1
+
+
+def tuple_itemgetter(itemgetter_func, num_indexes):
+    """Change output of itemgetter to always be a tuple even for one index"""
+    if num_indexes == 1:
+        def g(item):
+            return (itemgetter_func(item),)
+        return g
+    else:
+        return itemgetter_func

@@ -108,14 +108,6 @@ ui.mainwindow module
     :undoc-members:
     :show-inheritance:
 
-ui.network\_map\_form module
-----------------------------
-
-.. automodule:: ui.network_map_form
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ui.project\_form module
 -----------------------
 
@@ -136,6 +128,14 @@ ui.spine\_datapackage\_form module
 ----------------------------------
 
 .. automodule:: ui.spine_datapackage_form
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ui.tabular\_view\_form module
+-----------------------------
+
+.. automodule:: ui.tabular_view_form
     :members:
     :undoc-members:
     :show-inheritance:

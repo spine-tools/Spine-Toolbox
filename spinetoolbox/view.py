@@ -18,14 +18,13 @@ Module for view class.
 
 import logging
 import os
-from PySide2.QtCore import Qt, Slot, Signal
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
+from PySide2.QtCore import Qt, Slot, Signal, QUrl
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from project_item import ProjectItem
 from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError
-from widgets.graph_view_widget import GraphViewForm
+from widgets.data_store_widgets import GraphViewForm
 from graphics_items import ViewImage
 from helpers import busy_effect, create_dir
-from config import HEADER_POINTSIZE
 
 
 class View(ProjectItem):
@@ -66,8 +65,9 @@ class View(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.treeView_view.doubleClicked] = self.open_graph_view
-        s[self._toolbox.ui.pushButton_open_network_map.clicked] = self.open_graph_view
+        s[self._toolbox.ui.toolButton_view_open_dir.clicked] = self.open_directory
+        s[self._toolbox.ui.treeView_view.doubleClicked] = self.open_graph_view_dbl_clicked
+        s[self._toolbox.ui.pushButton_open_network_map.clicked] = self.open_graph_view_btn_clicked
         return s
 
     def activate(self):
@@ -122,6 +122,7 @@ class View(ProjectItem):
             item_list.append(item)
         return item_list
 
+    @Slot(name="refresh")
     def refresh(self):
         """Update the list of references that this item is viewing."""
         input_items = self.find_input_items()
@@ -134,15 +135,25 @@ class View(ProjectItem):
         # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
 
-    @busy_effect
-    @Slot("QModelIndex", name="open_graph_view")
-    def open_graph_view(self, index=None):
-        """Open reference in Network Map form."""
+    @Slot("QModelIndex", name="open_graph_view_dbl_clicked")
+    def open_graph_view_dbl_clicked(self, index):
+        """Slot for handling the signal emitted by double-clicking a reference.
+
+        Args:
+            index (QModelIndex): Double-clicked index
+        """
         if not index:
-            index = self._toolbox.ui.treeView_view.currentIndex()
-        if len(self._references) == 0:
-            self._toolbox.msg_warning.emit("No data to plot. Try connecting a Data Store here.")
+            logging.debug("dbl click with index=None")
             return
+        if not index.isValid():
+            logging.debug("dbl click with index is not valid")
+            return
+        self.open_graph_view(index)
+
+    @Slot(bool, name="open_graph_view_btn_clicked")
+    def open_graph_view_btn_clicked(self, checked=False):
+        """Slot for handling the signal emitted by clicking on 'Graph view' button."""
+        index = self._toolbox.ui.treeView_view.currentIndex()
         if not index.isValid():
             # If only one reference available select it automatically
             if len(self._references) == 1:
@@ -151,6 +162,15 @@ class View(ProjectItem):
             else:
                 self._toolbox.msg_warning.emit("Please select a reference to view")
                 return
+        self.open_graph_view(index)
+
+    @busy_effect
+    def open_graph_view(self, index):
+        """Open reference in Graph view form.
+
+        Args:
+            index (QModelIndex): Index of the selected reference in View properties
+        """
         reference = self._references[index.row()]
         db_url = reference['url']
         try:
@@ -166,25 +186,20 @@ class View(ProjectItem):
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        graph_view_form = GraphViewForm(self, db_map, database, read_only=True)
+        try:
+            graph_view_form = GraphViewForm(self, db_map, database, read_only=True)
+        except:
+            db_map.close()
+            raise
         graph_view_form.show()
         graph_view_form.destroyed.connect(lambda : self.graph_view_form_refs.pop(db_url))
         self.graph_view_form_refs[db_url] = graph_view_form
-
-    def add_reference_header(self):
-        """Add header to reference model."""
-        h = QStandardItem("References")
-        # Decrease font size
-        font = h.font()
-        font.setPointSize(HEADER_POINTSIZE)
-        h.setFont(font)
-        self.reference_model.setHorizontalHeaderItem(0, h)
 
     def populate_reference_list(self, items):
         """Add given list of items to the reference model. If None or
         an empty list given, the model is cleared."""
         self.reference_model.clear()
-        self.add_reference_header()
+        self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item['database'])
@@ -196,3 +211,12 @@ class View(ProjectItem):
     def update_name_label(self):
         """Update View tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_view_name.setText(self.name)
+
+    @Slot(bool, name="open_directory")
+    def open_directory(self, checked=False):
+        """Open file explorer in View data directory."""
+        url = "file:///" + self.data_dir
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
