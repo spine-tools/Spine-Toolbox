@@ -18,8 +18,8 @@ Unit tests for PivotModel class.
 
 import unittest
 from unittest import mock
-
 from tabularview_models import PivotModel
+
 
 class TestPivotModel(unittest.TestCase):
 
@@ -926,7 +926,6 @@ class TestPivotModel(unittest.TestCase):
         model.set_new_data(data, self.index_names, self.index_types, index_real_names = ['test','test','test3'], used_index_values={('test',): set(['a','b','c','d'])})
         model.delete_index_values({'test': set(['a'])})
         self.assertEqual(model._used_index_values[('test',)], set(['b','c','d']))
-        
 
 
 if __name__ == '__main__':

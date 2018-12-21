@@ -30,11 +30,13 @@ from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNa
 
 class TestTreeViewForm(unittest.TestCase):
 
-    app = QApplication()  # must create a QApplication before creating QWidgets
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        try:
+            cls.app = QApplication().processEvents()
+        except RuntimeError:
+            pass
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
@@ -42,7 +44,7 @@ class TestTreeViewForm(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes.
         """
-        # # Set logging level to Error to silence "Logging level: All messages" print
+        # Set logging level to Error to silence "Logging level: All messages" print
         with mock.patch("data_store.DataStore") as mock_data_store:
             logging.disable(level=logging.ERROR)  # Disable logging
             try:
@@ -66,7 +68,7 @@ class TestTreeViewForm(unittest.TestCase):
         except OSError:
             pass
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
@@ -105,7 +107,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(cat_name, "cat")
         self.assertEqual(root_item.rowCount(), 3)
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_objects(self):
         """Test that objects are added to the object tree model.
         """
@@ -188,7 +190,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(scooby_name, "scooby")
         self.assertEqual(fish_item.rowCount(), 2)
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_relationship_classes(self):
         """Test that relationship classes are added to the object tree model.
         """
@@ -275,7 +277,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(pluto_fish_dog_object_class_name_list, "fish,dog")
         self.assertEqual(pluto_item.rowCount(), 2)
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_relationships(self):
         """Test that relationships are added to the object tree model.
         """
@@ -450,7 +452,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
         self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model.
         """
@@ -507,7 +509,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter.object_class_id, dog_class_id)
         self.assertIsNone(parameter.relationship_class_id)
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model.
         """
@@ -597,7 +599,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter.relationship_class_id, dog_fish_class_id)
         self.assertIsNone(parameter.object_class_id)
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_add_object_parameter_values(self):
         """Test that object parameter values are added to the model.
         """
@@ -942,7 +944,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
         self.assertEqual(nemo_scooby_item_object_name_list, "nemo,scooby")
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_paste_add_object_parameter_values(self):
         """Test that data is pasted onto the view and object parameter values are added to the model.
         """
@@ -1060,7 +1062,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(scooby_breed.value, 'great dane')
         self.assertEqual(brian_breed.value, 'labrador')
 
-    @unittest.skip("DONE")
+    # @unittest.skip("DONE")
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in parameter definition models according the object tree selection.
         """

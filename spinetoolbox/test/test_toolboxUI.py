@@ -28,11 +28,13 @@ from project import SpineToolboxProject
 
 class TestToolboxUI(unittest.TestCase):
 
-    app = QApplication()  # QApplication must be instantiated here unless you want a segmentation fault
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        try:
+            cls.app = QApplication().processEvents()
+        except RuntimeError:
+            pass
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')

@@ -233,3 +233,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         with mock.patch("view.create_dir") as mock_create_dir:
             self.toolbox.project().add_view("view", "")
         return "view"
+
+
+if __name__ == '__main__':
+    unittest.main()

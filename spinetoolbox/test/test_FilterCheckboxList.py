@@ -19,8 +19,8 @@ Unit tests for PivotModel class.
 import unittest
 from unittest import mock
 from PySide2.QtCore import Qt
-
 from tabularview_models import FilterCheckboxListModel
+
 
 class TestPivotModel(unittest.TestCase):
 

@@ -31,11 +31,13 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 
 class TestAddItemsDialog(unittest.TestCase):
 
-    app = QApplication()  # must create a QApplication before creating QWidgets
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
+        try:
+            cls.app = QApplication().processEvents()
+        except RuntimeError:
+            pass
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
