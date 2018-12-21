@@ -22,8 +22,8 @@ import logging
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QStyle
-from PySide2.QtCore import Slot, Qt, QUrl
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QStyle, QFileIconProvider
+from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
 from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
@@ -144,6 +144,7 @@ class ToolTemplateWidget(QWidget):
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.sourcefiles_model.appendRow(qitem)
 
     def populate_inputfiles_list(self, items):
@@ -155,6 +156,7 @@ class ToolTemplateWidget(QWidget):
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.inputfiles_model.appendRow(qitem)
 
     def populate_inputfiles_opt_list(self, items):
@@ -166,6 +168,7 @@ class ToolTemplateWidget(QWidget):
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.inputfiles_opt_model.appendRow(qitem)
 
     def populate_outputfiles_list(self, items):
@@ -177,6 +180,7 @@ class ToolTemplateWidget(QWidget):
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.outputfiles_model.appendRow(qitem)
 
     @Slot(bool, name="browse_main_program")
@@ -265,6 +269,7 @@ class ToolTemplateWidget(QWidget):
             return False
         qitem = QStandardItem(path_to_add)
         qitem.setFlags(~Qt.ItemIsEditable)
+        qitem.setData(QFileIconProvider().icon(QFileInfo(path_to_add)), Qt.DecorationRole)
         self.sourcefiles_model.appendRow(qitem)
         return True
 
@@ -317,17 +322,20 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="add_inputfiles")
     def add_inputfiles(self, checked=False):
         """Let user select input files for this tool template."""
-        msg = "Add an input file or a directory required by your program.\n" \
-              "Examples:\n" \
-              "data.csv -> File is copied to the same work directory as the main program.\n" \
-              "input/data.csv -> Creates subdirectory input\ to the work directory and copies the file there.\n" \
-              "output/ -> Creates an empty directory into the work directory."
+        msg = "Add an input file or a directory required by your program. Wildcards " \
+              "<b> are not</b> supported.<br/><br/>" \
+              "Examples:<br/>" \
+              "<b>data.csv</b> -> File is copied to the same work directory as the main program.<br/>" \
+              "<b>input/data.csv</b> -> Creates subdirectory input\ to the work directory and " \
+              "copies the file there.<br/>" \
+              "<b>output/</b> -> Creates an empty directory into the work directory.<br/><br/>"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "Add input item", msg)
+        answer = QInputDialog.getText(self, "Add input item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
         qitem = QStandardItem(file_name)
+        qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_model.appendRow(qitem)
 
     @Slot(bool, name="remove_inputfiles")
@@ -350,12 +358,21 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="add_inputfiles_opt")
     def add_inputfiles_opt(self, checked=False):
         """Let user select optional input files for this tool template."""
+        msg = "Add optional input files that may be utilized by your program. <br/>" \
+              "Wildcards are supported.<br/><br/>" \
+              "Examples:<br/>" \
+              "<b>data.csv</b> -> If found, file is copied to the same work directory as the main program.<br/>" \
+              "<b>*.csv</b> -> All found CSV files are copied to the same work directory as the main program.<br/>" \
+              "<b>input/data_?.dat</b> -> All found files matching the pattern 'data_?.dat' will be copied to <br/>" \
+              "input/ subdirectory under the same work directory as the main program.<br/><br/>"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "Add optional input item", "Optional input file name (eg. other.csv):")
+        answer = QInputDialog.getText(self, "Add optional input item", msg,
+                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
         qitem = QStandardItem(file_name)
+        qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_opt_model.appendRow(qitem)
 
     @Slot(bool, name="remove_inputfiles_opt")
@@ -378,12 +395,20 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="add_outputfiles")
     def add_outputfiles(self, checked=False):
         """Let user select output files for this tool template."""
+        msg = "Add output files that will be archived into the Tool results directory after the <br/>" \
+              "Tool template has finished execution. Wildcards are supported.<br/><br/>" \
+              "Examples:<br/>" \
+              "<b>results.csv</b> -> File is copied from work directory into results.<br/> " \
+              "<b>*.csv</b> -> All CSV files will copied into results.<br/> " \
+              "<b>output\*.gdx</b> -> All GDX files from the work output\ directory will be copied into <br/>" \
+              "output\ subdirectory in the results directory.<br/><br/>"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "Add output item", "Output file name (eg. results.csv):")
+        answer = QInputDialog.getText(self, "Add output item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
         qitem = QStandardItem(file_name)
+        qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.outputfiles_model.appendRow(qitem)
 
     @Slot(bool, name="remove_outputfiles")

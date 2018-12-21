@@ -261,6 +261,9 @@
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
+           <property name="indentation">
+            <number>5</number>
+           </property>
           </widget>
          </item>
          <item>
@@ -407,6 +410,9 @@
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
+           <property name="indentation">
+            <number>5</number>
+           </property>
           </widget>
          </item>
          <item>
@@ -525,6 +531,9 @@
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
+           <property name="indentation">
+            <number>5</number>
+           </property>
           </widget>
          </item>
          <item>
@@ -642,6 +651,9 @@
            </property>
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="indentation">
+            <number>5</number>
            </property>
           </widget>
          </item>
@@ -852,10 +864,7 @@
     </layout>
    </item>
   </layout>
-  <zorder>textEdit_description</zorder>
-  <zorder>lineEdit_args</zorder>
   <zorder></zorder>
-  <zorder>checkBox_execute_in_work</zorder>
  </widget>
  <customwidgets>
   <customwidget>
