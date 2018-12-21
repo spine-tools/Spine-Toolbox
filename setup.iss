@@ -31,6 +31,7 @@ PrivilegesRequired=admin
 OutputDir=spinetoolbox\dist
 ArchitecturesInstallIn64BitMode=x64 ia64
 ArchitecturesAllowed=x64 ia64 arm64
+UsePreviousAppDir=no
 
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
