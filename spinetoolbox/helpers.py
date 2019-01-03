@@ -25,6 +25,8 @@ import shutil
 import glob
 import spinedatabase_api
 from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import __version__ as qt_version
+from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
@@ -44,6 +46,30 @@ def supported_img_formats():
     img_formats = QImageReader().supportedImageFormats()
     img_formats_str = '\n'.join(str(x) for x in img_formats)
     logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
+
+
+def pyside2_version_check():
+    """Check that PySide2 version is older than 5.12, since this is not supported yet.
+    Issue #238 in GitLab.
+
+    qt_version is the Qt version used to compile PySide2 as string. E.g. "5.11.2"
+    qt_version_info is a tuple with each version component of Qt used to compile PySide2. E.g. (5, 11, 2)
+    """
+    # print("Your QT version info is:{0} version string:{1}".format(qt_version_info, qt_version))
+    if qt_version_info[0] == 5 and qt_version_info[1] >= 12:
+        print(
+            """Sorry for the inconvenience but,
+
+            Spine Toolbox does not support PySide2 version {0} yet.
+            Please downgrade PySide2 to version 5.11.x and try to start the application again.
+
+            To downgrade PySide2 to a compatible version, run
+
+                pip install "pyside2<5.12"
+
+            """.format(qt_version))
+        return False
+    return True
 
 
 def spinedatabase_api_version_check():

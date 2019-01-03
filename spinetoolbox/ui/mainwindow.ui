@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -387,6 +387,7 @@
              <pointsize>10</pointsize>
              <weight>50</weight>
              <bold>false</bold>
+             <kerning>true</kerning>
             </font>
            </property>
            <property name="styleSheet">
@@ -403,6 +404,9 @@
            </property>
            <property name="text">
             <string>Name</string>
+           </property>
+           <property name="scaledContents">
+            <bool>false</bool>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>
