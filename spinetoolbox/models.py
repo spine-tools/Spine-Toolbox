@@ -1778,10 +1778,10 @@ class ObjectTreeModel(QStandardItemModel):
 
     def update_relationships(self, updated_items):
         """Update relationships in the model.
-        This may require moving rows if the objects in the relationship have changed."""
+        NOTE: This may require moving rows if the objects in the relationship have changed."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
-        ids_to_add = set()
+        relationships_to_add = set()
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != "relationship":
@@ -1789,20 +1789,19 @@ class ObjectTreeModel(QStandardItemModel):
             visited_id = visited_item.data(Qt.UserRole + 1)['id']
             try:
                 updated_item = updated_items_dict[visited_id]
-                # Handle changes in object path
-                visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
-                updated_object_id_list = updated_item.object_id_list
-                if visited_object_id_list != updated_object_id_list:
-                    visited_index = self.indexFromItem(visited_item)
-                    self.removeRows(visited_index.row(), 1, visited_index.parent())
-                    ids_to_add.add(visited_id)
-                else:
-                    visited_item.setText(updated_item.object_name_list)
-                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
             except KeyError:
                 continue
-        for id in ids_to_add:
-            self.add_relationship(updated_items_dict[id])
+            # Handle changes in object path
+            visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
+            updated_object_id_list = updated_item.object_id_list
+            if visited_object_id_list != updated_object_id_list:
+                visited_index = self.indexFromItem(visited_item)
+                self.removeRows(visited_index.row(), 1, visited_index.parent())
+                relationships_to_add.add(updated_item)
+            else:
+                visited_item.setText(updated_item.object_name_list)
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+        self.add_relationships(relationships_to_add)
 
     def remove_items(self, removed_type, removed_ids):
         """Remove all matched items and their 'childs'."""
