@@ -1109,7 +1109,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_cls_name_index.data(), 'dog')
         # Clear object tree selection and select root
         self.tree_view_form.ui.treeView_object.selectionModel().clearSelection()
-        root_tree_index = self.tree_view_form.object_tree_model.indexFromItem(rSoot_item)
+        root_tree_index = self.tree_view_form.object_tree_model.indexFromItem(root_item)
         self.tree_view_form.ui.treeView_object.selectionModel().select(root_tree_index, QItemSelectionModel.Select)
         obj_cls_name_index = model.index(model.rowCount() - 1, header_index("object_class_name"))
         self.assertIsNone(obj_cls_name_index.data())
@@ -1299,17 +1299,17 @@ class TestTreeViewForm(unittest.TestCase):
         header_index = model.horizontal_header_labels().index
         obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
         obj_cls_name_lst_1 = model.index(1, header_index("object_class_name_list")).data()
-        self.assertEqual(obj_cls_name_lst_0, 'god,octopus')
-        self.assertEqual(obj_cls_name_lst_1, 'octopus,god')
+        self.assertEqual(obj_cls_name_lst_0, 'octopus,god')
+        self.assertEqual(obj_cls_name_lst_1, 'god,octopus')
         # Check relationship parameter value table
         model = self.tree_view_form.relationship_parameter_value_model
         header_index = model.horizontal_header_labels().index
         obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
         obj_cls_name_lst_1 = model.index(1, header_index("object_class_name_list")).data()
         obj_cls_name_lst_2 = model.index(2, header_index("object_class_name_list")).data()
-        self.assertEqual(obj_cls_name_lst_0, 'god,octopus')
+        self.assertEqual(obj_cls_name_lst_0, 'octopus,god')
         self.assertEqual(obj_cls_name_lst_1, 'octopus,god')
-        self.assertEqual(obj_cls_name_lst_2, 'octopus,god')
+        self.assertEqual(obj_cls_name_lst_2, 'god,octopus')
 
     def test_update_objects(self):
         """Test that objects are updated on all model/views.
@@ -1361,9 +1361,9 @@ class TestTreeViewForm(unittest.TestCase):
         obj_name_lst_0 = model.index(0, header_index("object_name_list")).data()
         obj_name_lst_1 = model.index(1, header_index("object_name_list")).data()
         obj_name_lst_2 = model.index(2, header_index("object_name_list")).data()
-        self.assertEqual(obj_name_lst_0, 'rascal,dory')
-        self.assertEqual(obj_name_lst_1, 'dory,rascal')
-        self.assertEqual(obj_name_lst_2, 'dory,scooby')
+        self.assertEqual(obj_name_lst_0, 'dory,rascal')
+        self.assertEqual(obj_name_lst_1, 'dory,scooby')
+        self.assertEqual(obj_name_lst_2, 'rascal,dory')
 
     def test_update_relationship_classes(self):
         """Test that relationship classes are updated on all model/views.
@@ -1712,6 +1712,105 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_name_lst_1, 'nemo,scooby')
         self.assertEqual(model.rowCount(), 3)
 
+    def test_update_object_parameter_definitions(self):
+        """Test that object parameter definitions are updated using the table delegate."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Update parameter name
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.horizontal_header_labels().index
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertEqual(parameter_name_index.data(), "water")
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertEqual(editor.text(), "water")
+        editor.setText("fire")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        # Check object parameter definition table
+        self.assertEqual(parameter_name_index.data(), 'fire')
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        parameter_name_0 = model.index(0, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name_0, 'fire')
+
+    def test_update_relationship_parameter_definitions(self):
+        """Test that relationship parameter definitions are updated using the table delegate."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Update parameter name
+        model = self.tree_view_form.relationship_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
+        header_index = model.horizontal_header_labels().index
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertEqual(parameter_name_index.data(), "relative_speed")
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
+        view.itemDelegate().setEditorData(editor, parameter_name_index)
+        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertEqual(editor.text(), "relative_speed")
+        editor.setText("equivalent_ki")
+        view.itemDelegate().setModelData(editor, model, parameter_name_index)
+        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        # Check relationship parameter definition table
+        self.assertEqual(parameter_name_index.data(), 'equivalent_ki')
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        parameter_name0 = model.index(0, header_index("parameter_name")).data()
+        parameter_name1 = model.index(1, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name0, 'equivalent_ki')
+        self.assertEqual(parameter_name1, 'equivalent_ki')
+
+    def test_update_object_parameter_values(self):
+        """Test that object parameter values are updated using the table delegate."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Update parameter value
+        model = self.tree_view_form.object_parameter_value_model
+        view = self.tree_view_form.ui.tableView_object_parameter_value
+        header_index = model.horizontal_header_labels().index
+        parameter_value_index = model.index(0, header_index("value"))
+        self.assertEqual(parameter_value_index.data(), "salt")
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_value_index)
+        view.itemDelegate().setEditorData(editor, parameter_value_index)
+        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertEqual(editor.text(), "salt")
+        editor.setText("pepper")
+        view.itemDelegate().setModelData(editor, model, parameter_value_index)
+        view.itemDelegate().destroyEditor(editor, parameter_value_index)
+        # Check object parameter value table
+        self.assertEqual(parameter_value_index.data(), 'pepper')
+
+    def test_update_relationship_parameter_values(self):
+        """Test that relationship parameter values are updated using the table delegate."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Update parameter value
+        model = self.tree_view_form.relationship_parameter_value_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_value
+        header_index = model.horizontal_header_labels().index
+        parameter_value_index = model.index(0, header_index("value"))
+        self.assertEqual(parameter_value_index.data(), '-1')
+        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_value_index)
+        view.itemDelegate().setEditorData(editor, parameter_value_index)
+        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertEqual(editor.text(), "-1")
+        editor.setText("1")
+        view.itemDelegate().setModelData(editor, model, parameter_value_index)
+        view.itemDelegate().destroyEditor(editor, parameter_value_index)
+        # Check object parameter value table
+        self.assertEqual(parameter_value_index.data(), '1')
 
 if __name__ == '__main__':
     unittest.main()
