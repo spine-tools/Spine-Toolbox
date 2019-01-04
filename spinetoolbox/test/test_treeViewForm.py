@@ -26,6 +26,7 @@ from PySide2.QtCore import Qt, QItemSelectionModel
 from widgets.data_store_widgets import TreeViewForm
 from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
+from sqlalchemy.orm import Session
 
 
 class TestTreeViewForm(unittest.TestCase):
@@ -40,6 +41,14 @@ class TestTreeViewForm(unittest.TestCase):
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
+        engine = create_new_spine_database('sqlite://')
+        cls.db_map = DiffDatabaseMapping("", username='UnitTest', create_all=False)
+        cls.db_map.engine = engine
+        cls.db_map.engine.connect()
+        cls.db_map.session = Session(cls.db_map.engine, autoflush=False)
+        cls.db_map.create_mapping()
+        cls.db_map.create_diff_tables_and_mapping()
+        cls.db_map.init_next_id()
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes.
@@ -47,26 +56,16 @@ class TestTreeViewForm(unittest.TestCase):
         # Set logging level to Error to silence "Logging level: All messages" print
         with mock.patch("data_store.DataStore") as mock_data_store:
             logging.disable(level=logging.ERROR)  # Disable logging
-            try:
-                os.remove('mock_db.sqlite')
-            except OSError:
-                pass
-            db_url = "sqlite:///mock_db.sqlite"
-            create_new_spine_database(db_url)
-            db_map = DiffDatabaseMapping(db_url, "UnitTest")
-            db_map.reset_mapping()
-            self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
+            self.db_map.reset_mapping()
+            self.db_map.session.query(self.db_map.NextId).delete(synchronize_session=False)
+            self.tree_view_form = TreeViewForm(mock_data_store, self.db_map, "mock_db")
             logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        self.tree_view_form.close()
-        try:
-            os.remove('mock_db.sqlite')
-        except OSError:
-            pass
+        self.tree_view_form = None
 
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
@@ -1912,6 +1911,192 @@ class TestTreeViewForm(unittest.TestCase):
         # Check relationship parameter value table
         parameter_name0 = model.index(0, header_index("parameter_name")).data()
         self.assertEqual(parameter_name0, "relative_speed")
+        self.assertEqual(model.rowCount(), 2)
+
+    def test_filter_parameter_tables_per_object_class(self):
+        """Test that parameter value and definition tables are filtered
+        when selecting object classes in the object tree.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        # Select fish object class in object tree
+        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        # Check object parameter definition table
+        model = self.tree_view_form.object_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter definition table
+        model = self.tree_view_form.relationship_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
+        obj_cls_name_lst_1 = model.index(1, header_index("object_class_name_list")).data()
+        self.assertEqual(obj_cls_name_lst_0, 'fish,dog')
+        self.assertEqual(obj_cls_name_lst_1, 'dog,fish')
+        self.assertEqual(model.rowCount(), 3)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
+        obj_cls_name_lst_1 = model.index(1, header_index("object_class_name_list")).data()
+        obj_cls_name_lst_2 = model.index(2, header_index("object_class_name_list")).data()
+        self.assertEqual(obj_cls_name_lst_0, 'fish,dog')
+        self.assertEqual(obj_cls_name_lst_1, 'fish,dog')
+        self.assertEqual(obj_cls_name_lst_2, 'dog,fish')
+        self.assertEqual(model.rowCount(), 4)
+
+    def test_filter_parameter_tables_per_object(self):
+        """Test that parameter value and definition tables are filtered
+        when selecting objects in the object tree.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch object tree
+        root_item = self.tree_view_form.object_tree_model.root_item
+        dog_item = root_item.child(1)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
+        pluto_item = dog_item.child(0)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        # Select pluto object in object tree
+        self.tree_view_form.ui.treeView_object.selectionModel().select(pluto_index, QItemSelectionModel.Select)
+        # Check object parameter definition table
+        model = self.tree_view_form.object_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'dog')
+        self.assertEqual(model.rowCount(), 2)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_name_0 = model.index(0, header_index("object_name")).data()
+        self.assertEqual(obj_name_0, 'pluto')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter definition table
+        model = self.tree_view_form.relationship_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
+        obj_cls_name_lst_1 = model.index(1, header_index("object_class_name_list")).data()
+        self.assertEqual(obj_cls_name_lst_0, 'fish,dog')
+        self.assertEqual(obj_cls_name_lst_1, 'dog,fish')
+        self.assertEqual(model.rowCount(), 3)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_name_lst_0 = model.index(0, header_index("object_name_list")).data()
+        obj_name_lst_1 = model.index(1, header_index("object_name_list")).data()
+        self.assertEqual(obj_name_lst_0, 'nemo,pluto')
+        self.assertEqual(obj_name_lst_1, 'pluto,nemo')
+        self.assertEqual(model.rowCount(), 3)
+
+    def test_filter_parameter_tables_per_relationship_class(self):
+        """Test that parameter value and definition tables are filtered
+        when selecting relationship classes in the object tree.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch object tree
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        nemo_item = fish_item.child(0)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_index)
+        nemo_fish_dog_item = nemo_item.child(0)
+        nemo_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_fish_dog_item)
+        # Select nemo's fish__dog relationship class in object tree
+        self.tree_view_form.ui.treeView_object.selectionModel().select(nemo_fish_dog_index, QItemSelectionModel.Select)
+        # Check object parameter definition table
+        model = self.tree_view_form.object_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter definition table
+        model = self.tree_view_form.relationship_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
+        self.assertEqual(obj_cls_name_lst_0, 'fish,dog')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_name_lst_0 = model.index(0, header_index("object_name_list")).data()
+        obj_name_lst_1 = model.index(1, header_index("object_name_list")).data()
+        self.assertEqual(obj_name_lst_0, 'nemo,pluto')
+        self.assertEqual(obj_name_lst_1, 'nemo,scooby')
+        self.assertEqual(model.rowCount(), 3)
+
+    def test_filter_parameter_tables_per_relationship(self):
+        """Test that parameter value and definition tables are filtered
+        when selecting relationships in the object tree.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch object tree
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        nemo_item = fish_item.child(0)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_index)
+        nemo_fish_dog_item = nemo_item.child(0)
+        nemo_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_fish_dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_fish_dog_index)
+        nemo_pluto_item = nemo_fish_dog_item.child(0)
+        nemo_pluto_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_pluto_item)
+        # Select nemo__pluto relationship class in object tree
+        self.tree_view_form.ui.treeView_object.selectionModel().select(nemo_pluto_index, QItemSelectionModel.Select)
+        # Check object parameter definition table
+        model = self.tree_view_form.object_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter definition table
+        model = self.tree_view_form.relationship_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_lst_0 = model.index(0, header_index("object_class_name_list")).data()
+        self.assertEqual(obj_cls_name_lst_0, 'fish,dog')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_name_lst_0 = model.index(0, header_index("object_name_list")).data()
+        obj_name_lst_1 = model.index(1, header_index("object_name_list")).data()
+        self.assertEqual(obj_name_lst_0, 'nemo,pluto')
         self.assertEqual(model.rowCount(), 2)
 
 
