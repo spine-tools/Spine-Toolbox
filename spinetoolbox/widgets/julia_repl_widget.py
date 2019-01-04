@@ -156,7 +156,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("\tCouldn't find the Julia executable specified by the Jupyter kernel.")
             return self.handle_repl_failed_to_start()
-        except NoSuchKernel:  # TODO: in which case this exactly happens
+        except NoSuchKernel:  # TODO: in which case this exactly happens?
             self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find the specified Julia Jupyter kernel.")
             return self.handle_repl_failed_to_start()
 

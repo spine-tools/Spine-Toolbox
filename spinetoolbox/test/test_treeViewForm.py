@@ -68,7 +68,6 @@ class TestTreeViewForm(unittest.TestCase):
         except OSError:
             pass
 
-    @unittest.skip("DONE")
     def test_add_object_classes(self):
         """Test that object classes are added to the object tree model in the right positions.
         """
@@ -107,7 +106,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(cat_name, "cat")
         self.assertEqual(root_item.rowCount(), 3)
 
-    @unittest.skip("DONE")
     def test_add_objects(self):
         """Test that objects are added to the object tree model.
         """
@@ -192,7 +190,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(scooby_name, "scooby")
         self.assertEqual(fish_item.rowCount(), 2)
 
-    @unittest.skip("DONE")
     def test_add_relationship_classes(self):
         """Test that relationship classes are added to the object tree model.
         """
@@ -279,7 +276,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(pluto_fish_dog_object_class_name_list, "fish,dog")
         self.assertEqual(pluto_item.rowCount(), 2)
 
-    @unittest.skip("DONE")
     def test_add_relationships(self):
         """Test that relationships are added to the object tree model.
         """
@@ -454,7 +450,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
         self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
-    @unittest.skip("DONE")
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model.
         """
@@ -511,7 +506,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter.object_class_id, dog_class_id)
         self.assertIsNone(parameter.relationship_class_id)
 
-    @unittest.skip("DONE")
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model.
         """
@@ -601,7 +595,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter.relationship_class_id, dog_fish_class_id)
         self.assertIsNone(parameter.object_class_id)
 
-    @unittest.skip("DONE")
     def test_add_object_parameter_values(self):
         """Test that object parameter values are added to the model.
         """
@@ -733,7 +726,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter_value.object_id, pluto_object.id)
         self.assertIsNone(parameter_value.relationship_id)
 
-    @unittest.skip("DONE")
     def test_add_relationship_parameter_values(self):
         """Test that relationship parameter values are added to the model.
         """
@@ -952,7 +944,6 @@ class TestTreeViewForm(unittest.TestCase):
         """
         self.fail()
 
-    @unittest.skip("DONE")
     def test_paste_add_object_parameter_values(self):
         """Test that data is pasted onto the view and object parameter values are added to the model.
         """
@@ -1082,7 +1073,6 @@ class TestTreeViewForm(unittest.TestCase):
         """
         self.fail()
 
-    @unittest.skip("DONE")
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection.
         """
@@ -1258,7 +1248,6 @@ class TestTreeViewForm(unittest.TestCase):
             pluto_nemo_relationship.id, nemo_pluto_relationship.id, nemo_scooby_relationship.id, \
             combined_mojo_parameter.id, relative_speed_parameter.id
 
-    @unittest.skip("DONE")
     def test_update_object_classes(self):
         """Test that object classes are updated on all model/views.
         """
@@ -1322,7 +1311,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_cls_name_lst_1, 'octopus,god')
         self.assertEqual(obj_cls_name_lst_2, 'octopus,god')
 
-    @unittest.skip("DONE")
     def test_update_objects(self):
         """Test that objects are updated on all model/views.
         """
@@ -1377,7 +1365,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_name_lst_1, 'dory,rascal')
         self.assertEqual(obj_name_lst_2, 'dory,scooby')
 
-    @unittest.skip("DONE")
     def test_update_relationship_classes(self):
         """Test that relationship classes are updated on all model/views.
         """
@@ -1462,7 +1449,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(rel_cls_name_1, 'octopus__god')
         self.assertEqual(rel_cls_name_2, 'god__octopus')
 
-    @unittest.skip("DONE")
     def test_update_relationships(self):
         """Test that relationships are updated on all model/views.
         """
@@ -1488,7 +1474,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.tree_view_form.object_tree_model.fetchMore(pluto_index)
         self.tree_view_form.object_tree_model.fetchMore(scooby_index)
         nemo_dog_fish_item = nemo_item.child(1)
-        print(nemo_dog_fish_item.data(Qt.UserRole + 1)['name'])
         pluto_dog_fish_item = pluto_item.child(1)
         scooby_dog_fish_item = scooby_item.child(1)
         nemo_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_dog_fish_item)
@@ -1517,6 +1502,215 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(scooby_nemo_item2_type, "relationship")
         self.assertEqual(scooby_nemo_item2_name, "dog__fish_scooby__nemo")
         self.assertEqual(pluto_dog_fish_item.rowCount(), 0)
+
+    def test_remove_object_classes(self):
+        """Test that object classes are removed from all model/views.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch pluto, so we can test that 'child' relationship classes are correctly removed
+        root_item = self.tree_view_form.object_tree_model.root_item
+        dog_item = root_item.child(1)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
+        pluto_item = dog_item.child(0)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_index)
+        self.assertEqual(pluto_item.rowCount(), 2)
+        # Select fish and call the removal method
+        fish_item = root_item.child(0)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_object_tree_items()
+        # Check object tree
+        dog_item = root_item.child(0)
+        dog_type = dog_item.data(Qt.UserRole)
+        dog_name = dog_item.data(Qt.UserRole + 1)['name']
+        self.assertEqual(dog_type, "object_class")
+        self.assertEqual(dog_name, "dog")
+        self.assertEqual(root_item.rowCount(), 1)
+        self.assertEqual(pluto_item.rowCount(), 0)
+        # Check object parameter definition table
+        model = self.tree_view_form.object_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'dog')
+        self.assertEqual(model.rowCount(), 2)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_cls_name_0 = model.index(0, header_index("object_class_name")).data()
+        obj_cls_name_1 = model.index(1, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name_0, 'dog')
+        self.assertEqual(obj_cls_name_1, 'dog')
+        self.assertEqual(model.rowCount(), 3)
+        # Check relationship parameter definition table
+        model = self.tree_view_form.relationship_parameter_definition_model
+        self.assertEqual(model.rowCount(), 1)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        self.assertEqual(model.rowCount(), 1)
+
+    def test_remove_objects(self):
+        """Test that objects are removed from all model/views.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch pluto's fish__dog and dog__fish relationship class items,
+        # so we can test that 'child' relationships are correctly removed
+        root_item = self.tree_view_form.object_tree_model.root_item
+        dog_item = root_item.child(1)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
+        pluto_item = dog_item.child(0)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_index)
+        pluto_fish_dog_item = pluto_item.child(0)
+        pluto_dog_fish_item = pluto_item.child(1)
+        pluto_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_fish_dog_item)
+        pluto_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_dog_fish_item)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_fish_dog_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_dog_fish_index)
+        self.assertEqual(pluto_fish_dog_item.rowCount(), 1)
+        self.assertEqual(pluto_dog_fish_item.rowCount(), 1)
+        # Select nemo and call removal method
+        fish_item = root_item.child(0)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        nemo_item = fish_item.child(0)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(nemo_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_object_tree_items()
+        # Check object tree
+        self.assertEqual(fish_item.rowCount(), 0)
+        self.assertEqual(pluto_fish_dog_item.rowCount(), 0)
+        self.assertEqual(pluto_dog_fish_item.rowCount(), 0)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_name_0 = model.index(0, header_index("object_name")).data()
+        obj_name_1 = model.index(1, header_index("object_name")).data()
+        self.assertEqual(obj_name_0, 'pluto')
+        self.assertEqual(obj_name_1, 'scooby')
+        self.assertEqual(model.rowCount(), 3)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        self.assertEqual(model.rowCount(), 1)
+
+    def test_remove_relationship_classes(self):
+        """Test that relationship classes are removed from all model/views.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch object classes and objects, so we can test that relationship classes are removed from all objects
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        dog_item = root_item.child(1)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
+        nemo_item = fish_item.child(0)
+        pluto_item = dog_item.child(0)
+        scooby_item = dog_item.child(1)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        scooby_index = self.tree_view_form.object_tree_model.indexFromItem(scooby_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_index)
+        self.tree_view_form.object_tree_model.fetchMore(scooby_index)
+        self.assertEqual(nemo_item.rowCount(), 2)
+        self.assertEqual(nemo_item.rowCount(), 2)
+        self.assertEqual(nemo_item.rowCount(), 2)
+        # Select nemo's fish__dog relationship class item and call removal method
+        nemo_fish_dog_item = nemo_item.child(0)
+        nemo_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_fish_dog_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(nemo_fish_dog_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_object_tree_items()
+        # Check object tree
+        self.assertEqual(nemo_item.rowCount(), 1)
+        self.assertEqual(nemo_item.rowCount(), 1)
+        self.assertEqual(nemo_item.rowCount(), 1)
+        nemo_dog_fish_item = nemo_item.child(0)
+        pluto_dog_fish_item = pluto_item.child(0)
+        scooby_dog_fish_item = scooby_item.child(0)
+        nemo_dog_fish_type = nemo_dog_fish_item.data(Qt.UserRole)
+        nemo_dog_fish_name = nemo_dog_fish_item.data(Qt.UserRole + 1)['name']
+        pluto_dog_fish_type = pluto_dog_fish_item.data(Qt.UserRole)
+        pluto_dog_fish_name = pluto_dog_fish_item.data(Qt.UserRole + 1)['name']
+        scooby_dog_fish_type = scooby_dog_fish_item.data(Qt.UserRole)
+        scooby_dog_fish_name = scooby_dog_fish_item.data(Qt.UserRole + 1)['name']
+        self.assertEqual(nemo_dog_fish_type, "relationship_class")
+        self.assertEqual(nemo_dog_fish_name, "dog__fish")
+        self.assertEqual(pluto_dog_fish_type, "relationship_class")
+        self.assertEqual(pluto_dog_fish_name, "dog__fish")
+        self.assertEqual(scooby_dog_fish_type, "relationship_class")
+        self.assertEqual(scooby_dog_fish_name, "dog__fish")
+        # Check relationship parameter definition table
+        model = self.tree_view_form.relationship_parameter_definition_model
+        header_index = model.horizontal_header_labels().index
+        rel_cls_name_0 = model.index(0, header_index("relationship_class_name")).data()
+        self.assertEqual(rel_cls_name_0, 'dog__fish')
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        rel_cls_name_0 = model.index(0, header_index("relationship_class_name")).data()
+        self.assertEqual(rel_cls_name_0, 'dog__fish')
+        self.assertEqual(model.rowCount(), 2)
+
+    def test_remove_relationships(self):
+        """Test that relationships are removed from all model/views.
+        """
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Fetch nemo's and pluto's dog_fish relationship class,
+        # to test that both intances of the relationship are removed.
+        root_item = self.tree_view_form.object_tree_model.root_item
+        fish_item = root_item.child(0)
+        dog_item = root_item.child(1)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
+        nemo_item = fish_item.child(0)
+        pluto_item = dog_item.child(0)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_index)
+        nemo_dog_fish_item = nemo_item.child(1)
+        pluto_dog_fish_item = pluto_item.child(1)
+        nemo_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_dog_fish_item)
+        pluto_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_dog_fish_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_dog_fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_dog_fish_index)
+        self.assertEqual(nemo_dog_fish_item.rowCount(), 1)
+        self.assertEqual(pluto_dog_fish_item.rowCount(), 1)
+        # Select nemo's pluto__nemo relationship item and call removal method
+        pluto_nemo_item = nemo_dog_fish_item.child(0)
+        pluto_nemo_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_nemo_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(pluto_nemo_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_object_tree_items()
+        # Check object tree
+        self.assertEqual(nemo_dog_fish_item.rowCount(), 0)
+        self.assertEqual(pluto_dog_fish_item.rowCount(), 0)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        obj_name_lst_0 = model.index(0, header_index("object_name_list")).data()
+        obj_name_lst_1 = model.index(1, header_index("object_name_list")).data()
+        self.assertEqual(obj_name_lst_0, 'nemo,pluto')
+        self.assertEqual(obj_name_lst_1, 'nemo,scooby')
+        self.assertEqual(model.rowCount(), 3)
 
 
 if __name__ == '__main__':
