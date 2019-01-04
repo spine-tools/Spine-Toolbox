@@ -1812,5 +1812,108 @@ class TestTreeViewForm(unittest.TestCase):
         # Check object parameter value table
         self.assertEqual(parameter_value_index.data(), '1')
 
+    def test_remove_object_parameter_definitions(self):
+        """Test that object parameter definitions are removed."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Select parameter definition and call removal method
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.horizontal_header_labels().index
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertEqual(parameter_name_index.data(), "water")
+        self.tree_view_form.ui.tableView_object_parameter_definition.selectionModel().select(
+            parameter_name_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_object_parameter_definitions()
+        # Check object parameter definition table
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertEqual(parameter_name_index.data(), "breed")
+        self.assertEqual(model.rowCount(), 2)
+        # Check object parameter value table
+        model = self.tree_view_form.object_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        parameter_name_0 = model.index(0, header_index("parameter_name")).data()
+        parameter_name_1 = model.index(1, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name_0, 'breed')
+        self.assertEqual(parameter_name_1, 'breed')
+        self.assertEqual(model.rowCount(), 3)
+
+    def test_remove_relationship_parameter_definitions(self):
+        """Test that relationship parameter definitions are removed."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Select parameter definition and call removal method
+        model = self.tree_view_form.relationship_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
+        header_index = model.horizontal_header_labels().index
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertEqual(parameter_name_index.data(), "relative_speed")
+        self.tree_view_form.ui.tableView_relationship_parameter_definition.selectionModel().select(
+            parameter_name_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_relationship_parameter_definitions()
+        # Check relationship parameter definition table
+        parameter_name_index = model.index(0, header_index("parameter_name"))
+        self.assertEqual(parameter_name_index.data(), "combined_mojo")
+        self.assertEqual(model.rowCount(), 2)
+        # Check relationship parameter value table
+        model = self.tree_view_form.relationship_parameter_value_model
+        header_index = model.horizontal_header_labels().index
+        parameter_name = model.index(0, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name, 'combined_mojo')
+        self.assertEqual(model.rowCount(), 2)
+
+    def test_remove_object_parameter_values(self):
+        """Test that object parameter values are removed."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Select two parameter values and call removal method
+        model = self.tree_view_form.object_parameter_value_model
+        view = self.tree_view_form.ui.tableView_object_parameter_value
+        header_index = model.horizontal_header_labels().index
+        parameter_name0_index = model.index(0, header_index("parameter_name"))
+        parameter_name2_index = model.index(2, header_index("parameter_name"))
+        self.assertEqual(parameter_name0_index.data(), "water")
+        self.assertEqual(parameter_name2_index.data(), "breed")
+        self.tree_view_form.ui.tableView_object_parameter_value.selectionModel().select(
+            parameter_name0_index, QItemSelectionModel.Select)
+        self.tree_view_form.ui.tableView_object_parameter_value.selectionModel().select(
+            parameter_name2_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_object_parameter_values()
+        # Check object parameter value table
+        parameter_name0 = model.index(0, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name0, "breed")
+        self.assertEqual(model.rowCount(), 2)
+
+    def test_remove_relationship_parameter_values(self):
+        """Test that relationship parameter values are removed."""
+        fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
+            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
+            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+        # Select two parameter values and call removal method
+        model = self.tree_view_form.relationship_parameter_value_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_value
+        header_index = model.horizontal_header_labels().index
+        parameter_name0_index = model.index(0, header_index("parameter_name"))
+        parameter_name2_index = model.index(2, header_index("parameter_name"))
+        self.assertEqual(parameter_name0_index.data(), "relative_speed")
+        self.assertEqual(parameter_name2_index.data(), "combined_mojo")
+        self.tree_view_form.ui.tableView_relationship_parameter_value.selectionModel().select(
+            parameter_name0_index, QItemSelectionModel.Select)
+        self.tree_view_form.ui.tableView_relationship_parameter_value.selectionModel().select(
+            parameter_name2_index, QItemSelectionModel.Select)
+        self.tree_view_form.remove_relationship_parameter_values()
+        # Check relationship parameter value table
+        parameter_name0 = model.index(0, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name0, "relative_speed")
+        self.assertEqual(model.rowCount(), 2)
+
+
 if __name__ == '__main__':
     unittest.main()
