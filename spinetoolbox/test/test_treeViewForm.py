@@ -22,7 +22,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QStyleOptionViewItem
-from PySide2.QtCore import Qt, QItemSelectionModel
+from PySide2.QtCore import Qt, QItemSelectionModel, QItemSelection
 from widgets.data_store_widgets import TreeViewForm
 from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
@@ -108,22 +108,8 @@ class TestTreeViewForm(unittest.TestCase):
     def test_add_objects(self):
         """Test that objects are added to the object tree model.
         """
-        # Add classes and objects
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        self.tree_view_form.init_models()
         nemo = dict(
             class_id=fish_class_id,
             name='nemo',
@@ -192,22 +178,8 @@ class TestTreeViewForm(unittest.TestCase):
     def test_add_relationship_classes(self):
         """Test that relationship classes are added to the object tree model.
         """
-        # Add fish and dog object classes
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        self.tree_view_form.init_models()
         # Add nemo object before adding the relationships to test fetch more
         nemo = dict(
             class_id=fish_class_id,
@@ -278,69 +250,24 @@ class TestTreeViewForm(unittest.TestCase):
     def test_add_relationships(self):
         """Test that relationships are added to the object tree model.
         """
-        # Add fish and dog object classes
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
-        # Add nemo, pluto and scooby objects
-        nemo = dict(
-            class_id=fish_class_id,
-            name='nemo',
-            description='The lost one.'
-        )
-        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
-        pluto = dict(
-            class_id=dog_class_id,
-            name='pluto',
-            description="Mickey's."
-        )
-        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
-        scooby = dict(
-            class_id=dog_class_id,
-            name='scooby',
-            description="Scooby-Dooby-Doo."
-        )
-        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        self.tree_view_form.add_objects([nemo_object, pluto_object, scooby_object])
-        # Add dog__fish and fish__dog relationship classes
-        dog_fish = dict(
-            name="dog__fish",
-            object_class_id_list=[dog_class_id, fish_class_id]
-        )
-        fish_dog = dict(
-            name="fish__dog",
-            object_class_id_list=[fish_class_id, dog_class_id]
-        )
-        dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
-        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
-        # Add relationship classes
-        self.tree_view_form.add_relationship_classes([fish_dog_relationship_class, dog_fish_relationship_class])
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
+        self.tree_view_form.init_models()
         # Add pluto_nemo, nemo_pluto and nemo_scooby relationships
         pluto_nemo = dict(
-            class_id=dog_fish_relationship_class.id,
-            object_id_list=[pluto_object.id, nemo_object.id],
+            class_id=dog_fish_class_id,
+            object_id_list=[pluto_object_id, nemo_object_id],
             name='dog__fish_pluto__nemo'
         )
         nemo_pluto = dict(
-            class_id=fish_dog_relationship_class.id,
-            object_id_list=[nemo_object.id, pluto_object.id],
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, pluto_object_id],
             name='fish__dog_nemo__pluto'
         )
         nemo_scooby = dict(
-            class_id=fish_dog_relationship_class.id,
-            object_id_list=[nemo_object.id, scooby_object.id],
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, scooby_object_id],
             name='fish__dog_nemo__scooby'
         )
         relationships = self.tree_view_form.db_map.add_wide_relationships(pluto_nemo, nemo_pluto, nemo_scooby)
@@ -350,17 +277,39 @@ class TestTreeViewForm(unittest.TestCase):
         # Object class items
         fish_item = root_item.child(0)
         dog_item = root_item.child(1)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
         # Object items
         nemo_item = fish_item.child(0)
         pluto_item = dog_item.child(0)
         scooby_item = dog_item.child(1)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        scooby_index = self.tree_view_form.object_tree_model.indexFromItem(scooby_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_index)
+        self.tree_view_form.object_tree_model.fetchMore(scooby_index)
         # Relationship class items
-        nemo_dog_fish_item = nemo_item.child(0)
-        nemo_fish_dog_item = nemo_item.child(1)
-        pluto_dog_fish_item = pluto_item.child(0)
-        pluto_fish_dog_item = pluto_item.child(1)
-        scooby_dog_fish_item = scooby_item.child(0)
-        scooby_fish_dog_item = scooby_item.child(1)
+        nemo_fish_dog_item = nemo_item.child(0)
+        nemo_dog_fish_item = nemo_item.child(1)
+        pluto_fish_dog_item = pluto_item.child(0)
+        pluto_dog_fish_item = pluto_item.child(1)
+        scooby_fish_dog_item = scooby_item.child(0)
+        scooby_dog_fish_item = scooby_item.child(1)
+        nemo_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_dog_fish_item)
+        nemo_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_fish_dog_item)
+        pluto_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_dog_fish_item)
+        pluto_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_fish_dog_item)
+        scooby_dog_fish_index = self.tree_view_form.object_tree_model.indexFromItem(scooby_dog_fish_item)
+        scooby_fish_dog_index = self.tree_view_form.object_tree_model.indexFromItem(scooby_fish_dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_dog_fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_fish_dog_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_dog_fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(pluto_fish_dog_index)
+        self.tree_view_form.object_tree_model.fetchMore(scooby_dog_fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(scooby_fish_dog_index)
         # Relationship items
         pluto_nemo_item1 = pluto_dog_fish_item.child(0)
         pluto_nemo_item2 = nemo_dog_fish_item.child(0)
@@ -384,9 +333,9 @@ class TestTreeViewForm(unittest.TestCase):
         pluto_nemo_item1_object_name_list = pluto_nemo_item1.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(pluto_nemo_item1_type, "relationship")
         self.assertEqual(pluto_nemo_item1_name, 'dog__fish_pluto__nemo')
-        self.assertEqual(pluto_nemo_item1_class_id, dog_fish_relationship_class.id)
+        self.assertEqual(pluto_nemo_item1_class_id, dog_fish_class_id)
         split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item1_object_id_list.split(",")]
-        self.assertEqual(split_pluto_nemo_object_id_list, [pluto_object.id, nemo_object.id])
+        self.assertEqual(split_pluto_nemo_object_id_list, [pluto_object_id, nemo_object_id])
         self.assertEqual(pluto_nemo_item1_object_name_list, "pluto,nemo")
         # pluto_nemo_item2
         pluto_nemo_item2_type = pluto_nemo_item2.data(Qt.UserRole)
@@ -396,9 +345,9 @@ class TestTreeViewForm(unittest.TestCase):
         pluto_nemo_item2_object_name_list = pluto_nemo_item2.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(pluto_nemo_item2_type, "relationship")
         self.assertEqual(pluto_nemo_item2_name, 'dog__fish_pluto__nemo')
-        self.assertEqual(pluto_nemo_item2_class_id, dog_fish_relationship_class.id)
+        self.assertEqual(pluto_nemo_item2_class_id, dog_fish_class_id)
         split_pluto_nemo_object_id_list = [int(x) for x in pluto_nemo_item2_object_id_list.split(",")]
-        self.assertEqual(split_pluto_nemo_object_id_list, [pluto_object.id, nemo_object.id])
+        self.assertEqual(split_pluto_nemo_object_id_list, [pluto_object_id, nemo_object_id])
         self.assertEqual(pluto_nemo_item2_object_name_list, "pluto,nemo")
         # nemo_pluto_item1
         nemo_pluto_item1_type = nemo_pluto_item1.data(Qt.UserRole)
@@ -408,9 +357,9 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_pluto_item1_object_name_list = nemo_pluto_item1.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(nemo_pluto_item1_type, "relationship")
         self.assertEqual(nemo_pluto_item1_name, 'fish__dog_nemo__pluto')
-        self.assertEqual(nemo_pluto_item1_class_id, fish_dog_relationship_class.id)
+        self.assertEqual(nemo_pluto_item1_class_id, fish_dog_class_id)
         split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item1_object_id_list.split(",")]
-        self.assertEqual(split_pluto_nemo_object_id_list, [nemo_object.id, pluto_object.id])
+        self.assertEqual(split_pluto_nemo_object_id_list, [nemo_object_id, pluto_object_id])
         self.assertEqual(nemo_pluto_item1_object_name_list, "nemo,pluto")
         # nemo_pluto_item2
         nemo_pluto_item2_type = nemo_pluto_item2.data(Qt.UserRole)
@@ -420,9 +369,9 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_pluto_item2_object_name_list = nemo_pluto_item2.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(nemo_pluto_item2_type, "relationship")
         self.assertEqual(nemo_pluto_item2_name, 'fish__dog_nemo__pluto')
-        self.assertEqual(nemo_pluto_item2_class_id, fish_dog_relationship_class.id)
+        self.assertEqual(nemo_pluto_item2_class_id, fish_dog_class_id)
         split_pluto_nemo_object_id_list = [int(x) for x in nemo_pluto_item2_object_id_list.split(",")]
-        self.assertEqual(split_pluto_nemo_object_id_list, [nemo_object.id, pluto_object.id])
+        self.assertEqual(split_pluto_nemo_object_id_list, [nemo_object_id, pluto_object_id])
         self.assertEqual(nemo_pluto_item2_object_name_list, "nemo,pluto")
         # nemo_scooby_item1
         nemo_scooby_item1_type = nemo_scooby_item1.data(Qt.UserRole)
@@ -432,9 +381,9 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_scooby_item1_object_name_list = nemo_scooby_item1.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(nemo_scooby_item1_type, "relationship")
         self.assertEqual(nemo_scooby_item1_name, 'fish__dog_nemo__scooby')
-        self.assertEqual(nemo_scooby_item1_class_id, fish_dog_relationship_class.id)
+        self.assertEqual(nemo_scooby_item1_class_id, fish_dog_class_id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item1_object_id_list.split(",")]
-        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object_id, scooby_object_id])
         self.assertEqual(nemo_scooby_item1_object_name_list, "nemo,scooby")
         # nemo_scooby_item2
         nemo_scooby_item2_type = nemo_scooby_item2.data(Qt.UserRole)
@@ -444,30 +393,16 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_scooby_item2_object_name_list = nemo_scooby_item2.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(nemo_scooby_item2_type, "relationship")
         self.assertEqual(nemo_scooby_item2_name, 'fish__dog_nemo__scooby')
-        self.assertEqual(nemo_scooby_item2_class_id, fish_dog_relationship_class.id)
+        self.assertEqual(nemo_scooby_item2_class_id, fish_dog_class_id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item2_object_id_list.split(",")]
-        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object_id, scooby_object_id])
         self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model.
         """
         # Add fish and dog object classes
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
         # Add object parameter definition
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
@@ -508,50 +443,9 @@ class TestTreeViewForm(unittest.TestCase):
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model.
         """
-        # Add fish and dog object classes
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
-        # Add nemo and scooby objects
-        nemo = dict(
-            class_id=fish_class_id,
-            name='nemo',
-            description='The lost one.'
-        )
-        scooby = dict(
-            class_id=dog_class_id,
-            name='scooby',
-            description="Scooby-Dooby-Doo."
-        )
-        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
-        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        self.tree_view_form.add_objects([nemo_object, scooby_object])
-        # Add fish__dog and dog__fish relationship classes
-        fish_dog = dict(
-            name="fish__dog",
-            object_class_id_list=[fish_class_id, dog_class_id]
-        )
-        dog_fish = dict(
-            name="dog__fish",
-            object_class_id_list=[dog_class_id, fish_class_id]
-        )
-        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
-        dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
-        fish_dog_class_id = fish_dog_relationship_class.id
-        dog_fish_class_id = dog_fish_relationship_class.id
-        self.tree_view_form.add_relationship_classes([fish_dog_relationship_class, dog_fish_relationship_class])
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
         # Add relationship parameter definition
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -597,47 +491,9 @@ class TestTreeViewForm(unittest.TestCase):
     def test_add_object_parameter_values(self):
         """Test that object parameter values are added to the model.
         """
-        # Add dog object class
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([dog_object_class])
-        dog_class_id = dog_object_class.id
-        # Add pluto and scooby objects
-        pluto = dict(
-            class_id=dog_class_id,
-            name='pluto',
-            description="Mickey's."
-        )
-        scooby = dict(
-            class_id=dog_class_id,
-            name='scooby',
-            description="Scooby-Dooby-Doo."
-        )
-        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
-        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        self.tree_view_form.add_objects([pluto_object, scooby_object])
-        # Add object parameter definition
-        model = self.tree_view_form.object_parameter_definition_model
-        view = self.tree_view_form.ui.tableView_object_parameter_definition
-        header_index = model.horizontal_header_labels().index
-        # Enter object class name
-        obj_cls_name_index = model.index(0, header_index("object_class_name"))
-        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
-        view.itemDelegate().setEditorData(editor, obj_cls_name_index)
-        editor.setCurrentIndex(0)
-        view.itemDelegate().setModelData(editor, model, obj_cls_name_index)
-        view.itemDelegate().destroyEditor(editor, obj_cls_name_index)
-        # Enter parameter name
-        parameter_name_index = model.index(0, header_index("parameter_name"))
-        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
-        view.itemDelegate().setEditorData(editor, parameter_name_index)
-        editor.setText("breed")
-        view.itemDelegate().setModelData(editor, model, parameter_name_index)
-        view.itemDelegate().destroyEditor(editor, parameter_name_index)
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        water_id, breed_id = self.add_mock_object_parameter_definitions(fish_class_id, dog_class_id)
         # Add first object parameter value (for scooby), to test autofilling of object class from *object*
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -648,15 +504,16 @@ class TestTreeViewForm(unittest.TestCase):
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_name_index)
         view.itemDelegate().setEditorData(editor, obj_name_index)
         self.assertTrue(isinstance(editor, CustomComboEditor))
-        self.assertEqual(editor.count(), 2)
-        self.assertEqual(editor.itemText(0), 'pluto')
-        self.assertEqual(editor.itemText(1), 'scooby')
-        editor.setCurrentIndex(1)
+        self.assertEqual(editor.count(), 3)
+        self.assertEqual(editor.itemText(0), 'nemo')
+        self.assertEqual(editor.itemText(1), 'pluto')
+        self.assertEqual(editor.itemText(2), 'scooby')
+        editor.setCurrentIndex(2)
         view.itemDelegate().setModelData(editor, model, obj_name_index)
         view.itemDelegate().destroyEditor(editor, obj_name_index)
         self.assertEqual(obj_name_index.data(), 'scooby')
         obj_id_index = model.index(0, header_index("object_id"))
-        self.assertEqual(obj_id_index.data(), scooby_object.id)
+        self.assertEqual(obj_id_index.data(), scooby_object_id)
         # Check objet class
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
         self.assertEqual(obj_cls_name_index.data(), 'dog')
@@ -681,9 +538,9 @@ class TestTreeViewForm(unittest.TestCase):
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
         self.assertTrue(isinstance(editor, CustomComboEditor))
-        self.assertEqual(editor.count(), 1)
-        self.assertEqual(editor.itemText(0), 'breed')
-        editor.setCurrentIndex(0)
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(1), 'breed')
+        editor.setCurrentIndex(1)
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
         self.assertEqual(parameter_name_index.data(), 'breed')
@@ -706,7 +563,7 @@ class TestTreeViewForm(unittest.TestCase):
         view.itemDelegate().destroyEditor(editor, obj_name_index)
         self.assertEqual(obj_name_index.data(), 'pluto')
         obj_id_index = model.index(1, header_index("object_id"))
-        self.assertEqual(obj_id_index.data(), pluto_object.id)
+        self.assertEqual(obj_id_index.data(), pluto_object_id)
         # Check the db
         # First (scooby)
         parameter_id = model.index(0, header_index("parameter_id")).data()
@@ -714,7 +571,7 @@ class TestTreeViewForm(unittest.TestCase):
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
         self.assertEqual(parameter_value.id, parameter_value_id)
         self.assertEqual(parameter_value.parameter_id, parameter_id)
-        self.assertEqual(parameter_value.object_id, scooby_object.id)
+        self.assertEqual(parameter_value.object_id, scooby_object_id)
         self.assertIsNone(parameter_value.relationship_id)
         # Second (pluto)
         parameter_id = model.index(1, header_index("parameter_id")).data()
@@ -722,89 +579,37 @@ class TestTreeViewForm(unittest.TestCase):
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
         self.assertEqual(parameter_value.id, parameter_value_id)
         self.assertEqual(parameter_value.parameter_id, parameter_id)
-        self.assertEqual(parameter_value.object_id, pluto_object.id)
+        self.assertEqual(parameter_value.object_id, pluto_object_id)
         self.assertIsNone(parameter_value.relationship_id)
 
     def test_add_relationship_parameter_values(self):
         """Test that relationship parameter values are added to the model.
         """
-        # Add fish and dog object classes
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([fish_object_class, dog_object_class])
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
-        # Add nemo, pluto and scooby objects
-        nemo = dict(
-            class_id=fish_class_id,
-            name='nemo',
-            description='The lost one.'
-        )
-        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
-        pluto = dict(
-            class_id=dog_class_id,
-            name='pluto',
-            description="Mickey's."
-        )
-        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
-        scooby = dict(
-            class_id=dog_class_id,
-            name='scooby',
-            description="Scooby-Dooby-Doo."
-        )
-        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        self.tree_view_form.add_objects([nemo_object, pluto_object, scooby_object])
-        # Add fish__dog relationship class
-        fish_dog = dict(
-            name="fish__dog",
-            object_class_id_list=[fish_class_id, dog_class_id]
-        )
-        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
-        self.tree_view_form.add_relationship_classes([fish_dog_relationship_class])
-        # Fetch fish__dog
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
+        self.add_mock_relationship_parameter_definitions(fish_dog_class_id, dog_fish_class_id)
+        self.tree_view_form.init_models()
+        # Fetch nemo's fish__dog
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
         nemo_item = fish_item.child(0)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        self.tree_view_form.object_tree_model.fetchMore(nemo_index)
         nemo_fish_dog_item = nemo_item.child(0)
         nemo_fish__dog_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_fish_dog_item)
         self.tree_view_form.object_tree_model.fetchMore(nemo_fish__dog_index)
         # Add nemo_pluto relationship
+        # Don't add nemo_scooby since that one we want to be added 'on the fly'
         nemo_pluto = dict(
-            class_id=fish_dog_relationship_class.id,
-            object_id_list=[nemo_object.id, pluto_object.id],
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, pluto_object_id],
             name='fish__dog_nemo__pluto'
         )
-        # Don't add nemo_scooby since that one we want to add 'on the fly'
         nemo_pluto_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_pluto)
         self.tree_view_form.add_relationships([nemo_pluto_relationship])
-        # Add relationship parameter definition
-        model = self.tree_view_form.relationship_parameter_definition_model
-        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
-        header_index = model.horizontal_header_labels().index
-        # Enter relationship class name
-        rel_cls_name_index = model.index(0, header_index("relationship_class_name"))
-        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), rel_cls_name_index)
-        view.itemDelegate().setEditorData(editor, rel_cls_name_index)
-        editor.setCurrentIndex(0)
-        view.itemDelegate().setModelData(editor, model, rel_cls_name_index)
-        view.itemDelegate().destroyEditor(editor, rel_cls_name_index)
-        # Enter parameter name
-        parameter_name_index = model.index(0, header_index("parameter_name"))
-        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
-        view.itemDelegate().setEditorData(editor, parameter_name_index)
-        editor.setText("combined_mojo")
-        view.itemDelegate().setModelData(editor, model, parameter_name_index)
-        view.itemDelegate().destroyEditor(editor, parameter_name_index)
         # Add first relationship parameter value (for existing relationship)
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
@@ -815,17 +620,17 @@ class TestTreeViewForm(unittest.TestCase):
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
         self.assertTrue(isinstance(editor, CustomComboEditor))
-        self.assertEqual(editor.count(), 1)
-        self.assertEqual(editor.itemText(0), 'combined_mojo')
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(0), 'relative_speed')
         editor.setCurrentIndex(0)
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertEqual(parameter_name_index.data(), 'combined_mojo')
+        self.assertEqual(parameter_name_index.data(), 'relative_speed')
         # Check relationship class
         rel_cls_name = model.index(0, header_index("relationship_class_name")).data()
         self.assertEqual(rel_cls_name, 'fish__dog')
         rel_cls_id = model.index(0, header_index("relationship_class_id")).data()
-        self.assertEqual(rel_cls_id, fish_dog_relationship_class.id)
+        self.assertEqual(rel_cls_id, fish_dog_class_id)
         obj_cls_name_list_index = model.index(0, header_index("object_class_name_list"))
         self.assertEqual(obj_cls_name_list_index.data(), 'fish,dog')
         obj_cls_id_list_index = model.index(0, header_index("object_class_id_list"))
@@ -855,24 +660,24 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(relationship_id, nemo_pluto_relationship.id)
         obj_id_list_index = model.index(0, header_index("object_id_list"))
         split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
-        self.assertEqual(split_obj_id_list, [nemo_object.id, pluto_object.id])
+        self.assertEqual(split_obj_id_list, [nemo_object_id, pluto_object_id])
         # Add second relationship parameter value (relationship on the fly)
         parameter_name_index = model.index(1, header_index("parameter_name"))
         self.assertIsNone(parameter_name_index.data())
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
         view.itemDelegate().setEditorData(editor, parameter_name_index)
         self.assertTrue(isinstance(editor, CustomComboEditor))
-        self.assertEqual(editor.count(), 1)
-        self.assertEqual(editor.itemText(0), 'combined_mojo')
+        self.assertEqual(editor.count(), 2)
+        self.assertEqual(editor.itemText(0), 'relative_speed')
         editor.setCurrentIndex(0)
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        self.assertEqual(parameter_name_index.data(), 'combined_mojo')
+        self.assertEqual(parameter_name_index.data(), 'relative_speed')
         # Check relationship class
         rel_cls_name = model.index(1, header_index("relationship_class_name")).data()
         self.assertEqual(rel_cls_name, 'fish__dog')
         rel_cls_id = model.index(1, header_index("relationship_class_id")).data()
-        self.assertEqual(rel_cls_id, fish_dog_relationship_class.id)
+        self.assertEqual(rel_cls_id, fish_dog_class_id)
         obj_cls_name_list_index = model.index(1, header_index("object_class_name_list"))
         self.assertEqual(obj_cls_name_list_index.data(), 'fish,dog')
         obj_cls_id_list_index = model.index(1, header_index("object_class_id_list"))
@@ -900,7 +705,7 @@ class TestTreeViewForm(unittest.TestCase):
         # Check relationship
         obj_id_list_index = model.index(1, header_index("object_id_list"))
         split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
-        self.assertEqual(split_obj_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(split_obj_id_list, [nemo_object_id, scooby_object_id])
         # Check the db
         # First (nemo_pluto)
         parameter_id = model.index(0, header_index("parameter_id")).data()
@@ -911,18 +716,18 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter_value.relationship_id, nemo_pluto_relationship.id)
         self.assertIsNone(parameter_value.object_id)
         # Second (nemo_scooby)
-        nemo_scooby_relationship_id = model.index(1, header_index("relationship_id")).data()
+        nemo_scooby_rel_id = model.index(1, header_index("relationship_id")).data()
         nemo_scooby_relationship = self.tree_view_form.db_map.single_wide_relationship(
-            id=nemo_scooby_relationship_id).one_or_none()
+            id=nemo_scooby_rel_id).one_or_none()
         split_obj_id_list = [int(x) for x in nemo_scooby_relationship.object_id_list.split(',')]
-        self.assertEqual(split_obj_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(split_obj_id_list, [nemo_object_id, scooby_object_id])
         self.assertEqual(nemo_scooby_relationship.object_name_list, 'nemo,scooby')
         parameter_id = model.index(1, header_index("parameter_id")).data()
         parameter_value_id = model.index(1, header_index("id")).data()
         parameter_value = self.tree_view_form.db_map.single_parameter_value(id=parameter_value_id).one_or_none()
         self.assertEqual(parameter_value.id, parameter_value_id)
         self.assertEqual(parameter_value.parameter_id, parameter_id)
-        self.assertEqual(parameter_value.relationship_id, nemo_scooby_relationship_id)
+        self.assertEqual(parameter_value.relationship_id, nemo_scooby_rel_id)
         self.assertIsNone(parameter_value.object_id)
         # Last, check that relationship is in object tree
         nemo_scooby_item = nemo_fish_dog_item.child(1)
@@ -932,162 +737,355 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_scooby_item_object_id_list = nemo_scooby_item.data(Qt.UserRole + 1)['object_id_list']
         nemo_scooby_item_object_name_list = nemo_scooby_item.data(Qt.UserRole + 1)['object_name_list']
         self.assertEqual(nemo_scooby_item_type, "relationship")
-        self.assertEqual(nemo_scooby_item_class_id, fish_dog_relationship_class.id)
+        self.assertEqual(nemo_scooby_item_class_id, fish_dog_class_id)
         split_scooby_nemo_object_id_list = [int(x) for x in nemo_scooby_item_object_id_list.split(",")]
-        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object.id, scooby_object.id])
+        self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object_id, scooby_object_id])
         self.assertEqual(nemo_scooby_item_object_name_list, "nemo,scooby")
 
-    @unittest.skip("TODO")
     def test_paste_add_object_parameter_definitions(self):
         """Test that data is pasted onto the view and object parameter definitions are added to the model.
         """
-        self.fail()
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        self.tree_view_form.init_models()
+        # Paste data
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        header_index = model.horizontal_header_labels().index
+        clipboard_text = "dog\tbreed\nfish\twater\n"
+        QApplication.clipboard().setText(clipboard_text)
+        obj_cls_name_index = model.index(0, header_index('object_class_name'))
+        view.setCurrentIndex(obj_cls_name_index)
+        view.paste()
+        # Check model
+        # Object class name and id
+        obj_cls_name0 = model.index(0, header_index("object_class_name")).data()
+        obj_cls_name1 = model.index(1, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name0, 'dog')
+        self.assertEqual(obj_cls_name1, 'fish')
+        obj_cls_id0 = model.index(0, header_index("object_class_id")).data()
+        obj_cls_id1 = model.index(1, header_index("object_class_id")).data()
+        self.assertEqual(obj_cls_id0, dog_class_id)
+        self.assertEqual(obj_cls_id1, fish_class_id)
+        # Parameter name
+        parameter_name0 = model.index(0, header_index("parameter_name")).data()
+        parameter_name1 = model.index(1, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name0, 'breed')
+        self.assertEqual(parameter_name1, 'water')
+        # Check db
+        breed, water = self.tree_view_form.db_map.parameter_list().all()
+        # Object class id
+        self.assertEqual(breed.object_class_id, dog_class_id)
+        self.assertEqual(water.object_class_id, fish_class_id)
+        # Relationship id (None)
+        self.assertIsNone(breed.relationship_class_id)
+        self.assertIsNone(water.relationship_class_id)
+        # Parameter id
+        breed_id = model.index(0, header_index("id")).data()
+        water_id = model.index(1, header_index("id")).data()
+        self.assertEqual(breed.id, breed_id)
+        self.assertEqual(water.id, water_id)
 
     def test_paste_add_object_parameter_values(self):
         """Test that data is pasted onto the view and object parameter values are added to the model.
         """
-        # Add dog object class
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        self.tree_view_form.add_object_classes([dog_object_class])
-        dog_class_id = dog_object_class.id
-        # Add pluto and scooby objects
-        pluto = dict(
-            class_id=dog_class_id,
-            name='pluto',
-            description="Mickey's."
-        )
-        scooby = dict(
-            class_id=dog_class_id,
-            name='scooby',
-            description="Scooby-Dooby-Doo."
-        )
-        brian = dict(
-            class_id=dog_class_id,
-            name='brian',
-            description="Brian Griffin."
-        )
-        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
-        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        brian_object = self.tree_view_form.db_map.add_object(**brian)
-        self.tree_view_form.add_objects([pluto_object, scooby_object, brian_object])
-        # Add object parameter definition
-        model = self.tree_view_form.object_parameter_definition_model
-        view = self.tree_view_form.ui.tableView_object_parameter_definition
-        header_index = model.horizontal_header_labels().index
-        # Enter object class name
-        obj_cls_name_index = model.index(0, header_index("object_class_name"))
-        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), obj_cls_name_index)
-        view.itemDelegate().setEditorData(editor, obj_cls_name_index)
-        editor.setCurrentIndex(0)
-        view.itemDelegate().setModelData(editor, model, obj_cls_name_index)
-        view.itemDelegate().destroyEditor(editor, obj_cls_name_index)
-        # Enter parameter name
-        parameter_name_index = model.index(0, header_index("parameter_name"))
-        editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_name_index)
-        view.itemDelegate().setEditorData(editor, parameter_name_index)
-        editor.setText("breed")
-        view.itemDelegate().setModelData(editor, model, parameter_name_index)
-        view.itemDelegate().destroyEditor(editor, parameter_name_index)
-        breed_parameter_id = model.index(0, header_index('id')).data()
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        water_parameter_id, breed_parameter_id = self.add_mock_object_parameter_definitions(
+            fish_class_id, dog_class_id)
+        self.tree_view_form.init_models()
         # Paste data
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
         header_index = model.horizontal_header_labels().index
-        clipboard_text = "pluto\tbreed\t\tbloodhound\nscooby\tbreed\t\tgreat dane\nbrian\tbreed\t\tlabrador\n"
+        clipboard_text = "nemo\twater\t\tsalt\npluto\tbreed\t\tbloodhound\nscooby\tbreed\t\tgreat dane\n"
         QApplication.clipboard().setText(clipboard_text)
         obj_name_index = model.index(0, header_index('object_name'))
         view.setCurrentIndex(obj_name_index)
         view.paste()
         # Check model
-        for row in range(3):
-            # Object class name and id
-            obj_cls_name = model.index(row, header_index("object_class_name")).data()
-            self.assertEqual(obj_cls_name, 'dog')
-            obj_cls_id = model.index(row, header_index("object_class_id")).data()
-            self.assertEqual(obj_cls_id, dog_class_id)
-            # Parameter name and id
-            parameter_name = model.index(row, header_index("parameter_name")).data()
-            self.assertEqual(parameter_name, 'breed')
-            parameter_id = model.index(row, header_index("parameter_id")).data()
-            self.assertEqual(parameter_id, breed_parameter_id)
+        # Object class name and id
+        obj_cls_name = model.index(0, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name, 'fish')
+        obj_cls_id = model.index(0, header_index("object_class_id")).data()
+        self.assertEqual(obj_cls_id, fish_class_id)
+        obj_cls_name = model.index(1, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name, 'dog')
+        obj_cls_id = model.index(1, header_index("object_class_id")).data()
+        self.assertEqual(obj_cls_id, dog_class_id)
+        obj_cls_name = model.index(2, header_index("object_class_name")).data()
+        self.assertEqual(obj_cls_name, 'dog')
+        obj_cls_id = model.index(2, header_index("object_class_id")).data()
+        self.assertEqual(obj_cls_id, dog_class_id)
+        # Parameter name and id
+        parameter_name = model.index(0, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name, 'water')
+        parameter_id = model.index(0, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, water_parameter_id)
+        parameter_name = model.index(1, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name, 'breed')
+        parameter_id = model.index(1, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, breed_parameter_id)
+        parameter_name = model.index(2, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name, 'breed')
+        parameter_id = model.index(2, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, breed_parameter_id)
         # Object name and id
         obj_name = model.index(0, header_index("object_name")).data()
-        self.assertEqual(obj_name, 'pluto')
+        self.assertEqual(obj_name, 'nemo')
         obj_id = model.index(0, header_index("object_id")).data()
-        self.assertEqual(obj_id, pluto_object.id)
+        self.assertEqual(obj_id, nemo_object_id)
         obj_name = model.index(1, header_index("object_name")).data()
-        self.assertEqual(obj_name, 'scooby')
+        self.assertEqual(obj_name, 'pluto')
         obj_id = model.index(1, header_index("object_id")).data()
-        self.assertEqual(obj_id, scooby_object.id)
+        self.assertEqual(obj_id, pluto_object_id)
         obj_name = model.index(2, header_index("object_name")).data()
-        self.assertEqual(obj_name, 'brian')
+        self.assertEqual(obj_name, 'scooby')
         obj_id = model.index(2, header_index("object_id")).data()
-        self.assertEqual(obj_id, brian_object.id)
+        self.assertEqual(obj_id, scooby_object_id)
         # Parameter value and id
         value = model.index(0, header_index("value")).data()
-        self.assertEqual(value, 'bloodhound')
+        self.assertEqual(value, 'salt')
         parameter_id = model.index(0, header_index("parameter_id")).data()
-        self.assertEqual(parameter_id, breed_parameter_id)
+        self.assertEqual(parameter_id, water_parameter_id)
         value = model.index(1, header_index("value")).data()
-        self.assertEqual(value, 'great dane')
+        self.assertEqual(value, 'bloodhound')
         parameter_id = model.index(1, header_index("parameter_id")).data()
         self.assertEqual(parameter_id, breed_parameter_id)
         value = model.index(2, header_index("value")).data()
-        self.assertEqual(value, 'labrador')
+        self.assertEqual(value, 'great dane')
         parameter_id = model.index(2, header_index("parameter_id")).data()
         self.assertEqual(parameter_id, breed_parameter_id)
         # Check db
-        pluto_breed, scooby_breed, brian_breed = self.tree_view_form.db_map.parameter_value_list().all()
+        nemo_water, pluto_breed, scooby_breed = self.tree_view_form.db_map.parameter_value_list().all()
         # Object id
-        self.assertEqual(pluto_breed.object_id, pluto_object.id)
-        self.assertEqual(scooby_breed.object_id, scooby_object.id)
-        self.assertEqual(brian_breed.object_id, brian_object.id)
+        self.assertEqual(nemo_water.object_id, nemo_object_id)
+        self.assertEqual(pluto_breed.object_id, pluto_object_id)
+        self.assertEqual(scooby_breed.object_id, scooby_object_id)
         # Relationship id (None)
+        self.assertIsNone(nemo_water.relationship_id)
         self.assertIsNone(pluto_breed.relationship_id)
         self.assertIsNone(scooby_breed.relationship_id)
-        self.assertIsNone(brian_breed.relationship_id)
         # Parameter id
+        self.assertEqual(nemo_water.parameter_id, water_parameter_id)
         self.assertEqual(pluto_breed.parameter_id, breed_parameter_id)
         self.assertEqual(scooby_breed.parameter_id, breed_parameter_id)
-        self.assertEqual(brian_breed.parameter_id, breed_parameter_id)
         # Value
+        self.assertEqual(nemo_water.value, 'salt')
         self.assertEqual(pluto_breed.value, 'bloodhound')
         self.assertEqual(scooby_breed.value, 'great dane')
-        self.assertEqual(brian_breed.value, 'labrador')
 
-    @unittest.skip("TODO")
     def test_paste_add_relationship_parameter_definitions(self):
         """Test that data is pasted onto the view and relationship parameter definitions are added to the model.
         """
-        self.fail()
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
+        self.tree_view_form.init_models()
+        # Paste data
+        model = self.tree_view_form.relationship_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
+        header_index = model.horizontal_header_labels().index
+        clipboard_text = "fish__dog\t\trelative_speed\ndog__fish\t\tcombined_mojo\n"
+        QApplication.clipboard().setText(clipboard_text)
+        rel_class_name_index = model.index(0, header_index('relationship_class_name'))
+        view.setCurrentIndex(rel_class_name_index)
+        view.paste()
+        # Check model
+        # Relationship class name and id
+        rel_cls_name0 = model.index(0, header_index("relationship_class_name")).data()
+        rel_cls_name1 = model.index(1, header_index("relationship_class_name")).data()
+        self.assertEqual(rel_cls_name0, 'fish__dog')
+        self.assertEqual(rel_cls_name1, 'dog__fish')
+        rel_cls_id0 = model.index(0, header_index("relationship_class_id")).data()
+        rel_cls_id1 = model.index(1, header_index("relationship_class_id")).data()
+        self.assertEqual(rel_cls_id0, fish_dog_class_id)
+        self.assertEqual(rel_cls_id1, dog_fish_class_id)
+        # Object class name and id list
+        obj_cls_name_lst0 = model.index(0, header_index("object_class_name_list")).data()
+        obj_cls_name_lst1 = model.index(1, header_index("object_class_name_list")).data()
+        self.assertEqual(obj_cls_name_lst0, 'fish,dog')
+        self.assertEqual(obj_cls_name_lst1, 'dog,fish')
+        obj_cls_id_lst0 = model.index(0, header_index("object_class_id_list")).data()
+        obj_cls_id_lst1 = model.index(1, header_index("object_class_id_list")).data()
+        self.assertEqual(obj_cls_id_lst0, str(fish_class_id) + "," + str(dog_fish_class_id))
+        self.assertEqual(obj_cls_id_lst1, str(dog_fish_class_id) + "," + str(fish_class_id))
+        # Parameter name
+        parameter_name0 = model.index(0, header_index("parameter_name")).data()
+        parameter_name1 = model.index(1, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name0, 'relative_speed')
+        self.assertEqual(parameter_name1, 'combined_mojo')
+        # Check db
+        relative_speed, combined_mojo = self.tree_view_form.db_map.parameter_list().all()
+        # Relationship class id
+        self.assertEqual(relative_speed.relationship_class_id, fish_dog_class_id)
+        self.assertEqual(combined_mojo.relationship_class_id, dog_fish_class_id)
+        # Object class id (None)
+        self.assertIsNone(relative_speed.object_class_id)
+        self.assertIsNone(combined_mojo.object_class_id)
+        # Parameter id
+        relative_speed_id = model.index(0, header_index("id")).data()
+        combined_mojo_id = model.index(1, header_index("id")).data()
+        self.assertEqual(relative_speed.id, relative_speed_id)
+        self.assertEqual(combined_mojo.id, combined_mojo_id)
 
-    @unittest.skip("TODO")
     def test_paste_add_relationship_parameter_values(self):
         """Test that data is pasted onto the view and relationship parameter values are added to the model.
         """
-        self.fail()
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
+        pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id = self.add_mock_relationships(
+            fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id)
+        relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_relationship_parameter_definitions(
+            fish_dog_class_id, dog_fish_class_id)
+        self.tree_view_form.init_models()
+        # Paste data
+        model = self.tree_view_form.relationship_parameter_value_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_value
+        header_index = model.horizontal_header_labels().index
+        clipboard_text = "nemo,pluto\trelative_speed\t\t-1\npluto,nemo\tcombined_mojo\t\t100\n"
+        QApplication.clipboard().setText(clipboard_text)
+        obj_cls_name_lst_index = model.index(0, header_index('object_class_name_list'))
+        view.setCurrentIndex(obj_cls_name_lst_index)
+        view.paste()
+        # Check model
+        # Relationship class name and id
+        rel_cls_name = model.index(0, header_index("relationship_class_name")).data()
+        self.assertEqual(rel_cls_name, 'fish__dog')
+        rel_cls_id = model.index(0, header_index("relationship_class_id")).data()
+        self.assertEqual(rel_cls_id, fish_dog_class_id)
+        rel_cls_name = model.index(1, header_index("relationship_class_name")).data()
+        self.assertEqual(rel_cls_name, 'dog__fish')
+        rel_cls_id = model.index(1, header_index("relationship_class_id")).data()
+        self.assertEqual(rel_cls_id, dog_fish_class_id)
+        # Parameter name and id
+        parameter_name = model.index(0, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name, 'relative_speed')
+        parameter_id = model.index(0, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, relative_speed_parameter_id)
+        parameter_name = model.index(1, header_index("parameter_name")).data()
+        self.assertEqual(parameter_name, 'combined_mojo')
+        parameter_id = model.index(1, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, combined_mojo_parameter_id)
+        # Object name and id list
+        obj_name_lst = model.index(0, header_index("object_name_list")).data()
+        self.assertEqual(obj_name_lst, 'nemo,pluto')
+        obj_id_lst = model.index(0, header_index("object_id_list")).data()
+        self.assertEqual(obj_id_lst, str(nemo_object_id) + "," + str(pluto_object_id))
+        obj_name_lst = model.index(1, header_index("object_name_list")).data()
+        self.assertEqual(obj_name_lst, 'pluto,nemo')
+        obj_id_lst = model.index(1, header_index("object_id_list")).data()
+        self.assertEqual(obj_id_lst, str(pluto_object_id) + "," + str(nemo_object_id))
+        # Parameter value and id
+        value = model.index(0, header_index("value")).data()
+        self.assertEqual(value, '-1')
+        parameter_id = model.index(0, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, relative_speed_parameter_id)
+        value = model.index(1, header_index("value")).data()
+        self.assertEqual(value, '100')
+        parameter_id = model.index(1, header_index("parameter_id")).data()
+        self.assertEqual(parameter_id, combined_mojo_parameter_id)
+        # Check db
+        nemo_pluto_relative_speed, pluto_nemo_combined_mojo = self.tree_view_form.db_map.parameter_value_list().all()
+        # Object id (None)
+        self.assertIsNone(nemo_pluto_relative_speed.object_id)
+        self.assertIsNone(pluto_nemo_combined_mojo.object_id)
+        # Relationship id
+        self.assertEqual(nemo_pluto_relative_speed.relationship_id, nemo_pluto_rel_id)
+        self.assertEqual(pluto_nemo_combined_mojo.relationship_id, pluto_nemo_rel_id)
+        # Parameter id
+        self.assertEqual(nemo_pluto_relative_speed.parameter_id, relative_speed_parameter_id)
+        self.assertEqual(pluto_nemo_combined_mojo.parameter_id, combined_mojo_parameter_id)
+        # Value
+        self.assertEqual(nemo_pluto_relative_speed.value, '-1')
+        self.assertEqual(pluto_nemo_combined_mojo.value, '100')
+
+    def test_copy_from_parameter_tables(self):
+        """Test that data is copied from each parameter table into the clipboard."""
+        self.add_mock_dataset()
+        # Object parameter definition
+        model = self.tree_view_form.object_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_object_parameter_definition
+        top_left = model.index(0, 0)
+        bottom_right = model.index(model.rowCount() - 1, model.columnCount() - 1)
+        item_selection = QItemSelection(top_left, bottom_right)
+        view.selectionModel().select(item_selection, QItemSelectionModel.Select)
+        view.copy()
+        clipboard_text = QApplication.clipboard().text()
+        data = [line.split('\t') for line in clipboard_text.split('\n')]
+        self.assertEqual(data[0][0:2], ['fish', 'water'])
+        self.assertEqual(data[1][0:2], ['dog', 'breed'])
+        # Object parameter value
+        model = self.tree_view_form.object_parameter_value_model
+        view = self.tree_view_form.ui.tableView_object_parameter_value
+        top_left = model.index(0, 0)
+        bottom_right = model.index(model.rowCount() - 1, model.columnCount() - 1)
+        item_selection = QItemSelection(top_left, bottom_right)
+        view.selectionModel().select(item_selection, QItemSelectionModel.Select)
+        view.copy()
+        clipboard_text = QApplication.clipboard().text()
+        data = [line.split('\t') for line in clipboard_text.split('\n')]
+        self.assertEqual(data[0][0:5], ['fish', 'nemo', 'water', '1', 'salt'])
+        self.assertEqual(data[1][0:5], ['dog', 'pluto', 'breed', '1', 'bloodhound'])
+        self.assertEqual(data[2][0:5], ['dog', 'scooby', 'breed', '1', 'great dane'])
+        # Relationship parameter definition
+        model = self.tree_view_form.relationship_parameter_definition_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_definition
+        top_left = model.index(0, 0)
+        bottom_right = model.index(model.rowCount() - 1, model.columnCount() - 1)
+        item_selection = QItemSelection(top_left, bottom_right)
+        view.selectionModel().select(item_selection, QItemSelectionModel.Select)
+        view.copy()
+        clipboard_text = QApplication.clipboard().text()
+        data = [line.split('\t') for line in clipboard_text.split('\n')]
+        self.assertEqual(data[0][0:3], ['fish__dog', 'fish,dog', 'relative_speed'])
+        self.assertEqual(data[1][0:3], ['dog__fish', 'dog,fish', 'combined_mojo'])
+        # Relationship parameter value
+        model = self.tree_view_form.relationship_parameter_value_model
+        view = self.tree_view_form.ui.tableView_relationship_parameter_value
+        top_left = model.index(0, 0)
+        bottom_right = model.index(model.rowCount() - 1, model.columnCount() - 1)
+        item_selection = QItemSelection(top_left, bottom_right)
+        view.selectionModel().select(item_selection, QItemSelectionModel.Select)
+        view.copy()
+        clipboard_text = QApplication.clipboard().text()
+        data = [line.split('\t') for line in clipboard_text.split('\n')]
+        self.assertEqual(data[0][0:5], ['fish__dog', 'nemo,pluto', 'relative_speed', '1', '-1'])
+        self.assertEqual(data[1][0:5], ['fish__dog', 'nemo,scooby', 'relative_speed', '1', '5'])
+        self.assertEqual(data[2][0:5], ['dog__fish', 'pluto,nemo', 'combined_mojo', '1', '100'])
+
+    def test_copy_from_object_tree(self):
+        """Test that data is copied from object_tree into the clipboard."""
+        self.add_mock_dataset()
+        # Fetch entire object tree
+        root_item = self.tree_view_form.object_tree_model.root_item
+        root_index = self.tree_view_form.object_tree_model.indexFromItem(root_item)
+        fish_item = root_item.child(0)
+        dog_item = root_item.child(1)
+        fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
+        dog_index = self.tree_view_form.object_tree_model.indexFromItem(dog_item)
+        self.tree_view_form.object_tree_model.fetchMore(fish_index)
+        self.tree_view_form.object_tree_model.fetchMore(dog_index)
+        nemo_item = fish_item.child(0)
+        pluto_item = dog_item.child(0)
+        scooby_item = dog_item.child(1)
+        nemo_index = self.tree_view_form.object_tree_model.indexFromItem(nemo_item)
+        pluto_index = self.tree_view_form.object_tree_model.indexFromItem(pluto_item)
+        scooby_index = self.tree_view_form.object_tree_model.indexFromItem(scooby_item)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(fish_index, QItemSelectionModel.Select)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(dog_index, QItemSelectionModel.Select)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(nemo_index, QItemSelectionModel.Select)
+        self.tree_view_form.ui.treeView_object.selectionModel().select(scooby_index, QItemSelectionModel.Select)
+        self.tree_view_form.ui.treeView_object.copy()
+        clipboard_text = QApplication.clipboard().text()
+        data = [line.split('\t') for line in clipboard_text.split('\n')]
+        self.assertEqual(data, [['fish'], ['dog'], ['nemo'], ['scooby']])
 
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection.
         """
-        # Add fish and dog object classes
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        object_classes = self.tree_view_form.db_map.add_object_classes(fish, dog)
-        self.tree_view_form.add_object_classes(object_classes)
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        self.tree_view_form.init_models()
         # Select fish item in object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1131,9 +1129,8 @@ class TestTreeViewForm(unittest.TestCase):
         """
         self.fail()
 
-    def add_minimal_dataset(self):
-        """Add a minimal amount of items to test editing and removal."""
-        # Add fish and dog object classes
+    def add_mock_object_classes(self):
+        """Add fish and dog object classes."""
         fish = dict(
             name='fish',
             description='A fish.',
@@ -1146,9 +1143,10 @@ class TestTreeViewForm(unittest.TestCase):
         )
         fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
         dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        fish_class_id = fish_object_class.id
-        dog_class_id = dog_object_class.id
-        # Add nemo, pluto and scooby objects
+        return fish_object_class.id, dog_object_class.id
+
+    def add_mock_objects(self, fish_class_id, dog_class_id):
+        """Add nemo, pluto and scooby objects."""
         nemo = dict(
             class_id=fish_class_id,
             name='nemo',
@@ -1167,93 +1165,136 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_object = self.tree_view_form.db_map.add_object(**nemo)
         pluto_object = self.tree_view_form.db_map.add_object(**pluto)
         scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        # Add fish__dog and dog__fish relationship classes
-        fish_dog = dict(
-            name="fish__dog",
-            object_class_id_list=[fish_class_id, dog_class_id]
-        )
+        return nemo_object.id, pluto_object.id, scooby_object.id
+
+    def add_mock_relationship_classes(self, fish_class_id, dog_class_id):
+        """Add dog__fish and fish__dog relationship classes."""
         dog_fish = dict(
             name="dog__fish",
             object_class_id_list=[dog_class_id, fish_class_id]
         )
+        fish_dog = dict(
+            name="fish__dog",
+            object_class_id_list=[fish_class_id, dog_class_id]
+        )
         fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
         dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
-        # Add pluto_nemo, nemo_pluto and nemo_scooby relationships
+        return fish_dog_relationship_class.id, dog_fish_relationship_class.id
+
+    def add_mock_relationships(
+            self, fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id):
+        """Add pluto_nemo, nemo_pluto and nemo_scooby relationships."""
         pluto_nemo = dict(
-            class_id=dog_fish_relationship_class.id,
-            object_id_list=[pluto_object.id, nemo_object.id],
+            class_id=dog_fish_class_id,
+            object_id_list=[pluto_object_id, nemo_object_id],
             name='dog__fish_pluto__nemo'
         )
         nemo_pluto = dict(
-            class_id=fish_dog_relationship_class.id,
-            object_id_list=[nemo_object.id, pluto_object.id],
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, pluto_object_id],
             name='fish__dog_nemo__pluto'
         )
         nemo_scooby = dict(
-            class_id=fish_dog_relationship_class.id,
-            object_id_list=[nemo_object.id, scooby_object.id],
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, scooby_object_id],
             name='fish__dog_nemo__scooby'
         )
         pluto_nemo_relationship = self.tree_view_form.db_map.add_wide_relationship(**pluto_nemo)
         nemo_pluto_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_pluto)
         nemo_scooby_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_scooby)
-        # Add water and breed object parameter definitions
+        return pluto_nemo_relationship.id, nemo_pluto_relationship.id, nemo_scooby_relationship.id
+
+    def add_mock_object_parameter_definitions(self, fish_class_id, dog_class_id):
+        """Add water and breed object parameter definitions."""
         water = dict(object_class_id=fish_class_id, name='water')
         breed = dict(object_class_id=dog_class_id, name='breed')
         water_parameter = self.tree_view_form.db_map.add_parameter(**water)
         breed_parameter = self.tree_view_form.db_map.add_parameter(**breed)
-        # Add relative speed and combined mojo relationship parameter definitions.
-        relative_speed = dict(relationship_class_id=fish_dog_relationship_class.id, name='relative_speed')
-        combined_mojo = dict(relationship_class_id=dog_fish_relationship_class.id, name='combined_mojo')
+        return water_parameter.id, breed_parameter.id
+
+    def add_mock_relationship_parameter_definitions(self, fish_dog_class_id, dog_fish_class_id):
+        """Add relative speed and combined mojo relationship parameter definitions."""
+        relative_speed = dict(relationship_class_id=fish_dog_class_id, name='relative_speed')
+        combined_mojo = dict(relationship_class_id=dog_fish_class_id, name='combined_mojo')
         relative_speed_parameter = self.tree_view_form.db_map.add_parameter(**relative_speed)
         combined_mojo_parameter = self.tree_view_form.db_map.add_parameter(**combined_mojo)
-        # Add parameter values
+        return relative_speed_parameter.id, combined_mojo_parameter.id
+
+    def add_mock_object_parameter_values(
+            self, nemo_object_id, pluto_object_id, scooby_object_id,
+            water_parameter_id, breed_parameter_id):
+        """Add some object parameter values."""
         nemo_water = dict(
-            object_id=nemo_object.id,
-            parameter_id=water_parameter.id,
+            object_id=nemo_object_id,
+            parameter_id=water_parameter_id,
             value='salt'
         )
         pluto_breed = dict(
-            object_id=pluto_object.id,
-            parameter_id=breed_parameter.id,
+            object_id=pluto_object_id,
+            parameter_id=breed_parameter_id,
             value='bloodhound'
         )
         scooby_breed = dict(
-            object_id=scooby_object.id,
-            parameter_id=breed_parameter.id,
+            object_id=scooby_object_id,
+            parameter_id=breed_parameter_id,
             value='great dane'
         )
+        self.tree_view_form.db_map.add_parameter_values(nemo_water, pluto_breed, scooby_breed)
+
+    def add_mock_relationship_parameter_values(
+            self, nemo_pluto_rel_id, nemo_scooby_rel_id, pluto_nemo_rel_id,
+            relative_speed_parameter_id, combined_mojo_parameter_id):
+        """Add some relationship parameter values."""
         nemo_pluto_relative_speed = dict(
-            relationship_id=nemo_pluto_relationship.id,
-            parameter_id=relative_speed_parameter.id,
+            relationship_id=nemo_pluto_rel_id,
+            parameter_id=relative_speed_parameter_id,
             value=-1
         )
         nemo_scooby_relative_speed = dict(
-            relationship_id=nemo_scooby_relationship.id,
-            parameter_id=relative_speed_parameter.id,
+            relationship_id=nemo_scooby_rel_id,
+            parameter_id=relative_speed_parameter_id,
             value=5
         )
         pluto_nemo_combined_mojo = dict(
-            relationship_id=pluto_nemo_relationship.id,
-            parameter_id=combined_mojo_parameter.id,
+            relationship_id=pluto_nemo_rel_id,
+            parameter_id=combined_mojo_parameter_id,
             value=100
         )
         self.tree_view_form.db_map.add_parameter_values(
-            nemo_water, pluto_breed, scooby_breed,
             nemo_pluto_relative_speed, nemo_scooby_relative_speed, pluto_nemo_combined_mojo)
+
+    def add_mock_dataset(self):
+        """Add mock dataset."""
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
+        pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id = self.add_mock_relationships(
+            fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id)
+        water_parameter_id, breed_parameter_id = self.add_mock_object_parameter_definitions(
+            fish_class_id, dog_class_id)
+        relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_relationship_parameter_definitions(
+            fish_dog_class_id, dog_fish_class_id)
+        self.add_mock_object_parameter_values(
+            nemo_object_id, pluto_object_id, scooby_object_id,
+            water_parameter_id, breed_parameter_id)
+        self.add_mock_relationship_parameter_values(
+            nemo_pluto_rel_id, nemo_scooby_rel_id, pluto_nemo_rel_id,
+            relative_speed_parameter_id, combined_mojo_parameter_id)
         self.tree_view_form.init_models()
-        return fish_object_class.id, dog_object_class.id, nemo_object.id, pluto_object.id, scooby_object.id, \
-            dog_fish_relationship_class.id, fish_dog_relationship_class.id, \
-            pluto_nemo_relationship.id, nemo_pluto_relationship.id, nemo_scooby_relationship.id, \
-            combined_mojo_parameter.id, relative_speed_parameter.id
+        return fish_class_id, dog_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            fish_dog_class_id, dog_fish_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id
 
     def test_update_object_classes(self):
         """Test that object classes are updated on all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         upd_fish_obj_cls = dict(
             id=fish_object_class_id,
             name='octopus'
@@ -1314,9 +1355,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that objects are updated on all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object classes
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1368,9 +1410,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that relationship classes are updated on all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object classes and objects
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1452,9 +1495,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that relationships are updated on all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1483,7 +1527,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.tree_view_form.object_tree_model.fetchMore(scooby_dog_fish_index)
         # Update relationship
         upd_pluto_nemo_relationship = dict(
-            id=pluto_nemo_relationship_id,
+            id=pluto_nemo_rel_id,
             name='dog__fish_scooby__nemo',
             object_id_list=[scooby_object_id, nemo_object_id]
         )
@@ -1506,9 +1550,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that object classes are removed from all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch pluto, so we can test that 'child' relationship classes are correctly removed
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
@@ -1556,9 +1601,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that objects are removed from all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch pluto's fish__dog and dog__fish relationship class items,
         # so we can test that 'child' relationships are correctly removed
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -1604,9 +1650,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that relationship classes are removed from all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object classes and objects, so we can test that relationship classes are removed from all objects
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1668,9 +1715,10 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that relationships are removed from all model/views.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch nemo's and pluto's dog_fish relationship class,
         # to test that both intances of the relationship are removed.
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -1714,9 +1762,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_update_object_parameter_definitions(self):
         """Test that object parameter definitions are updated using the table delegate."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Update parameter name
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
@@ -1741,9 +1790,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_update_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are updated using the table delegate."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Update parameter name
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -1770,9 +1820,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_update_object_parameter_values(self):
         """Test that object parameter values are updated using the table delegate."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Update parameter value
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -1792,9 +1843,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_update_relationship_parameter_values(self):
         """Test that relationship parameter values are updated using the table delegate."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Update parameter value
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
@@ -1814,9 +1866,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_remove_object_parameter_definitions(self):
         """Test that object parameter definitions are removed."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Select parameter definition and call removal method
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
@@ -1842,9 +1895,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_remove_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are removed."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Select parameter definition and call removal method
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -1868,9 +1922,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_remove_object_parameter_values(self):
         """Test that object parameter values are removed."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Select two parameter values and call removal method
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -1892,9 +1947,10 @@ class TestTreeViewForm(unittest.TestCase):
     def test_remove_relationship_parameter_values(self):
         """Test that relationship parameter values are removed."""
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Select two parameter values and call removal method
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
@@ -1918,9 +1974,10 @@ class TestTreeViewForm(unittest.TestCase):
         when selecting object classes in the object tree.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
@@ -1962,9 +2019,10 @@ class TestTreeViewForm(unittest.TestCase):
         when selecting objects in the object tree.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
@@ -2008,9 +2066,10 @@ class TestTreeViewForm(unittest.TestCase):
         when selecting relationship classes in the object tree.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -2055,9 +2114,10 @@ class TestTreeViewForm(unittest.TestCase):
         when selecting relationships in the object tree.
         """
         fish_object_class_id, dog_object_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            dog_fish_relationship_class_id, fish_dog_relationship_class_id, \
-            pluto_nemo_relationship_id, nemo_pluto_relationship_id, nemo_scooby_relationship_id, \
-            combined_mojo_parameter_id, relative_speed_parameter_id = self.add_minimal_dataset()
+            fish_dog_relationship_class_id, dog_fish_relationship_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
