@@ -16,9 +16,11 @@ Unit tests for PivotModel class.
 :date:   4.12.2018
 """
 
-from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QListView, QLineEdit, \
-    QDialogButtonBox, QMenu, QPushButton, QWidgetAction, QAction, QTableView, QStyle
+from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QListView, QLineEdit, \
+    QDialogButtonBox, QMenu, QPushButton, QAction, QTableView, QStyle, QPushButton, \
+    QLabel, QToolBar, QToolButton
 from PySide2.QtCore import Qt, QTimer, Signal, Slot
+from PySide2.QtGui import QPixmap
 from tabularview_models import FilterCheckboxListModel
 from models import MinimalTableModel
 from widgets.custom_delegates import CheckBoxDelegate
@@ -197,3 +199,31 @@ class FilterWidget(QWidget):
         # is edited before last time is out.
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
+
+
+class ZoomWidget(QWidget):
+    """A widget to show zoom options for the graph view."""
+
+    minus_pressed = Signal(name="minus_pressed")
+    plus_pressed = Signal(name="plus_pressed")
+    reset_pressed = Signal(name="reset_pressed")
+
+    def __init__(self, parent=None):
+        """Init class."""
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        #layout.setSpacing(0)
+        label = QLabel("Zoom")
+        tool_bar = QToolBar(self)
+        minus_action = tool_bar.addAction("-")
+        reset_action = tool_bar.addAction("Reset")
+        plus_action = tool_bar.addAction("+")
+        layout.addSpacing(28)  # FIXME: get correct size from somewhere, or add QLabel with an icon
+        layout.addWidget(label)
+        layout.addStretch()
+        layout.addWidget(tool_bar)
+        self.setLayout(layout)
+        minus_action.triggered.connect(lambda x: self.minus_pressed.emit())
+        plus_action.triggered.connect(lambda x: self.plus_pressed.emit())
+        reset_action.triggered.connect(lambda x: self.reset_pressed.emit())
