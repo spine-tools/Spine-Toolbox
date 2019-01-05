@@ -110,6 +110,12 @@
            <height>0</height>
           </size>
          </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>200</height>
+          </size>
+         </property>
          <property name="autoFillBackground">
           <bool>false</bool>
          </property>
@@ -120,6 +126,9 @@
           <bool>false</bool>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="spacing">
+           <number>0</number>
+          </property>
           <item>
            <widget class="QCheckBox" name="checkBox_open_previous_project">
             <property name="toolTip">
@@ -232,6 +241,9 @@
           <string>GAMS</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
           <item row="1" column="0">
            <widget class="QLabel" name="label_4">
             <property name="font">
@@ -294,6 +306,9 @@
           <string>JULIA</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
+          <property name="spacing">
+           <number>0</number>
+          </property>
           <item row="1" column="0">
            <widget class="QCheckBox" name="checkBox_use_repl">
             <property name="text">
@@ -359,10 +374,25 @@
        </item>
        <item>
         <widget class="QGroupBox" name="groupBox_data_store">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>80</height>
+          </size>
+         </property>
          <property name="title">
           <string>Data store views</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
+          <property name="spacing">
+           <number>0</number>
+          </property>
           <item>
            <widget class="QCheckBox" name="checkBox_commit_at_exit">
             <property name="toolTip">
@@ -373,6 +403,13 @@
             </property>
             <property name="tristate">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
+            <property name="text">
+             <string>Use smooth zoom in graph view</string>
             </property>
            </widget>
           </item>

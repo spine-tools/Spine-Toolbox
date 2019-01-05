@@ -98,6 +98,7 @@ SETTINGS = {"project_directory": "",
             "julia_path": "",
             "save_at_exit": "1",
             "commit_at_exit": "1",
+            "use_smooth_zoom": "false",
             "delete_data": "false"}
 
 # Stylesheets

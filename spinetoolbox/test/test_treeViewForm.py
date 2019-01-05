@@ -1129,164 +1129,6 @@ class TestTreeViewForm(unittest.TestCase):
         """
         self.fail()
 
-    def add_mock_object_classes(self):
-        """Add fish and dog object classes."""
-        fish = dict(
-            name='fish',
-            description='A fish.',
-            display_order=1
-        )
-        dog = dict(
-            name='dog',
-            description='A dog.',
-            display_order=3
-        )
-        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
-        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
-        return fish_object_class.id, dog_object_class.id
-
-    def add_mock_objects(self, fish_class_id, dog_class_id):
-        """Add nemo, pluto and scooby objects."""
-        nemo = dict(
-            class_id=fish_class_id,
-            name='nemo',
-            description='The lost one.'
-        )
-        pluto = dict(
-            class_id=dog_class_id,
-            name='pluto',
-            description="Mickey's."
-        )
-        scooby = dict(
-            class_id=dog_class_id,
-            name='scooby',
-            description="Scooby-Dooby-Doo."
-        )
-        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
-        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
-        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
-        return nemo_object.id, pluto_object.id, scooby_object.id
-
-    def add_mock_relationship_classes(self, fish_class_id, dog_class_id):
-        """Add dog__fish and fish__dog relationship classes."""
-        dog_fish = dict(
-            name="dog__fish",
-            object_class_id_list=[dog_class_id, fish_class_id]
-        )
-        fish_dog = dict(
-            name="fish__dog",
-            object_class_id_list=[fish_class_id, dog_class_id]
-        )
-        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
-        dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
-        return fish_dog_relationship_class.id, dog_fish_relationship_class.id
-
-    def add_mock_relationships(
-            self, fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id):
-        """Add pluto_nemo, nemo_pluto and nemo_scooby relationships."""
-        pluto_nemo = dict(
-            class_id=dog_fish_class_id,
-            object_id_list=[pluto_object_id, nemo_object_id],
-            name='dog__fish_pluto__nemo'
-        )
-        nemo_pluto = dict(
-            class_id=fish_dog_class_id,
-            object_id_list=[nemo_object_id, pluto_object_id],
-            name='fish__dog_nemo__pluto'
-        )
-        nemo_scooby = dict(
-            class_id=fish_dog_class_id,
-            object_id_list=[nemo_object_id, scooby_object_id],
-            name='fish__dog_nemo__scooby'
-        )
-        pluto_nemo_relationship = self.tree_view_form.db_map.add_wide_relationship(**pluto_nemo)
-        nemo_pluto_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_pluto)
-        nemo_scooby_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_scooby)
-        return pluto_nemo_relationship.id, nemo_pluto_relationship.id, nemo_scooby_relationship.id
-
-    def add_mock_object_parameter_definitions(self, fish_class_id, dog_class_id):
-        """Add water and breed object parameter definitions."""
-        water = dict(object_class_id=fish_class_id, name='water')
-        breed = dict(object_class_id=dog_class_id, name='breed')
-        water_parameter = self.tree_view_form.db_map.add_parameter(**water)
-        breed_parameter = self.tree_view_form.db_map.add_parameter(**breed)
-        return water_parameter.id, breed_parameter.id
-
-    def add_mock_relationship_parameter_definitions(self, fish_dog_class_id, dog_fish_class_id):
-        """Add relative speed and combined mojo relationship parameter definitions."""
-        relative_speed = dict(relationship_class_id=fish_dog_class_id, name='relative_speed')
-        combined_mojo = dict(relationship_class_id=dog_fish_class_id, name='combined_mojo')
-        relative_speed_parameter = self.tree_view_form.db_map.add_parameter(**relative_speed)
-        combined_mojo_parameter = self.tree_view_form.db_map.add_parameter(**combined_mojo)
-        return relative_speed_parameter.id, combined_mojo_parameter.id
-
-    def add_mock_object_parameter_values(
-            self, nemo_object_id, pluto_object_id, scooby_object_id,
-            water_parameter_id, breed_parameter_id):
-        """Add some object parameter values."""
-        nemo_water = dict(
-            object_id=nemo_object_id,
-            parameter_id=water_parameter_id,
-            value='salt'
-        )
-        pluto_breed = dict(
-            object_id=pluto_object_id,
-            parameter_id=breed_parameter_id,
-            value='bloodhound'
-        )
-        scooby_breed = dict(
-            object_id=scooby_object_id,
-            parameter_id=breed_parameter_id,
-            value='great dane'
-        )
-        self.tree_view_form.db_map.add_parameter_values(nemo_water, pluto_breed, scooby_breed)
-
-    def add_mock_relationship_parameter_values(
-            self, nemo_pluto_rel_id, nemo_scooby_rel_id, pluto_nemo_rel_id,
-            relative_speed_parameter_id, combined_mojo_parameter_id):
-        """Add some relationship parameter values."""
-        nemo_pluto_relative_speed = dict(
-            relationship_id=nemo_pluto_rel_id,
-            parameter_id=relative_speed_parameter_id,
-            value=-1
-        )
-        nemo_scooby_relative_speed = dict(
-            relationship_id=nemo_scooby_rel_id,
-            parameter_id=relative_speed_parameter_id,
-            value=5
-        )
-        pluto_nemo_combined_mojo = dict(
-            relationship_id=pluto_nemo_rel_id,
-            parameter_id=combined_mojo_parameter_id,
-            value=100
-        )
-        self.tree_view_form.db_map.add_parameter_values(
-            nemo_pluto_relative_speed, nemo_scooby_relative_speed, pluto_nemo_combined_mojo)
-
-    def add_mock_dataset(self):
-        """Add mock dataset."""
-        fish_class_id, dog_class_id = self.add_mock_object_classes()
-        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
-        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
-        pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id = self.add_mock_relationships(
-            fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id)
-        water_parameter_id, breed_parameter_id = self.add_mock_object_parameter_definitions(
-            fish_class_id, dog_class_id)
-        relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_relationship_parameter_definitions(
-            fish_dog_class_id, dog_fish_class_id)
-        self.add_mock_object_parameter_values(
-            nemo_object_id, pluto_object_id, scooby_object_id,
-            water_parameter_id, breed_parameter_id)
-        self.add_mock_relationship_parameter_values(
-            nemo_pluto_rel_id, nemo_scooby_rel_id, pluto_nemo_rel_id,
-            relative_speed_parameter_id, combined_mojo_parameter_id)
-        self.tree_view_form.init_models()
-        return fish_class_id, dog_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
-            fish_dog_class_id, dog_fish_class_id, \
-            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
-            water_parameter_id, breed_parameter_id, \
-            relative_speed_parameter_id, combined_mojo_parameter_id
-
     def test_update_object_classes(self):
         """Test that object classes are updated on all model/views.
         """
@@ -2158,6 +2000,164 @@ class TestTreeViewForm(unittest.TestCase):
         obj_name_lst_1 = model.index(1, header_index("object_name_list")).data()
         self.assertEqual(obj_name_lst_0, 'nemo,pluto')
         self.assertEqual(model.rowCount(), 2)
+
+    def add_mock_object_classes(self):
+        """Add fish and dog object classes."""
+        fish = dict(
+            name='fish',
+            description='A fish.',
+            display_order=1
+        )
+        dog = dict(
+            name='dog',
+            description='A dog.',
+            display_order=3
+        )
+        fish_object_class = self.tree_view_form.db_map.add_object_class(**fish)
+        dog_object_class = self.tree_view_form.db_map.add_object_class(**dog)
+        return fish_object_class.id, dog_object_class.id
+
+    def add_mock_objects(self, fish_class_id, dog_class_id):
+        """Add nemo, pluto and scooby objects."""
+        nemo = dict(
+            class_id=fish_class_id,
+            name='nemo',
+            description='The lost one.'
+        )
+        pluto = dict(
+            class_id=dog_class_id,
+            name='pluto',
+            description="Mickey's."
+        )
+        scooby = dict(
+            class_id=dog_class_id,
+            name='scooby',
+            description="Scooby-Dooby-Doo."
+        )
+        nemo_object = self.tree_view_form.db_map.add_object(**nemo)
+        pluto_object = self.tree_view_form.db_map.add_object(**pluto)
+        scooby_object = self.tree_view_form.db_map.add_object(**scooby)
+        return nemo_object.id, pluto_object.id, scooby_object.id
+
+    def add_mock_relationship_classes(self, fish_class_id, dog_class_id):
+        """Add dog__fish and fish__dog relationship classes."""
+        dog_fish = dict(
+            name="dog__fish",
+            object_class_id_list=[dog_class_id, fish_class_id]
+        )
+        fish_dog = dict(
+            name="fish__dog",
+            object_class_id_list=[fish_class_id, dog_class_id]
+        )
+        fish_dog_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**fish_dog)
+        dog_fish_relationship_class = self.tree_view_form.db_map.add_wide_relationship_class(**dog_fish)
+        return fish_dog_relationship_class.id, dog_fish_relationship_class.id
+
+    def add_mock_relationships(
+            self, fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id):
+        """Add pluto_nemo, nemo_pluto and nemo_scooby relationships."""
+        pluto_nemo = dict(
+            class_id=dog_fish_class_id,
+            object_id_list=[pluto_object_id, nemo_object_id],
+            name='dog__fish_pluto__nemo'
+        )
+        nemo_pluto = dict(
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, pluto_object_id],
+            name='fish__dog_nemo__pluto'
+        )
+        nemo_scooby = dict(
+            class_id=fish_dog_class_id,
+            object_id_list=[nemo_object_id, scooby_object_id],
+            name='fish__dog_nemo__scooby'
+        )
+        pluto_nemo_relationship = self.tree_view_form.db_map.add_wide_relationship(**pluto_nemo)
+        nemo_pluto_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_pluto)
+        nemo_scooby_relationship = self.tree_view_form.db_map.add_wide_relationship(**nemo_scooby)
+        return pluto_nemo_relationship.id, nemo_pluto_relationship.id, nemo_scooby_relationship.id
+
+    def add_mock_object_parameter_definitions(self, fish_class_id, dog_class_id):
+        """Add water and breed object parameter definitions."""
+        water = dict(object_class_id=fish_class_id, name='water')
+        breed = dict(object_class_id=dog_class_id, name='breed')
+        water_parameter = self.tree_view_form.db_map.add_parameter(**water)
+        breed_parameter = self.tree_view_form.db_map.add_parameter(**breed)
+        return water_parameter.id, breed_parameter.id
+
+    def add_mock_relationship_parameter_definitions(self, fish_dog_class_id, dog_fish_class_id):
+        """Add relative speed and combined mojo relationship parameter definitions."""
+        relative_speed = dict(relationship_class_id=fish_dog_class_id, name='relative_speed')
+        combined_mojo = dict(relationship_class_id=dog_fish_class_id, name='combined_mojo')
+        relative_speed_parameter = self.tree_view_form.db_map.add_parameter(**relative_speed)
+        combined_mojo_parameter = self.tree_view_form.db_map.add_parameter(**combined_mojo)
+        return relative_speed_parameter.id, combined_mojo_parameter.id
+
+    def add_mock_object_parameter_values(
+            self, nemo_object_id, pluto_object_id, scooby_object_id,
+            water_parameter_id, breed_parameter_id):
+        """Add some object parameter values."""
+        nemo_water = dict(
+            object_id=nemo_object_id,
+            parameter_id=water_parameter_id,
+            value='salt'
+        )
+        pluto_breed = dict(
+            object_id=pluto_object_id,
+            parameter_id=breed_parameter_id,
+            value='bloodhound'
+        )
+        scooby_breed = dict(
+            object_id=scooby_object_id,
+            parameter_id=breed_parameter_id,
+            value='great dane'
+        )
+        self.tree_view_form.db_map.add_parameter_values(nemo_water, pluto_breed, scooby_breed)
+
+    def add_mock_relationship_parameter_values(
+            self, nemo_pluto_rel_id, nemo_scooby_rel_id, pluto_nemo_rel_id,
+            relative_speed_parameter_id, combined_mojo_parameter_id):
+        """Add some relationship parameter values."""
+        nemo_pluto_relative_speed = dict(
+            relationship_id=nemo_pluto_rel_id,
+            parameter_id=relative_speed_parameter_id,
+            value=-1
+        )
+        nemo_scooby_relative_speed = dict(
+            relationship_id=nemo_scooby_rel_id,
+            parameter_id=relative_speed_parameter_id,
+            value=5
+        )
+        pluto_nemo_combined_mojo = dict(
+            relationship_id=pluto_nemo_rel_id,
+            parameter_id=combined_mojo_parameter_id,
+            value=100
+        )
+        self.tree_view_form.db_map.add_parameter_values(
+            nemo_pluto_relative_speed, nemo_scooby_relative_speed, pluto_nemo_combined_mojo)
+
+    def add_mock_dataset(self):
+        """Add mock dataset."""
+        fish_class_id, dog_class_id = self.add_mock_object_classes()
+        nemo_object_id, pluto_object_id, scooby_object_id = self.add_mock_objects(fish_class_id, dog_class_id)
+        fish_dog_class_id, dog_fish_class_id = self.add_mock_relationship_classes(fish_class_id, dog_class_id)
+        pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id = self.add_mock_relationships(
+            fish_dog_class_id, dog_fish_class_id, pluto_object_id, nemo_object_id, scooby_object_id)
+        water_parameter_id, breed_parameter_id = self.add_mock_object_parameter_definitions(
+            fish_class_id, dog_class_id)
+        relative_speed_parameter_id, combined_mojo_parameter_id = self.add_mock_relationship_parameter_definitions(
+            fish_dog_class_id, dog_fish_class_id)
+        self.add_mock_object_parameter_values(
+            nemo_object_id, pluto_object_id, scooby_object_id,
+            water_parameter_id, breed_parameter_id)
+        self.add_mock_relationship_parameter_values(
+            nemo_pluto_rel_id, nemo_scooby_rel_id, pluto_nemo_rel_id,
+            relative_speed_parameter_id, combined_mojo_parameter_id)
+        self.tree_view_form.init_models()
+        return fish_class_id, dog_class_id, nemo_object_id, pluto_object_id, scooby_object_id, \
+            fish_dog_class_id, dog_fish_class_id, \
+            pluto_nemo_rel_id, nemo_pluto_rel_id, nemo_scooby_rel_id, \
+            water_parameter_id, breed_parameter_id, \
+            relative_speed_parameter_id, combined_mojo_parameter_id
 
 
 if __name__ == '__main__':

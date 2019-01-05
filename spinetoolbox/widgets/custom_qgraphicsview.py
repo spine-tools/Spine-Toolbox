@@ -302,6 +302,7 @@ class GraphViewGraphicsView(QGraphicsView):
         self.target_scene_pos = QPointF(0, 0)
         self._num_scheduled_scalings = 0
         self.anim = None
+        self.use_smooth_zoom = False
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
@@ -313,45 +314,37 @@ class GraphViewGraphicsView(QGraphicsView):
         self.target_viewport_pos = event.pos()
         self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
 
-    # def wheelEvent(self, event):
-    #    """Zoom in/out."""
-    #    if event.orientation() != Qt.Vertical:
-    #        event.ignore()
-    #        return
-    #    event.accept()
-    #    angle = event.angleDelta().y()
-    #    self.gentle_zoom(angle)
-
-    # def gentle_zoom(self, angle):
-    #    """Perform the zoom."""
-    #    factor = self._zoom_factor_base ** angle
-    #    self.scale(factor, factor)
-    #    self.centerOn(self.target_scene_pos)
-    #    delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
-    #    viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
-    #    self.centerOn(self.mapToScene(viewport_center))
-
     def wheelEvent(self, event):
         """Zoom in/out."""
         if event.orientation() != Qt.Vertical:
             event.ignore()
             return
         event.accept()
-        num_degrees = event.delta() / 8
-        num_steps = num_degrees / 15
-        self._num_scheduled_scalings += num_steps
-        if self._num_scheduled_scalings * num_steps < 0:
-            self._num_scheduled_scalings = num_steps
-        if self.anim:
-            self.anim.deleteLater()
-        self.anim = QTimeLine(200, self)
-        self.anim.setUpdateInterval(20)
-        self.anim.valueChanged.connect(self.scaling_time)
-        self.anim.finished.connect(self.anim_finished)
-        self.anim.start()
+        config = self._graph_view_form._data_store._toolbox._config
+        use_smooth_zoom = config.getboolean("settings", "use_smooth_zoom")
+        if use_smooth_zoom:
+            num_degrees = event.delta() / 8
+            num_steps = num_degrees / 15
+            self._num_scheduled_scalings += num_steps
+            if self._num_scheduled_scalings * num_steps < 0:
+                self._num_scheduled_scalings = num_steps
+            if self.anim:
+                self.anim.deleteLater()
+            self.anim = QTimeLine(200, self)
+            self.anim.setUpdateInterval(20)
+            self.anim.valueChanged.connect(self.scaling_time)
+            self.anim.finished.connect(self.anim_finished)
+            self.anim.start()
+        else:
+            angle = event.angleDelta().y()
+            factor = self._zoom_factor_base ** angle
+            self.gentle_zoom(factor)
 
     def scaling_time(self, x):
         factor = 1.0 + self._num_scheduled_scalings / 100.0
+        self.gentle_zoom(factor)
+
+    def gentle_zoom(self, factor):
         self.scale(factor, factor)
         self.centerOn(self.target_scene_pos)
         delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()

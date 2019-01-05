@@ -123,6 +123,7 @@ class SettingsWidget(QWidget):
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
         commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
+        use_smooth_zoom = self._configs.getboolean("settings", "use_smooth_zoom")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
@@ -149,6 +150,8 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         else:  # default
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        if use_smooth_zoom:
+            self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if datetime:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
         if delete_data:
@@ -178,6 +181,7 @@ class SettingsWidget(QWidget):
         b = int(self.ui.checkBox_exit_prompt.checkState())
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
+        h = int(self.ui.checkBox_use_smooth_zoom.checkState())
         d = int(self.ui.checkBox_datetime.checkState())
         delete_data = int(self.ui.checkBox_delete_data.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
@@ -201,6 +205,7 @@ class SettingsWidget(QWidget):
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "save_at_exit", f)
         self._configs.set("settings", "commit_at_exit", g)
+        self._configs.setboolean("settings", "use_smooth_zoom", h)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.setboolean("settings", "delete_data", delete_data)
         self._configs.set("settings", "gams_path", gams_path)
