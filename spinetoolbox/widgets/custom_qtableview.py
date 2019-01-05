@@ -20,7 +20,7 @@ from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
 from widgets.custom_delegates import CheckBoxDelegate
-from widgets.filter_menu_widget import AutoFilterWidget
+from widgets.custom_qwidget import AutoFilterWidget
 from models import TableModel
 
 

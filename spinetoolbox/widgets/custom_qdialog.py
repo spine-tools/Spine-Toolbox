@@ -21,7 +21,7 @@ NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inhe
 import logging
 from copy import deepcopy
 from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
-    QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QStyle, QAction, QApplication, QToolButton
+    QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QAction, QApplication, QToolButton
 from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError

@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from helpers import fix_name_ambiguity, tuple_itemgetter
-from widgets.filter_menu_widget import FilterWidget
+from widgets.custom_qwidget import FilterWidget
 from operator import itemgetter
 
 
@@ -444,7 +444,7 @@ class PivotTableModelMenu(QMenu):
         self._proxy = proxy_model
         self.relationship_tuple_key = ()
         self.class_type = ""
-        
+
         # strings
         self._DELETE_INDEX = "Delete selected indexes"
         self._DELETE_RELATIONSHIP = "Delete selected relationships"
@@ -459,7 +459,7 @@ class PivotTableModelMenu(QMenu):
         self.delete_invalid_col_action = self.addAction('Delete selected invalid columns')
         self.insert_row_action = self.addAction('Insert rows')
         self.insert_col_action = self.addAction('Insert columns')
-        
+
         # connect signals
         self.restore_values_action.triggered.connect(self.restore_values)
         self.delete_values_action.triggered.connect(self.delete_values)
@@ -490,7 +490,7 @@ class PivotTableModelMenu(QMenu):
                 else:
                     selected[index_name] = set([value])
         return selected
-    
+
     def _find_selected_relationships(self, indexes):
         """Find any selected tuple combinations in self.relationship_tuple_key"""
         pos = [self._model.model.index_names.index(n) for n in self.relationship_tuple_key]
@@ -506,7 +506,7 @@ class PivotTableModelMenu(QMenu):
                 if all(key):
                     selected.add(key)
         return selected
-    
+
     def _get_selected_indexes(self):
         """Find selected indexes of parent, map to source if proxy is given"""
         indexes = self.parent().selectedIndexes()
@@ -516,10 +516,10 @@ class PivotTableModelMenu(QMenu):
 
     def delete_invalid_row(self):
         return
-    
+
     def delete_invalid_col(self):
         return
-    
+
     def insert_row(self):
         return
 
@@ -588,12 +588,3 @@ class PivotTableModelMenu(QMenu):
         mPos=pPos+QPos
         self.move(mPos)
         self.show()
-
-
-
-
-
-
-
-
-        

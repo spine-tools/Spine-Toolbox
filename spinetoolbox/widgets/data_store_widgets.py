@@ -25,7 +25,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
-    QButtonGroup, QSizePolicy, QHBoxLayout, QWidget
+    QButtonGroup, QSizePolicy, QHBoxLayout, QWidget, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
@@ -41,6 +41,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
+from widgets.custom_qwidget import ZoomWidget
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
@@ -1968,7 +1969,7 @@ class GraphViewForm(DataStoreForm):
         # Icon dicts
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
-        # Contex menus
+        # Context menus
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
         # Hidden and rejected items
@@ -1977,6 +1978,9 @@ class GraphViewForm(DataStoreForm):
         # Current item selection
         self.object_item_selection = list()
         self.arc_item_selection = list()
+        # Zoom widget and action
+        self.zoom_widget_action = None
+        self.zoom_widget = None
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_parameter)
         self._handle_parameter_dock_location_changed(area)
@@ -1987,6 +1991,7 @@ class GraphViewForm(DataStoreForm):
         self.init_views()
         self.setup_delegates()
         self.create_add_more_actions()
+        self.setup_zoom_action()
         self.connect_signals()
         self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
@@ -2029,6 +2034,14 @@ class GraphViewForm(DataStoreForm):
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
 
+    def setup_zoom_action(self):
+        """Setup zoom action in view menu."""
+        self.zoom_widget = ZoomWidget()
+        self.zoom_widget_action = QWidgetAction(self)
+        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.zoom_widget_action)
+
     def create_add_more_actions(self):
         """Create and 'Add more' action and button for the Item Palette views."""
         # object class
@@ -2069,6 +2082,26 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.zoom_widget_action.hovered.connect(self._handle_zoom_widget_action_hovered)
+        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
+        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
+        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+
+    @Slot(name="_handle_zoom_widget_minus_pressed")
+    def _handle_zoom_widget_minus_pressed(self):
+        self.ui.graphicsView.gentle_zoom_out()
+
+    @Slot(name="_handle_zoom_widget_plus_pressed")
+    def _handle_zoom_widget_plus_pressed(self):
+        self.ui.graphicsView.gentle_zoom_in()
+
+    @Slot(name="_handle_zoom_widget_reset_pressed")
+    def _handle_zoom_widget_reset_pressed(self):
+        self.ui.graphicsView.scale_to_fit_scene()
+
+    @Slot(name="_handle_zoom_widget_action_hovered")
+    def _handle_zoom_widget_action_hovered(self):
+        self.ui.menuDock_Widgets.hide()
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
