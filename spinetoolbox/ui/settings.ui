@@ -1,16 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
-######################################################################################################################
--->
 <ui version="4.0">
  <class>SettingsForm</class>
  <widget class="QWidget" name="SettingsForm">
@@ -127,10 +115,16 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_6">
           <property name="spacing">
-           <number>0</number>
+           <number>6</number>
           </property>
           <item>
            <widget class="QCheckBox" name="checkBox_open_previous_project">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Application opens the project at startup that was open the last time the application was exited&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
@@ -241,7 +235,10 @@
           <string>GAMS</string>
          </property>
          <layout class="QGridLayout" name="gridLayout">
-          <property name="spacing">
+          <property name="horizontalSpacing">
+           <number>6</number>
+          </property>
+          <property name="verticalSpacing">
            <number>0</number>
           </property>
           <item row="1" column="0">
@@ -306,7 +303,10 @@
           <string>JULIA</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_2">
-          <property name="spacing">
+          <property name="horizontalSpacing">
+           <number>6</number>
+          </property>
+          <property name="verticalSpacing">
            <number>0</number>
           </property>
           <item row="1" column="0">
@@ -391,7 +391,7 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_4">
           <property name="spacing">
-           <number>0</number>
+           <number>6</number>
           </property>
           <item>
            <widget class="QCheckBox" name="checkBox_commit_at_exit">

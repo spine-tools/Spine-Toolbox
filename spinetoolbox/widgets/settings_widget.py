@@ -33,7 +33,7 @@ class SettingsWidget(QWidget):
     """
     def __init__(self, toolbox, configs):
         """ Initialize class. """
-        super().__init__(parent=toolbox, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
+        super().__init__(parent=None, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
         self._toolbox = toolbox  # QWidget parent
         self._configs = configs
         self._project = self._toolbox.project()

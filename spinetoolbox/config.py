@@ -110,7 +110,6 @@ STATUSBAR_SS = "QStatusBar{" \
 
 SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                 "QLabel{color: white;}" \
-                "QCheckBox{color: white;}" \
                 "QLineEdit{font-size: 11px;}" \
                 "QGroupBox{border: 2px solid gray; " \
                     "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #004AC2, stop: 1 #80B0FF);" \
@@ -124,7 +123,8 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-bottom: 0px;" \
                     "padding-right: 3px;" \
                     "padding-left: 3px;}" \
-                "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}"
+                "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}" \
+                # "QCheckBox{color: white;}"
 
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
 # (known Qt issue)
