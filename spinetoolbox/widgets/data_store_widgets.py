@@ -2089,18 +2089,21 @@ class GraphViewForm(DataStoreForm):
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
-        self.ui.graphicsView.gentle_zoom_out()
+        self.ui.graphicsView.zoom_out()
 
     @Slot(name="_handle_zoom_widget_plus_pressed")
     def _handle_zoom_widget_plus_pressed(self):
-        self.ui.graphicsView.gentle_zoom_in()
+        self.ui.graphicsView.zoom_in()
 
     @Slot(name="_handle_zoom_widget_reset_pressed")
     def _handle_zoom_widget_reset_pressed(self):
-        self.ui.graphicsView.scale_to_fit_scene()
+        self.ui.graphicsView.reset_zoom()
 
     @Slot(name="_handle_zoom_widget_action_hovered")
     def _handle_zoom_widget_action_hovered(self):
+        """Called when the zoom widget action is hovered. Hide the 'Dock widgets' submenu in case
+        it's being shown. This is the default behavior for hovering 'normal' `QAction`s, but for some reason
+        it's not the case for hovering `QWidgetAction`s."""
         self.ui.menuDock_Widgets.hide()
 
     @Slot(name="_handle_menu_about_to_show")
