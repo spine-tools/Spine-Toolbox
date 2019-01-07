@@ -230,7 +230,7 @@ class DataStoreForm(QMainWindow):
         self.init_models()
 
     def object_icon(self, object_class_name):
-        """An appropriate object icon for object_class_name."""
+        """An appropriate object icon for `object_class_name`."""
         if not object_class_name:
             return QIcon()
         try:
@@ -241,7 +241,7 @@ class DataStoreForm(QMainWindow):
         return icon
 
     def relationship_icon(self, object_class_name_list):
-        """An appropriate relationship icon for object_class_name_list."""
+        """An appropriate relationship icon for `object_class_name_list`."""
         if not object_class_name_list:
             return QIcon()
         try:
@@ -2036,7 +2036,7 @@ class GraphViewForm(DataStoreForm):
 
     def setup_zoom_action(self):
         """Setup zoom action in view menu."""
-        self.zoom_widget = ZoomWidget()
+        self.zoom_widget = ZoomWidget(self)
         self.zoom_widget_action = QWidgetAction(self)
         self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
         self.ui.menuView.addSeparator()

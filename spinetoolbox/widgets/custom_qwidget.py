@@ -218,9 +218,11 @@ class ZoomWidget(QWidget):
         minus_action = tool_bar.addAction("-")
         reset_action = tool_bar.addAction("Reset")
         plus_action = tool_bar.addAction("+")
-        layout.addSpacing(28)  # FIXME: get correct size from somewhere, or add QLabel with an icon
+        icon_size = parent.style().pixelMetric(QStyle.PM_ToolBarIconSize)
+        item_spacing = parent.style().pixelMetric(QStyle.PM_MenuBarItemSpacing)
+        layout.addSpacing(icon_size + item_spacing)
         layout.addWidget(label)
-        layout.addStretch()
+        layout.addSpacing(icon_size)
         layout.addWidget(tool_bar)
         self.setLayout(layout)
         minus_action.setToolTip("Zoom out")
