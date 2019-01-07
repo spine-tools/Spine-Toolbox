@@ -61,7 +61,7 @@ class Ui_SettingsForm(object):
         self.verticalLayout_6.setSpacing(6)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
         self.checkBox_open_previous_project = QtWidgets.QCheckBox(self.groupBox_general)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.checkBox_open_previous_project.sizePolicy().hasHeightForWidth())

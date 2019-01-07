@@ -22,7 +22,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(862, 707)
+        MainWindow.resize(862, 708)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_10 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 26))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -479,11 +479,11 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_ds_graph_view.sizePolicy().hasHeightForWidth())
         self.pushButton_ds_graph_view.setSizePolicy(sizePolicy)
-        self.pushButton_ds_graph_view.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_graph_view.setMinimumSize(QtCore.QSize(85, 23))
         self.pushButton_ds_graph_view.setMaximumSize(QtCore.QSize(75, 23))
         self.pushButton_ds_graph_view.setObjectName("pushButton_ds_graph_view")
         self.horizontalLayout_13.addWidget(self.pushButton_ds_graph_view)
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        spacerItem2 = QtWidgets.QSpacerItem(1, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_13.addItem(spacerItem2)
         self.pushButton_ds_tabular_view = QtWidgets.QPushButton(self.tab_data_store)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
@@ -491,7 +491,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_ds_tabular_view.sizePolicy().hasHeightForWidth())
         self.pushButton_ds_tabular_view.setSizePolicy(sizePolicy)
-        self.pushButton_ds_tabular_view.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_tabular_view.setMinimumSize(QtCore.QSize(95, 23))
         self.pushButton_ds_tabular_view.setMaximumSize(QtCore.QSize(75, 23))
         self.pushButton_ds_tabular_view.setObjectName("pushButton_ds_tabular_view")
         self.horizontalLayout_13.addWidget(self.pushButton_ds_tabular_view)
@@ -1133,7 +1133,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_properties.setCurrentIndex(4)
+        self.tabWidget_item_properties.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -1291,7 +1291,7 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsview import CustomQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit

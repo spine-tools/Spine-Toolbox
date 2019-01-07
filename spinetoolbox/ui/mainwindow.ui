@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>862</width>
-    <height>707</height>
+    <height>708</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>26</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -343,7 +343,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -1057,7 +1057,7 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
+               <width>85</width>
                <height>23</height>
               </size>
              </property>
@@ -1082,7 +1082,7 @@
              </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>40</width>
+               <width>1</width>
                <height>20</height>
               </size>
              </property>
@@ -1098,7 +1098,7 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>75</width>
+               <width>95</width>
                <height>23</height>
               </size>
              </property>
