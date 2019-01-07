@@ -2420,7 +2420,7 @@ class GraphViewForm(DataStoreForm):
             label_object_class_names = self.arc_label_object_class_name_lists[k]
             label_parts = self.relationship_graph(
                 label_object_names, label_object_class_names, self.extent, self._spread / 2,
-                label_font=self.font, label_color=self.object_label_color, # label_color=Qt.transparent,
+                label_font=self.font, label_color=Qt.transparent, # label_color=self.object_label_color
                 relationship_class_id=relationship_class_id)
             arc_item = ArcItem(
                 self, object_id_list, relationship_class_id, label_object_class_names, # object_class_names,

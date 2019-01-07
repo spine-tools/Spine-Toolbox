@@ -1042,7 +1042,7 @@ class ObjectItem(QGraphicsPixmapItem):
         label_position (str)
     """
     def __init__(self, graph_view_form, object_id, object_name, object_class_id, object_class_name,
-                 x, y, extent, label_font=QFont(), label_color=Qt.transparent, label_position=None):
+                 x, y, extent, label_font=QFont(), label_color=Qt.transparent, label_position="under_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -1622,10 +1622,9 @@ class ArcLabelItem(QGraphicsRectItem):
     def __init__(self, color, object_items=[], arc_items=[]):
         """A QGraphicsRectItem with a relationship to use as arc label"""
         super().__init__()
-        # for item in object_items:
-            # item._label_position = 'beside_icon'
-            # item.label_item.setTextWidth(-1)
-            # item.label_item.set_bg_color(Qt.transparent)
+        for item in object_items:
+            item._label_position = 'beside_icon'
+            item.label_item.setTextWidth(-1)
         for item in object_items + arc_items:
             item.setParentItem(self)
         rect = self.childrenBoundingRect()
