@@ -446,11 +446,15 @@ class ToolTemplateWidget(QWidget):
         self.definition["tooltype"] = self.ui.comboBox_tooltype.currentText().lower()
         flags = Qt.MatchContains
         # Check that main program file is valid before saving it
-        if not os.path.isfile(self.ui.lineEdit_main_program.text().strip()):
+        main_program = self.ui.lineEdit_main_program.text().strip()
+        if not os.path.isfile(main_program):
             self.statusbar.showMessage("Main program file is not valid", 6000)
             return
+        # Fix for issue #241
+        folder_path, file_path = os.path.split(main_program)
+        self.program_path = os.path.abspath(folder_path)
         self.definition["execute_in_work"] = True if self.ui.checkBox_execute_in_work.isChecked() else False
-        self.definition["includes"] = [os.path.split(self.ui.lineEdit_main_program.text().strip())[1]]
+        self.definition["includes"] = [file_path]
         self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
         self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
