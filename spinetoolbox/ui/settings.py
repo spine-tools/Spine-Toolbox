@@ -14,8 +14,6 @@
 # Form implementation generated from reading ui file '../spinetoolbox/ui/settings.ui',
 # licensing of '../spinetoolbox/ui/settings.ui' applies.
 #
-# Created: Tue Jan  8 10:15:24 2019
-#      by: pyside2-uic 2.0.0 running on PySide2 5.6.0~a1
 #
 # WARNING! All changes made in this file will be lost!
 
