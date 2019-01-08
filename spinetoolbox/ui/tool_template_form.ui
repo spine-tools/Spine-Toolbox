@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>743</height>
+    <height>760</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -165,7 +165,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_6">
        <item>
-        <widget class="QLineEdit" name="lineEdit_main_program">
+        <widget class="CustomQLineEdit" name="lineEdit_main_program">
          <property name="placeholderText">
           <string>Add main program file here...</string>
          </property>
@@ -867,6 +867,11 @@
   <zorder></zorder>
  </widget>
  <customwidgets>
+  <customwidget>
+   <class>CustomQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>widgets/custom_qlineedit.h</header>
+  </customwidget>
   <customwidget>
    <class>SourcesTreeView</class>
    <extends>QTreeView</extends>

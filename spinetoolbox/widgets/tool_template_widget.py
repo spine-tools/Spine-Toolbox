@@ -122,6 +122,7 @@ class ToolTemplateWidget(QWidget):
         self.ui.toolButton_add_main_program.clicked.connect(self.browse_main_program)
         self.ui.toolButton_add_source_files.clicked.connect(self.show_add_source_files_dialog)
         self.ui.toolButton_add_source_dirs.clicked.connect(self.show_add_source_dirs_dialog)
+        self.ui.lineEdit_main_program.file_dropped.connect(self.set_main_program_path)
         self.ui.treeView_sourcefiles.files_dropped.connect(self.add_dropped_includes)
         self.ui.treeView_sourcefiles.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_source_files.clicked.connect(self.remove_source_files)
@@ -191,6 +192,11 @@ class ToolTemplateWidget(QWidget):
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
+        self.set_main_program_path(file_path)
+
+    @Slot("QString", name="set_main_program_path")
+    def set_main_program_path(self, file_path):
+        """Set main program file and folder path."""
         folder_path = os.path.split(file_path)[0]
         self.program_path = os.path.abspath(folder_path)
         # Update UI
