@@ -60,7 +60,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 28))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -145,7 +145,7 @@ class Ui_MainWindow(object):
         self.dockWidget_process_output.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_process_output)
         self.dockWidget_item = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_item.setMinimumSize(QtCore.QSize(356, 158))
+        self.dockWidget_item.setMinimumSize(QtCore.QSize(356, 175))
         self.dockWidget_item.setObjectName("dockWidget_item")
         self.dockWidgetContents_3 = QtWidgets.QWidget()
         self.dockWidgetContents_3.setObjectName("dockWidgetContents_3")
@@ -187,7 +187,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 336, 345))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_15 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_15.setObjectName("verticalLayout_15")
@@ -487,7 +487,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_ds_graph_view.sizePolicy().hasHeightForWidth())
         self.pushButton_ds_graph_view.setSizePolicy(sizePolicy)
-        self.pushButton_ds_graph_view.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_graph_view.setMinimumSize(QtCore.QSize(85, 23))
         self.pushButton_ds_graph_view.setMaximumSize(QtCore.QSize(75, 23))
         self.pushButton_ds_graph_view.setObjectName("pushButton_ds_graph_view")
         self.horizontalLayout_13.addWidget(self.pushButton_ds_graph_view)
@@ -499,7 +499,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.pushButton_ds_tabular_view.sizePolicy().hasHeightForWidth())
         self.pushButton_ds_tabular_view.setSizePolicy(sizePolicy)
-        self.pushButton_ds_tabular_view.setMinimumSize(QtCore.QSize(75, 23))
+        self.pushButton_ds_tabular_view.setMinimumSize(QtCore.QSize(95, 23))
         self.pushButton_ds_tabular_view.setMaximumSize(QtCore.QSize(75, 23))
         self.pushButton_ds_tabular_view.setObjectName("pushButton_ds_tabular_view")
         self.horizontalLayout_13.addWidget(self.pushButton_ds_tabular_view)
@@ -557,7 +557,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 148, 272))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_16 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_16.setObjectName("verticalLayout_16")
@@ -724,7 +724,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 332, 393))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 269, 433))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_17 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_17.setObjectName("verticalLayout_17")
@@ -915,7 +915,7 @@ class Ui_MainWindow(object):
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 101, 161))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.verticalLayout_18 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_4)
         self.verticalLayout_18.setObjectName("verticalLayout_18")
@@ -1173,7 +1173,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_properties.setCurrentIndex(4)
+        self.tabWidget_item_properties.setCurrentIndex(0)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -1331,8 +1331,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -311,7 +311,7 @@
    <property name="minimumSize">
     <size>
      <width>356</width>
-     <height>158</height>
+     <height>175</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -343,7 +343,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -426,8 +426,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>361</height>
+              <width>336</width>
+              <height>345</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_15">
@@ -1072,7 +1072,7 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>75</width>
+                   <width>85</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1113,7 +1113,7 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>75</width>
+                   <width>95</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1189,7 +1189,6 @@
             <zorder></zorder>
             <zorder>line_2</zorder>
             <zorder>verticalSpacer</zorder>
-            <zorder></zorder>
             <zorder></zorder>
             <zorder>line</zorder>
            </widget>
@@ -1271,8 +1270,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>361</height>
+              <width>148</width>
+              <height>272</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1677,8 +1676,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>332</width>
-              <height>393</height>
+              <width>269</width>
+              <height>433</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -2165,8 +2164,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>361</height>
+              <width>101</width>
+              <height>161</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
