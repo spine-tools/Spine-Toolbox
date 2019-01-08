@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -426,8 +426,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>345</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_15">
@@ -1189,7 +1189,6 @@
             <zorder></zorder>
             <zorder>line_2</zorder>
             <zorder>verticalSpacer</zorder>
-            <zorder></zorder>
             <zorder>line</zorder>
            </widget>
           </widget>
@@ -1271,7 +1270,7 @@
               <x>0</x>
               <y>0</y>
               <width>349</width>
-              <height>331</height>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1503,18 +1502,18 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_3">
+              <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
                <item>
                 <widget class="QPushButton" name="pushButton_datapackage">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>0</width>
+                   <width>91</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1676,8 +1675,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>433</height>
+              <width>332</width>
+              <height>393</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1913,7 +1912,7 @@
                   <bool>true</bool>
                  </property>
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -1926,7 +1925,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1957,7 +1956,7 @@
                <item>
                 <widget class="QPushButton" name="pushButton_tool_results">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -1970,7 +1969,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1998,7 +1997,7 @@
                <item>
                 <widget class="QPushButton" name="pushButton_tool_execute">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -2011,7 +2010,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -2165,7 +2164,7 @@
               <x>0</x>
               <y>0</y>
               <width>349</width>
-              <height>331</height>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2192,14 +2191,14 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_8">
+              <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0,1">
                <property name="spacing">
                 <number>6</number>
                </property>
                <item>
                 <widget class="QPushButton" name="pushButton_open_network_map">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -2212,7 +2211,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
