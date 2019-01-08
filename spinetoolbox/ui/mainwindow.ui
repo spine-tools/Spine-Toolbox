@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -118,7 +118,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -343,7 +343,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -426,7 +426,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -1072,7 +1072,7 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>85</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1113,7 +1113,7 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>95</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1186,10 +1186,8 @@
               </layout>
              </item>
             </layout>
-            <zorder>horizontalSpacer_9</zorder>
             <zorder></zorder>
             <zorder>line_2</zorder>
-            <zorder></zorder>
             <zorder>verticalSpacer</zorder>
             <zorder></zorder>
             <zorder></zorder>
@@ -1273,7 +1271,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -1679,7 +1677,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>319</width>
+              <width>332</width>
               <height>393</height>
              </rect>
             </property>
@@ -2167,7 +2165,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -2279,10 +2277,6 @@
               </layout>
              </item>
             </layout>
-            <zorder>horizontalSpacer_12</zorder>
-            <zorder>horizontalSpacer_12</zorder>
-            <zorder></zorder>
-            <zorder></zorder>
             <zorder>line_5</zorder>
             <zorder>treeView_view</zorder>
            </widget>
