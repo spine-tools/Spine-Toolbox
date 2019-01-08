@@ -14,6 +14,8 @@
 # Form implementation generated from reading ui file '../spinetoolbox/ui/settings.ui',
 # licensing of '../spinetoolbox/ui/settings.ui' applies.
 #
+# Created: Tue Jan  8 10:15:24 2019
+#      by: pyside2-uic 2.0.0 running on PySide2 5.6.0~a1
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -43,10 +45,15 @@ class Ui_SettingsForm(object):
         self.horizontalLayout_2.setSpacing(6)
         self.horizontalLayout_2.setContentsMargins(9, 9, 9, 9)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.verticalLayout = QtWidgets.QVBoxLayout()
-        self.verticalLayout.setSpacing(6)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.groupBox_general = QtWidgets.QGroupBox(SettingsForm)
+        self.scrollArea = QtWidgets.QScrollArea(SettingsForm)
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setObjectName("scrollArea")
+        self.scrollAreaWidgetContents = QtWidgets.QWidget()
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, -23, 323, 449))
+        self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
+        self.verticalLayout_5.setObjectName("verticalLayout_5")
+        self.groupBox_general = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -97,8 +104,8 @@ class Ui_SettingsForm(object):
         self.verticalLayout_6.addWidget(self.lineEdit_project_dir)
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_6.addItem(spacerItem)
-        self.verticalLayout.addWidget(self.groupBox_general)
-        self.groupBox_gams = QtWidgets.QGroupBox(SettingsForm)
+        self.verticalLayout_5.addWidget(self.groupBox_general)
+        self.groupBox_gams = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_gams.setObjectName("groupBox_gams")
         self.gridLayout = QtWidgets.QGridLayout(self.groupBox_gams)
         self.gridLayout.setHorizontalSpacing(6)
@@ -121,8 +128,8 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_gams.setIconSize(QtCore.QSize(20, 20))
         self.toolButton_browse_gams.setObjectName("toolButton_browse_gams")
         self.gridLayout.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
-        self.verticalLayout.addWidget(self.groupBox_gams)
-        self.groupBox_julia = QtWidgets.QGroupBox(SettingsForm)
+        self.verticalLayout_5.addWidget(self.groupBox_gams)
+        self.groupBox_julia = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
         self.groupBox_julia.setObjectName("groupBox_julia")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.groupBox_julia)
         self.gridLayout_2.setHorizontalSpacing(6)
@@ -148,8 +155,8 @@ class Ui_SettingsForm(object):
         self.toolButton_browse_julia.setIconSize(QtCore.QSize(20, 20))
         self.toolButton_browse_julia.setObjectName("toolButton_browse_julia")
         self.gridLayout_2.addWidget(self.toolButton_browse_julia, 3, 1, 1, 1)
-        self.verticalLayout.addWidget(self.groupBox_julia)
-        self.groupBox_data_store = QtWidgets.QGroupBox(SettingsForm)
+        self.verticalLayout_5.addWidget(self.groupBox_julia)
+        self.groupBox_data_store = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -167,8 +174,9 @@ class Ui_SettingsForm(object):
         self.checkBox_use_smooth_zoom = QtWidgets.QCheckBox(self.groupBox_data_store)
         self.checkBox_use_smooth_zoom.setObjectName("checkBox_use_smooth_zoom")
         self.verticalLayout_4.addWidget(self.checkBox_use_smooth_zoom)
-        self.verticalLayout.addWidget(self.groupBox_data_store)
-        self.horizontalLayout_2.addLayout(self.verticalLayout)
+        self.verticalLayout_5.addWidget(self.groupBox_data_store)
+        self.scrollArea.setWidget(self.scrollAreaWidgetContents)
+        self.horizontalLayout_2.addWidget(self.scrollArea)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.groupBox_project = QtWidgets.QGroupBox(SettingsForm)
@@ -322,8 +330,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Cantarell\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'MS Shell Dlg 2\'; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave this empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))
