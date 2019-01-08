@@ -343,7 +343,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -1024,7 +1024,7 @@
                <item>
                 <widget class="QPushButton" name="pushButton_ds_tree_view">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -1037,7 +1037,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1065,20 +1065,20 @@
                <item>
                 <widget class="QPushButton" name="pushButton_ds_graph_view">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>85</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1106,20 +1106,20 @@
                <item>
                 <widget class="QPushButton" name="pushButton_ds_tabular_view">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>95</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1270,8 +1270,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>148</width>
-              <height>272</height>
+              <width>349</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1676,7 +1676,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>269</width>
+              <width>336</width>
               <height>433</height>
              </rect>
             </property>
@@ -2164,8 +2164,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>101</width>
-              <height>161</height>
+              <width>349</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
