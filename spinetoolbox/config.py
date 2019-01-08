@@ -109,11 +109,10 @@ STATUSBAR_SS = "QStatusBar{" \
                     "border-style: groove;}"
 
 SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
-                "QLabel{color: white;}" \
-                "QCheckBox{color: white;}" \
+                "QLabel{color: black;}" \
                 "QLineEdit{font-size: 11px;}" \
                 "QGroupBox{border: 2px solid gray; " \
-                    "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #004AC2, stop: 1 #80B0FF);" \
+                    "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #80B0FF, stop: 1 #e6efff);" \
                     "border-radius: 5px;" \
                     "margin-top: 0.5em;}" \
                 "QGroupBox:title{border-radius: 2px; " \
@@ -124,7 +123,13 @@ SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
                     "padding-bottom: 0px;" \
                     "padding-right: 3px;" \
                     "padding-left: 3px;}" \
-                "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}"
+                "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}" \
+                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none;}" \
+                "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}" \
+                "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}" \
+                "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}" \
+                "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}" \
+                "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
 
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
 # (known Qt issue)
@@ -147,7 +152,7 @@ TEXTBROWSER_SS = "QTextBrowser {background-color: #19232D; border: 1px solid #32
 
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
 MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}" \
-                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none; min-width: 70px;}" \
+                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none;}" \
                 "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}" \
                 "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}" \
                 "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}" \

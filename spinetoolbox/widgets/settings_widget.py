@@ -33,7 +33,9 @@ class SettingsWidget(QWidget):
     """
     def __init__(self, toolbox, configs):
         """ Initialize class. """
-        super().__init__(parent=toolbox, f=Qt.Window)  # Do not set parent. Uses own stylesheet.
+        # FIXME: setting the parent to toolbox causes the checkboxes in the
+        # groupBox_general to not layout correctly, this might be caused elsewhere?
+        super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
         self._toolbox = toolbox  # QWidget parent
         self._configs = configs
         self._project = self._toolbox.project()
