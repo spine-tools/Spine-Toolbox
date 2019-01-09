@@ -1178,6 +1178,9 @@ class ToolboxUI(QMainWindow):
                 self.project_item_model.setData(ind, new_name)
         elif option == "Remove item":
             self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"), check_dialog=True)
+        elif option == "Open project directory...":
+            file_url = "file:///" + self._project.project_dir
+            self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()

@@ -75,9 +75,17 @@ class ProjectItemContextMenu(CustomContextMenu):
         super().__init__(parent)
         if not index.isValid():
             # If no item at index
+            if not self._parent.project():
+                return
+            self.add_action("Open project directory...")
+            self.exec_(position)
             return
         if not index.parent().isValid():
+            if not self._parent.project():
+                return
             # If index is at a category item
+            self.add_action("Open project directory...")
+            self.exec_(position)
             return
         d = self._parent.project_item_model.project_item(index)
         if d.item_type == "Data Connection":
