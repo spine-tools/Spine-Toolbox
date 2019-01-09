@@ -298,16 +298,11 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="remove_source_files")
     def remove_source_files(self, checked=False):
         """Remove selected source files from include list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_sourcefiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.sourcefiles_model.clear()
-            self.sourcefiles_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
-            if self.ui.lineEdit_main_program.text().strip() == "":
-                self.program_path = None
-                self.ui.label_mainpath.clear()
-            self.statusbar.showMessage("All source files removed", 3000)
+            self.statusbar.showMessage("Please select the source files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -341,13 +336,11 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="remove_inputfiles")
     def remove_inputfiles(self, checked=False):
         """Remove selected input files from list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_inputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.inputfiles_model.clear()
-            self.inputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
-            self.statusbar.showMessage("All input files removed", 3000)
+            self.statusbar.showMessage("Please select the input files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -378,13 +371,11 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="remove_inputfiles_opt")
     def remove_inputfiles_opt(self, checked=False):
         """Remove selected optional input files from list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_inputfiles_opt.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.inputfiles_opt_model.clear()
-            self.inputfiles_opt_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
-            self.statusbar.showMessage("All optional input files removed", 3000)
+            self.statusbar.showMessage("Please select the optional input files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -414,13 +405,11 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="remove_outputfiles")
     def remove_outputfiles(self, checked=False):
         """Remove selected output files from list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_outputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.outputfiles_model.clear()
-            self.outputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
-            self.statusbar.showMessage("All output files removed", 3000)
+            self.statusbar.showMessage("Please select the output files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)

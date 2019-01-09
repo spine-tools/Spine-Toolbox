@@ -1287,6 +1287,9 @@
                  <pointsize>10</pointsize>
                 </font>
                </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
+               </property>
                <property name="acceptDrops">
                 <bool>true</bool>
                </property>
@@ -1470,6 +1473,9 @@
                 <font>
                  <pointsize>10</pointsize>
                 </font>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="acceptDrops">
                 <bool>true</bool>
@@ -1821,6 +1827,9 @@
                <property name="focusPolicy">
                 <enum>Qt::NoFocus</enum>
                </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
+               </property>
                <property name="toolTip">
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Files and directories the Tool template requires in order to run. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                </property>
@@ -1850,6 +1859,9 @@
                </property>
                <property name="focusPolicy">
                 <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="toolTip">
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Optional files. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -1883,6 +1895,9 @@
                </property>
                <property name="focusPolicy">
                 <enum>Qt::NoFocus</enum>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="toolTip">
                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output files produced by the Tool template. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -2175,6 +2190,9 @@
                  <pointsize>10</pointsize>
                 </font>
                </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
+               </property>
                <property name="acceptDrops">
                 <bool>true</bool>
                </property>
@@ -2456,6 +2474,9 @@
          </property>
          <item>
           <widget class="QListView" name="listView_tool_templates">
+           <property name="contextMenuPolicy">
+            <enum>Qt::CustomContextMenu</enum>
+           </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool Templates available in this project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>

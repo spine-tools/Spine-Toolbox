@@ -27,7 +27,7 @@ from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStan
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    LinkContextMenu, AddToolTemplatePopupMenu
+    LinkContextMenu, AddToolTemplatePopupMenu, DcRefContextMenu, DcDataContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -83,6 +83,8 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
+        self.dc_ref_context_menu = None
+        self.dc_data_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -156,15 +158,16 @@ class ToolboxUI(QMainWindow):
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers
         # QGraphicsView and QGraphicsScene
         # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
-        # Project TreeView
-        self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
-        # Tools ListView
+        # Tool templates tab
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
         self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
         self.ui.toolButton_remove_tool_template.clicked.connect(self.remove_selected_tool_template)
-        self.ui.listView_tool_templates.setContextMenuPolicy(Qt.CustomContextMenu)
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
+        # Context-menus
+        self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
+        self.ui.treeView_dc_references.customContextMenuRequested.connect(self.show_dc_ref_properties_context_menu)
+        self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -1173,7 +1176,7 @@ class ToolboxUI(QMainWindow):
             else:
                 new_name = answer[0]
                 self.project_item_model.setData(ind, new_name)
-        elif option == "Remove Item":
+        elif option == "Remove item":
             self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"), check_dialog=True)
         else:  # No option selected
             pass
@@ -1189,7 +1192,7 @@ class ToolboxUI(QMainWindow):
         """
         self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
         option = self.link_context_menu.get_action()
-        if option == "Remove Connection":
+        if option == "Remove connection":
             self.ui.graphicsView.remove_link(link.model_index)
             return
         elif option == "Send to bottom":
@@ -1222,6 +1225,75 @@ class ToolboxUI(QMainWindow):
             pass
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
+
+    @Slot("QPoint", name="show_dc_ref_properties_context_menu")
+    def show_dc_ref_properties_context_menu(self, pos):
+        """Create and show a context-menu in data connection properties
+        references view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_dc_references.indexAt(pos)
+        global_pos = self.ui.treeView_dc_references.viewport().mapToGlobal(pos)
+        self.dc_ref_context_menu = DcRefContextMenu(self, global_pos, ind)
+        option = self.dc_ref_context_menu.get_action()
+        # Get selected Data Connection from project item model
+        cur_index = self.ui.treeView_project.currentIndex()
+        if not cur_index.isValid():
+            self.msg_error.emit("FIXME: Could not find an index of a selected Data Connection.")
+            return
+        dc = self.project_item_model.project_item(cur_index)
+        if not dc:
+            self.msg_error.emit("FIXME: Data Connection {0} not found in project items". format(cur_index))
+            return
+        if option == "Open containing directory...":
+            ref_path = self.ui.treeView_dc_references.model().itemFromIndex(ind).data(Qt.DisplayRole)
+            ref_dir, ref_fname = os.path.split(ref_path)
+            file_url = "file:///" + ref_dir
+            self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+        elif option == "Edit...":
+            dc.open_reference(ind)
+        elif option == "Add reference(s)":
+            dc.add_references()
+        elif option == "Remove reference(s)":
+            dc.remove_references()
+        elif option == "Copy reference(s) to project":
+            dc.copy_to_project()
+        return
+
+    @Slot("QPoint", name="show_dc_data_properties_context_menu")
+    def show_dc_data_properties_context_menu(self, pos):
+        """Create and show a context-menu in data connection properties
+        data view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_dc_data.indexAt(pos)
+        global_pos = self.ui.treeView_dc_data.viewport().mapToGlobal(pos)
+        self.dc_data_context_menu = DcDataContextMenu(self, global_pos, ind)
+        option = self.dc_data_context_menu.get_action()
+        # Get selected Data Connection from project item model
+        cur_index = self.ui.treeView_project.currentIndex()
+        if not cur_index.isValid():
+            self.msg_error.emit("FIXME: Could not find an index of a selected Data Connection")
+            return
+        dc = self.project_item_model.project_item(cur_index)
+        if not dc:
+            self.msg_error.emit("FIXME: Data Connection {0} not found in project items". format(cur_index))
+            return
+        if option == "New file...":
+            dc.make_new_file()
+        elif option == "Edit...":
+            dc.open_data_file(ind)
+        elif option == "Remove file(s)":
+            dc.remove_file()
+        elif option == "Open Spine Datapackage Editor":
+            dc.show_spine_datapackage_form()
+        elif option == "Open directory...":
+            dc.open_directory()
+        return
 
     def close_view_forms(self):
         """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.

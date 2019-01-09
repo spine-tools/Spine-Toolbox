@@ -361,6 +361,7 @@ def relationship_pixmap(object_class_name_list):
     painter.end()
     return relationship_pixmap
 
+
 def fix_name_ambiguity(name_list, offset=0):
     """Modify repeated entries in name list by appending an increasing integer."""
     ref_name_list = name_list.copy()

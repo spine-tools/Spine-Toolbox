@@ -107,7 +107,7 @@ class ProjectItemContextMenu(CustomContextMenu):
             return
         self.addSeparator()
         self.add_action("Rename")
-        self.add_action("Remove Item")
+        self.add_action("Remove item")
         self.exec_(position)
 
 
@@ -125,7 +125,7 @@ class LinkContextMenu(CustomContextMenu):
         super().__init__(parent)
         if not index.isValid():
             return
-        self.add_action("Remove Connection")
+        self.add_action("Remove connection")
         if parallel_link:
             self.add_action("Send to bottom")
         self.exec_(position)
@@ -154,6 +154,59 @@ class ToolTemplateContextMenu(CustomContextMenu):
         self.addSeparator()
         self.add_action("Open main program file")
         self.add_action("Open definition file")
+        self.exec_(position)
+
+
+class DcRefContextMenu(CustomContextMenu):
+    """Context menu class for references view in Data Connection properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            # If no item at index
+            self.add_action("Add reference(s)")
+            self.add_action("Remove reference(s)")
+            self.add_action("Copy reference(s) to project")
+        else:
+            self.add_action("Edit...")
+            self.add_action("Open containing directory...")
+            self.addSeparator()
+            self.add_action("Add reference(s)")
+            self.add_action("Remove reference(s)")
+            self.add_action("Copy reference(s) to project")
+        self.exec_(position)
+
+
+class DcDataContextMenu(CustomContextMenu):
+    """Context menu class for data view in Data Connection properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            # If no item at index
+            self.add_action("New file...")
+            self.addSeparator()
+            self.add_action("Open Spine Datapackage Editor")
+            self.add_action("Open directory...")
+        else:
+            self.add_action("Edit...")
+            self.add_action("New file...")
+            self.add_action("Remove file(s)")
+            self.addSeparator()
+            self.add_action("Open Spine Datapackage Editor")
+            self.add_action("Open directory...")
         self.exec_(position)
 
 

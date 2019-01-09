@@ -570,6 +570,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_dc_references.setFont(font)
+        self.treeView_dc_references.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_dc_references.setAcceptDrops(True)
         self.treeView_dc_references.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_dc_references.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
@@ -645,6 +646,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_dc_data.setFont(font)
+        self.treeView_dc_data.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_dc_data.setAcceptDrops(True)
         self.treeView_dc_data.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_dc_data.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
@@ -790,6 +792,7 @@ class Ui_MainWindow(object):
         font.setPointSize(8)
         self.treeView_input_files.setFont(font)
         self.treeView_input_files.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.treeView_input_files.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_input_files.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
         self.treeView_input_files.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.treeView_input_files.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
@@ -802,6 +805,7 @@ class Ui_MainWindow(object):
         font.setPointSize(8)
         self.treeView_opt_input_files.setFont(font)
         self.treeView_opt_input_files.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.treeView_opt_input_files.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_opt_input_files.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
         self.treeView_opt_input_files.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.treeView_opt_input_files.setIndentation(5)
@@ -818,6 +822,7 @@ class Ui_MainWindow(object):
         font.setPointSize(8)
         self.treeView_output_files.setFont(font)
         self.treeView_output_files.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.treeView_output_files.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_output_files.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
         self.treeView_output_files.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.treeView_output_files.setIndentation(5)
@@ -924,6 +929,7 @@ class Ui_MainWindow(object):
         font = QtGui.QFont()
         font.setPointSize(10)
         self.treeView_view.setFont(font)
+        self.treeView_view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_view.setAcceptDrops(True)
         self.treeView_view.setRootIsDecorated(False)
         self.treeView_view.setObjectName("treeView_view")
@@ -1034,6 +1040,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_5.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.listView_tool_templates = QtWidgets.QListView(self.tab_tool_templates)
+        self.listView_tool_templates.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.listView_tool_templates.setObjectName("listView_tool_templates")
         self.verticalLayout_5.addWidget(self.listView_tool_templates)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
@@ -1333,8 +1340,8 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
-from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc
