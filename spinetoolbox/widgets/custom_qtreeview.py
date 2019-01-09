@@ -19,7 +19,7 @@ Classes for custom QTreeView.
 import os
 from PySide2.QtWidgets import QTreeView, QApplication
 from PySide2.QtCore import Signal, Slot, Qt, QMimeData, QUrl
-from PySide2.QtGui import QPixmap, QDrag
+from PySide2.QtGui import QDrag
 
 
 class ObjectTreeView(QTreeView):
@@ -57,7 +57,7 @@ class ObjectTreeView(QTreeView):
 
 
 class ReferencesTreeView(QTreeView):
-    """Custom QTreeView class for 'references' in Data Connection subwindow.
+    """Custom QTreeView class for 'References' in Data Connection properties.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -91,7 +91,7 @@ class ReferencesTreeView(QTreeView):
 
 
 class DataTreeView(QTreeView):
-    """Custom QTreeView class for 'data' in Data Connection subwindow.
+    """Custom QTreeView class for 'Data' in Data Connection properties.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -102,7 +102,7 @@ class DataTreeView(QTreeView):
         """Initialize the view."""
         super().__init__(parent=parent)
         self.drag_start_pos = None
-        self.drag_index = None
+        self.drag_indexes = list()
 
     def dragEnterEvent(self, event):
         """Accept file drops from the filesystem."""
@@ -126,27 +126,31 @@ class DataTreeView(QTreeView):
         self.files_dropped.emit([url.toLocalFile() for url in event.mimeData().urls()])
 
     def mousePressEvent(self, event):
-        """Register drag start position"""
+        """Register drag start position."""
         if event.button() == Qt.LeftButton:
             self.drag_start_pos = event.pos()
-            self.drag_index = self.indexAt(event.pos())
+            self.drag_indexes = self.selectedIndexes()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """Start dragging action if needed"""
+        """Start dragging action if needed."""
         if not event.buttons() & Qt.LeftButton:
             return
         if not self.drag_start_pos:
+            return
+        if len(self.drag_indexes) == 0:
             return
         if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
         drag = QDrag(self)
         mimeData = QMimeData()
-        file_path = self.drag_index.data(Qt.UserRole)
-        url = QUrl.fromLocalFile(file_path)
-        mimeData.setUrls([url])
+        urls = list()
+        for index in self.drag_indexes:
+            file_path = index.data(Qt.UserRole)
+            urls.append(QUrl.fromLocalFile(file_path))
+        mimeData.setUrls(urls)
         drag.setMimeData(mimeData)
-        icon = self.drag_index.data(Qt.DecorationRole)
+        icon = self.drag_indexes[0].data(Qt.DecorationRole)
         if icon:
             pixmap = icon.pixmap(32, 32)
             drag.setPixmap(pixmap)
@@ -156,6 +160,7 @@ class DataTreeView(QTreeView):
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
         self.drag_start_pos = None
+        super().mouseReleaseEvent(event)  # Fixes bug in extended selection
 
 
 class SourcesTreeView(QTreeView):
