@@ -435,9 +435,7 @@ class ToolboxUI(QMainWindow):
         self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.pushButton_tool_stop.setEnabled(False)
-        self.ui.treeView_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.treeView_opt_input_files.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.treeView_output_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
@@ -1297,6 +1295,10 @@ class ToolboxUI(QMainWindow):
         elif option == "Open directory...":
             dc.open_directory()
         return
+
+    @Slot("QPoint", name="show_tool_properties_context_menu")
+    def show_tool_properties_context_menu(self, pos):
+        logging.debug("Showing context menu")
 
     def close_view_forms(self):
         """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.

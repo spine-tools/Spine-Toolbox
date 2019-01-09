@@ -218,6 +218,21 @@ class DcDataContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
+class ToolPropertiesContextMenu(CustomContextMenu):
+    """Common context menu class for all Tool QTreeViews in Tool properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        self.add_action("Edit Tool template...")
+        self.exec_(position)
+
+
 class ObjectTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form.
 

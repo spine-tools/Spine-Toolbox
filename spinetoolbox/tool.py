@@ -50,12 +50,16 @@ class Tool(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Tool"
+        self.source_file_model = QStandardItemModel()
+        self.populate_source_file_model(None)
         self.input_file_model = QStandardItemModel()
         self.populate_input_file_model(None)
         self.opt_input_file_model = QStandardItemModel()
         self.populate_opt_input_file_model(None)
         self.output_file_model = QStandardItemModel()
         self.populate_output_file_model(None)
+        self.template_model = QStandardItemModel()
+        self.populate_template_model(None)
         self.source_files = list()
         self._tool_template = None
         self._tool_template_index = None
@@ -104,9 +108,7 @@ class Tool(ProjectItem):
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_tool_name.setText(self.name)
-        self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
-        self._toolbox.ui.treeView_opt_input_files.setModel(self.opt_input_file_model)
-        self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
+        self._toolbox.ui.treeView_template.setModel(self.template_model)
         if not self._tool_template_index:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
             self.set_tool_template(None)
@@ -182,19 +184,22 @@ class Tool(ProjectItem):
         """Update Tool UI to show Tool template details."""
         if not self.tool_template():
             self._toolbox.ui.lineEdit_tool_args.setText("")
-            self._toolbox.ui.lineEdit_main_program.setText("")
+            self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
+            self.populate_template_model(populate=False)
             self._toolbox.ui.checkBox_execution_mode.setCheckState(Qt.Checked)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-            self._toolbox.ui.lineEdit_main_program.setText(self.tool_template().main_prgm)
+            self.populate_source_file_model(self.tool_template().includes)
             self.populate_input_file_model(self.tool_template().inputfiles)
             self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
             self.populate_output_file_model(self.tool_template().outputfiles)
+            self.populate_template_model(populate=True)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
         self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._toolbox.ui.treeView_template.expandAll()
 
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
@@ -720,11 +725,23 @@ class Tool(ProjectItem):
             # Tool template cmdline args is a space delimited string. Add them to a list.
             self.instance.args += self.tool_template().cmdline_args.split(" ")
 
+    def populate_source_file_model(self, items):
+        """Add required source files (includes) into a model.
+        If items is None or an empty list, model is cleared."""
+        self.source_file_model.clear()
+        # self.source_file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
+                self.source_file_model.appendRow(qitem)
+
     def populate_input_file_model(self, items):
         """Add required Tool input files into a model.
         If items is None or an empty list, model is cleared."""
         self.input_file_model.clear()
-        self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
+        # self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -736,7 +753,7 @@ class Tool(ProjectItem):
         """Add optional Tool template files into a model.
         If items is None or an empty list, model is cleared."""
         self.opt_input_file_model.clear()
-        self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
+        # self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -748,13 +765,61 @@ class Tool(ProjectItem):
         """Add Tool output files into a model.
          If items is None or an empty list, model is cleared."""
         self.output_file_model.clear()
-        self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
+        # self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.output_file_model.appendRow(qitem)
+
+    def populate_template_model(self, populate):
+        """Add all tool template specs to a single QTreeView.
+        If items is None or an empty list, model is cleared.
+
+        Args:
+            populate (bool): False to clear model, True to populate.
+        """
+        self.template_model.clear()
+        self.template_model.setHorizontalHeaderItem(0, QStandardItem("Template specification"))  # Add header
+        # Add category items
+        source_file_category_item = QStandardItem("Source files")
+        input_category_item = QStandardItem("Input files")
+        opt_input_category_item = QStandardItem("Optional input files")
+        output_category_item = QStandardItem("Output files")
+        self.template_model.appendRow(source_file_category_item)
+        self.template_model.appendRow(input_category_item)
+        self.template_model.appendRow(opt_input_category_item)
+        self.template_model.appendRow(output_category_item)
+        if populate:
+            if self.source_file_model.rowCount() > 0:
+                for row in range(self.source_file_model.rowCount()):
+                    text = self.source_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    source_file_category_item.appendRow(qitem)
+            if self.input_file_model.rowCount() > 0:
+                for row in range(self.input_file_model.rowCount()):
+                    text = self.input_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    input_category_item.appendRow(qitem)
+            if self.opt_input_file_model.rowCount() > 0:
+                for row in range(self.opt_input_file_model.rowCount()):
+                    text = self.opt_input_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    opt_input_category_item.appendRow(qitem)
+            if self.output_file_model.rowCount() > 0:
+                for row in range(self.output_file_model.rowCount()):
+                    text = self.output_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    output_category_item.appendRow(qitem)
 
     def update_name_label(self):
         """Update Tool tab name label. Used only when renaming project items."""

@@ -1681,8 +1681,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>332</width>
-              <height>393</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1763,28 +1763,6 @@
               </layout>
              </item>
              <item>
-              <widget class="QLineEdit" name="lineEdit_main_program">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="cursor">
-                <cursorShape>ArrowCursor</cursorShape>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool template main program file. Edit Tool template to change this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Main program file</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QLineEdit" name="lineEdit_tool_args">
                <property name="enabled">
                 <bool>true</bool>
@@ -1812,106 +1790,14 @@
               </widget>
              </item>
              <item>
-              <widget class="QTreeView" name="treeView_input_files">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="contextMenuPolicy">
-                <enum>Qt::CustomContextMenu</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Files and directories the Tool template requires in order to run. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="selectionMode">
-                <enum>QAbstractItemView::NoSelection</enum>
-               </property>
-               <property name="selectionBehavior">
-                <enum>QAbstractItemView::SelectRows</enum>
-               </property>
-               <property name="verticalScrollMode">
-                <enum>QAbstractItemView::ScrollPerPixel</enum>
-               </property>
+              <widget class="QTreeView" name="treeView_template">
                <property name="indentation">
-                <number>5</number>
+                <number>20</number>
                </property>
                <property name="uniformRowHeights">
                 <bool>true</bool>
                </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QTreeView" name="treeView_opt_input_files">
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="contextMenuPolicy">
-                <enum>Qt::CustomContextMenu</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Optional files. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="selectionMode">
-                <enum>QAbstractItemView::NoSelection</enum>
-               </property>
-               <property name="verticalScrollMode">
-                <enum>QAbstractItemView::ScrollPerPixel</enum>
-               </property>
-               <property name="indentation">
-                <number>5</number>
-               </property>
-               <property name="uniformRowHeights">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QTreeView" name="treeView_output_files">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="contextMenuPolicy">
-                <enum>Qt::CustomContextMenu</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output files produced by the Tool template. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="selectionMode">
-                <enum>QAbstractItemView::NoSelection</enum>
-               </property>
-               <property name="verticalScrollMode">
-                <enum>QAbstractItemView::ScrollPerPixel</enum>
-               </property>
-               <property name="indentation">
-                <number>5</number>
-               </property>
-               <property name="uniformRowHeights">
+               <property name="animated">
                 <bool>true</bool>
                </property>
               </widget>
@@ -2859,8 +2745,6 @@
   <tabstop>treeView_dc_data</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
-  <tabstop>treeView_input_files</tabstop>
-  <tabstop>treeView_output_files</tabstop>
   <tabstop>pushButton_tool_stop</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
   <tabstop>pushButton_tool_execute</tabstop>
