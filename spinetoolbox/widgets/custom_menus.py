@@ -93,6 +93,8 @@ class ProjectItemContextMenu(CustomContextMenu):
         elif d.item_type == "Data Store":
             self.add_action("Open tree view...")
             self.add_action("Open graph view...")
+            self.add_action("Open tabular view...")
+            self.addSeparator()
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Execute")
