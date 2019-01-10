@@ -1374,7 +1374,6 @@ class ToolboxUI(QMainWindow):
         if not cur_index.isValid():
             return
         dc = self.project_item_model.project_item(cur_index)
-        logging.debug("Removing refs in {0}".format(dc.name))
         if not dc:
             return
         dc.remove_references()
@@ -1388,7 +1387,6 @@ class ToolboxUI(QMainWindow):
         if not cur_index.isValid():
             return
         dc = self.project_item_model.project_item(cur_index)
-        logging.debug("Removing data files in {0}".format(dc.name))
         if not dc:
             return
         dc.remove_files()

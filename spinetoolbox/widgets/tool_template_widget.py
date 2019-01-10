@@ -133,6 +133,11 @@ class ToolTemplateWidget(QWidget):
         self.ui.toolButton_minus_outputfiles.clicked.connect(self.remove_outputfiles)
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        # Enable removing items from QTreeViews by pressing the Delete key
+        self.ui.treeView_sourcefiles.del_key_pressed.connect(self.remove_source_files_with_del)
+        self.ui.treeView_inputfiles.del_key_pressed.connect(self.remove_inputfiles_with_del)
+        self.ui.treeView_inputfiles_opt.del_key_pressed.connect(self.remove_inputfiles_opt_with_del)
+        self.ui.treeView_outputfiles.del_key_pressed.connect(self.remove_outputfiles_with_del)
 
     def populate_sourcefile_list(self, items):
         """List source files in QTreeView.
@@ -295,6 +300,11 @@ class ToolTemplateWidget(QWidget):
             if not res:
                 self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
+    @Slot(name="remove_source_files_with_del")
+    def remove_source_files_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_source_files()
+
     @Slot(bool, name="remove_source_files")
     def remove_source_files(self, checked=False):
         """Remove selected source files from include list.
@@ -333,6 +343,11 @@ class ToolTemplateWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_model.appendRow(qitem)
 
+    @Slot(name="remove_inputfiles_with_del")
+    def remove_inputfiles_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_inputfiles()
+
     @Slot(bool, name="remove_inputfiles")
     def remove_inputfiles(self, checked=False):
         """Remove selected input files from list.
@@ -368,6 +383,11 @@ class ToolTemplateWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_opt_model.appendRow(qitem)
 
+    @Slot(name="remove_inputfiles_opt_with_del")
+    def remove_inputfiles_opt_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_inputfiles_opt()
+
     @Slot(bool, name="remove_inputfiles_opt")
     def remove_inputfiles_opt(self, checked=False):
         """Remove selected optional input files from list.
@@ -401,6 +421,11 @@ class ToolTemplateWidget(QWidget):
         qitem = QStandardItem(file_name)
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.outputfiles_model.appendRow(qitem)
+
+    @Slot(name="remove_outputfiles_with_del")
+    def remove_outputfiles_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_outputfiles()
 
     @Slot(bool, name="remove_outputfiles")
     def remove_outputfiles(self, checked=False):

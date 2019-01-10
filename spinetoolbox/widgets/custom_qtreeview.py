@@ -184,6 +184,7 @@ class SourcesTreeView(QTreeView):
         parent (QWidget): The parent of this view
     """
     files_dropped = Signal("QVariant", name="files_dropped")
+    del_key_pressed = Signal(name="del_key_pressed")
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -209,3 +210,28 @@ class SourcesTreeView(QTreeView):
     def dropEvent(self, event):
         """Emit files_dropped signal with a list of files for each dropped url."""
         self.files_dropped.emit([url.toLocalFile() for url in event.mimeData().urls()])
+
+    def keyPressEvent(self, event):
+        """Overridden method to make the view support deleting items with a delete key."""
+        super().keyPressEvent(event)
+        if event.key() == Qt.Key_Delete:
+            self.del_key_pressed.emit()
+
+
+class CustomTreeView(QTreeView):
+    """Custom QTreeView class for Tool template editor form to enable keyPressEvent.
+
+    Attributes:
+        parent (QWidget): The parent of this view
+    """
+    del_key_pressed = Signal(name="del_key_pressed")
+
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+
+    def keyPressEvent(self, event):
+        """Overridden method to make the view support deleting items with a delete key."""
+        super().keyPressEvent(event)
+        if event.key() == Qt.Key_Delete:
+            self.del_key_pressed.emit()

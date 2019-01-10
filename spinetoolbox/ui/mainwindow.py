@@ -573,6 +573,7 @@ class Ui_MainWindow(object):
         self.treeView_dc_references.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_dc_references.setAcceptDrops(True)
         self.treeView_dc_references.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_dc_references.setTextElideMode(QtCore.Qt.ElideLeft)
         self.treeView_dc_references.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.treeView_dc_references.setIndentation(5)
         self.treeView_dc_references.setUniformRowHeights(True)
@@ -1291,7 +1292,7 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
 
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc
