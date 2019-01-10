@@ -119,11 +119,13 @@ since you first installed the requirements.
 
 ## Building the User Guide
 
-Source files for the User Guide can be found in `/docs/source` directory. You can build 
-HTML pages from the source files by using `/bin/build_doc.bat` (Windows) or 
-`/bin/build_doc.sh` (Linux) scripts. After running the script, the index page can be 
-found in `/docs/build/html/index.html`. The User Guide can also be opened from Spine 
-Toolbox menu Help->User Guide (F2).
+Source files for the User Guide can be found in `/docs/source` directory. In order to 
+build the HTML docs, you need to first follow the above 'Upgrading all dependencies'
+(among other things this installs Sphinx, which is the documentation builder).
+After that, you can build HTML pages from the source files by using `/bin/build_doc.bat` 
+(Windows) or `/bin/build_doc.sh` (Linux) scripts. After running the script, the 
+index page can be found in `/docs/build/html/index.html`. The User Guide can also 
+be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ## Troubleshooting
 
