@@ -169,7 +169,6 @@ class Tool(ProjectItem):
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
             self.populate_template_model(populate=False)
-            # self._toolbox.ui.checkBox_execution_mode.setCheckState(Qt.Checked)
             self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
@@ -178,6 +177,11 @@ class Tool(ProjectItem):
             self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
             self.populate_output_file_model(self.tool_template().outputfiles)
             self.populate_template_model(populate=True)
+            self.execute_in_work = self.tool_template().execute_in_work
+            if self.execute_in_work:
+                self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+            else:
+                self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
         self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
         self._toolbox.ui.treeView_template.expandAll()
