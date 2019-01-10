@@ -59,7 +59,7 @@ class Tool(ProjectItem):
         self.output_file_model = QStandardItemModel()
         self.populate_output_file_model(None)
         self.template_model = QStandardItemModel()
-        self.populate_template_model(None)
+        self.populate_template_model(False)
         self.source_files = list()
         self._tool_template = None
         self._tool_template_index = None
