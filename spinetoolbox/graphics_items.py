@@ -399,7 +399,7 @@ class DataConnectionImage(ItemImage):
         if self.drag_over:
             return
         self.drag_over = True
-        QTimer.singleShot(500, self.select_on_drag_over)
+        QTimer.singleShot(100, self.select_on_drag_over)
 
     def drag_leave_event(self, event):
         """Drag and drop action leaves.

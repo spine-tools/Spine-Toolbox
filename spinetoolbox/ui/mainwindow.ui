@@ -1289,6 +1289,9 @@
                  <pointsize>10</pointsize>
                 </font>
                </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
+               </property>
                <property name="acceptDrops">
                 <bool>true</bool>
                </property>
@@ -1297,6 +1300,9 @@
                </property>
                <property name="selectionMode">
                 <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
                </property>
                <property name="verticalScrollMode">
                 <enum>QAbstractItemView::ScrollPerPixel</enum>
@@ -1472,6 +1478,9 @@
                 <font>
                  <pointsize>10</pointsize>
                 </font>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="acceptDrops">
                 <bool>true</bool>
@@ -1759,28 +1768,6 @@
               </layout>
              </item>
              <item>
-              <widget class="QLineEdit" name="lineEdit_main_program">
-               <property name="enabled">
-                <bool>true</bool>
-               </property>
-               <property name="cursor">
-                <cursorShape>ArrowCursor</cursorShape>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool template main program file. Edit Tool template to change this.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-               <property name="placeholderText">
-                <string>Main program file</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QLineEdit" name="lineEdit_tool_args">
                <property name="enabled">
                 <bool>true</bool>
@@ -1808,97 +1795,17 @@
               </widget>
              </item>
              <item>
-              <widget class="QTreeView" name="treeView_input_files">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Files and directories the Tool template requires in order to run. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="selectionMode">
-                <enum>QAbstractItemView::NoSelection</enum>
-               </property>
-               <property name="selectionBehavior">
-                <enum>QAbstractItemView::SelectRows</enum>
-               </property>
-               <property name="verticalScrollMode">
-                <enum>QAbstractItemView::ScrollPerPixel</enum>
+              <widget class="QTreeView" name="treeView_template">
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="indentation">
-                <number>5</number>
+                <number>20</number>
                </property>
                <property name="uniformRowHeights">
                 <bool>true</bool>
                </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QTreeView" name="treeView_opt_input_files">
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Optional files. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="selectionMode">
-                <enum>QAbstractItemView::NoSelection</enum>
-               </property>
-               <property name="verticalScrollMode">
-                <enum>QAbstractItemView::ScrollPerPixel</enum>
-               </property>
-               <property name="indentation">
-                <number>5</number>
-               </property>
-               <property name="uniformRowHeights">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QTreeView" name="treeView_output_files">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>8</pointsize>
-                </font>
-               </property>
-               <property name="focusPolicy">
-                <enum>Qt::NoFocus</enum>
-               </property>
-               <property name="toolTip">
-                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Output files produced by the Tool template. Edit Tool template to modify these.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-               </property>
-               <property name="selectionMode">
-                <enum>QAbstractItemView::NoSelection</enum>
-               </property>
-               <property name="verticalScrollMode">
-                <enum>QAbstractItemView::ScrollPerPixel</enum>
-               </property>
-               <property name="indentation">
-                <number>5</number>
-               </property>
-               <property name="uniformRowHeights">
+               <property name="animated">
                 <bool>true</bool>
                </property>
               </widget>
@@ -2034,35 +1941,30 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_15">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Execute in</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,0,0">
                <item>
-                <widget class="QCheckBox" name="checkBox_execution_mode">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can override the Tool template setting here for individual Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
+                <widget class="QRadioButton" name="radioButton_execute_in_work">
                  <property name="text">
-                  <string>Execution mode</string>
+                  <string>Work directory</string>
                  </property>
                  <property name="checked">
-                  <bool>false</bool>
-                 </property>
-                 <property name="tristate">
-                  <bool>false</bool>
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_11">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                <widget class="QRadioButton" name="radioButton_execute_in_source">
+                 <property name="text">
+                  <string>Source directory</string>
                  </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
+                </widget>
                </item>
                <item>
                 <widget class="QToolButton" name="toolButton_tool_open_dir">
@@ -2176,6 +2078,9 @@
                 <font>
                  <pointsize>10</pointsize>
                 </font>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
                </property>
                <property name="acceptDrops">
                 <bool>true</bool>
@@ -2458,6 +2363,9 @@
          </property>
          <item>
           <widget class="QListView" name="listView_tool_templates">
+           <property name="contextMenuPolicy">
+            <enum>Qt::CustomContextMenu</enum>
+           </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool Templates available in this project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
@@ -2848,8 +2756,6 @@
   <tabstop>treeView_dc_data</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
-  <tabstop>treeView_input_files</tabstop>
-  <tabstop>treeView_output_files</tabstop>
   <tabstop>pushButton_tool_stop</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
   <tabstop>pushButton_tool_execute</tabstop>

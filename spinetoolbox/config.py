@@ -28,10 +28,12 @@ NEUTRAL_COLOR = QColor('blue')
 BLACK_COLOR = QColor('black')
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
-# Selected characters that are not allowed in folder names
+# Invalid characters for directory names
+# NOTE: "." is actually valid in a directory name but this is
+# to prevent the user from creating directories like /..../
 INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
-# "." is actually valid in a folder name but this is
-# to prevent the user from creating folders like /..../
+# Invalid characters for file names
+INVALID_FILENAME_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*"]
 
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
@@ -152,7 +154,8 @@ TEXTBROWSER_SS = "QTextBrowser {background-color: #19232D; border: 1px solid #32
 
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
 MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}" \
-                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none;}" \
+                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; " \
+                    "border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}" \
                 "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}" \
                 "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}" \
                 "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}" \

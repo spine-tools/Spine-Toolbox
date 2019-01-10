@@ -22,11 +22,11 @@ import logging
 import fnmatch
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
-from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider
+from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
-from config import APPLICATION_PATH
+from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 from graphics_items import DataConnectionImage
 from helpers import busy_effect
 
@@ -146,7 +146,7 @@ class DataConnection(ProjectItem):
         """Add files to data directory"""
         for file_path in file_paths:
             src_dir, filename = os.path.split(file_path)
-            self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
+            self._toolbox.msg.emit("Copying file <b>{0}</b> to <b>{1}</b>".format(filename, self.name))
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
@@ -182,12 +182,12 @@ class DataConnection(ProjectItem):
     @Slot(bool, name="remove_references")
     def remove_references(self, checked=False):
         """Remove selected references from reference list.
-        Removes all references if nothing is selected.
+        Do not remove anything if there are no references selected.
         """
         indexes = self._toolbox.ui.treeView_dc_references.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.references.clear()
-            self._toolbox.msg.emit("All references removed")
+            self._toolbox.msg.emit("Please select references to remove")
+            return
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -198,24 +198,23 @@ class DataConnection(ProjectItem):
 
     @Slot(bool, name="copy_to_project")
     def copy_to_project(self, checked=False):
-        """Copy files in the file reference list to project and update Data QTreeView."""
-        if not self.references:
+        """Copy selected file references to this Data Connection's data directory."""
+        selected_indexes = self._toolbox.ui.treeView_dc_references.selectedIndexes()
+        if len(selected_indexes) == 0:
             self._toolbox.msg_warning.emit("No files to copy")
             return
-        self._toolbox.msg.emit("Copying files to {0}".format(self.data_dir))
-        for file_path in self.references:
+        for index in selected_indexes:
+            file_path = self.reference_model.itemFromIndex(index).data(Qt.DisplayRole)
             if not os.path.exists(file_path):
                 self._toolbox.msg_error.emit("File <b>{0}</b> does not exist".format(file_path))
                 continue
             src_dir, filename = os.path.split(file_path)
-            self._toolbox.msg.emit("Copying file <b>{0}</b>".format(filename))
+            self._toolbox.msg.emit("Copying file <b>{0}</b> to Data Connection <b>{1}</b>".format(filename, self.name))
             try:
                 shutil.copy(file_path, self.data_dir)
             except OSError:
                 self._toolbox.msg_error.emit("[OSError] Copying failed")
                 continue
-        data_files = self.data_files()
-        self.populate_data_list(data_files)
 
     @Slot("QModelIndex", name="open_reference")
     def open_reference(self, index):
@@ -269,8 +268,70 @@ class DataConnection(ProjectItem):
     def datapackage_form_destroyed(self):
         self.spine_datapackage_form = None
 
+    def make_new_file(self):
+        """Create a new blank file to this Data Connections data directory."""
+        msg = "File name"
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self._toolbox, "Create new file", msg,
+                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        file_name = answer[0]
+        if not file_name:  # Cancel button clicked
+            return
+        if file_name.strip() == "":
+            return
+        # Check that file name has no invalid chars
+        if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
+            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            return
+        file_path = os.path.join(self.data_dir, file_name)
+        if os.path.exists(file_path):
+            msg = "File <b>{0}</b> already exists.".format(file_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+            return
+        try:
+            with open(file_path, "w") as fp:
+                self._toolbox.msg.emit("File <b>{0}</b> created to Data Connection <b>{1}</b>"
+                                       .format(file_name, self.name))
+        except OSError:
+            msg = "Please check directory permissions."
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self._toolbox, "Creating file failed", msg)
+        return
+
+    def remove_files(self):
+        """Remove selected files from data directory."""
+        indexes = self._toolbox.ui.treeView_dc_data.selectedIndexes()
+        if not indexes:  # Nothing selected
+            self._toolbox.msg.emit("Please select files to remove")
+            return
+        else:
+            file_list = list()
+            for index in indexes:
+                file_at_index = self.data_model.itemFromIndex(index).data(Qt.DisplayRole)
+                file_list.append(file_at_index)
+            files = "\n".join(file_list)
+            msg = "The following files will be removed permanently from the project\n\n" \
+                  "{0}\n\n" \
+                  "Are you sure?".format(files)
+            # noinspection PyCallByClass, PyTypeChecker
+            answer = QMessageBox.question(self._toolbox, "Remove {0} file(s)?".format(len(file_list)),
+                                          msg, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                return
+            for filename in file_list:
+                path_to_remove = os.path.join(self.data_dir, filename)
+                try:
+                    os.remove(path_to_remove)
+                    self._toolbox.msg.emit("File <b>{0}</b> removed".format(path_to_remove))
+                except OSError:
+                    self._toolbox.msg_error.emit("Removing file {0} failed.\nCheck permissions.".format(path_to_remove))
+        return
+
     def file_references(self):
-        """Return a list of paths to files that are in this item as references (self.references)."""
+        """Return a list of paths to files that are in this item as references."""
         return self.references
 
     def data_files(self):
@@ -399,7 +460,6 @@ class DataConnection(ProjectItem):
                     qitem.setData(self.datapackage_icon, Qt.DecorationRole)
                 else:
                     qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
-                    # qitem.setData(self._toolbox.style().standardIcon(QStyle.SP_FileIcon), Qt.DecorationRole)
                 full_path = os.path.join(self.data_dir, item)  # For drag and drop
                 qitem.setData(full_path, Qt.UserRole)
                 self.data_model.appendRow(qitem)

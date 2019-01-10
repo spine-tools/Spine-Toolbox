@@ -529,7 +529,7 @@ class ToolTemplateModel(QAbstractListModel):
 
     def tool_template_index(self, name):
         """Returns the QModelIndex on which a tool template with
-        the given name is located or None if it is not found."""
+        the given name is located or invalid index if it is not found."""
         row = self.tool_template_row(name)
         if row == -1:
             return QModelIndex()
