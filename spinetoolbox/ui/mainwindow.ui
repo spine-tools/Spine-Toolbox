@@ -1933,35 +1933,30 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_15">
+              <widget class="QLabel" name="label_2">
+               <property name="text">
+                <string>Execute in</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,0,0">
                <item>
-                <widget class="QCheckBox" name="checkBox_execution_mode">
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can override the Tool template setting here for individual Tools&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
+                <widget class="QRadioButton" name="radioButton_execute_in_work">
                  <property name="text">
-                  <string>Execution mode</string>
+                  <string>Work directory</string>
                  </property>
                  <property name="checked">
-                  <bool>false</bool>
-                 </property>
-                 <property name="tristate">
-                  <bool>false</bool>
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_11">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
+                <widget class="QRadioButton" name="radioButton_execute_in_source">
+                 <property name="text">
+                  <string>Source directory</string>
                  </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
+                </widget>
                </item>
                <item>
                 <widget class="QToolButton" name="toolButton_tool_open_dir">

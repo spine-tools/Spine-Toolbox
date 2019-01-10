@@ -1,4 +1,4 @@
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 1
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 1
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 C o m p i l a t i o n
 
@@ -56,7 +56,7 @@ C o m p i l a t i o n
        type-3   1.5       4.0      3000       3.0      500       5    2000
       ;
        
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 2
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 2
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 C o m p i l a t i o n
 
@@ -80,7 +80,7 @@ GDXIN   C:\data\GIT\SPINETOOLBOX\tool_templates\magic\input/data.gdx
   79    peak = smax(t, dem(t));  ener(t) = dur(t)*dem(t);  tener = sum(t, ener(t));  lf = tener/(peak*24);
   80    display peak, tener, lf, ener;
   81   
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 3
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 3
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 C o m p i l a t i o n
 
@@ -138,7 +138,7 @@ C o m p i l a t i o n
  139  /;
  140   
  141  william.optcr = 0;
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 4
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 4
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 C o m p i l a t i o n
 
@@ -162,7 +162,7 @@ C o m p i l a t i o n
  162   
  163  *execute_unload 'output/dump.gdx';
  164   
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 5
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 5
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Include File Summary
 
@@ -174,7 +174,7 @@ Include File Summary
 
 
 COMPILATION TIME     =        0.000 SECONDS      3 Mb  WIN240-240 Feb 14, 2013
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 6
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 6
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 E x e c u t i o n
 
@@ -187,7 +187,7 @@ E x e c u t i o n
 
 12pm-6am  90.000,    6am-9am   90.000,    9am-3pm  150.000,    3pm-6pm  120.000,    6pm-12pm 162.000
 
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 7
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 7
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Equation Listing    SOLVE william Using LP From line 144
 
@@ -242,7 +242,7 @@ maxu(type-1,12pm-6am)..  x(type-1,12pm-6am) - 2*n(type-1,12pm-6am) =L= 0 ; (LHS 
      
 maxu(type-1,6am-9am)..  x(type-1,6am-9am) - 2*n(type-1,6am-9am) =L= 0 ; (LHS = 0)
      
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 8
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 8
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Equation Listing    SOLVE william Using LP From line 144
 
@@ -288,7 +288,7 @@ cdef..  - 12000*x(type-1,12pm-6am) - 6000*x(type-1,6am-9am) - 12000*x(type-1,9am
      
       - 1200000*k(type-2) - 2000000*k(type-3) + cost =E= 0 ; (LHS = 0)
      
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            12/13/18 12:41:59 Page 9
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                            01/10/19 15:10:19 Page 9
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Column Listing      SOLVE william Using LP From line 144
 
@@ -346,7 +346,7 @@ n(type-1,9am-3pm)
        -1       st(type-1,9am-3pm)
         1       st(type-1,3pm-6pm)
        -0.85    minu(type-1,9am-3pm)
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 10
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 10
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Column Listing      SOLVE william Using LP From line 144
 
@@ -404,7 +404,7 @@ k(type-2)
        -0.5     totcap2(type-3)
   -1.200000E+6  cdef
 
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 11
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 11
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Column Listing      SOLVE william Using LP From line 144
 
@@ -430,7 +430,7 @@ cost
                 (.LO, .L, .UP, .M = -INF, 0, +INF, 0)
         1       cdef
 
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 12
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 12
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Model Statistics    SOLVE william Using LP From line 144
 
@@ -442,11 +442,11 @@ BLOCKS OF VARIABLES           5     SINGLE VARIABLES           49
 NON ZERO ELEMENTS           223
 
 
-GENERATION TIME      =        0.015 SECONDS      4 Mb  WIN240-240 Feb 14, 2013
+GENERATION TIME      =        0.016 SECONDS      4 Mb  WIN240-240 Feb 14, 2013
 
 
-EXECUTION TIME       =        0.015 SECONDS      4 Mb  WIN240-240 Feb 14, 2013
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 13
+EXECUTION TIME       =        0.016 SECONDS      4 Mb  WIN240-240 Feb 14, 2013
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 13
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Solution Report     SOLVE william Using LP From line 144
 
@@ -461,7 +461,7 @@ Solution Report     SOLVE william Using LP From line 144
 **** MODEL STATUS      1 Optimal                   
 **** OBJECTIVE VALUE         24146205.5556
 
- RESOURCE USAGE, LIMIT          0.016      1000.000
+ RESOURCE USAGE, LIMIT          0.000      1000.000
  ITERATION COUNT, LIMIT        52    2000000000
 
 IBM ILOG CPLEX   Feb 14, 2013 24.0.2 WIN 38380.38394 VS8 x86/MS Windows       
@@ -504,7 +504,7 @@ type-1.3pm-6pm           .              .            +INF             .
 type-1.6pm-12pm          .              .            +INF             .          
 type-2.12pm-6am          .              .            +INF             .          
 type-2.6am-9am           .              .            +INF         1000.0000      
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 14
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 14
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Solution Report     SOLVE william Using LP From line 144
 
@@ -561,7 +561,7 @@ type-3.6am-9am         -INF          -16.0000          .              .
 type-3.9am-3pm         -INF          -19.1667          .              .          
 type-3.3pm-6pm         -INF           -6.0000          .              .          
 type-3.6pm-12pm        -INF          -19.0000          .              .          
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 15
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 15
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Solution Report     SOLVE william Using LP From line 144
 
@@ -619,7 +619,7 @@ type-3.6am-9am         -INF           14.6667        +INF             .
 type-3.9am-3pm         -INF           11.5000        +INF             .          
 type-3.3pm-6pm         -INF           24.6667        +INF             .          
 type-3.6pm-12pm        -INF           11.6667        +INF             .          
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 16
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 16
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Solution Report     SOLVE william Using LP From line 144
 
@@ -677,7 +677,7 @@ type-3        -INF            7.6667        +INF             .
 ---- VAR cost              -INF      2.4146206E+7        +INF             .          
 
   cost  total operating cost (¤)
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 17
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 17
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 Solution Report     SOLVE william Using LP From line 144
 
@@ -685,7 +685,7 @@ Solution Report     SOLVE william Using LP From line 144
 **** REPORT SUMMARY :        0     NONOPT
                              0 INFEASIBLE
                              0  UNBOUNDED
-GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           12/13/18 12:41:59 Page 18
+GAMS Rev 240  WEX-VS8 24.0.2 x86/MS Windows                                                                                                                                                                                           01/10/19 15:10:19 Page 18
 M A G I C   Power Scheduling Problem   (MAGIC,SEQ=12)
 E x e c u t i o n
 
@@ -702,7 +702,7 @@ E x e c u t i o n
 
 
 
-EXECUTION TIME       =        0.000 SECONDS      3 Mb  WIN240-240 Feb 14, 2013
+EXECUTION TIME       =        0.016 SECONDS      3 Mb  WIN240-240 Feb 14, 2013
 
 
 USER: Energy Systems                                 W120511:1343CP-WIN

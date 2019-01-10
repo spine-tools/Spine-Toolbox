@@ -650,9 +650,11 @@ class ToolboxUI(QMainWindow):
                 tool.set_tool_template(template)
                 tool.execute_in_work = template.execute_in_work
                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
-        # Update current selected Tool execute in work checkbox state
-        chk_state = Qt.Checked if template.execute_in_work else Qt.Unchecked
-        self.ui.checkBox_execution_mode.setCheckState(chk_state)
+        # Set execution mode radioButton depending on Tool template setting
+        if template.execute_in_work:
+            self.ui.radioButton_execute_in_work.setChecked(True)
+        else:
+            self.ui.radioButton_execute_in_source.setChecked(True)
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
