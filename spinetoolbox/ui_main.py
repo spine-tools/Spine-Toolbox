@@ -28,7 +28,7 @@ from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
     LinkContextMenu, AddToolTemplatePopupMenu, DcRefContextMenu, DcDataContextMenu, \
-    ToolPropertiesContextMenu
+    ToolPropertiesContextMenu, ViewPropertiesContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -87,6 +87,7 @@ class ToolboxUI(QMainWindow):
         self.dc_ref_context_menu = None
         self.dc_data_context_menu = None
         self.tool_prop_context_menu = None
+        self.view_prop_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -171,6 +172,7 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_dc_references.customContextMenuRequested.connect(self.show_dc_ref_properties_context_menu)
         self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
         self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
+        self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -1339,6 +1341,26 @@ class ToolboxUI(QMainWindow):
             self.open_tool_template_file(tool_index)
         elif option == "Open directory...":
             tool.open_directory()
+        return
+
+    @Slot("QPoint", name="show_view_properties_context_menu")
+    def show_view_properties_context_menu(self, pos):
+        """Create and show a context-menu in View properties.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_view.indexAt(pos)  # Index of selected item in View references tree view.
+        cur_index = self.ui.treeView_project.currentIndex()  # Get selected View
+        if not cur_index.isValid():
+            self.msg_error.emit("FIXME: Could not find selected View index")
+            return
+        view = self.project_item_model.project_item(cur_index)
+        global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
+        self.view_prop_context_menu = ViewPropertiesContextMenu(self, global_pos, ind)
+        option = self.view_prop_context_menu.get_action()
+        if option == "Open graph view":
+            view.open_graph_view(ind)
         return
 
     def close_view_forms(self):
