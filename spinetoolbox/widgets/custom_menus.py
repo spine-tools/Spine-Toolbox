@@ -491,6 +491,21 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.add_action("Open files...", self._parent.show_add_source_files_dialog)
 
 
+class CreateMainProgramPopupMenu(CustomPopupMenu):
+    """Popup menu class for add main program QToolButton in Tool Template editor.
+
+    Attributes:
+        parent (QWidget): Parent widget (ToolTemplateWidget)
+    """
+    def __init__(self, parent):
+        """Class constructor."""
+        super().__init__(parent)
+        self._parent = parent
+        # Open a tool template file
+        self.add_action("Make new main program", self._parent.new_main_program_file)
+        self.add_action("Select existing main program", self._parent.browse_main_program)
+
+
 class FilterMenu(QMenu):
     """Filter menu to use together with FilterWidget in TabularViewForm."""
     filterChanged = Signal(object, set, bool)

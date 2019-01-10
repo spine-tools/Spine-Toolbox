@@ -182,6 +182,16 @@
            <height>22</height>
           </size>
          </property>
+         <property name="icon">
+          <iconset resource="resources/resources_icons.qrc">
+           <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+         </property>
+         <property name="popupMode">
+          <enum>QToolButton::InstantPopup</enum>
+         </property>
+         <property name="autoRaise">
+          <bool>false</bool>
+         </property>
         </widget>
        </item>
       </layout>

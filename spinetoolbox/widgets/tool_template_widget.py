@@ -22,13 +22,15 @@ import logging
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QStyle, QFileIconProvider
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, \
+    QStyle, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
+from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, \
+    TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
 from helpers import busy_effect
-from widgets.custom_menus import AddIncludesPopupMenu
+from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
 class ToolTemplateWidget(QWidget):
@@ -59,7 +61,6 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.ui.toolButton_add_main_program.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.ui.toolButton_add_source_files.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
         self.ui.toolButton_add_source_dirs.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
         self.ui.toolButton_minus_source_files.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
@@ -115,11 +116,14 @@ class ToolTemplateWidget(QWidget):
         self.add_source_files_popup_menu = AddIncludesPopupMenu(self)
         self.ui.toolButton_add_source_files.setMenu(self.add_source_files_popup_menu)
         self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
+        # Add create new or add existing main program popup menu
+        self.add_main_prgm_popup_menu = CreateMainProgramPopupMenu(self)
+        self.ui.toolButton_add_main_program.setMenu(self.add_main_prgm_popup_menu)
+        self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
         self.connect_signals()
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.toolButton_add_main_program.clicked.connect(self.browse_main_program)
         self.ui.toolButton_add_source_files.clicked.connect(self.show_add_source_files_dialog)
         self.ui.toolButton_add_source_dirs.clicked.connect(self.show_add_source_dirs_dialog)
         self.ui.treeView_sourcefiles.files_dropped.connect(self.add_dropped_includes)
@@ -192,12 +196,56 @@ class ToolTemplateWidget(QWidget):
     def browse_main_program(self, checked=False):
         """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self._toolbox, "Add main program file", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileName(self, "Add existing main program file", APPLICATION_PATH, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
         folder_path = os.path.split(file_path)[0]
         self.program_path = os.path.abspath(folder_path)
+        # Update UI
+        self.ui.lineEdit_main_program.setText(file_path)
+        self.ui.label_mainpath.setText(self.program_path)
+
+    @Slot(name="new_main_program_file")
+    def new_main_program_file(self):
+        """Create a new blank main program file. Let user decide the file name and location."""
+        msg = "Main program file name?"
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self, "New main program", msg,
+                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        file_name = answer[0]
+        if not file_name:  # Cancel button clicked
+            return
+        if file_name.strip() == "":
+            return
+        # Check that file name has no invalid chars
+        if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
+            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        # Let user select the directory where the new main program is saved.
+        dir_msg = "Please choose a directory where the main program file is saved"
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        main_dir = QFileDialog.getExistingDirectory(self, dir_msg, APPLICATION_PATH, QFileDialog.ShowDirsOnly)
+        if not main_dir:  # Cancel button clicked
+            return
+        # Make new file
+        file_path = os.path.abspath(os.path.join(main_dir, file_name))
+        if os.path.exists(file_path):
+            msg = "File <b>{0}</b> already exists.".format(file_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        try:
+            with open(file_path, "w") as fp:
+                logging.debug("Created file:{0}".format(file_path))
+        except OSError:
+            msg = "Please check directory permissions."
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        self.program_path = os.path.abspath(main_dir)
         # Update UI
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)

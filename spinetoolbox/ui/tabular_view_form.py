@@ -176,4 +176,4 @@ class Ui_MainWindow(object):
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
 from widgets.custom_qlistview import TestListView
-from widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+from widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
