@@ -438,10 +438,8 @@ class ToolTemplateWidget(QWidget):
         self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
         self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
-        # Strip whitespace from args text before saving it to JSON
-        args_in_list = [x.strip() for x in self.ui.lineEdit_args.text().split(" ")]
-        args_cleaned = [x for x in args_in_list if x]
-        self.definition["cmdline_args"] = " ".join(args_cleaned)
+        # Strip whitespace from args before saving it to JSON
+        self.definition["cmdline_args"] = " ".join(self.ui.lineEdit_args.text().split())
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k), 3000)
