@@ -301,7 +301,7 @@ class DataConnection(ProjectItem):
             QMessageBox.information(self._toolbox, "Creating file failed", msg)
         return
 
-    def remove_file(self):
+    def remove_files(self):
         """Remove selected files from data directory."""
         indexes = self._toolbox.ui.treeView_dc_data.selectedIndexes()
         if not indexes:  # Nothing selected

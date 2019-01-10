@@ -63,6 +63,7 @@ class ReferencesTreeView(QTreeView):
         parent (QWidget): The parent of this view
     """
     files_dropped = Signal("QVariant", name="files_dropped")
+    del_key_pressed = Signal(name="del_key_pressed")
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -89,6 +90,12 @@ class ReferencesTreeView(QTreeView):
         """Emit files_dropped signal with a list of files for each dropped url."""
         self.files_dropped.emit([url.toLocalFile() for url in event.mimeData().urls()])
 
+    def keyPressEvent(self, event):
+        """Overridden method to make the view support deleting items with a delete key."""
+        super().keyPressEvent(event)
+        if event.key() == Qt.Key_Delete:
+            self.del_key_pressed.emit()
+
 
 class DataTreeView(QTreeView):
     """Custom QTreeView class for 'Data' in Data Connection properties.
@@ -97,6 +104,7 @@ class DataTreeView(QTreeView):
         parent (QWidget): The parent of this view
     """
     files_dropped = Signal("QVariant", name="files_dropped")
+    del_key_pressed = Signal(name="del_key_pressed")
 
     def __init__(self, parent):
         """Initialize the view."""
@@ -161,6 +169,12 @@ class DataTreeView(QTreeView):
         """Forget drag start position"""
         self.drag_start_pos = None
         super().mouseReleaseEvent(event)  # Fixes bug in extended selection
+
+    def keyPressEvent(self, event):
+        """Overridden method to make the view support deleting items with a delete key."""
+        super().keyPressEvent(event)
+        if event.key() == Qt.Key_Delete:
+            self.del_key_pressed.emit()
 
 
 class SourcesTreeView(QTreeView):

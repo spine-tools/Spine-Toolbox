@@ -140,6 +140,9 @@ class ToolboxUI(QMainWindow):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
+        # Custom signals
+        self.ui.treeView_dc_references.del_key_pressed.connect(self.remove_refs_with_del_key)
+        self.ui.treeView_dc_data.del_key_pressed.connect(self.remove_data_with_del_key)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -1302,7 +1305,7 @@ class ToolboxUI(QMainWindow):
         elif option == "Edit...":
             dc.open_data_file(ind)
         elif option == "Remove file(s)":
-            dc.remove_file()
+            dc.remove_files()
         elif option == "Open Spine Datapackage Editor":
             dc.show_spine_datapackage_form()
         elif option == "Open directory...":
@@ -1362,6 +1365,33 @@ class ToolboxUI(QMainWindow):
         if option == "Open graph view":
             view.open_graph_view(ind)
         return
+
+    @Slot(name="remove_refs_with_del_key")
+    def remove_refs_with_del_key(self):
+        """Slot that removes selected references from the currently selected Data Connection.
+        Used when removing DC references by pressing `Qt.Key_Delete."""
+        cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
+        if not cur_index.isValid():
+            return
+        dc = self.project_item_model.project_item(cur_index)
+        logging.debug("Removing refs in {0}".format(dc.name))
+        if not dc:
+            return
+        dc.remove_references()
+
+    @Slot(name="remove_data_with_del_key")
+    def remove_data_with_del_key(self):
+        """Slot that removes selected data files from the currently selected Data Connection.
+        Used when removing DC data files by pressing `Qt.Key_Delete."""
+        # Get selected Data Connection from project item model
+        cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
+        if not cur_index.isValid():
+            return
+        dc = self.project_item_model.project_item(cur_index)
+        logging.debug("Removing data files in {0}".format(dc.name))
+        if not dc:
+            return
+        dc.remove_files()
 
     def close_view_forms(self):
         """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.
