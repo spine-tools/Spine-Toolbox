@@ -109,7 +109,7 @@ class ProjectItemContextMenu(CustomContextMenu):
             else:
                 enabled = True
             self.add_action("Edit Tool template", enabled=enabled)
-            self.add_action("Open main program file", enabled=enabled)
+            self.add_action("Edit main program file...", enabled=enabled)
         elif d.item_type == "View":
             pass
         else:
@@ -160,10 +160,11 @@ class ToolTemplateContextMenu(CustomContextMenu):
             # Don't show menu when clicking on No tool
             return
         self.add_action("Edit Tool template")
-        self.add_action("Remove Tool template")
+        self.add_action("Edit main program file...")
+        self.add_action("Open main program directory...")
+        self.add_action("Open Tool template definition file...")
         self.addSeparator()
-        self.add_action("Open main program file")
-        self.add_action("Open definition file")
+        self.add_action("Remove Tool template")
         self.exec_(position)
 
 
@@ -231,7 +232,12 @@ class ToolPropertiesContextMenu(CustomContextMenu):
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
-        self.add_action("Edit Tool template...")
+        self.add_action("Edit Tool template")
+        self.add_action("Edit main program file...")
+        self.add_action("Open main program directory...")
+        self.add_action("Open Tool template definition file...")
+        self.addSeparator()
+        self.add_action("Open directory...")
         self.exec_(position)
 
 
@@ -418,7 +424,7 @@ class CustomPopupMenu(QMenu):
 
 
 class AddToolTemplatePopupMenu(CustomPopupMenu):
-    """Popup menu class for add tool template button.
+    """Popup menu class for add Tool template button.
 
     Attributes:
         parent (QWidget): parent widget (ToolboxUI)
@@ -426,7 +432,7 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
-        # Open empty Tool Template Form
+        # Open empty Tool template Form
         self.add_action("New", self._parent.show_tool_template_form)
         # Add an existing Tool template from file to project
         self.add_action("Add existing...", self._parent.open_tool_template)
@@ -443,8 +449,9 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         super().__init__(parent)
         enabled = True if tool.tool_template() else False
         self.add_action("Edit Tool template", tool.edit_tool_template, enabled=enabled)
+        self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
+        self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
         self.add_action("Open definition file", tool.open_tool_template_file, enabled=enabled)
-        self.add_action("Open main program file", tool.open_tool_main_program_file, enabled=enabled)
         self.addSeparator()
         self.add_action("New Tool template", self._parent.show_tool_template_form)
         self.add_action("Add Tool template...", self._parent.open_tool_template)

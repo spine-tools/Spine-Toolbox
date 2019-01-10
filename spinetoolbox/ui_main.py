@@ -27,7 +27,8 @@ from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStan
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    LinkContextMenu, AddToolTemplatePopupMenu, DcRefContextMenu, DcDataContextMenu
+    LinkContextMenu, AddToolTemplatePopupMenu, DcRefContextMenu, DcDataContextMenu, \
+    ToolPropertiesContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
@@ -85,6 +86,7 @@ class ToolboxUI(QMainWindow):
         self.process_output_context_menu = None
         self.dc_ref_context_menu = None
         self.dc_data_context_menu = None
+        self.tool_prop_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -168,6 +170,7 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         self.ui.treeView_dc_references.customContextMenuRequested.connect(self.show_dc_ref_properties_context_menu)
         self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
+        self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -1166,7 +1169,7 @@ class ToolboxUI(QMainWindow):
                 d.stop_process()  # Proceed with stopping
         elif option == "Edit Tool template":
             d.edit_tool_template()
-        elif option == "Open main program file":
+        elif option == "Edit main program file...":
             d.open_tool_main_program_file()
         elif option == "Rename":
             # noinspection PyCallByClass
@@ -1220,10 +1223,14 @@ class ToolboxUI(QMainWindow):
         option = self.tool_template_context_menu.get_action()
         if option == "Edit Tool template":
             self.edit_tool_template(ind)
-        elif option == "Open descriptor file":
-            self.open_tool_template_file(ind)
-        elif option == "Open main program file":
+        elif option == "Edit main program file...":
             self.open_tool_main_program_file(ind)
+        elif option == "Open main program directory...":
+            tool_template_path = self.tool_template_model.tool_template(ind.row()).path
+            path_url = "file:///" + tool_template_path
+            self.open_anchor(QUrl(path_url, QUrl.TolerantMode))
+        elif option == "Open Tool template definition file...":
+            self.open_tool_template_file(ind)
         elif option == "Remove Tool template":
             self.remove_tool_template(ind)
         else:  # No option selected
@@ -1282,7 +1289,7 @@ class ToolboxUI(QMainWindow):
         # Get selected Data Connection from project item model
         cur_index = self.ui.treeView_project.currentIndex()
         if not cur_index.isValid():
-            self.msg_error.emit("FIXME: Could not find an index of a selected Data Connection")
+            self.msg_error.emit("FIXME: Could not find selected Data Connection index.")
             return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
@@ -1302,7 +1309,37 @@ class ToolboxUI(QMainWindow):
 
     @Slot("QPoint", name="show_tool_properties_context_menu")
     def show_tool_properties_context_menu(self, pos):
-        logging.debug("Showing context menu")
+        """Create and show a context-menu in Tool properties
+        if selected Tool has a Tool template.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_template.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
+        cur_index = self.ui.treeView_project.currentIndex()  # Get selected Tool
+        if not cur_index.isValid():
+            self.msg_error.emit("FIXME: Could not find selected Tool index")
+            return
+        tool = self.project_item_model.project_item(cur_index)
+        if not tool.tool_template():
+            return
+        # Find index of Tool template
+        name = tool.tool_template().name
+        tool_index = self.tool_template_model.tool_template_index(name)
+        global_pos = self.ui.treeView_template.viewport().mapToGlobal(pos)
+        self.tool_prop_context_menu = ToolPropertiesContextMenu(self, global_pos, ind)
+        option = self.tool_prop_context_menu.get_action()
+        if option == "Edit Tool template":
+            self.edit_tool_template(tool_index)  # index in tool template model
+        elif option == "Edit main program file...":
+            self.open_tool_main_program_file(tool_index)  # index in tool template model
+        elif option == "Open main program directory...":
+            tool.open_tool_main_directory()
+        elif option == "Open Tool template definition file...":
+            self.open_tool_template_file(tool_index)
+        elif option == "Open directory...":
+            tool.open_directory()
+        return
 
     def close_view_forms(self):
         """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.

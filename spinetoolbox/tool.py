@@ -219,6 +219,14 @@ class Tool(ProjectItem):
     def open_tool_main_program_file(self):
         self._toolbox.open_tool_main_program_file(self._tool_template_index)
 
+    @Slot(name="open_tool_main_directory")
+    def open_tool_main_directory(self):
+        """Open directory where the Tool template main program is located in file explorer."""
+        if not self.tool_template():
+            return
+        dir_url = "file:///" + self.tool_template().path
+        self._toolbox.open_anchor(QUrl(dir_url, QUrl.TolerantMode))
+
     def tool_template(self):
         """Returns Tool template."""
         return self._tool_template
