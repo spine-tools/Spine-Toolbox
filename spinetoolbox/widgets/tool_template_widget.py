@@ -515,6 +515,7 @@ class ToolTemplateWidget(QWidget):
         # Fix for issue #241
         folder_path, file_path = os.path.split(main_program)
         self.program_path = os.path.abspath(folder_path)
+        self.ui.label_mainpath.setText(self.program_path)
         self.definition["execute_in_work"] = True if self.ui.checkBox_execute_in_work.isChecked() else False
         self.definition["includes"] = [file_path]
         self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
